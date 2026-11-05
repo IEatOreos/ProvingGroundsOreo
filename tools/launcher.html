@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Project Proving Grounds</title>
+<style>
+  /* tokens: spacing 4/8/12/16/24/32/48, type 12/14/16/20/24, colours by role (contrast measured: text 6.2:1 or more,
+     control borders and focus 3:1 or more against their surfaces) */
+  :root {
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+    --fs-xs: 12px; --fs-sm: 14px; --fs-md: 16px; --fs-lg: 20px; --fs-xl: 24px;
+    --r-sm: 4px; --r: 8px; --r-lg: 12px;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Bahnschrift", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    --bg: #0a0e14; --surface: #111821; --raised: #18212d; --hover: #202b3a; --pressed: #151d28;
+    --border: #243041; --control: #5a6a80;
+    --text: #e8edf4; --text-2: #a9b5c6; --text-3: #8d9aae;
+    --accent: #5cc8ff; --accent-hover: #86d7ff; --accent-pressed: #3fb4ee; --accent-ink: #03131f; --focus: #9be0ff;
+    --ok: #5fd38a; --warn: #f2c14e; --bad: #ff8080; --danger: #c8323f; --danger-hover: #d9434f;
+    --ok-bg: #12291d; --warn-bg: #2d2511; --bad-bg: #331a1d; --accent-bg: #0f2636;
+  }
+  * { box-sizing: border-box; }
+  body { --edge: max(var(--s5), calc((100% - 1280px) / 2 + var(--s5))); }   /* (header and footer line up with the content) */
+  [hidden] { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; color: var(--text);
+         background: radial-gradient(1200px 420px at 50% -220px, #12233a 0%, transparent 70%) no-repeat, var(--bg);
+         font: var(--fs-sm)/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+  p { margin: 0; }
+  svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75;
+          stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.sm { width: 16px; height: 16px; }
+
+  /* header */
+  .top { display: flex; align-items: center; gap: var(--s4); padding: var(--s3) var(--edge);
+         border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
+  .mark { width: 36px; height: 36px; flex: none; }
+  h1 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: .08em; text-transform: uppercase;
+       background: linear-gradient(180deg, #f4f8fc 0%, #b9c7d6 55%, #8fa2b7 100%); -webkit-background-clip: text;
+       background-clip: text; color: transparent; }
+  .tagline { color: var(--text-2); font-size: var(--fs-xs); }
+  .version { margin-left: auto; color: var(--text-2); font-size: var(--fs-xs); padding: 2px var(--s2);
+             border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; }
+  .version:empty { display: none; }
+
+  /* connection banner */
+  .banner { display: flex; gap: var(--s3); align-items: center; margin: var(--s4) var(--s5) 0; padding: var(--s3) var(--s4);
+            border-radius: var(--r); background: var(--bad-bg); border: 1px solid #6b2c35; color: var(--text); }
+  .banner svg { color: var(--bad); }
+  .banner:has(#banner:empty) { display: none; }
+
+  /* layout */
+  main { flex: 1; width: 100%; max-width: 1280px; margin: 0 auto; padding: var(--s4) var(--s5); display: grid; gap: var(--s4);
+         grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr); align-items: start; align-content: start; }
+  .col { display: grid; gap: var(--s4); align-content: start; }
+  .wide { grid-column: 1 / -1; }
+  @media (max-width: 820px) { main { grid-template-columns: minmax(0, 1fr); padding: var(--s4); } body { --edge: var(--s4); } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s4) var(--s5);
+          min-width: 0; }
+  .card-head { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
+  h2 { margin: 0; font: 600 var(--fs-sm)/1.3 var(--font-display); letter-spacing: .08em; text-transform: uppercase;
+       color: var(--text-2); }
+  .count { margin-left: auto; font-size: var(--fs-xs); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .help { color: var(--text-2); font-size: var(--fs-xs); }
+
+  /* buttons */
+  button { font: inherit; font-weight: 500; color: var(--text); background: var(--raised); border: 1px solid var(--control);
+           border-radius: var(--r); min-height: 36px; padding: 0 var(--s4); display: inline-flex; align-items: center;
+           justify-content: center; gap: var(--s2); cursor: pointer; transition: background-color .12s, border-color .12s; }
+  button:hover { background: var(--hover); }
+  button:active { background: var(--pressed); transform: translateY(1px); }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  button:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--focus); outline-offset: 2px; }
+  button[aria-busy="true"] { cursor: progress; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.primary:active { background: var(--accent-pressed); border-color: var(--accent-pressed); }
+  button.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  button.accent:hover { background: #143247; }
+  button.quiet { background: transparent; border-color: transparent; color: var(--text-2); padding: 0 var(--s3); }
+  button.quiet:hover { background: var(--raised); color: var(--text); }
+  button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  button.danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
+  .actions { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; }
+
+  /* busy spinner: shown in a busy button, replaces its icon */
+  .spin { display: none; animation: spin .9s linear infinite; }
+  [aria-busy="true"] > .spin { display: block; }
+  [aria-busy="true"] > .idle { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* messages next to actions: colour plus an icon, never colour alone */
+  .msg { font-size: var(--fs-sm); color: var(--text-2); }
+  .msg:empty { display: none; }
+  .msg[data-level="ok"] { color: var(--ok); } .msg[data-level="warn"] { color: var(--warn); }
+  .msg[data-level="bad"] { color: var(--bad); }
+  .msg[data-level="ok"]::before, .msg[data-level="warn"]::before, .msg[data-level="bad"]::before {
+    content: ""; display: inline-block; width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px;
+    background: currentColor; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+  .msg[data-level="ok"]::before { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12.5l2.5 2.5L16 9.5'/%3E%3C/svg%3E"); }
+  .msg[data-level="warn"]::before { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5 21.5 20h-19z'/%3E%3Cpath d='M12 10v4M12 17v.01'/%3E%3C/svg%3E"); }
+  .msg[data-level="bad"]::before { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5M12 16v.01'/%3E%3C/svg%3E"); }
+
+  /* Play */
+  .status { list-style: none; margin: 0 0 var(--s5); padding: 0; display: flex; flex-wrap: wrap;
+            background: var(--raised);
+            border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .stat { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s2); row-gap: 2px;
+          align-content: start; padding: var(--s3) var(--s4); flex: 1 1 150px;
+          box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border); }   /* (a tile that wraps takes the whole row) */
+  .stat svg { width: 16px; height: 16px; align-self: center; color: var(--text-3); }
+  .stat-value, .stat-detail { grid-column: 1 / -1; }
+  .stat[data-level="ok"] svg { color: var(--ok); } .stat[data-level="warn"] svg { color: var(--warn); }
+  .stat[data-level="bad"] svg { color: var(--bad); } .stat[data-level="busy"] svg { color: var(--accent); }
+  .stat-label { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+  .stat-value { font-weight: 600; }
+  .stat-detail { font-size: var(--fs-xs); color: var(--text-2); overflow-wrap: anywhere; }
+  .stat-detail:empty { display: none; }
+  .stat[data-level="busy"] .spinning { animation: spin .9s linear infinite; }
+  .play-row { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
+  button#play { min-height: 48px; padding: 0 var(--s6) 0 var(--s5); font: 600 var(--fs-md)/1 var(--font-display);
+                letter-spacing: .1em; text-transform: uppercase; border-radius: var(--r); }
+  button#play svg.i { width: 18px; height: 18px; }
+  button#play svg.idle { fill: currentColor; stroke: none; }
+  label.check { display: flex; gap: var(--s2); align-items: flex-start; margin-top: var(--s4); padding: var(--s3);
+                border-radius: var(--r); background: var(--warn-bg); border: 1px solid #5a4a1f; cursor: pointer; }
+  label.check input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+  /* the steps beside Play (under it when narrow), so the whole window fits without scrolling */
+  .play-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: start; }
+  .play-wrap .play-row { flex-direction: column; align-items: flex-start; gap: var(--s2); }
+  .howto { padding-left: var(--s5); border-left: 1px solid var(--border); }
+  @media (max-width: 820px) {
+    .play-wrap { grid-template-columns: minmax(0, 1fr); }
+    .howto { padding: var(--s4) 0 0; border-left: 0; border-top: 1px solid var(--border); }
+  }
+  .howto ol { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: var(--s2); }
+  .howto-title { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em;
+                 margin-bottom: var(--s3); }
+  .howto li { counter-increment: step; display: grid; grid-template-columns: 24px 1fr; gap: var(--s2);
+              color: var(--text-2); }
+  .howto li::before { content: counter(step); width: 20px; height: 20px; border-radius: 50%; display: grid;
+                      place-items: center; font-size: var(--fs-xs); font-weight: 600; color: var(--text);
+                      background: var(--raised); border: 1px solid var(--border); margin-top: 1px; }
+  .howto b { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .log { margin-top: var(--s4); background: #070a0f; border: 1px solid var(--border); border-radius: var(--r);
+         padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; font: var(--fs-xs)/1.5 var(--font-mono);
+         white-space: pre-wrap; overflow-wrap: anywhere; color: #c9d3df; }
+  .log:empty { display: none; }
+
+  /* setup */
+  .setup-intro { margin-bottom: var(--s4); }
+  progress { width: 100%; height: 6px; border: 0; border-radius: 999px; overflow: hidden; background: var(--raised);
+             appearance: none; margin-bottom: var(--s4); display: block; }
+  progress::-webkit-progress-bar { background: var(--raised); }
+  progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
+  progress::-moz-progress-bar { background: var(--accent); }
+  .done { display: flex; align-items: center; gap: var(--s2); color: var(--ok); font-weight: 600; margin-bottom: var(--s4); }
+  ol.steps { list-style: none; padding: 0; margin: 0 0 var(--s4); display: grid; gap: var(--s2) var(--s4);
+             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  ol.steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s2); align-content: start; }
+  ol.steps svg { margin-top: 2px; color: var(--text-3); grid-row: 1 / span 2; }
+  ol.steps [data-state="done"] svg { color: var(--ok); } ol.steps [data-state="failed"] svg { color: var(--bad); }
+  ol.steps [data-state="working"] svg { color: var(--accent); animation: spin .9s linear infinite; }
+  .step-name { font-weight: 500; }
+  .step-note { font-size: var(--fs-xs); color: var(--text-2); overflow-wrap: anywhere; }
+  [data-state="failed"] .step-note { color: var(--bad); }
+  #setup-card .help.repair { margin-top: var(--s3); }
+
+  /* game folder (a setting: folded away while the game is found, open while it is not) */
+  details { border-radius: var(--r-lg); }
+  summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s3);
+            align-items: center; border-radius: var(--r); margin: calc(-1 * var(--s2)); padding: var(--s2); }
+  summary::-webkit-details-marker { display: none; }
+  summary:hover { background: var(--raised); }
+  summary .chev { grid-row: 1 / span 2; grid-column: 2; color: var(--text-2); transition: transform .15s; }
+  details[open] summary .chev { transform: rotate(90deg); }
+  .path { font-size: var(--fs-sm); overflow-wrap: anywhere; }
+  .path[data-level="dim"] { color: var(--text-3); }
+  summary .path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+  details[open] summary .path { display: none; }
+  .folder-body { margin-top: var(--s4); display: grid; gap: var(--s3); }
+  #folder-card[data-attention] { border-color: #6b2c35; order: -1; }   /* (the game is not found: this comes first) */
+  .field-label { display: block; font-size: var(--fs-xs); color: var(--text-2); margin-bottom: var(--s1); }
+  .input-row { display: flex; gap: var(--s2); }
+  input[type="text"] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: #0b1017;
+                       border: 1px solid var(--control); border-radius: var(--r); min-height: 36px; padding: 0 var(--s3); }
+  input[type="text"]::placeholder { color: var(--text-3); }
+  input[type="text"]:hover { border-color: #71839b; }
+
+  /* tools */
+  .tools { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .tools { grid-template-columns: minmax(0, 1fr); } }
+  .tools li { display: flex; }
+  button.tool { width: 100%; height: 100%; min-height: 0; padding: var(--s3) var(--s4) var(--s4); display: grid; align-content: start; align-items: center;
+                justify-items: start; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s2) var(--s3); text-align: left;
+                font-weight: 400; background: var(--raised); border-color: var(--border); border-radius: var(--r); }
+  button.tool:hover { background: var(--hover); border-color: var(--control); }
+  button.tool:active { background: var(--pressed); }
+  .tool-icon { width: 32px; height: 32px; grid-column: 1; grid-row: 1; border-radius: var(--r); display: grid; place-items: center; color: var(--accent);
+               background: var(--accent-bg); }
+  .tool .ext { color: var(--text-3); justify-self: end; grid-column: 3; grid-row: 1; }
+  button.tool:hover .ext { color: var(--text-2); }
+  .tool-text { display: contents; }
+  .tool-desc, .meter { grid-column: 1 / -1; }
+  .tool-name { font-weight: 600; font-size: var(--fs-sm); grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+  .tool-desc { font-size: var(--fs-xs); color: var(--text-2); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 500; line-height: 1;
+          padding: var(--s1) var(--s2); border-radius: 999px; background: var(--hover); color: var(--text-2); }
+  .chip.run { display: none; background: var(--ok-bg); color: var(--ok); }
+  .chip.run::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  button.tool[aria-busy="true"] .chip.run { display: inline-flex; grid-column: 3; grid-row: 1; }
+  button.tool[aria-busy="true"] .ext { display: none; }
+  button.tool[aria-busy="true"] { cursor: pointer; }
+  .meter { justify-self: stretch; display: grid; gap: var(--s1); margin-top: var(--s1); }
+  .meter-bar { height: 4px; border-radius: 999px; background: var(--hover); overflow: hidden; }
+  .meter-bar span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; }
+  #tool-state { margin-left: auto; font-size: var(--fs-xs); }
+  .card-head:has(#tool-state:not(:empty)) .hint { display: none; }
+
+  /* footer */
+  .top-actions { display: flex; align-items: center; gap: var(--s1); flex-wrap: wrap; justify-content: flex-end; }
+  footer { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; padding: var(--s3) var(--edge);
+           border-top: 1px solid var(--border); }
+  footer .legal { margin-left: auto; color: var(--text-3); font-size: var(--fs-xs); }
+  button#uninstall:hover { color: var(--bad); }
+
+  /* uninstall confirmation */
+  dialog { width: min(480px, calc(100vw - 32px)); padding: var(--s5); color: var(--text); background: var(--surface);
+           border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: 0 24px 64px rgba(0, 0, 0, .55); }
+  dialog::backdrop { background: rgba(3, 6, 10, .7); }
+  dialog h2 { font: 600 var(--fs-lg)/1.3 var(--font); letter-spacing: 0; text-transform: none; color: var(--text);
+              margin-bottom: var(--s2); }
+  dialog p { color: var(--text-2); }
+  dialog .actions { justify-content: flex-end; margin-top: var(--s5); }
+  dialog .msg { margin-top: var(--s3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<svg hidden aria-hidden="true">
+  <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4M12 17v.01"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+  <symbol id="i-wait" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-spin" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></symbol>
+  <symbol id="i-todo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8.5 12h7"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7a5 5 0 1 0 5 5"/><circle cx="12" cy="12" r="1.5"/><path d="M12 12l6.5-6.5"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 2.8l8.5 4.7v9L12 21.2l-8.5-4.7v-9z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9.2"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5z"/><path d="M5 20.5A2.5 2.5 0 0 1 7.5 18H19v3H7.5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-repair" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3"/><path d="M3.5 4v5h5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+      <defs><linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f1f6fb"/><stop offset=".55" stop-color="#a9b9ca"/><stop offset="1" stop-color="#6f8399"/>
+      </linearGradient></defs>
+      <circle cx="18" cy="18" r="13" fill="none" stroke="url(#steel)" stroke-width="4"/>
+      <circle cx="18" cy="18" r="4" fill="#5cc8ff"/>
+    </svg>
+    <div>
+      <h1>Project Proving Grounds</h1>
+      <p class="tagline">PvP bots for Halo: The Master Chief Collection</p>
+    </div>
+  </div>
+  <span class="version" id="version"></span>
+  <nav class="top-actions" aria-label="More">
+    <button class="quiet" id="folder"><svg class="i sm" aria-hidden="true"><use href="#i-folder"/></svg>Open the install folder</button>
+    <button class="quiet" id="docs"><svg class="i sm" aria-hidden="true"><use href="#i-book"/></svg>Read the guide</button>
+    <button class="quiet" id="uninstall" hidden><svg class="i sm" aria-hidden="true"><use href="#i-trash"/></svg>Uninstall</button>
+  </nav>
+</header>
+<div class="banner"><svg class="i" aria-hidden="true"><use href="#i-bad"/></svg><span id="banner" role="alert"></span></div>
+
+<main>
+  <section class="card" aria-labelledby="play-h">
+    <h2 id="play-h" class="sr-only">Play</h2>
+    <ul class="status" id="play-rows" aria-label="Status">
+      <li class="stat" id="st-game" data-level="wait"><svg class="i" aria-hidden="true"><use href="#i-wait"/></svg>
+        <span class="stat-label">Game</span><span class="stat-value" id="r-game">Checking ...</span>
+        <span class="stat-detail" id="r-game-detail"></span></li>
+      <li class="stat" id="st-setup" data-level="wait"><svg class="i" aria-hidden="true"><use href="#i-wait"/></svg>
+        <span class="stat-label">Setup</span><span class="stat-value" id="r-setup">Checking ...</span>
+        <span class="stat-detail" id="r-setup-detail"></span></li>
+      <li class="stat" id="st-mods" data-level="wait"><svg class="i" aria-hidden="true"><use href="#i-wait"/></svg>
+        <span class="stat-label">Other mods</span><span class="stat-value" id="r-mods">Checking ...</span>
+        <span class="stat-detail" id="r-mods-detail"></span></li>
+    </ul>
+    <div class="play-wrap">
+    <div class="play-row">
+      <button class="primary" id="play"><svg class="i idle" aria-hidden="true"><use href="#i-play"/></svg>
+        <svg class="i spin" aria-hidden="true"><use href="#i-spin"/></svg>Play</button>
+      <span id="play-state" class="msg" aria-live="polite"></span>
+    </div>
+    <div class="howto">
+    <p class="howto-title" id="howto-h">How to start a match</p>
+    <ol aria-labelledby="howto-h">
+      <li><span>When Steam asks how to start MCC, choose the option with <b>anti-cheat off</b>.</span></li>
+      <li><span>In MCC open <b>Multiplayer &gt; Custom Multiplayer</b> (offline custom games only).</span></li>
+      <li><span>Select the <b>BOTS</b> tile next to START (or press <b>B</b>) to pick your bots.</span></li>
+    </ol>
+    </div>
+    </div>
+    <label class="check" id="clean-wrap" hidden>
+      <input type="checkbox" id="clean" checked>
+      <span>Start without those mods this time. They are moved aside and put back when MCC closes.</span>
+    </label>
+    <div class="log" id="log-play" aria-live="polite"></div>
+  </section>
+
+  <div class="col">
+    <section class="card" id="setup-card" aria-labelledby="setup-h">
+      <div class="card-head"><h2 id="setup-h">First-time setup</h2><span class="count" id="setup-count"></span></div>
+      <p class="help setup-intro" id="setup-intro">Builds the 3D bots, emblems, effects and map pictures from your own copy
+        of the game. Runs once and takes a few minutes.</p>
+      <progress id="setup-meter" max="1" value="0" aria-labelledby="setup-h"></progress>
+      <p id="setup-done" class="done" hidden><svg class="i" aria-hidden="true"><use href="#i-ok"/></svg>All parts are ready.</p>
+      <ol class="steps" id="steps"></ol>
+      <div class="actions">
+        <button id="setup" class="accent"><svg class="i sm spin" aria-hidden="true"><use href="#i-spin"/></svg>Run setup</button>
+        <button id="setup-force" aria-describedby="repair-help"><svg class="i sm idle" aria-hidden="true"><use href="#i-repair"/></svg>
+          <svg class="i sm spin" aria-hidden="true"><use href="#i-spin"/></svg>Repair</button>
+        <span id="setup-state" class="msg" aria-live="polite"></span>
+      </div>
+      <p class="help repair" id="repair-help">Repair builds every part again: for missing or broken 3D bots, pictures or
+        effects, or after installing more MCC games.</p>
+      <div class="log" id="log-setup"></div>
+    </section>
+
+    <details class="card" id="folder-card">
+      <summary><h2 id="folder-h">Game folder</h2><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg>
+        <span class="path" id="r-folder-short"></span></summary>
+      <div class="folder-body">
+        <div>
+          <p class="path" id="r-folder" data-level="dim"></p>
+          <p class="help" id="r-folder-how"></p>
+        </div>
+        <div class="actions">
+          <button id="mcc-browse"><svg class="i sm" aria-hidden="true"><use href="#i-folder"/></svg>Choose folder ...</button>
+          <button id="mcc-auto" hidden>Use automatic</button>
+        </div>
+        <form id="mcc-form">
+          <label class="field-label" for="mcc-path">Or paste the folder path (the one with MCC, halo1, halo3 ... in it)</label>
+          <div class="input-row">
+            <input id="mcc-path" type="text" spellcheck="false" autocomplete="off">
+            <button type="submit">Use</button>
+          </div>
+        </form>
+        <span id="mcc-state" class="msg" aria-live="polite"></span>
+      </div>
+    </details>
+  </div>
+
+  <section class="card wide" aria-labelledby="tools-h">
+    <div class="card-head"><h2 id="tools-h">Tools</h2><span class="count hint">Each opens in its own window</span>
+      <p class="msg" id="tool-state" aria-live="polite"></p></div>
+    <ul class="tools">
+      <li><button class="tool" data-task="observer" aria-labelledby="n-observer" aria-describedby="d-observer">
+        <span class="tool-icon"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg></span>
+        <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg><span class="chip run">Open</span>
+        <span class="tool-text"><span class="tool-name"><span id="n-observer">Observer</span></span>
+          <span class="tool-desc" id="d-observer">Replay matches: what each bot saw and decided, and your own stats.</span></span></button></li>
+      <li><button class="tool" data-task="lidar_sim" aria-labelledby="n-sim" aria-describedby="d-sim r-lidar">
+        <span class="tool-icon"><svg class="i" aria-hidden="true"><use href="#i-radar"/></svg></span>
+        <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg><span class="chip run">Open</span>
+        <span class="tool-text"><span class="tool-name"><span id="n-sim">LiDAR Simulator</span></span>
+          <span class="tool-desc" id="d-sim">Watch bots map any map, no game needed. Mapped maps play better.</span>
+          <span class="meter"><span class="tool-desc" id="r-lidar"></span><span class="meter-bar"><span id="lidar-bar"></span></span></span></span></button></li>
+      <li><button class="tool" data-task="lidar_view" aria-labelledby="n-view" aria-describedby="d-view">
+        <span class="tool-icon"><svg class="i" aria-hidden="true"><use href="#i-cube"/></svg></span>
+        <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg><span class="chip run">Open</span>
+        <span class="tool-text"><span class="tool-name"><span id="n-view">LiDAR Viewer</span></span>
+          <span class="tool-desc" id="d-view">Your LiDAR match live in 3D, or a map's stored scan.</span></span></button></li>
+      <li><button class="tool" data-task="paint" aria-labelledby="n-paint" aria-describedby="d-paint">
+        <span class="tool-icon"><svg class="i" aria-hidden="true"><use href="#i-brush"/></svg></span>
+        <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg><span class="chip run">Open</span>
+        <span class="tool-text"><span class="tool-name"><span id="n-paint">Paint the nav</span></span>
+          <span class="tool-desc" id="d-paint">Advanced: mark where bots may and may not walk on a map.</span></span></button></li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <span class="legal">Not affiliated with or endorsed by Microsoft.</span>
+</footer>
+
+<dialog id="uninstall-ask" aria-labelledby="uninstall-t" aria-describedby="uninstall-q">
+  <h2 id="uninstall-t">Uninstall Project Proving Grounds?</h2>
+  <p id="uninstall-q">MCC itself is not changed. Every window of the mod closes, then the uninstaller asks whether to keep
+    your LiDAR scans and recorded matches.</p>
+  <p id="uninstall-state" class="msg" aria-live="polite"></p>
+  <div class="actions">
+    <button id="uninstall-yes" class="danger">Uninstall</button>
+    <button id="uninstall-no">Cancel</button>
+  </div>
+</dialog>
+<script>
+const $ = id => document.getElementById(id);
+const STEP_NAMES = {"bots": "Bots", "recording": "Match recording", "map art": "Map pictures", "logos": "Game logos", "3D bots": "3D bots",
+                    "effects": "Effects", "looks": "Looks"};
+const ICONS = {ok: "i-ok", warn: "i-warn", bad: "i-bad", wait: "i-wait", busy: "i-spin"};
+let state = null, stepNote = {}, folderWasMissing = null;
+
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"X-Launcher": "1", "Content-Type": "application/json"},
+                               body: JSON.stringify(body || {})});
+  return r.json().catch(() => ({ok: false, message: "no answer"}));
+}
+
+// a message's text and level (ok, warn, bad, dim: its colour and icon)
+function setText(id, text, level) { const e = $(id); e.textContent = text; e.dataset.level = level || ""; }
+const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+// a status tile: its level (icon and colour), value and detail
+function setStatus(key, level, value, detail) {
+  const row = $("st-" + key);
+  row.dataset.level = level;
+  row.querySelector("use").setAttribute("href", "#" + ICONS[level]);
+  row.querySelector("svg").classList.toggle("spinning", level === "busy");
+  $("r-" + key).textContent = value;
+  $("r-" + key + "-detail").textContent = detail || "";
+}
+
+function render(s) {
+  state = s;
+  $("version").textContent = "Version " + s.version;
+  const setupBusy = !!(s.running.setup || s.running.setup_force);
+  if (s.mcc) setStatus("game", "ok", s.mcc_running ? "Found, running" : "Found",
+                       s.missing_games.length ? `Not installed: ${s.missing_games.join(", ")}. The bots play in the games you have.` : "");
+  else if (s.mcc_choice) setStatus("game", "bad", "Not found", "The folder you chose is not there any more: choose it again in Game folder, or use automatic.");
+  else setStatus("game", "bad", "Not found", "Choose its folder in Game folder, or install Halo: The Master Chief Collection through Steam.");
+
+  // game folder: open while the game is not found (and when it is lost again), folded away otherwise
+  const how = s.mcc_env ? "Set by HB_MCC" : s.mcc_choice ? "Chosen by you" : "Found automatically";
+  setText("r-folder", s.mcc || s.mcc_choice || "None yet", s.mcc ? "" : "dim");
+  $("r-folder-short").textContent = s.mcc || "Not found";
+  $("r-folder-short").title = s.mcc || "";                  // (the whole path when the line is cut short)
+  let note = s.mcc ? how + (s.mcc_steam || s.wine ? "." : ". Play starts this copy directly; Steam must be running.") : "";
+  if (s.mcc_found.length > 1) note += (note ? " " : "") + `Copies in your Steam libraries: ${s.mcc_found.join(", ")}.`;
+  $("r-folder-how").textContent = note;
+  if (folderWasMissing !== !s.mcc) { if (!s.mcc) $("folder-card").open = true; folderWasMissing = !s.mcc; }
+  $("folder-card").toggleAttribute("data-attention", !s.mcc);
+  $("mcc-auto").hidden = !s.mcc_choice;
+  $("mcc-browse").hidden = s.wine;
+  $("uninstall").hidden = !s.installed;
+
+  const ready = s.setup.filter(x => x[1]).length, total = s.setup.length;
+  if (setupBusy) setStatus("setup", "busy", "Working ...", "The first-time setup is running.");
+  else if (ready === total) setStatus("setup", "ok", "Ready", "");
+  else setStatus("setup", "warn", `${ready} of ${total} parts ready`, "Run the first-time setup.");
+  if (s.conflicts.length) {
+    setStatus("mods", "warn", `${plural(s.conflicts.length, "file", "files")} can clash`, s.conflicts.map(c => c.file.replace(/\\/g, "\\​")).join(", "));   // (a long path wraps at its folders)
+    $("clean-wrap").hidden = false;
+  } else {
+    setStatus("mods", "ok", "None that clash", s.workshop ? `${plural(s.workshop, "Workshop item", "Workshop items")}, loaded only when MCC starts with mods.` : "");
+    $("clean-wrap").hidden = true;
+  }
+  $("r-lidar").textContent = `${s.lidar.mapped} of ${s.lidar.total} maps mapped`;
+  $("lidar-bar").style.width = (s.lidar.total ? 100 * s.lidar.mapped / s.lidar.total : 0) + "%";
+
+  $("setup-count").textContent = `${ready} of ${total} ready`;
+  $("setup-meter").max = total; $("setup-meter").value = ready;
+  const list = $("steps"); list.innerHTML = "";
+  const allDone = ready === total && !Object.values(stepNote).some(Boolean) && !setupBusy;
+  $("setup-done").hidden = !allDone; list.hidden = allDone;
+  $("setup").hidden = allDone; $("setup-intro").hidden = allDone; $("setup-meter").hidden = allDone;
+  for (const [name, done, why] of s.setup) {
+    const li = document.createElement("li");
+    const note = stepNote[name];
+    const st = note && note.startsWith("failed") ? "failed" : note === "working" ? "working"
+      : note && note.startsWith("skipped") || why ? "skipped" : done ? "done" : "todo";
+    li.dataset.state = st;
+    li.innerHTML = `<svg class="i sm" aria-hidden="true"><use href="#${{failed: "i-bad", working: "i-spin", skipped: "i-skip", done: "i-ok", todo: "i-todo"}[st]}"/></svg>`
+      + `<span class="step-name"></span><span class="step-note"></span>`;
+    li.children[1].textContent = STEP_NAMES[name] || name;
+    li.children[2].textContent = cap(note && note !== "working" ? note : why ? `not needed: ${why}`
+      : done ? "ready" : (note === "working" ? "working ..." : "not yet"));
+    list.appendChild(li);
+  }
+  for (const [task, run] of Object.entries(s.running)) {
+    const b = task.startsWith("setup") ? $(task === "setup" ? "setup" : "setup-force") : task === "play" ? $("play") : document.querySelector(`[data-task="${task}"]`);
+    if (b) b.setAttribute("aria-busy", run ? "true" : "false");
+  }
+}
+
+async function refresh() {
+  try { render(await (await fetch("/status")).json()); $("banner").textContent = ""; }
+  catch (e) { $("banner").textContent = "The launcher stopped. Close this window and open Project Proving Grounds again."; }
+}
+
+const following = {};
+async function follow(task, box, stateEl) {
+  if (following[task]) return;
+  following[task] = true;
+  let from = 0;
+  $(box).textContent = "";
+  while (true) {
+    const r = await (await fetch(`/log/${task}?from=${from}`)).json();
+    from = r.next;
+    for (const line of r.lines) {
+      $(box).textContent += line + "\n";
+      const m = line.match(/^STEP \d+\/\d+ ([^:]+): (.*)$/);
+      if (m) stepNote[m[1]] = m[2].startsWith("working") ? "working" : m[2].startsWith("failed") || m[2].startsWith("skipped") ? m[2] : undefined;
+    }
+    $(box).scrollTop = $(box).scrollHeight;
+    if (!r.running) {
+      setText(stateEl, r.code === 0 ? "Done." : "Stopped with a problem: see the failed step and the log below.", r.code === 0 ? "ok" : "bad");
+      break;
+    }
+    await new Promise(res => setTimeout(res, 700));
+  }
+  following[task] = false;
+  refresh();
+}
+
+async function chooseMcc(body) {
+  setText("mcc-state", body.browse ? "Choose the folder in the window that opens ..." : "Checking ...", "dim");
+  const r = await post("/mcc", body);
+  setText("mcc-state", r.ok ? (body.auto ? "Back to automatic." : `Using ${r.message}. Run Repair if it is a different copy.`)
+                            : r.message, r.ok ? "ok" : "bad");
+  $("mcc-path").setAttribute("aria-invalid", !r.ok && !body.browse && !body.auto ? "true" : "false");
+  if (r.ok) $("mcc-path").value = "";
+  refresh();
+}
+$("mcc-path").setAttribute("aria-describedby", "mcc-state");
+$("mcc-browse").onclick = () => chooseMcc({browse: true});
+$("mcc-auto").onclick = () => chooseMcc({auto: true});
+$("mcc-form").onsubmit = e => { e.preventDefault(); chooseMcc({path: $("mcc-path").value}); };
+
+$("play").onclick = async () => {
+  if (state && state.wine) { location.href = "steam://rungameid/976730"; setText("play-state", "Steam starts MCC: choose the anti-cheat off option. The bots load as it starts.", "dim"); return; }
+  if (state && !state.mcc) { setText("play-state", "Choose the MCC folder in Game folder first, or install MCC through Steam.", "bad"); $("folder-card").open = true; return; }
+  if (state && state.setup.some(x => !x[1])) setText("play-state", "Starting. The first-time setup is not finished, so the 3D bots or pictures may be missing ...", "warn");
+  else setText("play-state", "Starting MCC ...", "dim");
+  const r = await post("/run/play", {clean: !$("clean-wrap").hidden && $("clean").checked});
+  if (!r.ok) { setText("play-state", r.message, "bad"); return; }
+  follow("play", "log-play", "play-state");
+};
+async function runSetup(task) {
+  setText("setup-state", "Working ... (a few minutes)", "dim");
+  const r = await post("/run/" + task);
+  if (!r.ok) { setText("setup-state", r.message, "bad"); return; }
+  follow(task, "log-setup", "setup-state");
+}
+$("setup").onclick = () => runSetup("setup");
+$("setup-force").onclick = () => runSetup("setup_force");
+for (const b of document.querySelectorAll("[data-task]")) {
+  const name = $(b.getAttribute("aria-labelledby")).textContent;
+  b.onclick = async () => {
+    setText("tool-state", `Opening ${name} ...`, "dim");
+    const tab = state && state.wine ? window.open("about:blank") : null;   // (Linux: the tool's page opens in a tab)
+    const r = await post("/run/" + b.dataset.task);
+    if (tab && r.ok && r.port) {
+      const url = `http://127.0.0.1:${r.port}/`;
+      for (let i = 0; i < 60; i++) {
+        try { await fetch(url, {mode: "no-cors"}); break; } catch (e) { await new Promise(res => setTimeout(res, 500)); }
+      }
+      tab.location = url;
+    } else if (tab) tab.close();
+    setText("tool-state", r.ok ? `${name}: its window opens in a moment.` : r.message, r.ok ? "dim" : "bad");
+  };
+}
+$("folder").onclick = () => post("/folder");
+$("docs").onclick = () => post("/docs");
+function askUninstall(open) {
+  setText("uninstall-state", "");
+  if (open) { $("uninstall-ask").showModal(); $("uninstall-no").focus(); }
+  else { $("uninstall-ask").close(); $("uninstall").focus(); }
+}
+$("uninstall").onclick = () => askUninstall(true);
+$("uninstall-no").onclick = () => askUninstall(false);
+$("uninstall-ask").addEventListener("close", () => $("uninstall").focus());   // (Esc closes it too)
+$("uninstall-yes").onclick = async () => {
+  const r = await post("/uninstall");
+  if (!r.ok) { setText("uninstall-state", r.message, "bad"); return; }
+  setText("uninstall-state", "Closing the mod's windows; the uninstaller opens in a moment ...", "dim");
+};
+refresh().then(() => {
+  if (location.search.includes("setup=1") && state && state.mcc && state.setup.some(x => !x[1])) runSetup("setup");
+});
+setInterval(refresh, 3000);
+setInterval(() => post("/ping"), 5000);
+post("/ping");
+</script>
+</body>
+</html>

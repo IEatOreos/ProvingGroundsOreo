@@ -1,0 +1,899 @@
+{
+ "map": "chillout",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 5.58,
+ "points": {
+  "mid": [
+   0.8,
+   -1.5,
+   0.0
+  ],
+  "mid_hill": [
+   -1.5,
+   -0.6,
+   2.8
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    7.49,
+    -4.49,
+    2.5
+   ],
+   [
+    8.02,
+    1.49,
+    2.38
+   ]
+  ],
+  "blue": [
+   [
+    -7.51,
+    9.75,
+    0.1
+   ],
+   [
+    -8.04,
+    3.77,
+    -0.0
+   ],
+   [
+    -1.57,
+    10.59,
+    0.75
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   6.3,
+   1.07,
+   2.38
+  ],
+  [
+   10.96,
+   3.87,
+   3.53
+  ],
+  [
+   5.78,
+   -3.43,
+   2.38
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Main": {
+   "poly": [
+    [
+     -2.4,
+     -6.0
+    ],
+    [
+     4.6,
+     -6.0
+    ],
+    [
+     4.6,
+     2.6
+    ],
+    [
+     -2.4,
+     2.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 14,
+   "full": "the large central room",
+   "aka": [
+    "main room",
+    "lobby",
+    "bottom main",
+    "main pillars"
+   ],
+   "area": true
+  },
+  "Health pack": {
+   "poly": [
+    [
+     -1.6,
+     -3.8
+    ],
+    [
+     0.9,
+     -3.8
+    ],
+    [
+     0.9,
+     -1.6
+    ],
+    [
+     -1.6,
+     -1.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "health pack alcove on the south side of main",
+   "aka": [
+    "health"
+   ],
+   "area": false,
+   "zmax": 0.8
+  },
+  "Opposite": {
+   "poly": [
+    [
+     2.2,
+     -3.8
+    ],
+    [
+     4.6,
+     -3.8
+    ],
+    [
+     4.6,
+     -1.6
+    ],
+    [
+     2.2,
+     -1.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "the alcove across main from the health pack",
+   "aka": [],
+   "area": false,
+   "zmax": 0.8
+  },
+  "Bottom PR": {
+   "poly": [
+    [
+     0.8,
+     -1.2
+    ],
+    [
+     3.2,
+     -1.2
+    ],
+    [
+     3.2,
+     1.0
+    ],
+    [
+     0.8,
+     1.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "plasma rifle by the pillars in the middle of main",
+   "aka": [
+    "PR1"
+   ],
+   "area": false,
+   "zmax": 0.8
+  },
+  "Side door": {
+   "poly": [
+    [
+     4.0,
+     -1.4
+    ],
+    [
+     5.2,
+     -1.4
+    ],
+    [
+     5.2,
+     1.6
+    ],
+    [
+     4.0,
+     1.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "main's east doorway, by bottom PR, into dark",
+   "aka": [],
+   "area": false,
+   "zmax": 1.0
+  },
+  "Double doors": {
+   "poly": [
+    [
+     -1.8,
+     2.2
+    ],
+    [
+     4.4,
+     2.2
+    ],
+    [
+     4.4,
+     3.8
+    ],
+    [
+     -1.8,
+     3.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "the pair of doorways from main north into the rocket room",
+   "aka": [
+    "doubles"
+   ],
+   "area": false,
+   "zmax": 2.0
+  },
+  "Needles": {
+   "poly": [
+    [
+     -3.6,
+     -1.4
+    ],
+    [
+     0.4,
+     -1.4
+    ],
+    [
+     0.4,
+     0.3
+    ],
+    [
+     -3.6,
+     0.3
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "needler spawn on the high bridge over main, top of the spiral",
+   "aka": [
+    "needler",
+    "dark bridge",
+    "needle bridge",
+    "low bridge"
+   ],
+   "area": false,
+   "zmin": 1.5
+  },
+  "Pink broken": {
+   "poly": [
+    [
+     0.4,
+     -1.4
+    ],
+    [
+     4.8,
+     -1.4
+    ],
+    [
+     4.8,
+     0.3
+    ],
+    [
+     0.4,
+     0.3
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "broken bridge from the needles to the pink room",
+   "aka": [
+    "broken bridge",
+    "pink bridge"
+   ],
+   "area": false,
+   "zmin": 1.5
+  },
+  "Spiral": {
+   "poly": [
+    [
+     -10.6,
+     -1.6
+    ],
+    [
+     -3.6,
+     -1.6
+    ],
+    [
+     -3.6,
+     2.8
+    ],
+    [
+     -10.6,
+     2.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "spiral stairs from the needles down toward the shotgun room",
+   "aka": [
+    "spiral stairs"
+   ],
+   "area": false,
+   "zmin": 0.8
+  },
+  "OS": {
+   "poly": [
+    [
+     -11.0,
+     -2.4
+    ],
+    [
+     -2.4,
+     -2.4
+    ],
+    [
+     -2.4,
+     1.9
+    ],
+    [
+     -11.0,
+     1.9
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "overshield hall between main and the shotgun room",
+   "aka": [
+    "OV",
+    "OS hall",
+    "front door"
+   ],
+   "area": false,
+   "zmax": 0.8
+  },
+  "Shotgun": {
+   "poly": [
+    [
+     -11.0,
+     1.9
+    ],
+    [
+     -2.2,
+     1.9
+    ],
+    [
+     -2.2,
+     13.0
+    ],
+    [
+     -11.0,
+     13.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 14,
+   "full": "the shotgun room with the blue flag",
+   "aka": [
+    "shotties",
+    "shotgun room",
+    "top shotties",
+    "blue flag"
+   ],
+   "area": true
+  },
+  "Shotgun ramp": {
+   "poly": [
+    [
+     -5.4,
+     2.4
+    ],
+    [
+     -3.4,
+     2.4
+    ],
+    [
+     -3.4,
+     6.8
+    ],
+    [
+     -5.4,
+     6.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "ramp from the shotgun room floor up to the spiral",
+   "aka": [],
+   "area": false
+  },
+  "Pillar": {
+   "poly": [
+    [
+     -7.4,
+     3.8
+    ],
+    [
+     -5.6,
+     3.8
+    ],
+    [
+     -5.6,
+     5.8
+    ],
+    [
+     -7.4,
+     5.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "pillar next to the shotgun spawn",
+   "aka": [
+    "shotgun pillar"
+   ],
+   "area": false
+  },
+  "Rocket room": {
+   "poly": [
+    [
+     -2.4,
+     2.6
+    ],
+    [
+     6.2,
+     2.6
+    ],
+    [
+     6.2,
+     13.0
+    ],
+    [
+     -2.4,
+     13.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 14,
+   "full": "the room north of main with the rocket tower",
+   "aka": [
+    "rocket pillars"
+   ],
+   "area": true
+  },
+  "Pistols": {
+   "poly": [
+    [
+     0.2,
+     4.4
+    ],
+    [
+     3.0,
+     4.4
+    ],
+    [
+     3.0,
+     7.4
+    ],
+    [
+     0.2,
+     7.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "pistol spawns right behind the double doors",
+   "aka": [
+    "pistol"
+   ],
+   "area": false,
+   "zmax": 2.0
+  },
+  "Rockets": {
+   "poly": [
+    [
+     -2.4,
+     8.0
+    ],
+    [
+     2.2,
+     8.0
+    ],
+    [
+     2.2,
+     11.8
+    ],
+    [
+     -2.4,
+     11.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "rocket launcher on top of the tall structure",
+   "aka": [
+    "top rockets"
+   ],
+   "area": false,
+   "zmin": 2.6
+  },
+  "Bottom rockets": {
+   "poly": [
+    [
+     -2.4,
+     8.0
+    ],
+    [
+     2.2,
+     8.0
+    ],
+    [
+     2.2,
+     11.8
+    ],
+    [
+     -2.4,
+     11.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "floor under the rocket tower",
+   "aka": [],
+   "area": false,
+   "zmax": 2.6
+  },
+  "Back door": {
+   "poly": [
+    [
+     -3.2,
+     9.0
+    ],
+    [
+     -1.6,
+     9.0
+    ],
+    [
+     -1.6,
+     11.6
+    ],
+    [
+     -3.2,
+     11.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "door from the rocket room back to the shotgun room",
+   "aka": [],
+   "area": false,
+   "zmax": 2.0
+  },
+  "Rocket ramp": {
+   "poly": [
+    [
+     3.6,
+     9.4
+    ],
+    [
+     6.4,
+     9.4
+    ],
+    [
+     6.4,
+     12.6
+    ],
+    [
+     3.6,
+     12.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "ramp up the east side of the rocket room to top PR",
+   "aka": [
+    "PR ramp"
+   ],
+   "area": false
+  },
+  "Top PR": {
+   "poly": [
+    [
+     3.6,
+     4.6
+    ],
+    [
+     6.4,
+     4.6
+    ],
+    [
+     6.4,
+     9.4
+    ],
+    [
+     3.6,
+     9.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "plasma rifle on the upper ledge of the rocket room",
+   "aka": [
+    "PR2"
+   ],
+   "area": false,
+   "zmin": 2.6
+  },
+  "High bridge": {
+   "poly": [
+    [
+     6.0,
+     4.8
+    ],
+    [
+     9.4,
+     4.8
+    ],
+    [
+     9.4,
+     6.6
+    ],
+    [
+     6.0,
+     6.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "upper walkway from top PR to the sniper hall",
+   "aka": [
+    "snipe bridge"
+   ],
+   "area": false,
+   "zmin": 2.6
+  },
+  "Sniper hall": {
+   "poly": [
+    [
+     8.8,
+     -0.6
+    ],
+    [
+     12.6,
+     -0.6
+    ],
+    [
+     12.6,
+     6.6
+    ],
+    [
+     8.8,
+     6.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "upper hall over dark where the sniper spawns",
+   "aka": [
+    "sniper room",
+    "snipe room"
+   ],
+   "area": false,
+   "zmin": 2.9
+  },
+  "Top health": {
+   "poly": [
+    [
+     9.0,
+     1.8
+    ],
+    [
+     10.9,
+     1.8
+    ],
+    [
+     10.9,
+     3.4
+    ],
+    [
+     9.0,
+     3.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "health pack in the sniper hall",
+   "aka": [
+    "top health pack",
+    "top HP"
+   ],
+   "area": false,
+   "zmin": 2.9
+  },
+  "Top portal": {
+   "poly": [
+    [
+     10.9,
+     1.8
+    ],
+    [
+     12.8,
+     1.8
+    ],
+    [
+     12.8,
+     3.4
+    ],
+    [
+     10.9,
+     3.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 40,
+   "full": "teleporter at the end of the sniper hall",
+   "aka": [
+    "top tele"
+   ],
+   "area": false,
+   "zmin": 2.9
+  },
+  "Sniper": {
+   "poly": [
+    [
+     8.4,
+     -2.4
+    ],
+    [
+     10.6,
+     -2.4
+    ],
+    [
+     10.6,
+     0.6
+    ],
+    [
+     8.4,
+     0.6
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "sniper spawn at the top of the short ramp from the pink room",
+   "aka": [
+    "snipe"
+   ],
+   "area": false,
+   "zmin": 2.0
+  },
+  "Pink": {
+   "poly": [
+    [
+     3.6,
+     -8.4
+    ],
+    [
+     12.6,
+     -8.4
+    ],
+    [
+     12.6,
+     -1.4
+    ],
+    [
+     3.6,
+     -1.4
+    ]
+   ],
+   "side": "red",
+   "priority": 14,
+   "full": "the pink-lit room with the camo and the red flag",
+   "aka": [
+    "pink room",
+    "camo room",
+    "cloak room",
+    "red flag"
+   ],
+   "area": true
+  },
+  "Pink hall": {
+   "poly": [
+    [
+     4.8,
+     -1.4
+    ],
+    [
+     9.4,
+     -1.4
+    ],
+    [
+     9.4,
+     1.9
+    ],
+    [
+     4.8,
+     1.9
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "hall at the north end of the pink room, by its teleporter exit",
+   "aka": [
+    "pink portal"
+   ],
+   "area": false,
+   "zmin": 1.6
+  },
+  "Camo": {
+   "poly": [
+    [
+     5.0,
+     -5.6
+    ],
+    [
+     7.0,
+     -5.6
+    ],
+    [
+     7.0,
+     -3.6
+    ],
+    [
+     5.0,
+     -3.6
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "camo spawn in the pink room next to the flag",
+   "aka": [
+    "cloak"
+   ],
+   "area": false,
+   "zmin": 1.6
+  },
+  "Dark": {
+   "poly": [
+    [
+     4.6,
+     -1.4
+    ],
+    [
+     8.8,
+     -1.4
+    ],
+    [
+     8.8,
+     -0.8
+    ],
+    [
+     13.0,
+     -0.8
+    ],
+    [
+     13.0,
+     13.0
+    ],
+    [
+     6.2,
+     13.0
+    ],
+    [
+     6.2,
+     1.9
+    ],
+    [
+     4.6,
+     1.9
+    ]
+   ],
+   "side": "mid",
+   "priority": 14,
+   "full": "the dark hall from main's side door and the dark room under the sniper hall",
+   "aka": [
+    "dark room",
+    "dark hall",
+    "front dark"
+   ],
+   "area": true
+  }
+ }
+}

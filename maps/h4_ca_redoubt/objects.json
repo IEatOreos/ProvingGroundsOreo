@@ -1,0 +1,13793 @@
+{
+ "netgame_flags": [
+  {
+   "type": "no_dom",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.607,
+    -8.489,
+    4.217
+   ],
+   "facing": 101.83,
+   "object": "mp_cinematic_fallback_camera"
+  },
+  {
+   "type": "dom_bigscreen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    31.71,
+    13.804,
+    2.701
+   ],
+   "facing": 149.643,
+   "object": "ca_dom_lrg_monitor_3"
+  },
+  {
+   "type": "dom_bigscreen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    31.042,
+    7.264,
+    2.67
+   ],
+   "facing": -6.984,
+   "object": "ca_dom_lrg_monitor_3"
+  },
+  {
+   "type": "dom_bigscreen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.063,
+    1.364,
+    3.725
+   ],
+   "facing": 137.318,
+   "object": "ca_dom_lrg_monitor_3"
+  },
+  {
+   "type": "dom_bigscreen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.802,
+    -1.39,
+    4.075
+   ],
+   "facing": -90.0,
+   "object": "ca_dom_monitor_4foot"
+  },
+  {
+   "type": "dom_bigscreen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -34.429,
+    7.372,
+    2.071
+   ],
+   "facing": -90.0,
+   "object": "ca_dom_monitor_4foot"
+  },
+  {
+   "type": "dom_bigscreen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.194,
+    8.671,
+    2.337
+   ],
+   "facing": -90.0,
+   "object": "ca_dom_monitor_4foot"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.527,
+    5.466,
+    1.913
+   ],
+   "facing": 0.0,
+   "object": "ca_dom_lrg_monitor_2"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -34.284,
+    11.152,
+    1.89
+   ],
+   "facing": -126.23,
+   "object": "ca_dom_lrg_monitor_1"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.113,
+    -3.339,
+    3.693
+   ],
+   "facing": 179.224,
+   "object": "ca_dom_lrg_monitor_1"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.385,
+    5.301,
+    3.69
+   ],
+   "facing": 179.224,
+   "object": "ca_dom_lrg_monitor_1"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.206,
+    -2.49,
+    3.694
+   ],
+   "facing": 0.0,
+   "object": "ca_dom_lrg_monitor_2"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.376,
+    7.738,
+    3.69
+   ],
+   "facing": -90.0,
+   "object": "ca_dom_lrg_monitor_2"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    34.088,
+    8.198,
+    2.48
+   ],
+   "facing": 84.399,
+   "object": "ca_dom_lrg_monitor_1"
+  },
+  {
+   "type": "dom_screen",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.456,
+    13.81,
+    2.745
+   ],
+   "facing": 169.22,
+   "object": "ca_dom_lrg_monitor_1"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.519,
+    0.611,
+    3.713
+   ],
+   "facing": -74.091,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.533,
+    0.577,
+    3.874
+   ],
+   "facing": -74.091,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.529,
+    0.569,
+    4.035
+   ],
+   "facing": -145.031,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.591,
+    6.534,
+    3.683
+   ],
+   "facing": -90.857,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.665,
+    7.064,
+    3.683
+   ],
+   "facing": -108.849,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.641,
+    6.75,
+    3.913
+   ],
+   "facing": -100.78,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    3.587,
+    -0.507,
+    3.672
+   ],
+   "facing": 152.793,
+   "object": "ca_dom_terminal_lights"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.182,
+    -2.302,
+    3.659
+   ],
+   "facing": 69.445,
+   "object": "ca_dom_terminal_lights"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.145,
+    8.305,
+    3.92
+   ],
+   "facing": 47.153,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.182,
+    8.215,
+    3.69
+   ],
+   "facing": 2.586,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.158,
+    8.405,
+    3.69
+   ],
+   "facing": -2.048,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.228,
+    -4.999,
+    3.683
+   ],
+   "facing": -8.363,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.263,
+    -5.38,
+    3.683
+   ],
+   "facing": 11.424,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.186,
+    -4.916,
+    3.913
+   ],
+   "facing": -52.075,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -3.236,
+    -4.793,
+    3.683
+   ],
+   "facing": -5.754,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    34.207,
+    8.826,
+    2.484
+   ],
+   "facing": 166.081,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    34.211,
+    8.831,
+    2.611
+   ],
+   "facing": 153.549,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    27.392,
+    13.536,
+    2.602
+   ],
+   "facing": -41.389,
+   "object": "ca_dom_terminal_lights"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.992,
+    9.103,
+    1.922
+   ],
+   "facing": -162.515,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.997,
+    9.075,
+    2.189
+   ],
+   "facing": 174.572,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.99,
+    9.073,
+    2.055
+   ],
+   "facing": 178.211,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.02,
+    8.396,
+    2.12
+   ],
+   "facing": -99.044,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.367,
+    11.753,
+    1.913
+   ],
+   "facing": 73.954,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.183,
+    11.732,
+    1.913
+   ],
+   "facing": 73.954,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.371,
+    11.745,
+    2.143
+   ],
+   "facing": 70.836,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.174,
+    11.693,
+    2.143
+   ],
+   "facing": 78.222,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -26.268,
+    6.245,
+    1.928
+   ],
+   "facing": 148.726,
+   "object": "ca_dom_terminal_lights"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -26.57,
+    5.88,
+    1.928
+   ],
+   "facing": -165.185,
+   "object": "ca_dom_terminal_case"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -26.583,
+    5.886,
+    2.158
+   ],
+   "facing": 119.775,
+   "object": "ca_dom_terminal_battery"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -28.434,
+    19.288,
+    0.723
+   ],
+   "facing": -88.622,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.011,
+    2.285,
+    3.68
+   ],
+   "facing": 171.941,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    6.984,
+    2.84,
+    3.68
+   ],
+   "facing": -60.057,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    21.346,
+    23.81,
+    0.781
+   ],
+   "facing": -4.675,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    29.023,
+    12.502,
+    2.586
+   ],
+   "facing": 10.992,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.183,
+    13.061,
+    2.603
+   ],
+   "facing": 19.073,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.262,
+    10.136,
+    2.47
+   ],
+   "facing": 98.197,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.571,
+    8.897,
+    2.463
+   ],
+   "facing": 88.901,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    29.852,
+    11.349,
+    2.48
+   ],
+   "facing": 98.197,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    33.194,
+    8.467,
+    2.434
+   ],
+   "facing": 153.342,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    31.97,
+    8.892,
+    2.435
+   ],
+   "facing": 146.756,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.974,
+    9.642,
+    2.441
+   ],
+   "facing": 117.464,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.426,
+    10.719,
+    2.451
+   ],
+   "facing": 133.378,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    29.686,
+    11.582,
+    2.468
+   ],
+   "facing": 177.391,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    25.495,
+    8.753,
+    2.744
+   ],
+   "facing": -178.507,
+   "object": "ca_dom_terminal_wires"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.045,
+    -0.393,
+    3.713
+   ],
+   "facing": 71.26,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.008,
+    -1.675,
+    3.713
+   ],
+   "facing": 91.604,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.681,
+    4.464,
+    3.698
+   ],
+   "facing": -67.626,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.208,
+    -3.863,
+    3.699
+   ],
+   "facing": -30.911,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.427,
+    3.261,
+    3.693
+   ],
+   "facing": -78.576,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.949,
+    2.067,
+    3.699
+   ],
+   "facing": -78.576,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.355,
+    1.031,
+    3.699
+   ],
+   "facing": -24.999,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.391,
+    0.488,
+    3.692
+   ],
+   "facing": 15.842,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.961,
+    -4.172,
+    3.699
+   ],
+   "facing": 18.292,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.0,
+    -3.829,
+    3.699
+   ],
+   "facing": 67.276,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.339,
+    -2.823,
+    3.705
+   ],
+   "facing": 126.033,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.77,
+    -1.897,
+    3.692
+   ],
+   "facing": 166.15,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.095,
+    -0.896,
+    3.713
+   ],
+   "facing": -120.68,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.405,
+    0.165,
+    3.723
+   ],
+   "facing": -145.483,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.486,
+    7.674,
+    3.69
+   ],
+   "facing": -154.441,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.503,
+    7.207,
+    3.687
+   ],
+   "facing": 153.432,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.29,
+    6.272,
+    3.694
+   ],
+   "facing": 123.641,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.146,
+    5.326,
+    3.691
+   ],
+   "facing": 117.905,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.674,
+    7.659,
+    3.712
+   ],
+   "facing": -154.441,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.955,
+    4.319,
+    3.684
+   ],
+   "facing": 117.905,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.289,
+    2.082,
+    3.698
+   ],
+   "facing": 96.593,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.427,
+    3.238,
+    3.686
+   ],
+   "facing": 118.479,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.686,
+    1.105,
+    3.699
+   ],
+   "facing": 69.691,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.681,
+    0.718,
+    3.713
+   ],
+   "facing": 22.212,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    12.617,
+    3.14,
+    3.672
+   ],
+   "facing": 9.866,
+   "object": "ca_dom_terminal_wires"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    9.862,
+    2.592,
+    3.67
+   ],
+   "facing": 9.866,
+   "object": "ca_dom_terminal_wires"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.117,
+    2.065,
+    3.665
+   ],
+   "facing": 8.816,
+   "object": "ca_dom_terminal_wires"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    4.393,
+    1.421,
+    3.676
+   ],
+   "facing": 14.497,
+   "object": "ca_dom_terminal_wires"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.738,
+    0.552,
+    3.692
+   ],
+   "facing": -170.563,
+   "object": "ca_dom_terminal_wires"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    3.093,
+    0.997,
+    3.683
+   ],
+   "facing": 177.47,
+   "object": "ca_dom_junctionbox"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    3.087,
+    0.86,
+    3.683
+   ],
+   "facing": 177.47,
+   "object": "ca_dom_junctionbox"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -33.683,
+    10.437,
+    1.937
+   ],
+   "facing": 61.598,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.646,
+    9.733,
+    1.915
+   ],
+   "facing": -44.665,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -33.892,
+    6.706,
+    1.914
+   ],
+   "facing": 22.581,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.882,
+    7.377,
+    1.919
+   ],
+   "facing": 62.163,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.272,
+    8.309,
+    1.919
+   ],
+   "facing": 100.964,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -34.416,
+    6.182,
+    2.022
+   ],
+   "facing": -140.017,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -34.402,
+    6.326,
+    1.915
+   ],
+   "facing": 177.935,
+   "object": "ca_dom_junctionbox"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.099,
+    9.565,
+    1.915
+   ],
+   "facing": -140.017,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.382,
+    9.165,
+    1.931
+   ],
+   "facing": 143.215,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.098,
+    9.724,
+    1.922
+   ],
+   "facing": 0.0,
+   "object": "ca_dom_junctionbox"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.962,
+    7.676,
+    1.91
+   ],
+   "facing": -61.21,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.435,
+    6.705,
+    1.916
+   ],
+   "facing": -13.016,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -30.313,
+    6.441,
+    1.919
+   ],
+   "facing": -5.653,
+   "object": "dom_terminal_wires002"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.459,
+    5.936,
+    1.939
+   ],
+   "facing": 91.811,
+   "object": "dom_terminal_wires003"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -28.927,
+    19.405,
+    0.729
+   ],
+   "facing": -37.577,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.762,
+    2.699,
+    1.923
+   ],
+   "facing": -78.613,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -31.786,
+    2.267,
+    1.923
+   ],
+   "facing": -175.138,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -4.103,
+    2.329,
+    3.811
+   ],
+   "facing": 135.701,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -4.235,
+    2.922,
+    3.806
+   ],
+   "facing": -2.412,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    22.642,
+    10.186,
+    2.723
+   ],
+   "facing": 131.081,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    23.209,
+    10.397,
+    2.715
+   ],
+   "facing": -148.254,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    21.079,
+    23.215,
+    0.778
+   ],
+   "facing": 84.586,
+   "object": "ca_dom_terminal_sandbags"
+  },
+  {
+   "type": "ext_decal",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.248,
+    7.693,
+    3.661
+   ],
+   "facing": 0.0,
+   "object": "ca_blam_site_decal"
+  },
+  {
+   "type": "ext_decal",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -17.549,
+    -5.436,
+    2.242
+   ],
+   "facing": 0.0,
+   "object": "ca_blam_site_decal"
+  },
+  {
+   "type": "ext_decal",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    9.79,
+    -16.929,
+    4.198
+   ],
+   "facing": 0.0,
+   "object": "ca_blam_site_decal"
+  },
+  {
+   "type": "ext_decal",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.983,
+    8.767,
+    3.701
+   ],
+   "facing": 0.0,
+   "object": "ca_blam_site_decal"
+  },
+  {
+   "type": "ext_decal",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    25.842,
+    6.79,
+    2.739
+   ],
+   "facing": 0.0,
+   "object": "ca_blam_site_decal"
+  },
+  {
+   "type": "dom_shield",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.471,
+    2.603,
+    0.38
+   ],
+   "facing": -179.787,
+   "object": "dom_damage_team_shield_small"
+  },
+  {
+   "type": "dom_shield",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -33.029,
+    11.925,
+    2.658
+   ],
+   "facing": 90.138,
+   "object": "dom_damage_team_shield_small"
+  },
+  {
+   "type": "dom_shield",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.996,
+    5.483,
+    2.707
+   ],
+   "facing": -89.439,
+   "object": "dom_damage_team_shield_small"
+  },
+  {
+   "type": "dom_shield",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    4.69,
+    2.458,
+    5.724
+   ],
+   "facing": -179.787,
+   "object": "dom_damage_team_shield_large"
+  },
+  {
+   "type": "dom_shield",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    27.523,
+    8.323,
+    4.917
+   ],
+   "facing": -169.393,
+   "object": "dom_damage_team_shield_large"
+  },
+  {
+   "type": "dom_shield",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    30.969,
+    -1.285,
+    4.733
+   ],
+   "facing": -150.983,
+   "object": "dom_damage_team_shield_large"
+  },
+  {
+   "type": "dom_base_zone",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.247,
+    2.99,
+    4.391
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "dom_base_zone",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -30.06,
+    8.859,
+    2.082
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "dom_base_zone",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    33.044,
+    7.395,
+    3.442
+   ],
+   "facing": 28.441,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.116,
+    0.379,
+    3.715
+   ],
+   "facing": 0.0,
+   "object": "fw_unsc_sandbags_single"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.355,
+    0.323,
+    3.723
+   ],
+   "facing": -77.72,
+   "object": "fw_unsc_sandbags_single"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -32.111,
+    8.703,
+    1.919
+   ],
+   "facing": -85.975,
+   "object": "fw_unsc_sandbags_single"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -32.191,
+    8.915,
+    1.907
+   ],
+   "facing": 20.517,
+   "object": "fw_unsc_sandbags_single"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -31.633,
+    8.641,
+    1.897
+   ],
+   "facing": 9.15,
+   "object": "fw_unsc_sandbags_single"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -3.877,
+    -37.665,
+    1.153
+   ],
+   "facing": 0.0,
+   "object": "ca_redoubt_forerunner_door_01"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    5.379,
+    -36.572,
+    0.945
+   ],
+   "facing": 0.0,
+   "object": "ca_redoubt_forerunner_door_01"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -3.585,
+    -41.11,
+    1.344
+   ],
+   "facing": 180.0,
+   "object": "ca_redoubt_forerunner_door_01"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -8.497,
+    41.286,
+    -0.159
+   ],
+   "facing": 0.0,
+   "object": "ca_redoubt_forerunner_door_01"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.034,
+    41.384,
+    -0.14
+   ],
+   "facing": 0.0,
+   "object": "ca_redoubt_forerunner_door_01"
+  },
+  {
+   "type": "dominion",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.022,
+    46.223,
+    0.334
+   ],
+   "facing": 0.0,
+   "object": "ca_redoubt_forerunner_door_01"
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -1.227,
+    8.89,
+    3.808
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    11.623,
+    -17.904,
+    3.993
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -18.483,
+    20.7,
+    0.211
+   ],
+   "facing": 23.389,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -18.467,
+    -5.24,
+    2.228
+   ],
+   "facing": -16.546,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    30.884,
+    10.418,
+    2.479
+   ],
+   "facing": 9.245,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    27.615,
+    -4.791,
+    2.593
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -37.748,
+    7.455,
+    1.318
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -14.343,
+    -8.023,
+    2.374
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.741,
+    21.046,
+    0.275
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    8.881,
+    -16.692,
+    4.028
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.794,
+    -2.258,
+    -0.134
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.213,
+    -0.088,
+    3.753
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "ext_site",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.262,
+    8.673,
+    3.672
+   ],
+   "facing": -0.624,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "ext_site",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.973,
+    -5.582,
+    2.283
+   ],
+   "facing": 169.087,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "ext_site",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    9.687,
+    -16.728,
+    4.029
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "ext_site",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.884,
+    9.113,
+    3.672
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "ext_site",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    24.888,
+    7.64,
+    2.783
+   ],
+   "facing": 21.652,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "ctf - flag",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    -4.373,
+    41.14,
+    -1.002
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    -4.373,
+    41.14,
+    -1.002
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 8,
+   "team": 8,
+   "pos": [
+    0.137,
+    -0.653,
+    3.713
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 8,
+   "team": 8,
+   "pos": [
+    0.137,
+    -0.653,
+    3.713
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.687,
+    -35.058,
+    0.137
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.687,
+    -35.058,
+    0.137
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 2,
+   "team": 2,
+   "pos": [
+    -33.05,
+    8.715,
+    1.919
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 2,
+   "team": 2,
+   "pos": [
+    -33.05,
+    8.715,
+    1.919
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 3,
+   "team": 3,
+   "pos": [
+    26.332,
+    -3.608,
+    2.554
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 3,
+   "team": 3,
+   "pos": [
+    26.332,
+    -3.608,
+    2.554
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "grif_goal",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    -11.443,
+    31.555,
+    -2.451
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "grif_goal",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -3.59,
+    -29.044,
+    -1.292
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "grif_spawn",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.54,
+    2.665,
+    3.71
+   ],
+   "facing": 0.0,
+   "object": "storm_mp_circle"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    24.986,
+    3.113,
+    3.519
+   ],
+   "facing": -34.603,
+   "object": "ca_dom_antenna_large"
+  },
+  {
+   "type": "dom_base",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    28.353,
+    12.185,
+    2.709
+   ],
+   "facing": -100.382,
+   "object": "ca_ai_terminal"
+  },
+  {
+   "type": "dom_base",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.125,
+    0.465,
+    3.713
+   ],
+   "facing": -90.0,
+   "object": "ca_ai_terminal"
+  },
+  {
+   "type": "dom_base",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.008,
+    8.681,
+    1.922
+   ],
+   "facing": -180.0,
+   "object": "ca_ai_terminal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -24.457,
+    8.736,
+    2.684
+   ],
+   "facing": 90.0,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -35.04,
+    7.419,
+    3.085
+   ],
+   "facing": -90.9,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.972,
+    4.741,
+    4.202
+   ],
+   "facing": 0.0,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -33.294,
+    12.709,
+    4.137
+   ],
+   "facing": -180.0,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    6.984,
+    2.628,
+    6.027
+   ],
+   "facing": 90.0,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.874,
+    -9.418,
+    3.815
+   ],
+   "facing": -0.833,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -6.726,
+    2.661,
+    6.022
+   ],
+   "facing": -90.0,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.636,
+    2.58,
+    0.921
+   ],
+   "facing": -89.24,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    6.795,
+    17.163,
+    2.789
+   ],
+   "facing": 0.0,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    27.13,
+    5.741,
+    4.411
+   ],
+   "facing": -121.029,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    24.821,
+    11.075,
+    4.225
+   ],
+   "facing": -51.77,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    23.747,
+    -3.062,
+    4.237
+   ],
+   "facing": -106.225,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_decor",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    21.366,
+    19.77,
+    2.724
+   ],
+   "facing": -159.024,
+   "object": "ca_dom_base_decal"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -6.64,
+    4.344,
+    3.113
+   ],
+   "facing": -0.0,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -6.672,
+    0.977,
+    3.141
+   ],
+   "facing": -0.0,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    12.917,
+    0.765,
+    3.672
+   ],
+   "facing": -0.0,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    12.898,
+    4.466,
+    3.657
+   ],
+   "facing": -0.0,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    8.341,
+    15.614,
+    3.31
+   ],
+   "facing": 88.58,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -34.196,
+    13.899,
+    1.193
+   ],
+   "facing": 142.031,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.37,
+    1.885,
+    -0.098
+   ],
+   "facing": 137.565,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    20.092,
+    19.0,
+    1.35
+   ],
+   "facing": -108.66,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    28.278,
+    -0.943,
+    3.665
+   ],
+   "facing": 157.969,
+   "object": "ca_dom_antenna_small"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    22.993,
+    2.863,
+    2.748
+   ],
+   "facing": 176.898,
+   "object": "ca_dom_cover"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    22.898,
+    1.185,
+    2.753
+   ],
+   "facing": 176.898,
+   "object": "ca_dom_cover"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    8.989,
+    5.862,
+    3.651
+   ],
+   "facing": -0.055,
+   "object": "ca_dom_cover"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    8.992,
+    7.55,
+    3.651
+   ],
+   "facing": -0.146,
+   "object": "ca_dom_cover"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -12.191,
+    3.753,
+    1.003
+   ],
+   "facing": 180.0,
+   "object": "ca_dom_cover"
+  },
+  {
+   "type": "dom_fortify",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -8.835,
+    1.573,
+    2.308
+   ],
+   "facing": 180.0,
+   "object": "ca_dom_cover"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    6.023,
+    7.569,
+    3.669
+   ],
+   "facing": -59.835,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    6.344,
+    7.192,
+    3.669
+   ],
+   "facing": 62.293,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    6.206,
+    7.324,
+    4.035
+   ],
+   "facing": -32.237,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    8.844,
+    8.955,
+    3.669
+   ],
+   "facing": -67.418,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    8.842,
+    8.411,
+    3.669
+   ],
+   "facing": -90.287,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    5.744,
+    10.265,
+    3.669
+   ],
+   "facing": 32.738,
+   "object": "ca_blam_crate_large"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    5.657,
+    9.441,
+    4.508
+   ],
+   "facing": 100.496,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -16.008,
+    -6.745,
+    2.355
+   ],
+   "facing": -35.362,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -16.018,
+    -6.741,
+    2.717
+   ],
+   "facing": -24.066,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -15.822,
+    -4.511,
+    2.316
+   ],
+   "facing": -44.243,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -15.979,
+    -4.109,
+    2.23
+   ],
+   "facing": -149.738,
+   "object": "ca_blam_crate_large"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -20.452,
+    -3.982,
+    2.267
+   ],
+   "facing": -104.151,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -20.482,
+    -4.507,
+    2.224
+   ],
+   "facing": -66.577,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -20.477,
+    -3.948,
+    2.633
+   ],
+   "facing": -124.984,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    10.611,
+    -15.835,
+    4.115
+   ],
+   "facing": 54.716,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    10.912,
+    -16.042,
+    4.153
+   ],
+   "facing": 49.828,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    10.705,
+    -15.882,
+    4.361
+   ],
+   "facing": 155.297,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    7.795,
+    -17.27,
+    4.078
+   ],
+   "facing": 28.863,
+   "object": "ca_blam_crate_large"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    8.832,
+    -18.156,
+    4.037
+   ],
+   "facing": -0.299,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    8.862,
+    -18.139,
+    4.392
+   ],
+   "facing": -9.638,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -2.878,
+    9.034,
+    3.708
+   ],
+   "facing": 104.614,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -2.9,
+    9.42,
+    3.708
+   ],
+   "facing": -11.964,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -2.886,
+    9.226,
+    3.941
+   ],
+   "facing": -92.363,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -0.542,
+    11.078,
+    3.699
+   ],
+   "facing": -92.363,
+   "object": "ca_blam_crate_large"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -1.386,
+    6.586,
+    3.683
+   ],
+   "facing": -24.74,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    1.702,
+    7.621,
+    3.683
+   ],
+   "facing": -85.346,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    1.706,
+    7.136,
+    3.683
+   ],
+   "facing": -99.144,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    1.716,
+    7.156,
+    3.915
+   ],
+   "facing": -107.242,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -0.122,
+    10.832,
+    3.684
+   ],
+   "facing": 155.795,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    25.939,
+    9.067,
+    2.765
+   ],
+   "facing": 155.795,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    23.704,
+    8.328,
+    2.794
+   ],
+   "facing": 56.96,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    23.573,
+    7.908,
+    2.806
+   ],
+   "facing": 81.281,
+   "object": "ca_blam_crate_small"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    23.654,
+    8.154,
+    3.027
+   ],
+   "facing": 70.628,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    25.972,
+    5.841,
+    2.777
+   ],
+   "facing": 50.655,
+   "object": "ca_blam_crate_med"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    25.671,
+    5.386,
+    2.823
+   ],
+   "facing": 160.698,
+   "object": "ca_blam_crate_large"
+  },
+  {
+   "type": "ext_target",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    28.453,
+    7.747,
+    3.397
+   ],
+   "facing": 41.601,
+   "object": "ca_blam_crate_med"
+  }
+ ],
+ "equipment": [
+  {
+   "item": "sniper",
+   "tag": "ord_weap_storm_sniper_rifle",
+   "path": "ord_weap_storm_sniper_rifle",
+   "pos": [
+    -22.688,
+    35.105,
+    0.619
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "sniper",
+   "tag": "ord_weap_storm_sniper_rifle",
+   "path": "ord_weap_storm_sniper_rifle",
+   "pos": [
+    25.351,
+    -30.704,
+    4.541
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "lmg",
+   "tag": "ord_weapon_storm_lmg",
+   "path": "ord_weapon_storm_lmg",
+   "pos": [
+    -7.158,
+    -23.295,
+    -1.069
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "lmg",
+   "tag": "ord_weapon_storm_lmg",
+   "path": "ord_weapon_storm_lmg",
+   "pos": [
+    12.162,
+    30.603,
+    0.132
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "spartan_laser",
+   "tag": "ord_weap_storm_spartan_laser",
+   "path": "ord_weap_storm_spartan_laser",
+   "pos": [
+    -14.601,
+    13.251,
+    0.324
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "spartan_laser",
+   "tag": "ord_weap_storm_spartan_laser",
+   "path": "ord_weap_storm_spartan_laser",
+   "pos": [
+    8.604,
+    -13.351,
+    3.972
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "railgun",
+   "tag": "ord_weap_storm_rail_gun",
+   "path": "ord_weap_storm_rail_gun",
+   "pos": [
+    -2.389,
+    1.262,
+    -0.376
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "incineration_cannon",
+   "tag": "ord_weapon_storm_incineration_launcher",
+   "path": "ord_weapon_storm_incineration_launcher",
+   "pos": [
+    31.003,
+    9.876,
+    2.47
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "rockets",
+   "tag": "ord_weap_storm_rocket_launcher",
+   "path": "ord_weap_storm_rocket_launcher",
+   "pos": [
+    3.152,
+    21.116,
+    -1.27
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "rockets",
+   "tag": "ord_weap_storm_rocket_launcher",
+   "path": "ord_weap_storm_rocket_launcher",
+   "pos": [
+    -12.44,
+    -17.214,
+    -0.935
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "incineration_cannon",
+   "tag": "ord_weapon_storm_incineration_launcher",
+   "path": "ord_weapon_storm_incineration_launcher",
+   "pos": [
+    -30.574,
+    8.705,
+    1.924
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "random"
+  },
+  {
+   "item": "needler",
+   "tag": "ord_weap_storm_needler",
+   "path": "ord_weap_storm_needler",
+   "pos": [
+    2.827,
+    -19.744,
+    -1.087
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "sniper",
+   "tag": "ord_weap_storm_sniper_rifle",
+   "path": "ord_weap_storm_sniper_rifle",
+   "pos": [
+    -9.095,
+    -13.258,
+    -1.008
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "sticky_detonator",
+   "tag": "ord_weap_storm_sticky_grenade_launcher",
+   "path": "ord_weap_storm_sticky_grenade_launcher",
+   "pos": [
+    -17.05,
+    13.971,
+    0.204
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "needler",
+   "tag": "ord_weap_storm_needler",
+   "path": "ord_weap_storm_needler",
+   "pos": [
+    -12.276,
+    23.248,
+    -2.126
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "sniper",
+   "tag": "ord_weap_storm_sniper_rifle",
+   "path": "ord_weap_storm_sniper_rifle",
+   "pos": [
+    19.522,
+    24.179,
+    0.49
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "sticky_detonator",
+   "tag": "ord_weap_storm_sticky_grenade_launcher",
+   "path": "ord_weap_storm_sticky_grenade_launcher",
+   "pos": [
+    11.282,
+    -11.59,
+    3.91
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "ord_grenade_doubleplasma",
+   "tag": "ord_grenade_doubleplasma",
+   "path": "ord_grenade_doubleplasma",
+   "pos": [
+    32.859,
+    -23.717,
+    4.818
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  },
+  {
+   "item": "ord_grenade_doubleplasma",
+   "tag": "ord_grenade_doubleplasma",
+   "path": "ord_grenade_doubleplasma",
+   "pos": [
+    -35.524,
+    11.559,
+    1.285
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "ordnance": "initial"
+  }
+ ],
+ "vehicles": [
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    -7.494,
+    32.223,
+    -2.482
+   ],
+   "yaw": -103.034,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    5.979,
+    -26.412,
+    -0.325
+   ],
+   "yaw": 118.51,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    4.073,
+    -27.623,
+    -0.445
+   ],
+   "yaw": 113.376,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    -3.57,
+    32.15,
+    -2.258
+   ],
+   "yaw": -85.495,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    24.782,
+    4.757,
+    2.767
+   ],
+   "yaw": -110.151,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    -16.605,
+    -10.303,
+    1.851
+   ],
+   "yaw": 65.772,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "ghost",
+   "tag": "storm_ghost",
+   "path": "storm_ghost",
+   "pos": [
+    -9.17,
+    32.704,
+    -2.048
+   ],
+   "yaw": -102.054,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "ghost",
+   "tag": "storm_ghost",
+   "path": "storm_ghost",
+   "pos": [
+    0.038,
+    -28.038,
+    -0.622
+   ],
+   "yaw": 66.386,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    -26.907,
+    16.857,
+    -0.223
+   ],
+   "yaw": 5.01,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "machinegun",
+   "tag": "machinegun",
+   "path": "machinegun",
+   "pos": [
+    8.548,
+    9.166,
+    3.658
+   ],
+   "yaw": 56.259,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "machinegun",
+   "tag": "machinegun",
+   "path": "machinegun",
+   "pos": [
+    28.035,
+    -23.912,
+    4.496
+   ],
+   "yaw": 143.477,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "machinegun",
+   "tag": "machinegun",
+   "path": "machinegun",
+   "pos": [
+    -13.843,
+    24.345,
+    1.043
+   ],
+   "yaw": 43.529,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "wraith",
+   "tag": "storm_wraith",
+   "path": "storm_wraith",
+   "pos": [
+    25.758,
+    -15.684,
+    3.152
+   ],
+   "yaw": 154.894,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 180,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    0.11,
+    -0.879,
+    -0.385
+   ],
+   "yaw": -1.188,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 120,
+   "unique": false
+  },
+  {
+   "item": "ghost",
+   "tag": "storm_ghost",
+   "path": "storm_ghost",
+   "pos": [
+    -38.92,
+    7.864,
+    1.359
+   ],
+   "yaw": -81.419,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "ghost",
+   "tag": "storm_ghost",
+   "path": "storm_ghost",
+   "pos": [
+    14.678,
+    -10.034,
+    3.839
+   ],
+   "yaw": 22.823,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "machinegun",
+   "tag": "machinegun",
+   "path": "machinegun",
+   "pos": [
+    -12.474,
+    -8.101,
+    2.369
+   ],
+   "yaw": 10.854,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    -39.09,
+    9.617,
+    1.449
+   ],
+   "yaw": -83.496,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 90,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    22.34,
+    -3.66,
+    2.663
+   ],
+   "yaw": -153.46,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    -27.953,
+    18.305,
+    -0.197
+   ],
+   "yaw": -12.162,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    -1.729,
+    32.545,
+    -2.029
+   ],
+   "yaw": -92.165,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    -1.924,
+    -24.352,
+    -1.402
+   ],
+   "yaw": 53.822,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "storm_mongoose",
+   "path": "storm_mongoose",
+   "pos": [
+    3.153,
+    1.666,
+    -0.008
+   ],
+   "yaw": -74.709,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    6.224,
+    -29.929,
+    -0.041
+   ],
+   "yaw": 114.726,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 90,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "storm_warthog",
+   "path": "storm_warthog",
+   "pos": [
+    0.788,
+    32.825,
+    -1.727
+   ],
+   "yaw": -100.674,
+   "team": 8,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 90,
+   "unique": false
+  }
+ ],
+ "spawns": [
+  {
+   "pos": [
+    3.685,
+    -29.814,
+    -0.264
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    3.685,
+    -29.814,
+    -0.264
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    2.191,
+    -29.668,
+    -0.488
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    2.191,
+    -29.668,
+    -0.488
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.605,
+    -29.79,
+    -0.766
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    0.605,
+    -29.79,
+    -0.766
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -0.961,
+    -29.819,
+    -0.95
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.961,
+    -29.819,
+    -0.95
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    2.981,
+    -28.807,
+    -0.464
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    2.981,
+    -28.807,
+    -0.464
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.325,
+    -28.843,
+    -0.689
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    1.325,
+    -28.843,
+    -0.689
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -1.975,
+    -28.919,
+    -1.136
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -1.975,
+    -28.919,
+    -1.136
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.097,
+    -29.901,
+    -1.147
+   ],
+   "team": 0,
+   "facing": 92.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -3.097,
+    -29.901,
+    -1.147
+   ],
+   "team": 1,
+   "facing": 92.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    2.022,
+    33.899,
+    -1.407
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    2.022,
+    33.899,
+    -1.407
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    3.09,
+    33.904,
+    -1.384
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    3.09,
+    33.904,
+    -1.384
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    5.499,
+    33.665,
+    -1.089
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    5.499,
+    33.665,
+    -1.089
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    7.594,
+    33.194,
+    -0.641
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    7.594,
+    33.194,
+    -0.641
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    9.55,
+    33.674,
+    -0.281
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    9.55,
+    33.674,
+    -0.281
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    8.171,
+    31.845,
+    -0.535
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    8.171,
+    31.845,
+    -0.535
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    6.344,
+    31.835,
+    -0.969
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    6.344,
+    31.835,
+    -0.969
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.169,
+    32.194,
+    -1.436
+   ],
+   "team": 0,
+   "facing": -94.37,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    4.169,
+    32.194,
+    -1.436
+   ],
+   "team": 1,
+   "facing": -94.37,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -6.684,
+    -20.535,
+    -0.932
+   ],
+   "team": 0,
+   "facing": 108.067,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -6.684,
+    -20.535,
+    -0.932
+   ],
+   "team": 1,
+   "facing": 108.067,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -7.674,
+    -23.736,
+    -1.218
+   ],
+   "team": 0,
+   "facing": 98.892,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -7.674,
+    -23.736,
+    -1.218
+   ],
+   "team": 1,
+   "facing": 98.892,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -13.18,
+    -13.937,
+    -0.013
+   ],
+   "team": 0,
+   "facing": -2.965,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -13.18,
+    -13.937,
+    -0.013
+   ],
+   "team": 1,
+   "facing": -2.965,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -11.092,
+    -0.224,
+    0.144
+   ],
+   "team": 0,
+   "facing": -5.039,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -11.092,
+    -0.224,
+    0.144
+   ],
+   "team": 1,
+   "facing": -5.039,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -7.151,
+    2.807,
+    0.236
+   ],
+   "team": 0,
+   "facing": 1.665,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -7.151,
+    2.807,
+    0.236
+   ],
+   "team": 1,
+   "facing": 1.665,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -1.135,
+    4.776,
+    -0.352
+   ],
+   "team": 0,
+   "facing": 108.43,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -1.135,
+    4.776,
+    -0.352
+   ],
+   "team": 1,
+   "facing": 108.43,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    21.402,
+    13.42,
+    2.477
+   ],
+   "team": 0,
+   "facing": -102.556,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    21.402,
+    13.42,
+    2.477
+   ],
+   "team": 1,
+   "facing": -102.556,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    24.219,
+    10.38,
+    2.791
+   ],
+   "team": 0,
+   "facing": -144.032,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    24.219,
+    10.38,
+    2.791
+   ],
+   "team": 1,
+   "facing": -144.032,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    26.255,
+    8.732,
+    2.714
+   ],
+   "team": 0,
+   "facing": -146.229,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    26.255,
+    8.732,
+    2.714
+   ],
+   "team": 1,
+   "facing": -146.229,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    28.122,
+    -1.528,
+    2.594
+   ],
+   "team": 0,
+   "facing": -171.077,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    28.122,
+    -1.528,
+    2.594
+   ],
+   "team": 1,
+   "facing": -171.077,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    23.573,
+    -7.583,
+    2.847
+   ],
+   "team": 0,
+   "facing": 177.489,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    23.573,
+    -7.583,
+    2.847
+   ],
+   "team": 1,
+   "facing": 177.489,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    23.63,
+    -11.865,
+    2.702
+   ],
+   "team": 0,
+   "facing": 169.536,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    23.63,
+    -11.865,
+    2.702
+   ],
+   "team": 1,
+   "facing": 169.536,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    23.352,
+    -9.879,
+    2.87
+   ],
+   "team": 0,
+   "facing": 175.848,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    23.352,
+    -9.879,
+    2.87
+   ],
+   "team": 1,
+   "facing": 175.848,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    29.673,
+    -15.436,
+    2.694
+   ],
+   "team": 0,
+   "facing": 172.952,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    29.673,
+    -15.436,
+    2.694
+   ],
+   "team": 1,
+   "facing": 172.952,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    28.907,
+    -13.149,
+    2.756
+   ],
+   "team": 0,
+   "facing": -161.399,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    28.907,
+    -13.149,
+    2.756
+   ],
+   "team": 1,
+   "facing": -161.399,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    29.738,
+    -29.977,
+    4.537
+   ],
+   "team": 0,
+   "facing": 113.581,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    29.738,
+    -29.977,
+    4.537
+   ],
+   "team": 1,
+   "facing": 113.581,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    22.855,
+    -27.299,
+    2.679
+   ],
+   "team": 0,
+   "facing": 122.078,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    22.855,
+    -27.299,
+    2.679
+   ],
+   "team": 1,
+   "facing": 122.078,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    31.413,
+    -26.279,
+    4.807
+   ],
+   "team": 0,
+   "facing": 142.368,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    31.413,
+    -26.279,
+    4.807
+   ],
+   "team": 1,
+   "facing": 142.368,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    31.084,
+    -27.369,
+    4.802
+   ],
+   "team": 0,
+   "facing": 142.368,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    31.084,
+    -27.369,
+    4.802
+   ],
+   "team": 1,
+   "facing": 142.368,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    30.742,
+    -28.581,
+    4.767
+   ],
+   "team": 0,
+   "facing": 130.318,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    30.742,
+    -28.581,
+    4.767
+   ],
+   "team": 1,
+   "facing": 130.318,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    27.849,
+    -28.802,
+    4.806
+   ],
+   "team": 0,
+   "facing": 90.839,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    27.849,
+    -28.802,
+    4.806
+   ],
+   "team": 1,
+   "facing": 90.839,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    21.754,
+    -35.603,
+    2.98
+   ],
+   "team": 0,
+   "facing": 143.696,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    21.754,
+    -35.603,
+    2.98
+   ],
+   "team": 1,
+   "facing": 143.696,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -6.354,
+    -36.438,
+    -0.024
+   ],
+   "team": 0,
+   "facing": 117.831,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -6.354,
+    -36.438,
+    -0.024
+   ],
+   "team": 1,
+   "facing": 117.831,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -5.444,
+    -33.537,
+    -0.475
+   ],
+   "team": 0,
+   "facing": 102.144,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -5.444,
+    -33.537,
+    -0.475
+   ],
+   "team": 1,
+   "facing": 102.144,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.28,
+    -30.474,
+    -1.973
+   ],
+   "team": 0,
+   "facing": 75.073,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -12.28,
+    -30.474,
+    -1.973
+   ],
+   "team": 1,
+   "facing": 75.073,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -10.626,
+    -32.645,
+    -1.718
+   ],
+   "team": 0,
+   "facing": 36.642,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -10.626,
+    -32.645,
+    -1.718
+   ],
+   "team": 1,
+   "facing": 36.642,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.801,
+    -28.476,
+    -1.839
+   ],
+   "team": 0,
+   "facing": 67.057,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -14.801,
+    -28.476,
+    -1.839
+   ],
+   "team": 1,
+   "facing": 67.057,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.135,
+    -28.053,
+    -1.566
+   ],
+   "team": 0,
+   "facing": 65.456,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -16.135,
+    -28.053,
+    -1.566
+   ],
+   "team": 1,
+   "facing": 65.456,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.835,
+    -1.759,
+    1.522
+   ],
+   "team": 0,
+   "facing": 24.753,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.835,
+    -1.759,
+    1.522
+   ],
+   "team": 1,
+   "facing": 24.753,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.151,
+    -3.327,
+    2.206
+   ],
+   "team": 0,
+   "facing": 29.004,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.151,
+    -3.327,
+    2.206
+   ],
+   "team": 1,
+   "facing": 29.004,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.71,
+    -7.505,
+    1.856
+   ],
+   "team": 0,
+   "facing": 32.972,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -22.71,
+    -7.505,
+    1.856
+   ],
+   "team": 1,
+   "facing": 32.972,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.896,
+    2.41,
+    -0.237
+   ],
+   "team": 0,
+   "facing": 21.055,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.896,
+    2.41,
+    -0.237
+   ],
+   "team": 1,
+   "facing": 21.055,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.665,
+    19.901,
+    0.699
+   ],
+   "team": 0,
+   "facing": 21.54,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.665,
+    19.901,
+    0.699
+   ],
+   "team": 1,
+   "facing": 21.54,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.947,
+    23.535,
+    0.41
+   ],
+   "team": 0,
+   "facing": -51.837,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -24.947,
+    23.535,
+    0.41
+   ],
+   "team": 1,
+   "facing": -51.837,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -22.724,
+    29.124,
+    0.096
+   ],
+   "team": 0,
+   "facing": -43.91,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.724,
+    29.124,
+    0.096
+   ],
+   "team": 1,
+   "facing": -43.91,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.457,
+    31.962,
+    -0.03
+   ],
+   "team": 0,
+   "facing": -57.487,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.457,
+    31.962,
+    -0.03
+   ],
+   "team": 1,
+   "facing": -57.487,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -13.584,
+    24.688,
+    -1.885
+   ],
+   "team": 0,
+   "facing": -49.872,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -13.584,
+    24.688,
+    -1.885
+   ],
+   "team": 1,
+   "facing": -49.872,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -14.69,
+    28.757,
+    -2.23
+   ],
+   "team": 0,
+   "facing": -50.947,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.69,
+    28.757,
+    -2.23
+   ],
+   "team": 1,
+   "facing": -50.947,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -14.545,
+    27.039,
+    -2.335
+   ],
+   "team": 0,
+   "facing": -49.174,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.545,
+    27.039,
+    -2.335
+   ],
+   "team": 1,
+   "facing": -49.174,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -3.09,
+    25.35,
+    -1.878
+   ],
+   "team": 0,
+   "facing": -85.894,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.09,
+    25.35,
+    -1.878
+   ],
+   "team": 1,
+   "facing": -85.894,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    9.145,
+    28.752,
+    -0.186
+   ],
+   "team": 0,
+   "facing": -88.217,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    9.145,
+    28.752,
+    -0.186
+   ],
+   "team": 1,
+   "facing": -88.217,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    3.195,
+    17.532,
+    -0.494
+   ],
+   "team": 0,
+   "facing": -110.042,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    3.195,
+    17.532,
+    -0.494
+   ],
+   "team": 1,
+   "facing": -110.042,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.84,
+    -6.257,
+    3.701
+   ],
+   "team": 0,
+   "facing": 110.92,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.84,
+    -6.257,
+    3.701
+   ],
+   "team": 1,
+   "facing": 110.92,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.521,
+    -6.758,
+    3.701
+   ],
+   "team": 0,
+   "facing": 106.522,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    1.521,
+    -6.758,
+    3.701
+   ],
+   "team": 1,
+   "facing": 106.522,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.119,
+    -6.362,
+    3.701
+   ],
+   "team": 0,
+   "facing": 66.059,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -3.119,
+    -6.362,
+    3.701
+   ],
+   "team": 1,
+   "facing": 66.059,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.143,
+    10.221,
+    3.701
+   ],
+   "team": 0,
+   "facing": -43.468,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.143,
+    10.221,
+    3.701
+   ],
+   "team": 1,
+   "facing": -43.468,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    0.692,
+    10.842,
+    3.701
+   ],
+   "team": 0,
+   "facing": -66.841,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.692,
+    10.842,
+    3.701
+   ],
+   "team": 1,
+   "facing": -66.841,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -3.154,
+    5.378,
+    3.701
+   ],
+   "team": 0,
+   "facing": -80.721,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.154,
+    5.378,
+    3.701
+   ],
+   "team": 1,
+   "facing": -80.721,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -10.628,
+    -4.622,
+    -0.304
+   ],
+   "team": 0,
+   "facing": 30.671,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -10.628,
+    -4.622,
+    -0.304
+   ],
+   "team": 1,
+   "facing": 30.671,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    10.973,
+    -21.366,
+    0.548
+   ],
+   "team": 0,
+   "facing": 118.698,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    10.973,
+    -21.366,
+    0.548
+   ],
+   "team": 1,
+   "facing": 118.698,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    9.432,
+    -9.809,
+    0.607
+   ],
+   "team": 0,
+   "facing": 125.743,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    9.432,
+    -9.809,
+    0.607
+   ],
+   "team": 1,
+   "facing": 125.743,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    13.932,
+    -8.668,
+    3.644
+   ],
+   "team": 0,
+   "facing": 116.104,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    13.932,
+    -8.668,
+    3.644
+   ],
+   "team": 1,
+   "facing": 116.104,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -13.52,
+    42.727,
+    -0.614
+   ],
+   "team": 0,
+   "facing": -78.241,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -13.52,
+    42.727,
+    -0.614
+   ],
+   "team": 1,
+   "facing": -78.241,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    1.555,
+    43.206,
+    -0.809
+   ],
+   "team": 0,
+   "facing": -89.992,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.555,
+    43.206,
+    -0.809
+   ],
+   "team": 1,
+   "facing": -89.992,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -9.358,
+    42.697,
+    -0.968
+   ],
+   "team": 0,
+   "facing": -100.174,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -9.358,
+    42.697,
+    -0.968
+   ],
+   "team": 1,
+   "facing": -100.174,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.709,
+    18.229,
+    0.836
+   ],
+   "team": 0,
+   "facing": -16.757,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.709,
+    18.229,
+    0.836
+   ],
+   "team": 1,
+   "facing": -16.757,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.785,
+    1.495,
+    0.354
+   ],
+   "team": 0,
+   "facing": -25.634,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.785,
+    1.495,
+    0.354
+   ],
+   "team": 1,
+   "facing": -25.634,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -31.385,
+    1.167,
+    0.099
+   ],
+   "team": 0,
+   "facing": -21.267,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -31.385,
+    1.167,
+    0.099
+   ],
+   "team": 1,
+   "facing": -21.267,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -37.465,
+    18.804,
+    1.447
+   ],
+   "team": 0,
+   "facing": -24.538,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -37.465,
+    18.804,
+    1.447
+   ],
+   "team": 1,
+   "facing": -24.538,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.191,
+    5.267,
+    1.369
+   ],
+   "team": 0,
+   "facing": -43.961,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.191,
+    5.267,
+    1.369
+   ],
+   "team": 1,
+   "facing": -43.961,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.075,
+    18.279,
+    1.691
+   ],
+   "team": 0,
+   "facing": -20.075,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.075,
+    18.279,
+    1.691
+   ],
+   "team": 1,
+   "facing": -20.075,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    29.066,
+    -4.528,
+    2.648
+   ],
+   "team": 0,
+   "facing": 153.929,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    29.066,
+    -4.528,
+    2.648
+   ],
+   "team": 1,
+   "facing": 153.929,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    33.13,
+    -0.399,
+    2.498
+   ],
+   "team": 0,
+   "facing": -139.851,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    33.13,
+    -0.399,
+    2.498
+   ],
+   "team": 1,
+   "facing": -139.851,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    28.778,
+    -2.293,
+    2.502
+   ],
+   "team": 0,
+   "facing": 175.728,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    28.778,
+    -2.293,
+    2.502
+   ],
+   "team": 1,
+   "facing": 175.728,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    3.358,
+    -2.915,
+    3.701
+   ],
+   "team": 0,
+   "facing": 146.706,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    3.358,
+    -2.915,
+    3.701
+   ],
+   "team": 1,
+   "facing": 146.706,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.663,
+    7.465,
+    3.701
+   ],
+   "team": 0,
+   "facing": -118.593,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.663,
+    7.465,
+    3.701
+   ],
+   "team": 1,
+   "facing": -118.593,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -11.792,
+    -41.882,
+    0.185
+   ],
+   "team": 0,
+   "facing": 41.697,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -11.792,
+    -41.882,
+    0.185
+   ],
+   "team": 1,
+   "facing": 41.697,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -18.458,
+    -40.208,
+    0.622
+   ],
+   "team": 0,
+   "facing": 82.203,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -18.458,
+    -40.208,
+    0.622
+   ],
+   "team": 1,
+   "facing": 82.203,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.693,
+    13.654,
+    1.708
+   ],
+   "team": 0,
+   "facing": 28.01,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.693,
+    13.654,
+    1.708
+   ],
+   "team": 1,
+   "facing": 28.01,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.184,
+    9.204,
+    1.922
+   ],
+   "team": 0,
+   "facing": 42.378,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.184,
+    9.204,
+    1.922
+   ],
+   "team": 1,
+   "facing": 42.378,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.146,
+    8.164,
+    1.922
+   ],
+   "team": 0,
+   "facing": -67.925,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.146,
+    8.164,
+    1.922
+   ],
+   "team": 1,
+   "facing": -67.925,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    7.458,
+    -22.707,
+    0.167
+   ],
+   "team": 0,
+   "facing": 161.767,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    7.458,
+    -22.707,
+    0.167
+   ],
+   "team": 1,
+   "facing": 161.767,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -3.042,
+    -25.368,
+    -1.412
+   ],
+   "team": 0,
+   "facing": 61.568,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -3.042,
+    -25.368,
+    -1.412
+   ],
+   "team": 1,
+   "facing": 61.568,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -6.555,
+    -25.828,
+    -1.606
+   ],
+   "team": 0,
+   "facing": 107.452,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -6.555,
+    -25.828,
+    -1.606
+   ],
+   "team": 1,
+   "facing": 107.452,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    27.298,
+    7.15,
+    2.7
+   ],
+   "team": 0,
+   "facing": -156.609,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    27.298,
+    7.15,
+    2.7
+   ],
+   "team": 1,
+   "facing": -156.609,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    5.707,
+    17.035,
+    -0.686
+   ],
+   "team": 0,
+   "facing": -45.105,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    5.707,
+    17.035,
+    -0.686
+   ],
+   "team": 1,
+   "facing": -45.105,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    11.217,
+    1.676,
+    1.859
+   ],
+   "team": 0,
+   "facing": 147.868,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    11.217,
+    1.676,
+    1.859
+   ],
+   "team": 1,
+   "facing": 147.868,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -24.819,
+    -19.592,
+    0.371
+   ],
+   "team": 0,
+   "facing": 53.927,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.819,
+    -19.592,
+    0.371
+   ],
+   "team": 1,
+   "facing": 53.927,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -13.955,
+    16.745,
+    0.66
+   ],
+   "team": 0,
+   "facing": -61.282,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -13.955,
+    16.745,
+    0.66
+   ],
+   "team": 1,
+   "facing": -61.282,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -14.961,
+    14.818,
+    0.328
+   ],
+   "team": 0,
+   "facing": -57.908,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.961,
+    14.818,
+    0.328
+   ],
+   "team": 1,
+   "facing": -57.908,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -16.004,
+    22.552,
+    0.528
+   ],
+   "team": 0,
+   "facing": -91.387,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.004,
+    22.552,
+    0.528
+   ],
+   "team": 1,
+   "facing": -91.387,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -16.836,
+    20.177,
+    0.227
+   ],
+   "team": 0,
+   "facing": -47.244,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.836,
+    20.177,
+    0.227
+   ],
+   "team": 1,
+   "facing": -47.244,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.793,
+    19.602,
+    -0.115
+   ],
+   "team": 0,
+   "facing": -18.882,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.793,
+    19.602,
+    -0.115
+   ],
+   "team": 1,
+   "facing": -18.882,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.503,
+    24.748,
+    0.577
+   ],
+   "team": 0,
+   "facing": -66.923,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.503,
+    24.748,
+    0.577
+   ],
+   "team": 1,
+   "facing": -66.923,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.311,
+    27.975,
+    0.621
+   ],
+   "team": 0,
+   "facing": -46.347,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.311,
+    27.975,
+    0.621
+   ],
+   "team": 1,
+   "facing": -46.347,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    19.809,
+    16.237,
+    1.539
+   ],
+   "team": 0,
+   "facing": -101.325,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    19.809,
+    16.237,
+    1.539
+   ],
+   "team": 1,
+   "facing": -101.325,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    12.565,
+    -6.674,
+    4.051
+   ],
+   "team": 0,
+   "facing": 86.529,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    12.565,
+    -6.674,
+    4.051
+   ],
+   "team": 1,
+   "facing": 86.529,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    16.182,
+    -14.976,
+    3.465
+   ],
+   "team": 0,
+   "facing": 118.297,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    16.182,
+    -14.976,
+    3.465
+   ],
+   "team": 1,
+   "facing": 118.297,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    16.814,
+    -26.84,
+    3.61
+   ],
+   "team": 0,
+   "facing": 115.402,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    16.814,
+    -26.84,
+    3.61
+   ],
+   "team": 1,
+   "facing": 115.402,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    17.589,
+    -24.704,
+    3.836
+   ],
+   "team": 0,
+   "facing": 98.941,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    17.589,
+    -24.704,
+    3.836
+   ],
+   "team": 1,
+   "facing": 98.941,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    14.766,
+    -24.879,
+    4.112
+   ],
+   "team": 0,
+   "facing": 109.015,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    14.766,
+    -24.879,
+    4.112
+   ],
+   "team": 1,
+   "facing": 109.015,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.858,
+    10.041,
+    1.922
+   ],
+   "team": 0,
+   "facing": -1.355,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.858,
+    10.041,
+    1.922
+   ],
+   "team": 1,
+   "facing": -1.355,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -30.489,
+    5.655,
+    1.922
+   ],
+   "team": 0,
+   "facing": 36.808,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.489,
+    5.655,
+    1.922
+   ],
+   "team": 1,
+   "facing": 36.808,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.524,
+    11.778,
+    1.922
+   ],
+   "team": 0,
+   "facing": -30.353,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.524,
+    11.778,
+    1.922
+   ],
+   "team": 1,
+   "facing": -30.353,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    17.206,
+    -37.25,
+    2.336
+   ],
+   "team": 0,
+   "facing": 121.641,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    17.206,
+    -37.25,
+    2.336
+   ],
+   "team": 1,
+   "facing": 121.641,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    13.919,
+    -38.211,
+    1.789
+   ],
+   "team": 0,
+   "facing": 124.363,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    13.919,
+    -38.211,
+    1.789
+   ],
+   "team": 1,
+   "facing": 124.363,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    12.585,
+    -38.696,
+    1.647
+   ],
+   "team": 0,
+   "facing": 106.156,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    12.585,
+    -38.696,
+    1.647
+   ],
+   "team": 1,
+   "facing": 106.156,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    6.036,
+    47.538,
+    -0.013
+   ],
+   "team": 0,
+   "facing": -103.442,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    6.036,
+    47.538,
+    -0.013
+   ],
+   "team": 1,
+   "facing": -103.442,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.738,
+    47.473,
+    -0.013
+   ],
+   "team": 0,
+   "facing": -90.516,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    4.738,
+    47.473,
+    -0.013
+   ],
+   "team": 1,
+   "facing": -90.516,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    8.097,
+    36.168,
+    -0.227
+   ],
+   "team": 0,
+   "facing": -89.39,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    8.097,
+    36.168,
+    -0.227
+   ],
+   "team": 1,
+   "facing": -89.39,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    19.589,
+    37.249,
+    0.369
+   ],
+   "team": 0,
+   "facing": -124.52,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    19.589,
+    37.249,
+    0.369
+   ],
+   "team": 1,
+   "facing": -124.52,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    18.69,
+    32.596,
+    0.492
+   ],
+   "team": 0,
+   "facing": -132.66,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    18.69,
+    32.596,
+    0.492
+   ],
+   "team": 1,
+   "facing": -132.66,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    21.891,
+    32.973,
+    0.455
+   ],
+   "team": 0,
+   "facing": -147.632,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    21.891,
+    32.973,
+    0.455
+   ],
+   "team": 1,
+   "facing": -147.632,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    20.139,
+    27.705,
+    0.412
+   ],
+   "team": 0,
+   "facing": -120.725,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    20.139,
+    27.705,
+    0.412
+   ],
+   "team": 1,
+   "facing": -120.725,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    10.24,
+    7.385,
+    1.198
+   ],
+   "team": 0,
+   "facing": -146.417,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    10.24,
+    7.385,
+    1.198
+   ],
+   "team": 1,
+   "facing": -146.417,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    32.473,
+    -25.553,
+    4.878
+   ],
+   "team": 0,
+   "facing": 98.658,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    32.473,
+    -25.553,
+    4.878
+   ],
+   "team": 1,
+   "facing": 98.658,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    9.663,
+    -45.011,
+    2.172
+   ],
+   "team": 0,
+   "facing": 92.016,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    9.663,
+    -45.011,
+    2.172
+   ],
+   "team": 1,
+   "facing": 92.016,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -7.178,
+    -40.73,
+    0.138
+   ],
+   "team": 0,
+   "facing": 107.103,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -7.178,
+    -40.73,
+    0.138
+   ],
+   "team": 1,
+   "facing": 107.103,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    7.07,
+    -37.704,
+    0.948
+   ],
+   "team": 0,
+   "facing": 55.039,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    7.07,
+    -37.704,
+    0.948
+   ],
+   "team": 1,
+   "facing": 55.039,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    6.779,
+    -32.939,
+    0.369
+   ],
+   "team": 0,
+   "facing": 93.316,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    6.779,
+    -32.939,
+    0.369
+   ],
+   "team": 1,
+   "facing": 93.316,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.817,
+    -39.329,
+    0.338
+   ],
+   "team": 0,
+   "facing": 112.944,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    1.817,
+    -39.329,
+    0.338
+   ],
+   "team": 1,
+   "facing": 112.944,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -0.438,
+    -39.531,
+    0.339
+   ],
+   "team": 0,
+   "facing": 66.478,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.438,
+    -39.531,
+    0.339
+   ],
+   "team": 1,
+   "facing": 66.478,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    5.622,
+    -47.386,
+    2.285
+   ],
+   "team": 0,
+   "facing": 58.729,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    5.622,
+    -47.386,
+    2.285
+   ],
+   "team": 1,
+   "facing": 58.729,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    13.205,
+    -24.015,
+    3.97
+   ],
+   "team": 0,
+   "facing": 101.262,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    13.205,
+    -24.015,
+    3.97
+   ],
+   "team": 1,
+   "facing": 101.262,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    24.149,
+    -24.607,
+    2.583
+   ],
+   "team": 0,
+   "facing": 129.933,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    24.149,
+    -24.607,
+    2.583
+   ],
+   "team": 1,
+   "facing": 129.933,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    26.43,
+    -20.213,
+    2.862
+   ],
+   "team": 0,
+   "facing": 153.188,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    26.43,
+    -20.213,
+    2.862
+   ],
+   "team": 1,
+   "facing": 153.188,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.05,
+    35.291,
+    -1.769
+   ],
+   "team": 0,
+   "facing": -66.197,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.05,
+    35.291,
+    -1.769
+   ],
+   "team": 1,
+   "facing": -66.197,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -29.151,
+    14.772,
+    -0.352
+   ],
+   "team": 0,
+   "facing": -6.386,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.151,
+    14.772,
+    -0.352
+   ],
+   "team": 1,
+   "facing": -6.386,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.116,
+    -9.267,
+    -0.107
+   ],
+   "team": 0,
+   "facing": 70.022,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -31.116,
+    -9.267,
+    -0.107
+   ],
+   "team": 1,
+   "facing": 70.022,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -20.092,
+    -38.65,
+    0.749
+   ],
+   "team": 0,
+   "facing": 78.69,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.092,
+    -38.65,
+    0.749
+   ],
+   "team": 1,
+   "facing": 78.69,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    15.661,
+    38.45,
+    0.806
+   ],
+   "team": 0,
+   "facing": -111.622,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    15.661,
+    38.45,
+    0.806
+   ],
+   "team": 1,
+   "facing": -111.622,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -1.957,
+    45.393,
+    -0.935
+   ],
+   "team": 0,
+   "facing": -60.974,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -1.957,
+    45.393,
+    -0.935
+   ],
+   "team": 1,
+   "facing": -60.974,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    18.537,
+    -37.484,
+    2.485
+   ],
+   "team": 0,
+   "facing": 129.854,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    18.537,
+    -37.484,
+    2.485
+   ],
+   "team": 1,
+   "facing": 129.854,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    20.705,
+    -37.244,
+    2.546
+   ],
+   "team": 0,
+   "facing": 131.94,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    20.705,
+    -37.244,
+    2.546
+   ],
+   "team": 1,
+   "facing": 131.94,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    21.363,
+    -36.531,
+    2.732
+   ],
+   "team": 0,
+   "facing": 147.902,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    21.363,
+    -36.531,
+    2.732
+   ],
+   "team": 1,
+   "facing": 147.902,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    23.391,
+    -2.861,
+    2.603
+   ],
+   "team": 0,
+   "facing": 170.757,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    23.391,
+    -2.861,
+    2.603
+   ],
+   "team": 1,
+   "facing": 170.757,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    24.219,
+    -0.552,
+    2.652
+   ],
+   "team": 0,
+   "facing": 168.651,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    24.219,
+    -0.552,
+    2.652
+   ],
+   "team": 1,
+   "facing": 168.651,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.23,
+    17.364,
+    -0.663
+   ],
+   "team": 0,
+   "facing": -134.195,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.23,
+    17.364,
+    -0.663
+   ],
+   "team": 1,
+   "facing": -134.195,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -2.058,
+    -10.785,
+    -0.402
+   ],
+   "team": 0,
+   "facing": 91.198,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -2.058,
+    -10.785,
+    -0.402
+   ],
+   "team": 1,
+   "facing": 91.198,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.035,
+    15.213,
+    -2.104
+   ],
+   "team": 0,
+   "facing": -4.964,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.035,
+    15.213,
+    -2.104
+   ],
+   "team": 1,
+   "facing": -4.964,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    6.225,
+    -21.768,
+    -0.017
+   ],
+   "team": 0,
+   "facing": 165.132,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    6.225,
+    -21.768,
+    -0.017
+   ],
+   "team": 1,
+   "facing": 165.132,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.278,
+    26.101,
+    -2.21
+   ],
+   "team": 0,
+   "facing": -44.8,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.278,
+    26.101,
+    -2.21
+   ],
+   "team": 1,
+   "facing": -44.8,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -7.618,
+    35.776,
+    -2.217
+   ],
+   "team": 0,
+   "facing": -86.362,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -7.618,
+    35.776,
+    -2.217
+   ],
+   "team": 1,
+   "facing": -86.362,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -5.091,
+    35.154,
+    -2.225
+   ],
+   "team": 0,
+   "facing": -93.493,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -5.091,
+    35.154,
+    -2.225
+   ],
+   "team": 1,
+   "facing": -93.493,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -2.357,
+    35.019,
+    -1.814
+   ],
+   "team": 0,
+   "facing": -96.449,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -2.357,
+    35.019,
+    -1.814
+   ],
+   "team": 1,
+   "facing": -96.449,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    0.246,
+    35.035,
+    -1.529
+   ],
+   "team": 0,
+   "facing": -88.479,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.246,
+    35.035,
+    -1.529
+   ],
+   "team": 1,
+   "facing": -88.479,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.344,
+    -30.585,
+    -0.049
+   ],
+   "team": 0,
+   "facing": 94.559,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.344,
+    -30.585,
+    -0.049
+   ],
+   "team": 1,
+   "facing": 94.559,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    2.179,
+    -30.761,
+    -0.234
+   ],
+   "team": 0,
+   "facing": 91.497,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    2.179,
+    -30.761,
+    -0.234
+   ],
+   "team": 1,
+   "facing": 91.497,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -0.564,
+    -30.605,
+    -0.721
+   ],
+   "team": 0,
+   "facing": 86.036,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.564,
+    -30.605,
+    -0.721
+   ],
+   "team": 1,
+   "facing": 86.036,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -2.859,
+    -30.666,
+    -0.82
+   ],
+   "team": 0,
+   "facing": 86.574,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -2.859,
+    -30.666,
+    -0.82
+   ],
+   "team": 1,
+   "facing": 86.574,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.198,
+    14.608,
+    -0.396
+   ],
+   "team": 0,
+   "facing": -97.131,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    0.198,
+    14.608,
+    -0.396
+   ],
+   "team": 1,
+   "facing": -97.131,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    2.345,
+    9.991,
+    -0.2
+   ],
+   "team": 0,
+   "facing": -104.758,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    2.345,
+    9.991,
+    -0.2
+   ],
+   "team": 1,
+   "facing": -104.758,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    5.927,
+    10.524,
+    -0.079
+   ],
+   "team": 0,
+   "facing": -75.185,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    5.927,
+    10.524,
+    -0.079
+   ],
+   "team": 1,
+   "facing": -75.185,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.352,
+    -8.075,
+    -0.495
+   ],
+   "team": 0,
+   "facing": 66.406,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.352,
+    -8.075,
+    -0.495
+   ],
+   "team": 1,
+   "facing": 66.406,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -2.128,
+    -6.939,
+    -0.48
+   ],
+   "team": 0,
+   "facing": 95.796,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -2.128,
+    -6.939,
+    -0.48
+   ],
+   "team": 1,
+   "facing": 95.796,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -4.402,
+    -6.404,
+    -0.644
+   ],
+   "team": 0,
+   "facing": 84.572,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -4.402,
+    -6.404,
+    -0.644
+   ],
+   "team": 1,
+   "facing": 84.572,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -0.831,
+    -10.846,
+    -0.538
+   ],
+   "team": 0,
+   "facing": 125.435,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -0.831,
+    -10.846,
+    -0.538
+   ],
+   "team": 1,
+   "facing": 125.435,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -10.741,
+    10.195,
+    0.001
+   ],
+   "team": 0,
+   "facing": -39.05,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -10.741,
+    10.195,
+    0.001
+   ],
+   "team": 1,
+   "facing": -39.05,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -5.182,
+    10.379,
+    -0.383
+   ],
+   "team": 0,
+   "facing": -59.853,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -5.182,
+    10.379,
+    -0.383
+   ],
+   "team": 1,
+   "facing": -59.853,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -6.475,
+    18.552,
+    -0.906
+   ],
+   "team": 0,
+   "facing": -79.049,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -6.475,
+    18.552,
+    -0.906
+   ],
+   "team": 1,
+   "facing": -79.049,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -5.093,
+    19.18,
+    -0.948
+   ],
+   "team": 0,
+   "facing": -73.74,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -5.093,
+    19.18,
+    -0.948
+   ],
+   "team": 1,
+   "facing": -73.74,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    21.433,
+    20.09,
+    1.069
+   ],
+   "team": 0,
+   "facing": -179.421,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    21.433,
+    20.09,
+    1.069
+   ],
+   "team": 1,
+   "facing": -179.421,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -8.951,
+    -18.349,
+    -1.195
+   ],
+   "team": 0,
+   "facing": 70.747,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -8.951,
+    -18.349,
+    -1.195
+   ],
+   "team": 1,
+   "facing": 70.747,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    16.18,
+    -0.564,
+    3.431
+   ],
+   "team": 0,
+   "facing": 160.814,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    16.18,
+    -0.564,
+    3.431
+   ],
+   "team": 1,
+   "facing": 160.814,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    15.555,
+    9.649,
+    2.676
+   ],
+   "team": 0,
+   "facing": -134.552,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    15.555,
+    9.649,
+    2.676
+   ],
+   "team": 1,
+   "facing": -134.552,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    24.443,
+    3.602,
+    2.751
+   ],
+   "team": 0,
+   "facing": 162.174,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    24.443,
+    3.602,
+    2.751
+   ],
+   "team": 1,
+   "facing": 162.174,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    10.81,
+    36.415,
+    0.155
+   ],
+   "team": 0,
+   "facing": -101.049,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    10.81,
+    36.415,
+    0.155
+   ],
+   "team": 1,
+   "facing": -101.049,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -33.077,
+    -2.907,
+    0.076
+   ],
+   "team": 0,
+   "facing": 21.086,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -33.077,
+    -2.907,
+    0.076
+   ],
+   "team": 1,
+   "facing": 21.086,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -5.759,
+    -15.893,
+    -1.105
+   ],
+   "team": 0,
+   "facing": 64.916,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -5.759,
+    -15.893,
+    -1.105
+   ],
+   "team": 1,
+   "facing": 64.916,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -6.939,
+    45.459,
+    -0.945
+   ],
+   "team": 0,
+   "facing": -112.942,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -6.939,
+    45.459,
+    -0.945
+   ],
+   "team": 1,
+   "facing": -112.942,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.889,
+    -26.029,
+    0.132
+   ],
+   "team": 0,
+   "facing": 43.789,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.889,
+    -26.029,
+    0.132
+   ],
+   "team": 1,
+   "facing": 43.789,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    4.713,
+    -20.599,
+    -0.421
+   ],
+   "team": 0,
+   "facing": 169.382,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.713,
+    -20.599,
+    -0.421
+   ],
+   "team": 1,
+   "facing": 169.382,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.816,
+    7.51,
+    -0.464
+   ],
+   "team": 0,
+   "facing": -13.015,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.816,
+    7.51,
+    -0.464
+   ],
+   "team": 1,
+   "facing": -13.015,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.717,
+    10.96,
+    -0.431
+   ],
+   "team": 0,
+   "facing": -33.179,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.717,
+    10.96,
+    -0.431
+   ],
+   "team": 1,
+   "facing": -33.179,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.735,
+    -41.454,
+    1.171
+   ],
+   "team": 0,
+   "facing": 102.399,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    4.735,
+    -41.454,
+    1.171
+   ],
+   "team": 1,
+   "facing": 102.399,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -2.769,
+    -41.551,
+    1.171
+   ],
+   "team": 0,
+   "facing": 93.65,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -2.769,
+    -41.551,
+    1.171
+   ],
+   "team": 1,
+   "facing": 93.65,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -8.346,
+    47.562,
+    -0.514
+   ],
+   "team": 0,
+   "facing": -83.733,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -8.346,
+    47.562,
+    -0.514
+   ],
+   "team": 1,
+   "facing": -83.733,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    32.521,
+    13.096,
+    2.549
+   ],
+   "team": 0,
+   "facing": -137.457,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    32.521,
+    13.096,
+    2.549
+   ],
+   "team": 1,
+   "facing": -137.457,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    33.792,
+    9.243,
+    2.436
+   ],
+   "team": 0,
+   "facing": -168.168,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    33.792,
+    9.243,
+    2.436
+   ],
+   "team": 1,
+   "facing": -168.168,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    29.669,
+    14.293,
+    2.716
+   ],
+   "team": 0,
+   "facing": -104.994,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    29.669,
+    14.293,
+    2.716
+   ],
+   "team": 1,
+   "facing": -104.994,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    34.357,
+    7.319,
+    2.523
+   ],
+   "team": 0,
+   "facing": 169.576,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    34.357,
+    7.319,
+    2.523
+   ],
+   "team": 1,
+   "facing": 169.576,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    34.367,
+    3.345,
+    2.682
+   ],
+   "team": 0,
+   "facing": -118.378,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    34.367,
+    3.345,
+    2.682
+   ],
+   "team": 1,
+   "facing": -118.378,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    8.885,
+    -14.227,
+    0.558
+   ],
+   "team": 0,
+   "facing": 95.368,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    8.885,
+    -14.227,
+    0.558
+   ],
+   "team": 1,
+   "facing": 95.368,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.606,
+    4.818,
+    -0.087
+   ],
+   "team": 0,
+   "facing": 74.338,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.606,
+    4.818,
+    -0.087
+   ],
+   "team": 1,
+   "facing": 74.338,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.713,
+    0.454,
+    -0.23
+   ],
+   "team": 0,
+   "facing": -57.496,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    1.713,
+    0.454,
+    -0.23
+   ],
+   "team": 1,
+   "facing": -57.496,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -1.222,
+    0.372,
+    -0.398
+   ],
+   "team": 0,
+   "facing": -114.421,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -1.222,
+    0.372,
+    -0.398
+   ],
+   "team": 1,
+   "facing": -114.421,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -10.422,
+    35.014,
+    -2.291
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -9.852,
+    35.526,
+    -2.233
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -11.101,
+    35.102,
+    -2.247
+   ],
+   "team": 1,
+   "facing": -45.912,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -10.554,
+    35.661,
+    -2.183
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -11.236,
+    35.739,
+    -2.132
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -10.665,
+    36.334,
+    -2.056
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -11.764,
+    35.23,
+    -2.191
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -10.924,
+    34.444,
+    -2.357
+   ],
+   "team": 1,
+   "facing": -45.914,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -4.697,
+    -30.505,
+    -1.224
+   ],
+   "team": 0,
+   "facing": 45.101,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -5.917,
+    -30.079,
+    -1.506
+   ],
+   "team": 0,
+   "facing": 46.964,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -5.256,
+    -29.919,
+    -1.411
+   ],
+   "team": 0,
+   "facing": 46.364,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -5.398,
+    -30.569,
+    -1.328
+   ],
+   "team": 0,
+   "facing": 45.532,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -5.82,
+    -29.348,
+    -1.571
+   ],
+   "team": 0,
+   "facing": 46.718,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -6.636,
+    -30.302,
+    -1.59
+   ],
+   "team": 0,
+   "facing": 47.352,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -6.105,
+    -30.779,
+    -1.413
+   ],
+   "team": 0,
+   "facing": 45.894,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -5.569,
+    -31.261,
+    -1.232
+   ],
+   "team": 0,
+   "facing": 45.894,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    3.984,
+    47.548,
+    -0.013
+   ],
+   "team": 0,
+   "facing": -86.788,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    3.984,
+    47.548,
+    -0.013
+   ],
+   "team": 1,
+   "facing": -86.788,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -1.191,
+    -48.455,
+    1.015
+   ],
+   "team": 0,
+   "facing": 27.834,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -1.191,
+    -48.455,
+    1.015
+   ],
+   "team": 1,
+   "facing": 27.834,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    33.466,
+    9.984,
+    2.413
+   ],
+   "team": 0,
+   "facing": -158.973,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    33.466,
+    9.984,
+    2.413
+   ],
+   "team": 1,
+   "facing": -158.973,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    21.379,
+    33.325,
+    0.422
+   ],
+   "team": 0,
+   "facing": -144.08,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    21.379,
+    33.325,
+    0.422
+   ],
+   "team": 1,
+   "facing": -144.08,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -25.119,
+    34.378,
+    0.489
+   ],
+   "team": 0,
+   "facing": -56.135,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -25.119,
+    34.378,
+    0.489
+   ],
+   "team": 1,
+   "facing": -56.135,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -39.427,
+    12.949,
+    1.609
+   ],
+   "team": 0,
+   "facing": 39.791,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -39.427,
+    12.949,
+    1.609
+   ],
+   "team": 1,
+   "facing": 39.791,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.539,
+    -30.592,
+    0.486
+   ],
+   "team": 0,
+   "facing": 42.598,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.539,
+    -30.592,
+    0.486
+   ],
+   "team": 1,
+   "facing": 42.598,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    20.238,
+    -36.214,
+    2.579
+   ],
+   "team": 0,
+   "facing": 142.306,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    20.238,
+    -36.214,
+    2.579
+   ],
+   "team": 1,
+   "facing": 142.306,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    8.24,
+    -14.309,
+    0.557
+   ],
+   "team": 0,
+   "facing": 80.573,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    8.24,
+    -14.309,
+    0.557
+   ],
+   "team": 1,
+   "facing": 80.573,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    3.676,
+    17.137,
+    -0.513
+   ],
+   "team": 0,
+   "facing": -114.584,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    3.676,
+    17.137,
+    -0.513
+   ],
+   "team": 1,
+   "facing": -114.584,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -0.999,
+    -8.389,
+    -0.472
+   ],
+   "team": 0,
+   "facing": 58.31,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -0.999,
+    -8.389,
+    -0.472
+   ],
+   "team": 1,
+   "facing": 58.31,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -32.479,
+    -13.525,
+    -0.777
+   ],
+   "team": 0,
+   "facing": 27.844,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -32.479,
+    -13.525,
+    -0.777
+   ],
+   "team": 1,
+   "facing": 27.844,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    11.409,
+    2.458,
+    1.815
+   ],
+   "team": 0,
+   "facing": -175.394,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    11.409,
+    2.458,
+    1.815
+   ],
+   "team": 1,
+   "facing": -175.394,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -10.407,
+    42.679,
+    -1.03
+   ],
+   "team": 0,
+   "facing": -89.631,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -10.407,
+    42.679,
+    -1.03
+   ],
+   "team": 1,
+   "facing": -89.631,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -16.742,
+    14.973,
+    -2.344
+   ],
+   "team": 0,
+   "facing": 5.629,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -16.742,
+    14.973,
+    -2.344
+   ],
+   "team": 1,
+   "facing": 5.629,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -7.134,
+    2.249,
+    0.252
+   ],
+   "team": 0,
+   "facing": 3.369,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -7.134,
+    2.249,
+    0.252
+   ],
+   "team": 1,
+   "facing": 3.369,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  }
+ ],
+ "scenery": [],
+ "placed": [
+  {
+   "name": "mp_cinematic_fallback_camera",
+   "kind": "scenery",
+   "pos": [
+    2.607,
+    -8.489,
+    4.217
+   ],
+   "rot": [
+    101.83,
+    -0.0,
+    -0.0
+   ],
+   "label": "no_dom",
+   "flags": "0",
+   "team": 8
+  },
+  {
+   "name": "ca_redoubt_turbine",
+   "kind": "scenery",
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_floats",
+   "kind": "scenery",
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_site_decal",
+   "kind": "scenery",
+   "pos": [
+    7.248,
+    7.693,
+    3.661
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ext_decal",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_blam_site_decal",
+   "kind": "scenery",
+   "pos": [
+    -17.549,
+    -5.436,
+    2.242
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ext_decal",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_blam_site_decal",
+   "kind": "scenery",
+   "pos": [
+    9.79,
+    -16.929,
+    4.198
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ext_decal",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_blam_site_decal",
+   "kind": "scenery",
+   "pos": [
+    -0.983,
+    8.767,
+    3.701
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ext_decal",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_blam_site_decal",
+   "kind": "scenery",
+   "pos": [
+    25.842,
+    6.79,
+    2.739
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ext_decal",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_redoubt_wind_core",
+   "kind": "scenery",
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "ca_dom_lrg_monitor_3",
+   "kind": "scenery",
+   "pos": [
+    31.71,
+    13.804,
+    2.701
+   ],
+   "rot": [
+    149.643,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_bigscreen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_3",
+   "kind": "scenery",
+   "pos": [
+    31.042,
+    7.264,
+    2.67
+   ],
+   "rot": [
+    -6.984,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_bigscreen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_3",
+   "kind": "scenery",
+   "pos": [
+    -1.063,
+    1.364,
+    3.725
+   ],
+   "rot": [
+    137.318,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_bigscreen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_monitor_4foot",
+   "kind": "scenery",
+   "pos": [
+    -3.802,
+    -1.39,
+    4.075
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_bigscreen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_monitor_4foot",
+   "kind": "scenery",
+   "pos": [
+    -34.429,
+    7.372,
+    2.071
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_bigscreen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_monitor_4foot",
+   "kind": "scenery",
+   "pos": [
+    -31.194,
+    8.671,
+    2.337
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_bigscreen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    31.425,
+    10.728,
+    2.612
+   ],
+   "rot": [
+    4.942,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -0.984,
+    3.328,
+    3.711
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    6.986,
+    3.366,
+    3.772
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -30.361,
+    8.726,
+    2.027
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -31.471,
+    3.216,
+    2.041
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_2",
+   "kind": "scenery",
+   "pos": [
+    -29.527,
+    5.466,
+    1.913
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_1",
+   "kind": "scenery",
+   "pos": [
+    -34.284,
+    11.152,
+    1.89
+   ],
+   "rot": [
+    -126.23,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_1",
+   "kind": "scenery",
+   "pos": [
+    -1.113,
+    -3.339,
+    3.693
+   ],
+   "rot": [
+    179.224,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_1",
+   "kind": "scenery",
+   "pos": [
+    -2.385,
+    5.301,
+    3.69
+   ],
+   "rot": [
+    179.224,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_2",
+   "kind": "scenery",
+   "pos": [
+    -0.206,
+    -2.49,
+    3.694
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_2",
+   "kind": "scenery",
+   "pos": [
+    -3.376,
+    7.738,
+    3.69
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_1",
+   "kind": "scenery",
+   "pos": [
+    34.088,
+    8.198,
+    2.48
+   ],
+   "rot": [
+    84.399,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_lrg_monitor_1",
+   "kind": "scenery",
+   "pos": [
+    30.456,
+    13.81,
+    2.745
+   ],
+   "rot": [
+    169.22,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_screen",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    0.519,
+    0.611,
+    3.713
+   ],
+   "rot": [
+    -74.091,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    0.533,
+    0.577,
+    3.874
+   ],
+   "rot": [
+    -74.091,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    0.529,
+    0.569,
+    4.035
+   ],
+   "rot": [
+    -145.031,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    1.591,
+    6.534,
+    3.683
+   ],
+   "rot": [
+    -90.857,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    1.665,
+    7.064,
+    3.683
+   ],
+   "rot": [
+    -108.849,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    1.641,
+    6.75,
+    3.913
+   ],
+   "rot": [
+    -100.78,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_lights",
+   "kind": "scenery",
+   "pos": [
+    3.587,
+    -0.507,
+    3.672
+   ],
+   "rot": [
+    152.793,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_lights",
+   "kind": "scenery",
+   "pos": [
+    -1.182,
+    -2.302,
+    3.659
+   ],
+   "rot": [
+    69.445,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    -3.145,
+    8.305,
+    3.92
+   ],
+   "rot": [
+    47.153,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -3.182,
+    8.215,
+    3.69
+   ],
+   "rot": [
+    2.586,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -3.158,
+    8.405,
+    3.69
+   ],
+   "rot": [
+    -2.048,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -3.228,
+    -4.999,
+    3.683
+   ],
+   "rot": [
+    -8.363,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    -3.263,
+    -5.38,
+    3.683
+   ],
+   "rot": [
+    11.424,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -3.186,
+    -4.916,
+    3.913
+   ],
+   "rot": [
+    -52.075,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -3.236,
+    -4.793,
+    3.683
+   ],
+   "rot": [
+    -5.754,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    34.207,
+    8.826,
+    2.484
+   ],
+   "rot": [
+    166.081,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    34.211,
+    8.831,
+    2.611
+   ],
+   "rot": [
+    153.549,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_lights",
+   "kind": "scenery",
+   "pos": [
+    27.392,
+    13.536,
+    2.602
+   ],
+   "rot": [
+    -41.389,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    -31.992,
+    9.103,
+    1.922
+   ],
+   "rot": [
+    -162.515,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    -31.997,
+    9.075,
+    2.189
+   ],
+   "rot": [
+    174.572,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    -31.99,
+    9.073,
+    2.055
+   ],
+   "rot": [
+    178.211,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -32.02,
+    8.396,
+    2.12
+   ],
+   "rot": [
+    -99.044,
+    9.912,
+    52.83
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -29.367,
+    11.753,
+    1.913
+   ],
+   "rot": [
+    73.954,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -29.183,
+    11.732,
+    1.913
+   ],
+   "rot": [
+    73.954,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -29.371,
+    11.745,
+    2.143
+   ],
+   "rot": [
+    70.836,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -29.174,
+    11.693,
+    2.143
+   ],
+   "rot": [
+    78.222,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_lights",
+   "kind": "scenery",
+   "pos": [
+    -26.268,
+    6.245,
+    1.928
+   ],
+   "rot": [
+    148.726,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_case",
+   "kind": "scenery",
+   "pos": [
+    -26.57,
+    5.88,
+    1.928
+   ],
+   "rot": [
+    -165.185,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_battery",
+   "kind": "scenery",
+   "pos": [
+    -26.583,
+    5.886,
+    2.158
+   ],
+   "rot": [
+    119.775,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    -28.434,
+    19.288,
+    0.723
+   ],
+   "rot": [
+    -88.622,
+    -0.0,
+    9.709
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    7.011,
+    2.285,
+    3.68
+   ],
+   "rot": [
+    171.941,
+    6.612,
+    -1.359
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    6.984,
+    2.84,
+    3.68
+   ],
+   "rot": [
+    -60.057,
+    -3.008,
+    6.045
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    21.346,
+    23.81,
+    0.781
+   ],
+   "rot": [
+    -4.675,
+    12.063,
+    -9.405
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    29.023,
+    12.502,
+    2.586
+   ],
+   "rot": [
+    10.992,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    30.183,
+    13.061,
+    2.603
+   ],
+   "rot": [
+    19.073,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    30.262,
+    10.136,
+    2.47
+   ],
+   "rot": [
+    98.197,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    30.571,
+    8.897,
+    2.463
+   ],
+   "rot": [
+    88.901,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    29.852,
+    11.349,
+    2.48
+   ],
+   "rot": [
+    98.197,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    33.194,
+    8.467,
+    2.434
+   ],
+   "rot": [
+    153.342,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    31.97,
+    8.892,
+    2.435
+   ],
+   "rot": [
+    146.756,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    30.974,
+    9.642,
+    2.441
+   ],
+   "rot": [
+    117.464,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    30.426,
+    10.719,
+    2.451
+   ],
+   "rot": [
+    133.378,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    29.686,
+    11.582,
+    2.468
+   ],
+   "rot": [
+    177.391,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_wires",
+   "kind": "scenery",
+   "pos": [
+    25.495,
+    8.753,
+    2.744
+   ],
+   "rot": [
+    -178.507,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -0.045,
+    -0.393,
+    3.713
+   ],
+   "rot": [
+    71.26,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -0.008,
+    -1.675,
+    3.713
+   ],
+   "rot": [
+    91.604,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -2.681,
+    4.464,
+    3.698
+   ],
+   "rot": [
+    -67.626,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -0.208,
+    -3.863,
+    3.699
+   ],
+   "rot": [
+    -30.911,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -2.427,
+    3.261,
+    3.693
+   ],
+   "rot": [
+    -78.576,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -1.949,
+    2.067,
+    3.699
+   ],
+   "rot": [
+    -78.576,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -1.355,
+    1.031,
+    3.699
+   ],
+   "rot": [
+    -24.999,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -0.391,
+    0.488,
+    3.692
+   ],
+   "rot": [
+    15.842,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    0.961,
+    -4.172,
+    3.699
+   ],
+   "rot": [
+    18.292,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    2.0,
+    -3.829,
+    3.699
+   ],
+   "rot": [
+    67.276,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    2.339,
+    -2.823,
+    3.705
+   ],
+   "rot": [
+    126.033,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    1.77,
+    -1.897,
+    3.692
+   ],
+   "rot": [
+    166.15,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    1.095,
+    -0.896,
+    3.713
+   ],
+   "rot": [
+    -120.68,
+    0.0,
+    -180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    0.405,
+    0.165,
+    3.723
+   ],
+   "rot": [
+    -145.483,
+    0.0,
+    -180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -1.486,
+    7.674,
+    3.69
+   ],
+   "rot": [
+    -154.441,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -0.503,
+    7.207,
+    3.687
+   ],
+   "rot": [
+    153.432,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    0.29,
+    6.272,
+    3.694
+   ],
+   "rot": [
+    123.641,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    1.146,
+    5.326,
+    3.691
+   ],
+   "rot": [
+    117.905,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -2.674,
+    7.659,
+    3.712
+   ],
+   "rot": [
+    -154.441,
+    -0.0,
+    -180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    1.955,
+    4.319,
+    3.684
+   ],
+   "rot": [
+    117.905,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    2.289,
+    2.082,
+    3.698
+   ],
+   "rot": [
+    96.593,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    2.427,
+    3.238,
+    3.686
+   ],
+   "rot": [
+    118.479,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    1.686,
+    1.105,
+    3.699
+   ],
+   "rot": [
+    69.691,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    0.681,
+    0.718,
+    3.713
+   ],
+   "rot": [
+    22.212,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_wires",
+   "kind": "scenery",
+   "pos": [
+    12.617,
+    3.14,
+    3.672
+   ],
+   "rot": [
+    9.866,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_wires",
+   "kind": "scenery",
+   "pos": [
+    9.862,
+    2.592,
+    3.67
+   ],
+   "rot": [
+    9.866,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_wires",
+   "kind": "scenery",
+   "pos": [
+    7.117,
+    2.065,
+    3.665
+   ],
+   "rot": [
+    8.816,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_wires",
+   "kind": "scenery",
+   "pos": [
+    4.393,
+    1.421,
+    3.676
+   ],
+   "rot": [
+    14.497,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_wires",
+   "kind": "scenery",
+   "pos": [
+    1.738,
+    0.552,
+    3.692
+   ],
+   "rot": [
+    -170.563,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_junctionbox",
+   "kind": "scenery",
+   "pos": [
+    3.093,
+    0.997,
+    3.683
+   ],
+   "rot": [
+    177.47,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_junctionbox",
+   "kind": "scenery",
+   "pos": [
+    3.087,
+    0.86,
+    3.683
+   ],
+   "rot": [
+    177.47,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -33.683,
+    10.437,
+    1.937
+   ],
+   "rot": [
+    61.598,
+    0.0,
+    180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -32.646,
+    9.733,
+    1.915
+   ],
+   "rot": [
+    -44.665,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -33.892,
+    6.706,
+    1.914
+   ],
+   "rot": [
+    22.581,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -32.882,
+    7.377,
+    1.919
+   ],
+   "rot": [
+    62.163,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -32.272,
+    8.309,
+    1.919
+   ],
+   "rot": [
+    100.964,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -34.416,
+    6.182,
+    2.022
+   ],
+   "rot": [
+    -140.017,
+    90.0,
+    0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_junctionbox",
+   "kind": "scenery",
+   "pos": [
+    -34.402,
+    6.326,
+    1.915
+   ],
+   "rot": [
+    177.935,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -31.099,
+    9.565,
+    1.915
+   ],
+   "rot": [
+    -140.017,
+    90.0,
+    0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -31.382,
+    9.165,
+    1.931
+   ],
+   "rot": [
+    143.215,
+    -0.0,
+    180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_junctionbox",
+   "kind": "scenery",
+   "pos": [
+    -31.098,
+    9.724,
+    1.922
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -31.962,
+    7.676,
+    1.91
+   ],
+   "rot": [
+    -61.21,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -31.435,
+    6.705,
+    1.916
+   ],
+   "rot": [
+    -13.016,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires002",
+   "kind": "scenery",
+   "pos": [
+    -30.313,
+    6.441,
+    1.919
+   ],
+   "rot": [
+    -5.653,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_terminal_wires003",
+   "kind": "scenery",
+   "pos": [
+    -29.459,
+    5.936,
+    1.939
+   ],
+   "rot": [
+    91.811,
+    -0.0,
+    180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    -28.927,
+    19.405,
+    0.729
+   ],
+   "rot": [
+    -37.577,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    -31.762,
+    2.699,
+    1.923
+   ],
+   "rot": [
+    -78.613,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    -31.786,
+    2.267,
+    1.923
+   ],
+   "rot": [
+    -175.138,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    -4.103,
+    2.329,
+    3.811
+   ],
+   "rot": [
+    135.701,
+    -0.006,
+    0.008
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    -4.235,
+    2.922,
+    3.806
+   ],
+   "rot": [
+    -2.412,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    22.642,
+    10.186,
+    2.723
+   ],
+   "rot": [
+    131.081,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    23.209,
+    10.397,
+    2.715
+   ],
+   "rot": [
+    -148.254,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_terminal_sandbags",
+   "kind": "scenery",
+   "pos": [
+    21.079,
+    23.215,
+    0.778
+   ],
+   "rot": [
+    84.586,
+    -1.045,
+    -7.31
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    2.827,
+    -19.744,
+    -1.087
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -9.095,
+    -13.258,
+    -1.008
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -17.05,
+    13.971,
+    0.204
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -12.276,
+    23.248,
+    -2.126
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    19.522,
+    24.179,
+    0.49
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    11.282,
+    -11.59,
+    3.91
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    31.605,
+    11.338,
+    2.45
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    24.107,
+    1.754,
+    2.756
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    32.293,
+    1.391,
+    2.568
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    5.816,
+    6.721,
+    3.683
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -0.793,
+    -1.819,
+    3.708
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -2.282,
+    3.899,
+    -0.369
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -29.951,
+    8.696,
+    1.922
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -35.564,
+    7.611,
+    1.23
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "objective_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -31.692,
+    15.692,
+    0.788
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    31.003,
+    9.876,
+    2.47
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -30.574,
+    8.705,
+    1.924
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -22.688,
+    35.105,
+    0.619
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    25.351,
+    -30.704,
+    4.541
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -7.158,
+    -23.295,
+    -1.069
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    12.162,
+    30.603,
+    0.132
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -14.601,
+    13.251,
+    0.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    8.604,
+    -13.351,
+    3.972
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -2.389,
+    1.262,
+    -0.376
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -0.188,
+    -5.053,
+    3.757
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -0.87,
+    8.209,
+    3.708
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    3.152,
+    21.116,
+    -1.27
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "random_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -12.44,
+    -17.214,
+    -0.935
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    32.859,
+    -23.717,
+    4.818
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "initial_drop_point",
+   "kind": "scenery",
+   "pos": [
+    -35.524,
+    11.559,
+    1.285
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -4.345,
+    42.466,
+    -0.744
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf",
+   "flags": "4",
+   "team": 1
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    0.843,
+    -37.817,
+    0.65
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -32.436,
+    8.699,
+    2.762
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf",
+   "flags": "4",
+   "team": 2
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    25.04,
+    -3.666,
+    5.117
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf",
+   "flags": "4",
+   "team": 3
+  },
+  {
+   "name": "weak_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -4.442,
+    33.196,
+    -0.238
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "slayer",
+   "flags": "4",
+   "team": 1
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    -4.442,
+    33.196,
+    0.044
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "slayer",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "weak_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    0.829,
+    -27.407,
+    1.158
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "slayer",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "weak_anti_respawn_zone",
+   "kind": "scenery",
+   "pos": [
+    0.829,
+    -27.407,
+    1.464
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "slayer",
+   "flags": "4",
+   "team": 1
+  },
+  {
+   "name": "gravlift_center",
+   "kind": "crates",
+   "pos": [
+    0.135,
+    2.551,
+    -0.239
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "gravlift_center",
+   "kind": "crates",
+   "pos": [
+    2.647,
+    13.555,
+    -0.09
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "gravlift_center",
+   "kind": "crates",
+   "pos": [
+    -1.945,
+    -7.994,
+    -0.463
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "north_cannon",
+   "kind": "crates",
+   "pos": [
+    9.388,
+    25.859,
+    -0.57
+   ],
+   "rot": [
+    -100.644,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "south_cannon",
+   "kind": "crates",
+   "pos": [
+    -1.382,
+    -20.305,
+    -1.323
+   ],
+   "rot": [
+    69.4,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "gravlift_plunger",
+   "kind": "crates",
+   "pos": [
+    -28.176,
+    8.722,
+    -0.87
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "0",
+   "team": 0
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -1.227,
+    8.89,
+    3.808
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "koth_hill",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    11.623,
+    -17.904,
+    3.993
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "koth_hill",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -18.483,
+    20.7,
+    0.211
+   ],
+   "rot": [
+    23.389,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -18.467,
+    -5.24,
+    2.228
+   ],
+   "rot": [
+    -16.546,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    30.884,
+    10.418,
+    2.479
+   ],
+   "rot": [
+    9.245,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    27.615,
+    -4.791,
+    2.593
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -37.748,
+    7.455,
+    1.318
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -14.343,
+    -8.023,
+    2.374
+   ],
+   "rot": [
+    0.0,
+    -0.014,
+    -0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -16.741,
+    21.046,
+    0.275
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    8.881,
+    -16.692,
+    4.028
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -29.794,
+    -2.258,
+    -0.134
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    0.213,
+    -0.088,
+    3.753
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    7.262,
+    8.673,
+    3.672
+   ],
+   "rot": [
+    -0.624,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_site",
+   "flags": "0",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.973,
+    -5.582,
+    2.283
+   ],
+   "rot": [
+    169.087,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_site",
+   "flags": "0",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    9.687,
+    -16.728,
+    4.029
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ext_site",
+   "flags": "0",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -0.884,
+    9.113,
+    3.672
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_site",
+   "flags": "0",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    24.888,
+    7.64,
+    2.783
+   ],
+   "rot": [
+    21.652,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_site",
+   "flags": "0",
+   "team": 8
+  },
+  {
+   "name": "ctf_flag_stand",
+   "kind": "crates",
+   "pos": [
+    -4.373,
+    41.14,
+    -1.002
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "4",
+   "team": 1
+  },
+  {
+   "name": "ctf_flag_stand",
+   "kind": "crates",
+   "pos": [
+    0.137,
+    -0.653,
+    3.713
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ctf_flag_stand",
+   "kind": "crates",
+   "pos": [
+    0.687,
+    -35.058,
+    0.137
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ctf_flag_stand",
+   "kind": "crates",
+   "pos": [
+    -33.05,
+    8.715,
+    1.919
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "4",
+   "team": 2
+  },
+  {
+   "name": "ctf_flag_stand",
+   "kind": "crates",
+   "pos": [
+    26.332,
+    -3.608,
+    2.554
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "4",
+   "team": 3
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -11.443,
+    31.555,
+    -2.451
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "grif_goal",
+   "flags": "4",
+   "team": 1
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -3.59,
+    -29.044,
+    -1.292
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "grif_goal",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "storm_mp_circle",
+   "kind": "crates",
+   "pos": [
+    -2.54,
+    2.665,
+    3.71
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "grif_spawn",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "dom_damage_team_shield_small",
+   "kind": "crates",
+   "pos": [
+    -1.471,
+    2.603,
+    0.38
+   ],
+   "rot": [
+    -179.787,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_shield",
+   "flags": "5",
+   "team": 8
+  },
+  {
+   "name": "dom_damage_team_shield_small",
+   "kind": "crates",
+   "pos": [
+    -33.029,
+    11.925,
+    2.658
+   ],
+   "rot": [
+    90.138,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_shield",
+   "flags": "5",
+   "team": 8
+  },
+  {
+   "name": "dom_damage_team_shield_small",
+   "kind": "crates",
+   "pos": [
+    -32.996,
+    5.483,
+    2.707
+   ],
+   "rot": [
+    -89.439,
+    1.054,
+    -0.0
+   ],
+   "label": "dom_shield",
+   "flags": "5",
+   "team": 8
+  },
+  {
+   "name": "dom_damage_team_shield_large",
+   "kind": "crates",
+   "pos": [
+    4.69,
+    2.458,
+    5.724
+   ],
+   "rot": [
+    -179.787,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_shield",
+   "flags": "5",
+   "team": 8
+  },
+  {
+   "name": "dom_damage_team_shield_large",
+   "kind": "crates",
+   "pos": [
+    27.523,
+    8.323,
+    4.917
+   ],
+   "rot": [
+    -169.393,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_shield",
+   "flags": "5",
+   "team": 8
+  },
+  {
+   "name": "dom_damage_team_shield_large",
+   "kind": "crates",
+   "pos": [
+    30.969,
+    -1.285,
+    4.733
+   ],
+   "rot": [
+    -150.983,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_shield",
+   "flags": "5",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    0.247,
+    2.99,
+    4.391
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_base_zone",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -30.06,
+    8.859,
+    2.082
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_base_zone",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    33.044,
+    7.395,
+    3.442
+   ],
+   "rot": [
+    28.441,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_base_zone",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "fw_unsc_sandbags_single",
+   "kind": "crates",
+   "pos": [
+    0.116,
+    0.379,
+    3.715
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "fw_unsc_sandbags_single",
+   "kind": "crates",
+   "pos": [
+    0.355,
+    0.323,
+    3.723
+   ],
+   "rot": [
+    -77.72,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "fw_unsc_sandbags_single",
+   "kind": "crates",
+   "pos": [
+    -32.111,
+    8.703,
+    1.919
+   ],
+   "rot": [
+    -85.975,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "fw_unsc_sandbags_single",
+   "kind": "crates",
+   "pos": [
+    -32.191,
+    8.915,
+    1.907
+   ],
+   "rot": [
+    20.517,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "fw_unsc_sandbags_single",
+   "kind": "crates",
+   "pos": [
+    -31.633,
+    8.641,
+    1.897
+   ],
+   "rot": [
+    9.15,
+    -0.0,
+    -0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_door_01",
+   "kind": "crates",
+   "pos": [
+    -3.877,
+    -37.665,
+    1.153
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_door_01",
+   "kind": "crates",
+   "pos": [
+    5.379,
+    -36.572,
+    0.945
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_door_01",
+   "kind": "crates",
+   "pos": [
+    -3.585,
+    -41.11,
+    1.344
+   ],
+   "rot": [
+    180.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_door_01",
+   "kind": "crates",
+   "pos": [
+    -8.497,
+    41.286,
+    -0.159
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_door_01",
+   "kind": "crates",
+   "pos": [
+    0.034,
+    41.384,
+    -0.14
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_redoubt_forerunner_door_01",
+   "kind": "crates",
+   "pos": [
+    0.022,
+    46.223,
+    0.334
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dominion",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    6.023,
+    7.569,
+    3.669
+   ],
+   "rot": [
+    -59.835,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    6.344,
+    7.192,
+    3.669
+   ],
+   "rot": [
+    62.293,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    6.206,
+    7.324,
+    4.035
+   ],
+   "rot": [
+    -32.237,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    8.844,
+    8.955,
+    3.669
+   ],
+   "rot": [
+    -67.418,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    8.842,
+    8.411,
+    3.669
+   ],
+   "rot": [
+    -90.287,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_large",
+   "kind": "machines",
+   "pos": [
+    5.744,
+    10.265,
+    3.669
+   ],
+   "rot": [
+    32.738,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    5.657,
+    9.441,
+    4.508
+   ],
+   "rot": [
+    100.496,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    -16.008,
+    -6.745,
+    2.355
+   ],
+   "rot": [
+    -35.362,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -16.018,
+    -6.741,
+    2.717
+   ],
+   "rot": [
+    -24.066,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -15.822,
+    -4.511,
+    2.316
+   ],
+   "rot": [
+    -44.243,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_large",
+   "kind": "machines",
+   "pos": [
+    -15.979,
+    -4.109,
+    2.23
+   ],
+   "rot": [
+    -149.738,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    -20.452,
+    -3.982,
+    2.267
+   ],
+   "rot": [
+    -104.151,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -20.482,
+    -4.507,
+    2.224
+   ],
+   "rot": [
+    -66.577,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -20.477,
+    -3.948,
+    2.633
+   ],
+   "rot": [
+    -124.984,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    10.611,
+    -15.835,
+    4.115
+   ],
+   "rot": [
+    54.716,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    10.912,
+    -16.042,
+    4.153
+   ],
+   "rot": [
+    49.828,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    10.705,
+    -15.882,
+    4.361
+   ],
+   "rot": [
+    155.297,
+    9.66,
+    -5.549
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_large",
+   "kind": "machines",
+   "pos": [
+    7.795,
+    -17.27,
+    4.078
+   ],
+   "rot": [
+    28.863,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    8.832,
+    -18.156,
+    4.037
+   ],
+   "rot": [
+    -0.299,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    8.862,
+    -18.139,
+    4.392
+   ],
+   "rot": [
+    -9.638,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -2.878,
+    9.034,
+    3.708
+   ],
+   "rot": [
+    104.614,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -2.9,
+    9.42,
+    3.708
+   ],
+   "rot": [
+    -11.964,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    -2.886,
+    9.226,
+    3.941
+   ],
+   "rot": [
+    -92.363,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_large",
+   "kind": "machines",
+   "pos": [
+    -0.542,
+    11.078,
+    3.699
+   ],
+   "rot": [
+    -92.363,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    -1.386,
+    6.586,
+    3.683
+   ],
+   "rot": [
+    -24.74,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    1.702,
+    7.621,
+    3.683
+   ],
+   "rot": [
+    -85.346,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    1.706,
+    7.136,
+    3.683
+   ],
+   "rot": [
+    -99.144,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    1.716,
+    7.156,
+    3.915
+   ],
+   "rot": [
+    -107.242,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    -0.122,
+    10.832,
+    3.684
+   ],
+   "rot": [
+    155.795,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    25.939,
+    9.067,
+    2.765
+   ],
+   "rot": [
+    155.795,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    23.704,
+    8.328,
+    2.794
+   ],
+   "rot": [
+    56.96,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_small",
+   "kind": "machines",
+   "pos": [
+    23.573,
+    7.908,
+    2.806
+   ],
+   "rot": [
+    81.281,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    23.654,
+    8.154,
+    3.027
+   ],
+   "rot": [
+    70.628,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    25.972,
+    5.841,
+    2.777
+   ],
+   "rot": [
+    50.655,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_large",
+   "kind": "machines",
+   "pos": [
+    25.671,
+    5.386,
+    2.823
+   ],
+   "rot": [
+    160.698,
+    -0.0,
+    -0.0
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_blam_crate_med",
+   "kind": "machines",
+   "pos": [
+    28.453,
+    7.747,
+    3.397
+   ],
+   "rot": [
+    41.601,
+    -4.485,
+    12.674
+   ],
+   "label": "ext_target",
+   "flags": "4",
+   "team": 0
+  },
+  {
+   "name": "ca_dom_antenna_large",
+   "kind": "machines",
+   "pos": [
+    24.986,
+    3.113,
+    3.519
+   ],
+   "rot": [
+    -34.603,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_ai_terminal",
+   "kind": "machines",
+   "pos": [
+    28.353,
+    12.185,
+    2.709
+   ],
+   "rot": [
+    -100.382,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_base",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_ai_terminal",
+   "kind": "machines",
+   "pos": [
+    0.125,
+    0.465,
+    3.713
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_base",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_ai_terminal",
+   "kind": "machines",
+   "pos": [
+    -32.008,
+    8.681,
+    1.922
+   ],
+   "rot": [
+    -180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_base",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    -24.457,
+    8.736,
+    2.684
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    -35.04,
+    7.419,
+    3.085
+   ],
+   "rot": [
+    -90.9,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    -32.972,
+    4.741,
+    4.202
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    -33.294,
+    12.709,
+    4.137
+   ],
+   "rot": [
+    -180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    6.984,
+    2.628,
+    6.027
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    0.874,
+    -9.418,
+    3.815
+   ],
+   "rot": [
+    -0.833,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    -6.726,
+    2.661,
+    6.022
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    1.636,
+    2.58,
+    0.921
+   ],
+   "rot": [
+    -89.24,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    6.795,
+    17.163,
+    2.789
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    180.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    27.13,
+    5.741,
+    4.411
+   ],
+   "rot": [
+    -121.029,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    24.821,
+    11.075,
+    4.225
+   ],
+   "rot": [
+    -51.77,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    23.747,
+    -3.062,
+    4.237
+   ],
+   "rot": [
+    -106.225,
+    0.819,
+    2.811
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_base_decal",
+   "kind": "machines",
+   "pos": [
+    21.366,
+    19.77,
+    2.724
+   ],
+   "rot": [
+    -159.024,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_decor",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    -6.64,
+    4.344,
+    3.113
+   ],
+   "rot": [
+    -0.0,
+    21.602,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    -6.672,
+    0.977,
+    3.141
+   ],
+   "rot": [
+    -0.0,
+    21.602,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    12.917,
+    0.765,
+    3.672
+   ],
+   "rot": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    12.898,
+    4.466,
+    3.657
+   ],
+   "rot": [
+    -0.0,
+    0.0,
+    0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    8.341,
+    15.614,
+    3.31
+   ],
+   "rot": [
+    88.58,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    -34.196,
+    13.899,
+    1.193
+   ],
+   "rot": [
+    142.031,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    -27.37,
+    1.885,
+    -0.098
+   ],
+   "rot": [
+    137.565,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    20.092,
+    19.0,
+    1.35
+   ],
+   "rot": [
+    -108.66,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_antenna_small",
+   "kind": "machines",
+   "pos": [
+    28.278,
+    -0.943,
+    3.665
+   ],
+   "rot": [
+    157.969,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_cover",
+   "kind": "machines",
+   "pos": [
+    22.993,
+    2.863,
+    2.748
+   ],
+   "rot": [
+    176.898,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_cover",
+   "kind": "machines",
+   "pos": [
+    22.898,
+    1.185,
+    2.753
+   ],
+   "rot": [
+    176.898,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_cover",
+   "kind": "machines",
+   "pos": [
+    8.989,
+    5.862,
+    3.651
+   ],
+   "rot": [
+    -0.055,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_cover",
+   "kind": "machines",
+   "pos": [
+    8.992,
+    7.55,
+    3.651
+   ],
+   "rot": [
+    -0.146,
+    -0.0,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_cover",
+   "kind": "machines",
+   "pos": [
+    -12.191,
+    3.753,
+    1.003
+   ],
+   "rot": [
+    180.0,
+    23.199,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  },
+  {
+   "name": "ca_dom_cover",
+   "kind": "machines",
+   "pos": [
+    -8.835,
+    1.573,
+    2.308
+   ],
+   "rot": [
+    180.0,
+    23.199,
+    -0.0
+   ],
+   "label": "dom_fortify",
+   "flags": "4",
+   "team": 8
+  }
+ ]
+}

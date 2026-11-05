@@ -1,0 +1,521 @@
+{
+"features": [
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+0.371,
+-69.622,
+-0.006
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-0.309,
+-69.62,
+-0.006
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-13.267,
+-29.028,
+3.595
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "drop_shield",
+"pos": [
+16.51,
+-153.185,
+-9.24
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "plasma_turret_mounted",
+"pos": [
+-7.763,
+-40.443,
+3.451
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "plasma_turret_mounted",
+"pos": [
+7.782,
+-40.442,
+3.451
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.013,
+-64.196,
+0.585
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.004,
+-24.764,
+4.385
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small_ff45",
+"pos": [
+-12.036,
+-33.603,
+3.451
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-12.032,
+-28.402,
+3.451
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-0.008,
+-29.969,
+1.45
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-0.005,
+-24.763,
+1.45
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+0.004,
+-24.764,
+4.385
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+12.031,
+-28.401,
+3.436
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+12.522,
+-28.707,
+-0.015
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-12.527,
+-28.71,
+-0.015
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-0.004,
+-58.685,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-0.011,
+-62.487,
+-0.015
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-9.546,
+-32.968,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-0.008,
+-29.96,
+4.409
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small_ff45",
+"pos": [
+12.039,
+-33.598,
+3.451
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+9.545,
+-32.968,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small_ff45",
+"pos": [
+14.088,
+-57.647,
+2.201
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small_ff45",
+"pos": [
+-14.081,
+-57.643,
+2.186
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+3.818,
+-68.114,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-3.817,
+-68.117,
+-0.015
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-5.696,
+-62.234,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+5.692,
+-62.232,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-14.082,
+-62.85,
+2.186
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+14.066,
+-62.85,
+2.186
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+0.018,
+-69.921,
+0.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+6.052,
+-70.585,
+0.002
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m45_hall_door_small01",
+"pos": [
+-6.036,
+-70.585,
+0.004
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-0.046,
+-56.529,
+0.412
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+11.246,
+-51.08,
+0.132
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-11.057,
+-50.851,
+0.126
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-0.046,
+-56.529,
+0.412
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-0.046,
+-56.529,
+0.412
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+11.246,
+-51.08,
+0.132
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+11.246,
+-51.08,
+0.132
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-11.057,
+-50.851,
+0.126
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-11.057,
+-50.851,
+0.126
+],
+"group": "controls"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+10.148,
+-33.391,
+-0.015
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-10.271,
+-33.453,
+-0.136
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-12.548,
+-33.604,
+3.424
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+12.5,
+-33.599,
+3.425
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-0.006,
+-29.964,
+3.764
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-0.013,
+-29.969,
+1.186
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-6.042,
+-70.474,
+-0.024
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+6.049,
+-70.463,
+-0.044
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+0.006,
+-58.554,
+-1.331
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

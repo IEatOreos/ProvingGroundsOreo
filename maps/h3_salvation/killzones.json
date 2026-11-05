@@ -1,0 +1,4 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_drop", "center": [18.142, 57.368, -72.242], "size": [381.778, 419.188, 136.997]},
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [-0.397, 6.607, -0.546], "size": [37.613, 46.105, 31.142], "condition": "safe_zone volume not in the safe zone block (H2 / H3 engine): what it does is UNKNOWN"}
+]}

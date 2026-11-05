@@ -1,0 +1,170 @@
+{
+"features": [
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+143.034,
+57.224,
+-0.142
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+144.276,
+49.519,
+-0.142
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "drop_shield",
+"pos": [
+125.085,
+37.299,
+-1.554
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+166.464,
+61.004,
+-2.11
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+137.278,
+56.2,
+-1.032
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+191.338,
+88.337,
+-2.835
+],
+"team": 1
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+137.975,
+79.343,
+0.606
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+142.131,
+54.093,
+0.311
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+165.24,
+56.5,
+-1.806
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+137.975,
+79.343,
+0.606
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+142.131,
+54.093,
+0.311
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+165.24,
+56.5,
+-1.806
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+137.975,
+79.343,
+0.606
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+142.131,
+54.093,
+0.311
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+165.24,
+56.5,
+-1.806
+],
+"group": "controls"
+},
+{
+"kind": "door",
+"name": "door_slider_utility",
+"pos": [
+138.868,
+51.847,
+0.354
+],
+"group": "scenery"
+}
+],
+"teleporters": []
+}

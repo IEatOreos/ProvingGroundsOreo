@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Observer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0b0f14; --card: rgba(12, 19, 28, 0.92); --line: #24425a; --text: #d3dde8; --dim: #8fa3b6;
+    --gold: #ffc94d; --violet: #b48cff; --orange: #ff9a3d; --magenta: #ff5bd8; --red: #ff4b4b;
+    --green: #5fe08a; --cyan: #4fd8ff; --sky: #8fd3ff; --lime: #a8f05a;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --r: 6px;
+    --f-s: 12px; --f-m: 13px; --f-l: 15px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: var(--f-m)/1.4 "Segoe UI", system-ui, sans-serif; }
+  button, select { font: inherit; color: var(--text); background: #132232; border: 1px solid var(--line);
+    border-radius: var(--r); padding: var(--s1) var(--s2); cursor: pointer; min-height: 28px; }
+  button:hover, select:hover { border-color: var(--sky); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  button[aria-pressed="true"] { background: #1d3a52; border-color: var(--sky); color: #fff; }
+  button[aria-pressed="false"] { color: var(--dim); }
+  #app { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+  header { display: flex; gap: var(--s3); align-items: center; padding: var(--s2) var(--s3);
+    border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: var(--f-l); margin: 0; font-weight: 600; }
+  #status { color: var(--dim); margin-left: auto; }
+  .badge { font-size: var(--f-s); padding: 1px var(--s2); border-radius: 10px; border: 1px solid var(--line); }
+  .live { color: #0b0f14; background: var(--red); border-color: var(--red); font-weight: 700; }
+  main { display: grid; grid-template-columns: 1fr 390px; min-height: 0; }
+  #mapwrap { position: relative; min-width: 0; min-height: 0; }
+  canvas#map { width: 100%; height: 100%; display: block; cursor: crosshair; }
+  #layers { position: absolute; top: var(--s2); left: var(--s2); display: flex; flex-wrap: wrap; gap: var(--s1);
+    max-width: calc(100% - 16px); }
+  #layers button { background: var(--card); font-size: var(--f-s); }
+  #banner { position: absolute; left: var(--s2); bottom: var(--s2); right: var(--s2); background: var(--card);
+    border: 1px solid var(--orange); border-radius: var(--r); padding: var(--s2) var(--s3); display: none; }
+  aside { border-left: 1px solid var(--line); overflow-y: auto; min-height: 0; }
+  section { padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line); }
+  section h2 { font-size: var(--f-s); text-transform: uppercase; letter-spacing: .06em; color: var(--dim);
+    margin: 0 0 var(--s2); font-weight: 600; }
+  .botrow { display: grid; grid-template-columns: 14px 1fr auto; gap: var(--s2); align-items: center;
+    padding: 3px var(--s1); border-radius: var(--r); cursor: pointer; border: 1px solid transparent; width: 100%;
+    background: none; text-align: left; min-height: 30px; }
+  .botrow:hover { border-color: var(--line); }
+  .botrow.sel { border-color: var(--gold); background: #1a2430; }
+  .botrow.dead { opacity: .45; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .sub { color: var(--dim); font-size: var(--f-s); }
+  .hp { display: flex; gap: 2px; width: 64px; }
+  .hp span { height: 6px; border-radius: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s1); }
+  .chip { font-size: var(--f-s); padding: 1px var(--s2); border-radius: 10px; border: 1px solid var(--line); color: var(--dim); }
+  .chip.on { color: #0b0f14; background: var(--lime); border-color: var(--lime); font-weight: 600; }
+  .chip.warn { color: #0b0f14; background: var(--orange); border-color: var(--orange); font-weight: 600; }
+  .kv { display: grid; grid-template-columns: 92px 1fr; gap: 2px var(--s2); }
+  .kv div:nth-child(odd) { color: var(--dim); }
+  .bar { display: grid; grid-template-columns: 1fr 44px; gap: var(--s2); align-items: center; margin: 2px 0; }
+  .bar .fill { height: 16px; border-radius: 3px; background: #24425a; position: relative; overflow: hidden; }
+  .bar .fill span { position: absolute; left: var(--s1); top: 0; font-size: var(--f-s); line-height: 16px;
+    white-space: nowrap; color: #fff; text-shadow: 0 0 3px #000; }
+  .bar.chosen .fill { outline: 1px solid var(--gold); }
+  .bar .v { text-align: right; font-variant-numeric: tabular-nums; }
+  #feed div { padding: 2px 0; cursor: pointer; border-radius: 3px; }
+  #feed div:hover { background: #1a2430; }
+  #feed .t { color: var(--dim); font-variant-numeric: tabular-nums; display: inline-block; width: 52px; }
+  footer { border-top: 1px solid var(--line); padding: var(--s2) var(--s3); display: grid;
+    grid-template-columns: auto auto auto 1fr auto; gap: var(--s3); align-items: center; }
+  #clock { font-variant-numeric: tabular-nums; min-width: 150px; }
+  #scrub { position: relative; height: 36px; }
+  #ticks { position: absolute; inset: 0 0 18px 0; width: 100%; height: 18px; }
+  #time { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; }
+  #help, #recset { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; }
+  #help .card, #recset .card { background: #0f1822; border: 1px solid var(--line); border-radius: var(--r); padding: var(--s4); max-width: 560px; }
+  #help kbd { background: #1d2a38; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; font-size: var(--f-s); }
+  .empty { color: var(--dim); }
+  #nogames { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: var(--s4); }
+  #nogames[hidden] { display: none; }
+  #nogames .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: var(--s4);
+    max-width: 560px; }
+  #nogames h2 { margin: 0 0 var(--s2); font-size: var(--f-l); }
+  #nogames ol { margin: var(--s2) 0; padding-left: 1.4em; }
+  .ytab { width: 100%; border-collapse: collapse; font-size: var(--f-s); font-variant-numeric: tabular-nums; margin: var(--s1) 0 var(--s2); }
+  .ytab th { color: var(--dim); font-weight: 600; text-align: right; padding: 2px 3px; white-space: nowrap; }
+  .ytab td { text-align: right; padding: 2px 3px; border-top: 1px solid #1a2a3a; }
+  .ytab th:first-child, .ytab td:first-child { text-align: left; }
+  .ytab tr.me td { color: var(--gold); font-weight: 600; }
+  #you details { margin-top: var(--s2); }
+  #you summary { cursor: pointer; color: var(--sky); }
+  #you .note { color: var(--dim); font-size: var(--f-s); margin-bottom: var(--s1); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { border-left: 0; max-height: 45vh; } }
+  .pair { display: inline-flex; align-items: center; gap: var(--s2); }   /* a label wraps with its control */
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Observer</h1>
+    <span class="pair"><label for="tracepick" class="sub">Game</label>
+    <select id="tracepick" aria-label="Choose a game trace"></select></span>
+    <button id="reload" title="Look for new traces">Refresh list</button>
+    <span class="pair"><button id="exportbtn" title="Save this game as one file to share: every player marked person or bot, everything the bots did and decided, and the post-game report. Gamertags become Player 1, Player 2 (tick Keep names to keep them); Xbox ids are always left out.">Export game</button>
+    <label class="sub"><input type="checkbox" id="exportnames"> Keep names</label></span>
+    <button id="keepbtn" aria-pressed="false" hidden title="Kept games are never removed. Games you do not keep make room for new ones.">Keep game</button>
+    <button id="recbtn" title="How many games are kept and how long each recording can be">Recording settings</button>
+    <span class="pair"><button id="importbtn" title="Open a game someone exported (a .zip from Export game): it is added to the game list as Imported">Import game</button>
+    <input type="file" id="importfile" accept=".zip,application/zip" hidden></span>
+    <span class="pair"><label for="mappick" class="sub">Map</label>
+    <select id="mappick" aria-label="Map to draw under this game"></select></span>
+    <span id="livebadge" class="badge live" hidden>LIVE</span>
+    <span id="status" role="status" aria-live="polite">Loading the list of games…</span>
+    <button id="helpbtn" aria-label="Keyboard shortcuts and legend">?</button>
+  </header>
+  <main>
+    <div id="mapwrap">
+      <canvas id="map" aria-label="Top-down map of the game: bots, where they face, their goals, callouts"></canvas>
+      <div id="layers" role="toolbar" aria-label="Map layers"></div>
+      <div id="banner" role="note"></div>
+      <div id="nogames" role="status" hidden></div>
+    </div>
+    <aside>
+      <section><h2>You</h2><div id="you" class="empty">No game loaded.</div></section>
+      <section><h2>Players</h2><div id="botlist" class="empty">No game loaded.</div></section>
+      <section><h2 id="insp-title">Selected bot</h2><div id="inspector" class="empty">Click a bot on the map or in the list.</div></section>
+      <section><h2>Events near this moment</h2><div id="feed" class="empty">Nothing yet.</div></section>
+    </aside>
+  </main>
+  <footer>
+    <button id="play" aria-label="Play">Play</button>
+    <select id="speed" aria-label="Playback speed">
+      <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option>
+      <option value="2">2x</option><option value="4">4x</option><option value="8">8x</option>
+    </select>
+    <span id="clock">0.0 / 0.0 s</span>
+    <div id="scrub"><canvas id="ticks" aria-hidden="true"></canvas>
+      <input id="time" type="range" min="0" max="0" step="0.05" value="0" aria-label="Time in the game"></div>
+    <button id="follow" aria-pressed="false" title="Stay at the newest moment of a live game (L)">Follow live</button>
+  </footer>
+</div>
+<div id="help" role="dialog" aria-modal="true" aria-label="Shortcuts and legend"><div class="card">
+  <h2 style="margin-top:0">Shortcuts</h2>
+  <p><kbd>Space</kbd> play / pause &nbsp; <kbd>←</kbd> <kbd>→</kbd> 0.5 s (<kbd>Shift</kbd> 5 s) &nbsp; <kbd>,</kbd> <kbd>.</kbd> 0.1 s<br>
+  <kbd>[</kbd> <kbd>]</kbd> slower / faster &nbsp; <kbd>1</kbd>–<kbd>9</kbd> pick a bot &nbsp; <kbd>F</kbd> follow the picked bot &nbsp; <kbd>L</kbd> follow live<br>
+  Mouse: wheel zooms, drag pans, click picks a bot.</p>
+  <h2>On the map</h2>
+  <p>Dots are players in their team's colour (white ring: a person). The line out of a dot is where it faces; the picked bot also shows its view cone.
+  Goal lines: <span style="color:var(--red)">fight</span>, <span style="color:var(--gold)">objective</span>,
+  <span style="color:var(--orange)">hunt</span>, <span style="color:var(--green)">retreat</span>,
+  <span style="color:var(--violet)">item</span>, <span style="color:var(--sky)">hold</span>. Small dots: next waypoint.
+  Hollow circles: where the picked bot believes enemies are (solid ring: seen now). Diamonds: director orders.
+  Speech bubbles: callouts. Flashes: shots. Crosses: deaths. Teal ground: floor LiDAR mapped.
+  You layer: gold squares where you spent the match (brighter: longer), red rings where your fights began.</p>
+  <p>Attention (dotted lines ending in a ring): where each player's eyes are. Bots: <span style="color:var(--red)">aiming at an enemy</span>,
+  <span style="color:var(--gold)">watching an enemy it knows of</span> (seen, on radar, called out), <span style="color:var(--sky)">checking a flank</span>,
+  <span style="color:var(--violet)">using equipment</span>, grey: where it walks. People: white, the enemy in their sights.
+  Squads: a thick team-coloured line joins teammates formed up within 8 units. Labels add how long a player has stood still
+  (from 3 s) and how many teammates are with it.</p>
+  <p>In the panel, lit chips are what was true when the bot decided; dim chips were false. The list shows everyone's
+  attention, stillness, squad and what each bot is weighing.</p>
+  <button id="helpclose">Close</button></div></div>
+<div id="recset" role="dialog" aria-modal="true" aria-labelledby="rectitle"><div class="card">
+  <h2 id="rectitle" style="margin-top:0">Recording settings</h2>
+  <p><label for="recgames">Games kept</label> <input id="recgames" type="number" min="2" max="50" step="1" style="width:5em"></p>
+  <p class="sub">When a new game starts, the oldest game you did not keep is removed. Kept games, exported games and
+  games with bug reports always stay.</p>
+  <p><label for="recminutes">Longest recording (minutes)</label> <input id="recminutes" type="number" min="1" max="600" step="1" style="width:5em"></p>
+  <p class="sub">A longer game keeps its last minutes, so the end of the game and any bug report are always there.
+  Changes count from the next game.</p>
+  <p><button id="recsave">Save</button> <button id="recclose">Close</button> <span id="recsaid" role="status"></span></p>
+</div></div>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+// team colours in the games' order (Halo 3 / Reach: red, blue, green, orange, purple, gold, brown, pink: the
+// BOTS panel's); free for all puts every player on a team of its own: more hues after the eight
+const TEAMS = [["Red", "#ff4b4b"], ["Blue", "#4fd8ff"], ["Green", "#48b85c"], ["Orange", "#f08a2c"], ["Purple", "#a46ae0"],
+  ["Gold", "#e5bf3c"], ["Brown", "#a8784a"], ["Pink", "#e56aae"]];
+const tcol = (t) => t >= 0 && t < 8 ? TEAMS[t][1] : `hsl(${(t * 47) % 360}, 70%, 62%)`;
+const tname = (t) => t >= 0 && t < 8 ? TEAMS[t][0] : `team ${t + 1}`;
+const GOALCOL = { fight: "#ff4b4b", objective: "#ffc94d", hunt: "#ff9a3d", retreat: "#5fe08a", item: "#b48cff",
+  hold: "#8fd3ff", roam: "#8fa3b6", vehicle: "#a8f05a" };
+const LAYERS = [["map", "Map"], ["zones", "Zones"], ["facing", "Facing"], ["attention", "Attention"], ["aim", "Crosshairs"], ["squads", "Squads"],
+  ["goals", "Goals"], ["beliefs", "Beliefs"], ["calls", "Callouts"], ["orders", "Orders"], ["shots", "Shots"],
+  ["gear", "Equipment"], ["vehicles", "Vehicles"], ["trails", "Trails"], ["labels", "Labels"], ["you", "You"]];
+// what a player pays attention to (bot lines "att", brain/tracefmt.py; a person: who is in their sights)
+const ATTCOL = { aim: "#ff4b4b", grenade: "#ffd27a", gear: "#b48cff", watch: "#ffc94d", flank: "#8fd3ff", path: "#8fa3b6",
+  sights: "#ffffff" };
+const SOURCE = { eyes: "seen", radar: "on radar", callout: "called out", hit: "shot us", static: "radar static",
+  pv: "promethean vision", fake: "a fake radar dot" };
+function attText(p) {
+  if (!p.bot) return p.sights >= 0 ? `eyes on #${p.sights}` : (p.sights === null ? "not recorded" : "nobody in sights");
+  const a = p.line && p.line.att;
+  if (!a) return "not recorded";
+  const [k, w] = a;
+  if (k === "aim") return `aiming at #${w}`;
+  if (k === "grenade") return `grenade at #${w}`;
+  if (k === "gear") return `using ${String(w).replace(/_/g, " ")}`;
+  if (k === "watch") {
+    const [who, ...rest] = String(w).split(" "), src = rest.join(" ");
+    if (who === "static") return `watching the radar static of #${src}`;
+    if (who === "callout") return `watching a callout: ${src}`;
+    if (!who.startsWith("#")) return `watching ${SOURCE[who] || who}`;
+    return `watching ${who}${src ? ` (${SOURCE[src] || src})` : ""}`;
+  }
+  if (k === "flank") return `checking its ${w} flank`;
+  return "looking where it walks";
+}
+function stillText(p) { return p.still == null ? "" : p.still >= 3 ? `still ${p.still.toFixed(0)} s` : ""; }
+// deployed equipment radii in world units (brain/equipment.py ITEM)
+const GEAR_R = { bubble_shield: 0.75, power_drain: 1.5, regenerator: 0.75, trip_mine: 0.6, deployable_cover: 0.5,
+  radar_jammer: 1.2, flare: 1.0, grav_lift: 0.5, drop_shield: 0.75, regen_field: 0.6, autosentry: 0.4, hologram: 0.3 };
+const on = Object.fromEntries(LAYERS.map(([k]) => [k, k !== "orders" && k !== "you"]));   // (You: from its section)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function niceArg(a) {        // "Vec(x=2.7516999, y=-4.68500, z=2.0058" (cut at 60 in the trace) -> "2.8, -4.7, 2.0"
+  const m = /x=(-?[\d.]+)(?:, y=(-?[\d.]+))?(?:, z=(-?[\d.]+))?/.exec(String(a || ""));
+  if (!m) return a === "None" ? "" : String(a ?? "");
+  return [m[1], m[2], m[3]].filter((v) => v !== undefined && v !== "").map((v) => (+v).toFixed(1)).join(", ");
+}
+
+let S = null;                 // the loaded game
+let base = null, img = null;  // the map picture
+let view = { k: 8, cx: 0, cy: 0 };
+let now = 0, playing = false, speed = 1, follow = false, followBot = false, selected = null, dirty = true;
+let lastPanel = 0, pollTimer = null;
+
+function freshGame(file, info) {
+  return { file, info, meta: {}, bots: new Map(), thinks: new Map(), world: { t: [], rows: [] }, calls: [], loadouts: [], coach: [],
+    deaths: [], prevAlive: {}, tStart: Infinity, tEnd: 0, offset: 0, size: 0, hasThink: false, switches: new Map() };
+}
+function series(map, id) { if (!map.has(id)) map.set(id, { t: [], rows: [] }); return map.get(id); }
+function at(s, t) {          // the last row at or before t
+  if (!s || !s.t.length) return null;
+  let lo = 0, hi = s.t.length - 1;
+  if (s.t[0] > t) return null;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (s.t[mid] <= t) lo = mid; else hi = mid - 1; }
+  return s.rows[lo];
+}
+function ingest(text) {
+  for (const line of text.split("\n")) {
+    if (!line) continue;
+    let d; try { d = JSON.parse(line); } catch (e) { continue; }
+    const t = d.t || 0;
+    if (d.meta) { if (d.meta.bot) S.meta[d.meta.bot.id] = d.meta.bot; if (d.meta.map) S.mapName = d.meta.map; continue; }
+    S.tStart = Math.min(S.tStart, t); S.tEnd = Math.max(S.tEnd, t);
+    if (d.world) {
+      S.world.t.push(t); S.world.rows.push(d);
+      const gone = d.world.filter((r) => !r[2] && S.prevAlive[r[0]]);
+      if (gone.length < Math.max(3, d.world.length >> 1))
+        for (const r of gone) { const p = S.prevAlive[r[0]]; S.deaths.push({ t, id: r[0], team: r[1], pos: p }); }
+      for (const r of d.world) S.prevAlive[r[0]] = r[2] ? [r[3], r[4], r[5]] : null;
+    } else if (d.think) {
+      S.hasThink = true;
+      const s = series(S.thinks, d.id), prev = s.rows[s.rows.length - 1];
+      s.t.push(t); s.rows.push(d);
+      if (!prev || prev.chose[0] !== d.chose[0]) {
+        const sw = S.switches.get(d.id) || []; sw.push({ t, from: prev ? prev.chose[0] : null, to: d.chose[0] }); S.switches.set(d.id, sw);
+      }
+    } else if (d.call) { S.calls.push(d); }
+    else if (d.coach) { if (d.coach !== "sent") S.coach.push(d); }      // the AI director (brain/coach.py)
+    else if (d.loadout !== undefined) { S.loadouts.push(d); }
+    else if (d.id !== undefined && d.pos) { const s = series(S.bots, d.id); s.t.push(t); s.rows.push(d); }
+  }
+}
+
+async function loadList(keep) {
+  let list;
+  try { list = await (await fetch("/traces")).json(); }
+  catch (e) { $("status").textContent = "Could not reach the Observer: close this window and open the Observer again from the launcher."; return; }
+  const pick = $("tracepick"), was = pick.value;
+  pick.innerHTML = "";
+  $("nogames").hidden = list.length > 0;
+  if (!list.length) { showNoGames(); return; }
+  // this copy's games first, then each other copy of the mod's on this PC (an install and a working repo)
+  const groups = new Map();
+  for (const d of list) { const k = d.copy || ""; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(d); }
+  for (const k of [...groups.keys()].sort((a, b) => (a ? 1 : 0) - (b ? 1 : 0))) {
+    const into = k ? pick.appendChild(Object.assign(document.createElement("optgroup"), { label: `Recorded by the copy in ${k}` })) : pick;
+    for (const d of groups.get(k)) {
+      const o = document.createElement("option");
+      o.value = d.file; o.dataset.info = JSON.stringify(d);
+      o.textContent = `${d.live ? "● LIVE  " : ""}${d.label}  (${d.map || "map?"}, ${(d.bytes / 1e6).toFixed(1)} MB${d.kept ? ", kept" : ""})`;
+      into.appendChild(o);
+    }
+  }
+  if (keep && [...pick.options].some((o) => o.value === was)) pick.value = was;
+  else {
+    const want = URLP.get("file");                // a link to a moment: ?file=<trace>&t=<s>&bot=<id>
+    if (want && [...pick.options].some((o) => o.value === want)) pick.value = want;
+    loadTrace(pick.value);
+  }
+}
+const URLP = new URLSearchParams(location.search);
+// the empty list says why and how to record a game, and where it looked (/settings: logs, on, copies)
+async function showNoGames() {
+  $("status").textContent = "No recorded games yet.";
+  let s = {};
+  try { s = await (await fetch("/settings")).json(); } catch (e) { /* the card without the folders */ }
+  const where = [s.logs, ...(s.copies || []).map((c) => `${c}\\logs`)].filter(Boolean);
+  $("nogames").innerHTML = `<div class="card"><h2>No recorded games yet</h2>
+    <p>${s.on === false ? "Recording is off, so games are not saved for the Observer. In the launcher, press Repair to turn it back on, then play a game."
+      : "Every match you play with bots is recorded and shows up here, live while it is being played."}</p>
+    <ol><li>In the launcher, press Play to start Halo with the bots.</li>
+    <li>In Halo, open Multiplayer &gt; Custom Multiplayer and add bots with the BOTS tile next to START (or press B), then start the match.</li>
+    <li>Press Refresh list here.</li></ol>
+    <p class="sub">LiDAR mapping runs are not recorded. To watch a game someone shared, use Import game.</p>
+    ${where.length ? `<p class="sub">Looked in ${where.map(esc).join(" and ")} at ${new Date().toLocaleTimeString()}.</p>` : ""}</div>`;
+}
+
+async function loadTrace(file) {
+  clearInterval(pollTimer);
+  const info = JSON.parse($("tracepick").selectedOptions[0].dataset.info);
+  S = freshGame(file, info); selected = null; base = null; img = null;
+  $("banner").style.display = "none";
+  $("livebadge").hidden = !info.live;
+  showKeep(info);
+  follow = info.live; $("follow").setAttribute("aria-pressed", follow);
+  $("status").textContent = "Loading…";
+  await pull(true);
+  S.mapName = S.mapName || info.map;
+  await fillMaps(S.mapName);
+  await loadBase(S.mapName);
+  if (!S.hasThink) banner("This game was recorded before the observer lines (Oct 23): positions, goals and facing only, no decisions, beliefs or callouts.");
+  now = follow ? S.tEnd : S.tStart;
+  if (URLP.get("t") && file === URLP.get("file")) { now = Math.max(S.tStart, Math.min(S.tEnd, +URLP.get("t"))); setFollow(false); }
+  if (URLP.get("bot") && file === URLP.get("file")) selected = +URLP.get("bot");
+  fitView(); setRange(); dirty = true; lastPanel = 0;
+  if (info.live) pollTimer = setInterval(() => pull(false), 1000);
+  loadYou();
+}
+
+async function pull(first) {
+  for (;;) {
+    let r;
+    try { r = await fetch(`/trace?file=${encodeURIComponent(S.file)}&offset=${S.offset}`); }
+    catch (e) { $("status").textContent = "Lost the observer server (retrying)…"; return; }
+    if (!r.ok) { $("status").textContent = `Could not read this trace (${r.status}).`; return; }
+    const text = await r.text();
+    if (!first && +r.headers.get("X-Size") < S.offset) {   // the recording dropped its oldest minutes: read it again
+      const at = now, f = follow; await loadTrace(S.file); if (!f) { now = Math.max(S.tStart, at); setFollow(false); } return;
+    }
+    S.offset = +r.headers.get("X-Next-Offset"); S.size = +r.headers.get("X-Size");
+    if (text) ingest(text);
+    $("status").textContent = S.offset < S.size ? `Loading ${(S.offset / 1e6).toFixed(1)} / ${(S.size / 1e6).toFixed(1)} MB…`
+      : `${S.bots.size} bots, ${S.calls.length} callouts, ${S.deaths.length} deaths, ${(S.tEnd - S.tStart).toFixed(0)} s`;
+    if (!text || S.offset >= S.size) break;
+  }
+  if (!first) { setRange(); if (follow) now = S.tEnd; dirty = true; }
+}
+
+let mapList = null;
+async function fillMaps(current) {
+  if (!mapList) { try { mapList = await (await fetch("/maps")).json(); } catch (e) { mapList = []; } }
+  const pick = $("mappick");
+  pick.innerHTML = `<option value="">${current ? "" : "pick the map…"}</option>` +
+    mapList.map((m) => `<option value="${esc(m)}"${m === current ? " selected" : ""}>${esc(m)}</option>`).join("");
+}
+async function loadBase(name) {
+  if (!name) { banner("This trace does not say its map (recorded before Oct 23): pick it in Map at the top to draw the level under it."); return; }
+  try {
+    const r = await fetch(`/base?map=${encodeURIComponent(name)}`);
+    if (!r.ok) { banner(`No level data for ${name}: drawn on a blank grid.`); return; }
+    base = await r.json();
+    img = new Image(); img.onload = () => { dirty = true; }; img.src = base.img;
+  } catch (e) { banner("Could not load the map picture."); }
+}
+function banner(text) { const b = $("banner"); b.textContent = text; b.style.display = "block"; }
+
+// ---------------------------------------------------------------- you (tools/player_stats.py via /you)
+async function loadYou() {
+  const game = S;
+  game.youState = "loading"; renderYou();
+  try {
+    const r = await fetch(`/you?file=${encodeURIComponent(game.file)}`), v = await r.json();
+    if (game !== S) return;                        // another game was picked meanwhile
+    if (!r.ok || v.error) { S.youState = "error"; S.youError = v.error || `status ${r.status}`; }
+    else { S.you = v; S.youState = "done"; }
+  } catch (e) { if (game === S) { S.youState = "error"; S.youError = "the observer server did not answer"; } }
+  renderYou(); dirty = true;
+}
+const TIER_ORDER = ["Easy", "Normal", "Heroic", "Legendary"];
+function renderYou() {
+  const el = $("you");
+  if (!S) { el.className = "empty"; el.textContent = "No game loaded."; return; }
+  if (S.youState === "loading") { el.className = "empty"; el.textContent = "Working out your numbers (about 10 s)…"; return; }
+  if (S.youState === "error") {
+    el.className = "empty";
+    el.innerHTML = `Could not work out your numbers: ${esc(S.youError)}. <button id="youagain">Try again</button>`;
+    $("youagain").onclick = loadYou; return;
+  }
+  const v = S.you;
+  if (!v || !v.you) { el.className = "empty"; el.textContent = "No person in this game: nothing to measure."; return; }
+  const y = v.you, r = y.row;
+  const n = (x, d = 2, u = "") => x == null ? "–" : `${(+x).toFixed(d)}${u}`, pc = (x) => x == null ? "–" : `${Math.round(100 * x)}%`;
+  const rank = (t) => { const i = TIER_ORDER.indexOf(t); return i < 0 ? 99 : i; };
+  const rows = [["You", r, true]].concat(Object.entries(v.tiers).sort((a, b) => rank(a[0]) - rank(b[0])).map(([t, x]) => [t, x, false]));
+  const cols = [["aim", "Aim", (x) => n(x)], ["shot", "Hit", (x) => n(x)], ["fights_min", "Fights", (x) => n(x, 1)],
+    ["speed", "Speed", (x) => n(x)], ["standing", "Still", pc], ["strafe", "Strafe", (x) => n(x)],
+    ["first_look", "1st look", pc], ["on_body", "On body", pc]];
+  const src = v.kind === "collect" ? `Data collector: ${v.rate} samples a second, with your guns and shots.`
+    : `From the trace: ${v.rate} samples a second (times good to about 0.25 s). Turn on Data collector in the BOTS panel for your shots, guns and exact times.`;
+  let h = `<div class="note">${esc(src)}</div>`;
+  h += `<table class="ytab" aria-label="You beside the bots by difficulty"><thead><tr><th scope="col">Who</th>${cols.map(([, l]) => `<th scope="col">${l}</th>`).join("")}</tr></thead><tbody>`;
+  for (const [name, x, me] of rows) h += `<tr${me ? ' class="me"' : ""}><td>${esc(name)}</td>${cols.map(([k, , f]) => `<td>${f(x[k])}</td>`).join("")}</tr>`;
+  h += `</tbody></table>`;
+  h += `<div class="note">Aim: seconds from a man coming into view to your aim on him. Hit: from being shot to your aim on someone. Fights: a minute alive. Speed: units a second. Still: time standing. Strafe: sideways speed in fights. 1st look: who aimed first when two players saw each other. On body: trigger time on a body.</div>`;
+  h += `<div class="kv">`
+    + `<div>First shot</div><div>${r.fire == null ? "needs your shots (Data collector)" : `${n(r.fire, 2, " s")} after he comes into view`}</div>`
+    + `<div>Pre-aimed</div><div>${y.pre} times already on the spot he came from</div>`
+    + `<div>Fights</div><div>${y.fights}, ${n(r.fight_len, 1, " s")} long, ${n(r.between, 1, " s")} between</div>`
+    + `<div>After spawn</div><div>first fight ${n(r.to_first, 1, " s")} later</div>`
+    + `<div>Fight distance</div><div>${n(r.dist, 1, " units")}, ${n(r.height, 1, " units")} above him</div>`
+    + `<div>In their view</div><div>${pc(r.in_view)} of the time</div>`
+    + `<div>Damage</div><div>${r.dealt == null ? "needs your shots (Data collector)" : `${n(r.dealt, 1)} (2.0 = one kill), ${r.kills} kills`}</div>`
+    + `<div>Deaths</div><div>${r.deaths}</div></div>`;
+  let more = `<div class="kv"><div>Zones</div><div>${y.zones.map(([z, sh]) => `${esc(z)} ${pc(sh)}`).join(", ") || "–"}</div>`
+    + `<div>Moving</div><div>${n(y.p90, 2)} units/s at the 90th percentile, ${n(y.jumps, 1)} jumps a minute</div>`;
+  if (y.gear) more += `<div>Guns</div><div>${y.gear.guns.map(([w, s]) => `${esc(String(w).replace(/_/g, " "))} ${Math.round(s)} s`).join(", ")}</div>`
+    + `<div>Switches</div><div>${y.gear.switches}; picked up ${Object.keys(y.gear.pickups).length ? esc(Object.entries(y.gear.pickups).map(([w, c]) => `${w.replace(/_/g, " ")} x${c}`).join(", ")) : "nothing"}</div>`
+    + `<div>Shots</div><div>${y.gear.shots}</div>`
+    + `<div>Equipment</div><div>${y.gear.uses.length} uses${y.gear.uses.length ? ` (${esc([...new Set(y.gear.uses.map((u) => u[1]))].join(", "))})` : ""}</div>`;
+  h += `<p><button id="youmap" aria-pressed="${on.you}">${on.you ? "Hide" : "Show"} where you were on the map</button></p>`;
+  h += `<details><summary>More: zones, movement${y.gear ? ", guns, equipment" : ""}</summary>${more}</div></details>`;
+  if (S.info && S.info.live) h += `<p><button id="youagain">Work it out again</button> (the game is still going)</p>`;
+  el.className = ""; el.innerHTML = h;
+  if ($("youagain")) $("youagain").onclick = loadYou;
+  $("youmap").onclick = () => { setLayer("you", !on.you); renderYou(); };
+}
+
+// ---------------------------------------------------------------- view
+const cv = $("map"), cx2 = cv.getContext("2d");
+function fitView() {
+  let x0, y0, x1, y1;
+  if (base && base.play) { [x0, y0, x1, y1] = base.play; x0 -= 3; y0 -= 3; x1 += 3; y1 += 3; }   // where people play
+  else if (base) { x0 = base.x0; y0 = base.y0; x1 = base.x0 + base.w * base.cell; y1 = base.y0 + base.h * base.cell; }
+  else {
+    const xs = [], ys = [];
+    for (const s of S.bots.values()) for (const r of s.rows.slice(0, 200)) { xs.push(r.pos[0]); ys.push(r.pos[1]); }
+    if (!xs.length) { xs.push(-20, 20); ys.push(-20, 20); }
+    x0 = Math.min(...xs) - 5; x1 = Math.max(...xs) + 5; y0 = Math.min(...ys) - 5; y1 = Math.max(...ys) + 5;
+  }
+  const W = cv.clientWidth, H = cv.clientHeight;
+  view.k = Math.min(W / (x1 - x0), H / (y1 - y0)) * 0.95; view.cx = (x0 + x1) / 2; view.cy = (y0 + y1) / 2;
+}
+const sx = (x) => cv.width / 2 + (x - view.cx) * view.k;
+const sy = (y) => cv.height / 2 - (y - view.cy) * view.k;
+const wx = (px) => view.cx + (px - cv.width / 2) / view.k;
+const wy = (py) => view.cy - (py - cv.height / 2) / view.k;
+
+function playersAt(t) {
+  // bots from their own lines (smooth), people from the world lines; shield / health from the world lines
+  const w = at(S.world, t), out = [];
+  const rows = w ? w.world : [];
+  for (const r of rows) {
+    const b = r[8] ? at(S.bots.get(r[0]), t) : null;
+    const fresh = b && t - b.t < 0.6;
+    // 11 pitch, 12 seconds standing still, 13 teammates formed up, 14 the enemy in its sights (Oct 23 on)
+    out.push({ id: r[0], team: r[1], alive: r[2], bot: r[8], pos: fresh ? b.pos : [r[3], r[4], r[5]],
+      yaw: fresh ? b.yaw : r[10], pitch: fresh ? b.pitch : (r[11] ?? null), shield: r[6], health: r[7], flag: r[9],
+      line: fresh ? b : null, still: r[12] ?? null, mates: r[13] || [], sights: r[14] ?? null,
+      aim: r.length > 15 ? r[15] : undefined, ride: r[16] ?? null });   // (people, Oct 31 on: crosshair, ride)
+  }
+  if (!rows.length) for (const [id, s] of S.bots) { const b = at(s, t); if (b) out.push({ id, team: b.team ?? 0, alive: true, bot: true,
+    pos: b.pos, yaw: b.yaw, pitch: b.pitch, shield: 1, health: 1, line: b }); }
+  return out;
+}
+
+function draw() {
+  const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const c = cx2; c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = "#0b0f14"; c.fillRect(0, 0, cv.width, cv.height);
+  if (!S) return;
+  const u = view.k;  // px per world unit
+  if (on.map && base && img && img.complete && img.naturalWidth) {
+    c.imageSmoothingEnabled = false;
+    c.drawImage(img, sx(base.x0), sy(base.y0 + base.h * base.cell), base.w * base.cell * u, base.h * base.cell * u);
+  } else {
+    c.strokeStyle = "#16222e"; c.lineWidth = 1;
+    for (let g = Math.floor(wx(0) / 5) * 5; g < wx(cv.width); g += 5) { c.beginPath(); c.moveTo(sx(g), 0); c.lineTo(sx(g), cv.height); c.stroke(); }
+    for (let g = Math.floor(wy(cv.height) / 5) * 5; g < wy(0); g += 5) { c.beginPath(); c.moveTo(0, sy(g)); c.lineTo(cv.width, sy(g)); c.stroke(); }
+  }
+  const fs = 12 * dpr; c.font = `${fs}px Segoe UI, sans-serif`; c.textBaseline = "middle";
+  if (on.zones && base) for (const z of base.zones) {
+    c.beginPath(); z.poly.forEach(([x, y], i) => i ? c.lineTo(sx(x), sy(y)) : c.moveTo(sx(x), sy(y))); c.closePath();
+    c.strokeStyle = z.side === "red" ? "rgba(255,75,75,.22)" : z.side === "blue" ? "rgba(79,216,255,.22)" : "rgba(255,201,77,.18)";
+    c.lineWidth = 1; c.stroke();
+    const mx = z.poly.reduce((a, p) => a + p[0], 0) / z.poly.length, my = z.poly.reduce((a, p) => a + p[1], 0) / z.poly.length;
+    c.fillStyle = "rgba(211,221,232,.4)"; c.fillText(z.name, sx(mx) - c.measureText(z.name).width / 2, sy(my));
+  }
+  if (on.you && S.you && S.you.heat && S.you.heat.length) {     // where you spent the match, where fights began
+    const most = Math.max(...S.you.heat.map((c) => c[2]));
+    for (const [x, y, sec] of S.you.heat) {
+      c.fillStyle = `rgba(255,201,77,${(0.05 + 0.4 * Math.sqrt(sec / most)).toFixed(3)})`;
+      c.fillRect(sx(x - 1), sy(y + 1), 2 * u, 2 * u);
+    }
+    c.strokeStyle = "#ff4b4b"; c.lineWidth = 1.5 * (window.devicePixelRatio || 1);
+    for (const [x, y] of S.you.fights || []) { c.beginPath(); c.arc(sx(x), sy(y), Math.max(4, 0.8 * u), 0, 2 * Math.PI); c.stroke(); }
+  }
+  const ps = playersAt(now), byId = Object.fromEntries(ps.map((p) => [p.id, p]));
+  if (on.trails) for (const [id, s] of S.bots) {
+    c.beginPath(); let started = false;
+    for (let i = Math.max(0, bisect(s.t, now - 5)); i < s.t.length && s.t[i] <= now; i += 2) {
+      const p = s.rows[i].pos; if (!started) { c.moveTo(sx(p[0]), sy(p[1])); started = true; } else c.lineTo(sx(p[0]), sy(p[1]));
+    }
+    const team = byId[id] ? byId[id].team : 0;
+    c.strokeStyle = tcol(team); c.globalAlpha = 0.35; c.lineWidth = 1.5 * dpr; c.stroke(); c.globalAlpha = 1;
+  }
+  const sel = selected != null ? byId[selected] : null;
+  const think = selected != null ? at(S.thinks.get(selected), now) : null;
+  if (on.orders) for (const [id, s] of S.thinks) {
+    if (selected != null && id !== selected) continue;
+    const th = at(s, now); if (!th || !Array.isArray(th.order[1])) continue;
+    const [x, y] = th.order[1], X = sx(x), Y = sy(y), r = 6 * dpr;
+    c.beginPath(); c.moveTo(X, Y - r); c.lineTo(X + r, Y); c.lineTo(X, Y + r); c.lineTo(X - r, Y); c.closePath();
+    c.strokeStyle = "#b48cff"; c.lineWidth = 1.5 * dpr; c.stroke();
+    c.fillStyle = "#b48cff"; c.fillText(`${th.order[0]} #${id}`, X + r + 3, Y);
+  }
+  if (on.goals) for (const p of ps) {
+    if (!p.alive || !p.line) continue;
+    const b = p.line, col = GOALCOL[b.goal] || "#8fa3b6";
+    let tx = null, ty = null;
+    if (b.goal === "fight" && byId[+b.arg]) { tx = byId[+b.arg].pos[0]; ty = byId[+b.arg].pos[1]; }
+    else { const m = /x=(-?[\d.]+), y=(-?[\d.]+)/.exec(b.arg || ""); if (m) { tx = +m[1]; ty = +m[2]; } }
+    if (tx !== null && (selected == null || p.id === selected || b.goal === "fight")) {
+      c.setLineDash(b.goal === "fight" ? [] : [4 * dpr, 4 * dpr]);
+      c.beginPath(); c.moveTo(sx(p.pos[0]), sy(p.pos[1])); c.lineTo(sx(tx), sy(ty));
+      c.strokeStyle = col; c.globalAlpha = p.id === selected ? 0.95 : 0.55; c.lineWidth = (p.id === selected ? 2 : 1.2) * dpr; c.stroke();
+      c.setLineDash([]); c.globalAlpha = 1;
+    }
+    if (b.wp && (selected == null || p.id === selected)) {
+      c.beginPath(); c.arc(sx(b.wp[0]), sy(b.wp[1]), 2.5 * dpr, 0, 7); c.fillStyle = col; c.fill();
+    }
+  }
+  if (on.squads) for (const p of ps) {
+    // teammates formed up (within 8 units of each other, brain/tracefmt.py FORM_R): a line between them
+    if (!p.alive) continue;
+    for (const m of p.mates) {
+      const q = byId[m]; if (!q || !q.alive || m < p.id) continue;
+      c.beginPath(); c.moveTo(sx(p.pos[0]), sy(p.pos[1])); c.lineTo(sx(q.pos[0]), sy(q.pos[1]));
+      c.strokeStyle = tcol(p.team); c.globalAlpha = 0.5; c.lineWidth = 3 * dpr; c.stroke(); c.globalAlpha = 1;
+    }
+  }
+  if (on.attention) for (const p of ps) {
+    // where each player's attention is (dotted, ends in a ring): bots by what they chose to look at,
+    // people by who is in their sights
+    if (!p.alive) continue;
+    let tx = null, ty = null, col = ATTCOL.sights;
+    if (p.bot && p.line && p.line.att) { [, , tx, ty] = p.line.att; col = ATTCOL[p.line.att[0]] || "#8fa3b6"; }
+    else if (!p.bot && p.sights >= 0 && byId[p.sights]) { [tx, ty] = byId[p.sights].pos; }
+    if (tx == null) continue;
+    c.setLineDash([1.5 * dpr, 3 * dpr]); c.beginPath(); c.moveTo(sx(p.pos[0]), sy(p.pos[1])); c.lineTo(sx(tx), sy(ty));
+    c.strokeStyle = col; c.lineWidth = (p.id === selected ? 2.5 : 1.5) * dpr; c.stroke(); c.setLineDash([]);
+    c.beginPath(); c.arc(sx(tx), sy(ty), 4 * dpr, 0, 7); c.stroke();
+  }
+  if (on.aim) for (const p of ps) {
+    // a person's line of sight to what the crosshair is on (world rows 15-16, brain/tracefmt.py crosshair); its ring is
+    // drawn over the players (below); nothing drawn when it is on the sky
+    if (!p.alive || p.bot || !p.aim) continue;
+    c.beginPath(); c.moveTo(sx(p.pos[0]), sy(p.pos[1])); c.lineTo(sx(p.aim[0]), sy(p.aim[1]));
+    c.strokeStyle = aimCol(p.aim[3]); c.globalAlpha = 0.6; c.lineWidth = (p.id === selected ? 2 : 1.2) * dpr; c.stroke(); c.globalAlpha = 1;
+  }
+  if (on.beliefs && think && think.beliefs) for (const [e, x, y, z, seen, src, age] of think.beliefs) {
+    c.beginPath(); c.arc(sx(x), sy(y), Math.max(6 * dpr, 0.5 * u), 0, 7);
+    c.setLineDash(seen ? [] : [3 * dpr, 3 * dpr]); c.strokeStyle = "#ffc94d"; c.lineWidth = 1.5 * dpr; c.stroke(); c.setLineDash([]);
+    c.fillStyle = "#ffc94d"; c.fillText(`#${e} ${seen ? "seen" : src} ${age}s`, sx(x) + 8 * dpr, sy(y) - 8 * dpr);
+  }
+  if (on.calls) for (const call of S.calls) {
+    if (call.t > now || now - call.t > 4 || !Array.isArray(call.pos)) continue;
+    const X = sx(call.pos[0]), Y = sy(call.pos[1]), a = 1 - (now - call.t) / 4;
+    c.globalAlpha = 0.35 + 0.65 * a;
+    const text = `${call.call}`, w = c.measureText(text).width + 10 * dpr;
+    c.fillStyle = "rgba(12,19,28,.9)"; c.fillRect(X - w / 2, Y - 26 * dpr, w, 18 * dpr);
+    c.strokeStyle = tcol(call.team); c.lineWidth = 1.5 * dpr; c.strokeRect(X - w / 2, Y - 26 * dpr, w, 18 * dpr);
+    c.fillStyle = "#fff"; c.fillText(text, X - w / 2 + 5 * dpr, Y - 17 * dpr);
+    c.beginPath(); c.arc(X, Y, 3 * dpr, 0, 7); c.fillStyle = tcol(call.team); c.fill();
+    c.globalAlpha = 1;
+  }
+  const wNow = at(S.world, now);
+  if (on.gear && wNow && wNow.deployed) for (const [kind, x, y, , team] of wNow.deployed) {
+    // domes, fields, mines, sentries and holograms (dashed: things, not players)
+    const X = sx(x), Y = sy(y), r = Math.max(4 * dpr, (GEAR_R[kind] || 0.5) * view.k);
+    c.setLineDash([4 * dpr, 3 * dpr]); c.strokeStyle = tcol(team); c.lineWidth = 1.5 * dpr;
+    c.beginPath(); c.arc(X, Y, r, 0, 7); c.stroke(); c.setLineDash([]);
+    c.fillStyle = tcol(team); c.fillText(kind.replace("_", " "), X + r + 3 * dpr, Y + 4 * dpr);
+  }
+  if (on.vehicles && wNow && wNow.vehicles) for (const [h, kind, x, y, , riders, team] of wNow.vehicles) {
+    // every vehicle on the map: a box in its riders' team colour (grey and dashed when empty), kind and seats taken
+    const X = sx(x), Y = sy(y), r = Math.max(7 * dpr, 1.4 * view.k);
+    c.setLineDash(riders ? [] : [3 * dpr, 3 * dpr]); c.strokeStyle = riders ? tcol(team) : "#8fa3b6";
+    c.lineWidth = (riders ? 2.5 : 1.5) * dpr; c.strokeRect(X - r, Y - r * 0.6, 2 * r, 1.2 * r); c.setLineDash([]);
+    c.fillStyle = riders ? tcol(team) : "#8fa3b6";
+    c.fillText(`${kind.replace(/_/g, " ")}${riders ? ` x${riders}` : ""}`, X + r + 3 * dpr, Y + 4 * dpr);
+  }
+  for (const d of S.deaths) {
+    if (d.t > now || now - d.t > 3 || !d.pos) continue;
+    const X = sx(d.pos[0]), Y = sy(d.pos[1]), r = 6 * dpr;
+    c.strokeStyle = tcol(d.team); c.lineWidth = 2.5 * dpr;
+    c.beginPath(); c.moveTo(X - r, Y - r); c.lineTo(X + r, Y + r); c.moveTo(X + r, Y - r); c.lineTo(X - r, Y + r); c.stroke();
+  }
+  for (const p of ps) {
+    if (!p.alive) continue;
+    const X = sx(p.pos[0]), Y = sy(p.pos[1]), r = Math.max(5 * dpr, 0.35 * u);
+    if (on.facing && p.yaw != null) {
+      const L = Math.max(18 * dpr, 1.6 * u);
+      if (p.id === selected) {
+        c.beginPath(); c.moveTo(X, Y); c.arc(X, Y, L * 3, -p.yaw - 0.87, -p.yaw + 0.87); c.closePath();
+        c.fillStyle = "rgba(255,201,77,.08)"; c.fill();
+      }
+      c.beginPath(); c.moveTo(X, Y); c.lineTo(X + Math.cos(p.yaw) * L, Y - Math.sin(p.yaw) * L);
+      c.strokeStyle = "#fff"; c.lineWidth = 1.5 * dpr; c.stroke();
+    }
+    if (on.shots && p.line && p.line.cmd && (p.line.cmd[3] & 1) && now - p.line.t < 0.2) {
+      const L = Math.max(30 * dpr, 3 * u);
+      c.beginPath(); c.moveTo(X, Y); c.lineTo(X + Math.cos(p.yaw) * L, Y - Math.sin(p.yaw) * L);
+      c.strokeStyle = "#ffd27a"; c.lineWidth = 3 * dpr; c.stroke();
+    }
+    c.beginPath(); c.arc(X, Y, r, 0, 7); c.fillStyle = tcol(p.team); c.fill();
+    if (!p.bot) { c.strokeStyle = "#fff"; c.lineWidth = 2 * dpr; c.stroke(); }
+    if (p.id === selected) { c.beginPath(); c.arc(X, Y, r + 4 * dpr, 0, 7); c.strokeStyle = "#ffc94d"; c.lineWidth = 2 * dpr; c.stroke(); }
+    if (p.flag) { c.fillStyle = "#fff"; c.fillText("FLAG", X + r + 3, Y + r + 6 * dpr); }
+    if (on.labels) {
+      const goal = p.line ? p.line.goal : (p.bot ? "" : "person");
+      const notes = p.line && p.line.notes ? " ⚠" : "";
+      const extra = [stillText(p), p.mates.length ? `with ${p.mates.length}` : ""].filter(Boolean).join(" · ");
+      c.fillStyle = "#fff"; c.fillText(`#${p.id} ${goal}${notes}${extra ? " · " + extra : ""}`, X + r + 3, Y - r - 4 * dpr);
+    }
+  }
+  if (on.aim) for (const p of ps) {
+    // the crosshair: a ring with ticks, over the man it is on (red), a vehicle (gold) or the level (white)
+    if (!p.alive || p.bot || !p.aim) continue;
+    const X = sx(p.aim[0]), Y = sy(p.aim[1]), r = Math.max(5 * dpr, 0.35 * u + 3 * dpr);
+    c.beginPath(); c.arc(X, Y, r, 0, 7);
+    for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { c.moveTo(X + a * r * 0.5, Y + b * r * 0.5); c.lineTo(X + a * r * 1.6, Y + b * r * 1.6); }
+    c.strokeStyle = aimCol(p.aim[3]); c.lineWidth = 1.5 * dpr; c.stroke();
+  }
+}
+const aimCol = (who) => typeof who === "number" ? "#ff4b4b" : who ? "#ffc94d" : "#fff";
+function vehicleKind(handle) {     // a vehicle's kind from this moment's world line ("v123" -> "ghost"), else its number
+  const w = at(S.world, now), v = w && w.vehicles ? w.vehicles.find((x) => String(x[0]) === String(handle)) : null;
+  return v ? v[1].replace(/_/g, " ") : `vehicle ${handle}`;
+}
+function bisect(a, t) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < t) lo = m + 1; else hi = m; } return lo; }
+
+// ---------------------------------------------------------------- panels
+function hpBar(sh, hp) {
+  return `<span class="hp" aria-label="shield ${sh} health ${hp}"><span style="width:${32 * Math.max(0, Math.min(1, sh))}px;background:var(--cyan)"></span>` +
+    `<span style="width:${32 * Math.max(0, Math.min(1, hp))}px;background:var(--green)"></span></span>`;
+}
+function botList(ps) {
+  const el = $("botlist");
+  if (!ps.length) { el.textContent = "No players at this moment."; el.className = "empty"; return; }
+  el.className = "";
+  el.innerHTML = ps.slice().sort((a, b) => a.team - b.team || a.id - b.id).map((p, i) => {
+    const m = S.meta[p.id] || {};
+    const who = p.bot ? `${esc(m.name || "bot")} <span class="sub">${esc(m.tier || "")} ${esc(m.pers || "")}</span>` : `${esc(m.name || "person")} <span class="sub">person</span>`;
+    const goal = p.line ? `<span class="chip" style="border-color:${GOALCOL[p.line.goal] || "#24425a"}">${esc(p.line.goal)}</span>` : "";
+    // everyone's attention, stillness, squad and (bots) what they are weighing, at a glance
+    const th = p.bot ? at(S.thinks.get(p.id), now) : null;
+    const thinks = th && th.think.length ? `<br><span class="sub">thinks ${th.think.slice(0, 2).map(([k, a, v]) =>
+      `${esc(k)}${k === "fight" ? " #" + esc(a) : ""} ${v.toFixed(1)}`).join(" &gt; ")}</span>` : "";
+    const eyes = attText(p);
+    const state = p.alive ? [eyes === "not recorded" ? "" : eyes, stillText(p), p.mates.length ? `with ${p.mates.map((m) => "#" + m).join(" ")}` : ""]
+      .filter(Boolean).join(" · ") : "";
+    return `<button class="botrow${p.id === selected ? " sel" : ""}${p.alive ? "" : " dead"}" data-id="${p.id}">` +
+      `<span class="dot" style="background:${tcol(p.team)}"></span><span>#${p.id} ${who}<br>${goal}` +
+      `${state ? ` <span class="sub">${esc(state)}</span>` : ""}${thinks}</span>${hpBar(p.shield, p.health)}</button>`;
+  }).join("");
+  for (const b of el.querySelectorAll(".botrow")) b.onclick = () => { selected = +b.dataset.id; dirty = true; lastPanel = 0; };
+}
+function chips(obj, warnKeys) {
+  return `<div class="chips">` + Object.entries(obj || {}).map(([k, v]) => {
+    const lit = v !== false && v !== 0 && v !== null;
+    const cls = lit ? (warnKeys.includes(k) ? "chip warn" : "chip on") : "chip";
+    const label = typeof v === "number" ? `${k} ${v}` : k;
+    return `<span class="${cls}" title="${esc(k)} = ${esc(v)}">${esc(label)}</span>`;
+  }).join("") + `</div>`;
+}
+function inspector(ps) {
+  const el = $("inspector");
+  if (selected == null) { el.className = "empty"; el.textContent = "Click a bot on the map or in the list."; return; }
+  const p = ps.find((q) => q.id === selected), m = S.meta[selected] || {};
+  $("insp-title").textContent = `#${selected} ${m.name || ""} ${m.tier ? "· " + m.tier + " " + m.pers : ""}`;
+  if (!p) { el.className = "empty"; el.textContent = "Not in the game at this moment."; return; }
+  if (!p.alive) { el.className = "empty"; el.textContent = "Dead (waiting to respawn)."; return; }
+  el.className = "";
+  const b = p.line, th = at(S.thinks.get(selected), now);
+  const deg = (r) => r == null ? "?" : `${((r * 180 / Math.PI) % 360 + 360) % 360 | 0}°`;
+  let h = `<div class="kv"><div>Doing</div><div>${!p.bot ? `<span class="sub">a person: no decisions to read</span>` :
+    `<b style="color:${GOALCOL[b ? b.goal : ""] || "#fff"}">${esc(b ? b.goal : "?")}</b> ${esc(b ? (b.goal === "fight" ? "#" + b.arg : niceArg(b.arg)) : "")}`}</div>` +
+    `<div>Facing</div><div>${deg(p.yaw)}${p.pitch != null ? `, pitch ${(p.pitch * 180 / Math.PI).toFixed(0)}°` : ""}</div>` +
+    `<div>Attention</div><div>${esc(attText(p))}</div>` +
+    (p.bot ? "" : personRows(p, ps)) +
+    `<div>Standing still</div><div>${p.still == null ? "not recorded" : p.still < 0.5 ? "moving" : p.still.toFixed(1) + " s"}</div>` +
+    `<div>Formed up with</div><div>${p.mates.length ? p.mates.map((m) => { const q = ps.find((x) => x.id === m);
+      return `#${m}${q ? ` <span class="sub">${Math.hypot(q.pos[0] - p.pos[0], q.pos[1] - p.pos[1]).toFixed(1)} u</span>` : ""}`; }).join(", ")
+      : (p.still == null ? "not recorded" : "nobody within 8 u")}</div>` +
+    `<div>Height</div><div>z ${p.pos[2].toFixed(2)}</div>` +
+    `<div>Shield / hp</div><div>${p.shield.toFixed(2)} / ${p.health.toFixed(2)}</div>` +
+    (b && b.wpn ? `<div>Weapon</div><div>${esc(b.wpn)}</div>` : "") +
+    (b && b.eq ? `<div>Equipment</div><div>${esc(b.eq[0].replace("_", " "))}${b.eq[1] ? " <b style='color:var(--gold)'>ON</b>" : ""}</div>` : "") +
+    (b ? `<div>Input</div><div>fwd ${b.cmd[0].toFixed(2)} strafe ${b.cmd[1].toFixed(2)}${b.cmd[3] & 1 ? " <b style='color:var(--gold)'>FIRE</b>" : ""}${b.cmd[3] & 2 ? " JUMP" : ""}${b.cmd[3] & 128 ? " EQUIP" : ""}${b.cmd[3] & 2048 ? " SPRINT" : ""}</div>` : "") +
+    (th ? `<div>Order</div><div>${esc(th.order[0])} ${esc(JSON.stringify(th.order[1]))}</div><div>Posture</div><div>${th.posture}</div>` : "") + `</div>`;
+  if (th) {
+    const max = Math.max(3, ...th.think.map((x) => x[2]));
+    h += `<h2 style="margin-top:10px">Weighed (decided ${(now - th.t).toFixed(1)} s ago)</h2>` + th.think.map(([k, a, v]) => {
+      const chosen = k === th.chose[0] && JSON.stringify(a) === JSON.stringify(th.chose[1]);
+      return `<div class="bar${chosen ? " chosen" : ""}"><div class="fill"><span>${esc(k)} ${esc(typeof a === "object" && a ? a.join(", ") : a ?? "")}</span>` +
+        `<div style="width:${100 * v / max}%;height:100%;background:${GOALCOL[k] || "#556"};opacity:.75"></div></div><div class="v">${v.toFixed(2)}</div></div>`;
+    }).join("") + (th.think.length ? "" : `<div class="sub">nothing to weigh: roaming</div>`);
+    h += `<h2 style="margin-top:10px">Because</h2>` + chips(th.flags, ["avoid", "cracked"]);
+  } else if (!S.hasThink) h += `<p class="sub">No decisions recorded in this game.</p>`;
+  if (b && b.fx) h += `<h2 style="margin-top:10px">In the fight</h2>` + chips(b.fx, ["dry", "splash_hold"]);
+  const notes = new Set(); const s = S.bots.get(selected);
+  if (s) for (let i = Math.max(0, bisect(s.t, now - 2)); i < s.t.length && s.t[i] <= now; i++) for (const n of s.rows[i].notes || []) notes.add(n);
+  h += `<h2 style="margin-top:10px">Overrides (last 2 s)</h2>` + (notes.size ? `<div class="chips">${[...notes].map((n) => `<span class="chip warn">${esc(n)}</span>`).join("")}</div>` : `<div class="sub">none</div>`);
+  if (th && th.beliefs) h += `<h2 style="margin-top:10px">Believes</h2>` + (th.beliefs.length ? th.beliefs.map(([e, x, y, z, seen, src, age]) =>
+    `<div>#${e} at ${x}, ${y}, ${z} <span class="${seen ? "chip on" : "chip"}">${seen ? "seen" : esc(src)}</span> <span class="sub">${age} s ago</span></div>`).join("") : `<div class="sub">no enemy known</div>`);
+  el.innerHTML = h;
+}
+function personRows(p, ps) {     // a person: crosshair and ride (Oct 31 on)
+  const sub = (t) => `<span class="sub">${t}</span>`;
+  let cross = sub("not recorded in this game");
+  if (p.aim === null) cross = "on the sky";
+  else if (p.aim) {
+    const [x, y, z, who] = p.aim, d = Math.hypot(x - p.pos[0], y - p.pos[1], z - p.pos[2]).toFixed(1);
+    const q = typeof who === "number" ? ps.find((o) => o.id === who) : null;
+    cross = (typeof who === "number" ? `<b style="color:${q ? tcol(q.team) : "#ff4b4b"}">#${who}${S.meta[who] ? " " + esc(S.meta[who].name) : ""}</b>`
+      : who ? `the ${esc(vehicleKind(who.slice(1)))}` : "the level") + ` ${sub(`${d} u away, at ${x}, ${y}, ${z}`)}`;
+  }
+  const ride = p.ride ? `${esc(p.ride[0].replace(/_/g, " "))}${p.ride[1] ? ` ${sub("on its " + esc(p.ride[1].replace(/_/g, " ")))}` : ""}` : "on foot";
+  return `<div>Crosshair on</div><div>${cross}</div><div>Riding</div><div>${ride}</div>`;
+}
+function feed() {
+  const el = $("feed"), items = [];
+  for (const c of S.calls) if (c.t >= now - 20 && c.t <= now + 2)
+    items.push({ t: c.t, html: `<span style="color:${tcol(c.team)}">${tname(c.team)}</span> #${c.speaker}: “${esc(c.call)}”` });
+  for (const d of S.deaths) if (d.t >= now - 20 && d.t <= now + 2)
+    items.push({ t: d.t, html: `<span style="color:${tcol(d.team)}">#${d.id} died</span>` });
+  for (const k of S.coach) if (k.t >= now - 20 && k.t <= now + 2) {
+    const who = k.team != null ? `<span style="color:${tcol(k.team)}">${tname(k.team)}</span> ` : "";
+    items.push({ t: k.t, html: k.coach === "applied"
+      ? `${who}Command: <b>${esc(k.play || "same play")}</b> / ${esc(k.tempo || "same tempo")}${k.coaching ? ` “${esc(k.coaching)}”` : ""} <span class="sub">${k.latency}&nbsp;s</span>`
+      : k.coach === "discarded" ? `${who}Command answer dropped <span class="sub">${esc((k.reasons || []).join("; "))}</span>`
+      : `${who}Command ${esc(k.coach)}: <span class="sub">${esc(k.text || "")}</span>` });
+  }
+  for (const l of S.loadouts) if (l.t >= now - 20 && l.t <= now + 2)
+    items.push({ t: l.t, html: `#${l.id} asks loadout ${l.loadout}: ${esc(l.why)} ×${l.n} <span class="sub">${esc((l.guns || ["not seen yet"]).join(", "))}</span>` });
+  if (selected != null) for (const sw of S.switches.get(selected) || []) if (sw.t >= now - 20 && sw.t <= now + 2)
+    items.push({ t: sw.t, html: `#${selected} ${esc(sw.from || "start")} → <b style="color:${GOALCOL[sw.to] || "#fff"}">${esc(sw.to)}</b>` });
+  items.sort((a, b) => b.t - a.t);
+  if (!items.length) { el.className = "empty"; el.textContent = "Nothing in the 20 s before this moment."; return; }
+  el.className = "";
+  el.innerHTML = items.slice(0, 60).map((it) => `<div data-t="${it.t}" style="${it.t > now ? "opacity:.5" : ""}"><span class="t">${it.t.toFixed(1)}</span>${it.html}</div>`).join("");
+  for (const d of el.querySelectorAll("div[data-t]")) d.onclick = () => seek(+d.dataset.t);
+}
+function ticks() {
+  const c = $("ticks"), g = c.getContext("2d"), W = c.width = c.clientWidth, H = c.height = 18;
+  g.clearRect(0, 0, W, H);
+  if (!S || S.tEnd <= S.tStart) return;
+  const X = (t) => (t - S.tStart) / (S.tEnd - S.tStart) * W;
+  g.fillStyle = "rgba(255,201,77,.7)"; for (const cl of S.calls) g.fillRect(X(cl.t), 10, 1, 8);
+  for (const d of S.deaths) { g.fillStyle = d.id === selected ? "#fff" : tcol(d.team); g.fillRect(X(d.t) - 1, d.id === selected ? 0 : 3, 2, d.id === selected ? 18 : 8); }
+}
+
+// ---------------------------------------------------------------- time
+function setRange() { const r = $("time"); r.min = S.tStart === Infinity ? 0 : S.tStart; r.max = S.tEnd; ticks(); }
+function seek(t) { if (!S) return; now = Math.max(S.tStart, Math.min(S.tEnd, t)); if (now < S.tEnd) setFollow(false); dirty = true; lastPanel = 0; }
+function setFollow(v) { follow = v; $("follow").setAttribute("aria-pressed", v); if (v && S) now = S.tEnd; dirty = true; }
+function setPlaying(v) { playing = v; $("play").textContent = v ? "Pause" : "Play"; $("play").setAttribute("aria-label", v ? "Pause" : "Play"); }
+let lastT = performance.now();
+function frame(ts) {
+  const dt = (ts - lastT) / 1000; lastT = ts;
+  if (S && playing && !follow) { now += dt * speed; if (now >= S.tEnd) { now = S.tEnd; setPlaying(false); } dirty = true; }
+  if (S && followBot && selected != null) { const p = playersAt(now).find((q) => q.id === selected); if (p) { view.cx = p.pos[0]; view.cy = p.pos[1]; } }
+  if (dirty) {
+    draw(); dirty = playing;
+    $("clock").textContent = S ? `${now.toFixed(1)} / ${S.tEnd.toFixed(1)} s` : "0.0 / 0.0 s";
+    if (S) $("time").value = now;
+  }
+  if (S && ts - lastPanel > 150) { lastPanel = ts; const ps = playersAt(now); botList(ps); inspector(ps); feed(); }
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------- input
+$("layers").innerHTML = LAYERS.map(([k, label]) => `<button data-k="${k}" aria-pressed="${on[k]}">${label}</button>`).join("");
+function setLayer(k, v) { on[k] = v; $("layers").querySelector(`[data-k="${k}"]`).setAttribute("aria-pressed", v); dirty = true; }
+for (const b of $("layers").querySelectorAll("button")) b.onclick = () => { setLayer(b.dataset.k, !on[b.dataset.k]); if (b.dataset.k === "you" && S) renderYou(); };
+$("tracepick").onchange = (e) => loadTrace(e.target.value);
+// Export game: the server zips this game's recordings (tools/match_export.py) and the page saves the file
+$("exportbtn").onclick = async () => {
+  if (!S || !S.file) { $("status").textContent = "Pick a game to export first."; return; }
+  const btn = $("exportbtn");
+  btn.disabled = true;
+  $("status").textContent = "Making the export file (a long game takes a few seconds)…";
+  try {
+    const r = await fetch(`/export?file=${encodeURIComponent(S.file)}&names=${$("exportnames").checked ? 1 : 0}`);
+    if (!r.ok) throw new Error(await r.text());
+    const m = (r.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+    const name = m ? m[1] : "match.zip";
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: name });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    $("status").textContent = `Saved ${name} (a copy is in logs\\exports)`;
+  } catch (e) {
+    $("status").textContent = `Could not export this game: ${e.message}`;
+  }
+  btn.disabled = false;
+};
+// Keep game: a kept game is never removed to make room for new ones (tools/recording.py)
+function showKeep(info) {
+  const b = $("keepbtn");
+  const always = info.kept === null || info.kept === undefined;   // (never removed: bug reports, imports, older games)
+  b.hidden = false; b.disabled = always;
+  b.title = always ? "This game is never removed to make room for new ones."
+                   : "Kept games are never removed. Games you do not keep make room for new ones.";
+  b.setAttribute("aria-pressed", !always && !!info.kept);
+  b.textContent = always ? "Always kept" : info.kept ? "Kept" : "Keep game";
+}
+async function post(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "X-Observer": "1", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+$("keepbtn").onclick = async () => {
+  if (!S || !S.file) return;
+  const opt = $("tracepick").selectedOptions[0], info = JSON.parse(opt.dataset.info);
+  try {
+    info.kept = (await post("/keep", { file: S.file, keep: !info.kept })).kept;
+    opt.dataset.info = JSON.stringify(info); showKeep(info);
+    opt.textContent = opt.textContent.replace(/, kept\)$/, ")").replace(/\)$/, info.kept ? ", kept)" : ")");
+    $("status").textContent = info.kept ? "This game is kept." : "This game is no longer kept.";
+  } catch (e) { $("status").textContent = `Could not change this game: ${e.message}`; }
+};
+// Recording settings: games kept and the longest recording (saved in the user folder)
+$("recbtn").onclick = async () => {
+  $("recsaid").textContent = "";
+  try { const d = await (await fetch("/settings")).json(); $("recgames").value = d.games; $("recminutes").value = d.minutes; }
+  catch (e) { $("recsaid").textContent = "Could not read the settings."; }
+  $("recset").style.display = "flex"; $("recgames").focus();
+};
+$("recsave").onclick = async () => {
+  try {
+    const d = await post("/settings", { games: +$("recgames").value || 5, minutes: +$("recminutes").value || 15 });
+    $("recgames").value = d.games; $("recminutes").value = d.minutes; $("recsaid").textContent = "Saved.";
+  } catch (e) { $("recsaid").textContent = `Not saved: ${e.message}`; }
+};
+$("recclose").onclick = () => { $("recset").style.display = "none"; $("recbtn").focus(); };
+// Import game: the server unpacks a shared export into logs\imported and the list shows it as Imported
+$("importbtn").onclick = () => $("importfile").click();
+$("importfile").onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $("status").textContent = `Importing ${f.name} ...`;
+  try {
+    const r = await fetch("/import", { method: "POST", headers: { "X-Observer": "1", "Content-Type": "application/zip" }, body: f });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.statusText);
+    await loadList(false);
+    $("tracepick").value = d.file;
+    loadTrace(d.file);
+    $("status").textContent = `Imported ${f.name}.`;
+  } catch (err) {
+    $("status").textContent = `Could not import ${f.name}: ${err.message}`;
+  }
+  e.target.value = "";
+};
+$("mappick").onchange = async (e) => {
+  if (!S || !e.target.value) return;
+  S.mapName = e.target.value; base = null; img = null; $("banner").style.display = "none";
+  await loadBase(S.mapName); fitView(); dirty = true;
+  if (!S.hasThink) banner("This game was recorded before the observer lines (Oct 23): positions, goals and facing only, no decisions, beliefs or callouts.");
+};
+$("reload").onclick = () => loadList(true);
+$("play").onclick = () => { if (follow) setFollow(false); if (S && now >= S.tEnd) now = S.tStart; setPlaying(!playing); };
+$("speed").onchange = (e) => { speed = +e.target.value; };
+$("time").oninput = (e) => seek(+e.target.value);
+$("follow").onclick = () => setFollow(!follow);
+$("helpbtn").onclick = () => { $("help").style.display = "flex"; $("helpclose").focus(); };
+$("helpclose").onclick = () => { $("help").style.display = "none"; $("helpbtn").focus(); };
+let drag = null;
+cv.addEventListener("mousedown", (e) => { drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false }; });
+window.addEventListener("mousemove", (e) => {
+  if (!drag) return; const dpr = window.devicePixelRatio || 1;
+  const dx = (e.clientX - drag.x) * dpr, dy = (e.clientY - drag.y) * dpr;
+  if (Math.abs(dx) + Math.abs(dy) > 3) { drag.moved = true; followBot = false; }
+  view.cx = drag.cx - dx / view.k; view.cy = drag.cy + dy / view.k; dirty = true;
+});
+window.addEventListener("mouseup", (e) => {
+  if (drag && !drag.moved && S) {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    const px = (e.clientX - r.left) * dpr, py = (e.clientY - r.top) * dpr;
+    let best = null, bd = 14 * dpr;
+    for (const p of playersAt(now)) { if (!p.alive) continue; const d = Math.hypot(sx(p.pos[0]) - px, sy(p.pos[1]) - py); if (d < bd) { bd = d; best = p.id; } }
+    if (best !== null) { selected = best; lastPanel = 0; dirty = true; }
+  }
+  drag = null;
+});
+cv.addEventListener("wheel", (e) => {
+  e.preventDefault(); const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const px = (e.clientX - r.left) * dpr, py = (e.clientY - r.top) * dpr, bx = wx(px), by = wy(py);
+  view.k *= Math.exp(-e.deltaY * 0.0015); view.k = Math.max(0.5, Math.min(200, view.k));
+  view.cx = bx - (px - cv.width / 2) / view.k; view.cy = by + (py - cv.height / 2) / view.k; dirty = true;
+}, { passive: false });
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT" && e.target.type !== "range") return;
+  if ($("help").style.display === "flex") { if (e.key === "Escape") $("helpclose").click(); return; }
+  if ($("recset").style.display === "flex") { if (e.key === "Escape") $("recclose").click(); return; }
+  const k = e.key;
+  if (k === " ") { e.preventDefault(); $("play").click(); }
+  else if (k === "ArrowLeft") { e.preventDefault(); seek(now - (e.shiftKey ? 5 : 0.5)); }
+  else if (k === "ArrowRight") { e.preventDefault(); seek(now + (e.shiftKey ? 5 : 0.5)); }
+  else if (k === ",") seek(now - 0.1);
+  else if (k === ".") seek(now + 0.1);
+  else if (k === "[" || k === "]") { const o = [...$("speed").options], i = o.findIndex((x) => x.selected);
+    const j = Math.max(0, Math.min(o.length - 1, i + (k === "]" ? 1 : -1))); $("speed").value = o[j].value; speed = +o[j].value; }
+  else if (/^[1-9]$/.test(k) && S) { const ids = playersAt(now).map((p) => p.id).sort((a, b) => a - b); if (ids[+k - 1] !== undefined) { selected = ids[+k - 1]; lastPanel = 0; dirty = true; } }
+  else if (k === "f" || k === "F") { followBot = !followBot; dirty = true; }
+  else if (k === "l" || k === "L") setFollow(!follow);
+  else if (k === "?") $("helpbtn").click();
+});
+window.addEventListener("resize", () => { dirty = true; ticks(); });
+loadList(false);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

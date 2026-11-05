@@ -1,0 +1,922 @@
+{
+ "map": "sidewinder",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 0.56,
+ "points": {
+  "mid": [
+   -0.09,
+   -44.09,
+   -3.84
+  ],
+  "mid_hill": [
+   -0.05,
+   -7.09,
+   0.16
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    -32.04,
+    -42.07,
+    -3.7
+   ],
+   [
+    -33.0,
+    -37.0,
+    0.56
+   ],
+   [
+    -29.51,
+    -37.62,
+    -3.84
+   ]
+  ],
+  "blue": [
+   [
+    30.35,
+    -46.11,
+    -3.7
+   ],
+   [
+    31.4,
+    -41.0,
+    0.56
+   ],
+   [
+    27.95,
+    -41.91,
+    -3.84
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   -0.09,
+   -44.09,
+   -3.84
+  ],
+  [
+   2.12,
+   -25.37,
+   -2.83
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Red portal": {
+   "poly": [
+    [
+     -35.6,
+     -35.9
+    ],
+    [
+     -32.2,
+     -35.9
+    ],
+    [
+     -32.2,
+     -32.5
+    ],
+    [
+     -35.6,
+     -32.5
+    ]
+   ],
+   "side": "red",
+   "priority": 42,
+   "full": "teleporter pad on top red, to the red rockets ledge",
+   "aka": [
+    "red tele",
+    "red base portal",
+    "top red portal"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Top red": {
+   "poly": [
+    [
+     -37.2,
+     -40.2
+    ],
+    [
+     -28.8,
+     -40.2
+    ],
+    [
+     -28.8,
+     -30.4
+    ],
+    [
+     -37.2,
+     -30.4
+    ]
+   ],
+   "side": "red",
+   "priority": 38,
+   "full": "upper floor and roof of the red base: sniper, shotguns, the portal pad",
+   "aka": [
+    "red top",
+    "top red base",
+    "red sniper",
+    "red roof"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Bottom red": {
+   "poly": [
+    [
+     -37.2,
+     -47.5
+    ],
+    [
+     -28.8,
+     -47.5
+    ],
+    [
+     -28.8,
+     -30.4
+    ],
+    [
+     -37.2,
+     -30.4
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "ground floor of the red base: the red flag room",
+   "aka": [
+    "red base",
+    "red flag",
+    "bottom red base",
+    "inside red"
+   ],
+   "area": false,
+   "zmax": -1.5
+  },
+  "Front red": {
+   "poly": [
+    [
+     -47,
+     -31
+    ],
+    [
+     -20,
+     -31
+    ],
+    [
+     -20,
+     -17
+    ],
+    [
+     -47,
+     -17
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "in front of the red base, where the red vehicles park",
+   "aka": [
+    "red front",
+    "front red base"
+   ],
+   "area": false
+  },
+  "Blue portal": {
+   "poly": [
+    [
+     34.0,
+     -39.9
+    ],
+    [
+     30.6,
+     -39.9
+    ],
+    [
+     30.6,
+     -36.5
+    ],
+    [
+     34.0,
+     -36.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 42,
+   "full": "teleporter pad on top blue, to the blue rockets ledge",
+   "aka": [
+    "blue tele",
+    "blue base portal",
+    "top blue portal"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Top blue": {
+   "poly": [
+    [
+     35.6,
+     -44.2
+    ],
+    [
+     27.2,
+     -44.2
+    ],
+    [
+     27.2,
+     -34.4
+    ],
+    [
+     35.6,
+     -34.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 38,
+   "full": "upper floor and roof of the blue base: sniper, shotguns, the portal pad",
+   "aka": [
+    "blue top",
+    "top blue base",
+    "blue sniper",
+    "blue roof"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Bottom blue": {
+   "poly": [
+    [
+     35.6,
+     -51.5
+    ],
+    [
+     27.2,
+     -51.5
+    ],
+    [
+     27.2,
+     -34.4
+    ],
+    [
+     35.6,
+     -34.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "ground floor of the blue base: the blue flag room",
+   "aka": [
+    "blue base",
+    "blue flag",
+    "bottom blue base",
+    "inside blue"
+   ],
+   "area": false,
+   "zmax": -1.5
+  },
+  "Front blue": {
+   "poly": [
+    [
+     45.4,
+     -35
+    ],
+    [
+     18.4,
+     -35
+    ],
+    [
+     18.4,
+     -21
+    ],
+    [
+     45.4,
+     -21
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "in front of the blue base, where the blue vehicles park",
+   "aka": [
+    "blue front",
+    "front blue base"
+   ],
+   "area": false
+  },
+  "Red rockets": {
+   "poly": [
+    [
+     -56,
+     19
+    ],
+    [
+     -50,
+     19
+    ],
+    [
+     -47,
+     24
+    ],
+    [
+     -37,
+     24
+    ],
+    [
+     -36,
+     31
+    ],
+    [
+     -37,
+     42
+    ],
+    [
+     -39,
+     48.5
+    ],
+    [
+     -47.5,
+     48.5
+    ],
+    [
+     -49,
+     40
+    ],
+    [
+     -47.5,
+     32
+    ],
+    [
+     -56,
+     32
+    ]
+   ],
+   "side": "red",
+   "priority": 26,
+   "full": "the cliff ledge on the red side with the rocket launcher and a fuel rod, reached by the red portal",
+   "aka": [
+    "red rockets ledge",
+    "red cliff",
+    "red rockets cliff"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Red rockets portal": {
+   "poly": [
+    [
+     -56,
+     19
+    ],
+    [
+     -49,
+     19
+    ],
+    [
+     -49,
+     26.5
+    ],
+    [
+     -56,
+     26.5
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "red portal exit at the south-west end of the red rockets ledge (goes back to top red)",
+   "aka": [
+    "red portal exit",
+    "red cliff portal"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Red fuel rod": {
+   "poly": [
+    [
+     -47.5,
+     41
+    ],
+    [
+     -37,
+     41
+    ],
+    [
+     -37,
+     48.5
+    ],
+    [
+     -47.5,
+     48.5
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "north end of the red rockets ledge: fuel rod, and the portal across to blue rockets",
+   "aka": [
+    "red fuel rod portal"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Blue rockets": {
+   "poly": [
+    [
+     35,
+     26
+    ],
+    [
+     44,
+     22
+    ],
+    [
+     49,
+     20
+    ],
+    [
+     55,
+     18
+    ],
+    [
+     55,
+     28.5
+    ],
+    [
+     48,
+     30.5
+    ],
+    [
+     46,
+     32
+    ],
+    [
+     48.5,
+     38
+    ],
+    [
+     48.5,
+     43
+    ],
+    [
+     46.5,
+     48.5
+    ],
+    [
+     36,
+     48.5
+    ],
+    [
+     34.5,
+     40
+    ]
+   ],
+   "side": "blue",
+   "priority": 26,
+   "full": "the cliff ledge on the blue side with the rocket launcher and a fuel rod, reached by the blue portal",
+   "aka": [
+    "blue rockets ledge",
+    "blue cliff",
+    "blue rockets cliff"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Blue rockets portal": {
+   "poly": [
+    [
+     48,
+     19
+    ],
+    [
+     55,
+     19
+    ],
+    [
+     55,
+     27
+    ],
+    [
+     48,
+     27
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "blue portal exit at the south-east end of the blue rockets ledge (goes back to top blue)",
+   "aka": [
+    "blue portal exit",
+    "blue cliff portal"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Blue fuel rod": {
+   "poly": [
+    [
+     36,
+     41
+    ],
+    [
+     46.5,
+     41
+    ],
+    [
+     46.5,
+     48.5
+    ],
+    [
+     36,
+     48.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "north end of the blue rockets ledge: fuel rod, and the portal across to red rockets",
+   "aka": [
+    "blue fuel rod portal"
+   ],
+   "area": false,
+   "zmin": -1.5
+  },
+  "Power-ups": {
+   "poly": [
+    [
+     -9.5,
+     -47.5
+    ],
+    [
+     8.5,
+     -47.5
+    ],
+    [
+     8.5,
+     -38
+    ],
+    [
+     -9.5,
+     -38
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "lower tunnel room between the bases with the four power-ups (two overshields, two camos)",
+   "aka": [
+    "power-up tunnel",
+    "power-up room",
+    "power-ups tunnel"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Red tunnel": {
+   "poly": [
+    [
+     -14.5,
+     -34.5
+    ],
+    [
+     -9.5,
+     -34.5
+    ],
+    [
+     -9.5,
+     -38
+    ],
+    [
+     -3.5,
+     -38
+    ],
+    [
+     -3.5,
+     -26
+    ],
+    [
+     -9.5,
+     -26
+    ],
+    [
+     -9.5,
+     -29.5
+    ],
+    [
+     -14.5,
+     -29.5
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "red-side tunnel from the power-ups north to the red keyhole, with a side door to the field",
+   "aka": [
+    "red power-up tunnel",
+    "red power-ups",
+    "red tunnels"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Blue tunnel": {
+   "poly": [
+    [
+     13.5,
+     -34.5
+    ],
+    [
+     8.5,
+     -34.5
+    ],
+    [
+     8.5,
+     -38
+    ],
+    [
+     2.5,
+     -38
+    ],
+    [
+     2.5,
+     -26
+    ],
+    [
+     8.5,
+     -26
+    ],
+    [
+     8.5,
+     -29.5
+    ],
+    [
+     13.5,
+     -29.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "blue-side tunnel from the power-ups north to the blue keyhole, with a side door to the field",
+   "aka": [
+    "blue power-up tunnel",
+    "blue power-ups",
+    "blue tunnels"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Red keyhole": {
+   "poly": [
+    [
+     -9.5,
+     -26
+    ],
+    [
+     -2.5,
+     -26
+    ],
+    [
+     -2.5,
+     -12.5
+    ],
+    [
+     -9.5,
+     -12.5
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "ramp from the red tunnel up through the keyhole-shaped opening onto the ridge top (placed from the map shape; QL comms tie keyhole to the power-up tunnels)",
+   "aka": [
+    "keyhole",
+    "red keyhole ramp",
+    "top keyhole"
+   ],
+   "area": false,
+   "zmin": -4.5
+  },
+  "Blue keyhole": {
+   "poly": [
+    [
+     1.5,
+     -26
+    ],
+    [
+     8.5,
+     -26
+    ],
+    [
+     8.5,
+     -12.5
+    ],
+    [
+     1.5,
+     -12.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "ramp from the blue tunnel up through the keyhole-shaped opening onto the ridge top (placed from the map shape; QL comms tie keyhole to the power-up tunnels)",
+   "aka": [
+    "blue keyhole ramp",
+    "blue tunnel keyhole"
+   ],
+   "area": false,
+   "zmin": -4.5
+  },
+  "Turret": {
+   "poly": [
+    [
+     -7,
+     48
+    ],
+    [
+     10,
+     48
+    ],
+    [
+     10,
+     61
+    ],
+    [
+     -7,
+     61
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "the far bend of the canyon: Shade turret and an overshield (suggested name)",
+   "aka": [
+    "shade",
+    "turret OS",
+    "back OS"
+   ],
+   "area": false
+  },
+  "Red banshee": {
+   "poly": [
+    [
+     -54,
+     -13
+    ],
+    [
+     -44,
+     -13
+    ],
+    [
+     -44,
+     -4
+    ],
+    [
+     -54,
+     -4
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "red Banshee spawn on the outer edge north of the red base",
+   "aka": [
+    "red banshee spawn"
+   ],
+   "area": false
+  },
+  "Blue banshee": {
+   "poly": [
+    [
+     44,
+     -14.5
+    ],
+    [
+     54,
+     -14.5
+    ],
+    [
+     54,
+     -5.5
+    ],
+    [
+     44,
+     -5.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "blue Banshee spawn on the outer edge north of the blue base",
+   "aka": [
+    "blue banshee spawn"
+   ],
+   "area": false
+  },
+  "Mid": {
+   "poly": [
+    [
+     -14,
+     63
+    ],
+    [
+     14,
+     63
+    ],
+    [
+     14,
+     0
+    ],
+    [
+     21,
+     0
+    ],
+    [
+     21,
+     -52
+    ],
+    [
+     -21,
+     -52
+    ],
+    [
+     -21,
+     0
+    ],
+    [
+     -14,
+     0
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the middle: the ridge between the bases (tunnels, power-ups, the top) and the far bend",
+   "aka": [
+    "middle",
+    "tunnels"
+   ],
+   "area": true
+  },
+  "Red side": {
+   "poly": [
+    [
+     -60,
+     -52
+    ],
+    [
+     -21,
+     -52
+    ],
+    [
+     -21,
+     0
+    ],
+    [
+     -14,
+     0
+    ],
+    [
+     -14,
+     63
+    ],
+    [
+     -60,
+     63
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "red's arm of the canyon: base, vehicles, the red rockets cliff",
+   "aka": [
+    "red"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     60,
+     -52
+    ],
+    [
+     21,
+     -52
+    ],
+    [
+     21,
+     0
+    ],
+    [
+     14,
+     0
+    ],
+    [
+     14,
+     63
+    ],
+    [
+     60,
+     63
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "blue's arm of the canyon: base, vehicles, the blue rockets cliff",
+   "aka": [
+    "blue"
+   ],
+   "area": true
+  }
+ }
+}

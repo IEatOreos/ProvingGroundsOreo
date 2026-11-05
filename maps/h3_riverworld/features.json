@@ -1,0 +1,1052 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "missile_pod",
+"pos": [
+81.646,
+-59.262,
+0.123
+],
+"team": 8,
+"respawn": 150
+},
+{
+"kind": "weapon",
+"name": "missile_pod",
+"pos": [
+81.677,
+-145.182,
+1.018
+],
+"team": 8,
+"respawn": 150
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+82.323,
+-56.592,
+0.12
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+80.844,
+-147.785,
+1.012
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+82.803,
+-102.47,
+5.002
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+78.827,
+-61.173,
+2.154
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+77.549,
+-144.501,
+3.049
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+77.564,
+-59.886,
+2.154
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+78.759,
+-143.284,
+3.05
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+92.031,
+-101.078,
+3.144
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+65.102,
+-150.8,
+2.34
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+65.295,
+-68.935,
+2.712
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+67.409,
+-124.694,
+2.276
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+66.33,
+-80.112,
+3.261
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+96.194,
+-83.681,
+3.376
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+92.101,
+-118.802,
+3.514
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+72.896,
+-103.444,
+3.959
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+80.149,
+-112.52,
+2.991
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+80.599,
+-89.985,
+2.022
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+51.055,
+-106.809,
+3.372
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+78.704,
+-146.164,
+0.999
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+84.504,
+-146.192,
+0.998
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+78.777,
+-58.229,
+0.105
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+84.382,
+-58.229,
+0.104
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+76.769,
+-58.737,
+2.515
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+76.757,
+-145.613,
+3.411
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+76.234,
+-81.515,
+2.251
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+67.925,
+-115.438,
+2.065
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+96.727,
+-87.282,
+3.386
+],
+"team": 8,
+"respawn": 90
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+92.401,
+-114.438,
+3.255
+],
+"team": 8,
+"respawn": 90
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+85.959,
+-59.233,
+2.057
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+65.608,
+-73.307,
+3.659
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+86.108,
+-145.198,
+2.952
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+69.718,
+-124.456,
+2.311
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "brute_shot",
+"pos": [
+50.056,
+-86.849,
+2.718
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "brute_shot",
+"pos": [
+50.63,
+-108.045,
+3.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+77.507,
+-57.343,
+-0.027
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+85.691,
+-57.272,
+-0.027
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+85.751,
+-147.133,
+0.867
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+77.407,
+-147.196,
+0.867
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+76.882,
+-59.157,
+2.534
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+91.817,
+-118.329,
+3.369
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+95.999,
+-84.108,
+3.276
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+76.764,
+-145.04,
+3.429
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+92.012,
+-101.322,
+3.178
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+64.759,
+-98.745,
+3.664
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+59.69,
+-63.34,
+3.283
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+62.349,
+-149.13,
+3.403
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+82.334,
+-59.569,
+-0.02
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+80.705,
+-144.858,
+0.874
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+72.885,
+-103.231,
+3.838
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+67.76,
+-124.919,
+2.116
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+76.459,
+-81.012,
+2.21
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+51.278,
+-106.834,
+3.328
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "powerdrain_equipment",
+"pos": [
+84.575,
+-144.348,
+2.906
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "powerdrain_equipment",
+"pos": [
+84.54,
+-60.101,
+2.011
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "powerup",
+"name": "regenerator_equipment",
+"pos": [
+100.178,
+-102.657,
+3.857
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "bubbleshield_equipment",
+"pos": [
+55.782,
+-93.044,
+3.412
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "banshee",
+"pos": [
+81.685,
+-50.69,
+1.191
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "banshee",
+"pos": [
+81.51,
+-153.414,
+2.083
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+77.501,
+-51.55,
+0.599
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+85.704,
+-153.858,
+1.554
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+85.805,
+-55.881,
+1.517
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+77.428,
+-147.201,
+2.395
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+77.431,
+-148.318,
+2.391
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+85.795,
+-57.208,
+1.517
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+54.43,
+-94.914,
+3.349
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+64.767,
+-100.77,
+3.034
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "wraith",
+"pos": [
+89.546,
+-51.458,
+0.302
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "wraith",
+"pos": [
+73.944,
+-154.061,
+1.447
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+81.902,
+-104.075,
+4.833
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+83.651,
+-102.729,
+4.923
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+58.495,
+-99.487,
+2.285
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+97.311,
+-104.583,
+3.455
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+62.315,
+-104.132,
+4.04
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+97.674,
+-102.018,
+3.366
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+97.415,
+-104.005,
+3.431
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+66.817,
+-127.02,
+1.493
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+95.994,
+-83.486,
+3.222
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+63.515,
+-83.617,
+2.296
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+81.607,
+-57.979,
+1.477
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+81.607,
+-57.979,
+1.525
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+81.607,
+-57.979,
+1.477
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+81.63,
+-146.506,
+2.432
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+81.63,
+-146.506,
+2.382
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+70.725,
+-127.831,
+2.875
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+93.327,
+-118.508,
+3.44
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+83.61,
+-102.951,
+4.907
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+75.206,
+-80.3,
+2.332
+],
+"team": 8
+},
+{
+"kind": "launcher",
+"name": "man_cannon_river",
+"pos": [
+81.598,
+-141.485,
+2.75
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "man_cannon_river",
+"pos": [
+81.601,
+-62.822,
+1.798
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "man_cannon_river_short",
+"pos": [
+77.591,
+-143.266,
+2.639
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "man_cannon_river_short",
+"pos": [
+77.578,
+-61.139,
+1.848
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "man_cannon",
+"pos": [
+81.56,
+-142.352,
+2.75
+],
+"group": "scenery"
+},
+{
+"kind": "launcher",
+"name": "mini_man_cannon",
+"pos": [
+77.958,
+-143.776,
+2.75
+],
+"group": "scenery"
+},
+{
+"kind": "launcher",
+"name": "mini_man_cannon",
+"pos": [
+78.013,
+-60.691,
+1.8
+],
+"group": "scenery"
+},
+{
+"kind": "launcher",
+"name": "man_cannon",
+"pos": [
+81.593,
+-62.136,
+1.8
+],
+"group": "scenery"
+}
+],
+"teleporters": []
+}

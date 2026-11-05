@@ -1,0 +1,21 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_oni", "center": [348.147, -1.144, 0.947], "size": [302.799, 173.473, 6.217]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_01", "center": [-28.666, 1.064, 3.685], "size": [4.499, 5.57, 1.525], "rotation": {"forward": [0.71351, 0.70064, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_02", "center": [-20.931, 3.733, 3.759], "size": [4.31, 5.515, 1.78]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_03", "center": [-28.646, -31.893, 3.861], "size": [5.732, 4.058, 2.035], "rotation": {"forward": [-0.70646, -0.70775, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_04", "center": [-20.667, -34.494, 3.551], "size": [3.604, 5.741, 1.511]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_05", "center": [-41.668, -20.848, 1.645], "size": [3.527, 5.808, 1.717], "rotation": {"forward": [-0.70721, 0.707, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_06", "center": [-41.592, -9.964, 1.932], "size": [3.99, 5.452, 1.808], "rotation": {"forward": [0.70947, 0.70474, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_07", "center": [-45.89, -42.694, 8.482], "size": [23.223, 23.517, 6.858]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_room_08", "center": [-46.011, -19.212, 6.788], "size": [5.096, 2.866, 2.175]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_01", "center": [141.05, -29.314, 9.119], "size": [4.81, 5.091, 1.54], "rotation": {"forward": [-0.70277, 0.71141, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_02", "center": [131.267, -17.009, 5.693], "size": [5.593, 6.161, 1.562], "rotation": {"forward": [-0.71256, 0.7016, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_03", "center": [128.715, -20.441, 8.234], "size": [4.811, 5.684, 2.148]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_04", "center": [125.521, 0.067, 5.786], "size": [3.38, 5.262, 2.015]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_06", "center": [128.741, 20.569, 8.119], "size": [4.757, 5.95, 1.7]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_07", "center": [131.3, 17.051, 5.729], "size": [5.396, 6.151, 1.738], "rotation": {"forward": [0.70322, 0.71097, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_08", "center": [140.971, 29.351, 9.117], "size": [4.44, 5.238, 1.374], "rotation": {"forward": [0.71281, 0.70136, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_06b", "center": [131.43, 20.428, 8.142], "size": [3.743, 4.967, 1.49], "rotation": {"forward": [-0.70632, 0.70789, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_b_room_03b", "center": [131.775, -20.286, 8.109], "size": [3.02, 4.816, 1.719], "rotation": {"forward": [0.70664, 0.70758, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_sur_a_oob_01", "center": [-63.88, -22.273, 7.179], "size": [16.072, 28.424, 9.468], "rotation": {"forward": [0.70838, -0.70583, 0.0], "up": [0.0, 0.0, 1.0]}}
+]}

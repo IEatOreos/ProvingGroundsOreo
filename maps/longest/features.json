@@ -1,0 +1,874 @@
+{
+"features": [
+{
+"kind": "powerup",
+"name": "powerup super shield",
+"pos": [
+0.352,
+-14.834,
+2.105
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup invisibility",
+"pos": [
+-2.178,
+-14.272,
+2.105
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+5.521,
+-10.836,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-7.337,
+-18.062,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+-12.892,
+-18.465,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+11.122,
+-10.727,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma rifle",
+"pos": [
+5.031,
+-18.553,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+-6.721,
+-10.505,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+-16.71,
+-12.527,
+0.001
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+14.948,
+-16.533,
+0.001
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "pistol",
+"pos": [
+4.549,
+-12.523,
+-0.569
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "pistol",
+"pos": [
+-6.366,
+-16.555,
+-0.569
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+-15.698,
+-20.232,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+13.992,
+-8.968,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag grenades",
+"pos": [
+-6.734,
+-10.436,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag grenades",
+"pos": [
+5.161,
+-18.419,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag grenades",
+"pos": [
+4.952,
+-18.67,
+2.057
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+-10.171,
+-20.315,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+8.275,
+-8.984,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+-12.836,
+-20.675,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+-13.054,
+-20.431,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+11.246,
+-8.731,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+11.027,
+-8.512,
+-0.599
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag grenades",
+"pos": [
+7.455,
+-16.091,
+-0.425
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag grenades",
+"pos": [
+7.242,
+-15.874,
+-0.46
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag grenades",
+"pos": [
+-9.223,
+-13.2,
+-0.423
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "flame thrower",
+"pos": [
+1.439,
+-15.088,
+0.001
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "flame thrower",
+"pos": [
+-3.292,
+-14.05,
+0.001
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-12.792,
+-21.642,
+-0.4
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+11.035,
+-7.588,
+-0.4
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-1.269,
+-13.7,
+2.105
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-1.234,
+-14.794,
+2.105
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-2.736,
+-14.852,
+2.105
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-2.821,
+-13.684,
+2.105
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+8.116,
+-10.788,
+-0.599
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+14.027,
+-10.849,
+-0.599
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+8.217,
+-6.994,
+-0.599
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+14.054,
+-6.999,
+-0.599
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+1.14,
+-14.33,
+2.105
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+1.156,
+-15.367,
+2.105
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-0.484,
+-14.273,
+2.105
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-0.481,
+-15.32,
+2.105
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-9.935,
+-18.261,
+-0.599
+],
+"team": 7
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-9.988,
+-22.109,
+-0.599
+],
+"team": 7
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-15.817,
+-22.057,
+-0.599
+],
+"team": 7
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-15.764,
+-18.326,
+-0.599
+],
+"team": 7
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-9.803,
+-12.065,
+-0.33
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-8.439,
+-12.071,
+-0.55
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-8.45,
+-13.96,
+-0.548
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-9.793,
+-13.946,
+-0.331
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+6.629,
+-16.932,
+-0.558
+],
+"team": 10
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+8.052,
+-16.966,
+-0.329
+],
+"team": 10
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+6.661,
+-15.093,
+-0.553
+],
+"team": 10
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+8.059,
+-15.126,
+-0.328
+],
+"team": 10
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+2.11,
+-13.256,
+0.001
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+-3.89,
+-15.929,
+0.001
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+-13.632,
+-14.528,
+0.001
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+11.827,
+-14.587,
+0.001
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+7.529,
+-16.038,
+-0.413
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+-9.125,
+-13.071,
+-0.439
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+-15.126,
+-9.94,
+0.001
+],
+"team": 6
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+13.327,
+-19.189,
+0.001
+],
+"team": 7
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-1.815,
+-14.739,
+0.001
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-1.822,
+-12.166,
+0.001
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-4.561,
+-14.743,
+0.001
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-4.489,
+-12.088,
+0.001
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-15.707,
+-11.276,
+0.001
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-15.758,
+-16.413,
+0.001
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-13.045,
+-15.544,
+0.001
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+-12.975,
+-11.158,
+0.001
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+14.045,
+-12.66,
+0.001
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+13.912,
+-17.806,
+0.001
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+11.241,
+-17.895,
+0.001
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+11.475,
+-13.644,
+0.001
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+-0.904,
+-14.556,
+0.168
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+-12.904,
+-20.676,
+-0.599
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+11.149,
+-8.536,
+-0.599
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+4.983,
+-18.751,
+2.057
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+-6.773,
+-10.346,
+2.057
+],
+"team": 5
+}
+],
+"teleporters": []
+}

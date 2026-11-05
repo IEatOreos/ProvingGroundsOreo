@@ -1,0 +1,1511 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+65.945,
+-37.155,
+-1.061
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+-19.107,
+-107.084,
+-1.254
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+28.717,
+-5.286,
+-17.733
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+24.934,
+-139.213,
+-17.733
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_cannon",
+"pos": [
+63.287,
+-74.01,
+-1.061
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+26.772,
+-72.189,
+11.023
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup super shield",
+"pos": [
+26.83,
+-72.245,
+-2.808
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket launcher",
+"pos": [
+26.78,
+-44.079,
+-14.473
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket launcher",
+"pos": [
+26.789,
+-100.323,
+-14.473
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+30.893,
+-69.537,
+-20.315
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+26.685,
+-116.393,
+-15.632
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+26.932,
+-28.259,
+-15.633
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma rifle",
+"pos": [
+30.792,
+-150.024,
+-16.611
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+22.602,
+-74.986,
+-20.315
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+26.755,
+-127.03,
+-15.625
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+26.8,
+-17.441,
+-15.625
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+26.805,
+-70.451,
+-20.315
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup super shield",
+"pos": [
+26.855,
+-148.036,
+-17.733
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup super shield",
+"pos": [
+26.774,
+3.514,
+-17.733
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+26.789,
+-74.051,
+-20.315
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+26.692,
+-50.443,
+-18.325
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+26.925,
+-94.385,
+-18.325
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+39.224,
+-87.434,
+-14.473
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+14.26,
+-56.735,
+-14.473
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+14.327,
+-87.566,
+-14.473
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+39.21,
+-56.612,
+-14.473
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+-20.911,
+-83.287,
+-1.254
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+74.083,
+-73.84,
+-1.061
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_cannon",
+"pos": [
+-21.291,
+-84.439,
+-1.254
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+-16.489,
+-31.847,
+-1.254
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+65.994,
+-111.834,
+-1.061
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+-26.633,
+-84.305,
+-1.254
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup health pack",
+"pos": [
+71.389,
+-73.79,
+-1.061
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+35.339,
+-71.642,
+-12.711
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper rifle",
+"pos": [
+18.286,
+-71.634,
+-12.711
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup super shield",
+"pos": [
+10.773,
+-71.641,
+-12.711
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup invisibility",
+"pos": [
+43.062,
+-71.731,
+-12.711
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma rifle",
+"pos": [
+30.901,
+5.588,
+-16.628
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma grenades",
+"pos": [
+-21.019,
+-85.33,
+-1.254
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+22.763,
+-150.126,
+-16.611
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "pistol",
+"pos": [
+24.896,
+-5.28,
+-17.733
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "pistol",
+"pos": [
+22.627,
+-69.496,
+-20.315
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "pistol",
+"pos": [
+30.842,
+-74.616,
+-20.315
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault rifle",
+"pos": [
+22.714,
+5.507,
+-16.628
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "pistol",
+"pos": [
+28.693,
+-139.093,
+-17.733
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "flame thrower",
+"pos": [
+26.634,
+-124.676,
+-18.325
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "flame thrower",
+"pos": [
+26.97,
+-19.587,
+-18.325
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "mp_warthog",
+"pos": [
+24.428,
+-109.774,
+-15.632
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mp_warthog",
+"pos": [
+24.523,
+-34.525,
+-15.632
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "banshee_mp",
+"pos": [
+-17.485,
+-29.305,
+-1.254
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "banshee_mp",
+"pos": [
+67.91,
+-113.41,
+-1.061
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "c gun turret_mp",
+"pos": [
+36.397,
+-67.234,
+-12.711
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "c gun turret_mp",
+"pos": [
+17.201,
+-77.868,
+-12.711
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "c gun turret_mp",
+"pos": [
+42.571,
+-77.595,
+-12.711
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "rwarthog",
+"pos": [
+28.866,
+-34.415,
+-15.632
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "rwarthog",
+"pos": [
+29.484,
+-109.735,
+-15.632
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "c gun turret_mp",
+"pos": [
+10.983,
+-67.191,
+-12.687
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+28.112,
+-23.8,
+-18.325
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+25.637,
+-120.816,
+-18.325
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "banshee_mp",
+"pos": [
+67.982,
+-36.012,
+-1.061
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "banshee_mp",
+"pos": [
+-21.356,
+-109.055,
+-1.254
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+28.033,
+-120.659,
+-18.325
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+25.599,
+-23.829,
+-18.325
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+28.079,
+-31.369,
+-15.632
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+25.572,
+-31.382,
+-15.632
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+25.586,
+-112.666,
+-15.632
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost_mp",
+"pos": [
+28.062,
+-112.635,
+-15.632
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mp_warthog",
+"pos": [
+36.975,
+-102.973,
+-14.473
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "rwarthog",
+"pos": [
+16.599,
+-102.772,
+-14.473
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "rwarthog",
+"pos": [
+16.568,
+-41.623,
+-14.473
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "mp_warthog",
+"pos": [
+37.13,
+-41.387,
+-14.473
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+26.884,
+-144.716,
+-16.049
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+26.839,
+-74.596,
+-20.315
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+16.717,
+-71.695,
+-12.711
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+36.779,
+-71.654,
+-12.711
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+19.479,
+-20.51,
+-15.898
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+34.156,
+-124.022,
+-15.898
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+26.79,
+-117.848,
+-18.325
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+26.818,
+-26.953,
+-18.325
+],
+"team": 6
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+41.2,
+-70.0,
+-12.711
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+37.5,
+-70.0,
+-12.711
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+41.2,
+-73.3,
+-12.711
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+37.5,
+-73.3,
+-12.711
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+12.2,
+-70.0,
+-12.711
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+16.4,
+-70.0,
+-12.711
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+16.4,
+-73.3,
+-12.711
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+12.2,
+-73.3,
+-12.711
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+28.5,
+-40.0,
+-18.325
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+25.0,
+-40.0,
+-18.325
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+25.0,
+-35.708,
+-18.325
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+28.5,
+-35.725,
+-18.325
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+28.5,
+-104.0,
+-18.325
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+25.0,
+-104.0,
+-18.325
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+25.0,
+-108.8,
+-18.325
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+28.5,
+-108.8,
+-18.325
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+26.728,
+0.166,
+-16.048
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+42.076,
+-71.727,
+-12.711
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+26.821,
+-42.317,
+-14.473
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+11.594,
+-71.651,
+-12.711
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+26.797,
+-101.776,
+-14.473
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+26.804,
+-45.347,
+-18.325
+],
+"team": 4
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race - track",
+"pos": [
+26.813,
+-98.924,
+-18.325
+],
+"team": 5
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+34.064,
+-20.488,
+-15.897
+],
+"team": 7
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+19.488,
+-124.003,
+-15.898
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+26.874,
+-143.878,
+-16.151
+],
+"team": 9
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+34.387,
+-133.386,
+-17.969
+],
+"team": 10
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+19.207,
+-132.017,
+-18.042
+],
+"team": 11
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+34.387,
+-12.042,
+-18.014
+],
+"team": 12
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+19.205,
+-11.493,
+-18.005
+],
+"team": 13
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+26.759,
+-0.67,
+-16.151
+],
+"team": 14
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball - ball spawn",
+"pos": [
+26.828,
+-70.076,
+-20.315
+],
+"team": 15
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+24.75,
+-76.0,
+-20.315
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+28.75,
+-76.0,
+-20.315
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+24.75,
+-69.0,
+-20.315
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "hill - flag",
+"pos": [
+28.75,
+-69.0,
+-20.315
+],
+"team": 0
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+28.589,
+7.984,
+-16.628
+],
+"channel": "2"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+24.885,
+7.99,
+-16.628
+],
+"channel": "3"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+75.81,
+-112.774,
+-1.061
+],
+"channel": "4"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+-28.897,
+-107.227,
+-1.254
+],
+"channel": "5"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+75.811,
+-38.15,
+-1.061
+],
+"channel": "6"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+-25.464,
+-27.669,
+-1.254
+],
+"channel": "7"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+28.682,
+-152.535,
+-16.611
+],
+"channel": "13"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+24.975,
+-152.534,
+-16.611
+],
+"channel": "14"
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+76.057,
+-38.163,
+-1.061
+],
+"channel": "2",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+-25.678,
+-27.572,
+-1.254
+],
+"channel": "3",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+28.684,
+-152.777,
+-16.611
+],
+"channel": "4",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+24.976,
+-152.78,
+-16.611
+],
+"channel": "5",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+28.588,
+8.216,
+-16.628
+],
+"channel": "6",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+24.884,
+8.223,
+-16.628
+],
+"channel": "7",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+76.039,
+-112.789,
+-1.061
+],
+"channel": "13",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+-29.14,
+-107.225,
+-1.254
+],
+"channel": "14",
+"exit": true
+}
+],
+"teleporters": [
+[
+[
+28.589,
+7.984,
+-16.628
+],
+[
+76.057,
+-38.163,
+-1.061
+]
+],
+[
+[
+24.885,
+7.99,
+-16.628
+],
+[
+-25.678,
+-27.572,
+-1.254
+]
+],
+[
+[
+75.81,
+-112.774,
+-1.061
+],
+[
+28.684,
+-152.777,
+-16.611
+]
+],
+[
+[
+-28.897,
+-107.227,
+-1.254
+],
+[
+24.976,
+-152.78,
+-16.611
+]
+],
+[
+[
+75.811,
+-38.15,
+-1.061
+],
+[
+28.588,
+8.216,
+-16.628
+]
+],
+[
+[
+-25.464,
+-27.669,
+-1.254
+],
+[
+24.884,
+8.223,
+-16.628
+]
+],
+[
+[
+28.682,
+-152.535,
+-16.611
+],
+[
+76.039,
+-112.789,
+-1.061
+]
+],
+[
+[
+24.975,
+-152.534,
+-16.611
+],
+[
+-29.14,
+-107.225,
+-1.254
+]
+]
+]
+}

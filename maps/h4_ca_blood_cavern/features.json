@@ -1,0 +1,453 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+11.039,
+0.084,
+0.276
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+10.841,
+-10.925,
+2.059
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+6.584,
+14.764,
+1.995
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sticky_detonator",
+"pos": [
+21.194,
+-0.203,
+2.349
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+1.788,
+0.008,
+0.137
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-3.457,
+9.638,
+2.217
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+23.33,
+-8.343,
+-0.418
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "scattershot",
+"pos": [
+7.296,
+0.053,
+0.273
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+22.803,
+-4.921,
+-0.449
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+0.493,
+5.932,
+0.325
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+-0.663,
+-6.198,
+2.108
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+20.986,
+15.626,
+1.877
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+8.919,
+0.062,
+3.891
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+8.968,
+13.805,
+1.978
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+19.651,
+-0.467,
+2.391
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-7.024,
+-0.107,
+3.548
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+13.389,
+-10.492,
+0.022
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+4.955,
+0.042,
+3.857
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+4.955,
+0.042,
+3.857
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-4.919,
+-0.113,
+3.548
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-4.919,
+-0.113,
+3.548
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+27.802,
+-1.908,
+-0.849
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+27.802,
+-1.908,
+-0.849
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+11.305,
+-0.062,
+3.862
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.324,
+-6.039,
+2.104
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+20.614,
+-0.577,
+2.282
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+9.07,
+-0.011,
+3.989
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+9.52,
+14.009,
+2.015
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-0.561,
+-10.25,
+2.04
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+13.798,
+-2.824,
+-0.078
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-2.459,
+4.65,
+0.194
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+5.017,
+9.469,
+1.97
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+5.017,
+9.469,
+1.97
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+8.957,
+-8.286,
+2.047
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+8.957,
+-8.286,
+2.047
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+26.268,
+-1.189,
+-0.775
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+-8.512,
+-0.12,
+3.546
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "grif_spawn",
+"pos": [
+9.024,
+-1.646,
+3.862
+],
+"team": 8
+},
+{
+"kind": "lift",
+"name": "ca_cavern_center_lift",
+"pos": [
+8.933,
+0.003,
+0.324
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "ca_cavern_back_lift",
+"pos": [
+-6.374,
+-0.126,
+0.715
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "tree_mancannon",
+"pos": [
+0.016,
+-8.545,
+0.268
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

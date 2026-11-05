@@ -1,0 +1,129 @@
+{
+ "h3_construct": {
+  "matches": [
+   "collect_h3_construct_20261025-224609.jsonl"
+  ],
+  "tiers": {
+   "Normal": {
+    "aim_body": 0.8562861919414629,
+    "reaction": 0.40374999999998806,
+    "shot_react": 0.2769999999999957,
+    "standing": 0.14324746675188987,
+    "jumps": 1.1490634023197501,
+    "snap": 314.9506104596618,
+    "jitter": 0.20053522829588055,
+    "flick180": 0.0,
+    "look_ahead": 0.20122126795894163,
+    "priority": 0.09751243545273605,
+    "ignored": 0.2153846153846154,
+    "range": 0.011830684163266592,
+    "melee": 0.41666666666666663,
+    "explore": 0.5469204058801674,
+    "route_var": 0.8611111111111112,
+    "pitch_var": 18.08094808956787,
+    "speed_var": 0.3937788950907225,
+    "nades": 0.8927459268844931,
+    "pre_aim": 0.3714733542319749,
+    "strafe": 0.7401646481129462,
+    "herding": 0.5774025004481861,
+    "fluidity": 59.278612746753126
+   },
+   "Legendary": {
+    "aim_body": 0.85625,
+    "reaction": 0.30200000000001026,
+    "shot_react": 0.30299999999999727,
+    "standing": 0.14236346388399512,
+    "jumps": 1.3422600405121716,
+    "snap": 533.8056791301968,
+    "jitter": 0.22918311805240582,
+    "flick180": 0.0,
+    "look_ahead": 0.2295556986477785,
+    "priority": 0.21483986473045555,
+    "ignored": 0.2857142857142857,
+    "range": 0.01639344262295082,
+    "melee": 0.5625,
+    "explore": 0.5230123402203508,
+    "route_var": 0.7,
+    "pitch_var": 25.428323119224924,
+    "speed_var": 0.40163950050009106,
+    "nades": 1.7920647373434764,
+    "pre_aim": 0.3220338983050847,
+    "strafe": 0.6982290673917977,
+    "herding": 0.6079089269096125,
+    "fluidity": 56.41708011902638
+   }
+  },
+  "owner": "Oct 25 late, Construct Team Slayer, owner + 4 Normal vs 5 Legendary: \"overall I would say that match was the gold standard of bot gameplay, I was honestly very impressed\"",
+  "result": {
+   "score": "48-50 (Legendary won by a kill)",
+   "owner": "31 kills 16 deaths",
+   "legendary_kd": 1.04,
+   "normal_kd": 0.5,
+   "stalls_per_min": 0.4
+  }
+ },
+ "h3_salvation": {
+  "matches": [
+   "collect_h3_salvation_20261026-000613.jsonl"
+  ],
+  "tiers": {
+   "Normal": {
+    "aim_body": 0.8212153143659993,
+    "reaction": 0.4055000000000035,
+    "shot_react": 0.3555000000000046,
+    "standing": 0.14656673542105647,
+    "jumps": 0.14593995057503856,
+    "snap": 299.500665636612,
+    "jitter": 0.20053522829582965,
+    "flick180": 0.0,
+    "look_ahead": 0.10774208585256173,
+    "priority": 0.56063449530102,
+    "ignored": 0.05,
+    "range": 0.00625,
+    "melee": 0.5,
+    "explore": 0.6487334397234965,
+    "route_var": 0.7181818181818183,
+    "pitch_var": 7.592494544002696,
+    "speed_var": 0.3025957934988347,
+    "nades": 1.7759709048132732,
+    "pre_aim": 0.27217553688141927,
+    "strafe": 0.7158235256974915,
+    "herding": 0.6933386417273734,
+    "fluidity": 69.81894901759401
+   },
+   "Legendary": {
+    "aim_body": 0.9027777777777778,
+    "reaction": 0.20600000000001728,
+    "shot_react": 0.10450000000000159,
+    "standing": 0.08362535839439311,
+    "jumps": 2.5286344437478574,
+    "snap": 665.3000264491794,
+    "jitter": 0.22918311805240582,
+    "flick180": 0.0,
+    "look_ahead": 0.13353115727002968,
+    "priority": 0.9505520883341335,
+    "ignored": 0.0,
+    "range": 0.0,
+    "melee": 0.5,
+    "explore": 0.5850407610838734,
+    "route_var": 0.8888888888888888,
+    "pitch_var": 6.656415891048214,
+    "speed_var": 0.31900758005653873,
+    "nades": 2.823981248765188,
+    "pre_aim": 0.3,
+    "strafe": 0.6314835245695481,
+    "herding": 0.5802785635498499,
+    "fluidity": 59.50807397249606
+   }
+  },
+  "owner": "Oct 26, Epitaph (h3_salvation) Team Slayer, owner + 4 Normal vs 5 Legendary: \"I just played another gold standard match in my opinion\"",
+  "result": {
+   "score": "41-50 (Legendary won)",
+   "owner": "16 kills 9 deaths",
+   "legendary_kd": 1.19,
+   "normal_kd": 0.61,
+   "stalls_per_min": 0.2,
+   "botcore": "s94 (weapon switches still broken)"
+  }
+ }
+}

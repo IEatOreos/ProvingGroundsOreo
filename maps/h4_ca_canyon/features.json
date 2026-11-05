@@ -1,0 +1,1272 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "railgun",
+"pos": [
+-4.816,
+23.764,
+1.767
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "railgun",
+"pos": [
+4.769,
+-23.736,
+1.853
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+16.648,
+19.205,
+-1.056
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-16.497,
+-19.433,
+-1.243
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "incineration_cannon",
+"pos": [
+21.677,
+11.459,
+2.404
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "incineration_cannon",
+"pos": [
+-21.343,
+-10.554,
+2.549
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+24.256,
+-1.328,
+2.546
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+-24.305,
+0.865,
+2.332
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "scattershot",
+"pos": [
+8.848,
+-21.174,
+1.596
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "scattershot",
+"pos": [
+-8.945,
+21.27,
+1.593
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+21.513,
+10.637,
+2.417
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-21.993,
+-10.658,
+2.54
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+12.981,
+5.509,
+1.006
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+-13.227,
+-5.652,
+0.814
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+1.981,
+13.196,
+-0.968
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "fuelrod",
+"pos": [
+-2.333,
+-14.396,
+-1.136
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-9.752,
+-26.008,
+-0.882
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+9.728,
+25.871,
+-0.882
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+2.6,
+-16.439,
+-1.372
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+-4.093,
+15.467,
+-0.889
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+-8.469,
+-23.753,
+-0.882
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+8.262,
+23.698,
+-0.842
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+8.364,
+15.756,
+-0.916
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+-8.744,
+-15.78,
+-1.034
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+6.896,
+24.594,
+-0.872
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-7.312,
+-24.634,
+-0.872
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+-21.409,
+-11.511,
+2.585
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+20.446,
+9.981,
+2.416
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+16.185,
+29.162,
+0.458
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+15.9,
+28.843,
+0.458
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+17.095,
+29.036,
+0.458
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+16.959,
+25.79,
+-0.652
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+16.803,
+25.605,
+-0.882
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+15.851,
+25.124,
+2.236
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+15.664,
+25.631,
+2.236
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+15.793,
+25.431,
+2.466
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.133,
+-29.215,
+0.458
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-16.203,
+-29.207,
+0.458
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-16.646,
+-25.598,
+-0.882
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.018,
+-25.961,
+-0.882
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-15.643,
+-25.833,
+2.236
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.631,
+-25.793,
+2.236
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.36,
+-25.363,
+2.236
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.435,
+-25.594,
+2.466
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-10.248,
+-20.577,
+-0.998
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-10.716,
+-20.385,
+-0.982
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.793,
+-19.751,
+2.333
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-17.955,
+-20.2,
+2.36
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+9.887,
+23.954,
+2.286
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+9.775,
+24.407,
+2.26
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+19.796,
+19.082,
+-1.175
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+20.309,
+18.881,
+-1.198
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+0.181,
+-0.515,
+0.567
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+0.626,
+-0.356,
+0.587
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+3.92,
+30.339,
+1.58
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-10.877,
+21.794,
+1.586
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+10.783,
+-22.004,
+1.586
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-3.902,
+-30.433,
+1.58
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-16.635,
+-29.579,
+0.432
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-2.342,
+-2.268,
+0.448
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+16.805,
+29.275,
+0.44
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+11.162,
+-0.019,
+3.3
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-9.054,
+0.098,
+3.636
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+12.344,
+3.786,
+0.751
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-12.755,
+-4.046,
+0.772
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-0.174,
+-0.315,
+0.56
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+16.603,
+33.104,
+-0.182
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+16.603,
+33.104,
+-0.182
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-16.612,
+-33.367,
+-0.182
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-16.612,
+-33.367,
+-0.182
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-0.372,
+-0.097,
+0.554
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-0.372,
+-0.097,
+0.554
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.14,
+0.004,
+0.57
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-16.465,
+-17.423,
+2.304
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+20.737,
+11.078,
+2.459
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-10.009,
+21.047,
+1.582
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-13.64,
+-4.881,
+0.669
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+19.619,
+10.052,
+2.433
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-16.27,
+-16.839,
+-1.349
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-3.036,
+-8.608,
+2.823
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+3.344,
+8.744,
+2.875
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-9.885,
+20.803,
+1.799
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+21.231,
+9.462,
+2.324
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+21.231,
+9.462,
+2.324
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-22.69,
+-10.575,
+2.54
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-22.69,
+-10.575,
+2.54
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+-16.443,
+-20.384,
+2.312
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+16.599,
+20.323,
+2.312
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "grif_spawn",
+"pos": [
+0.67,
+0.489,
+0.571
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+-16.595,
+-29.395,
+0.458
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+0.385,
+-0.466,
+0.579
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+16.626,
+29.308,
+0.458
+],
+"team": 8
+},
+{
+"kind": "lift",
+"name": "canyonlift",
+"pos": [
+-1.458,
+-8.132,
+-0.353
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "canyonlift",
+"pos": [
+1.86,
+7.899,
+-0.094
+],
+"group": "crates"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_sender",
+"pos": [
+-3.87,
+-30.42,
+1.58
+],
+"group": "crates",
+"channel": "alpha"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_receiver",
+"pos": [
+10.858,
+-22.058,
+1.586
+],
+"group": "crates",
+"channel": "alpha"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_sender",
+"pos": [
+3.884,
+30.316,
+1.58
+],
+"group": "crates",
+"channel": "bravo"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_receiver",
+"pos": [
+-10.974,
+21.853,
+1.586
+],
+"group": "crates",
+"channel": "bravo"
+},
+{
+"kind": "lift",
+"name": "canyonlift",
+"pos": [
+-29.467,
+-18.316,
+-0.792
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "canyonlift",
+"pos": [
+29.233,
+18.621,
+-0.808
+],
+"group": "crates"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+-16.595,
+-29.395,
+0.458
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+0.385,
+-0.466,
+0.579
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+16.626,
+29.308,
+0.458
+],
+"group": "machines"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_medium",
+"pos": [
+-16.593,
+-23.55,
+3.306
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_medium",
+"pos": [
+-4.933,
+-25.871,
+3.083
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_large",
+"pos": [
+-8.399,
+-22.142,
+-0.765
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_medium",
+"pos": [
+4.949,
+25.772,
+3.087
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_medium",
+"pos": [
+16.614,
+23.51,
+3.313
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_large",
+"pos": [
+8.916,
+22.203,
+-0.693
+],
+"group": "crates"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_2_way",
+"pos": [
+3.92,
+30.339,
+1.58
+],
+"group": "crates",
+"channel": "november"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_2_way",
+"pos": [
+-10.877,
+21.794,
+1.586
+],
+"group": "crates",
+"channel": "november"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_2_way",
+"pos": [
+10.783,
+-22.004,
+1.586
+],
+"group": "crates",
+"channel": "oscar"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_2_way",
+"pos": [
+-3.902,
+-30.433,
+1.58
+],
+"group": "crates",
+"channel": "oscar"
+}
+],
+"teleporters": [
+[
+[
+-3.87,
+-30.42,
+1.58
+],
+[
+10.858,
+-22.058,
+1.586
+]
+],
+[
+[
+3.884,
+30.316,
+1.58
+],
+[
+-10.974,
+21.853,
+1.586
+]
+],
+[
+[
+-10.877,
+21.794,
+1.586
+],
+[
+3.92,
+30.339,
+1.58
+]
+],
+[
+[
+10.783,
+-22.004,
+1.586
+],
+[
+-3.902,
+-30.433,
+1.58
+]
+]
+]
+}

@@ -1,0 +1,190 @@
+{
+"features": [
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-115.362,
+-132.798,
+14.491
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-136.734,
+-129.472,
+11.637
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "drop_shield",
+"pos": [
+-92.606,
+-85.622,
+24.61
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-128.686,
+-133.241,
+14.421
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-129.024,
+-129.972,
+13.501
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-141.595,
+-75.323,
+13.664
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "door_interior_large_logo",
+"pos": [
+-74.3,
+35.5,
+17.714
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_interior_large_logo",
+"pos": [
+-98.75,
+35.5,
+17.7
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_interior_large_logo",
+"pos": [
+-91.864,
+35.5,
+16.5
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-132.619,
+-132.537,
+12.048
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-112.549,
+-131.588,
+13.524
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-141.883,
+-109.753,
+10.911
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-132.619,
+-132.537,
+12.048
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-112.549,
+-131.588,
+13.524
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-141.883,
+-109.753,
+10.911
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-132.619,
+-132.537,
+12.048
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-112.549,
+-131.588,
+13.524
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-141.883,
+-109.753,
+10.911
+],
+"group": "controls"
+}
+],
+"teleporters": []
+}

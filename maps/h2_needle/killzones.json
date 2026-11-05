@@ -1,0 +1,5 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_trigger", "center": [9.74, 37.38, -15.5], "size": [99.987, 89.243, 19.0]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_trigger_lightbeam", "center": [-0.014, 37.644, -4.714], "size": [2.284, 2.103, 8.742]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_trigger_lightbeam2", "center": [-0.006, 37.603, 12.089], "size": [0.4, 0.4, 25.0], "rotation": {"forward": [0.92945, 0.36895, 0.0], "up": [0.0, 0.0, 1.0]}}
+]}

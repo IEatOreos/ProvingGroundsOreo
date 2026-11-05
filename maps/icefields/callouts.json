@@ -1,0 +1,727 @@
+{
+ "map": "icefields",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 4.22,
+ "points": {
+  "mid": [
+   -26.47,
+   32.16,
+   0.68
+  ],
+  "mid_hill": [
+   -25.97,
+   32.41,
+   9.01
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    24.85,
+    -22.11,
+    2.11
+   ],
+   [
+    25.28,
+    -19.09,
+    2.1
+   ],
+   [
+    21.78,
+    -22.59,
+    2.1
+   ]
+  ],
+  "blue": [
+   [
+    -77.86,
+    86.55,
+    2.11
+   ],
+   [
+    -78.72,
+    82.91,
+    0.8
+   ],
+   [
+    -74.47,
+    87.16,
+    0.8
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   -26.47,
+   32.16,
+   0.68
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Red base": {
+   "poly": [
+    [
+     19.5,
+     -27.5
+    ],
+    [
+     30.5,
+     -27.5
+    ],
+    [
+     30.5,
+     -16.5
+    ],
+    [
+     19.5,
+     -16.5
+    ]
+   ],
+   "side": "red",
+   "priority": 38,
+   "full": "the red base building: red flag, shotgun, flamethrower",
+   "aka": [
+    "red flag",
+    "inside red",
+    "red"
+   ],
+   "area": false
+  },
+  "Red portal": {
+   "poly": [
+    [
+     20.0,
+     -39.5
+    ],
+    [
+     30.0,
+     -39.5
+    ],
+    [
+     30.0,
+     -32.5
+    ],
+    [
+     20.0,
+     -32.5
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "behind the red base: overshield and the red portal (goes to the pad under the bridge)",
+   "aka": [
+    "red tele",
+    "red OS",
+    "back red",
+    "red base portal"
+   ],
+   "area": false
+  },
+  "Back red": {
+   "poly": [
+    [
+     13.0,
+     -32.5
+    ],
+    [
+     37.0,
+     -32.5
+    ],
+    [
+     37.0,
+     -27.5
+    ],
+    [
+     13.0,
+     -27.5
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "behind the red base: red Scorpion, Ghosts and Warthogs, on the way to the red portal",
+   "aka": [
+    "behind red",
+    "red back"
+   ],
+   "area": false
+  },
+  "Front red": {
+   "poly": [
+    [
+     12.0,
+     -16.5
+    ],
+    [
+     38.0,
+     -16.5
+    ],
+    [
+     38.0,
+     -8.0
+    ],
+    [
+     12.0,
+     -8.0
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "in front of the red base, toward the middle; red vehicles",
+   "aka": [
+    "red front",
+    "red front door",
+    "front door"
+   ],
+   "area": false
+  },
+  "Blue base": {
+   "poly": [
+    [
+     -72.5,
+     91.9
+    ],
+    [
+     -83.5,
+     91.9
+    ],
+    [
+     -83.5,
+     80.9
+    ],
+    [
+     -72.5,
+     80.9
+    ]
+   ],
+   "side": "blue",
+   "priority": 38,
+   "full": "the blue base building: blue flag, shotgun, flamethrower",
+   "aka": [
+    "blue flag",
+    "inside blue",
+    "blue"
+   ],
+   "area": false
+  },
+  "Blue portal": {
+   "poly": [
+    [
+     -73.0,
+     103.9
+    ],
+    [
+     -83.0,
+     103.9
+    ],
+    [
+     -83.0,
+     96.9
+    ],
+    [
+     -73.0,
+     96.9
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "behind the blue base: overshield and the blue portal (goes to the pad under the bridge)",
+   "aka": [
+    "blue tele",
+    "blue OS",
+    "back blue",
+    "blue base portal"
+   ],
+   "area": false
+  },
+  "Back blue": {
+   "poly": [
+    [
+     -66.0,
+     96.9
+    ],
+    [
+     -90.0,
+     96.9
+    ],
+    [
+     -90.0,
+     91.9
+    ],
+    [
+     -66.0,
+     91.9
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "behind the blue base: blue Scorpion, Ghosts and Warthogs, on the way to the blue portal",
+   "aka": [
+    "behind blue",
+    "blue back"
+   ],
+   "area": false
+  },
+  "Front blue": {
+   "poly": [
+    [
+     -65.0,
+     80.9
+    ],
+    [
+     -91.0,
+     80.9
+    ],
+    [
+     -91.0,
+     72.4
+    ],
+    [
+     -65.0,
+     72.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "in front of the blue base, toward the middle; blue vehicles",
+   "aka": [
+    "blue front",
+    "blue front door",
+    "front door"
+   ],
+   "area": false
+  },
+  "Top mid": {
+   "poly": [
+    [
+     -31.0,
+     17.0
+    ],
+    [
+     -19.0,
+     17.0
+    ],
+    [
+     -19.0,
+     45.0
+    ],
+    [
+     -31.0,
+     45.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "top of the centre bridge: overshield, rocket launcher, fuel rod",
+   "aka": [
+    "top middle",
+    "top middle bridge",
+    "middle bridge",
+    "top bridge",
+    "bridge"
+   ],
+   "area": false,
+   "zmin": 6.0
+  },
+  "Blue tunnel": {
+   "poly": [
+    [
+     -31,
+     45
+    ],
+    [
+     -19,
+     45
+    ],
+    [
+     -19,
+     66
+    ],
+    [
+     -24,
+     74
+    ],
+    [
+     -47,
+     74
+    ],
+    [
+     -49,
+     64
+    ],
+    [
+     -31,
+     63
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "the bridge's north end: tunnel through the rock and the ramp down toward the blue base",
+   "aka": [
+    "blue bridge tunnel",
+    "north tunnel"
+   ],
+   "area": false,
+   "zmin": 2.0
+  },
+  "Red tunnel": {
+   "poly": [
+    [
+     -31,
+     17
+    ],
+    [
+     -19,
+     17
+    ],
+    [
+     -19,
+     4
+    ],
+    [
+     -10,
+     -2.5
+    ],
+    [
+     4,
+     -3.5
+    ],
+    [
+     4,
+     -9.5
+    ],
+    [
+     -12,
+     -9.5
+    ],
+    [
+     -24,
+     -7.5
+    ],
+    [
+     -31,
+     -1
+    ]
+   ],
+   "side": "red",
+   "priority": 28,
+   "full": "the bridge's south end: tunnel through the rock and the ramp down toward the red base",
+   "aka": [
+    "red bridge tunnel",
+    "south tunnel"
+   ],
+   "area": false,
+   "zmin": 2.0
+  },
+  "Blue sniper": {
+   "poly": [
+    [
+     -47.5,
+     40.5
+    ],
+    [
+     -31.0,
+     40.5
+    ],
+    [
+     -31.0,
+     51.5
+    ],
+    [
+     -47.5,
+     51.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "cliff west of the bridge on the blue half: sniper rifle, shotgun; joins the bridge's north end",
+   "aka": [
+    "blue cliff",
+    "sniper spawn",
+    "blue snipe"
+   ],
+   "area": false,
+   "zmin": 6.0
+  },
+  "Red sniper": {
+   "poly": [
+    [
+     -17.5,
+     12.5
+    ],
+    [
+     -4.5,
+     12.5
+    ],
+    [
+     -4.5,
+     23.5
+    ],
+    [
+     -17.5,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "cliff east of the bridge on the red half: sniper rifle, shotgun",
+   "aka": [
+    "red cliff",
+    "sniper spawn",
+    "red snipe"
+   ],
+   "area": false,
+   "zmin": 6.0
+  },
+  "Blue cliff portal": {
+   "poly": [
+    [
+     -53.5,
+     39.0
+    ],
+    [
+     -47.5,
+     39.0
+    ],
+    [
+     -47.5,
+     45.0
+    ],
+    [
+     -53.5,
+     45.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "ground teleporter west of the bridge, up to the blue sniper cliff",
+   "aka": [
+    "top portal",
+    "blue top portal",
+    "blue sniper portal"
+   ],
+   "area": false,
+   "zmax": 6.0
+  },
+  "Red cliff portal": {
+   "poly": [
+    [
+     -4.2,
+     20.0
+    ],
+    [
+     1.8,
+     20.0
+    ],
+    [
+     1.8,
+     26.0
+    ],
+    [
+     -4.2,
+     26.0
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "ground teleporter east of the bridge, up to the red sniper cliff",
+   "aka": [
+    "top portal",
+    "red top portal",
+    "red sniper portal"
+   ],
+   "area": false,
+   "zmax": 6.0
+  },
+  "Red portal exit": {
+   "poly": [
+    [
+     -28.8,
+     37.4
+    ],
+    [
+     -23.2,
+     37.4
+    ],
+    [
+     -23.2,
+     43.2
+    ],
+    [
+     -28.8,
+     43.2
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "raised pad under the north half of the bridge where the red portal comes out; a camo on it",
+   "aka": [
+    "red exit",
+    "red portal camo"
+   ],
+   "area": false,
+   "zmax": 6.0
+  },
+  "Blue portal exit": {
+   "poly": [
+    [
+     -28.8,
+     21.6
+    ],
+    [
+     -23.2,
+     21.6
+    ],
+    [
+     -23.2,
+     27.4
+    ],
+    [
+     -28.8,
+     27.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "raised pad under the south half of the bridge where the blue portal comes out; a camo on it",
+   "aka": [
+    "blue exit",
+    "blue portal camo"
+   ],
+   "area": false,
+   "zmax": 6.0
+  },
+  "Bottom mid": {
+   "poly": [
+    [
+     -52,
+     30
+    ],
+    [
+     -34,
+     50
+    ],
+    [
+     -22,
+     52
+    ],
+    [
+     -6,
+     40
+    ],
+    [
+     -2,
+     26
+    ],
+    [
+     -12,
+     12
+    ],
+    [
+     -30,
+     12
+    ],
+    [
+     -44,
+     22
+    ]
+   ],
+   "side": "mid",
+   "priority": 22,
+   "full": "the ground under and around the bridge: portal pads, camos, the low fuel rod",
+   "aka": [
+    "bottom middle",
+    "under the bridge",
+    "under bridge"
+   ],
+   "area": false,
+   "zmax": 6.0
+  },
+  "Mid": {
+   "poly": [
+    [
+     -116.16,
+     -91.18
+    ],
+    [
+     -154.64,
+     -50.52
+    ],
+    [
+     63.16,
+     155.58
+    ],
+    [
+     101.64,
+     114.92
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the middle: bridge, tunnels, sniper cliffs and everything under them",
+   "aka": [
+    "middle",
+    "center"
+   ],
+   "area": true
+  },
+  "Red side": {
+   "poly": [
+    [
+     -116.16,
+     -91.18
+    ],
+    [
+     101.64,
+     114.92
+    ],
+    [
+     219.8,
+     -9.95
+    ],
+    [
+     2.0,
+     -216.05
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "red's half (south-east): red base and the road to the bridge",
+   "aka": [
+    "red half",
+    "red"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     -154.64,
+     -50.52
+    ],
+    [
+     -272.8,
+     74.35
+    ],
+    [
+     -55.0,
+     280.45
+    ],
+    [
+     63.16,
+     155.58
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "blue's half (north-west): blue base and the road to the bridge",
+   "aka": [
+    "blue half",
+    "blue"
+   ],
+   "area": true
+  }
+ }
+}

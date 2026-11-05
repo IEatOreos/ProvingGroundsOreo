@@ -1,0 +1,21 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local1", "center": [7.714, 95.071, 4.893], "size": [4.963, 3.663, 2.093]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local2", "center": [7.922, 106.48, 4.981], "size": [5.664, 3.887, 1.96]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local3", "center": [8.148, 100.699, 5.69], "size": [6.201, 7.658, 2.526]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local4", "center": [25.68, 97.272, 4.657], "size": [6.073, 3.608, 0.916]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local5", "center": [26.256, 96.874, 5.041], "size": [1.537, 2.791, 1.647]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local6", "center": [23.602, 96.833, 5.08], "size": [1.34, 2.789, 1.569]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local7", "center": [25.688, 104.354, 4.655], "size": [6.093, 3.516, 0.704]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local8", "center": [26.288, 104.637, 5.179], "size": [1.256, 2.792, 1.501]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local9", "center": [23.688, 104.77, 5.192], "size": [1.315, 2.991, 1.508]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local10", "center": [27.569, 106.913, 4.66], "size": [2.345, 1.642, 0.723]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local11", "center": [28.304, 108.348, 4.694], "size": [1.446, 1.238, 0.674]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local12", "center": [27.109, 108.23, 4.681], "size": [0.937, 0.967, 0.786]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local13", "center": [23.07, 106.999, 4.663], "size": [0.853, 1.916, 0.687]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local14", "center": [23.045, 94.187, 4.369], "size": [0.849, 2.576, 1.141]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local15", "center": [27.495, 94.697, 4.369], "size": [2.275, 1.552, 1.258]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local16", "center": [28.227, 93.211, 4.413], "size": [1.017, 1.411, 1.071]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local17", "center": [27.285, 93.348, 4.463], "size": [1.087, 1.588, 0.711]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_local18", "center": [4.436, 100.37, 3.966], "size": [1.799, 7.371, 3.669]},
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [24.496, 98.662, 2.46], "size": [74.284, 111.579, 26.069], "condition": "safe_zone volume not in the safe zone block (H2 / H3 engine): what it does is UNKNOWN"}
+]}

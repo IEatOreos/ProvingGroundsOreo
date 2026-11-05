@@ -1,0 +1,3 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume", "center": [-7.897, 15.842, -26.496], "size": [75.951, 101.171, 56.175]}
+]}

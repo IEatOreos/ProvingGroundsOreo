@@ -1,0 +1,981 @@
+{
+ "map": "prisoner",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 5.59,
+ "points": {
+  "mid": [
+   0.8,
+   0.0,
+   -0.5
+  ],
+  "mid_hill": [
+   0.0,
+   0.75,
+   3.2
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    -9.37,
+    -4.95,
+    5.7
+   ],
+   [
+    -6.5,
+    -6.55,
+    5.59
+   ]
+  ],
+  "blue": [
+   [
+    9.37,
+    5.12,
+    5.7
+   ],
+   [
+    6.5,
+    6.72,
+    5.59
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   -8.24,
+   -5.13,
+   5.59
+  ],
+  [
+   -7.87,
+   -5.64,
+   5.59
+  ],
+  [
+   -8.26,
+   -4.7,
+   5.59
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Camo": {
+   "poly": [
+    [
+     -1.6,
+     -1.6
+    ],
+    [
+     3.4,
+     -1.6
+    ],
+    [
+     3.4,
+     1.6
+    ],
+    [
+     -1.6,
+     1.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "ground floor centre under the rockets platform: camo",
+   "aka": [
+    "bottom mid",
+    "bottom middle",
+    "bottom camo"
+   ],
+   "area": false,
+   "zmax": 0.5
+  },
+  "Red 1": {
+   "poly": [
+    [
+     -8.4,
+     -7.4
+    ],
+    [
+     2.2,
+     -7.4
+    ],
+    [
+     2.2,
+     -2.6
+    ],
+    [
+     -8.4,
+     -2.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 26,
+   "full": "ground floor of the red-lit south side (lighting, not team)",
+   "aka": [
+    "red one",
+    "red court",
+    "bottom red"
+   ],
+   "area": false,
+   "zmax": 0.5
+  },
+  "Red ladder": {
+   "poly": [
+    [
+     -1.8,
+     -7.4
+    ],
+    [
+     0.6,
+     -7.4
+    ],
+    [
+     0.6,
+     -4.4
+    ],
+    [
+     -1.8,
+     -4.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "ladder from red 1 up to red 2 under the red lights",
+   "aka": [],
+   "area": false
+  },
+  "Red 2": {
+   "poly": [
+    [
+     -5.0,
+     -7.4
+    ],
+    [
+     2.0,
+     -7.4
+    ],
+    [
+     2.0,
+     -2.6
+    ],
+    [
+     -5.0,
+     -2.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 28,
+   "full": "middle floor of the red-lit south side",
+   "aka": [
+    "red two"
+   ],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "Red 3": {
+   "poly": [
+    [
+     -5.0,
+     -7.4
+    ],
+    [
+     2.0,
+     -7.4
+    ],
+    [
+     2.0,
+     -1.4
+    ],
+    [
+     -5.0,
+     -1.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 28,
+   "full": "top floor of the red-lit south side",
+   "aka": [
+    "red three"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Triples": {
+   "poly": [
+    [
+     -10.4,
+     2.4
+    ],
+    [
+     -2.0,
+     2.4
+    ],
+    [
+     -2.0,
+     7.4
+    ],
+    [
+     -10.4,
+     7.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "ground floor spot with three doors, under the OS",
+   "aka": [
+    "threes",
+    "triple doors",
+    "bottom OS",
+    "OB1"
+   ],
+   "area": false,
+   "zmax": 0.5
+  },
+  "Doubles": {
+   "poly": [
+    [
+     7.6,
+     1.2
+    ],
+    [
+     10.6,
+     1.2
+    ],
+    [
+     10.6,
+     7.4
+    ],
+    [
+     7.6,
+     7.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "ground floor pocket with two doors under the back sniper",
+   "aka": [
+    "twos",
+    "double doors"
+   ],
+   "area": false,
+   "zmax": 0.5
+  },
+  "Back 1": {
+   "poly": [
+    [
+     4.4,
+     -3.8
+    ],
+    [
+     10.6,
+     -3.8
+    ],
+    [
+     10.6,
+     1.2
+    ],
+    [
+     4.4,
+     1.2
+    ]
+   ],
+   "side": "blue",
+   "priority": 26,
+   "full": "ground floor along the back wall",
+   "aka": [
+    "B1",
+    "back one",
+    "back wall 1"
+   ],
+   "area": false,
+   "zmax": 0.5
+  },
+  "Back 2": {
+   "poly": [
+    [
+     6.2,
+     -2.6
+    ],
+    [
+     8.6,
+     -2.6
+    ],
+    [
+     8.6,
+     7.4
+    ],
+    [
+     6.2,
+     7.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "middle floor along the back wall",
+   "aka": [
+    "B2",
+    "back two",
+    "back wall 2"
+   ],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "Back 3": {
+   "poly": [
+    [
+     8.0,
+     -5.8
+    ],
+    [
+     10.6,
+     -5.8
+    ],
+    [
+     10.6,
+     1.8
+    ],
+    [
+     7.8,
+     1.8
+    ],
+    [
+     7.8,
+     7.4
+    ],
+    [
+     6.2,
+     7.4
+    ],
+    [
+     6.2,
+     -0.8
+    ],
+    [
+     8.0,
+     -0.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "top floor along the back wall",
+   "aka": [
+    "B3",
+    "back three",
+    "back wall 3"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Bottom elbow": {
+   "poly": [
+    [
+     2.0,
+     -7.4
+    ],
+    [
+     8.4,
+     -7.4
+    ],
+    [
+     8.4,
+     -1.4
+    ],
+    [
+     2.0,
+     -1.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "middle floor corner between red and the back wall, under the office",
+   "aka": [],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "Elbow": {
+   "poly": [
+    [
+     2.0,
+     -7.4
+    ],
+    [
+     4.4,
+     -7.4
+    ],
+    [
+     4.4,
+     -2.8
+    ],
+    [
+     2.0,
+     -2.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "top floor corner between red 3 and the office",
+   "aka": [],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Office": {
+   "poly": [
+    [
+     4.4,
+     -5.8
+    ],
+    [
+     8.0,
+     -5.8
+    ],
+    [
+     8.0,
+     -3.3
+    ],
+    [
+     4.4,
+     -3.3
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "top floor room with the breakable window over the middle",
+   "aka": [
+    "front office",
+    "window",
+    "glass",
+    "hospital"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Blue ramp": {
+   "poly": [
+    [
+     -4.2,
+     3.6
+    ],
+    [
+     2.6,
+     3.6
+    ],
+    [
+     2.6,
+     6.4
+    ],
+    [
+     -4.2,
+     6.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "ground ramp up to the middle floor on the blue-lit north side",
+   "aka": [
+    "camo ramp",
+    "back ramp"
+   ],
+   "area": false
+  },
+  "PR": {
+   "poly": [
+    [
+     2.8,
+     3.6
+    ],
+    [
+     4.8,
+     3.6
+    ],
+    [
+     4.8,
+     7.4
+    ],
+    [
+     2.8,
+     7.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "plasma rifle spawn on the north middle floor, by its ladder",
+   "aka": [
+    "PR2",
+    "PR ladder",
+    "blue ladder"
+   ],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "Rockets": {
+   "poly": [
+    [
+     -0.4,
+     -1.2
+    ],
+    [
+     2.2,
+     -1.2
+    ],
+    [
+     2.2,
+     1.2
+    ],
+    [
+     -0.4,
+     1.2
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "rocket launcher on the small platform above camo",
+   "aka": [],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "O2": {
+   "poly": [
+    [
+     -7.2,
+     3.4
+    ],
+    [
+     -4.4,
+     3.4
+    ],
+    [
+     -4.4,
+     7.4
+    ],
+    [
+     -7.2,
+     7.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "middle floor under the OS",
+   "aka": [
+    "OV2",
+    "under OS",
+    "bottom health"
+   ],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "Top OS": {
+   "poly": [
+    [
+     -7.0,
+     4.4
+    ],
+    [
+     -4.6,
+     4.4
+    ],
+    [
+     -4.6,
+     7.4
+    ],
+    [
+     -7.0,
+     7.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "overshield on the top floor in the north-west",
+   "aka": [
+    "top OV",
+    "O3",
+    "OB3",
+    "OS"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "OS bridge": {
+   "poly": [
+    [
+     -11.4,
+     0.8
+    ],
+    [
+     -2.8,
+     0.8
+    ],
+    [
+     -2.8,
+     5.8
+    ],
+    [
+     -11.4,
+     5.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 28,
+   "full": "top floor walkway leading to the OS",
+   "aka": [
+    "OS catwalk",
+    "front OV"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Mid bridge": {
+   "poly": [
+    [
+     -4.0,
+     2.2
+    ],
+    [
+     -2.6,
+     3.6
+    ],
+    [
+     3.8,
+     -0.6
+    ],
+    [
+     2.8,
+     -2.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "top floor bridge across the middle over rockets",
+   "aka": [
+    "red bridge",
+    "middle bridge"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Top health": {
+   "poly": [
+    [
+     0.6,
+     1.2
+    ],
+    [
+     4.8,
+     1.2
+    ],
+    [
+     4.8,
+     4.0
+    ],
+    [
+     0.6,
+     4.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "health pack on the top floor north of the mid bridge",
+   "aka": [
+    "top HP"
+   ],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Bottom safe": {
+   "poly": [
+    [
+     -10.8,
+     -7.4
+    ],
+    [
+     -6.0,
+     -7.4
+    ],
+    [
+     -6.0,
+     -4.8
+    ],
+    [
+     -10.8,
+     -4.8
+    ]
+   ],
+   "side": "red",
+   "priority": 32,
+   "full": "corner at the bottom of the OS ramp; the safe spawn",
+   "aka": [
+    "safe corner",
+    "safe"
+   ],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "OS ramp": {
+   "poly": [
+    [
+     -10.8,
+     -4.8
+    ],
+    [
+     -8.2,
+     -4.8
+    ],
+    [
+     -8.2,
+     1.2
+    ],
+    [
+     -10.8,
+     1.2
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "long ramp up the west wall from bottom safe to the OS walkway",
+   "aka": [
+    "OV ramp",
+    "safe ramp"
+   ],
+   "area": false,
+   "zmin": 0.5
+  },
+  "Top safe": {
+   "poly": [
+    [
+     -10.8,
+     1.2
+    ],
+    [
+     -8.2,
+     1.2
+    ],
+    [
+     -8.2,
+     2.8
+    ],
+    [
+     -10.8,
+     2.8
+    ]
+   ],
+   "side": "red",
+   "priority": 32,
+   "full": "top of the OS ramp",
+   "aka": [],
+   "area": false,
+   "zmin": 2.3,
+   "zmax": 4.5
+  },
+  "Red health": {
+   "poly": [
+    [
+     -8.4,
+     -4.0
+    ],
+    [
+     -6.2,
+     -4.0
+    ],
+    [
+     -6.2,
+     -1.8
+    ],
+    [
+     -8.4,
+     -1.8
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "health pack on the middle floor of the red corner",
+   "aka": [],
+   "area": false,
+   "zmin": 0.5,
+   "zmax": 2.3
+  },
+  "Red sniper": {
+   "poly": [
+    [
+     -10.6,
+     -7.4
+    ],
+    [
+     -5.6,
+     -7.4
+    ],
+    [
+     -5.6,
+     -3.2
+    ],
+    [
+     -10.6,
+     -3.2
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "sniper perch over the red corner, red flag",
+   "aka": [
+    "red snipe",
+    "red flag"
+   ],
+   "area": false,
+   "zmin": 4.5
+  },
+  "Back sniper": {
+   "poly": [
+    [
+     6.0,
+     3.0
+    ],
+    [
+     10.6,
+     3.0
+    ],
+    [
+     10.6,
+     7.4
+    ],
+    [
+     6.0,
+     7.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "sniper perch over the back wall, blue flag",
+   "aka": [
+    "blue sniper",
+    "back wall snipe",
+    "back snipe",
+    "blue flag"
+   ],
+   "area": false,
+   "zmin": 4.5
+  },
+  "OS side": {
+   "poly": [
+    [
+     -12.8,
+     -2.6
+    ],
+    [
+     -4.6,
+     -2.6
+    ],
+    [
+     -4.6,
+     7.4
+    ],
+    [
+     -12.8,
+     7.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the north-west quarter around the OS (suggested area name)",
+   "aka": [
+    "OS"
+   ],
+   "area": true
+  },
+  "Red": {
+   "poly": [
+    [
+     -12.8,
+     -7.4
+    ],
+    [
+     4.4,
+     -7.4
+    ],
+    [
+     4.4,
+     -2.6
+    ],
+    [
+     -12.8,
+     -2.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the red-lit south side, all floors",
+   "aka": [
+    "red court"
+   ],
+   "area": true
+  },
+  "Back wall": {
+   "poly": [
+    [
+     4.4,
+     -7.4
+    ],
+    [
+     11.6,
+     -7.4
+    ],
+    [
+     11.6,
+     8.4
+    ],
+    [
+     4.4,
+     8.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "the back wall side, all floors",
+   "aka": [
+    "back"
+   ],
+   "area": true
+  },
+  "Mid": {
+   "poly": [
+    [
+     -4.6,
+     -2.6
+    ],
+    [
+     4.4,
+     -2.6
+    ],
+    [
+     4.4,
+     8.4
+    ],
+    [
+     -4.6,
+     8.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the middle: camo, rockets, the mid bridge",
+   "aka": [
+    "middle"
+   ],
+   "area": true
+  }
+ }
+}

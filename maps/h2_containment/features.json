@@ -1,0 +1,1908 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-2.28052,
+53.6222,
+0.930819
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-58.855785,
+-23.39826,
+0.924825
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+18.735556,
+55.072826,
+-1.437532
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-80.037834,
+-24.726154,
+-1.437532
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-14.397423,
+62.654011,
+-2.923617
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-46.238056,
+-32.17614,
+-3.10226
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+8.608205,
+45.954262,
+-1.737489
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-69.659317,
+-15.465816,
+-1.737488
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "brute_shot",
+"pos": [
+15.573687,
+45.757935,
+1.262506
+],
+"team": 8,
+"respawn": 60
+},
+{
+"kind": "weapon",
+"name": "brute_shot",
+"pos": [
+-76.653954,
+-15.453783,
+1.262504
+],
+"team": 8,
+"respawn": 60
+},
+{
+"kind": "weapon",
+"name": "carbine",
+"pos": [
+-38.293343,
+9.128829,
+-1.807324
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "carbine",
+"pos": [
+-22.788578,
+21.162445,
+-1.639171
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "carbine",
+"pos": [
+-30.897207,
+51.538467,
+1.272728
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "carbine",
+"pos": [
+-30.199003,
+-21.301815,
+1.267799
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+-11.466834,
+29.499897,
+-2.898981
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+-49.72739,
+0.743052,
+-2.708229
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+11.358391,
+34.647457,
+-2.231244
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-72.600502,
+-4.198348,
+-2.207774
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-34.830261,
+-27.34417,
+-0.575983
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-26.433216,
+57.74836,
+-0.42311
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+3.460221,
+48.404797,
+0.862503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+3.443108,
+43.232334,
+0.862503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-64.482178,
+-18.019871,
+0.862503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-64.427147,
+-12.835721,
+0.862503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-6.649161,
+59.405903,
+1.562503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-54.480301,
+-29.020918,
+1.562503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+-18.743822,
+-8.363676,
+0.912813
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+-42.504311,
+38.751125,
+1.448366
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_rocket_launcher",
+"pos": [
+-29.634705,
+15.220608,
+1.266901
+],
+"team": 8,
+"respawn": 60
+},
+{
+"kind": "ammo",
+"name": "ammo_rocket_launcher",
+"pos": [
+-35.723831,
+36.938129,
+0.286832
+],
+"team": 8,
+"respawn": 100
+},
+{
+"kind": "ammo",
+"name": "ammo_rocket_launcher",
+"pos": [
+-25.22139,
+-6.733975,
+-0.187307
+],
+"team": 8,
+"respawn": 100
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+3.477925,
+53.046124,
+-1.437532
+],
+"team": 8,
+"respawn": 60
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-64.679108,
+-22.329311,
+-1.437532
+],
+"team": 8,
+"respawn": 60
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+3.972297,
+35.66293,
+-1.437543
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+-65.180367,
+-5.142606,
+-1.437543
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-4.420257,
+31.718781,
+-1.669548
+],
+"team": 8,
+"respawn": 275
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-56.597328,
+-1.438171,
+-1.671916
+],
+"team": 8,
+"respawn": 275
+},
+{
+"kind": "grenade",
+"name": "frag_grenades",
+"pos": [
+-1.190321,
+30.73562,
+0.862504
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenades",
+"pos": [
+-59.72451,
+-0.56949,
+0.862504
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenades",
+"pos": [
+-13.306524,
+19.871893,
+-2.970877
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenades",
+"pos": [
+-48.017563,
+10.397051,
+-2.849356
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenades",
+"pos": [
+-57.161694,
+-35.64172,
+-1.437532
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenades",
+"pos": [
+-3.771762,
+65.658401,
+-1.437532
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-55.260273,
+-34.34016,
+0.862504
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-5.455615,
+64.556686,
+0.862503
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-57.006699,
+-7.849294,
+-1.737488
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-4.019658,
+38.004211,
+-1.737488
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-25.828293,
+36.08337,
+-1.625234
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-35.020203,
+-5.664761,
+-1.605807
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-40.418716,
+1.081108,
+-2.088791
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-35.052326,
+13.391595,
+-1.470298
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenades",
+"pos": [
+-25.806396,
+16.772987,
+-1.469621
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup_invisibility",
+"pos": [
+-46.547943,
+-14.903295,
+-2.867601
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup_invisibility",
+"pos": [
+-14.718228,
+44.839989,
+-2.870024
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "powerup_super_shield",
+"pos": [
+-30.37541,
+15.288279,
+-1.21807
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "h_turret_ap",
+"pos": [
+-2.991184,
+51.949619,
+0.809637
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "h_turret_ap",
+"pos": [
+-58.065666,
+-21.647142,
+0.805694
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog_gauss",
+"pos": [
+-78.097855,
+-25.771029,
+-1.437817
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog_gauss",
+"pos": [
+16.880051,
+56.078533,
+-1.437532
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "scorpion",
+"pos": [
+-56.464622,
+-13.712699,
+-3.937506
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "scorpion",
+"pos": [
+-4.626386,
+44.040394,
+-3.938272
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "banshee",
+"pos": [
+2.775602,
+61.306797,
+-0.437498
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "banshee",
+"pos": [
+-63.836205,
+-31.017406,
+-0.437498
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+13.7991,
+45.710602,
+-1.43753
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+13.798697,
+45.711296,
+-1.437533
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-74.844925,
+-15.407729,
+-1.437532
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-74.844528,
+-15.408004,
+-1.437532
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-30.525402,
+15.177037,
+1.259226
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "Oddball spawn",
+"pos": [
+-30.525797,
+15.176755,
+1.257325
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "Oddball spawn",
+"pos": [
+-31.346699,
+16.309893,
+1.247981
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "Oddball spawn",
+"pos": [
+-29.60812,
+14.105096,
+1.267728
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "Assault bomb spawn",
+"pos": [
+13.79943,
+45.707935,
+-1.437532
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "Assault bomb return",
+"pos": [
+13.799426,
+45.713093,
+-1.437532
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "Assault bomb return",
+"pos": [
+13.71253,
+42.324924,
+-1.436217
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "Assault bomb spawn",
+"pos": [
+-74.844559,
+-15.40673,
+-1.437532
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "Assault bomb return",
+"pos": [
+-74.845634,
+-15.40673,
+-1.437532
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "Assault bomb return",
+"pos": [
+-74.869057,
+-12.191181,
+-1.437703
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "Assault bomb spawn",
+"pos": [
+-30.526001,
+15.177136,
+1.257355
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-30.525579,
+15.177011,
+1.257445
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-30.574657,
+19.030022,
+1.151434
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-11.469166,
+23.980419,
+-2.75171
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-11.566128,
+27.127924,
+-2.644193
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-11.519322,
+24.139969,
+-3.49752
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-50.225006,
+6.377981,
+-2.673396
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-50.104992,
+3.640668,
+-2.554375
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-50.278942,
+6.303594,
+-3.627003
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-27.61709,
+36.882584,
+-1.473091
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-24.697422,
+37.400555,
+-1.80775
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-27.582529,
+36.97662,
+-2.443
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-33.618187,
+-6.613572,
+-1.497881
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-36.276531,
+-7.159161,
+-1.817716
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "Territories flag",
+"pos": [
+-33.556419,
+-6.701259,
+-2.110773
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-52.513126,
+6.83011,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-50.687252,
+8.817558,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-48.929966,
+8.536392,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-47.644585,
+6.372417,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-47.894711,
+5.070454,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-48.832436,
+3.857434,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-50.34391,
+3.785979,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-51.857529,
+4.872153,
+-2.336
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-49.333549,
+5.986959,
+-3.243132
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 3",
+"pos": [
+-49.333141,
+5.556277,
+-1.258129
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-8.783901,
+23.387125,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-10.225382,
+21.737431,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-12.428432,
+22.020687,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-13.942036,
+23.676304,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-13.931376,
+24.978382,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-12.414258,
+26.193024,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-10.738407,
+26.408623,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-9.225216,
+25.372341,
+-2.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-11.555722,
+24.354084,
+-3.197847
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 4",
+"pos": [
+-11.649955,
+24.595818,
+-1.551865
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-42.109699,
+23.917051,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-40.849907,
+22.971832,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-40.553402,
+19.195419,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-41.194439,
+18.530531,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-44.253132,
+18.739111,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-45.73177,
+20.21483,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-45.960278,
+22.66342,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-44.375801,
+24.00635,
+1.3
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-42.63205,
+22.017353,
+0.094665
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 5",
+"pos": [
+-43.409557,
+21.649649,
+3.482362
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-15.367586,
+7.768867,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-16.767572,
+6.40036,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-19.175013,
+6.619659,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-20.308441,
+7.871024,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-20.569832,
+11.138817,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-20.10434,
+11.807559,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-16.613361,
+11.323721,
+1.25
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-15.333591,
+9.933613,
+1.258777
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-17.716246,
+9.213624,
+0.14955
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 6",
+"pos": [
+-17.69743,
+8.965687,
+3.074367
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-25.374767,
+35.217976,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-25.949144,
+34.484978,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-28.700354,
+34.270966,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-30.342663,
+35.877552,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-30.164602,
+38.186371,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-28.455612,
+39.89587,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-26.628138,
+39.999058,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-25.376915,
+37.93222,
+-1.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-27.337143,
+37.563797,
+-2.267969
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 2",
+"pos": [
+-27.840721,
+37.627262,
+0.397744
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-35.571793,
+-4.433333,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-34.937294,
+-3.752493,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-31.68499,
+-3.653827,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-30.264898,
+-5.115733,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-30.357491,
+-7.277587,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-31.723402,
+-9.120169,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-34.212311,
+-9.327055,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-35.598988,
+-7.42869,
+-1.13
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-32.673504,
+-6.299829,
+-2.205122
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 1",
+"pos": [
+-32.053268,
+-6.352718,
+0.893174
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-33.041275,
+11.234461,
+1.230947
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-33.039726,
+17.276588,
+1.230657
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-31.882713,
+18.801006,
+1.091941
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-29.283405,
+19.712954,
+1.118761
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-27.987305,
+19.051779,
+1.284154
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-28.008192,
+13.081738,
+1.283977
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-28.944601,
+11.750185,
+1.136463
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-31.892315,
+10.600088,
+1.106492
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-30.56196,
+16.071751,
+0.644551
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "King Hill 0",
+"pos": [
+-30.470602,
+16.034943,
+3.89591
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "Assault bomb return",
+"pos": [
+11.808782,
+45.697002,
+-1.834265
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "Assault bomb return",
+"pos": [
+-72.844604,
+-15.41449,
+-1.84526
+],
+"team": 1
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+-68.242561,
+-15.388268,
+-1.166781
+],
+"channel": "0"
+},
+{
+"kind": "teleporter",
+"name": "teleport from",
+"pos": [
+7.196509,
+45.689602,
+-1.198344
+],
+"channel": "1"
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+-38.108223,
+-10.052726,
+1.163193
+],
+"channel": "0",
+"exit": true
+},
+{
+"kind": "teleporter",
+"name": "teleport to",
+"pos": [
+-22.908146,
+40.370785,
+1.14962
+],
+"channel": "1",
+"exit": true
+},
+{
+"kind": "door",
+"name": "base_gate",
+"pos": [
+2.0,
+60.89,
+-2.7
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "base_gate_blue",
+"pos": [
+-63.05,
+-30.57,
+-2.65
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "base_switch",
+"pos": [
+-37.424,
+-8.947,
+-1.174
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "base_switch",
+"pos": [
+-23.642,
+39.249,
+-1.177
+],
+"group": "machines"
+}
+],
+"teleporters": [
+[
+[
+-68.242561,
+-15.388268,
+-1.166781
+],
+[
+-38.108223,
+-10.052726,
+1.163193
+]
+],
+[
+[
+7.196509,
+45.689602,
+-1.198344
+],
+[
+-22.908146,
+40.370785,
+1.14962
+]
+]
+]
+}

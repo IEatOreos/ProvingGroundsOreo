@@ -1,0 +1,46 @@
+{
+ "action": [
+  {
+   "off": 64,
+   "mask": 12582912,
+   "press": false,
+   "how": "decoded live 2026-10-29 02:00 (tools/decode_buttons.py action=e, Lockdown Team Crazy King): +0x40 0xC00000 while held, as Halo 4's (botcore's own Use sets 0x400000 only)"
+  }
+ ],
+ "melee": [
+  {
+   "off": 8,
+   "mask": 4096,
+   "press": false,
+   "how": "decoded live 2026-10-29 02:00 (melee=q): +0x08 0x1000 while held, as Halo 4's"
+  }
+ ],
+ "grenade": [
+  {
+   "off": 8,
+   "mask": 8796093022208,
+   "press": false,
+   "how": "decoded live 2026-10-29 02:00 (grenade=f, the owner's bind): +0x08 bit 43 while held, as Halo 4's (F threw there, HUD checked)"
+  },
+  {
+   "off": 48,
+   "mask": 8589934592,
+   "press": false,
+   "how": "decoded live 2026-10-29 02:00 (grenade=f): +0x30 bit 33"
+  }
+ ],
+ "reload": [
+  {
+   "off": 64,
+   "mask": 786432,
+   "press": false,
+   "how": "decoded live 2026-10-29 02:00 (reload=r): +0x40 0xC0000 while held"
+  },
+  {
+   "off": 48,
+   "mask": 4294967296,
+   "press": false,
+   "how": "decoded live 2026-10-29 02:00 (reload=r): +0x30 bit 32"
+  }
+ ]
+}

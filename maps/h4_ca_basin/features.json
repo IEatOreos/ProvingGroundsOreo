@@ -1,0 +1,763 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+-0.359,
+28.365,
+-0.289
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+10.219,
+-26.842,
+1.985
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+5.856,
+-10.513,
+2.361
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-1.626,
+27.317,
+-0.239
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "fuelrod",
+"pos": [
+-18.466,
+0.603,
+2.312
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "gravity_hammer",
+"pos": [
+23.289,
+-17.418,
+4.331
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "railgun",
+"pos": [
+2.858,
+-37.457,
+3.624
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-9.154,
+-16.35,
+2.597
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+-6.134,
+9.795,
+1.403
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "railgun",
+"pos": [
+16.918,
+29.811,
+0.776
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+10.167,
+16.169,
+0.255
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+25.227,
+4.446,
+4.04
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "gravity_hammer",
+"pos": [
+7.305,
+0.312,
+1.467
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+8.857,
+-14.917,
+3.072
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+-21.474,
+-10.178,
+2.985
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+-21.474,
+-10.178,
+2.985
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+18.952,
+23.78,
+1.049
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-3.378,
+-37.742,
+3.234
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "wraith",
+"pos": [
+-15.877,
+3.823,
+1.652
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+1.315,
+-8.048,
+2.328
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+22.006,
+16.17,
+3.539
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-10.5,
+-35.223,
+4.938
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+0.603,
+-34.758,
+3.203
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+15.628,
+26.005,
+0.644
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+18.183,
+20.022,
+1.033
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+14.446,
+26.296,
+0.494
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-5.313,
+-35.553,
+3.066
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+0.367,
+-32.697,
+3.151
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+-3.802,
+10.306,
+1.26
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+-7.68,
+-3.265,
+1.461
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-3.983,
+2.795,
+2.944
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-3.06,
+0.354,
+3.049
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+18.253,
+17.017,
+0.927
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dominion",
+"pos": [
+-5.772,
+-33.778,
+2.963
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+22.891,
+22.106,
+1.434
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+22.891,
+22.106,
+1.434
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-7.226,
+-40.244,
+3.027
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-7.226,
+-40.244,
+3.027
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-21.311,
+3.584,
+2.297
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+26.168,
+-15.845,
+4.165
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-14.979,
+-20.315,
+4.02
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+8.343,
+13.708,
+0.399
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-3.663,
+2.209,
+2.956
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+5.492,
+-6.904,
+1.989
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-11.174,
+-17.664,
+3.804
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+23.535,
+-13.182,
+3.784
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-1.021,
+28.273,
+-0.308
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+2.073,
+-22.58,
+2.883
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+4.466,
+-16.304,
+2.508
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+19.92,
+0.253,
+3.709
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-21.718,
+-26.163,
+4.119
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+4.138,
+-33.986,
+3.195
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+11.466,
+32.22,
+0.117
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-2.271,
+3.44,
+2.935
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+23.802,
+-19.753,
+4.149
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+29.353,
+-7.097,
+4.732
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+29.353,
+-7.097,
+4.732
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-21.304,
+-8.698,
+2.604
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-21.304,
+-8.698,
+2.604
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+26.063,
+20.762,
+4.483
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+-3.078,
+4.398,
+2.903
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+-11.146,
+-41.013,
+5.875
+],
+"team": 8
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+26.063,
+20.762,
+4.483
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+-3.078,
+4.398,
+2.903
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+-11.146,
+-41.013,
+5.875
+],
+"group": "machines"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_medium",
+"pos": [
+25.223,
+14.676,
+4.31
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_large",
+"pos": [
+19.922,
+30.345,
+3.948
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_medium",
+"pos": [
+-1.97,
+0.478,
+4.02
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_large",
+"pos": [
+2.041,
+2.095,
+4.288
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_large",
+"pos": [
+-3.019,
+-45.223,
+7.01
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+-13.911,
+-35.747,
+5.767
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

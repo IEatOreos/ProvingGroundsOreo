@@ -1,0 +1,1716 @@
+{
+ "map": "bloodgulch",
+ "base_radius": 4.8,
+ "roof_z": 1.7,
+ "points": {
+  "mid": [
+   67.3,
+   -119.8,
+   0.2
+  ],
+  "mid_hill": [
+   72.8,
+   -103.6,
+   4.1
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    95.7,
+    -159.4,
+    -0.3
+   ],
+   [
+    90.0,
+    -152.0,
+    0.1
+   ],
+   [
+    101.0,
+    -151.0,
+    0.1
+   ]
+  ],
+  "blue": [
+   [
+    40.2,
+    -79.1,
+    -0.3
+   ],
+   [
+    46.0,
+    -86.0,
+    0.1
+   ],
+   [
+    34.0,
+    -86.0,
+    0.1
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   82.8,
+   -114.5,
+   0.7
+  ],
+  [
+   67.3,
+   -119.8,
+   0.2
+  ],
+  [
+   45.0,
+   -124.0,
+   0.3
+  ]
+ ],
+ "sneak": {
+  "red": [
+   [
+    [
+     86,
+     -110,
+     1
+    ],
+    [
+     90,
+     -98,
+     2
+    ],
+    [
+     75,
+     -95,
+     1.5
+    ],
+    [
+     58,
+     -84,
+     0.3
+    ]
+   ],
+   [
+    [
+     44,
+     -130,
+     0.3
+    ],
+    [
+     30,
+     -110,
+     2.6
+    ],
+    [
+     24,
+     -92,
+     1.0
+    ]
+   ]
+  ],
+  "blue": [
+   [
+    [
+     44,
+     -130,
+     0.3
+    ],
+    [
+     46,
+     -146,
+     2.0
+    ],
+    [
+     60,
+     -152,
+     6.0
+    ],
+    [
+     72,
+     -166,
+     1.0
+    ]
+   ],
+   [
+    [
+     84,
+     -112,
+     0.7
+    ],
+    [
+     106,
+     -132,
+     0.5
+    ],
+    [
+     104,
+     -150,
+     0.2
+    ]
+   ]
+  ]
+ },
+ "zones": {
+  "Red base": {
+   "poly": [
+    [
+     100.69,
+     -159.45
+    ],
+    [
+     100.02,
+     -156.95
+    ],
+    [
+     98.19,
+     -155.12
+    ],
+    [
+     95.69,
+     -154.45
+    ],
+    [
+     93.19,
+     -155.12
+    ],
+    [
+     91.36,
+     -156.95
+    ],
+    [
+     90.69,
+     -159.45
+    ],
+    [
+     91.36,
+     -161.95
+    ],
+    [
+     93.19,
+     -163.78
+    ],
+    [
+     95.69,
+     -164.45
+    ],
+    [
+     98.19,
+     -163.78
+    ],
+    [
+     100.02,
+     -161.95
+    ]
+   ],
+   "side": "red",
+   "priority": 40,
+   "full": "inside red base: flag room and doorways",
+   "aka": [
+    "red"
+   ],
+   "area": false,
+   "zmax": 1.0
+  },
+  "Red top": {
+   "poly": [
+    [
+     101.29,
+     -159.45
+    ],
+    [
+     100.54,
+     -156.65
+    ],
+    [
+     98.49,
+     -154.6
+    ],
+    [
+     95.69,
+     -153.85
+    ],
+    [
+     92.89,
+     -154.6
+    ],
+    [
+     90.84,
+     -156.65
+    ],
+    [
+     90.09,
+     -159.45
+    ],
+    [
+     90.84,
+     -162.25
+    ],
+    [
+     92.89,
+     -164.3
+    ],
+    [
+     95.69,
+     -165.05
+    ],
+    [
+     98.49,
+     -164.3
+    ],
+    [
+     100.54,
+     -162.25
+    ]
+   ],
+   "side": "red",
+   "priority": 39,
+   "full": "red roof: tele pad, sniper, health, Banshee",
+   "aka": [
+    "top red"
+   ],
+   "area": false,
+   "zmin": 1.0
+  },
+  "Blue base": {
+   "poly": [
+    [
+     45.24,
+     -79.12
+    ],
+    [
+     44.57,
+     -76.62
+    ],
+    [
+     42.74,
+     -74.79
+    ],
+    [
+     40.24,
+     -74.12
+    ],
+    [
+     37.74,
+     -74.79
+    ],
+    [
+     35.91,
+     -76.62
+    ],
+    [
+     35.24,
+     -79.12
+    ],
+    [
+     35.91,
+     -81.62
+    ],
+    [
+     37.74,
+     -83.45
+    ],
+    [
+     40.24,
+     -84.12
+    ],
+    [
+     42.74,
+     -83.45
+    ],
+    [
+     44.57,
+     -81.62
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "inside blue base: flag room and doorways",
+   "aka": [
+    "blue"
+   ],
+   "area": false,
+   "zmax": 1.0
+  },
+  "Blue top": {
+   "poly": [
+    [
+     45.84,
+     -79.12
+    ],
+    [
+     45.09,
+     -76.32
+    ],
+    [
+     43.04,
+     -74.27
+    ],
+    [
+     40.24,
+     -73.52
+    ],
+    [
+     37.44,
+     -74.27
+    ],
+    [
+     35.39,
+     -76.32
+    ],
+    [
+     34.64,
+     -79.12
+    ],
+    [
+     35.39,
+     -81.92
+    ],
+    [
+     37.44,
+     -83.97
+    ],
+    [
+     40.24,
+     -84.72
+    ],
+    [
+     43.04,
+     -83.97
+    ],
+    [
+     45.09,
+     -81.92
+    ]
+   ],
+   "side": "blue",
+   "priority": 39,
+   "full": "blue roof: tele pad, sniper, health, Banshee",
+   "aka": [
+    "top blue"
+   ],
+   "area": false,
+   "zmin": 1.0
+  },
+  "Red port": {
+   "poly": [
+    [
+     87.33,
+     -114.53
+    ],
+    [
+     86.73,
+     -112.28
+    ],
+    [
+     85.08,
+     -110.63
+    ],
+    [
+     82.83,
+     -110.03
+    ],
+    [
+     80.58,
+     -110.63
+    ],
+    [
+     78.93,
+     -112.28
+    ],
+    [
+     78.33,
+     -114.53
+    ],
+    [
+     78.93,
+     -116.78
+    ],
+    [
+     80.58,
+     -118.43
+    ],
+    [
+     82.83,
+     -119.03
+    ],
+    [
+     85.08,
+     -118.43
+    ],
+    [
+     86.73,
+     -116.78
+    ]
+   ],
+   "side": "red",
+   "priority": 32,
+   "full": "red teleporter exit, dark side next to the Water cave",
+   "aka": [
+    "red portal",
+    "red portal exit"
+   ],
+   "area": false
+  },
+  "Blue port": {
+   "poly": [
+    [
+     48.3,
+     -126.23
+    ],
+    [
+     47.7,
+     -123.98
+    ],
+    [
+     46.05,
+     -122.33
+    ],
+    [
+     43.8,
+     -121.73
+    ],
+    [
+     41.55,
+     -122.33
+    ],
+    [
+     39.9,
+     -123.98
+    ],
+    [
+     39.3,
+     -126.23
+    ],
+    [
+     39.9,
+     -128.48
+    ],
+    [
+     41.55,
+     -130.13
+    ],
+    [
+     43.8,
+     -130.73
+    ],
+    [
+     46.05,
+     -130.13
+    ],
+    [
+     47.7,
+     -128.48
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "blue teleporter exit, light side by Blue cliff",
+   "aka": [
+    "blue portal",
+    "blue portal exit"
+   ],
+   "area": false
+  },
+  "OS": {
+   "poly": [
+    [
+     100,
+     -104
+    ],
+    [
+     112,
+     -104
+    ],
+    [
+     113,
+     -114
+    ],
+    [
+     100,
+     -114
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "overshield pocket at the east end of the caves (flamethrower too)",
+   "aka": [
+    "OS cave",
+    "overshield cave",
+    "power up cave"
+   ],
+   "area": false,
+   "zmax": 3.2
+  },
+  "Tunnel": {
+   "poly": [
+    [
+     89,
+     -89
+    ],
+    [
+     100,
+     -89
+    ],
+    [
+     106,
+     -96
+    ],
+    [
+     111,
+     -104
+    ],
+    [
+     111,
+     -112
+    ],
+    [
+     100,
+     -112
+    ],
+    [
+     96,
+     -104
+    ],
+    [
+     89,
+     -99
+    ]
+   ],
+   "side": "mid",
+   "priority": 33,
+   "full": "upper tunnel along the dark wall, from the bay by Big Hill to the OS",
+   "aka": [
+    "tunnels",
+    "high cave"
+   ],
+   "area": false,
+   "zmin": 3.2
+  },
+  "Water": {
+   "poly": [
+    [
+     86,
+     -111
+    ],
+    [
+     92,
+     -107
+    ],
+    [
+     100,
+     -108
+    ],
+    [
+     100,
+     -119
+    ],
+    [
+     92,
+     -121
+    ],
+    [
+     86,
+     -118
+    ]
+   ],
+   "side": "mid",
+   "priority": 31,
+   "full": "cave mouth right behind Red port",
+   "aka": [
+    "water cave",
+    "the cave"
+   ],
+   "area": false
+  },
+  "Batcave": {
+   "poly": [
+    [
+     62,
+     -86
+    ],
+    [
+     66,
+     -80
+    ],
+    [
+     72,
+     -76
+    ],
+    [
+     75,
+     -63
+    ],
+    [
+     84,
+     -63
+    ],
+    [
+     87,
+     -78
+    ],
+    [
+     88,
+     -92
+    ],
+    [
+     86,
+     -97
+    ],
+    [
+     66,
+     -98
+    ],
+    [
+     61,
+     -92
+    ]
+   ],
+   "side": "blue",
+   "priority": 26,
+   "full": "blue's dark-side cave bulge: low mouth, raised cave with plasmas, ledge with a pistol",
+   "aka": [
+    "blue caves",
+    "blue base cave"
+   ],
+   "area": false
+  },
+  "Sunny": {
+   "poly": [
+    [
+     38,
+     -141
+    ],
+    [
+     48,
+     -139
+    ],
+    [
+     58,
+     -142
+    ],
+    [
+     66,
+     -149
+    ],
+    [
+     66,
+     -160
+    ],
+    [
+     71,
+     -168
+    ],
+    [
+     72,
+     -184
+    ],
+    [
+     57,
+     -186
+    ],
+    [
+     52,
+     -172
+    ],
+    [
+     46,
+     -160
+    ],
+    [
+     37,
+     -151
+    ]
+   ],
+   "side": "red",
+   "priority": 28,
+   "full": "light-side ridge over red base: ledge with pistol and plasmas, terrace to the south",
+   "aka": [
+    "Sunny ridge",
+    "Sunnyside",
+    "the ridge",
+    "red cliff"
+   ],
+   "area": false,
+   "zmin": 1.8
+  },
+  "Blue cliff": {
+   "poly": [
+    [
+     18,
+     -100
+    ],
+    [
+     32,
+     -99
+    ],
+    [
+     40,
+     -112
+    ],
+    [
+     40,
+     -124
+    ],
+    [
+     30,
+     -126
+    ],
+    [
+     20,
+     -114
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "light-side shelf by Blue port",
+   "aka": [
+    "blue sniper cliff",
+    "light cliff"
+   ],
+   "area": false,
+   "zmin": 1.8
+  },
+  "Camp hill": {
+   "poly": [
+    [
+     104,
+     -166
+    ],
+    [
+     116,
+     -166
+    ],
+    [
+     130,
+     -172
+    ],
+    [
+     130,
+     -190
+    ],
+    [
+     110,
+     -190
+    ],
+    [
+     104,
+     -178
+    ]
+   ],
+   "side": "red",
+   "priority": 28,
+   "full": "hill in red's back dark corner, with Sniper Rock",
+   "aka": [
+    "the hill behind red base",
+    "Sniper Rock"
+   ],
+   "area": false,
+   "zmin": 1.2
+  },
+  "Cubby": {
+   "poly": [
+    [
+     12,
+     -48
+    ],
+    [
+     56,
+     -48
+    ],
+    [
+     56,
+     -66
+    ],
+    [
+     12,
+     -66
+    ]
+   ],
+   "side": "blue",
+   "priority": 27,
+   "full": "crevice and overhang along the back wall behind blue base",
+   "aka": [
+    "cubbie hole"
+   ],
+   "area": false,
+   "zmin": 1.8
+  },
+  "Big Hill": {
+   "poly": [
+    [
+     63,
+     -98
+    ],
+    [
+     80,
+     -97
+    ],
+    [
+     84,
+     -104
+    ],
+    [
+     81,
+     -111
+    ],
+    [
+     66,
+     -112
+    ],
+    [
+     61,
+     -105
+    ]
+   ],
+   "side": "mid",
+   "priority": 24,
+   "full": "tallest hill in the field, next to Red port",
+   "aka": [
+    "Hamburger Hill",
+    "Hamburger",
+    "BH"
+   ],
+   "area": false
+  },
+  "Camo": {
+   "poly": [
+    [
+     65.0,
+     -113.5
+    ],
+    [
+     64.33,
+     -111.0
+    ],
+    [
+     62.5,
+     -109.17
+    ],
+    [
+     60.0,
+     -108.5
+    ],
+    [
+     57.5,
+     -109.17
+    ],
+    [
+     55.67,
+     -111.0
+    ],
+    [
+     55.0,
+     -113.5
+    ],
+    [
+     55.67,
+     -116.0
+    ],
+    [
+     57.5,
+     -117.83
+    ],
+    [
+     60.0,
+     -118.5
+    ],
+    [
+     62.5,
+     -117.83
+    ],
+    [
+     64.33,
+     -116.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 25,
+   "full": "camo hump west of mid (spawn is 50% camo, 50% overshield)",
+   "aka": [
+    "middle power up"
+   ],
+   "area": false
+  },
+  "Rockets": {
+   "poly": [
+    [
+     76.6,
+     -126.34
+    ],
+    [
+     76.06,
+     -124.34
+    ],
+    [
+     74.6,
+     -122.88
+    ],
+    [
+     72.6,
+     -122.34
+    ],
+    [
+     70.6,
+     -122.88
+    ],
+    [
+     69.14,
+     -124.34
+    ],
+    [
+     68.6,
+     -126.34
+    ],
+    [
+     69.14,
+     -128.34
+    ],
+    [
+     70.6,
+     -129.8
+    ],
+    [
+     72.6,
+     -130.34
+    ],
+    [
+     74.6,
+     -129.8
+    ],
+    [
+     76.06,
+     -128.34
+    ]
+   ],
+   "side": "mid",
+   "priority": 25,
+   "full": "rocket launcher mound south of mid",
+   "aka": [
+    "middle rockets",
+    "RL"
+   ],
+   "area": false
+  },
+  "Fuel rod": {
+   "poly": [
+    [
+     66.97,
+     -136.52
+    ],
+    [
+     66.43,
+     -134.52
+    ],
+    [
+     64.97,
+     -133.06
+    ],
+    [
+     62.97,
+     -132.52
+    ],
+    [
+     60.97,
+     -133.06
+    ],
+    [
+     59.51,
+     -134.52
+    ],
+    [
+     58.97,
+     -136.52
+    ],
+    [
+     59.51,
+     -138.52
+    ],
+    [
+     60.97,
+     -139.98
+    ],
+    [
+     62.97,
+     -140.52
+    ],
+    [
+     64.97,
+     -139.98
+    ],
+    [
+     66.43,
+     -138.52
+    ]
+   ],
+   "side": "mid",
+   "priority": 25,
+   "full": "fuel rod gun spawn, light side, red half",
+   "aka": [
+    "fuel rod rock"
+   ],
+   "area": false
+  },
+  "Red tree": {
+   "poly": [
+    [
+     85.8,
+     -145.5
+    ],
+    [
+     85.06,
+     -142.75
+    ],
+    [
+     83.05,
+     -140.74
+    ],
+    [
+     80.3,
+     -140.0
+    ],
+    [
+     77.55,
+     -140.74
+    ],
+    [
+     75.54,
+     -142.75
+    ],
+    [
+     74.8,
+     -145.5
+    ],
+    [
+     75.54,
+     -148.25
+    ],
+    [
+     77.55,
+     -150.26
+    ],
+    [
+     80.3,
+     -151.0
+    ],
+    [
+     83.05,
+     -150.26
+    ],
+    [
+     85.06,
+     -148.25
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "dead tree and small hill in front of red base",
+   "aka": [
+    "red front hill"
+   ],
+   "area": false
+  },
+  "Blue tree": {
+   "poly": [
+    [
+     48.4,
+     -95.6
+    ],
+    [
+     47.66,
+     -92.85
+    ],
+    [
+     45.65,
+     -90.84
+    ],
+    [
+     42.9,
+     -90.1
+    ],
+    [
+     40.15,
+     -90.84
+    ],
+    [
+     38.14,
+     -92.85
+    ],
+    [
+     37.4,
+     -95.6
+    ],
+    [
+     38.14,
+     -98.35
+    ],
+    [
+     40.15,
+     -100.36
+    ],
+    [
+     42.9,
+     -101.1
+    ],
+    [
+     45.65,
+     -100.36
+    ],
+    [
+     47.66,
+     -98.35
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "white tree and small hill in front of blue base",
+   "aka": [
+    "blue front hill"
+   ],
+   "area": false
+  },
+  "Red front": {
+   "poly": [
+    [
+     83,
+     -162
+    ],
+    [
+     90,
+     -164.5
+    ],
+    [
+     92,
+     -154
+    ],
+    [
+     99,
+     -153.5
+    ],
+    [
+     103,
+     -150
+    ],
+    [
+     100,
+     -144
+    ],
+    [
+     90,
+     -143
+    ],
+    [
+     84,
+     -146
+    ],
+    [
+     82,
+     -153
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "field side of red base: front door, front rocks",
+   "aka": [
+    "front red"
+   ],
+   "area": false
+  },
+  "Blue front": {
+   "poly": [
+    [
+     33,
+     -83
+    ],
+    [
+     34,
+     -91
+    ],
+    [
+     41,
+     -91.5
+    ],
+    [
+     49,
+     -91
+    ],
+    [
+     54,
+     -86
+    ],
+    [
+     53,
+     -77
+    ],
+    [
+     46,
+     -74.5
+    ],
+    [
+     45,
+     -80
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "field side of blue base: front door, front rocks",
+   "aka": [
+    "front blue"
+   ],
+   "area": false
+  },
+  "Red back": {
+   "poly": [
+    [
+     84,
+     -163
+    ],
+    [
+     90,
+     -165
+    ],
+    [
+     100,
+     -164
+    ],
+    [
+     104,
+     -160
+    ],
+    [
+     108,
+     -158
+    ],
+    [
+     112,
+     -162
+    ],
+    [
+     108,
+     -170
+    ],
+    [
+     104,
+     -178
+    ],
+    [
+     95,
+     -182
+    ],
+    [
+     80,
+     -182
+    ],
+    [
+     78,
+     -170
+    ]
+   ],
+   "side": "red",
+   "priority": 18,
+   "full": "behind red base: back door, hogs and tanks",
+   "aka": [
+    "back red",
+    "behind red"
+   ],
+   "area": false
+  },
+  "Blue back": {
+   "poly": [
+    [
+     26,
+     -74
+    ],
+    [
+     30,
+     -70
+    ],
+    [
+     36,
+     -62
+    ],
+    [
+     50,
+     -60
+    ],
+    [
+     56,
+     -66
+    ],
+    [
+     54,
+     -74
+    ],
+    [
+     46,
+     -74.5
+    ],
+    [
+     34,
+     -75
+    ]
+   ],
+   "side": "blue",
+   "priority": 18,
+   "full": "behind blue base: back door, hogs and tanks",
+   "aka": [
+    "back blue",
+    "behind blue"
+   ],
+   "area": false
+  },
+  "Light red": {
+   "poly": [
+    [
+     64,
+     -158
+    ],
+    [
+     78,
+     -155
+    ],
+    [
+     84,
+     -162
+    ],
+    [
+     80,
+     -172
+    ],
+    [
+     78,
+     -182
+    ],
+    [
+     68,
+     -184
+    ],
+    [
+     64,
+     -172
+    ]
+   ],
+   "side": "red",
+   "priority": 16,
+   "full": "light-side ground next to red base",
+   "aka": [
+    "light side red"
+   ],
+   "area": false
+  },
+  "Dark red": {
+   "poly": [
+    [
+     98,
+     -122
+    ],
+    [
+     112,
+     -122
+    ],
+    [
+     120,
+     -132
+    ],
+    [
+     116,
+     -148
+    ],
+    [
+     108,
+     -158
+    ],
+    [
+     102,
+     -150
+    ],
+    [
+     100,
+     -140
+    ],
+    [
+     96,
+     -130
+    ]
+   ],
+   "side": "red",
+   "priority": 16,
+   "full": "dark-side ground next to red base",
+   "aka": [
+    "dark side red"
+   ],
+   "area": false
+  },
+  "Light blue": {
+   "poly": [
+    [
+     10,
+     -74
+    ],
+    [
+     26,
+     -74
+    ],
+    [
+     34,
+     -84
+    ],
+    [
+     33,
+     -92
+    ],
+    [
+     30,
+     -100
+    ],
+    [
+     14,
+     -100
+    ],
+    [
+     8,
+     -88
+    ]
+   ],
+   "side": "blue",
+   "priority": 16,
+   "full": "light-side ground next to blue base",
+   "aka": [
+    "light side blue"
+   ],
+   "area": false
+  },
+  "Dark blue": {
+   "poly": [
+    [
+     46,
+     -74.5
+    ],
+    [
+     54,
+     -74
+    ],
+    [
+     56,
+     -66
+    ],
+    [
+     64,
+     -64
+    ],
+    [
+     70,
+     -70
+    ],
+    [
+     66,
+     -80
+    ],
+    [
+     62,
+     -86
+    ],
+    [
+     54,
+     -86
+    ]
+   ],
+   "side": "blue",
+   "priority": 16,
+   "full": "dark-side ground next to blue base, under the Batcave",
+   "aka": [
+    "dark side blue"
+   ],
+   "area": false
+  },
+  "Mid": {
+   "poly": [
+    [
+     52,
+     -108
+    ],
+    [
+     64,
+     -106
+    ],
+    [
+     84,
+     -110
+    ],
+    [
+     88,
+     -124
+    ],
+    [
+     84,
+     -134
+    ],
+    [
+     56,
+     -134
+    ],
+    [
+     50,
+     -124
+    ]
+   ],
+   "side": "mid",
+   "priority": 12,
+   "full": "centre field between the two ports",
+   "aka": [
+    "middle",
+    "center"
+   ],
+   "area": true
+  },
+  "Light side": {
+   "poly": [
+    [
+     14,
+     -100
+    ],
+    [
+     52,
+     -100
+    ],
+    [
+     52,
+     -108
+    ],
+    [
+     50,
+     -124
+    ],
+    [
+     56,
+     -134
+    ],
+    [
+     56,
+     -142
+    ],
+    [
+     36,
+     -150
+    ],
+    [
+     22,
+     -130
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the sunlit south-west wall and the strip along it",
+   "aka": [
+    "light",
+    "sunny side"
+   ],
+   "area": true
+  },
+  "Dark side": {
+   "poly": [
+    [
+     84,
+     -96
+    ],
+    [
+     96,
+     -96
+    ],
+    [
+     112,
+     -104
+    ],
+    [
+     120,
+     -124
+    ],
+    [
+     100,
+     -122
+    ],
+    [
+     88,
+     -124
+    ],
+    [
+     84,
+     -110
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the shaded north-east wall and the strip along it",
+   "aka": [
+    "dark"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     0,
+     -40
+    ],
+    [
+     90,
+     -40
+    ],
+    [
+     90,
+     -100
+    ],
+    [
+     0,
+     -100
+    ]
+   ],
+   "side": "blue",
+   "priority": 8,
+   "full": "blue's half of the canyon",
+   "aka": [],
+   "area": true
+  },
+  "Red side": {
+   "poly": [
+    [
+     30,
+     -134
+    ],
+    [
+     60,
+     -134
+    ],
+    [
+     88,
+     -124
+    ],
+    [
+     100,
+     -122
+    ],
+    [
+     125,
+     -125
+    ],
+    [
+     135,
+     -160
+    ],
+    [
+     135,
+     -195
+    ],
+    [
+     30,
+     -195
+    ]
+   ],
+   "side": "red",
+   "priority": 8,
+   "full": "red's half of the canyon",
+   "aka": [],
+   "area": true
+  }
+ }
+}

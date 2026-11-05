@@ -1,0 +1,16 @@
+{"volumes": [
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [3.94, 1.325, 14.04], "size": [53.334, 49.553, 8.964]},
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [3.04, -1.072, 6.497], "size": [53.714, 31.221, 16.611]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [24.147, -0.426, 7.81], "size": [4.609, 4.279, 10.846]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [-8.124, 10.353, 9.906], "size": [21.161, 7.047, 5.838]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-14.359, -0.033, -2.687], "size": [2.536, 3.725, 4.899]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [24.065, -0.052, 8.907], "size": [4.754, 6.643, 2.069]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-19.904, 1.013, 4.879], "size": [0.839, 16.284, 6.734]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-20.315, 1.137, 4.794], "size": [0.904, 15.857, 4.092]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [-18.365, -1.893, 9.72], "size": [2.154, 1.035, 1.0]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [-17.873, 2.001, 9.945], "size": [1.623, 1.004, 1.0]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-22.05, -0.004, 0.193], "size": [3.23, 3.505, 1.089]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [3.311, 7.895, 9.262], "size": [7.335, 5.012, 4.47]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [-5.895, 10.103, 8.953], "size": [3.105, 5.83, 3.566]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [-11.098, 9.66, 8.412], "size": [7.359, 6.028, 4.285]}
+]}

@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Paint the nav</title>
+<style>
+  :root { --bg:#121418; --panel:#1b1e24; --line:#2c313a; --text:#e6e8eb; --mute:#9aa1ab; --accent:#4da3ff; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.35 "Segoe UI", system-ui, sans-serif; }
+  #top { height:52px; display:flex; align-items:center; gap:12px; padding:0 14px; background:var(--panel); border-bottom:1px solid var(--line); }
+  #top h1 { font-size:16px; font-weight:600; margin:0 8px 0 0; }
+  select, button, input[type=range] { font:inherit; }
+  select, button { background:#252a32; color:var(--text); border:1px solid var(--line); border-radius:6px; height:34px; padding:0 10px; }
+  button { cursor:pointer; }
+  button:hover { border-color:#3d4450; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  button.primary { background:#2563c9; border-color:#2f6fd6; }
+  button.primary:disabled { background:#252a32; border-color:var(--line); color:var(--mute); cursor:default; }
+  #status { color:var(--mute); min-width:150px; }
+  #status.warn { color:#ffb34d; } #status.err { color:#ff6b6b; } #status.ok { color:#7ad48e; }
+  #main { position:absolute; top:52px; bottom:0; left:0; right:0; display:flex; }
+  #side { width:250px; background:var(--panel); border-right:1px solid var(--line); padding:14px; overflow:auto; }
+  #side h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); margin:16px 0 8px; font-weight:600; }
+  #side h2:first-child { margin-top:0; }
+  .tool { display:flex; align-items:center; gap:10px; width:100%; height:38px; margin-bottom:6px; text-align:left; }
+  .tool .sw { width:16px; height:16px; border-radius:3px; flex:none; border:1px solid rgba(255,255,255,.25); }
+  .tool .key { margin-left:auto; color:var(--mute); font-size:12px; }
+  .tool[aria-pressed=true] { border-color:var(--accent); background:#223049; }
+  .row { display:flex; align-items:center; gap:8px; }
+  .row input[type=range] { flex:1; }
+  .hint { color:var(--mute); font-size:12px; margin-top:6px; }
+  #wrap { position:relative; flex:1; overflow:hidden; cursor:crosshair; }
+  canvas { display:block; }
+  #empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:var(--mute); }
+  #empty[hidden], #coord:empty { display:none; }
+  #help { position:absolute; left:12px; bottom:10px; background:rgba(18,20,24,.85); border:1px solid var(--line); border-radius:6px; padding:6px 10px; color:var(--mute); font-size:12px; }
+  #coord { position:absolute; right:12px; bottom:10px; background:rgba(18,20,24,.85); border:1px solid var(--line); border-radius:6px; padding:6px 10px; color:var(--mute); font-size:12px; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<div id="top">
+  <h1>Paint the nav</h1>
+  <label for="map" class="hint" style="margin:0">Map</label>
+  <select id="map" aria-label="Map"></select>
+  <label for="cut" class="hint" style="margin:0">Height</label>
+  <input id="cut" type="range" min="0" max="0" value="0" aria-label="Height shown" style="width:200px">
+  <span id="cutlabel" class="hint" style="margin:0;min-width:120px"></span>
+  <span style="flex:1"></span>
+  <span id="status" role="status" aria-live="polite"></span>
+  <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+  <button id="redo" title="Redo (Ctrl+Y)">Redo</button>
+  <button id="save" class="primary" title="Save (Ctrl+S)" disabled>Save</button>
+</div>
+<div id="main">
+  <div id="side">
+    <h2>Paint</h2>
+    <div id="tools"></div>
+    <h2>Brush</h2>
+    <div class="row"><input id="size" type="range" min="0.5" max="5" step="0.5" value="1.5" aria-label="Brush size"><span id="sizelabel" style="width:48px;text-align:right"></span></div>
+    <div class="hint">Hold Shift to erase the selected layer only.</div>
+    <h2>Jumps</h2>
+    <button class="tool" data-tool="jump" id="jumptool" title="Draw a jump bots should make" aria-pressed="false"><span class="sw" style="background:#ff4fd8"></span><span>Draw a jump</span><span class="key">J</span></button>
+    <div class="hint">Click where the jump takes off, then where it lands. Change the height between the clicks for a jump up or down. Shift+click a jump to delete it. Esc cancels.</div>
+    <h2>Show</h2>
+    <label class="row"><input id="allh" type="checkbox"> Paint on other heights</label>
+    <label class="row" style="margin-top:6px"><input id="hidepaint" type="checkbox"> Hide paint</label>
+    <label class="row" style="margin-top:6px"><input id="showlinks" type="checkbox" checked> Jumps people made</label>
+    <label class="row" style="margin-top:6px"><input id="showmarks" type="checkbox" checked> Objectives</label>
+    <h2>Colours</h2>
+    <div style="height:12px;border-radius:3px;background:linear-gradient(90deg,#233c87,#2378a5,#379655,#b9b941,#dc8732,#c33c3c,#ebd7eb)"></div>
+    <div class="row hint" style="margin-top:2px"><span>Lower</span><span style="flex:1"></span><span>Higher</span></div>
+    <div class="hint">On a height, the colours span the 6 units under it; deeper floors are dark. Thin lines: every half unit. White edges: ledges and drops.</div>
+    <div class="hint" style="margin-top:6px"><span style="color:#ff4fd8">&#9632;</span> your jumps &nbsp;<span style="color:#ffa53d">&#9632;</span> recorded jumps &nbsp;<span style="color:#ff5c5c">&#9632;</span> retired</div>
+    <h2>Counts</h2>
+    <div id="counts" class="hint"></div>
+  </div>
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="empty" hidden><div id="emptytext"></div><button id="build" class="primary">Make the roofless view</button></div>
+    <div id="help">Left drag: paint · Right drag: move · Wheel: zoom · 1-8: layers · J: draw a jump · [ ]: brush size</div>
+    <div id="coord"></div>
+  </div>
+</div>
+<script>
+"use strict";
+const LAYERS = [
+  ["walk", "Walk", "#3ecf6e", "Floor bots may walk"],
+  ["block", "Block", "#ff4d4d", "Floor bots must avoid"],
+  ["drive_s", "Drive small", "#ffd23f", "Mongoose, Ghost"],
+  ["drive_m", "Drive medium", "#ff9f1c", "Warthog"],
+  ["drive_l", "Drive large", "#c27a3a", "Scorpion, Wraith"],
+  ["fly_low", "Fly low", "#3fd8ff", "Take-off and attack runs"],
+  ["fly_high", "Fly high", "#7a86ff", "Travel"],
+  ["erase", "Eraser", "#6b7280", "Every layer at this height"],
+];
+const CELL = 0.5, CUT_HEAD = 1.6;
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+let view = null, img = null, mapName = null, level = 0, tool = "walk";
+let paint = {};                 // layer -> Map(key -> {x, y, z (saved) | cut (new)})
+let jumps = [], pending = null; // jumps: {x, y, x2, y2, z, z2 (saved) | cut, cut2 (new)}; pending: the take-off clicked
+let links = [], marks = [];     // recorded people's jumps [x, y, z, x2, y2, z2, status], objectives {kind, label, x, y, r}
+let undo = [], redo = [], stroke = null, dirty = false;
+let scale = 8, ox = 0, oy = 0, drag = null, mouse = null;
+
+function setStatus(text, cls) { const s = $("status"); s.textContent = text; s.className = cls || ""; }
+function markDirty(d) { dirty = d; $("save").disabled = !d; setStatus(d ? "Unsaved changes" : "Saved", d ? "warn" : "ok"); }
+function cutOf(k) { const l = view.levels[k]; return l.cut === null ? null : l.cut; }
+function cellZ(c) { return c.z !== undefined ? c.z : (c.cut === null ? 1e9 : c.cut - CUT_HEAD); }
+function shown(c) {
+  if ($("allh").checked) return true;
+  const cut = cutOf(level);
+  if (cut === null) return true;
+  const z = cellZ(c);
+  return z <= cut + 0.05 && z >= cut - CUT_HEAD - 1.5;
+}
+function keyOf(x, y, c) { return Math.round(x / CELL) + "," + Math.round(y / CELL) + "," + Math.round(cellZ(c)); }
+
+function buildTools() {
+  const box = $("tools");
+  LAYERS.forEach(([id, label, color, tip], k) => {
+    const b = document.createElement("button");
+    b.className = "tool"; b.dataset.tool = id; b.title = tip;
+    b.setAttribute("aria-pressed", id === tool);
+    b.innerHTML = `<span class="sw" style="background:${color}"></span><span>${label}</span><span class="key">${k + 1}</span>`;
+    b.onclick = () => pickTool(id);
+    box.appendChild(b);
+  });
+}
+function pickTool(id) {
+  tool = id; pending = null;
+  document.querySelectorAll(".tool").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === id));
+  draw();
+}
+
+async function loadMaps() {
+  const list = await (await fetch("/api/maps")).json();
+  const sel = $("map");
+  sel.innerHTML = list.map(m => `<option value="${m.name}">${m.name}${m.painted ? " (painted)" : ""}</option>`).join("");
+  const want = new URLSearchParams(location.search).get("map");
+  if (want && list.some(m => m.name === want)) sel.value = want;
+  await openMap(sel.value);
+}
+
+async function openMap(name) {
+  if (dirty && !confirm("You have unsaved paint on this map. Leave it without saving?")) { $("map").value = mapName; return; }
+  mapName = name;
+  setStatus("Loading…");
+  const d = await (await fetch("/api/map?name=" + encodeURIComponent(name))).json();
+  view = d.view; paint = {}; undo = []; redo = []; pending = null;
+  jumps = (d.jumps || []).map(j => ({x: j[0], y: j[1], z: j[2], x2: j[3], y2: j[4], z2: j[5]}));
+  links = d.links || []; marks = d.marks || [];
+  for (const [id] of LAYERS) paint[id] = new Map();
+  for (const [layer, cells] of Object.entries(d.paint || {}))
+    if (paint[layer]) for (const [x, y, z] of cells) { const c = {x, y, z}; paint[layer].set(keyOf(x, y, c), c); }
+  $("empty").hidden = !!view;
+  if (!view) { $("emptytext").textContent = "This map has no roofless view yet."; img = null; draw(); markDirty(false); setStatus(""); return; }
+  $("cut").max = view.levels.length - 1;
+  level = view.levels.length - 1;
+  const wantH = parseFloat(new URLSearchParams(location.search).get("h"));   // ?h=-24: open at the floor nearest that height
+  if (!isNaN(wantH)) view.levels.forEach((l, k) => { if (l.cut !== null && Math.abs(l.z - wantH) < Math.abs(view.levels[level].z - wantH) + (view.levels[level].cut === null ? 1e9 : 0)) level = k; });
+  $("cut").value = level;
+  await loadLevel();
+  fit(); markDirty(false); setStatus(""); counts();
+}
+function loadLevel() {
+  return new Promise(res => {
+    const l = view.levels[level];
+    $("cutlabel").textContent = l.cut === null ? "Everything" : `Floor at ${l.z.toFixed(1)}`;
+    const im = new Image();
+    im.onload = () => { img = im; draw(); res(); };
+    im.src = `/view/${mapName}/${l.png}`;
+  });
+}
+function fit() {
+  const w = cv.width, h = cv.height;
+  const ww = view.x1 - view.x0, wh = view.y1 - view.y0;
+  scale = Math.min(w / ww, h / wh) * 0.95;
+  ox = (w - ww * scale) / 2 - view.x0 * scale;
+  oy = (h - wh * scale) / 2 + view.y1 * scale;
+}
+const sx = x => x * scale + ox, sy = y => oy - y * scale;
+const wx = px => (px - ox) / scale, wy = py => (oy - py) / scale;
+
+function resize() { const r = $("wrap").getBoundingClientRect(); cv.width = r.width; cv.height = r.height; if (view) draw(); }
+function draw() {
+  ctx.fillStyle = "#121418"; ctx.fillRect(0, 0, cv.width, cv.height);
+  if (!view || !img) return;
+  ctx.imageSmoothingEnabled = scale < view.px;
+  ctx.drawImage(img, sx(view.x0), sy(view.y1), (view.x1 - view.x0) * scale, (view.y1 - view.y0) * scale);
+  if (!$("hidepaint").checked) {
+    const s = CELL * scale;
+    for (const [id, , color] of LAYERS) {
+      const m = paint[id]; if (!m || !m.size) continue;
+      ctx.fillStyle = color; ctx.globalAlpha = 0.5;
+      for (const c of m.values()) if (shown(c)) ctx.fillRect(sx(c.x) - s / 2, sy(c.y) - s / 2, s, s);
+    }
+    ctx.globalAlpha = 1;
+  }
+  const cutNow = cutOf(level), nearH = z => cutNow === null || (z <= cutNow + 0.5 && z >= cutNow - 8);
+  if ($("showmarks").checked) for (const m of marks.filter(m => nearH(m.z))) {
+    const col = m.kind === "core" ? "#ffe14d" : m.kind === "delivery" ? "#5dff8a" : "#5ee7ff";
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.arc(sx(m.x), sy(m.y), Math.max(4, m.r * scale), 0, Math.PI * 2); ctx.stroke();
+    ctx.font = "600 12px Segoe UI, sans-serif"; ctx.fillStyle = col;
+    ctx.fillText(`${m.label} (${m.z.toFixed(1)})`, sx(m.x) + Math.max(6, m.r * scale) + 3, sy(m.y) + 4);
+  }
+  if ($("showlinks").checked) for (const l of links.filter(l => nearH(l[2]) || nearH(l[5])))
+    arrow(l[0], l[1], l[3], l[4], l[6] === "retired" ? "#ff5c5c" : "#ffa53d", 1.5, 0.8);
+  for (const j of jumps) arrow(j.x, j.y, j.x2, j.y2, "#ff4fd8", 3, 1);
+  if (pending) {
+    ctx.fillStyle = "#ff4fd8"; ctx.beginPath(); ctx.arc(sx(pending.x), sy(pending.y), 5, 0, Math.PI * 2); ctx.fill();
+    if (mouse) {
+      ctx.setLineDash([6, 4]); ctx.strokeStyle = "#ff4fd8"; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(sx(pending.x), sy(pending.y)); ctx.lineTo(mouse.x, mouse.y); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  if (mouse && tool !== "jump") {
+    ctx.strokeStyle = tool === "erase" ? "#e6e8eb" : LAYERS.find(l => l[0] === tool)[2];
+    ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, +$("size").value * scale, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+function arrow(x, y, x2, y2, color, width, alpha) {
+  const a = [sx(x), sy(y)], b = [sx(x2), sy(y2)], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+  ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+  ctx.beginPath(); ctx.arc(a[0], a[1], width + 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  const h = 6 + 2 * width;
+  ctx.beginPath(); ctx.moveTo(b[0], b[1]);
+  ctx.lineTo(b[0] - h * Math.cos(ang - 0.45), b[1] - h * Math.sin(ang - 0.45));
+  ctx.lineTo(b[0] - h * Math.cos(ang + 0.45), b[1] - h * Math.sin(ang + 0.45)); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function nearJump(px, py) {      // the drawn jump whose line passes within 10 px of the click, else -1
+  let best = -1, bd = 10;
+  jumps.forEach((j, k) => {
+    const ax = sx(j.x), ay = sy(j.y), bx = sx(j.x2), by = sy(j.y2), L = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+    const t = Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / L));
+    const d = Math.hypot(px - (ax + t * (bx - ax)), py - (ay + t * (by - ay)));
+    if (d < bd) { bd = d; best = k; }
+  });
+  return best;
+}
+function jumpClick(px, py, del) {
+  if (del) {
+    const k = nearJump(px, py); if (k < 0) return;
+    const j = jumps.splice(k, 1)[0]; undo.push({jump: j, add: false}); redo = []; markDirty(true); counts(); return;
+  }
+  const p = {x: +wx(px).toFixed(2), y: +wy(py).toFixed(2), cut: cutOf(level)};
+  if (!pending) { pending = p; setStatus("Now click where it lands"); return; }
+  const j = {x: pending.x, y: pending.y, cut: pending.cut, x2: p.x, y2: p.y, cut2: p.cut};
+  pending = null; jumps.push(j); undo.push({jump: j, add: true}); redo = []; markDirty(true); counts();
+}
+function brush(px, py, erase) {
+  const x = wx(px), y = wy(py), r = +$("size").value, cut = cutOf(level);
+  const layers = tool === "erase" ? LAYERS.map(l => l[0]).filter(l => l !== "erase") : [tool];
+  for (let gx = Math.round((x - r) / CELL); gx <= Math.round((x + r) / CELL); gx++)
+    for (let gy = Math.round((y - r) / CELL); gy <= Math.round((y + r) / CELL); gy++) {
+      const cx = gx * CELL, cy = gy * CELL;
+      if ((cx - x) ** 2 + (cy - y) ** 2 > r * r) continue;
+      for (const id of layers) {
+        const m = paint[id];
+        if (erase || tool === "erase") {
+          for (const [k, c] of m) if (c.x === cx && c.y === cy && shown(c)) { stroke.push([id, k, c, null]); m.delete(k); }
+        } else {
+          const c = {x: cx, y: cy, cut};
+          const k = keyOf(cx, cy, c);
+          if (!m.has(k)) { stroke.push([id, k, null, c]); m.set(k, c); }
+        }
+      }
+    }
+}
+function apply(st, back) {
+  if (st.jump) {                 // a drawn (add) or deleted jump
+    if (st.add !== back) jumps.push(st.jump); else jumps.splice(jumps.indexOf(st.jump), 1);
+    return;
+  }
+  for (const [id, k, before, after] of (back ? [...st].reverse() : st)) {
+    const v = back ? before : after;
+    if (v) paint[id].set(k, v); else paint[id].delete(k);
+  }
+}
+function doUndo() { const st = undo.pop(); if (!st) return; apply(st, true); redo.push(st); markDirty(true); counts(); draw(); }
+function doRedo() { const st = redo.pop(); if (!st) return; apply(st, false); undo.push(st); markDirty(true); counts(); draw(); }
+function counts() {
+  $("counts").innerHTML = LAYERS.filter(l => l[0] !== "erase")
+    .map(([id, label]) => `${label}: ${paint[id].size} cells`).join("<br>") + `<br>Jumps: ${jumps.length}`;
+}
+
+async function save() {
+  if (!mapName || !dirty) return;
+  setStatus("Saving…");
+  const body = {};
+  for (const [id] of LAYERS) if (id !== "erase")
+    body[id] = [...paint[id].values()].map(c => c.z !== undefined ? [c.x, c.y, null, c.z] : [c.x, c.y, c.cut]);
+  body.jumps = jumps.map(j => [j.x, j.y, j.cut ?? null, j.x2, j.y2, j.cut2 ?? null, j.z ?? null, j.z2 ?? null]);
+  try {
+    const r = await fetch("/api/paint?name=" + encodeURIComponent(mapName), {method: "POST", body: JSON.stringify(body)});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || r.status);
+    dirty = false;
+    const keep = level; await openMap(mapName); level = keep; $("cut").value = keep; await loadLevel();
+    setStatus("Saved. Bots use it from the next match.", "ok");
+  } catch (e) { setStatus("Could not save: " + e.message, "err"); }
+}
+
+cv.addEventListener("contextmenu", e => e.preventDefault());
+cv.addEventListener("pointerdown", e => {
+  if (!view) return;
+  cv.setPointerCapture(e.pointerId);
+  if (e.button === 2 || e.button === 1) { drag = {x: e.clientX, y: e.clientY, ox, oy}; return; }
+  if (e.button === 0 && tool === "jump") { jumpClick(e.offsetX, e.offsetY, e.shiftKey); draw(); return; }
+  if (e.button === 0) { stroke = []; brush(e.offsetX, e.offsetY, e.shiftKey); draw(); }
+});
+cv.addEventListener("pointermove", e => {
+  mouse = {x: e.offsetX, y: e.offsetY};
+  if (view) $("coord").textContent = `x ${wx(e.offsetX).toFixed(1)}  y ${wy(e.offsetY).toFixed(1)}`;
+  if (drag) { ox = drag.ox + e.clientX - drag.x; oy = drag.oy + e.clientY - drag.y; }
+  else if (stroke) brush(e.offsetX, e.offsetY, e.shiftKey);
+  draw();
+});
+cv.addEventListener("pointerup", () => {
+  if (stroke && stroke.length) { undo.push(stroke); redo = []; markDirty(true); counts(); }
+  stroke = null; drag = null;
+});
+cv.addEventListener("pointerleave", () => { mouse = null; draw(); });
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0015), x = wx(e.offsetX), y = wy(e.offsetY);
+  scale = Math.min(200, Math.max(1, scale * f));
+  ox = e.offsetX - x * scale; oy = e.offsetY + y * scale; draw();
+}, {passive: false});
+window.addEventListener("keydown", e => {
+  if (e.target.tagName === "SELECT") return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); doRedo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); return; }
+  if (e.key === "Escape" && pending) { pending = null; setStatus(""); draw(); return; }
+  if (e.key === "j" || e.key === "J") { pickTool("jump"); return; }
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= LAYERS.length) pickTool(LAYERS[n - 1][0]);
+  if (e.key === "[" || e.key === "]") {
+    const s = $("size"); s.value = Math.min(5, Math.max(0.5, +s.value + (e.key === "]" ? 0.5 : -0.5)));
+    $("sizelabel").textContent = s.value + " u"; draw();
+  }
+});
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+$("map").onchange = e => openMap(e.target.value);
+$("cut").oninput = async e => { level = +e.target.value; await loadLevel(); };
+$("size").oninput = e => { $("sizelabel").textContent = e.target.value + " u"; draw(); };
+$("allh").onchange = draw; $("hidepaint").onchange = draw;
+$("showlinks").onchange = draw; $("showmarks").onchange = draw; $("jumptool").onclick = () => pickTool("jump");
+$("undo").onclick = doUndo; $("redo").onclick = doRedo; $("save").onclick = save;
+$("build").onclick = async () => {
+  setStatus("Making the roofless view… (a few seconds)");
+  const r = await fetch("/api/build?name=" + encodeURIComponent(mapName), {method: "POST"});
+  if (!r.ok) { setStatus("Could not make the view: " + ((await r.json()).error || r.status), "err"); return; }
+  dirty = false; await openMap(mapName);
+};
+window.addEventListener("resize", resize);
+buildTools(); $("sizelabel").textContent = $("size").value + " u"; resize(); loadMaps();
+</script>
+</body>
+</html>

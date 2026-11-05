@@ -1,0 +1,8 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_box", "center": [40.039, -14.0, -29.989], "size": [200.0, 200.0, 55.021]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume", "center": [3.844, -55.054, -0.298], "size": [16.964, 3.638, 0.971]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_vspom1", "center": [-20.913, -30.212, -1.241], "size": [3.456, 10.887, 1.346]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_vspom", "center": [-7.876, -20.58, -0.393], "size": [1.59, 3.636, 1.596]},
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [-7.232, -35.019, 4.641], "size": [100.0, 100.0, 25.08], "condition": "safe_zone volume not in the safe zone block (H2 / H3 engine): what it does is UNKNOWN"},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_box", "center": [-13.016, -45.939, -0.28], "size": [3.0, 3.0, 1.0]}
+]}

@@ -1,0 +1,7 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_shark", "center": [-0.162, -46.721, 1.659], "size": [53.206, 45.624, 2.989]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_bldg1", "center": [-22.029, -21.913, 26.319], "size": [24.258, 23.226, 3.622]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_bldg2", "center": [-33.246, 10.265, 27.081], "size": [15.294, 18.259, 4.586]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_bldg3", "center": [-0.132, 33.87, 27.096], "size": [12.111, 7.792, 3.68]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_bldg4", "center": [7.536, 29.895, 27.325], "size": [3.562, 15.222, 3.291]}
+]}

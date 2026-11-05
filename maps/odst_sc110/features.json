@@ -1,0 +1,447 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-206.696,
+-538.716,
+10.06
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+-225.964,
+-507.091,
+6.339
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-210.452,
+-499.867,
+10.044
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+-217.31,
+-512.762,
+9.986
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+-189.581,
+-504.06,
+9.979
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-209.721,
+-500.223,
+10.027
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+-207.151,
+-482.821,
+9.976
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-208.407,
+-513.176,
+9.94
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+-211.33,
+-505.576,
+6.236
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "flak_cannon",
+"pos": [
+-180.249,
+-485.138,
+10.403
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+-162.737,
+-456.242,
+8.375
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-211.26,
+-507.221,
+6.325
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-211.573,
+-507.159,
+6.327
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+-211.267,
+-507.728,
+6.283
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-225.522,
+-506.885,
+6.283
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-207.29,
+-506.376,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-208.855,
+-512.895,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-217.34,
+-513.617,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-210.24,
+-500.549,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-206.26,
+-482.566,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+-188.98,
+-505.605,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+-207.575,
+-506.342,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-188.984,
+-505.234,
+9.917
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-179.848,
+-485.756,
+10.425
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+-179.885,
+-485.199,
+10.445
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+-206.29,
+-539.838,
+10.034
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+-163.022,
+-456.224,
+8.359
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-163.335,
+-456.444,
+8.383
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+-161.91,
+-465.954,
+8.371
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+-163.352,
+-465.536,
+8.37
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-221.217,
+-504.054,
+6.5
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "turret_standalone",
+"pos": [
+-206.215,
+-486.264,
+9.917
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+-194.691,
+-513.929,
+7.679
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+-203.633,
+-494.843,
+6.642
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+-206.346,
+-542.183,
+10.471
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+-162.509,
+-466.201,
+8.342
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-156.819,
+-470.047,
+8.2
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-218.251,
+-506.424,
+7.0
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-190.458,
+-505.52,
+7.055
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-208.876,
+-482.247,
+7.117
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-206.346,
+-542.183,
+10.471
+],
+"team": 1
+}
+],
+"teleporters": []
+}

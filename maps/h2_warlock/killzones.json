@@ -1,0 +1,4 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_ruins", "center": [-15.575, 15.918, 5.45], "size": [15.656, 13.684, 11.68], "rotation": {"forward": [0.71341, -0.70075, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume_tree", "center": [15.346, -15.348, 4.66], "size": [15.81, 13.609, 11.346], "rotation": {"forward": [0.70249, -0.71169, 0.0], "up": [0.0, 0.0, 1.0]}}
+]}

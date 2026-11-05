@@ -1,0 +1,249 @@
+{
+"features": [
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-99.234,
+37.435,
+17.693
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-94.27,
+58.407,
+17.7
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-75.537,
+57.502,
+16.5
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "forklift",
+"pos": [
+-82.719,
+21.757,
+15.489
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "forklift",
+"pos": [
+-84.214,
+66.61,
+16.489
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-104.634,
+35.48,
+18.281
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-60.403,
+49.763,
+14.225
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "door_interior_large_logo",
+"pos": [
+-74.3,
+35.5,
+17.714
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_interior_large_logo",
+"pos": [
+-98.75,
+35.5,
+17.7
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_interior_large_logo",
+"pos": [
+-91.864,
+35.5,
+16.5
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-84.801,
+63.689,
+16.985
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-87.04,
+35.49,
+16.988
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-93.907,
+7.875,
+15.973
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-84.801,
+63.689,
+16.985
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-87.04,
+35.49,
+16.988
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-93.907,
+7.875,
+15.973
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-84.801,
+63.689,
+16.985
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-87.04,
+35.49,
+16.988
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-93.907,
+7.875,
+15.973
+],
+"group": "controls"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-67.349,
+38.113,
+12.896
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_large",
+"pos": [
+-61.092,
+38.189,
+8.351
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-94.09,
+54.408,
+14.378
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-94.09,
+58.624,
+14.378
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "gatehouse_frontdoor_closed",
+"pos": [
+-61.585,
+28.982,
+13.249
+],
+"group": "scenery"
+}
+],
+"teleporters": []
+}

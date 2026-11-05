@@ -1,0 +1,291 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+-5.645,
+-23.295,
+2.015
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+444.365,
+115.75,
+-5.666
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+440.953,
+121.064,
+-7.854
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "drop_shield",
+"pos": [
+418.215,
+111.575,
+4.0
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+459.763,
+111.175,
+-6.12
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+454.386,
+122.868,
+-6.308
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+442.813,
+130.442,
+-5.834
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+442.142,
+116.336,
+-4.956
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+474.488,
+104.153,
+-6.505
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "m70_door_ff",
+"pos": [
+442.909,
+102.017,
+-2.998
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_ff",
+"pos": [
+445.862,
+117.426,
+-5.761
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_ff",
+"pos": [
+442.023,
+120.804,
+-5.761
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_ff",
+"pos": [
+442.1,
+113.494,
+-5.761
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_small",
+"pos": [
+430.51,
+107.425,
+-3.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_small",
+"pos": [
+434.309,
+93.617,
+-4.613
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_small",
+"pos": [
+448.538,
+120.752,
+-7.854
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_small",
+"pos": [
+448.759,
+121.758,
+-9.373
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_small",
+"pos": [
+441.525,
+116.82,
+-7.854
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "m70_door_small",
+"pos": [
+455.597,
+105.343,
+-5.867
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+463.1,
+109.999,
+-6.898
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+439.81,
+122.18,
+-3.186
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+458.666,
+129.945,
+-6.395
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+463.1,
+109.999,
+-6.898
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+439.81,
+122.18,
+-3.186
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+458.666,
+129.945,
+-6.395
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+463.1,
+109.999,
+-6.898
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+439.81,
+122.18,
+-3.186
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+458.666,
+129.945,
+-6.395
+],
+"group": "controls"
+}
+],
+"teleporters": []
+}

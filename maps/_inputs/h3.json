@@ -1,0 +1,98 @@
+{
+ "equipment": [
+  {
+   "off": 8,
+   "mask": 16,
+   "press": true,
+   "how": "static, Oct 23: Halo 3's player input FUN_1800e7efc calls use-equipment FUN_180357814(unit) when the action's +0x08 flags have bit 4 (ghidra/h3_player_input.c); the host's unit_equipment_use event calls the same function (ghidra/h3_equipment_use.c). Not yet seen live."
+  }
+ ],
+ "reload": [
+  {
+   "off": 40,
+   "mask": 4294967296,
+   "press": false,
+   "how": "decoded live 2026-10-24: key r, 25 ticks held, idle noise excluded"
+  },
+  {
+   "off": 64,
+   "mask": 12288,
+   "press": false,
+   "how": "decoded live 2026-10-24: key r, 25 ticks held, idle noise excluded"
+  }
+ ],
+ "melee": [
+  {
+   "off": 8,
+   "mask": 32,
+   "press": false,
+   "how": "decoded live 2026-10-25: key q, 25 ticks held, idle noise excluded"
+  },
+  {
+   "off": 128,
+   "mask": 64,
+   "press": false,
+   "how": "decoded live 2026-10-25: key q, 25 ticks held, idle noise excluded"
+  }
+ ],
+ "grenade": [
+  {
+   "off": 8,
+   "mask": 536870912,
+   "press": false,
+   "how": "decoded live 2026-10-25: key f, 25 ticks held, idle noise excluded"
+  },
+  {
+   "off": 40,
+   "mask": 8589934592,
+   "press": false,
+   "how": "decoded live 2026-10-25: key f, 25 ticks held, idle noise excluded"
+  },
+  {
+   "off": 64,
+   "mask": 16,
+   "press": false,
+   "how": "decoded live 2026-10-25: key f, 25 ticks held, idle noise excluded"
+  },
+  {
+   "off": 128,
+   "mask": 96,
+   "press": false,
+   "how": "decoded live 2026-10-25: key f, 25 ticks held, idle noise excluded"
+  }
+ ],
+ "crouch": [
+  {
+   "off": 8,
+   "mask": 1,
+   "press": false,
+   "how": "decoded live 2026-10-25: key ctrl, 26 ticks held, idle noise excluded"
+  },
+  {
+   "off": 56,
+   "mask": 4575657221408423936,
+   "press": false,
+   "how": "decoded live 2026-10-25: key ctrl, 26 ticks held, idle noise excluded"
+  },
+  {
+   "off": 128,
+   "mask": 96,
+   "press": false,
+   "how": "decoded live 2026-10-25: key ctrl, 26 ticks held, idle noise excluded"
+  }
+ ],
+ "fire2": [
+  {
+   "off": 8,
+   "mask": 17844224,
+   "press": false,
+   "how": "decoded live 2026-10-31: key rmb, 91 ticks held, idle noise excluded"
+  },
+  {
+   "off": 48,
+   "mask": 4575657221408423936,
+   "press": false,
+   "how": "decoded live 2026-10-31: key rmb, 91 ticks held, idle noise excluded"
+  }
+ ]
+}

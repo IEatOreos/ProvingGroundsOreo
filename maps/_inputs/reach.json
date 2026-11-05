@@ -1,0 +1,60 @@
+{
+ "melee": [
+  {
+   "off": 8,
+   "mask": 2048,
+   "press": false,
+   "how": "decoded live 2026-10-23 22:12 (tools/decode_buttons.py melee=q, the owner's bind): +0x08 0x10800 while held (bit 16 rides on every key) and +0x40 0x80001000; bit 11 alone verified live the same minute on Boardwalk: 4 bot melee hits (2.0 -> 0.41 -> 0.02 -> dead, and a one-swing kill), 1 melee kill in the carnage report. Bit 12 (read from FUN_18004bc0c) never swung."
+  }
+ ],
+ "grenade": [
+  {
+   "off": 8,
+   "mask": 1099511627776,
+   "press": true,
+   "how": "static (FUN_18004bc0c starts the grenade-throw unit action 0x3A on +0x08 bit 40), then decoded live 2026-10-23 22:12 (grenade=f: +0x08 0x10000010000 while held) and seen live: 4 bot grenade kills on Boardwalk (carnage report)."
+  }
+ ],
+ "equipment": [
+  {
+   "off": 64,
+   "mask": 12288,
+   "press": false,
+   "how": "decoded live 2026-10-24 (tools/decode_buttons.py equipment=shift, the owner's bind; docs/HANDOFF.md: +0x40 0x3000 while held and bit 31 on the press tick); added Oct 25 when the owner saw no bot use an armor ability (the brain kept them off: no equipment entry). Live check pending"
+  },
+  {
+   "off": 64,
+   "mask": 2147483648,
+   "press": true,
+   "how": "decoded live 2026-10-24 (tools/decode_buttons.py equipment=shift, the owner's bind; docs/HANDOFF.md: +0x40 0x3000 while held and bit 31 on the press tick); added Oct 25 when the owner saw no bot use an armor ability (the brain kept them off: no equipment entry). Live check pending"
+  },
+  {
+   "off": 8,
+   "mask": 65536,
+   "press": false,
+   "how": "added 2026-10-30 from static RE (FUN_18004bc0c gates the ability checks on +0x08 bit 16) and the live decodes (bit 16 rode on every key: melee +0x08 0x10800, grenade 0x10000010000): held abilities did nothing without it (Spire 232250: held sprint 2.1-2.4 u/s). Live check pending: a bot's held sprint over 3.0 u/s"
+  }
+ ],
+ "cycle": [
+  {
+   "off": 64,
+   "mask": 768,
+   "press": false,
+   "how": "decoded live 2026-10-30: key 1, 25 ticks held, idle noise excluded"
+  }
+ ],
+ "ability": [
+  {
+   "off": 8,
+   "mask": 256,
+   "press": false,
+   "how": "static 2026-10-31, the local player's input (ghidra/hr_ability_input.c FUN_18005df80): for an ability whose tag is in hold mode it sets +0x08 bit 8 while the ability button is down and nothing else of its own; the press bit (+0x40 bit 31 in the equipment entry) comes only from its toggle-mode branch, and +0x08 bit 16 only while a sprint-type ability (type block 22) runs. So a hold-mode kind sends this button alone, not equipment: bit 8 and the key's own held bits (+0x40 0x3000, decoded with Shift on Oct 24). FUN_18004bc0c keeps bit 8 through a shot for a hold-mode tag only while +0x40 bit 12 is held. FUN_18047fda8 starts the ability while unit +0x1D8 bit 8 is set and stops it when clear. Live Oct 31 Spire 012320 before: armor lock 0 of 50 presses on, evade 0 of 183, hologram 0 of 135, jetpack 0 of 27, drop shield 0 of 3 (camo 36 of 37, sprint 71 of 164). Live check pending"
+  },
+  {
+   "off": 64,
+   "mask": 12288,
+   "press": false,
+   "how": "static 2026-10-31, the local player's input (ghidra/hr_ability_input.c FUN_18005df80): for an ability whose tag is in hold mode it sets +0x08 bit 8 while the ability button is down and nothing else of its own; the press bit (+0x40 bit 31 in the equipment entry) comes only from its toggle-mode branch, and +0x08 bit 16 only while a sprint-type ability (type block 22) runs. So a hold-mode kind sends this button alone, not equipment: bit 8 and the key's own held bits (+0x40 0x3000, decoded with Shift on Oct 24). FUN_18004bc0c keeps bit 8 through a shot for a hold-mode tag only while +0x40 bit 12 is held. FUN_18047fda8 starts the ability while unit +0x1D8 bit 8 is set and stops it when clear. Live Oct 31 Spire 012320 before: armor lock 0 of 50 presses on, evade 0 of 183, hologram 0 of 135, jetpack 0 of 27, drop shield 0 of 3 (camo 36 of 37, sprint 71 of 164). Live check pending"
+  }
+ ]
+}

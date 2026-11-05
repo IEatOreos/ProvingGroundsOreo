@@ -1,0 +1,220 @@
+{
+"features": [
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+148.636,
+0.001,
+-38.898
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+148.305,
+-18.634,
+-29.971
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+148.356,
+18.592,
+-29.971
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+164.151,
+-2.285,
+-36.5
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+168.82,
+-8.002,
+-30.0
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+168.811,
+7.995,
+-30.0
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+164.03,
+2.752,
+-36.5
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+181.913,
+0.984,
+-36.438
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+148.305,
+-18.634,
+-29.971
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+147.627,
+-2.975,
+-39.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+147.627,
+-21.015,
+-39.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+147.627,
+21.026,
+-39.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+147.627,
+3.025,
+-39.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_large",
+"pos": [
+146.903,
+0.215,
+-33.939
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+151.003,
+26.511,
+-30.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+162.002,
+24.476,
+-37.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+162.002,
+-24.49,
+-37.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+151.002,
+-26.502,
+-30.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+173.001,
+20.901,
+-30.0
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+172.999,
+-20.894,
+-30.0
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "lift_large",
+"pos": [
+-237.009,
+95.026,
+4.074
+],
+"group": "scenery"
+}
+],
+"teleporters": []
+}

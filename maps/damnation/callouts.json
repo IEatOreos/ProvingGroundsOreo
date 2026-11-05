@@ -1,0 +1,1042 @@
+{
+ "map": "damnation",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 7.82,
+ "points": {
+  "mid": [
+   0.5,
+   2.5,
+   0.0
+  ],
+  "mid_hill": [
+   -0.75,
+   1.0,
+   8.2
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    9.69,
+    -13.34,
+    6.8
+   ],
+   [
+    11.13,
+    -7.52,
+    4.5
+   ]
+  ],
+  "blue": [
+   [
+    -12.18,
+    14.98,
+    -0.2
+   ],
+   [
+    -12.61,
+    9.89,
+    -0.4
+   ],
+   [
+    -9.18,
+    14.9,
+    -0.4
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   9.1,
+   -7.86,
+   4.5
+  ],
+  [
+   11.23,
+   -7.66,
+   4.5
+  ],
+  [
+   9.1,
+   -14.42,
+   6.7
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Bottom red": {
+   "poly": [
+    [
+     -15.6,
+     9.2
+    ],
+    [
+     -7.6,
+     9.2
+    ],
+    [
+     -7.6,
+     15.6
+    ],
+    [
+     -15.6,
+     15.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "red-lit bottom with the low flag stand and plasma pistol (in the stock CTF data this is the BLUE team's flag)",
+   "aka": [
+    "red flag",
+    "bottom red flag",
+    "red"
+   ],
+   "area": false,
+   "zmax": 1.5
+  },
+  "Back red": {
+   "poly": [
+    [
+     -15.6,
+     10.4
+    ],
+    [
+     -12.4,
+     10.4
+    ],
+    [
+     -12.4,
+     13.6
+    ],
+    [
+     -15.6,
+     13.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "far end of bottom red at the plasma pistol",
+   "aka": [],
+   "area": false,
+   "zmax": 1.5
+  },
+  "Red health": {
+   "poly": [
+    [
+     -9.4,
+     12.0
+    ],
+    [
+     -7.6,
+     12.0
+    ],
+    [
+     -7.6,
+     14.0
+    ],
+    [
+     -9.4,
+     14.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "health pack in bottom red, by the computers",
+   "aka": [],
+   "area": false,
+   "zmax": 1.5
+  },
+  "Computers": {
+   "poly": [
+    [
+     -7.8,
+     12.2
+    ],
+    [
+     -6.2,
+     12.2
+    ],
+    [
+     -6.2,
+     13.8
+    ],
+    [
+     -7.8,
+     13.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 39,
+   "full": "noisy computer console in red that players stand on",
+   "aka": [
+    "computer"
+   ],
+   "area": false
+  },
+  "Red plat": {
+   "poly": [
+    [
+     -7.6,
+     11.6
+    ],
+    [
+     -3.4,
+     11.6
+    ],
+    [
+     -3.4,
+     14.4
+    ],
+    [
+     -7.6,
+     14.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "raised platform between the two red ramps",
+   "aka": [
+    "red flat"
+   ],
+   "area": false,
+   "zmin": 2.5
+  },
+  "Red shelf": {
+   "poly": [
+    [
+     -8.6,
+     6.4
+    ],
+    [
+     -1.2,
+     6.4
+    ],
+    [
+     -1.2,
+     9.4
+    ],
+    [
+     -8.6,
+     9.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "ledge over the waterfall drop north of the platforms, reached by a rocket or grenade jump",
+   "aka": [],
+   "area": false,
+   "zmin": 2.5
+  },
+  "Red ramp": {
+   "poly": [
+    [
+     -8.2,
+     9.2
+    ],
+    [
+     -3.2,
+     9.2
+    ],
+    [
+     -3.2,
+     15.6
+    ],
+    [
+     -8.2,
+     15.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "the two ramps from bottom red up to the teleporter floor",
+   "aka": [
+    "red ramps"
+   ],
+   "area": false,
+   "zmax": 2.5
+  },
+  "Top red": {
+   "poly": [
+    [
+     -3.2,
+     9.2
+    ],
+    [
+     2.0,
+     9.2
+    ],
+    [
+     2.0,
+     15.6
+    ],
+    [
+     -3.2,
+     15.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "top of the red ramps: the floor around the bottom teleporter",
+   "aka": [
+    "top of red ramp"
+   ],
+   "area": false,
+   "zmax": 2.5
+  },
+  "Portal": {
+   "poly": [
+    [
+     -3.0,
+     8.2
+    ],
+    [
+     -0.8,
+     8.2
+    ],
+    [
+     -0.8,
+     10.0
+    ],
+    [
+     -3.0,
+     10.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "bottom end of the two-way teleporter, in red",
+   "aka": [
+    "teleporter",
+    "tele",
+    "bottom portal"
+   ],
+   "area": false,
+   "zmax": 2.5
+  },
+  "Red door": {
+   "poly": [
+    [
+     1.8,
+     9.4
+    ],
+    [
+     3.4,
+     9.4
+    ],
+    [
+     3.4,
+     15.6
+    ],
+    [
+     1.8,
+     15.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "doorway from red out to the street",
+   "aka": [],
+   "area": false
+  },
+  "Pit": {
+   "poly": [
+    [
+     -3.2,
+     -4.6
+    ],
+    [
+     2.6,
+     -4.6
+    ],
+    [
+     2.6,
+     7.0
+    ],
+    [
+     -3.2,
+     7.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 26,
+   "full": "the pit in the middle: rockets and overshield",
+   "aka": [
+    "rocket pit"
+   ],
+   "area": false,
+   "zmax": 1.0
+  },
+  "Rockets": {
+   "poly": [
+    [
+     0.2,
+     0.0
+    ],
+    [
+     2.6,
+     0.0
+    ],
+    [
+     2.6,
+     3.2
+    ],
+    [
+     0.2,
+     3.2
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "rocket launcher spawn in the pit",
+   "aka": [
+    "RL"
+   ],
+   "area": false,
+   "zmax": 1.0
+  },
+  "OS": {
+   "poly": [
+    [
+     -3.2,
+     -0.2
+    ],
+    [
+     -0.8,
+     -0.2
+    ],
+    [
+     -0.8,
+     3.2
+    ],
+    [
+     -3.2,
+     3.2
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "overshield next to rockets, at the pit's waterfall side",
+   "aka": [
+    "OV",
+    "overshield",
+    "OS ledge",
+    "OS jump"
+   ],
+   "area": false,
+   "zmax": 1.0
+  },
+  "Street": {
+   "poly": [
+    [
+     2.0,
+     -3.6
+    ],
+    [
+     12.0,
+     -3.6
+    ],
+    [
+     12.0,
+     15.6
+    ],
+    [
+     2.0,
+     15.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 22,
+   "full": "the main lower balcony along the windows",
+   "aka": [
+    "walk",
+    "sidewalk",
+    "shotgun balcony"
+   ],
+   "area": false,
+   "zmax": 5.0
+  },
+  "Shotties": {
+   "poly": [
+    [
+     7.2,
+     -1.4
+    ],
+    [
+     10.6,
+     -1.4
+    ],
+    [
+     10.6,
+     4.6
+    ],
+    [
+     7.2,
+     4.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "the two shotguns on the street by the windows",
+   "aka": [
+    "front shotgun",
+    "bottom shotgun",
+    "shotguns",
+    "shotty"
+   ],
+   "area": false,
+   "zmax": 5.0
+  },
+  "Elbow": {
+   "poly": [
+    [
+     0.0,
+     -7.5
+    ],
+    [
+     4.8,
+     -7.5
+    ],
+    [
+     4.8,
+     -3.6
+    ],
+    [
+     0.0,
+     -3.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "bend from the street toward bottom snipe",
+   "aka": [],
+   "area": false,
+   "zmax": 5.0
+  },
+  "Bottom snipe": {
+   "poly": [
+    [
+     -6.4,
+     -10.0
+    ],
+    [
+     0.0,
+     -10.0
+    ],
+    [
+     0.0,
+     -4.6
+    ],
+    [
+     -6.4,
+     -4.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "lower sniper room: links the street, the PR room and the tunnel into green",
+   "aka": [
+    "sniper",
+    "low snipe",
+    "pipe room",
+    "sweaty",
+    "snipe room"
+   ],
+   "area": false,
+   "zmax": 6.0
+  },
+  "Clinky": {
+   "poly": [
+    [
+     0.0,
+     -9.8
+    ],
+    [
+     4.8,
+     -9.8
+    ],
+    [
+     4.8,
+     -7.5
+    ],
+    [
+     0.0,
+     -7.5
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "short noisy metal ramp from bottom snipe up into green",
+   "aka": [
+    "clanky"
+   ],
+   "area": false,
+   "zmax": 5.6
+  },
+  "PR room": {
+   "poly": [
+    [
+     -13.6,
+     -15.6
+    ],
+    [
+     -6.4,
+     -15.6
+    ],
+    [
+     -6.4,
+     -4.6
+    ],
+    [
+     -13.6,
+     -4.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 28,
+   "full": "plasma rifle room under the waterfall side",
+   "aka": [
+    "plasma room"
+   ],
+   "aka_crude": [
+    "gay room"
+   ],
+   "area": false,
+   "zmax": 2.0
+  },
+  "Waterfall": {
+   "poly": [
+    [
+     -16.0,
+     -4.6
+    ],
+    [
+     -3.2,
+     -4.6
+    ],
+    [
+     -3.2,
+     6.4
+    ],
+    [
+     -16.0,
+     6.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 12,
+   "full": "the drop on the far side: three jump platforms and planks, flank route to rockets, PR and back red",
+   "aka": [
+    "waterfalls",
+    "jump platforms"
+   ],
+   "area": true
+  },
+  "Bottom green": {
+   "poly": [
+    [
+     4.6,
+     -12.4
+    ],
+    [
+     12.0,
+     -12.4
+    ],
+    [
+     12.0,
+     -6.6
+    ],
+    [
+     4.6,
+     -6.6
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "lower floor of the green room",
+   "aka": [
+    "green"
+   ],
+   "area": false,
+   "zmax": 5.6
+  },
+  "Green ramp": {
+   "poly": [
+    [
+     10.0,
+     -12.6
+    ],
+    [
+     12.0,
+     -12.6
+    ],
+    [
+     12.0,
+     -8.6
+    ],
+    [
+     10.0,
+     -8.6
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "ramp from bottom green up to the flag level",
+   "aka": [],
+   "area": false
+  },
+  "Top green": {
+   "poly": [
+    [
+     2.4,
+     -16.0
+    ],
+    [
+     12.0,
+     -16.0
+    ],
+    [
+     12.0,
+     -12.4
+    ],
+    [
+     2.4,
+     -12.4
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "top level of green with the high flag stand (the RED team's flag in the stock CTF data)",
+   "aka": [
+    "green room",
+    "back green",
+    "green flag"
+   ],
+   "area": false,
+   "zmin": 5.6
+  },
+  "Shotgun flat": {
+   "poly": [
+    [
+     7.2,
+     -16.0
+    ],
+    [
+     10.0,
+     -16.0
+    ],
+    [
+     10.0,
+     -14.4
+    ],
+    [
+     7.2,
+     -14.4
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "upper shotgun spawn on the back ledge of green",
+   "aka": [
+    "top shotgun",
+    "top shotties",
+    "top shotty"
+   ],
+   "area": false,
+   "zmin": 5.6
+  },
+  "Green flat": {
+   "poly": [
+    [
+     0.6,
+     -12.4
+    ],
+    [
+     4.8,
+     -12.4
+    ],
+    [
+     4.8,
+     -6.6
+    ],
+    [
+     0.6,
+     -6.6
+    ]
+   ],
+   "side": "red",
+   "priority": 32,
+   "full": "platform over the clinky ramp at the front of green",
+   "aka": [
+    "green plat"
+   ],
+   "area": false,
+   "zmin": 5.6
+  },
+  "Lookout": {
+   "poly": [
+    [
+     4.6,
+     -6.6
+    ],
+    [
+     12.0,
+     -6.6
+    ],
+    [
+     12.0,
+     -2.6
+    ],
+    [
+     4.6,
+     -2.6
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "pistol spawn on the ledge behind camo, over bottom green",
+   "aka": [
+    "pistol"
+   ],
+   "area": false,
+   "zmin": 5.6
+  },
+  "Camo": {
+   "poly": [
+    [
+     -0.2,
+     -2.8
+    ],
+    [
+     5.4,
+     -2.8
+    ],
+    [
+     5.4,
+     -1.0
+    ],
+    [
+     -0.2,
+     -1.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "camo on the thin plank outside green",
+   "aka": [
+    "camo plank"
+   ],
+   "area": false,
+   "zmin": 5.0
+  },
+  "Top street": {
+   "poly": [
+    [
+     0.4,
+     -2.8
+    ],
+    [
+     8.0,
+     -2.8
+    ],
+    [
+     8.0,
+     6.6
+    ],
+    [
+     0.4,
+     6.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 24,
+   "full": "suggested name (not attested): upper deck over the street with the PC fuel rod, joined to top snipe by planks",
+   "aka": [],
+   "area": false,
+   "zmin": 5.0
+  },
+  "Top snipe": {
+   "poly": [
+    [
+     -1.8,
+     -4.6
+    ],
+    [
+     0.4,
+     -4.6
+    ],
+    [
+     0.4,
+     6.4
+    ],
+    [
+     -1.8,
+     6.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "upper sniper spot on the high catwalk over the pit, front of green",
+   "aka": [
+    "top sniper",
+    "top front green"
+   ],
+   "area": false,
+   "zmin": 6.0
+  },
+  "Catwalk": {
+   "poly": [
+    [
+     -1.8,
+     6.4
+    ],
+    [
+     0.4,
+     6.4
+    ],
+    [
+     0.4,
+     10.0
+    ],
+    [
+     -1.8,
+     10.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 33,
+   "full": "the high catwalk at the top teleporter end; deagle is where it meets the wall",
+   "aka": [
+    "deagle"
+   ],
+   "area": false,
+   "zmin": 6.0
+  },
+  "Top portal": {
+   "poly": [
+    [
+     -1.6,
+     7.8
+    ],
+    [
+     0.4,
+     7.8
+    ],
+    [
+     0.4,
+     9.4
+    ],
+    [
+     -1.6,
+     9.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 40,
+   "full": "top end of the two-way teleporter",
+   "aka": [
+    "top tele"
+   ],
+   "area": false,
+   "zmin": 6.0
+  },
+  "Red": {
+   "poly": [
+    [
+     -15.6,
+     6.4
+    ],
+    [
+     -1.2,
+     6.4
+    ],
+    [
+     -1.2,
+     9.2
+    ],
+    [
+     2.0,
+     9.2
+    ],
+    [
+     3.4,
+     9.2
+    ],
+    [
+     3.4,
+     15.6
+    ],
+    [
+     -15.6,
+     15.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 12,
+   "full": "the red-lit bottom, its ramps and the teleporter floor (blue team's base in the stock data)",
+   "aka": [],
+   "area": true
+  },
+  "Green": {
+   "poly": [
+    [
+     0.6,
+     -16.0
+    ],
+    [
+     12.0,
+     -16.0
+    ],
+    [
+     12.0,
+     -2.6
+    ],
+    [
+     4.6,
+     -2.6
+    ],
+    [
+     4.6,
+     -6.6
+    ],
+    [
+     0.6,
+     -6.6
+    ]
+   ],
+   "side": "red",
+   "priority": 12,
+   "full": "the green top area with the high flag (red team's base in the stock data)",
+   "aka": [],
+   "area": true
+  },
+  "Mid": {
+   "poly": [
+    [
+     -16.0,
+     -16.0
+    ],
+    [
+     12.5,
+     -16.0
+    ],
+    [
+     12.5,
+     16.0
+    ],
+    [
+     -16.0,
+     16.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 8,
+   "full": "everything else: pit, street, bottom snipe, PR room",
+   "aka": [
+    "middle"
+   ],
+   "area": true
+  }
+ }
+}

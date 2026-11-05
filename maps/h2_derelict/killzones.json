@@ -1,0 +1,4 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_top", "center": [0.543, 0.047, 24.148], "size": [38.991, 37.6, 36.61]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_bottom", "center": [0.543, 0.047, -15.0], "size": [38.991, 37.6, 20.0]}
+]}

@@ -1,0 +1,11 @@
+{
+ "game": "odst",
+ "objects": [],
+ "skipped": [
+  "hub_wall_switch_elevator: no object tag in H3ODSTEK",
+  "oni_elevator_device_machine: no object tag in H3ODSTEK",
+  "oni_elevator_doors: no object tag in H3ODSTEK",
+  "oni_elevator_new: no object tag in H3ODSTEK",
+  "oni_elevator_roof_doors: no object tag in H3ODSTEK"
+ ]
+}

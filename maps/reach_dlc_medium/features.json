@@ -1,0 +1,1348 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "dmr",
+"pos": [
+-0.025,
+-25.516,
+4.205
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-0.03,
+-31.454,
+4.381
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+3.03,
+-28.284,
+4.063
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+-18.323,
+-17.28,
+3.135
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+10.146,
+-15.437,
+3.713
+],
+"team": 8,
+"respawn": 120
+},
+{
+"kind": "weapon",
+"name": "dmr",
+"pos": [
+0.006,
+25.525,
+4.206
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-0.057,
+31.282,
+4.384
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-3.204,
+28.097,
+4.064
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+18.492,
+-3.25,
+1.502
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-10.266,
+15.457,
+3.68
+],
+"team": 8,
+"respawn": 120
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+18.32,
+17.038,
+3.199
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-20.401,
+6.936,
+1.384
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+14.361,
+18.602,
+3.2
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-14.259,
+-18.66,
+3.214
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "dmr",
+"pos": [
+-5.863,
+-10.396,
+5.646
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "dmr",
+"pos": [
+6.023,
+10.544,
+5.486
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "needle_rifle",
+"pos": [
+6.065,
+-4.197,
+4.866
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "needle_rifle",
+"pos": [
+-5.999,
+4.153,
+4.805
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+0.098,
+35.908,
+2.88
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+0.366,
+-35.416,
+3.052
+],
+"team": 1
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+5.811,
+19.776,
+4.079
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-6.006,
+-20.154,
+3.985
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+0.044,
+5.083,
+7.409
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-0.058,
+-5.151,
+7.409
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+0.055,
+0.092,
+4.927
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+-21.77,
+-0.446,
+0.973
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.013,
+33.215,
+4.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.013,
+33.215,
+4.37
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.01,
+-33.184,
+4.362
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.01,
+-33.184,
+4.362
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+0.137,
+0.101,
+4.928
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+0.135,
+17.865,
+5.25
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+-0.086,
+26.651,
+4.05
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+0.003,
+-26.263,
+4.042
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+0.036,
+-18.29,
+5.25
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+6.512,
+4.71,
+4.487
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+-7.277,
+-4.88,
+4.402
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+13.278,
+-23.408,
+2.828
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+-13.314,
+23.229,
+2.83
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+18.272,
+16.561,
+3.1
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+-18.238,
+-16.426,
+3.1
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "stockpile_goal",
+"name": "stp_goal",
+"pos": [
+-0.043,
+26.611,
+4.05
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "stockpile_goal",
+"name": "stp_goal",
+"pos": [
+0.013,
+-26.272,
+4.042
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+0.044,
+0.105,
+4.929
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+0.133,
+17.869,
+5.25
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+0.012,
+-18.282,
+5.25
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+6.512,
+4.71,
+4.487
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+-7.287,
+-4.868,
+4.397
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+13.252,
+-23.392,
+2.827
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+-13.314,
+23.229,
+2.83
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+18.357,
+16.561,
+3.1
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+-18.345,
+-16.519,
+3.1
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+-6.745,
+-47.099,
+0.079
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+-13.892,
+-11.311,
+1.704
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+27.205,
+4.827,
+-0.242
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+4.205,
+47.975,
+0.041
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race_flag",
+"pos": [
+14.164,
+11.968,
+1.505
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+18.38,
+0.709,
+1.234
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "stp_flag",
+"pos": [
+-23.158,
+2.208,
+0.499
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+18.304,
+-5.549,
+1.302
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "drop_point",
+"name": "hh_drop_point",
+"pos": [
+-18.504,
+5.177,
+1.699
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+0.01,
+-33.184,
+4.35
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+0.013,
+33.215,
+4.35
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "as_bomb",
+"pos": [
+-0.043,
+26.611,
+4.03
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "as_bomb",
+"pos": [
+0.013,
+-26.272,
+4.03
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+0.0,
+-27.5,
+4.0
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+0.0,
+27.5,
+4.0
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+0.04,
+0.12,
+4.93
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+18.397,
+-5.409,
+1.702
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+12.164,
+-22.584,
+3.05
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-0.114,
+-17.707,
+5.23
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-0.06,
+18.051,
+5.23
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-19.267,
+5.07,
+1.517
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-12.079,
+22.492,
+3.07
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+0.194,
+10.446,
+5.527
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-1.098,
+-10.423,
+5.512
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.133,
+17.869,
+5.25
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.038,
+26.736,
+4.05
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.012,
+-18.282,
+5.25
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+6.512,
+4.71,
+4.487
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.106,
+-0.039,
+4.916
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+0.08,
+0.097,
+4.927
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+18.405,
+-5.45,
+1.285
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+-19.015,
+5.063,
+1.579
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+18.282,
+13.513,
+3.1
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+-18.275,
+-13.245,
+3.1
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "as_bomb",
+"pos": [
+0.046,
+0.101,
+4.928
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.054,
+0.093,
+4.926
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.054,
+0.093,
+4.926
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "stockpile_goal",
+"name": "stp_goal",
+"pos": [
+18.369,
+-5.384,
+1.303
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "stockpile_goal",
+"name": "stp_goal",
+"pos": [
+-18.65,
+5.239,
+1.656
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "invasion",
+"name": "inv_slayer_res_zone",
+"pos": [
+0.0,
+-30.0,
+4.695
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "invasion",
+"name": "inv_slayer_res_zone",
+"pos": [
+0.0,
+30.0,
+4.704
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.194,
+10.446,
+5.527
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-1.098,
+-10.423,
+5.512
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-18.504,
+5.177,
+1.699
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+18.369,
+-5.384,
+1.712
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.046,
+0.101,
+4.928
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-20.84,
+-0.337,
+1.008
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-20.84,
+-0.337,
+1.008
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+24.233,
+1.853,
+-0.095
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+24.233,
+1.853,
+-0.095
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+0.055,
+0.092,
+4.927
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+-21.77,
+-0.446,
+0.997
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+-6.745,
+-47.099,
+0.077
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+-13.892,
+-11.311,
+1.67
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+27.204,
+4.828,
+-0.237
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+4.203,
+47.977,
+0.101
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "rally_flag",
+"pos": [
+14.162,
+11.963,
+1.372
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+24.233,
+1.853,
+-0.139
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+-20.84,
+-0.337,
+1.021
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "invasion",
+"name": "inv_slayer_res_zone",
+"pos": [
+-18.358,
+-15.526,
+3.434
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "invasion",
+"name": "inv_slayer_res_zone",
+"pos": [
+22.936,
+-31.795,
+0.466
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "invasion",
+"name": "inv_slayer_res_zone",
+"pos": [
+-23.386,
+33.49,
+0.685
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "invasion",
+"name": "inv_slayer_res_zone",
+"pos": [
+18.367,
+15.931,
+3.1
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race",
+"pos": [
+-9.191,
+-2.229,
+3.572
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race",
+"pos": [
+-26.806,
+-7.252,
+0.287
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race",
+"pos": [
+-14.564,
+-35.63,
+0.358
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "race",
+"name": "race",
+"pos": [
+22.193,
+24.019,
+-0.156
+],
+"team": 8
+},
+{
+"kind": "launcher",
+"name": "dlc_medium_mancannon",
+"pos": [
+-18.301,
+-11.108,
+3.091
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "dlc_medium_mancannon",
+"pos": [
+18.305,
+11.067,
+3.079
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "dlc_medium_mancannon",
+"pos": [
+0.0,
+20.0,
+5.25
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "dlc_medium_mancannon",
+"pos": [
+0.0,
+-20.0,
+5.25
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

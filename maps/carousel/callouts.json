@@ -1,0 +1,508 @@
+{
+ "map": "carousel",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": -0.86,
+ "points": {
+  "mid": [
+   -0.07,
+   0.17,
+   -2.76
+  ],
+  "mid_hill": [
+   1.5,
+   0.5,
+   -0.86
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    5.61,
+    -13.55,
+    -3.2
+   ],
+   [
+    8.52,
+    -8.3,
+    -3.36
+   ],
+   [
+    -0.16,
+    -11.9,
+    -3.36
+   ]
+  ],
+  "blue": [
+   [
+    -5.75,
+    13.89,
+    -3.2
+   ],
+   [
+    -8.67,
+    8.64,
+    -3.36
+   ],
+   [
+    0.02,
+    12.24,
+    -3.36
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   -0.07,
+   0.17,
+   -2.76
+  ],
+  [
+   8.16,
+   3.58,
+   -3.17
+  ],
+  [
+   -8.3,
+   -3.24,
+   -3.19
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Top mid": {
+   "poly": [
+    [
+     -2.6,
+     -2.6
+    ],
+    [
+     2.6,
+     -2.6
+    ],
+    [
+     2.6,
+     2.6
+    ],
+    [
+     -2.6,
+     2.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "upper centre where the catwalks cross: overshield",
+   "aka": [
+    "top OS",
+    "OS",
+    "top middle"
+   ],
+   "area": false,
+   "zmin": -2.0
+  },
+  "Catwalks": {
+   "poly": [
+    [
+     -4.8,
+     9.4
+    ],
+    [
+     4.8,
+     9.4
+    ],
+    [
+     9.9,
+     4.3
+    ],
+    [
+     9.9,
+     -4.3
+    ],
+    [
+     4.8,
+     -9.4
+    ],
+    [
+     -4.8,
+     -9.4
+    ],
+    [
+     -9.9,
+     -4.3
+    ],
+    [
+     -9.9,
+     4.3
+    ]
+   ],
+   "side": "mid",
+   "priority": 20,
+   "full": "the cross catwalks between the corners and top mid",
+   "aka": [
+    "catwalk"
+   ],
+   "area": false,
+   "zmin": -2.0
+  },
+  "Bottom mid": {
+   "poly": [
+    [
+     -3.6,
+     8.8
+    ],
+    [
+     3.6,
+     8.8
+    ],
+    [
+     8.8,
+     3.6
+    ],
+    [
+     8.8,
+     -3.6
+    ],
+    [
+     3.6,
+     -8.8
+    ],
+    [
+     -3.6,
+     -8.8
+    ],
+    [
+     -8.8,
+     -3.6
+    ],
+    [
+     -8.8,
+     3.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 26,
+   "full": "lower centre under the catwalks: health pack",
+   "aka": [
+    "bottom middle"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Bottom sniper": {
+   "poly": [
+    [
+     0.0,
+     -8.8
+    ],
+    [
+     3.6,
+     -8.8
+    ],
+    [
+     8.8,
+     -3.6
+    ],
+    [
+     8.8,
+     0.0
+    ],
+    [
+     17.0,
+     0.0
+    ],
+    [
+     17.0,
+     -17.0
+    ],
+    [
+     0.0,
+     -17.0
+    ]
+   ],
+   "side": "red",
+   "priority": 28,
+   "full": "lower level under the sniper corner, by the red flag",
+   "aka": [
+    "bottom sniper port",
+    "under sniper port",
+    "sniper cubby",
+    "under sniper"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Bottom rockets": {
+   "poly": [
+    [
+     0.0,
+     8.8
+    ],
+    [
+     3.6,
+     8.8
+    ],
+    [
+     8.8,
+     3.6
+    ],
+    [
+     8.8,
+     0.0
+    ],
+    [
+     17.0,
+     0.0
+    ],
+    [
+     17.0,
+     17.0
+    ],
+    [
+     0.0,
+     17.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "lower level under the rockets corner, by the lower teleporter",
+   "aka": [
+    "under rockets"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Bottom camo": {
+   "poly": [
+    [
+     0.0,
+     8.8
+    ],
+    [
+     -3.6,
+     8.8
+    ],
+    [
+     -8.8,
+     3.6
+    ],
+    [
+     -8.8,
+     0.0
+    ],
+    [
+     -17.0,
+     0.0
+    ],
+    [
+     -17.0,
+     17.0
+    ],
+    [
+     0.0,
+     17.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "lower level under the camo corner, by the blue flag",
+   "aka": [
+    "bottom camo portal",
+    "under camo portal",
+    "camo cubby",
+    "under camo"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Green wall": {
+   "poly": [
+    [
+     0.0,
+     -8.8
+    ],
+    [
+     -3.6,
+     -8.8
+    ],
+    [
+     -8.8,
+     -3.6
+    ],
+    [
+     -8.8,
+     6.0
+    ],
+    [
+     -17.0,
+     6.0
+    ],
+    [
+     -17.0,
+     -17.0
+    ],
+    [
+     0.0,
+     -17.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "lower west side with green walls: under the needles corner (lower teleporter) and beside bottom camo",
+   "aka": [
+    "green"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Gold": {
+   "poly": [
+    [
+     8.8,
+     -6.0
+    ],
+    [
+     17.0,
+     -6.0
+    ],
+    [
+     17.0,
+     6.0
+    ],
+    [
+     8.8,
+     6.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "lower east side with gold walls, between bottom sniper and bottom rockets",
+   "aka": [
+    "gold corner",
+    "gold wall",
+    "yellow"
+   ],
+   "area": false,
+   "zmax": -2.0
+  },
+  "Sniper": {
+   "poly": [
+    [
+     -0.6,
+     0.0
+    ],
+    [
+     17.0,
+     0.0
+    ],
+    [
+     17.0,
+     -17.0
+    ],
+    [
+     -0.6,
+     -17.0
+    ]
+   ],
+   "side": "red",
+   "priority": 12,
+   "full": "upper corner where the sniper spawns (three lights), with the south teleporter",
+   "aka": [
+    "sniper portal",
+    "sniper cubby",
+    "snipe"
+   ],
+   "area": true
+  },
+  "Needles": {
+   "poly": [
+    [
+     -0.6,
+     0.0
+    ],
+    [
+     -17.0,
+     0.0
+    ],
+    [
+     -17.0,
+     -17.0
+    ],
+    [
+     -0.6,
+     -17.0
+    ]
+   ],
+   "side": "red",
+   "priority": 12,
+   "full": "upper corner where the needlers spawn",
+   "aka": [
+    "needler",
+    "needle cubby",
+    "left needles",
+    "right needles",
+    "needler portal"
+   ],
+   "area": true
+  },
+  "Camo": {
+   "poly": [
+    [
+     0.6,
+     0.0
+    ],
+    [
+     -17.0,
+     0.0
+    ],
+    [
+     -17.0,
+     17.0
+    ],
+    [
+     0.6,
+     17.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 12,
+   "full": "upper corner with the camo (two lights), with the north teleporter",
+   "aka": [
+    "camo portal",
+    "Dorito"
+   ],
+   "area": true
+  },
+  "Rockets": {
+   "poly": [
+    [
+     0.6,
+     0.0
+    ],
+    [
+     17.0,
+     0.0
+    ],
+    [
+     17.0,
+     17.0
+    ],
+    [
+     0.6,
+     17.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 12,
+   "full": "upper corner where the rocket launcher spawns on Xbox",
+   "aka": [
+    "rocket cubby",
+    "left rockets",
+    "right rockets",
+    "rocket tunnel",
+    "front rockets"
+   ],
+   "area": true
+  }
+ }
+}

@@ -1,0 +1,756 @@
+{
+ "map": "deathisland",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 22.06,
+ "points": {
+  "mid": [
+   1.63,
+   4.5,
+   22.61
+  ],
+  "mid_hill": [
+   6.03,
+   20.92,
+   22.48
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    -26.58,
+    -6.98,
+    9.66
+   ],
+   [
+    -23.0,
+    -7.0,
+    9.68
+   ],
+   [
+    -30.5,
+    -7.0,
+    9.6
+   ]
+  ],
+  "blue": [
+   [
+    29.84,
+    15.97,
+    8.29
+   ],
+   [
+    21.5,
+    16.0,
+    8.29
+   ],
+   [
+    32.0,
+    16.0,
+    8.29
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   1.63,
+   4.5,
+   22.61
+  ],
+  [
+   13.6,
+   -12.5,
+   20.76
+  ],
+  [
+   -5.25,
+   21.42,
+   13.11
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Red base": {
+   "poly": [
+    [
+     -32.5,
+     -11.8
+    ],
+    [
+     -16.5,
+     -11.8
+    ],
+    [
+     -16.5,
+     -2.2
+    ],
+    [
+     -32.5,
+     -2.2
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "inside the red base, dug into the hill: red flag at the west door, both red portals in the back room",
+   "aka": [
+    "red flag",
+    "inside red",
+    "bottom red"
+   ],
+   "area": false,
+   "zmax": 16.0
+  },
+  "Top red": {
+   "poly": [
+    [
+     -34.5,
+     -12.5
+    ],
+    [
+     -15.5,
+     -12.5
+    ],
+    [
+     -15.5,
+     -1.5
+    ],
+    [
+     -34.5,
+     -1.5
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "platform on top of the red base: two Banshees, a Ghost, a sniper rifle (the red top portal lands here)",
+   "aka": [
+    "red top",
+    "red banshees",
+    "red sniper",
+    "top red platform"
+   ],
+   "area": false,
+   "zmin": 16.0
+  },
+  "Red top portal": {
+   "poly": [
+    [
+     -22.5,
+     -5.9
+    ],
+    [
+     -19.5,
+     -5.9
+    ],
+    [
+     -19.5,
+     -2.9
+    ],
+    [
+     -22.5,
+     -2.9
+    ]
+   ],
+   "side": "red",
+   "priority": 42,
+   "full": "teleporter in the red base back room up to the top red platform (Banshees, sniper)",
+   "aka": [
+    "top portal",
+    "red banshee portal",
+    "banshee portal"
+   ],
+   "area": false,
+   "zmax": 16.0
+  },
+  "Red shade portal": {
+   "poly": [
+    [
+     -22.6,
+     -11.2
+    ],
+    [
+     -19.6,
+     -11.2
+    ],
+    [
+     -19.6,
+     -8.2
+    ],
+    [
+     -22.6,
+     -8.2
+    ]
+   ],
+   "side": "red",
+   "priority": 42,
+   "full": "teleporter in the red base back room out to the red Shade outcrop",
+   "aka": [
+    "shade portal",
+    "red shade tele"
+   ],
+   "area": false,
+   "zmax": 16.0
+  },
+  "Red shade": {
+   "poly": [
+    [
+     -62.5,
+     17.2
+    ],
+    [
+     -63.3,
+     20.2
+    ],
+    [
+     -65.5,
+     22.4
+    ],
+    [
+     -68.5,
+     23.2
+    ],
+    [
+     -71.5,
+     22.4
+    ],
+    [
+     -73.7,
+     20.2
+    ],
+    [
+     -74.5,
+     17.2
+    ],
+    [
+     -73.7,
+     14.2
+    ],
+    [
+     -71.5,
+     12.0
+    ],
+    [
+     -68.5,
+     11.2
+    ],
+    [
+     -65.5,
+     12.0
+    ],
+    [
+     -63.3,
+     14.2
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "rock outcrop with the red Shade turret, where the red shade portal comes out",
+   "aka": [
+    "red turret",
+    "red shade outcrop"
+   ],
+   "area": false,
+   "zmin": 10.0
+  },
+  "Blue base": {
+   "poly": [
+    [
+     18.0,
+     10.8
+    ],
+    [
+     36.5,
+     10.8
+    ],
+    [
+     36.5,
+     21.2
+    ],
+    [
+     18.0,
+     21.2
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "inside the blue base, dug into the hill: blue flag at the east door, both blue portals in the back room",
+   "aka": [
+    "blue flag",
+    "inside blue",
+    "bottom blue"
+   ],
+   "area": false,
+   "zmax": 15.0
+  },
+  "Top blue": {
+   "poly": [
+    [
+     18.0,
+     10.3
+    ],
+    [
+     37.5,
+     10.3
+    ],
+    [
+     37.5,
+     21.7
+    ],
+    [
+     18.0,
+     21.7
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "platform on top of the blue base: two Banshees, a Ghost, a sniper rifle (the blue top portal lands here)",
+   "aka": [
+    "blue top",
+    "blue banshees",
+    "blue sniper",
+    "top blue platform"
+   ],
+   "area": false,
+   "zmin": 15.0
+  },
+  "Blue top portal": {
+   "poly": [
+    [
+     22.9,
+     11.8
+    ],
+    [
+     25.9,
+     11.8
+    ],
+    [
+     25.9,
+     14.8
+    ],
+    [
+     22.9,
+     14.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 42,
+   "full": "teleporter in the blue base back room up to the top blue platform (Banshees, sniper)",
+   "aka": [
+    "top portal",
+    "blue banshee portal",
+    "banshee portal"
+   ],
+   "area": false,
+   "zmax": 15.0
+  },
+  "Blue shade portal": {
+   "poly": [
+    [
+     22.9,
+     17.2
+    ],
+    [
+     25.9,
+     17.2
+    ],
+    [
+     25.9,
+     20.2
+    ],
+    [
+     22.9,
+     20.2
+    ]
+   ],
+   "side": "blue",
+   "priority": 42,
+   "full": "teleporter in the blue base back room out to the blue Shade outcrop",
+   "aka": [
+    "shade portal",
+    "blue shade tele"
+   ],
+   "area": false,
+   "zmax": 15.0
+  },
+  "Blue shade": {
+   "poly": [
+    [
+     52.8,
+     -35.2
+    ],
+    [
+     52.0,
+     -32.2
+    ],
+    [
+     49.8,
+     -30.0
+    ],
+    [
+     46.8,
+     -29.2
+    ],
+    [
+     43.8,
+     -30.0
+    ],
+    [
+     41.6,
+     -32.2
+    ],
+    [
+     40.8,
+     -35.2
+    ],
+    [
+     41.6,
+     -38.2
+    ],
+    [
+     43.8,
+     -40.4
+    ],
+    [
+     46.8,
+     -41.2
+    ],
+    [
+     49.8,
+     -40.4
+    ],
+    [
+     52.0,
+     -38.2
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "rock outcrop with the blue Shade turret, where the blue shade portal comes out",
+   "aka": [
+    "blue turret",
+    "blue shade outcrop"
+   ],
+   "area": false,
+   "zmin": 10.0
+  },
+  "Red beach": {
+   "poly": [
+    [
+     -55,
+     -26
+    ],
+    [
+     -33,
+     -26
+    ],
+    [
+     -33,
+     -12.5
+    ],
+    [
+     -30,
+     -12.5
+    ],
+    [
+     -30,
+     4
+    ],
+    [
+     -36,
+     8
+    ],
+    [
+     -55,
+     8
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "shore in front of the red base door: red Warthogs, Scorpions, Ghosts",
+   "aka": [
+    "our beach",
+    "red shore",
+    "front red"
+   ],
+   "area": false
+  },
+  "Blue beach": {
+   "poly": [
+    [
+     37,
+     0
+    ],
+    [
+     56,
+     0
+    ],
+    [
+     56,
+     34
+    ],
+    [
+     37,
+     34
+    ],
+    [
+     37,
+     21.5
+    ],
+    [
+     37.5,
+     10
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "shore in front of the blue base door: blue Warthogs, Scorpions, Ghosts",
+   "aka": [
+    "our beach",
+    "blue shore",
+    "front blue"
+   ],
+   "area": false
+  },
+  "Top mid": {
+   "poly": [
+    [
+     -15,
+     0
+    ],
+    [
+     -14,
+     21
+    ],
+    [
+     4,
+     24
+    ],
+    [
+     16,
+     10
+    ],
+    [
+     21,
+     -4
+    ],
+    [
+     20,
+     -24
+    ],
+    [
+     6,
+     -30
+    ],
+    [
+     -8,
+     -22
+    ],
+    [
+     -15,
+     -13
+    ]
+   ],
+   "side": "mid",
+   "priority": 26,
+   "full": "the high ground in the middle of the island between the bases (fuel rod, flamethrower, shotgun)",
+   "aka": [
+    "top middle",
+    "center hill"
+   ],
+   "area": false,
+   "zmin": 15.0
+  },
+  "Cave": {
+   "poly": [
+    [
+     -7,
+     -26
+    ],
+    [
+     9,
+     -26
+    ],
+    [
+     9,
+     -8
+    ],
+    [
+     5,
+     16
+    ],
+    [
+     -6,
+     16
+    ],
+    [
+     -7,
+     0
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "caves under the middle high ground, with a camo (suggested name)",
+   "aka": [
+    "caves",
+    "camo cave",
+    "camo"
+   ],
+   "area": false,
+   "zmax": 13.0
+  },
+  "Hatch": {
+   "poly": [
+    [
+     -17.0,
+     32.0
+    ],
+    [
+     -18.19,
+     37.21
+    ],
+    [
+     -21.52,
+     41.38
+    ],
+    [
+     -26.33,
+     43.7
+    ],
+    [
+     -31.67,
+     43.7
+    ],
+    [
+     -36.48,
+     41.38
+    ],
+    [
+     -39.81,
+     37.21
+    ],
+    [
+     -41.0,
+     32.0
+    ],
+    [
+     -39.81,
+     26.79
+    ],
+    [
+     -36.48,
+     22.62
+    ],
+    [
+     -31.67,
+     20.3
+    ],
+    [
+     -26.33,
+     20.3
+    ],
+    [
+     -21.52,
+     22.62
+    ],
+    [
+     -18.19,
+     26.79
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "bowl in the north-west hills around the closed hatch: overshield, rocket launcher, fuel rod, shotgun (suggested name)",
+   "aka": [
+    "hatch OS",
+    "the hatch",
+    "overshield"
+   ],
+   "area": false,
+   "zmin": 10.0
+  },
+  "Mid": {
+   "poly": [
+    [
+     34.0,
+     -111.91
+    ],
+    [
+     59.92,
+     -101.33
+    ],
+    [
+     -30.8,
+     120.91
+    ],
+    [
+     -56.72,
+     110.33
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the middle of the island between the bases",
+   "aka": [
+    "middle",
+    "center"
+   ],
+   "area": true
+  },
+  "Red side": {
+   "poly": [
+    [
+     34.0,
+     -111.91
+    ],
+    [
+     -56.72,
+     110.33
+    ],
+    [
+     -191.92,
+     55.14
+    ],
+    [
+     -101.2,
+     -167.1
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "red's half of the island (west): red base, red beach, the hatch, the red Shade",
+   "aka": [
+    "red half",
+    "red"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     59.92,
+     -101.33
+    ],
+    [
+     195.12,
+     -46.14
+    ],
+    [
+     104.4,
+     176.1
+    ],
+    [
+     -30.8,
+     120.91
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "blue's half of the island (east): blue base, blue beach, the blue Shade",
+   "aka": [
+    "blue half",
+    "blue"
+   ],
+   "area": true
+  }
+ }
+}

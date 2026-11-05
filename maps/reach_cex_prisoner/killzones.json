@@ -1,0 +1,21 @@
+{"volumes": [
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [-5.407, -5.023, 1.568], "size": [29.796, 29.474, 10.431]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [3.3, 10.572, 7.687], "size": [6.432, 8.484, 6.883], "points": [[2.678, 6.33], [6.516, 13.464], [4.591, 14.813], [0.084, 9.464]]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [8.327, -4.013, 8.649], "size": [11.168, 26.386, 7.046]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [11.421, -1.183, 5.226], "size": [5.48, 4.909, 1.0]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [9.485, -6.91, 7.037], "size": [12.779, 4.656, 9.842]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [1.018, -9.468, 8.101], "size": [3.848, 8.049, 8.0], "points": [[2.942, -13.492], [2.721, -5.443], [-0.906, -8.38]]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [5.423, -13.274, 0.121], "size": [9.479, 9.947, 7.372]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-2.895, -16.567, 2.345], "size": [7.259, 5.604, 1.744]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-22.228, -1.344, 1.808], "size": [3.926, 16.44, 2.377]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-17.723, -11.678, 2.719], "size": [8.273, 4.865, 4.583]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-18.413, -0.941, -3.403], "size": [5.869, 19.037, 2.798]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-17.885, 1.784, -0.956], "size": [2.123, 5.692, 1.432], "points": [[-18.947, 0.56], [-17.616, -1.062], [-16.882, -0.959], [-18.152, 0.526], [-18.149, 3.064], [-16.823, 4.624], [-17.544, 4.631], [-18.945, 3.022]]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-1.863, 9.174, -3.19], "size": [14.691, 5.909, 2.967]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [4.81, -11.357, -0.396], "size": [8.658, 6.116, 6.181]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [9.791, 0.971, 2.134], "size": [1.306, 11.907, 3.233]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [8.253, 8.936, 0.795], "size": [6.302, 4.398, 7.299]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-19.066, -11.511, 3.489], "size": [2.605, 4.679, 2.051]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [-5.378, -1.394, 7.093], "size": [15.056, 13.009, 1.462]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill", "center": [4.0, -1.103, 4.379], "size": [2.506, 4.579, 4.513]}
+]}

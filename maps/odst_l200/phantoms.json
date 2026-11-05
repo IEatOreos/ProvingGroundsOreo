@@ -1,0 +1,7 @@
+{
+ "game": "odst",
+ "objects": [],
+ "skipped": [
+  "lift_large: physics model has no phantom types"
+ ]
+}

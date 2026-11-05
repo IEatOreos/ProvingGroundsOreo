@@ -1,0 +1,402 @@
+{
+ "how": "Each game's ORIGINAL player customization (owner's research, Oct 24: docs/research/13-original-customization.md), for the bot armor toggles. Tags: default = unlocked from the start; unlock = earned in normal play (achievements, rank, skulls, credits); promo = pre-order, special edition, DLC pack or website tie-in (original, rare in real lobbies); staff = Bungie employees or hand-picked players (original, almost nobody had it). Modes: strict = default + unlock; exclusives = strict + promo + staff; mcc = everything the game offers in MCC (no filter). An item the mode excludes falls back to the game's default item in that slot (as MCC shows default armor with cosmetics off). 'unlock' text is verbatim from the source; brain/looks.py original_items() reads this file. 'armory_slot' (Reach) = the slot number Reach's Armory functions take (live probes Oct 24, maps/_looks/reach.json); other games' look layouts are not decoded yet.",
+ "modes": {"strict": ["default", "unlock"], "exclusives": ["default", "unlock", "promo", "staff"], "mcc": null},
+ "games": {
+  "ce": {
+   "name": "Halo: Combat Evolved",
+   "species": ["spartan"],
+   "pieces": "one fixed Mark V model; no helmets, shoulders or other pieces",
+   "slots": {
+    "armor_color": {"pick": "one color for the whole suit; undersuit and parts of the bracers / greaves always stay black", "items": [
+     {"name": "Black", "tag": "default"}, {"name": "Red", "tag": "default"}, {"name": "Blue", "tag": "default"},
+     {"name": "Gray", "tag": "default"}, {"name": "Yellow", "tag": "default"}, {"name": "Green", "tag": "default"},
+     {"name": "Pink", "tag": "default"}, {"name": "Purple", "tag": "default"}, {"name": "Cyan", "tag": "default"},
+     {"name": "Cobalt", "tag": "default"}, {"name": "Orange", "tag": "default"}, {"name": "Teal", "tag": "default"},
+     {"name": "Sage", "tag": "default"}, {"name": "Brown", "tag": "default"}, {"name": "Tan", "tag": "default"},
+     {"name": "Maroon", "tag": "default"}, {"name": "Salmon", "tag": "default"}, {"name": "White", "tag": "default"}]}
+   },
+   "not_original": ["secondary or tertiary color", "visor color (default visor only)", "emblems (introduced in Halo 2)", "weapon and vehicle skins", "Elites in multiplayer"],
+   "notes": ["MCC briefly named five colors Grey, Light Blue, Lapis Lazuli, Forest Green and Cherry before reverting: match on the color, not the label"]
+  },
+  "h2": {
+   "name": "Halo 2 (Classic)",
+   "species": ["spartan", "elite"],
+   "pieces": "fixed model per species; no helmets, shoulders or other pieces; no Elite ranks or variants to pick",
+   "slots": {
+    "primary_color": {"count": 18, "names_verified": false, "items": [
+     {"name": "White", "tag": "default"}, {"name": "Steel", "tag": "default"}, {"name": "Red", "tag": "default"},
+     {"name": "Orange", "tag": "default"}, {"name": "Gold", "tag": "default"}, {"name": "Olive", "tag": "default"},
+     {"name": "Green", "tag": "default"}, {"name": "Sage", "tag": "default"}, {"name": "Cyan", "tag": "default"},
+     {"name": "Teal", "tag": "default"}, {"name": "Cobalt", "tag": "default"}, {"name": "Blue", "tag": "default"},
+     {"name": "Violet", "tag": "default"}, {"name": "Purple", "tag": "default"}, {"name": "Pink", "tag": "default"},
+     {"name": "Crimson", "tag": "default"}, {"name": "Brown", "tag": "default"}, {"name": "Tan", "tag": "default"}]},
+    "secondary_color": {"same_as": "primary_color"},
+    "emblem_foreground": {"count": 64, "tag": "default", "colors": "primary + secondary from the 18 colors"},
+    "emblem_background": {"count": 32, "tag": "default", "colors": "its two colors are the armor's primary and secondary"}
+   },
+   "emblem_shown": "both shoulders and the back",
+   "not_original": ["armor pieces", "visor colors (default only)", "weapon and vehicle skins"],
+   "open": ["the 18 color names are from memory: confirm against the in-game list (the count of 18 and the emblem counts are sourced)"]
+  },
+  "h2a": {
+   "name": "Halo 2: Anniversary (2014 MCC launch)",
+   "species": ["spartan", "elite"],
+   "pieces": "whole sets only at launch: helmet, chest, shoulders / arms, forearms and legs all from one set",
+   "slots": {
+    "spartan_set": {"species": "spartan", "items": [
+     {"name": "Mark VI", "tag": "default"}, {"name": "Centurion", "tag": "default"}, {"name": "Hoplite", "tag": "default"}]},
+    "elite_set": {"species": "elite", "items": [
+     {"name": "Combat", "tag": "default"}, {"name": "Outrider", "tag": "default"}, {"name": "Invader", "tag": "default"}]},
+    "primary_color": {"names_verified": false},
+    "secondary_color": {"names_verified": false}
+   },
+   "not_original": ["mixing pieces across sets (MCC Series 3, 2020)"],
+   "open": ["the launch color palette", "which weapon skins shipped at launch"]
+  },
+  "h3": {
+   "name": "Halo 3",
+   "species": ["spartan", "elite"],
+   "pieces": "free mix of helmet / chest / shoulders within a species; a slot with no piece in a set uses Mark VI",
+   "slots": {
+    "spartan_helmet": {"species": "spartan", "items": [
+     {"name": "Mark VI", "tag": "default", "unlock": "Default"},
+     {"name": "CQB", "tag": "default", "unlock": "Default"},
+     {"name": "EVA", "tag": "unlock", "unlock": "campaign complete on Normal+"},
+     {"name": "EOD", "tag": "unlock", "unlock": "campaign complete on Legendary"},
+     {"name": "Hayabusa", "tag": "unlock", "unlock": "all 13 skulls"},
+     {"name": "Scout", "tag": "unlock", "unlock": "Used Car Salesman"},
+     {"name": "Security", "tag": "unlock", "unlock": "1,000 Gamerscore", "note": "adds a small chest antenna"},
+     {"name": "Mark V", "tag": "unlock", "unlock": "rank Sergeant (UNSC Spartan)"},
+     {"name": "ODST", "tag": "unlock", "unlock": "rank Private (Spartan Graduate)"},
+     {"name": "Rogue", "tag": "unlock", "unlock": "rank Lieutenant (Spartan Officer)"},
+     {"name": "Recon", "tag": "staff", "unlock": "granted by Bungie (later via Vidmaster challenges)"}]},
+    "spartan_chest": {"species": "spartan", "items": [
+     {"name": "Mark VI", "tag": "default", "unlock": "Default"},
+     {"name": "CQB", "tag": "default", "unlock": "Default"},
+     {"name": "EVA", "tag": "unlock", "unlock": "beat Tsavo Highway on Normal+"},
+     {"name": "EOD", "tag": "unlock", "unlock": "Tsavo Highway on Legendary"},
+     {"name": "Hayabusa", "tag": "unlock", "unlock": "5 skulls"},
+     {"name": "Scout", "tag": "unlock", "unlock": "Too Close to the Sun"},
+     {"name": "Katana", "tag": "unlock", "unlock": "49 achievements or 1,000 Gamerscore", "note": "Hayabusa chest with sword"},
+     {"name": "Recon", "tag": "staff", "unlock": "granted by Bungie (later via Vidmaster challenges)"},
+     {"name": "Bungie", "tag": "staff", "unlock": "Bungie employees only", "note": "EOD-style chest + flaming head effect"}]},
+    "spartan_shoulders": {"species": "spartan", "items": [
+     {"name": "Mark VI", "tag": "default", "unlock": "Default"},
+     {"name": "CQB", "tag": "default", "unlock": "Default"},
+     {"name": "EVA", "tag": "unlock", "unlock": "beat The Ark on Normal+"},
+     {"name": "EOD", "tag": "unlock", "unlock": "The Ark on Legendary"},
+     {"name": "Hayabusa", "tag": "unlock", "unlock": "9 skulls"},
+     {"name": "Scout", "tag": "unlock", "unlock": "Mongoose Mowdown"},
+     {"name": "Security", "tag": "unlock", "unlock": "750 Gamerscore"},
+     {"name": "Recon", "tag": "staff", "unlock": "granted by Bungie (later via Vidmaster challenges)"}]},
+    "elite_helmet": {"species": "elite", "items": [
+     {"name": "Combat", "tag": "default", "unlock": "Default"},
+     {"name": "Assault", "tag": "default", "unlock": "Default"},
+     {"name": "Flight", "tag": "unlock", "unlock": "campaign complete on Heroic+"},
+     {"name": "Ascetic", "tag": "unlock", "unlock": "Steppin' Razor"},
+     {"name": "Commando", "tag": "unlock", "unlock": "Overkill"}]},
+    "elite_chest": {"species": "elite", "items": [
+     {"name": "Combat", "tag": "default", "unlock": "Default"},
+     {"name": "Assault", "tag": "default", "unlock": "Default"},
+     {"name": "Flight", "tag": "unlock", "unlock": "Tsavo Highway on Heroic+"},
+     {"name": "Ascetic", "tag": "unlock", "unlock": "Up Close and Personal"},
+     {"name": "Commando", "tag": "unlock", "unlock": "Triple Kill"}]},
+    "elite_shoulders": {"species": "elite", "items": [
+     {"name": "Combat", "tag": "default", "unlock": "Default"},
+     {"name": "Assault", "tag": "default", "unlock": "Default"},
+     {"name": "Flight", "tag": "unlock", "unlock": "The Ark on Heroic+"},
+     {"name": "Ascetic", "tag": "unlock", "unlock": "Overkill"},
+     {"name": "Commando", "tag": "unlock", "unlock": "Killing Frenzy", "note": "auto-unlocked for everyone in Title Update 1, so effectively Default"}]},
+    "primary_color": {"count": 30, "names_verified": false},
+    "secondary_color": {"count": 30, "names_verified": false},
+    "detail_color": {"count": 30, "names_verified": false},
+    "emblem": {"tag": "default", "parts": "foreground, background and their colors", "shown": "right shoulder"},
+    "service_tag": {"chars": 4}
+   },
+   "not_original": ["visor colors", "forearms", "legs", "techsuits", "back accessories", "weapon and vehicle skins"],
+   "notes": ["MCC unlocks everything for everyone, Recon and the Bungie flaming head included: in strict mode keep Recon and Flaming Head rare or off (they are staff-tagged, so strict leaves them out)"],
+   "open": ["the 30 color names"]
+  },
+  "odst": {
+   "name": "Halo 3: ODST (Firefight)",
+   "species": ["odst"],
+   "pieces": "a Firefight character with a fixed look, two colors, an emblem and a helmet toggle",
+   "slots": {
+    "character": {"items": [
+     {"name": "The Rookie", "tag": "default", "unlock": "Default", "helmet": "always"},
+     {"name": "Romeo", "tag": "unlock", "unlock": "NMPD HQ achievement", "helmet": "toggle"},
+     {"name": "Dutch", "tag": "unlock", "unlock": "Uplift Reserve achievement", "helmet": "toggle"},
+     {"name": "Mickey", "tag": "unlock", "unlock": "Kizingo Boulevard achievement", "helmet": "toggle"},
+     {"name": "Buck", "tag": "unlock", "unlock": "Tayari Plaza achievement", "helmet": "toggle"},
+     {"name": "Dare", "tag": "unlock", "unlock": "Campaign Complete: Legendary achievement", "helmet": "toggle", "note": "her secondary color colors her whole helmet"},
+     {"name": "Sgt. Avery Johnson", "tag": "promo", "unlock": "pre-order bonus", "helmet": "never"}]},
+    "primary_color": {"colors": "the chestplate"},
+    "secondary_color": {"colors": "the shoulder pad and helmet decals"},
+    "emblem": {"shown": "large on the chestplate"},
+    "service_tag": {"chars": 4},
+    "helmet_toggle": {"note": "free toggle at any time, no gameplay effect"}
+   },
+   "not_original": ["a tertiary color (that slot is skin tone)", "Injured Romeo", "Bug-splattered Buck", "helmetless versions as separate unlock items"]
+  },
+  "reach": {
+   "name": "Halo: Reach",
+   "species": ["spartan", "elite"],
+   "pieces": "ten Spartan slots bought with credits (cR) and gated by rank (original Xbox 360 prices); whole-set Elite armor chosen by rank",
+   "slots": {
+    "helmet": {"species": "spartan", "armory_slot": 0, "variants": "each helmet = the base plus its attachment variants (Pilot has three)", "items": [
+     {"name": "Mark V [B]", "tag": "default", "unlock": "Default", "variants": [
+      {"name": "UA", "tag": "unlock", "unlock": "Recruit, 750 cR"}, {"name": "UA/HUL", "tag": "unlock", "unlock": "Corporal, 1,500 cR"}]},
+     {"name": "CQC", "tag": "default", "unlock": "Default", "variants": [
+      {"name": "CBRN", "tag": "unlock", "unlock": "Recruit, 750 cR"}, {"name": "UA/HUL", "tag": "unlock", "unlock": "Corporal, 1,500 cR"}]},
+     {"name": "ODST", "tag": "unlock", "unlock": "Recruit, 2,000 cR", "variants": [
+      {"name": "UA/CNM", "tag": "unlock", "unlock": "Corporal, 1,000 cR"}, {"name": "CBRN/HUL", "tag": "unlock", "unlock": "Sergeant, 500 cR"}]},
+     {"name": "HAZOP", "tag": "unlock", "unlock": "Recruit, 7,000 cR", "variants": [
+      {"name": "CBRN/HUL", "tag": "unlock", "unlock": "Sergeant, 2,000 cR"}, {"name": "CNM-I", "tag": "unlock", "unlock": "Captain, 1,000 cR"}]},
+     {"name": "EOD", "tag": "unlock", "unlock": "Sergeant, 15,000 cR", "variants": [
+      {"name": "CNM", "tag": "unlock", "unlock": "Sergeant, 5,000 cR"}, {"name": "UA/HUL", "tag": "unlock", "unlock": "Sergeant, 3,000 cR"}]},
+     {"name": "Operator", "tag": "unlock", "unlock": "Sergeant, 7,000 cR", "variants": [
+      {"name": "UA/HUL", "tag": "unlock", "unlock": "Sergeant, 2,000 cR"}, {"name": "CNM", "tag": "unlock", "unlock": "Sergeant, 1,000 cR"}]},
+     {"name": "Air Assault", "tag": "unlock", "unlock": "Warrant Officer, 15,000 cR", "variants": [
+      {"name": "UA/CNM", "tag": "unlock", "unlock": "Warrant Officer, 7,500 cR"}, {"name": "FC-I", "tag": "unlock", "unlock": "Warrant Officer, 5,000 cR"}]},
+     {"name": "Grenadier", "tag": "unlock", "unlock": "Warrant Officer, 25,000 cR", "variants": [
+      {"name": "UA", "tag": "unlock", "unlock": "Warrant Officer, 5,000 cR"}, {"name": "UA/FC", "tag": "unlock", "unlock": "Warrant Officer, 2,000 cR"}]},
+     {"name": "Scout", "tag": "unlock", "unlock": "Captain, 40,000 cR", "variants": [
+      {"name": "HU/RS", "tag": "unlock", "unlock": "Captain, 5,000 cR"}, {"name": "CBRN/CNM", "tag": "unlock", "unlock": "Captain, 5,000 cR"}]},
+     {"name": "EVA", "tag": "unlock", "unlock": "Major, 30,000 cR", "variants": [
+      {"name": "CNM", "tag": "unlock", "unlock": "Major, 7,000 cR"}, {"name": "UA/HUL[3]", "tag": "unlock", "unlock": "Lt. Colonel, 15,000 cR"}]},
+     {"name": "JFO", "tag": "unlock", "unlock": "Lt. Colonel, 60,000 cR", "variants": [
+      {"name": "HUL-I", "tag": "unlock", "unlock": "Lt. Colonel, 20,000 cR"}, {"name": "UA", "tag": "unlock", "unlock": "Lt. Colonel, 10,000 cR"}]},
+     {"name": "Mark V", "tag": "unlock", "unlock": "Lt. Colonel, 130,000 cR", "variants": [
+      {"name": "CNM", "tag": "unlock", "unlock": "Lt. Colonel, 10,000 cR"}, {"name": "UA", "tag": "unlock", "unlock": "Lt. Colonel, 15,000 cR"}]},
+     {"name": "Commando", "tag": "unlock", "unlock": "Commander, 85,000 cR", "variants": [
+      {"name": "CBRN/CNM", "tag": "unlock", "unlock": "Commander, 40,000 cR"}, {"name": "UA/FC-I[2]", "tag": "unlock", "unlock": "Commander, 40,000 cR"}]},
+     {"name": "EVA[C]", "tag": "unlock", "unlock": "Commander, 120,000 cR", "needs": "EVA", "variants": [
+      {"name": "CNM", "tag": "unlock", "unlock": "Commander, 25,000 cR"}, {"name": "UA/HUL[3]", "tag": "unlock", "unlock": "Commander, 140,000 cR"}]},
+     {"name": "Pilot", "tag": "unlock", "unlock": "Commander, 90,000 cR", "variants": [
+      {"name": "HUL[3]", "tag": "unlock", "unlock": "Commander, 25,000 cR"}, {"name": "UA/HUL[3]", "tag": "unlock", "unlock": "Commander, 55,000 cR"},
+      {"name": "Haunted", "tag": "unlock", "unlock": "Inheritor rank, all helmets bought"}]},
+     {"name": "Recon", "tag": "unlock", "unlock": "Colonel, 100,000 cR", "variants": [
+      {"name": "HUL", "tag": "unlock", "unlock": "Colonel, 75,000 cR"}, {"name": "UA/HUL(3)", "tag": "promo", "unlock": "pre-order / release-day code"}]},
+     {"name": "GUNGNIR", "tag": "unlock", "unlock": "Brigadier, 250,000 cR", "variants": [
+      {"name": "HU/RS", "tag": "unlock", "unlock": "Brigadier, 125,000 cR"}, {"name": "CBRN", "tag": "unlock", "unlock": "Mythic, 400,000 cR"}]},
+     {"name": "Mark VI", "tag": "unlock", "unlock": "Brigadier, 300,000 cR", "variants": [
+      {"name": "FC-I[2]", "tag": "unlock", "unlock": "Brigadier, 75,000 cR"}, {"name": "UA/HUL-I", "tag": "unlock", "unlock": "Brigadier, 75,000 cR"}]},
+     {"name": "Security", "tag": "unlock", "unlock": "General, 250,000 cR", "variants": [
+      {"name": "UA/HUL", "tag": "unlock", "unlock": "General, 200,000 cR"}, {"name": "CBRN/CNM", "tag": "unlock", "unlock": "Legend, 200,000 cR"}]},
+     {"name": "CQB", "tag": "promo", "unlock": "free Halo Waypoint download", "variants": [
+      {"name": "HU/RS/CNM", "tag": "promo", "unlock": "same Waypoint download"}, {"name": "UA/HUL", "tag": "promo", "unlock": "same Waypoint download"}]},
+     {"name": "Military Police", "tag": "promo", "unlock": "free Halo Waypoint download", "variants": [
+      {"name": "CBRN/HU/RS", "tag": "promo", "unlock": "same Waypoint download"}, {"name": "HU/RS/CNM", "tag": "promo", "unlock": "same Waypoint download"}]}]},
+    "left_shoulder": {"species": "spartan", "armory_slot": 1, "items": [
+     {"name": "Default (Mark V [B])", "tag": "default", "unlock": "Default"},
+     {"name": "FJ/PARA", "tag": "unlock", "unlock": "Recruit, 250 cR"},
+     {"name": "HAZOP", "tag": "unlock", "unlock": "Recruit, 500 cR"},
+     {"name": "JFO", "tag": "unlock", "unlock": "Recruit, 1,000 cR"},
+     {"name": "Recon", "tag": "unlock", "unlock": "Corporal, 1,500 cR"},
+     {"name": "EVA", "tag": "unlock", "unlock": "3,000 cR"},
+     {"name": "Jump Jet", "tag": "unlock", "unlock": "5,000 cR"},
+     {"name": "GUNGNIR", "tag": "unlock", "unlock": "8,000 cR"},
+     {"name": "CQC", "tag": "unlock", "unlock": "Lt. Colonel, 20,000 cR"},
+     {"name": "ODST", "tag": "unlock", "unlock": "Captain, 25,000 cR"},
+     {"name": "Operator", "tag": "unlock", "unlock": "Commander, 28,000 cR"},
+     {"name": "Commando", "tag": "unlock", "unlock": "Commander, 40,000 cR"},
+     {"name": "Grenadier", "tag": "unlock", "unlock": "Colonel, 65,000 cR"},
+     {"name": "Security", "tag": "unlock", "unlock": "General, 70,000 cR"},
+     {"name": "Sniper", "tag": "unlock", "unlock": "Brigadier, 80,000 cR"},
+     {"name": "UA/Multi-Threat", "tag": "unlock", "unlock": "Brigadier, 100,000 cR", "note": "listed under 'Mk V' in the 2011 table; verify the name"}]},
+    "right_shoulder": {"species": "spartan", "armory_slot": 2, "items": [
+     {"name": "Default (Mark V [B])", "tag": "default", "unlock": "Default"},
+     {"name": "FJ/PARA", "tag": "unlock", "unlock": "Recruit, 250 cR"},
+     {"name": "HAZOP", "tag": "unlock", "unlock": "Recruit, 500 cR"},
+     {"name": "JFO", "tag": "unlock", "unlock": "Recruit, 1,000 cR"},
+     {"name": "Recon", "tag": "unlock", "unlock": "Corporal, 1,500 cR"},
+     {"name": "EVA", "tag": "unlock", "unlock": "3,000 cR"},
+     {"name": "Jump Jet", "tag": "unlock", "unlock": "5,000 cR"},
+     {"name": "GUNGNIR", "tag": "unlock", "unlock": "8,000 cR"},
+     {"name": "CQC", "tag": "unlock", "unlock": "Lt. Colonel, 20,000 cR"},
+     {"name": "ODST", "tag": "unlock", "unlock": "Captain, 25,000 cR"},
+     {"name": "Operator", "tag": "unlock", "unlock": "Commander, 28,000 cR"},
+     {"name": "Commando", "tag": "unlock", "unlock": "Commander, 40,000 cR"},
+     {"name": "Grenadier", "tag": "unlock", "unlock": "Colonel, 65,000 cR"},
+     {"name": "Security", "tag": "unlock", "unlock": "General, 275,000 cR"},
+     {"name": "Sniper", "tag": "unlock", "unlock": "Brigadier, 75,000 cR"},
+     {"name": "UA/Multi-Threat", "tag": "unlock", "unlock": "Brigadier, 80,000 cR", "note": "listed under 'Mk V' in the 2011 table; verify the name"}]},
+    "chest": {"species": "spartan", "armory_slot": 3, "items": [
+     {"name": "Default", "tag": "default", "unlock": "Default"},
+     {"name": "UA/Counterassault", "tag": "unlock", "unlock": "600 cR"},
+     {"name": "HP/HALO", "tag": "unlock", "unlock": "Recruit, 600 cR"},
+     {"name": "UA/ODST", "tag": "unlock", "unlock": "Warrant Officer, 750 cR"},
+     {"name": "Tactical/LRP", "tag": "unlock", "unlock": "Recruit, 1,000 cR"},
+     {"name": "Tactical/Recon", "tag": "unlock", "unlock": "Warrant Officer, 1,500 cR"},
+     {"name": "UA/Multi-Threat", "tag": "unlock", "unlock": "2,000 cR", "note": "today's Halopedia says the plain model (no grenades) first appeared in MCC; check which MCC model this name maps to"},
+     {"name": "Collar/Grenadier", "tag": "unlock", "unlock": "Captain, 4,000 cR"},
+     {"name": "Tactical/Patrol", "tag": "unlock", "unlock": "Major, 4,000 cR"},
+     {"name": "HP/Parafoil", "tag": "unlock", "unlock": "Colonel, 8,000 cR"},
+     {"name": "Collar/Breacher", "tag": "unlock", "unlock": "Lt. Colonel, 8,000 cR"},
+     {"name": "UA/Base Security", "tag": "unlock", "unlock": "Major, 12,000 cR", "note": "today's Halopedia says the plain model (no grenades) first appeared in MCC; check which MCC model this name maps to"},
+     {"name": "Assault/Commando", "tag": "unlock", "unlock": "Colonel, 12,000 cR"},
+     {"name": "Assault/Sapper", "tag": "unlock", "unlock": "Commander, 14,000 cR"},
+     {"name": "Collar/Grenadier [UA]", "tag": "unlock", "unlock": "General, 40,000 cR"},
+     {"name": "Collar/Breacher [R]", "tag": "unlock", "unlock": "Lt. Colonel, 75,000 cR", "needs": "Collar/Breacher"},
+     {"name": "HP/Parafoil [R]", "tag": "unlock", "unlock": "Brigadier, 175,000 cR", "needs": "HP/Parafoil"},
+     {"name": "Assault/Sapper [R]", "tag": "unlock", "unlock": "General, 250,000 cR", "needs": "Assault/Sapper"},
+     {"name": "UA/Multi-Threat [W]", "tag": "promo", "unlock": "pre-order only"},
+     {"name": "UA/Base Security [W]", "tag": "promo", "unlock": "free Halo Waypoint download"}]},
+    "wrist": {"species": "spartan", "armory_slot": 4, "items": [
+     {"name": "Default", "tag": "default", "unlock": "Default"},
+     {"name": "UA/Buckler", "tag": "unlock", "unlock": "5,000 cR"},
+     {"name": "UA/Bracer", "tag": "unlock", "unlock": "10,000 cR"},
+     {"name": "Tactical/TACPAD", "tag": "unlock", "unlock": "Major, 50,000 cR"},
+     {"name": "Tactical/UGPS", "tag": "unlock", "unlock": "Lt. Colonel, 80,000 cR"},
+     {"name": "Assault/Breacher", "tag": "unlock", "unlock": "Colonel, 200,000 cR"}]},
+    "utility": {"species": "spartan", "armory_slot": 5, "items": [
+     {"name": "Default", "tag": "default", "unlock": "Default"},
+     {"name": "UA/Chobham", "tag": "unlock", "unlock": "30,000 cR", "needs": "Tactical/Hard Case"},
+     {"name": "Tactical/Hard Case", "tag": "unlock", "unlock": "Captain, 40,000 cR"},
+     {"name": "UA/NxRA", "tag": "unlock", "unlock": "Major, 40,000 cR", "needs": "Tactical/Hard Case"},
+     {"name": "Tactical/Trauma Kit", "tag": "unlock", "unlock": "Lt. Colonel, 60,000 cR", "needs": "Tactical/Hard Case"},
+     {"name": "Tactical/Soft Case", "tag": "unlock", "unlock": "Colonel, 100,000 cR"}]},
+    "knee_guards": {"species": "spartan", "armory_slot": 6, "items": [
+     {"name": "Default", "tag": "default", "unlock": "Default"},
+     {"name": "FJ/PARA", "tag": "unlock", "unlock": "10,000 cR"},
+     {"name": "GUNGNIR", "tag": "unlock", "unlock": "Captain, 25,000 cR"},
+     {"name": "Grenadier", "tag": "unlock", "unlock": "Lt. Colonel, 45,000 cR"}]},
+    "visor": {"species": "spartan", "armory_slot": 7, "items": [
+     {"name": "Default", "tag": "default", "unlock": "Default"},
+     {"name": "Silver", "tag": "unlock", "unlock": "Sergeant, 35,000 cR"},
+     {"name": "Blue", "tag": "unlock", "unlock": "Warrant Officer, 50,000 cR"},
+     {"name": "Black", "tag": "unlock", "unlock": "Lt. Colonel, 100,000 cR"},
+     {"name": "Gold", "tag": "unlock", "unlock": "Colonel, 250,000 cR"}]},
+    "armor_effect": {"species": "spartan", "armory_slot": 8, "items": [
+     {"name": "None", "tag": "default", "unlock": "Default", "note": "no effect, the game's default: not a row in the source, added so a bot without an effect has an item"},
+     {"name": "Birthday Party", "tag": "unlock", "unlock": "200,000 cR"},
+     {"name": "Heart Attack", "tag": "unlock", "unlock": "300,000 cR"},
+     {"name": "Pestilence", "tag": "unlock", "unlock": "1,000,000 cR"},
+     {"name": "Inclement Weather", "tag": "unlock", "unlock": "2,000,000 cR"},
+     {"name": "Legendary (Flaming Helmet)", "tag": "promo", "unlock": "Legendary Edition"},
+     {"name": "Eternal (blue flames)", "tag": "staff", "unlock": "Bungie employees only"}]},
+    "firefight_voice": {"armory_slot": null, "note": "one of armory slots 9-12 (not confirmed live)", "items": [
+     {"name": "Noble Six", "tag": "default", "unlock": "Default"},
+     {"name": "GySgt Stacker", "tag": "unlock", "unlock": "5,000 cR"},
+     {"name": "Jorge", "tag": "unlock", "unlock": "10,000 cR"},
+     {"name": "Jun", "tag": "unlock", "unlock": "10,000 cR"},
+     {"name": "Emile", "tag": "unlock", "unlock": "10,000 cR"},
+     {"name": "Kat", "tag": "unlock", "unlock": "10,000 cR"},
+     {"name": "Auntie Dot", "tag": "unlock", "unlock": "15,000 cR"},
+     {"name": "GySgt Buck", "tag": "unlock", "unlock": "15,000 cR"},
+     {"name": "Carter", "tag": "unlock", "unlock": "100,000 cR"},
+     {"name": "SgtMaj Johnson", "tag": "unlock", "unlock": "100,000 cR"},
+     {"name": "Cortana", "tag": "unlock", "unlock": "100,000 cR"},
+     {"name": "John S-117", "tag": "unlock", "unlock": "150,000 cR"}]},
+    "elite_armor": {"species": "elite", "armory_slot": 11, "note": "whole sets only, no piece mixing; slot 11 from Reach's slot-name table (elite_armor), not confirmed live", "items": [
+     {"name": "Minor", "tag": "default", "unlock": "Default"},
+     {"name": "Spec Ops", "tag": "unlock", "unlock": "Corporal"},
+     {"name": "Ranger", "tag": "unlock", "unlock": "Sergeant"},
+     {"name": "Ultra", "tag": "unlock", "unlock": "Warrant Officer"},
+     {"name": "Zealot", "tag": "unlock", "unlock": "Captain"},
+     {"name": "General", "tag": "unlock", "unlock": "Major"},
+     {"name": "Field Marshal", "tag": "unlock", "unlock": "Lt. Colonel"},
+     {"name": "Officer", "tag": "promo", "unlock": "Limited / Legendary Edition"}]},
+    "gender": {"items": [{"name": "Male", "tag": "default"}, {"name": "Female", "tag": "default"}], "note": "config +0x4C (clamped 0..2) found, photos inconclusive"},
+    "primary_color": {"names_verified": false},
+    "secondary_color": {"names_verified": false},
+    "emblem": {"tag": "default"},
+    "service_tag": {"chars": 4}
+   },
+   "elites_mostly_in": ["Invasion", "custom games"],
+   "not_original": ["AKIS and Mariner helmets and their attachments (incl. Mister Chief, OPTREX)", "the robot-arm '[R]' chests added in Series 5", "EXO/TSCS and GRD supplemental armor", "Fractures helmets (Belos, Blackguard, Drengr)"],
+   "open": ["which MCC models the names UA/Multi-Threat and UA/Base Security (chest) map to: MCC lists both the plain and the [W] chests as separate items (HR_Chest_UAMultiThreat / _UAMultiThreatW, _UABaseSecurity / _UABaseSecurityW)", "the shoulder the 2011 table calls 'Mk V': MCC lists HR_LeftShoulder_MjolnirMarkV as well as _UAMultiThreat and _UABaseSecurity; most likely the original is MjolnirMarkV and the UA/Multi-Threat and UA/Base Security shoulders are MCC additions like the plain chests (check in game)", "the 30 Reach colors MCC lists (HR_Color_*) are not named in the source"],
+   "settled": ["the original '[R]' chests are MCC's HR_Chest_CollarBreacherR, _HPParaFoilR and _AssaultSapperR; MCC's Series 5 robot-arm chests are separate items named *_RoboArm (tools/original_vs_mcc.py, Oct 24)", "Legendary (Flaming Helmet) is MCC's HR_ArmorEffect_Flames, Eternal is _BlueFlames, and 'None' is _Default"]
+  },
+  "h4": {
+   "name": "Halo 4",
+   "species": ["spartan"],
+   "pieces": "helmet, chest, left and right shoulders, forearms, legs, visor, per-piece armor skins and a stance; chest and shoulders use the helmet set names (the unlock below is the helmet's)",
+   "slots": {
+    "armor_set": {"applies_to": ["helmet", "chest", "left_shoulder", "right_shoulder"], "items": [
+     {"name": "Recruit", "tag": "default", "unlock": "Default"},
+     {"name": "Warrior", "tag": "unlock", "unlock": "SR-8"},
+     {"name": "Air Assault", "tag": "unlock", "unlock": "SR-11"},
+     {"name": "Soldier", "tag": "unlock", "unlock": "SR-15"},
+     {"name": "Aviator", "tag": "unlock", "unlock": "SR-17"},
+     {"name": "Defender", "tag": "unlock", "unlock": "SR-24"},
+     {"name": "Recon", "tag": "unlock", "unlock": "SR-26"},
+     {"name": "EVA", "tag": "unlock", "unlock": "SR-27"},
+     {"name": "War Master", "tag": "unlock", "unlock": "SR-37"},
+     {"name": "Scout", "tag": "unlock", "unlock": "SR-38"},
+     {"name": "Orbital", "tag": "unlock", "unlock": "SR-41"},
+     {"name": "Infiltrator", "tag": "unlock", "unlock": "SR-42"},
+     {"name": "HAZOP", "tag": "unlock", "unlock": "SR-43"},
+     {"name": "EOD", "tag": "unlock", "unlock": "SR-45"},
+     {"name": "Oceanic", "tag": "unlock", "unlock": "SR-47"},
+     {"name": "Enforcer", "tag": "unlock", "unlock": "SR-50"},
+     {"name": "Wetwork", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Operator", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Pioneer", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Pathfinder", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Engineer", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Stalker", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Rogue", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Tracker", "tag": "unlock", "unlock": "Specialization level 4 (chest at level 2)", "open": "Specializations opened by rank or the War Games Map Pass: not checked"},
+     {"name": "Vanguard", "tag": "unlock", "unlock": "Forerunner Destroyer commendation"},
+     {"name": "CIO", "tag": "unlock", "unlock": "Spartan Slayer commendation"},
+     {"name": "Venator", "tag": "unlock", "unlock": "Assassin commendation"},
+     {"name": "GUNGNIR", "tag": "unlock", "unlock": "Slayer Victory commendation"},
+     {"name": "Commando", "tag": "unlock", "unlock": "Dominion Victory commendation"},
+     {"name": "Ranger", "tag": "unlock", "unlock": "Combat Opportunity commendation"},
+     {"name": "Protector", "tag": "unlock", "unlock": "UNSC Loadout Mastery commendation"},
+     {"name": "Mark VI", "tag": "unlock", "unlock": "Legend commendation"},
+     {"name": "Raider", "tag": "promo", "unlock": "Halo Waypoint Classified (Requiem Archive I)"},
+     {"name": "Deadeye", "tag": "promo", "unlock": "pre-order (Best Buy / Play.com)"},
+     {"name": "Locus", "tag": "promo", "unlock": "pre-order (MightyApe / HMV)"},
+     {"name": "Scanner", "tag": "promo", "unlock": "DLC: War Games Map Pass"},
+     {"name": "Strider", "tag": "promo", "unlock": "DLC: War Games Map Pass"},
+     {"name": "FOTUS", "tag": "promo", "unlock": "Halo 4 Limited Edition console"},
+     {"name": "Mark V", "tag": "promo", "unlock": "DLC: Infinity Armor Pack / Champions Bundle"},
+     {"name": "ODST", "tag": "promo", "unlock": "DLC: Infinity Armor Pack / Champions Bundle"},
+     {"name": "Prefect", "tag": "promo", "unlock": "DLC: Infinity Armor Pack / Champions Bundle"},
+     {"name": "Ricochet", "tag": "promo", "unlock": "DLC: Bullseye Pack / Champions Bundle"}]},
+    "forearms": {"note": "per-item unlocks not checked; all ten are original", "items": [
+     {"name": "Contoured", "tag": "unlock"}, {"name": "GV-09 Locking", "tag": "unlock"}, {"name": "Inner-plated", "tag": "unlock"},
+     {"name": "LG-50 Bulk", "tag": "unlock"}, {"name": "Outer-plated", "tag": "unlock"}, {"name": "Over-locking", "tag": "unlock"},
+     {"name": "RG-63 Counter", "tag": "unlock"}, {"name": "Twin-plated", "tag": "unlock"}, {"name": "XG-89 Narrow", "tag": "unlock"},
+     {"name": "XV-27 Shifting", "tag": "unlock"}]},
+    "legs": {"same_as": "forearms"},
+    "armor_skin": {"note": "each skin belongs to one set; the unlock shown is the helmet skin's", "items": [
+     {"name": "MTRX", "tag": "unlock", "unlock": "commendations"}, {"name": "VERG", "tag": "unlock", "unlock": "commendations"},
+     {"name": "ZNTH", "tag": "unlock", "unlock": "commendations"}, {"name": "BOND", "tag": "unlock", "unlock": "commendations"},
+     {"name": "CTRL", "tag": "unlock", "unlock": "commendations"}, {"name": "SURG", "tag": "unlock", "unlock": "commendations"},
+     {"name": "BRCH", "tag": "unlock", "unlock": "commendations"}, {"name": "PRML", "tag": "unlock", "unlock": "commendations"},
+     {"name": "APEX", "tag": "unlock", "unlock": "commendations"}, {"name": "AEON", "tag": "unlock", "unlock": "commendations"},
+     {"name": "TRAC", "tag": "unlock", "unlock": "commendations"}, {"name": "SHDW", "tag": "unlock", "unlock": "commendations"},
+     {"name": "TRBL", "tag": "unlock", "unlock": "commendations"}, {"name": "CNVG", "tag": "unlock", "unlock": "commendations"},
+     {"name": "FRCT", "tag": "unlock", "unlock": "commendations"}, {"name": "STRK", "tag": "unlock", "unlock": "commendations"},
+     {"name": "DRFT", "tag": "unlock", "unlock": "commendations"},
+     {"name": "SHRD", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"}, {"name": "SRFC", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"},
+     {"name": "ADPT", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"}, {"name": "CORE", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"},
+     {"name": "EDGE", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"}, {"name": "CRSH", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"},
+     {"name": "FCUS", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"}, {"name": "ADRT", "tag": "unlock", "unlock": "specialization level 9 (chest at 7)"},
+     {"name": "PRME", "tag": "promo", "unlock": "Limited Edition"},
+     {"name": "FRST", "tag": "promo", "unlock": "pre-order (GameStop)"}, {"name": "CRCT", "tag": "promo", "unlock": "pre-order (Walmart)"},
+     {"name": "WEB", "tag": "promo", "unlock": "pre-order (Amazon)"}, {"name": "RPTR", "tag": "promo", "unlock": "pre-order (Best Buy)"},
+     {"name": "PULS", "tag": "promo", "unlock": "pre-order (Microsoft)"},
+     {"name": "VISN", "tag": "promo", "unlock": "Waypoint Classified"}, {"name": "RUSH", "tag": "promo", "unlock": "Waypoint Classified"},
+     {"name": "DSTT", "tag": "promo", "unlock": "Requiem Archive II"}, {"name": "SWFT", "tag": "promo", "unlock": "Section 3 code"},
+     {"name": "TOXC", "tag": "promo", "unlock": "McFarlane figure code"}, {"name": "RUIN", "tag": "promo", "unlock": "McFarlane figure code"},
+     {"name": "RFCT", "tag": "promo", "unlock": "McFarlane figure code"},
+     {"name": "CLMN", "tag": "promo", "unlock": "DLC: Champions Bundle / Bullseye Pack"}, {"name": "PYTN", "tag": "promo", "unlock": "DLC: Champions Bundle / Bullseye Pack"},
+     {"name": "SLID", "tag": "promo", "unlock": "DLC: Champions Bundle / Bullseye Pack"}, {"name": "TRCR", "tag": "promo", "unlock": "DLC: Champions Bundle / Bullseye Pack"},
+     {"name": "BYNT", "tag": "promo", "unlock": "DLC: Champions Bundle / Bullseye Pack"}, {"name": "HMTM", "tag": "promo", "unlock": "DLC: Champions Bundle / Bullseye Pack"}]},
+    "primary_color": {"names_verified": false},
+    "secondary_color": {"names_verified": false},
+    "visor_color": {"names_verified": false, "note": "several visor colors existed; the full list is not captured"},
+    "stance": {"tag": "default"},
+    "emblem": {"tag": "default"},
+    "service_tag": {"chars": 4},
+    "weapon_skin": {"names_verified": false, "note": "original loadout weapon skins existed; list not captured"}
+   },
+   "not_original": ["Keystone helmet", "armor effects (Pestilence, Birthday Party, Eternal and the rest did not exist in Halo 4)", "MCC-exclusive weapon skins such as Pixel, Maw, Edgework and the Magnum Blood skin", "Elites in multiplayer"],
+   "open": ["color and visor name lists", "whether Specialization armor is Unlock or DLC (how Specializations were opened)"]
+  }
+ }
+}

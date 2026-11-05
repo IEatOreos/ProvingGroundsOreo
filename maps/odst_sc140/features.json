@@ -1,0 +1,984 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+3.091,
+-1.089,
+1.663
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+2.496,
+-4.327,
+1.525
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+6.245,
+-2.682,
+1.525
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+2.349,
+-3.952,
+1.521
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+0.41,
+-2.925,
+1.521
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+1.321,
+-6.329,
+1.529
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+31.461,
+3.378,
+0.525
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+17.589,
+14.61,
+0.525
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+-17.343,
+-14.404,
+1.529
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+-30.41,
+-18.616,
+-0.365
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+7.126,
+-1.801,
+1.527
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+4.09,
+1.443,
+1.528
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+8.884,
+0.715,
+1.534
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-1.354,
+-4.086,
+1.526
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-0.04,
+-6.298,
+1.526
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "brute_shot",
+"pos": [
+-1.432,
+-6.962,
+1.528
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+-0.549,
+-8.892,
+1.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+6.195,
+0.231,
+1.599
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+12.513,
+46.163,
+-0.476
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+25.461,
+24.68,
+-0.479
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+28.234,
+21.581,
+-0.472
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-10.504,
+-29.83,
+0.612
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+-36.995,
+-42.632,
+-3.109
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-2.909,
+-31.482,
+0.549
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-3.205,
+-31.753,
+0.546
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-34.378,
+-25.337,
+-0.459
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "claymore_grenade",
+"pos": [
+6.218,
+-0.124,
+1.605
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-1.62,
+-4.303,
+1.547
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+7.49,
+-2.643,
+1.542
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+0.431,
+-3.391,
+1.541
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+6.597,
+-3.241,
+1.544
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+-45.109,
+-29.202,
+-2.01
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+-44.942,
+-29.468,
+-2.01
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+-21.483,
+-25.248,
+-0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+30.865,
+2.566,
+0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+31.355,
+2.791,
+0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+3.416,
+-3.219,
+1.679
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+2.897,
+-2.715,
+1.696
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+12.979,
+44.964,
+-0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+25.215,
+24.983,
+-0.499
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+24.94,
+23.955,
+-0.499
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+28.349,
+21.125,
+-0.499
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+2.612,
+-2.998,
+1.679
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-21.966,
+-29.409,
+-0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-2.519,
+-23.88,
+-0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-43.704,
+-32.051,
+0.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+-23.02,
+-29.482,
+-0.399
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "missile_pod",
+"pos": [
+-27.257,
+-32.269,
+-0.5
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "missile_pod",
+"pos": [
+-6.907,
+-33.257,
+0.5
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+-38.457,
+-7.963,
+2.437
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+8.28,
+2.237,
+3.648
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+3.597,
+38.594,
+3.327
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-20.532,
+-20.041,
+1.562
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+12.513,
+46.163,
+-0.476
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-25.8,
+-27.0,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-20.2,
+-27.0,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-23.0,
+-24.2,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-23.0,
+-20.97,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-27.75,
+-11.0,
+1.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-18.25,
+-11.0,
+1.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-6.8,
+-25.0,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-39.1,
+-21.0,
+0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-38.151,
+-9.867,
+1.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-47.272,
+-12.271,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-49.56,
+-14.56,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-53.514,
+-18.513,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-2.407,
+-8.407,
+1.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+8.465,
+2.465,
+1.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+27.0,
+20.2,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+27.0,
+25.8,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+25.0,
+6.8,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+21.0,
+39.2,
+0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+12.271,
+47.272,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+14.549,
+49.55,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+14.562,
+53.523,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+18.522,
+49.564,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+18.512,
+53.514,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+9.868,
+38.148,
+1.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-26.9,
+-27.0,
+4.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-19.1,
+-27.0,
+4.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-37.0,
+-33.8,
+-2.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-9.0,
+-33.8,
+-2.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+27.0,
+26.9,
+4.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+27.0,
+19.1,
+4.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+33.8,
+9.0,
+-2.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+33.8,
+37.0,
+-2.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-60.651,
+-8.368,
+-0.5
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+24.2,
+23.0,
+4.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "door_ext",
+"pos": [
+-48.781,
+-19.291,
+4.0
+],
+"group": "machines"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-38.13,
+-9.79,
+1.5
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-37.001,
+-28.061,
+-0.502
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-8.991,
+-28.062,
+-0.485
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-2.377,
+-8.419,
+1.5
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

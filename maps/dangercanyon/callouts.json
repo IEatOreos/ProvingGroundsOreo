@@ -1,0 +1,860 @@
+{
+ "map": "dangercanyon",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": -0.24,
+ "points": {
+  "mid": [
+   -0.07,
+   19.61,
+   -1.13
+  ],
+  "mid_hill": [
+   2.93,
+   54.61,
+   0.14
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    -12.11,
+    -3.44,
+    -2.24
+   ],
+   [
+    -8.38,
+    -8.14,
+    -4.03
+   ],
+   [
+    -8.37,
+    1.26,
+    -4.03
+   ]
+  ],
+  "blue": [
+   [
+    12.01,
+    -3.45,
+    -2.24
+   ],
+   [
+    8.28,
+    1.25,
+    -4.03
+   ],
+   [
+    8.27,
+    -8.15,
+    -4.03
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   1.45,
+   -3.44,
+   -4.02
+  ],
+  [
+   1.7,
+   -10.68,
+   -4.05
+  ],
+  [
+   1.85,
+   2.08,
+   -4.04
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Red base": {
+   "poly": [
+    [
+     -29.0,
+     -16.5
+    ],
+    [
+     -1.0,
+     -16.5
+    ],
+    [
+     -1.0,
+     4.5
+    ],
+    [
+     -29.0,
+     4.5
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "the red base at the south end: the raised red flag pad and the yard where the red vehicles park",
+   "aka": [
+    "red flag",
+    "red yard",
+    "red"
+   ],
+   "area": false
+  },
+  "Red tunnel": {
+   "poly": [
+    [
+     -6.0,
+     18.5
+    ],
+    [
+     -6.0,
+     23.0
+    ],
+    [
+     -15.0,
+     23.0
+    ],
+    [
+     -15.0,
+     35.5
+    ],
+    [
+     -8.5,
+     35.5
+    ],
+    [
+     -8.5,
+     30.0
+    ],
+    [
+     -10.5,
+     30.0
+    ],
+    [
+     -10.5,
+     23.5
+    ],
+    [
+     -22.0,
+     23.5
+    ],
+    [
+     -27.0,
+     30.5
+    ],
+    [
+     -31.0,
+     28.5
+    ],
+    [
+     -25.0,
+     21.5
+    ],
+    [
+     -25.0,
+     18.5
+    ]
+   ],
+   "side": "red",
+   "priority": 26,
+   "full": "the red-side tunnels: from the middle room past the flamethrower out to the red rockets, and the branch north to top mid",
+   "aka": [
+    "red tunnels",
+    "tunnels"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Red rockets": {
+   "poly": [
+    [
+     -25.1,
+     25.8
+    ],
+    [
+     -25.57,
+     27.55
+    ],
+    [
+     -26.85,
+     28.83
+    ],
+    [
+     -28.6,
+     29.3
+    ],
+    [
+     -30.35,
+     28.83
+    ],
+    [
+     -31.63,
+     27.55
+    ],
+    [
+     -32.1,
+     25.8
+    ],
+    [
+     -31.63,
+     24.05
+    ],
+    [
+     -30.35,
+     22.77
+    ],
+    [
+     -28.6,
+     22.3
+    ],
+    [
+     -26.85,
+     22.77
+    ],
+    [
+     -25.57,
+     24.05
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "rocket launcher at the red-side tunnel mouth onto the canyon",
+   "aka": [
+    "red rocket launcher"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Red bridge": {
+   "poly": [
+    [
+     -12.5,
+     35.5
+    ],
+    [
+     -6.5,
+     35.5
+    ],
+    [
+     -6.5,
+     52.0
+    ],
+    [
+     -12.5,
+     52.0
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "the red-side bridge from top mid over the low middle to the ridge",
+   "aka": [
+    "bridges",
+    "bridge"
+   ],
+   "area": false,
+   "zmin": -3.5
+  },
+  "Blue base": {
+   "poly": [
+    [
+     29.0,
+     4.5
+    ],
+    [
+     1.0,
+     4.5
+    ],
+    [
+     1.0,
+     -16.5
+    ],
+    [
+     29.0,
+     -16.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "the blue base at the south end: the raised blue flag pad and the yard where the blue vehicles park",
+   "aka": [
+    "blue flag",
+    "blue yard",
+    "blue"
+   ],
+   "area": false
+  },
+  "Blue tunnel": {
+   "poly": [
+    [
+     25.0,
+     18.5
+    ],
+    [
+     25.0,
+     21.5
+    ],
+    [
+     31.0,
+     28.5
+    ],
+    [
+     27.0,
+     30.5
+    ],
+    [
+     22.0,
+     23.5
+    ],
+    [
+     10.5,
+     23.5
+    ],
+    [
+     10.5,
+     30.0
+    ],
+    [
+     8.5,
+     30.0
+    ],
+    [
+     8.5,
+     35.5
+    ],
+    [
+     15.0,
+     35.5
+    ],
+    [
+     15.0,
+     23.0
+    ],
+    [
+     6.0,
+     23.0
+    ],
+    [
+     6.0,
+     18.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 26,
+   "full": "the blue-side tunnels: from the middle room past the flamethrower out to the blue rockets, and the branch north to top mid",
+   "aka": [
+    "blue tunnels",
+    "tunnels"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Blue rockets": {
+   "poly": [
+    [
+     25.57,
+     24.05
+    ],
+    [
+     26.85,
+     22.77
+    ],
+    [
+     28.6,
+     22.3
+    ],
+    [
+     30.35,
+     22.77
+    ],
+    [
+     31.63,
+     24.05
+    ],
+    [
+     32.1,
+     25.8
+    ],
+    [
+     31.63,
+     27.55
+    ],
+    [
+     30.35,
+     28.83
+    ],
+    [
+     28.6,
+     29.3
+    ],
+    [
+     26.85,
+     28.83
+    ],
+    [
+     25.57,
+     27.55
+    ],
+    [
+     25.1,
+     25.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "rocket launcher at the blue-side tunnel mouth onto the canyon",
+   "aka": [
+    "blue rocket launcher"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Blue bridge": {
+   "poly": [
+    [
+     12.5,
+     52.0
+    ],
+    [
+     6.5,
+     52.0
+    ],
+    [
+     6.5,
+     35.5
+    ],
+    [
+     12.5,
+     35.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "the blue-side bridge from top mid over the low middle to the ridge",
+   "aka": [
+    "bridges",
+    "bridge"
+   ],
+   "area": false,
+   "zmin": -3.5
+  },
+  "Middle room": {
+   "poly": [
+    [
+     6.5,
+     19.5
+    ],
+    [
+     6.01,
+     21.99
+    ],
+    [
+     4.6,
+     24.1
+    ],
+    [
+     2.49,
+     25.51
+    ],
+    [
+     0.0,
+     26.0
+    ],
+    [
+     -2.49,
+     25.51
+    ],
+    [
+     -4.6,
+     24.1
+    ],
+    [
+     -6.01,
+     21.99
+    ],
+    [
+     -6.5,
+     19.5
+    ],
+    [
+     -6.01,
+     17.01
+    ],
+    [
+     -4.6,
+     14.9
+    ],
+    [
+     -2.49,
+     13.49
+    ],
+    [
+     -0.0,
+     13.0
+    ],
+    [
+     2.49,
+     13.49
+    ],
+    [
+     4.6,
+     14.9
+    ],
+    [
+     6.01,
+     17.01
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "round central room in the tunnels: fuel rod, two sniper rifles; corridors to both tunnels, the bases and top mid",
+   "aka": [
+    "mid room",
+    "center room",
+    "fuel rod room"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Middle tunnel": {
+   "poly": [
+    [
+     -5.5,
+     3.5
+    ],
+    [
+     5.5,
+     3.5
+    ],
+    [
+     5.5,
+     13.5
+    ],
+    [
+     -5.5,
+     13.5
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "the middle tunnel from the bases' yards north into the middle room",
+   "aka": [
+    "mid tunnel",
+    "center tunnel",
+    "tunnels"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Top mid": {
+   "poly": [
+    [
+     -8.5,
+     28.0
+    ],
+    [
+     8.5,
+     28.0
+    ],
+    [
+     8.5,
+     35.5
+    ],
+    [
+     -8.5,
+     35.5
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "the junction at the top of the tunnels where the bridges start (two shotguns)",
+   "aka": [
+    "top middle"
+   ],
+   "area": false,
+   "zmin": -3.0
+  },
+  "Ridge": {
+   "poly": [
+    [
+     -17.0,
+     51.0
+    ],
+    [
+     17.0,
+     51.0
+    ],
+    [
+     17.0,
+     59.0
+    ],
+    [
+     -17.0,
+     59.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "the ridge across the far end of the bridges: overshield, sniper rifle, pistol, frags, the portal down",
+   "aka": [
+    "the ridge",
+    "OS",
+    "overshield",
+    "sniper spawn",
+    "snipe spawn"
+   ],
+   "area": false,
+   "zmin": -3.5
+  },
+  "Portal": {
+   "poly": [
+    [
+     -3.0,
+     56.0
+    ],
+    [
+     2.0,
+     56.0
+    ],
+    [
+     2.0,
+     59.5
+    ],
+    [
+     -3.0,
+     59.5
+    ]
+   ],
+   "side": "mid",
+   "priority": 40,
+   "full": "teleporter on the ridge, down to the low middle",
+   "aka": [
+    "ridge portal",
+    "teleporter",
+    "tele"
+   ],
+   "area": false,
+   "zmin": -3.5
+  },
+  "Portal exit": {
+   "poly": [
+    [
+     -3.0,
+     43.5
+    ],
+    [
+     3.0,
+     43.5
+    ],
+    [
+     3.0,
+     52.0
+    ],
+    [
+     -3.0,
+     52.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "low middle where the ridge portal comes out: fuel rod, two Ghosts",
+   "aka": [
+    "bottom portal",
+    "low fuel rod"
+   ],
+   "area": false,
+   "zmax": -4.5
+  },
+  "Middle power-ups": {
+   "poly": [
+    [
+     2.9,
+     40.5
+    ],
+    [
+     2.5,
+     42.0
+    ],
+    [
+     1.4,
+     43.1
+    ],
+    [
+     -0.1,
+     43.5
+    ],
+    [
+     -1.6,
+     43.1
+    ],
+    [
+     -2.7,
+     42.0
+    ],
+    [
+     -3.1,
+     40.5
+    ],
+    [
+     -2.7,
+     39.0
+    ],
+    [
+     -1.6,
+     37.9
+    ],
+    [
+     -0.1,
+     37.5
+    ],
+    [
+     1.4,
+     37.9
+    ],
+    [
+     2.5,
+     39.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "random power-up spawn (camo) on the canyon floor under the bridges",
+   "aka": [
+    "middle power-up",
+    "power-ups",
+    "middle camo"
+   ],
+   "area": false,
+   "zmax": -4.5
+  },
+  "Bottom mid": {
+   "poly": [
+    [
+     -15.0,
+     32.0
+    ],
+    [
+     15.0,
+     32.0
+    ],
+    [
+     15.0,
+     58.0
+    ],
+    [
+     -15.0,
+     58.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 22,
+   "full": "the low canyon floor in the middle, under the bridges and the ridge",
+   "aka": [
+    "bottom middle",
+    "low middle",
+    "under the bridges"
+   ],
+   "area": false,
+   "zmax": -4.5
+  },
+  "Mid": {
+   "poly": [
+    [
+     -15,
+     5
+    ],
+    [
+     15,
+     5
+    ],
+    [
+     15,
+     62
+    ],
+    [
+     -15,
+     62
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the middle: tunnels, bridges, ridge and the low canyon under them",
+   "aka": [
+    "middle",
+    "center"
+   ],
+   "area": true
+  },
+  "Red side": {
+   "poly": [
+    [
+     -65,
+     -20
+    ],
+    [
+     0,
+     -20
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     -15,
+     5
+    ],
+    [
+     -15,
+     62
+    ],
+    [
+     -65,
+     62
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "red's half: red base and the west arm of the canyon",
+   "aka": [
+    "red half",
+    "red"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     65,
+     -20
+    ],
+    [
+     65,
+     62
+    ],
+    [
+     15,
+     62
+    ],
+    [
+     15,
+     5
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     0,
+     -20
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "blue's half: blue base and the east arm of the canyon",
+   "aka": [
+    "blue half",
+    "blue"
+   ],
+   "area": true
+  }
+ }
+}

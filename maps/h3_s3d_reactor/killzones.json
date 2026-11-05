@@ -1,0 +1,4 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_floor", "center": [0.239, -0.773, -8.912], "size": [100.0, 100.0, 13.424]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_reactor", "center": [-4.346, 4.847, -1.467], "size": [13.863, 12.045, 1.098]}
+]}

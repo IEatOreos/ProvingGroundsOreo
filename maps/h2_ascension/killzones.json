@@ -1,0 +1,6 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_clouds", "center": [3.548, 1.188, -24.308], "size": [106.615, 114.985, 22.95]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_crossbeam", "center": [-0.022, -12.474, -4.446], "size": [0.76, 1.975, 1.713]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_crossbeam_low", "center": [-0.005, -8.9, -8.452], "size": [0.979, 2.2, 2.003]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_way_low", "center": [12.637, 12.722, -10.566], "size": [2.467, 2.443, 1.649], "rotation": {"forward": [0.70768, -0.70653, 0.0], "up": [0.0, 0.0, 1.0]}}
+]}

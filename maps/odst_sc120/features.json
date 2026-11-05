@@ -1,0 +1,502 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+151.641,
+7.53,
+6.923
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+120.548,
+34.267,
+5.923
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+122.168,
+36.389,
+6.034
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+160.74,
+-0.459,
+6.497
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+152.234,
+-0.895,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+152.227,
+-1.536,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+152.942,
+7.535,
+6.943
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+152.32,
+-1.237,
+6.877
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+150.955,
+7.317,
+6.942
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+152.087,
+7.582,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+152.846,
+-4.61,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+151.837,
+7.27,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+152.951,
+8.474,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+152.824,
+-4.912,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+119.067,
+32.49,
+5.494
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+119.425,
+32.779,
+5.58
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "smg_ammo",
+"pos": [
+123.978,
+33.65,
+5.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+119.179,
+32.762,
+5.59
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_small",
+"pos": [
+120.851,
+34.577,
+5.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+152.484,
+7.921,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+153.38,
+-5.477,
+6.9
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+141.073,
+16.732,
+5.445
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+141.499,
+17.483,
+5.445
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+136.587,
+7.106,
+4.948
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+135.93,
+7.283,
+4.948
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+134.956,
+8.012,
+4.948
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+135.351,
+8.223,
+4.948
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "pistol_ammo",
+"pos": [
+121.765,
+36.494,
+6.0
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "pistol_ammo",
+"pos": [
+152.208,
+6.684,
+6.893
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "pistol_ammo",
+"pos": [
+151.94,
+-5.041,
+6.893
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+161.019,
+-0.36,
+6.463
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "pistol_ammo",
+"pos": [
+160.688,
+-0.072,
+6.463
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+161.101,
+0.06,
+6.507
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+137.89,
+-3.985,
+5.723
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+137.839,
+3.956,
+5.723
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+151.613,
+-1.843,
+6.893
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+151.771,
+3.717,
+6.893
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+170.597,
+0.814,
+5.515
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+119.179,
+32.762,
+5.59
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+128.2,
+17.209,
+7.492
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+133.565,
+14.853,
+6.092
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+127.399,
+0.07,
+6.233
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+128.2,
+-17.212,
+7.492
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+133.581,
+-14.814,
+6.092
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+142.472,
+-27.131,
+9.492
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+142.473,
+27.121,
+9.492
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

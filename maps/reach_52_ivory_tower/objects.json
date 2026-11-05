@@ -1,0 +1,7909 @@
+{
+ "netgame_flags": [
+  {
+   "type": "ctf - flag",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -27.195,
+    -161.457,
+    243.06
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -27.195,
+    -161.457,
+    243.06
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.191,
+    -172.668,
+    243.148
+   ],
+   "facing": 0.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.786,
+    -174.642,
+    244.598
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.102,
+    -175.782,
+    241.148
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -39.621,
+    -174.749,
+    242.253
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "oddball_ball",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.222,
+    -180.545,
+    245.251
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "terr_object",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.232,
+    -169.063,
+    243.08
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "terr_object",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.779,
+    -174.66,
+    243.08
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 2.5,
+    "l": 2.5,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "terr_object",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -39.219,
+    -174.725,
+    244.98
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 3.0,
+    "l": 3.5,
+    "up": 1.5,
+    "down": 0.2
+   }
+  },
+  {
+   "type": "terr_object",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -30.955,
+    -175.31,
+    241.18
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.25,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "terr_object",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 2.0,
+    "l": 2.0,
+    "up": 2.0,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "stp_goal",
+   "id": 0,
+   "team": 2,
+   "pos": [
+    -16.799,
+    -174.654,
+    243.08
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 2.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "stp_goal",
+   "id": 0,
+   "team": 3,
+   "pos": [
+    -37.777,
+    -174.739,
+    241.18
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 2.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "stp_goal",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    -27.233,
+    -184.392,
+    241.787
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 2.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "stp_goal",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -27.22,
+    -161.805,
+    243.06
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 2.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -21.725,
+    -170.131,
+    245.281
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.19,
+    -161.451,
+    245.26
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -32.899,
+    -172.54,
+    245.28
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -39.335,
+    -167.177,
+    245.798
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -38.429,
+    -174.747,
+    246.597
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -36.158,
+    -181.774,
+    246.58
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.404,
+    -184.831,
+    247.28
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -17.535,
+    -184.297,
+    247.28
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.186,
+    -172.668,
+    243.18
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.221,
+    -181.023,
+    245.281
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.23,
+    -189.822,
+    241.88
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -18.383,
+    -189.535,
+    242.78
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "stp_flag",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -36.107,
+    -189.628,
+    242.28
+   ],
+   "facing": 0.0,
+   "object": "mp_flag_base"
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.207,
+    -161.432,
+    245.26
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.1
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.205,
+    -180.559,
+    245.28
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -36.078,
+    -181.771,
+    246.58
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.404,
+    -185.031,
+    247.281
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -17.55,
+    -184.215,
+    247.283
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -17.191,
+    -180.919,
+    243.58
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -37.542,
+    -174.737,
+    241.18
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.0,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.609,
+    -174.64,
+    243.08
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "ctf - flag",
+   "id": 2,
+   "team": 2,
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 2,
+   "team": 2,
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 3,
+   "team": 3,
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 3,
+   "team": 3,
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "hh_drop_point",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.232,
+    -169.064,
+    243.08
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.25
+   }
+  },
+  {
+   "type": "ctf - flag",
+   "id": 8,
+   "team": 8,
+   "pos": [
+    -38.427,
+    -174.75,
+    246.597
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 8,
+   "team": 8,
+   "pos": [
+    -38.427,
+    -174.75,
+    246.597
+   ],
+   "facing": 180.0
+  },
+  {
+   "type": "as_bomb",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    -27.238,
+    -184.39,
+    241.833
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "as_bomb",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -27.195,
+    -161.457,
+    243.156
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "as_bomb",
+   "id": 0,
+   "team": 2,
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "as_bomb",
+   "id": 0,
+   "team": 3,
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "as_bomb",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -14.166,
+    -180.171,
+    246.28
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon"
+  },
+  {
+   "type": "as_goal",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "facing": 0.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "as_goal",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -27.195,
+    -161.457,
+    243.06
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "as_goal",
+   "id": 0,
+   "team": 2,
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "as_goal",
+   "id": 0,
+   "team": 3,
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "as_goal",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.226,
+    -180.887,
+    245.28
+   ],
+   "facing": 180.0,
+   "object": "mp_circle"
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.23,
+    -181.363,
+    245.28
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.22,
+    -189.45,
+    241.88
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 3.0,
+    "l": 2.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -37.548,
+    -174.723,
+    241.18
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 2.0,
+    "l": 2.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -38.364,
+    -174.694,
+    244.98
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 2.0,
+    "l": 2.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.844,
+    -174.638,
+    243.108
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 2.0,
+    "l": 2.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -30.97,
+    -175.439,
+    241.18
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "box",
+    "w": 2.0,
+    "l": 2.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "inf_haven",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.229,
+    -169.063,
+    243.08
+   ],
+   "facing": 0.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.0,
+    "down": 0.5
+   }
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -29.36,
+    -175.693,
+    241.18
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.779,
+    -174.66,
+    243.08
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -39.219,
+    -174.725,
+    244.98
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.232,
+    -169.063,
+    243.08
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  },
+  {
+   "type": "koth_hill",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -27.224,
+    -181.528,
+    245.26
+   ],
+   "facing": 180.0,
+   "object": "mp_hill_beacon",
+   "boundary": {
+    "shape": "cylinder",
+    "w": 1.5,
+    "l": 0.0,
+    "up": 1.5,
+    "down": 0.0
+   }
+  }
+ ],
+ "equipment": [
+  {
+   "item": "plasma_pistol",
+   "tag": "plasma_pistol",
+   "path": "plasma_pistol",
+   "pos": [
+    -26.065,
+    -186.791,
+    244.7
+   ],
+   "yaw": -0.78,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "sniper",
+   "tag": "sniper_rifle",
+   "path": "sniper_rifle",
+   "pos": [
+    -25.201,
+    -182.464,
+    247.332
+   ],
+   "yaw": 179.291,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 180,
+   "unique": true
+  },
+  {
+   "item": "shotgun",
+   "tag": "shotgun",
+   "path": "shotgun",
+   "pos": [
+    -11.646,
+    -174.895,
+    245.22
+   ],
+   "yaw": 55.979,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 180,
+   "unique": true
+  },
+  {
+   "item": "plasma_rifle",
+   "tag": "plasma_repeater",
+   "path": "plasma_repeater",
+   "pos": [
+    -20.197,
+    -167.551,
+    245.296
+   ],
+   "yaw": 0.013,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "needle_rifle",
+   "tag": "needle_rifle",
+   "path": "needle_rifle",
+   "pos": [
+    -27.182,
+    -162.061,
+    245.287
+   ],
+   "yaw": -179.639,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "rockets",
+   "tag": "rocket_launcher",
+   "path": "rocket_launcher",
+   "pos": [
+    -27.321,
+    -179.71,
+    243.945
+   ],
+   "yaw": 123.068,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 180,
+   "unique": true
+  },
+  {
+   "item": "plasma_rifle",
+   "tag": "plasma_repeater",
+   "path": "plasma_repeater",
+   "pos": [
+    -21.867,
+    -173.566,
+    242.044
+   ],
+   "yaw": 179.468,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "plasma_pistol",
+   "tag": "plasma_pistol",
+   "path": "plasma_pistol",
+   "pos": [
+    -17.522,
+    -179.891,
+    247.296
+   ],
+   "yaw": 179.992,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "dmr",
+   "tag": "dmr",
+   "path": "dmr",
+   "pos": [
+    -18.464,
+    -174.595,
+    244.63
+   ],
+   "yaw": 179.597,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "sword",
+   "tag": "energy_sword",
+   "path": "energy_sword",
+   "pos": [
+    -27.262,
+    -172.05,
+    241.109
+   ],
+   "yaw": 179.967,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 180,
+   "unique": true
+  },
+  {
+   "item": "needle_rifle",
+   "tag": "needle_rifle",
+   "path": "needle_rifle",
+   "pos": [
+    -32.785,
+    -181.618,
+    242.606
+   ],
+   "yaw": -178.996,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "plasma_rifle",
+   "tag": "plasma_repeater",
+   "path": "plasma_repeater",
+   "pos": [
+    -32.863,
+    -171.625,
+    241.192
+   ],
+   "yaw": 0.269,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "dmr",
+   "tag": "dmr",
+   "path": "dmr",
+   "pos": [
+    -37.868,
+    -174.771,
+    246.602
+   ],
+   "yaw": 172.102,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "needler",
+   "tag": "needler",
+   "path": "needler",
+   "pos": [
+    -35.983,
+    -186.056,
+    246.611
+   ],
+   "yaw": -0.333,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "magnum",
+   "tag": "magnum",
+   "path": "magnum",
+   "pos": [
+    -33.568,
+    -187.633,
+    242.362
+   ],
+   "yaw": 0.967,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "magnum",
+   "tag": "magnum",
+   "path": "magnum",
+   "pos": [
+    -20.842,
+    -187.617,
+    242.861
+   ],
+   "yaw": 0.053,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 30,
+   "unique": false
+  },
+  {
+   "item": "needler",
+   "tag": "needler",
+   "path": "needler",
+   "pos": [
+    -34.045,
+    -167.749,
+    245.312
+   ],
+   "yaw": -0.056,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "plasma_grenade",
+   "tag": "plasma_grenade",
+   "path": "plasma_grenade",
+   "pos": [
+    -32.827,
+    -188.108,
+    242.321
+   ],
+   "yaw": -90.688,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "frag_grenade",
+   "tag": "frag_grenade",
+   "path": "frag_grenade",
+   "pos": [
+    -32.848,
+    -187.67,
+    242.314
+   ],
+   "yaw": -161.532,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "frag_grenade",
+   "tag": "frag_grenade",
+   "path": "frag_grenade",
+   "pos": [
+    -21.619,
+    -187.651,
+    242.816
+   ],
+   "yaw": -8.982,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "plasma_grenade",
+   "tag": "plasma_grenade",
+   "path": "plasma_grenade",
+   "pos": [
+    -21.614,
+    -188.038,
+    242.823
+   ],
+   "yaw": -68.169,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "plasma_grenade",
+   "tag": "plasma_grenade",
+   "path": "plasma_grenade",
+   "pos": [
+    -29.243,
+    -182.322,
+    247.319
+   ],
+   "yaw": -90.204,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "plasma_grenade",
+   "tag": "plasma_grenade",
+   "path": "plasma_grenade",
+   "pos": [
+    -28.82,
+    -182.326,
+    247.32
+   ],
+   "yaw": -90.098,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "frag_grenade",
+   "tag": "frag_grenade",
+   "path": "frag_grenade",
+   "pos": [
+    -27.443,
+    -167.118,
+    243.315
+   ],
+   "yaw": -82.89,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "frag_grenade",
+   "tag": "frag_grenade",
+   "path": "frag_grenade",
+   "pos": [
+    -26.988,
+    -167.088,
+    243.312
+   ],
+   "yaw": -47.264,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "plasma_grenade",
+   "tag": "plasma_grenade",
+   "path": "plasma_grenade",
+   "pos": [
+    -37.876,
+    -175.037,
+    245.021
+   ],
+   "yaw": -122.772,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  },
+  {
+   "item": "plasma_grenade",
+   "tag": "plasma_grenade",
+   "path": "plasma_grenade",
+   "pos": [
+    -37.874,
+    -174.45,
+    245.023
+   ],
+   "yaw": -101.453,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 45,
+   "unique": false
+  }
+ ],
+ "vehicles": [],
+ "spawns": [
+  {
+   "pos": [
+    -28.592,
+    -190.665,
+    241.88
+   ],
+   "team": 0,
+   "facing": 91.93,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.592,
+    -190.665,
+    241.88
+   ],
+   "team": 1,
+   "facing": 91.93,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.897,
+    -190.665,
+    241.88
+   ],
+   "team": 0,
+   "facing": 86.87,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.897,
+    -190.665,
+    241.88
+   ],
+   "team": 1,
+   "facing": 86.87,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -29.019,
+    -189.65,
+    241.88
+   ],
+   "team": 0,
+   "facing": 48.6,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.019,
+    -189.65,
+    241.88
+   ],
+   "team": 1,
+   "facing": 48.6,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.221,
+    -190.629,
+    241.88
+   ],
+   "team": 0,
+   "facing": 89.606,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.221,
+    -190.629,
+    241.88
+   ],
+   "team": 1,
+   "facing": 89.606,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -29.003,
+    -184.943,
+    244.852
+   ],
+   "team": 0,
+   "facing": 88.965,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.003,
+    -184.943,
+    244.852
+   ],
+   "team": 1,
+   "facing": 88.965,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.412,
+    -187.033,
+    244.68
+   ],
+   "team": 0,
+   "facing": 63.509,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.412,
+    -187.033,
+    244.68
+   ],
+   "team": 1,
+   "facing": 63.509,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.693,
+    -184.607,
+    246.58
+   ],
+   "team": 0,
+   "facing": 1.758,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.693,
+    -184.607,
+    246.58
+   ],
+   "team": 1,
+   "facing": 1.758,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.025,
+    -182.506,
+    245.8
+   ],
+   "team": 0,
+   "facing": 62.319,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.025,
+    -182.506,
+    245.8
+   ],
+   "team": 1,
+   "facing": 62.319,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.098,
+    -181.891,
+    242.58
+   ],
+   "team": 0,
+   "facing": 69.021,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.098,
+    -181.891,
+    242.58
+   ],
+   "team": 1,
+   "facing": 69.021,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.104,
+    -176.759,
+    244.927
+   ],
+   "team": 0,
+   "facing": 41.343,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.104,
+    -176.759,
+    244.927
+   ],
+   "team": 1,
+   "facing": 41.343,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.963,
+    -177.244,
+    244.88
+   ],
+   "team": 0,
+   "facing": 12.69,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.963,
+    -177.244,
+    244.88
+   ],
+   "team": 1,
+   "facing": 12.69,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.798,
+    -174.762,
+    244.98
+   ],
+   "team": 0,
+   "facing": 0.008,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.798,
+    -174.762,
+    244.98
+   ],
+   "team": 1,
+   "facing": 0.008,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -41.034,
+    -172.161,
+    244.88
+   ],
+   "team": 0,
+   "facing": -19.974,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -41.034,
+    -172.161,
+    244.88
+   ],
+   "team": 1,
+   "facing": -19.974,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.907,
+    -166.353,
+    242.58
+   ],
+   "team": 0,
+   "facing": -73.897,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -39.907,
+    -166.353,
+    242.58
+   ],
+   "team": 1,
+   "facing": -73.897,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.98,
+    -166.663,
+    245.428
+   ],
+   "team": 0,
+   "facing": -89.959,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.98,
+    -166.663,
+    245.428
+   ],
+   "team": 1,
+   "facing": -89.959,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.681,
+    -161.732,
+    244.13
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.681,
+    -161.732,
+    244.13
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.194,
+    -162.574,
+    244.13
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.194,
+    -162.574,
+    244.13
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -19.802,
+    -161.66,
+    244.13
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -19.802,
+    -161.66,
+    244.13
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -20.342,
+    -162.211,
+    244.13
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.342,
+    -162.211,
+    244.13
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.749,
+    -162.247,
+    245.28
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.749,
+    -162.247,
+    245.28
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.723,
+    -162.223,
+    245.28
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.723,
+    -162.223,
+    245.28
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.559,
+    -163.255,
+    245.28
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.559,
+    -163.255,
+    245.28
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.993,
+    -163.139,
+    245.28
+   ],
+   "team": 0,
+   "facing": -89.828,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.993,
+    -163.139,
+    245.28
+   ],
+   "team": 1,
+   "facing": -89.828,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.406,
+    -165.989,
+    245.28
+   ],
+   "team": 0,
+   "facing": -46.695,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.406,
+    -165.989,
+    245.28
+   ],
+   "team": 1,
+   "facing": -46.695,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -20.129,
+    -165.953,
+    245.28
+   ],
+   "team": 0,
+   "facing": -130.571,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.129,
+    -165.953,
+    245.28
+   ],
+   "team": 1,
+   "facing": -130.571,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.421,
+    -183.221,
+    245.214
+   ],
+   "team": 0,
+   "facing": 92.011,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.421,
+    -183.221,
+    245.214
+   ],
+   "team": 1,
+   "facing": 92.011,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.299,
+    -183.294,
+    245.199
+   ],
+   "team": 0,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.299,
+    -183.294,
+    245.199
+   ],
+   "team": 1,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.187,
+    -183.596,
+    245.14
+   ],
+   "team": 0,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.187,
+    -183.596,
+    245.14
+   ],
+   "team": 1,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.103,
+    -182.385,
+    245.28
+   ],
+   "team": 0,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.103,
+    -182.385,
+    245.28
+   ],
+   "team": 1,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.295,
+    -182.17,
+    245.28
+   ],
+   "team": 0,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.295,
+    -182.17,
+    245.28
+   ],
+   "team": 1,
+   "facing": 88.278,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.824,
+    -180.122,
+    246.28
+   ],
+   "team": 0,
+   "facing": 179.412,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.824,
+    -180.122,
+    246.28
+   ],
+   "team": 1,
+   "facing": 179.412,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.804,
+    -180.983,
+    246.28
+   ],
+   "team": 0,
+   "facing": 177.131,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.804,
+    -180.983,
+    246.28
+   ],
+   "team": 1,
+   "facing": 177.131,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.803,
+    -179.21,
+    246.28
+   ],
+   "team": 0,
+   "facing": -171.428,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -12.803,
+    -179.21,
+    246.28
+   ],
+   "team": 1,
+   "facing": -171.428,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.46,
+    -172.775,
+    243.75
+   ],
+   "team": 0,
+   "facing": 125.444,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -23.46,
+    -172.775,
+    243.75
+   ],
+   "team": 1,
+   "facing": 125.444,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.242,
+    -173.618,
+    243.75
+   ],
+   "team": 0,
+   "facing": 115.317,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.242,
+    -173.618,
+    243.75
+   ],
+   "team": 1,
+   "facing": 115.317,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.261,
+    -176.35,
+    244.218
+   ],
+   "team": 0,
+   "facing": 95.122,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.261,
+    -176.35,
+    244.218
+   ],
+   "team": 1,
+   "facing": 95.122,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.562,
+    -177.673,
+    244.778
+   ],
+   "team": 0,
+   "facing": 92.961,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.562,
+    -177.673,
+    244.778
+   ],
+   "team": 1,
+   "facing": 92.961,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.066,
+    -176.853,
+    244.565
+   ],
+   "team": 0,
+   "facing": 87.186,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -30.066,
+    -176.853,
+    244.565
+   ],
+   "team": 1,
+   "facing": 87.186,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -30.89,
+    -176.078,
+    244.565
+   ],
+   "team": 0,
+   "facing": 83.955,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -30.89,
+    -176.078,
+    244.565
+   ],
+   "team": 1,
+   "facing": 83.955,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.016,
+    -172.705,
+    243.966
+   ],
+   "team": 0,
+   "facing": 57.491,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.016,
+    -172.705,
+    243.966
+   ],
+   "team": 1,
+   "facing": 57.491,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.524,
+    -174.287,
+    243.965
+   ],
+   "team": 0,
+   "facing": 79.206,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.524,
+    -174.287,
+    243.965
+   ],
+   "team": 1,
+   "facing": 79.206,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.259,
+    -171.108,
+    243.43
+   ],
+   "team": 0,
+   "facing": 79.206,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.259,
+    -171.108,
+    243.43
+   ],
+   "team": 1,
+   "facing": 79.206,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.685,
+    -177.516,
+    244.83
+   ],
+   "team": 0,
+   "facing": 109.535,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.685,
+    -177.516,
+    244.83
+   ],
+   "team": 1,
+   "facing": 109.535,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -33.385,
+    -169.106,
+    242.581
+   ],
+   "team": 0,
+   "facing": -101.584,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -33.385,
+    -169.106,
+    242.581
+   ],
+   "team": 1,
+   "facing": -101.584,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.252,
+    -169.118,
+    242.581
+   ],
+   "team": 0,
+   "facing": -94.201,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.252,
+    -169.118,
+    242.581
+   ],
+   "team": 1,
+   "facing": -94.201,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -35.131,
+    -169.104,
+    242.581
+   ],
+   "team": 0,
+   "facing": -93.076,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -35.131,
+    -169.104,
+    242.581
+   ],
+   "team": 1,
+   "facing": -93.076,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.636,
+    -166.395,
+    242.578
+   ],
+   "team": 0,
+   "facing": -89.887,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.636,
+    -166.395,
+    242.578
+   ],
+   "team": 1,
+   "facing": -89.887,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -37.606,
+    -166.371,
+    242.575
+   ],
+   "team": 0,
+   "facing": -88.514,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -37.606,
+    -166.371,
+    242.575
+   ],
+   "team": 1,
+   "facing": -88.514,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -37.147,
+    -182.662,
+    242.58
+   ],
+   "team": 0,
+   "facing": 94.749,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -37.147,
+    -182.662,
+    242.58
+   ],
+   "team": 1,
+   "facing": 94.749,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.256,
+    -182.586,
+    242.58
+   ],
+   "team": 0,
+   "facing": 94.12,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -38.256,
+    -182.586,
+    242.58
+   ],
+   "team": 1,
+   "facing": 94.12,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.733,
+    -189.285,
+    242.28
+   ],
+   "team": 0,
+   "facing": -3.246,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.733,
+    -189.285,
+    242.28
+   ],
+   "team": 1,
+   "facing": -3.246,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.731,
+    -190.068,
+    242.28
+   ],
+   "team": 0,
+   "facing": -4.069,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.731,
+    -190.068,
+    242.28
+   ],
+   "team": 1,
+   "facing": -4.069,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.211,
+    -187.098,
+    242.281
+   ],
+   "team": 0,
+   "facing": -132.226,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -34.211,
+    -187.098,
+    242.281
+   ],
+   "team": 1,
+   "facing": -132.226,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.865,
+    -187.055,
+    242.281
+   ],
+   "team": 0,
+   "facing": -108.374,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.865,
+    -187.055,
+    242.281
+   ],
+   "team": 1,
+   "facing": -108.374,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.069,
+    -186.988,
+    242.782
+   ],
+   "team": 0,
+   "facing": -58.819,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -20.069,
+    -186.988,
+    242.782
+   ],
+   "team": 1,
+   "facing": -58.819,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.548,
+    -186.978,
+    242.782
+   ],
+   "team": 0,
+   "facing": -62.443,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.548,
+    -186.978,
+    242.782
+   ],
+   "team": 1,
+   "facing": -62.443,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -17.591,
+    -190.025,
+    242.777
+   ],
+   "team": 0,
+   "facing": 179.383,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -17.591,
+    -190.025,
+    242.777
+   ],
+   "team": 1,
+   "facing": 179.383,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -17.603,
+    -189.157,
+    242.779
+   ],
+   "team": 0,
+   "facing": -177.362,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -17.603,
+    -189.157,
+    242.779
+   ],
+   "team": 1,
+   "facing": -177.362,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.416,
+    -180.239,
+    243.58
+   ],
+   "team": 0,
+   "facing": 178.67,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.416,
+    -180.239,
+    243.58
+   ],
+   "team": 1,
+   "facing": 178.67,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.403,
+    -179.319,
+    243.58
+   ],
+   "team": 0,
+   "facing": -179.404,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.403,
+    -179.319,
+    243.58
+   ],
+   "team": 1,
+   "facing": -179.404,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -19.986,
+    -173.085,
+    242.33
+   ],
+   "team": 0,
+   "facing": -137.59,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -19.986,
+    -173.085,
+    242.33
+   ],
+   "team": 1,
+   "facing": -137.59,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.831,
+    -173.008,
+    242.03
+   ],
+   "team": 0,
+   "facing": -121.538,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.831,
+    -173.008,
+    242.03
+   ],
+   "team": 1,
+   "facing": -121.538,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -13.015,
+    -169.027,
+    244.122
+   ],
+   "team": 0,
+   "facing": -93.217,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -13.015,
+    -169.027,
+    244.122
+   ],
+   "team": 1,
+   "facing": -93.217,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -12.136,
+    -169.156,
+    244.122
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.136,
+    -169.156,
+    244.122
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.161,
+    -174.69,
+    245.08
+   ],
+   "team": 0,
+   "facing": -129.226,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -12.161,
+    -174.69,
+    245.08
+   ],
+   "team": 1,
+   "facing": -129.226,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -14.209,
+    -174.423,
+    245.08
+   ],
+   "team": 0,
+   "facing": -83.24,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -14.209,
+    -174.423,
+    245.08
+   ],
+   "team": 1,
+   "facing": -83.24,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.703,
+    -175.939,
+    245.28
+   ],
+   "team": 0,
+   "facing": 83.192,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.703,
+    -175.939,
+    245.28
+   ],
+   "team": 1,
+   "facing": 83.192,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.514,
+    -181.779,
+    245.28
+   ],
+   "team": 0,
+   "facing": 85.332,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.514,
+    -181.779,
+    245.28
+   ],
+   "team": 1,
+   "facing": 85.332,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -24.919,
+    -181.561,
+    245.28
+   ],
+   "team": 0,
+   "facing": 88.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -24.919,
+    -181.561,
+    245.28
+   ],
+   "team": 1,
+   "facing": 88.838,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.311,
+    -176.483,
+    244.218
+   ],
+   "team": 0,
+   "facing": 88.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.311,
+    -176.483,
+    244.218
+   ],
+   "team": 1,
+   "facing": 88.838,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.246,
+    -163.492,
+    243.281
+   ],
+   "team": 0,
+   "facing": -82.777,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.246,
+    -163.492,
+    243.281
+   ],
+   "team": 1,
+   "facing": -82.777,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -19.464,
+    -164.673,
+    243.28
+   ],
+   "team": 0,
+   "facing": -87.996,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -19.464,
+    -164.673,
+    243.28
+   ],
+   "team": 1,
+   "facing": -87.996,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -20.417,
+    -164.629,
+    243.28
+   ],
+   "team": 0,
+   "facing": -87.996,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -20.417,
+    -164.629,
+    243.28
+   ],
+   "team": 1,
+   "facing": -87.996,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.437,
+    -175.102,
+    243.08
+   ],
+   "team": 0,
+   "facing": 174.358,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.437,
+    -175.102,
+    243.08
+   ],
+   "team": 1,
+   "facing": 174.358,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.718,
+    -171.779,
+    243.08
+   ],
+   "team": 0,
+   "facing": -157.291,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.718,
+    -171.779,
+    243.08
+   ],
+   "team": 1,
+   "facing": -157.291,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.422,
+    -174.365,
+    243.08
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.422,
+    -174.365,
+    243.08
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -18.643,
+    -178.981,
+    243.58
+   ],
+   "team": 0,
+   "facing": 179.376,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -18.643,
+    -178.981,
+    243.58
+   ],
+   "team": 1,
+   "facing": 179.376,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.702,
+    -175.982,
+    245.28
+   ],
+   "team": 0,
+   "facing": 94.473,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.702,
+    -175.982,
+    245.28
+   ],
+   "team": 1,
+   "facing": 94.473,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.69,
+    -183.877,
+    246.581
+   ],
+   "team": 0,
+   "facing": 1.758,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.69,
+    -183.877,
+    246.581
+   ],
+   "team": 1,
+   "facing": 1.758,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.407,
+    -182.188,
+    244.93
+   ],
+   "team": 0,
+   "facing": 174.832,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.407,
+    -182.188,
+    244.93
+   ],
+   "team": 1,
+   "facing": 174.832,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.401,
+    -181.419,
+    244.93
+   ],
+   "team": 0,
+   "facing": -178.413,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.401,
+    -181.419,
+    244.93
+   ],
+   "team": 1,
+   "facing": -178.413,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -42.307,
+    -176.89,
+    246.576
+   ],
+   "team": 0,
+   "facing": -0.109,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -42.307,
+    -176.89,
+    246.576
+   ],
+   "team": 1,
+   "facing": -0.109,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -42.248,
+    -172.659,
+    246.582
+   ],
+   "team": 0,
+   "facing": -3.789,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -42.248,
+    -172.659,
+    246.582
+   ],
+   "team": 1,
+   "facing": -3.789,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -38.148,
+    -172.801,
+    244.883
+   ],
+   "team": 0,
+   "facing": -41.921,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.148,
+    -172.801,
+    244.883
+   ],
+   "team": 1,
+   "facing": -41.921,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -38.561,
+    -175.681,
+    241.18
+   ],
+   "team": 0,
+   "facing": 2.971,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.561,
+    -175.681,
+    241.18
+   ],
+   "team": 1,
+   "facing": 2.971,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.507,
+    -174.768,
+    241.18
+   ],
+   "team": 0,
+   "facing": -0.245,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.507,
+    -174.768,
+    241.18
+   ],
+   "team": 1,
+   "facing": -0.245,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.504,
+    -173.842,
+    241.18
+   ],
+   "team": 0,
+   "facing": -1.817,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -38.504,
+    -173.842,
+    241.18
+   ],
+   "team": 1,
+   "facing": -1.817,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.606,
+    -179.037,
+    241.18
+   ],
+   "team": 0,
+   "facing": 13.839,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.606,
+    -179.037,
+    241.18
+   ],
+   "team": 1,
+   "facing": 13.839,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.59,
+    -177.69,
+    241.18
+   ],
+   "team": 0,
+   "facing": 13.839,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.59,
+    -177.69,
+    241.18
+   ],
+   "team": 1,
+   "facing": 13.839,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.441,
+    -171.179,
+    241.079
+   ],
+   "team": 0,
+   "facing": -32.38,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.441,
+    -171.179,
+    241.079
+   ],
+   "team": 1,
+   "facing": -32.38,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -35.354,
+    -171.201,
+    241.079
+   ],
+   "team": 0,
+   "facing": -32.38,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -35.354,
+    -171.201,
+    241.079
+   ],
+   "team": 1,
+   "facing": -32.38,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.453,
+    -171.205,
+    241.079
+   ],
+   "team": 0,
+   "facing": -32.38,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -34.453,
+    -171.205,
+    241.079
+   ],
+   "team": 1,
+   "facing": -32.38,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -39.208,
+    -176.084,
+    244.98
+   ],
+   "team": 0,
+   "facing": 10.238,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -39.208,
+    -176.084,
+    244.98
+   ],
+   "team": 1,
+   "facing": 10.238,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.231,
+    -173.397,
+    244.98
+   ],
+   "team": 0,
+   "facing": -3.512,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -39.231,
+    -173.397,
+    244.98
+   ],
+   "team": 1,
+   "facing": -3.512,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -33.205,
+    -165.953,
+    245.28
+   ],
+   "team": 0,
+   "facing": -47.239,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -33.205,
+    -165.953,
+    245.28
+   ],
+   "team": 1,
+   "facing": -47.239,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.385,
+    -166.027,
+    245.28
+   ],
+   "team": 0,
+   "facing": -130.571,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.385,
+    -166.027,
+    245.28
+   ],
+   "team": 1,
+   "facing": -130.571,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.209,
+    -182.535,
+    245.801
+   ],
+   "team": 0,
+   "facing": 62.319,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -39.209,
+    -182.535,
+    245.801
+   ],
+   "team": 1,
+   "facing": 62.319,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -36.741,
+    -166.36,
+    242.573
+   ],
+   "team": 0,
+   "facing": -94.961,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -36.741,
+    -166.36,
+    242.573
+   ],
+   "team": 1,
+   "facing": -94.961,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.25,
+    -184.804,
+    244.901
+   ],
+   "team": 0,
+   "facing": 88.965,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.25,
+    -184.804,
+    244.901
+   ],
+   "team": 1,
+   "facing": 88.965,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.446,
+    -181.093,
+    243.581
+   ],
+   "team": 0,
+   "facing": 178.67,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -15.446,
+    -181.093,
+    243.581
+   ],
+   "team": 1,
+   "facing": 178.67,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -22.294,
+    -177.623,
+    245.28
+   ],
+   "team": 0,
+   "facing": 141.98,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -22.294,
+    -177.623,
+    245.28
+   ],
+   "team": 1,
+   "facing": 141.98,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.08,
+    -178.409,
+    245.28
+   ],
+   "team": 0,
+   "facing": 136.592,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -23.08,
+    -178.409,
+    245.28
+   ],
+   "team": 1,
+   "facing": 136.592,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.82,
+    -179.174,
+    245.28
+   ],
+   "team": 0,
+   "facing": 134.996,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -23.82,
+    -179.174,
+    245.28
+   ],
+   "team": 1,
+   "facing": 134.996,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.582,
+    -179.089,
+    245.28
+   ],
+   "team": 0,
+   "facing": 45.023,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -30.582,
+    -179.089,
+    245.28
+   ],
+   "team": 1,
+   "facing": 45.023,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -31.489,
+    -178.217,
+    245.28
+   ],
+   "team": 0,
+   "facing": 45.023,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.489,
+    -178.217,
+    245.28
+   ],
+   "team": 1,
+   "facing": 45.023,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.364,
+    -177.394,
+    245.28
+   ],
+   "team": 0,
+   "facing": 45.023,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.364,
+    -177.394,
+    245.28
+   ],
+   "team": 1,
+   "facing": 45.023,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.218,
+    -175.146,
+    244.25
+   ],
+   "team": 0,
+   "facing": 103.3,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -23.218,
+    -175.146,
+    244.25
+   ],
+   "team": 1,
+   "facing": 103.3,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.554,
+    -189.767,
+    241.88
+   ],
+   "team": 0,
+   "facing": 123.65,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.554,
+    -189.767,
+    241.88
+   ],
+   "team": 1,
+   "facing": 123.65,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.325,
+    -183.395,
+    241.745
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.325,
+    -183.395,
+    241.745
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.165,
+    -183.44,
+    241.742
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.165,
+    -183.44,
+    241.742
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.512,
+    -182.03,
+    241.36
+   ],
+   "team": 0,
+   "facing": -93.946,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.512,
+    -182.03,
+    241.36
+   ],
+   "team": 1,
+   "facing": -93.946,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.686,
+    -182.051,
+    241.36
+   ],
+   "team": 0,
+   "facing": -95.442,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.686,
+    -182.051,
+    241.36
+   ],
+   "team": 1,
+   "facing": -95.442,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.361,
+    -180.923,
+    240.98
+   ],
+   "team": 0,
+   "facing": -92.138,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.361,
+    -180.923,
+    240.98
+   ],
+   "team": 1,
+   "facing": -92.138,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.08,
+    -180.857,
+    240.98
+   ],
+   "team": 0,
+   "facing": -92.138,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.08,
+    -180.857,
+    240.98
+   ],
+   "team": 1,
+   "facing": -92.138,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.286,
+    -178.803,
+    242.58
+   ],
+   "team": 0,
+   "facing": 29.032,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.286,
+    -178.803,
+    242.58
+   ],
+   "team": 1,
+   "facing": 29.032,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -37.304,
+    -175.591,
+    241.18
+   ],
+   "team": 0,
+   "facing": 4.319,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -37.304,
+    -175.591,
+    241.18
+   ],
+   "team": 1,
+   "facing": 4.319,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -37.237,
+    -173.868,
+    241.18
+   ],
+   "team": 0,
+   "facing": 0.94,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -37.237,
+    -173.868,
+    241.18
+   ],
+   "team": 1,
+   "facing": 0.94,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.202,
+    -171.094,
+    242.58
+   ],
+   "team": 0,
+   "facing": -12.742,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.202,
+    -171.094,
+    242.58
+   ],
+   "team": 1,
+   "facing": -12.742,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.202,
+    -159.971,
+    245.281
+   ],
+   "team": 0,
+   "facing": -89.33,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.202,
+    -159.971,
+    245.281
+   ],
+   "team": 1,
+   "facing": -89.33,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.507,
+    -160.587,
+    245.281
+   ],
+   "team": 0,
+   "facing": -89.33,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.507,
+    -160.587,
+    245.281
+   ],
+   "team": 1,
+   "facing": -89.33,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.967,
+    -160.556,
+    245.281
+   ],
+   "team": 0,
+   "facing": -89.33,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.967,
+    -160.556,
+    245.281
+   ],
+   "team": 1,
+   "facing": -89.33,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.06,
+    -160.615,
+    243.08
+   ],
+   "team": 0,
+   "facing": -91.521,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.06,
+    -160.615,
+    243.08
+   ],
+   "team": 1,
+   "facing": -91.521,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.3,
+    -160.624,
+    243.08
+   ],
+   "team": 0,
+   "facing": -91.521,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.3,
+    -160.624,
+    243.08
+   ],
+   "team": 1,
+   "facing": -91.521,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.877,
+    -161.813,
+    243.08
+   ],
+   "team": 0,
+   "facing": -91.521,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.877,
+    -161.813,
+    243.08
+   ],
+   "team": 1,
+   "facing": -91.521,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.432,
+    -161.729,
+    243.08
+   ],
+   "team": 0,
+   "facing": -91.521,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.432,
+    -161.729,
+    243.08
+   ],
+   "team": 1,
+   "facing": -91.521,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.37,
+    -163.029,
+    243.28
+   ],
+   "team": 0,
+   "facing": -128.581,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.37,
+    -163.029,
+    243.28
+   ],
+   "team": 1,
+   "facing": -128.581,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -40.18,
+    -174.008,
+    242.281
+   ],
+   "team": 0,
+   "facing": -2.93,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.18,
+    -174.008,
+    242.281
+   ],
+   "team": 1,
+   "facing": -2.93,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.213,
+    -175.502,
+    242.281
+   ],
+   "team": 0,
+   "facing": -2.93,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -40.213,
+    -175.502,
+    242.281
+   ],
+   "team": 1,
+   "facing": -2.93,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -17.418,
+    -173.795,
+    243.08
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -17.418,
+    -173.795,
+    243.08
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -17.483,
+    -175.351,
+    243.08
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -17.483,
+    -175.351,
+    243.08
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.588,
+    -176.45,
+    243.08
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.588,
+    -176.45,
+    243.08
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.511,
+    -173.032,
+    243.08
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -15.511,
+    -173.032,
+    243.08
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -16.934,
+    -184.776,
+    247.281
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.934,
+    -184.776,
+    247.281
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.973,
+    -183.833,
+    247.28
+   ],
+   "team": 0,
+   "facing": -179.701,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.973,
+    -183.833,
+    247.28
+   ],
+   "team": 1,
+   "facing": -179.701,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -30.838,
+    -166.669,
+    243.281
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -30.838,
+    -166.669,
+    243.281
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -29.771,
+    -165.766,
+    243.28
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -29.771,
+    -165.766,
+    243.28
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -28.035,
+    -164.743,
+    243.281
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -28.035,
+    -164.743,
+    243.281
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -26.497,
+    -164.681,
+    243.281
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -26.497,
+    -164.681,
+    243.281
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -25.182,
+    -165.585,
+    243.28
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -25.182,
+    -165.585,
+    243.28
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -24.07,
+    -166.516,
+    243.28
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -24.07,
+    -166.516,
+    243.28
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -23.019,
+    -167.51,
+    243.281
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -23.019,
+    -167.51,
+    243.281
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -31.476,
+    -167.727,
+    243.28
+   ],
+   "team": 0,
+   "facing": -90.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -31.476,
+    -167.727,
+    243.28
+   ],
+   "team": 1,
+   "facing": -90.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.513,
+    -165.355,
+    243.28
+   ],
+   "team": 0,
+   "facing": -136.281,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.513,
+    -165.355,
+    243.28
+   ],
+   "team": 1,
+   "facing": -136.281,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -32.929,
+    -164.249,
+    243.28
+   ],
+   "team": 0,
+   "facing": -136.281,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -32.929,
+    -164.249,
+    243.28
+   ],
+   "team": 1,
+   "facing": -136.281,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.618,
+    -165.779,
+    243.281
+   ],
+   "team": 0,
+   "facing": -55.777,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.618,
+    -165.779,
+    243.281
+   ],
+   "team": 1,
+   "facing": -55.777,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.594,
+    -164.391,
+    243.281
+   ],
+   "team": 0,
+   "facing": -61.101,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -21.594,
+    -164.391,
+    243.281
+   ],
+   "team": 1,
+   "facing": -61.101,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -22.355,
+    -162.914,
+    243.281
+   ],
+   "team": 0,
+   "facing": -73.842,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -22.355,
+    -162.914,
+    243.281
+   ],
+   "team": 1,
+   "facing": -73.842,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -16.726,
+    -169.893,
+    243.081
+   ],
+   "team": 0,
+   "facing": 179.35,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -16.726,
+    -169.893,
+    243.081
+   ],
+   "team": 1,
+   "facing": 179.35,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -39.176,
+    -174.743,
+    242.282
+   ],
+   "team": 0,
+   "facing": -0.526,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -39.176,
+    -174.743,
+    242.282
+   ],
+   "team": 1,
+   "facing": -0.526,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -42.492,
+    -180.918,
+    245.802
+   ],
+   "team": 0,
+   "facing": 89.297,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -42.492,
+    -180.918,
+    245.802
+   ],
+   "team": 1,
+   "facing": 89.297,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.219,
+    -185.434,
+    244.756
+   ],
+   "team": 0,
+   "facing": 90.579,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.219,
+    -185.434,
+    244.756
+   ],
+   "team": 1,
+   "facing": 90.579,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -33.665,
+    -187.052,
+    242.28
+   ],
+   "team": 0,
+   "facing": -88.963,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -33.665,
+    -187.052,
+    242.28
+   ],
+   "team": 1,
+   "facing": -88.963,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -20.669,
+    -187.007,
+    242.78
+   ],
+   "team": 0,
+   "facing": -92.122,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -20.669,
+    -187.007,
+    242.78
+   ],
+   "team": 1,
+   "facing": -92.122,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -34.434,
+    -163.116,
+    244.129
+   ],
+   "team": 0,
+   "facing": -91.301,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -34.434,
+    -163.116,
+    244.129
+   ],
+   "team": 1,
+   "facing": -91.301,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -13.181,
+    -174.991,
+    245.08
+   ],
+   "team": 0,
+   "facing": -91.561,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -13.181,
+    -174.991,
+    245.08
+   ],
+   "team": 1,
+   "facing": -91.561,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.413,
+    -185.601,
+    247.28
+   ],
+   "team": 0,
+   "facing": 89.105,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.413,
+    -185.601,
+    247.28
+   ],
+   "team": 1,
+   "facing": 89.105,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -36.095,
+    -185.277,
+    246.58
+   ],
+   "team": 0,
+   "facing": 89.105,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -36.095,
+    -185.277,
+    246.58
+   ],
+   "team": 1,
+   "facing": 89.105,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -41.444,
+    -166.663,
+    242.577
+   ],
+   "team": 0,
+   "facing": -0.752,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -41.444,
+    -166.663,
+    242.577
+   ],
+   "team": 1,
+   "facing": -0.752,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -16.124,
+    -182.083,
+    243.58
+   ],
+   "team": 0,
+   "facing": 102.191,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -16.124,
+    -182.083,
+    243.58
+   ],
+   "team": 1,
+   "facing": 102.191,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -19.711,
+    -171.973,
+    245.041
+   ],
+   "team": 0,
+   "facing": 179.079,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -19.711,
+    -171.973,
+    245.041
+   ],
+   "team": 1,
+   "facing": 179.079,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.243,
+    -190.581,
+    241.88
+   ],
+   "team": 0,
+   "facing": 89.811,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.243,
+    -190.581,
+    241.88
+   ],
+   "team": 1,
+   "facing": 89.811,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -19.963,
+    -161.857,
+    244.132
+   ],
+   "team": 0,
+   "facing": 178.975,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -19.963,
+    -161.857,
+    244.132
+   ],
+   "team": 1,
+   "facing": 178.975,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.218,
+    -162.145,
+    243.06
+   ],
+   "team": 0,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -28.12,
+    -161.572,
+    243.062
+   ],
+   "team": 0,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.216,
+    -161.587,
+    243.08
+   ],
+   "team": 0,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -29.864,
+    -161.836,
+    243.08
+   ],
+   "team": 0,
+   "facing": -60.02,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -24.561,
+    -161.734,
+    243.08
+   ],
+   "team": 0,
+   "facing": -109.684,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -28.373,
+    -162.789,
+    243.08
+   ],
+   "team": 0,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.111,
+    -162.938,
+    243.08
+   ],
+   "team": 0,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.179,
+    -160.489,
+    243.073
+   ],
+   "team": 0,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.168,
+    -183.094,
+    241.738
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -28.056,
+    -182.425,
+    241.617
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.27,
+    -182.523,
+    241.535
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -28.18,
+    -181.523,
+    241.1
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.283,
+    -181.597,
+    241.1
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.197,
+    -182.259,
+    241.391
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -26.769,
+    -180.805,
+    240.98
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.605,
+    -180.805,
+    240.98
+   ],
+   "team": 1,
+   "facing": -90.177,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.211,
+    -179.084,
+    240.98
+   ],
+   "team": 0,
+   "facing": -90.948,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  },
+  {
+   "pos": [
+    -27.211,
+    -179.084,
+    240.98
+   ],
+   "team": 1,
+   "facing": -90.948,
+   "games": [
+    "slayer",
+    "ctf"
+   ],
+   "initial": true
+  }
+ ],
+ "scenery": [],
+ "placed": [
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -27.219,
+    -186.003,
+    242.309
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -27.183,
+    -160.02,
+    243.61
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "m52_reflection_globe",
+   "kind": "scenery",
+   "pos": [
+    -27.342,
+    -169.023,
+    250.091
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "circuit_breaker",
+   "kind": "scenery",
+   "pos": [
+    -28.402,
+    -180.361,
+    241.046
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "circuit_breaker",
+   "kind": "scenery",
+   "pos": [
+    -25.989,
+    -180.361,
+    241.046
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fire_extinguisher_wall",
+   "kind": "scenery",
+   "pos": [
+    -28.272,
+    -190.962,
+    242.38
+   ],
+   "rot": [
+    -171.721,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fire_extinguisher_wall",
+   "kind": "scenery",
+   "pos": [
+    -26.149,
+    -190.956,
+    242.38
+   ],
+   "rot": [
+    -171.721,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "chains_hanging_2",
+   "kind": "scenery",
+   "pos": [
+    -26.689,
+    -186.271,
+    242.193
+   ],
+   "rot": [
+    140.833,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "chains_hanging_2",
+   "kind": "scenery",
+   "pos": [
+    -27.768,
+    -186.282,
+    242.193
+   ],
+   "rot": [
+    -131.862,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_ext_security_camera",
+   "kind": "scenery",
+   "pos": [
+    -25.953,
+    -190.83,
+    244.106
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_ext_security_camera",
+   "kind": "scenery",
+   "pos": [
+    -28.474,
+    -190.83,
+    244.106
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_ext_security_camera",
+   "kind": "scenery",
+   "pos": [
+    -22.335,
+    -173.578,
+    243.727
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_ext_security_camera",
+   "kind": "scenery",
+   "pos": [
+    -33.452,
+    -174.742,
+    244.468
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_ext_security_camera",
+   "kind": "scenery",
+   "pos": [
+    -27.195,
+    -160.231,
+    244.862
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -40.31,
+    -174.729,
+    242.856
+   ],
+   "rot": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "weapon_box_mp",
+   "kind": "scenery",
+   "pos": [
+    -27.649,
+    -159.504,
+    243.246
+   ],
+   "rot": [
+    -90.0,
+    -90.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 1
+  },
+  {
+   "name": "weapon_box_mp",
+   "kind": "scenery",
+   "pos": [
+    -27.649,
+    -159.504,
+    243.588
+   ],
+   "rot": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 1
+  },
+  {
+   "name": "weapon_box_mp",
+   "kind": "scenery",
+   "pos": [
+    -27.648,
+    -159.504,
+    243.931
+   ],
+   "rot": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 1
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "hide unless megalo required",
+   "team": 1
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.195,
+    -161.457,
+    243.06
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "hide unless megalo required",
+   "team": 0
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -27.191,
+    -172.668,
+    243.148
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -16.786,
+    -174.642,
+    244.598
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -27.102,
+    -175.782,
+    241.148
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -39.621,
+    -174.749,
+    242.253
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -27.222,
+    -180.545,
+    245.251
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "oddball_ball",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.232,
+    -169.063,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "terr_object",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.779,
+    -174.66,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "terr_object",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -39.219,
+    -174.725,
+    244.98
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "terr_object",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -30.955,
+    -175.31,
+    241.18
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "terr_object",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "terr_object",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.799,
+    -174.654,
+    243.08
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_goal",
+   "flags": "hide unless megalo required",
+   "team": 2
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -37.777,
+    -174.739,
+    241.18
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_goal",
+   "flags": "hide unless megalo required",
+   "team": 3
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.233,
+    -184.392,
+    241.787
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_goal",
+   "flags": "hide unless megalo required",
+   "team": 1
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.22,
+    -161.805,
+    243.06
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_goal",
+   "flags": "hide unless megalo required",
+   "team": 0
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -21.725,
+    -170.131,
+    245.281
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.19,
+    -161.451,
+    245.26
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -32.899,
+    -172.54,
+    245.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -39.335,
+    -167.177,
+    245.798
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -38.429,
+    -174.747,
+    246.597
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -36.158,
+    -181.774,
+    246.58
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.404,
+    -184.831,
+    247.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -17.535,
+    -184.297,
+    247.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.186,
+    -172.668,
+    243.18
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.221,
+    -181.023,
+    245.281
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -27.23,
+    -189.822,
+    241.88
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -18.383,
+    -189.535,
+    242.78
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -36.107,
+    -189.628,
+    242.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "stp_flag",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.207,
+    -161.432,
+    245.26
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.205,
+    -180.559,
+    245.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -36.078,
+    -181.771,
+    246.58
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.404,
+    -185.031,
+    247.281
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -17.55,
+    -184.215,
+    247.283
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -17.191,
+    -180.919,
+    243.58
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -37.542,
+    -174.737,
+    241.18
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.609,
+    -174.64,
+    243.08
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "ivorytower_lift",
+   "kind": "crates",
+   "pos": [
+    -42.648,
+    -166.877,
+    242.54
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ivorytower_lift",
+   "kind": "crates",
+   "pos": [
+    -42.615,
+    -182.62,
+    242.54
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "hide unless megalo required",
+   "team": 2
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "hide unless megalo required",
+   "team": 3
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.232,
+    -169.064,
+    243.08
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "hh_drop_point",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_flag_base",
+   "kind": "crates",
+   "pos": [
+    -38.427,
+    -174.75,
+    246.597
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "ctf_flag_return",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.238,
+    -184.39,
+    241.833
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "as_bomb",
+   "flags": "hide unless megalo required",
+   "team": 1
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.195,
+    -161.457,
+    243.156
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_bomb",
+   "flags": "hide unless megalo required",
+   "team": 0
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_bomb",
+   "flags": "hide unless megalo required",
+   "team": 2
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_bomb",
+   "flags": "hide unless megalo required",
+   "team": 3
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -14.166,
+    -180.171,
+    246.28
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_bomb",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "as_goal",
+   "flags": "hide unless megalo required",
+   "team": 1
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -27.195,
+    -161.457,
+    243.06
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_goal",
+   "flags": "hide unless megalo required",
+   "team": 0
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -16.872,
+    -174.629,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_goal",
+   "flags": "hide unless megalo required",
+   "team": 2
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -37.219,
+    -174.763,
+    241.18
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_goal",
+   "flags": "hide unless megalo required",
+   "team": 3
+  },
+  {
+   "name": "mp_circle",
+   "kind": "crates",
+   "pos": [
+    -27.226,
+    -180.887,
+    245.28
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "as_goal",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.23,
+    -181.363,
+    245.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.22,
+    -189.45,
+    241.88
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -37.548,
+    -174.723,
+    241.18
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -38.364,
+    -174.694,
+    244.98
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.844,
+    -174.638,
+    243.108
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -30.97,
+    -175.439,
+    241.18
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.229,
+    -169.063,
+    243.08
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "inf_haven",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -29.36,
+    -175.693,
+    241.18
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.238,
+    -184.39,
+    241.739
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -16.779,
+    -174.66,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -39.219,
+    -174.725,
+    244.98
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.232,
+    -169.063,
+    243.08
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "mp_hill_beacon",
+   "kind": "crates",
+   "pos": [
+    -27.224,
+    -181.528,
+    245.26
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "koth_hill",
+   "flags": "hide unless megalo required",
+   "team": 8
+  },
+  {
+   "name": "august",
+   "kind": "crates",
+   "pos": [
+    -32.133,
+    -188.045,
+    242.281
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "coatrack_01",
+   "kind": "crates",
+   "pos": [
+    -19.806,
+    -186.821,
+    242.781
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "coatrack_01",
+   "kind": "crates",
+   "pos": [
+    -34.668,
+    -186.73,
+    242.281
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -20.12,
+    -186.27,
+    242.781
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -21.342,
+    -162.695,
+    243.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -33.05,
+    -162.677,
+    243.28
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "street_cone",
+   "kind": "crates",
+   "pos": [
+    -26.652,
+    -178.271,
+    240.98
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "street_cone",
+   "kind": "crates",
+   "pos": [
+    -27.273,
+    -178.281,
+    240.98
+   ],
+   "rot": [
+    -56.895,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "street_cone",
+   "kind": "crates",
+   "pos": [
+    -27.854,
+    -178.285,
+    240.98
+   ],
+   "rot": [
+    59.3,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -34.32,
+    -186.25,
+    242.281
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "hu_mil_radio_big_sound_m52",
+   "kind": "crates",
+   "pos": [
+    -21.546,
+    -186.346,
+    242.777
+   ],
+   "rot": [
+    -179.051,
+    0.459,
+    -0.004
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "vending_machine",
+   "kind": "crates",
+   "pos": [
+    -22.455,
+    -187.007,
+    242.78
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "vending_machine",
+   "kind": "crates",
+   "pos": [
+    -22.434,
+    -187.3,
+    242.78
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "glass_bar_tall",
+   "kind": "crates",
+   "pos": [
+    -20.849,
+    -187.484,
+    242.851
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "glass_bar_tall",
+   "kind": "crates",
+   "pos": [
+    -21.083,
+    -187.675,
+    242.851
+   ],
+   "rot": [
+    -9.004,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "glass_bar_tall",
+   "kind": "crates",
+   "pos": [
+    -20.608,
+    -187.696,
+    242.851
+   ],
+   "rot": [
+    -9.004,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "bottle_hum_liquor",
+   "kind": "crates",
+   "pos": [
+    -33.575,
+    -187.506,
+    242.351
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "bottle_hum_liquor",
+   "kind": "crates",
+   "pos": [
+    -33.581,
+    -187.858,
+    242.352
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "vending_machine",
+   "kind": "crates",
+   "pos": [
+    -20.64,
+    -186.195,
+    242.781
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "vending_machine",
+   "kind": "crates",
+   "pos": [
+    -20.372,
+    -186.203,
+    242.781
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "august",
+   "kind": "crates",
+   "pos": [
+    -32.144,
+    -187.712,
+    242.281
+   ],
+   "rot": [
+    111.925,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "august",
+   "kind": "crates",
+   "pos": [
+    -34.044,
+    -186.323,
+    242.281
+   ],
+   "rot": [
+    111.925,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "glass_bar_tall",
+   "kind": "crates",
+   "pos": [
+    -20.85,
+    -187.869,
+    242.851
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "bottle_hum_liquor",
+   "kind": "crates",
+   "pos": [
+    -33.381,
+    -187.689,
+    242.352
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "bottle_hum_liquor",
+   "kind": "crates",
+   "pos": [
+    -33.827,
+    -187.695,
+    242.35
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -32.271,
+    -182.813,
+    242.58
+   ],
+   "rot": [
+    -89.743,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -21.375,
+    -171.133,
+    243.08
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -15.712,
+    -182.497,
+    243.58
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -22.332,
+    -172.775,
+    242.03
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "garbage_can",
+   "kind": "crates",
+   "pos": [
+    -33.075,
+    -170.216,
+    242.58
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ivorytower_lift",
+   "kind": "crates",
+   "pos": [
+    -20.098,
+    -182.084,
+    244.542
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "august",
+   "kind": "crates",
+   "pos": [
+    -32.877,
+    -186.351,
+    242.281
+   ],
+   "rot": [
+    111.925,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -27.183,
+    -160.02,
+    243.612
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -27.219,
+    -186.003,
+    242.311
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -40.31,
+    -174.729,
+    242.858
+   ],
+   "rot": [
+    0.0,
+    -90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ivory_tower_elevator",
+   "kind": "machines",
+   "pos": [
+    -27.215,
+    -186.687,
+    242.073
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  }
+ ]
+}

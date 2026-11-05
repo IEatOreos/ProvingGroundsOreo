@@ -1,0 +1,57 @@
+# made on each PC: recordings, logs, backups
+logs/
+backups/
+__pycache__/
+*.pyc
+
+# built: the mod, the injector and their settings, pictures and 3D bots (native/build.bat, tools/setup.py)
+native/bin/
+native/**/*.obj
+native/**/*.pdb
+
+# the map tools and the bundled Python of an install
+tools/map_tools/
+python/
+
+# made from your copy of MCC by the first-time setup
+tools/view_art/games/
+tools/view_art/maps/
+maps/_models/
+
+# the map pack (a separate download: unzip it over the repository)
+maps/*/heightmap.npz
+maps/*/topdown.png
+maps/*/glass.json
+maps/_shapes/
+
+# each PC's own LiDAR scans and what its bots learned
+maps/*/lidar*.json
+maps/*/nav_learned.json
+maps/*/los_learned.json
+maps/*/rides.json
+maps/*/wedges.json
+maps/*/shots.json
+maps/*/paint.json
+maps/*/oob*.json
+maps/*/stations.json
+maps/*/variants/
+maps/*/source/
+maps/*/roofless/
+maps/*/roofless.json
+
+# personal terms for the release privacy scan (tools/make_release.py)
+.private_terms
+
+# Local installation archives, companion recorder, and machine-specific files
+/Project Proving Grounds 0.2.0/
+/Project Proving Grounds 0.2.0.zip
+/Project Proving Grounds - Vehicle Recorder Setup.exe
+/Vehicle Data Recorder/
+/unins*.exe
+/unins*.dat
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.venv/

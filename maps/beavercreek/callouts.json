@@ -1,0 +1,769 @@
+{
+ "map": "beavercreek",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 2.26,
+ "points": {
+  "mid": [
+   14.1,
+   13.75,
+   -0.99
+  ],
+  "mid_hill": [
+   15.1,
+   15.48,
+   4.96
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    29.06,
+    13.73,
+    -0.1
+   ],
+   [
+    25.33,
+    18.94,
+    -0.22
+   ],
+   [
+    25.32,
+    9.04,
+    -0.22
+   ]
+  ],
+  "blue": [
+   [
+    -0.86,
+    13.77,
+    -0.01
+   ],
+   [
+    3.11,
+    9.06,
+    -0.22
+   ],
+   [
+    2.87,
+    18.46,
+    -0.17
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   14.1,
+   13.75,
+   -0.99
+  ],
+  [
+   14.11,
+   22.72,
+   -1.04
+  ],
+  [
+   15.1,
+   5.51,
+   -0.83
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Inside red": {
+   "poly": [
+    [
+     20.8,
+     9.8
+    ],
+    [
+     31.0,
+     9.8
+    ],
+    [
+     31.0,
+     17.6
+    ],
+    [
+     20.8,
+     17.6
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "inside red base: red flag",
+   "aka": [
+    "red base",
+    "red"
+   ],
+   "area": false,
+   "zmax": 1.2
+  },
+  "Top red": {
+   "poly": [
+    [
+     20.8,
+     9.8
+    ],
+    [
+     31.0,
+     9.8
+    ],
+    [
+     31.0,
+     17.6
+    ],
+    [
+     20.8,
+     17.6
+    ]
+   ],
+   "side": "red",
+   "priority": 30,
+   "full": "red base roof",
+   "aka": [
+    "red roof",
+    "red top"
+   ],
+   "area": false,
+   "zmin": 1.2
+  },
+  "Inside blue": {
+   "poly": [
+    [
+     -2.6,
+     9.8
+    ],
+    [
+     6.8,
+     9.8
+    ],
+    [
+     6.8,
+     17.6
+    ],
+    [
+     -2.6,
+     17.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "inside blue base: blue flag",
+   "aka": [
+    "blue base",
+    "blue"
+   ],
+   "area": false,
+   "zmax": 1.2
+  },
+  "Top blue": {
+   "poly": [
+    [
+     -2.6,
+     9.8
+    ],
+    [
+     6.8,
+     9.8
+    ],
+    [
+     6.8,
+     17.6
+    ],
+    [
+     -2.6,
+     17.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 30,
+   "full": "blue base roof",
+   "aka": [
+    "blue roof",
+    "blue top"
+   ],
+   "area": false,
+   "zmin": 1.2
+  },
+  "Back red": {
+   "poly": [
+    [
+     31.0,
+     2.2
+    ],
+    [
+     36.2,
+     2.2
+    ],
+    [
+     36.2,
+     24.6
+    ],
+    [
+     31.0,
+     24.6
+    ]
+   ],
+   "side": "red",
+   "priority": 24,
+   "full": "behind red base on the teleporter side",
+   "aka": [
+    "behind red"
+   ],
+   "area": false
+  },
+  "OS": {
+   "poly": [
+    [
+     32.8,
+     12.4
+    ],
+    [
+     35.6,
+     12.4
+    ],
+    [
+     35.6,
+     15.2
+    ],
+    [
+     32.8,
+     15.2
+    ]
+   ],
+   "side": "red",
+   "priority": 34,
+   "full": "overshield spawn behind red base (camo in CTF)",
+   "aka": [
+    "overshield"
+   ],
+   "area": false
+  },
+  "Back blue": {
+   "poly": [
+    [
+     -7.8,
+     2.2
+    ],
+    [
+     -2.6,
+     2.2
+    ],
+    [
+     -2.6,
+     24.6
+    ],
+    [
+     -7.8,
+     24.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 24,
+   "full": "behind blue base on the teleporter side",
+   "aka": [
+    "behind blue"
+   ],
+   "area": false
+  },
+  "Front red": {
+   "poly": [
+    [
+     17.6,
+     6.4
+    ],
+    [
+     20.8,
+     6.4
+    ],
+    [
+     20.8,
+     21.0
+    ],
+    [
+     17.6,
+     21.0
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "in front of red base, facing the creek",
+   "aka": [
+    "red front"
+   ],
+   "area": false
+  },
+  "Front blue": {
+   "poly": [
+    [
+     6.8,
+     6.4
+    ],
+    [
+     11.4,
+     6.4
+    ],
+    [
+     11.4,
+     21.0
+    ],
+    [
+     6.8,
+     21.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "in front of blue base, facing the creek",
+   "aka": [
+    "blue front"
+   ],
+   "area": false
+  },
+  "Red needles": {
+   "poly": [
+    [
+     20.8,
+     5.0
+    ],
+    [
+     27.6,
+     5.0
+    ],
+    [
+     27.6,
+     9.8
+    ],
+    [
+     20.8,
+     9.8
+    ]
+   ],
+   "side": "red",
+   "priority": 32,
+   "full": "needler corner on the light side of red base",
+   "aka": [
+    "needle red",
+    "red needler"
+   ],
+   "area": false
+  },
+  "Red PR": {
+   "poly": [
+    [
+     20.8,
+     17.6
+    ],
+    [
+     27.6,
+     17.6
+    ],
+    [
+     27.6,
+     22.6
+    ],
+    [
+     20.8,
+     22.6
+    ]
+   ],
+   "side": "red",
+   "priority": 32,
+   "full": "plasma rifle side of red base, dark side",
+   "aka": [],
+   "area": false
+  },
+  "Blue needles": {
+   "poly": [
+    [
+     0.0,
+     17.6
+    ],
+    [
+     6.8,
+     17.6
+    ],
+    [
+     6.8,
+     22.6
+    ],
+    [
+     0.0,
+     22.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "needler corner on the dark side of blue base",
+   "aka": [
+    "needle blue",
+    "blue needler"
+   ],
+   "area": false
+  },
+  "Blue PR": {
+   "poly": [
+    [
+     0.0,
+     5.0
+    ],
+    [
+     6.8,
+     5.0
+    ],
+    [
+     6.8,
+     9.8
+    ],
+    [
+     0.0,
+     9.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 32,
+   "full": "plasma rifle side of blue base, light side",
+   "aka": [],
+   "area": false
+  },
+  "Big rock": {
+   "poly": [
+    [
+     20.2,
+     7.2
+    ],
+    [
+     22.6,
+     7.2
+    ],
+    [
+     22.6,
+     9.8
+    ],
+    [
+     20.2,
+     9.8
+    ]
+   ],
+   "side": "red",
+   "priority": 38,
+   "full": "boulder by red base's light-side wall, the jump onto top red",
+   "aka": [
+    "red jump",
+    "the rock"
+   ],
+   "area": false,
+   "zmin": 0.4
+  },
+  "Blue jump": {
+   "poly": [
+    [
+     -2.0,
+     7.2
+    ],
+    [
+     0.0,
+     7.2
+    ],
+    [
+     0.0,
+     8.8
+    ],
+    [
+     -2.0,
+     8.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 38,
+   "full": "concrete debris by blue base's light-side wall, the jump onto top blue",
+   "aka": [],
+   "area": false,
+   "zmin": 0.3
+  },
+  "Camo": {
+   "poly": [
+    [
+     13.4,
+     5.0
+    ],
+    [
+     16.4,
+     5.0
+    ],
+    [
+     16.4,
+     7.8
+    ],
+    [
+     13.4,
+     7.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "camo by the creek on the light side, crouch-in cave under the water",
+   "aka": [
+    "cloak",
+    "camo cave"
+   ],
+   "area": false,
+   "zmax": 1.5
+  },
+  "Light snipe": {
+   "poly": [
+    [
+     13.6,
+     2.6
+    ],
+    [
+     19.4,
+     2.6
+    ],
+    [
+     19.4,
+     6.8
+    ],
+    [
+     13.6,
+     6.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "lit sniper ledge above camo, overlooking red",
+   "aka": [
+    "light sniper"
+   ],
+   "area": false,
+   "zmin": 2.0
+  },
+  "Dark snipe": {
+   "poly": [
+    [
+     10.2,
+     20.6
+    ],
+    [
+     14.6,
+     20.6
+    ],
+    [
+     14.6,
+     24.0
+    ],
+    [
+     10.2,
+     24.0
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "shadowed sniper ledge on the dark wall",
+   "aka": [
+    "dark sniper"
+   ],
+   "area": false,
+   "zmin": 1.5
+  },
+  "Top rockets": {
+   "poly": [
+    [
+     11.4,
+     8.8
+    ],
+    [
+     13.4,
+     7.8
+    ],
+    [
+     18.6,
+     19.4
+    ],
+    [
+     17.8,
+     21.6
+    ],
+    [
+     15.4,
+     21.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 36,
+   "full": "top of the stone arch over the creek: rocket launcher",
+   "aka": [
+    "rockets",
+    "rocket arch",
+    "arch",
+    "top arch"
+   ],
+   "area": false,
+   "zmin": 2.0
+  },
+  "Bottom arch": {
+   "poly": [
+    [
+     11.4,
+     8.8
+    ],
+    [
+     13.4,
+     7.8
+    ],
+    [
+     18.6,
+     19.4
+    ],
+    [
+     17.8,
+     21.6
+    ],
+    [
+     15.4,
+     21.4
+    ]
+   ],
+   "side": "mid",
+   "priority": 28,
+   "full": "ground and creek under the arch",
+   "aka": [
+    "under arch"
+   ],
+   "area": false,
+   "zmax": 2.0
+  },
+  "Creek": {
+   "poly": [
+    [
+     11.4,
+     2.2
+    ],
+    [
+     17.6,
+     2.2
+    ],
+    [
+     17.6,
+     24.6
+    ],
+    [
+     11.4,
+     24.6
+    ]
+   ],
+   "side": "mid",
+   "priority": 12,
+   "full": "the creek across the middle",
+   "aka": [
+    "pit",
+    "mid",
+    "middle",
+    "river"
+   ],
+   "area": true
+  },
+  "Light red": {
+   "poly": [
+    [
+     17.6,
+     2.2
+    ],
+    [
+     36.2,
+     2.2
+    ],
+    [
+     36.2,
+     13.8
+    ],
+    [
+     17.6,
+     13.8
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "light-wall half of the red side",
+   "aka": [],
+   "area": true
+  },
+  "Dark red": {
+   "poly": [
+    [
+     17.6,
+     13.8
+    ],
+    [
+     36.2,
+     13.8
+    ],
+    [
+     36.2,
+     24.6
+    ],
+    [
+     17.6,
+     24.6
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "dark-wall half of the red side",
+   "aka": [],
+   "area": true
+  },
+  "Light blue": {
+   "poly": [
+    [
+     -7.8,
+     2.2
+    ],
+    [
+     11.4,
+     2.2
+    ],
+    [
+     11.4,
+     13.8
+    ],
+    [
+     -7.8,
+     13.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "light-wall half of the blue side",
+   "aka": [],
+   "area": true
+  },
+  "Dark blue": {
+   "poly": [
+    [
+     -7.8,
+     13.8
+    ],
+    [
+     11.4,
+     13.8
+    ],
+    [
+     11.4,
+     24.6
+    ],
+    [
+     -7.8,
+     24.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "dark-wall half of the blue side",
+   "aka": [],
+   "area": true
+  }
+ }
+}

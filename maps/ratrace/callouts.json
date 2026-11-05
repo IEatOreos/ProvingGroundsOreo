@@ -1,0 +1,590 @@
+{
+ "map": "ratrace",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": -1.16,
+ "points": {
+  "mid": [
+   7.19,
+   -11.75,
+   -2.9
+  ],
+  "mid_hill": [
+   10.69,
+   -11.75,
+   0.22
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    -4.23,
+    -0.86,
+    -0.4
+   ],
+   [
+    -4.77,
+    -6.83,
+    -1.04
+   ],
+   [
+    1.71,
+    -0.03,
+    -0.4
+   ]
+  ],
+  "blue": [
+   [
+    18.61,
+    -22.65,
+    -3.4
+   ],
+   [
+    19.16,
+    -16.68,
+    -3.61
+   ],
+   [
+    12.92,
+    -23.48,
+    -3.61
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   7.19,
+   -11.75,
+   -2.9
+  ],
+  [
+   1.8,
+   -21.11,
+   -3.61
+  ],
+  [
+   12.98,
+   -4.9,
+   -0.33
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Red base": {
+   "poly": [
+    [
+     -9.5,
+     -7.0
+    ],
+    [
+     5.5,
+     -7.0
+    ],
+    [
+     5.5,
+     4.0
+    ],
+    [
+     -9.5,
+     4.0
+    ]
+   ],
+   "side": "red",
+   "priority": 28,
+   "full": "the red flag room in the north-west corner, with the slope down to the camo hall",
+   "aka": [
+    "red flag",
+    "red room"
+   ],
+   "area": false
+  },
+  "Blue base": {
+   "poly": [
+    [
+     12.0,
+     -26.5
+    ],
+    [
+     24.0,
+     -26.5
+    ],
+    [
+     24.0,
+     -17.5
+    ],
+    [
+     12.0,
+     -17.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 28,
+   "full": "the blue flag room in the south-east corner, overshield on its raised step",
+   "aka": [
+    "blue flag",
+    "blue room"
+   ],
+   "area": false
+  },
+  "Tunnels": {
+   "poly": [
+    [
+     -6.5,
+     -14.8
+    ],
+    [
+     11.8,
+     -12.8
+    ],
+    [
+     11.8,
+     -9.8
+    ],
+    [
+     -6.5,
+     -11.8
+    ]
+   ],
+   "side": "mid",
+   "priority": 30,
+   "full": "the raised tunnel across the middle, from the cloak at its west end to the top room; holes drop into the halls below",
+   "aka": [
+    "tunnel",
+    "the tunnels",
+    "mid tunnel"
+   ],
+   "area": false,
+   "zmin": -1.0
+  },
+  "Top room": {
+   "poly": [
+    [
+     4.5,
+     -9.8
+    ],
+    [
+     11.0,
+     -9.8
+    ],
+    [
+     11.0,
+     -6.5
+    ],
+    [
+     4.5,
+     -6.5
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "upper room at the east end of the tunnels, with the teleporter down to the south hall",
+   "aka": [
+    "top"
+   ],
+   "area": false,
+   "zmin": -1.0
+  },
+  "Cloak": {
+   "poly": [
+    [
+     -2.5,
+     -13.0
+    ],
+    [
+     -2.83,
+     -11.75
+    ],
+    [
+     -3.75,
+     -10.83
+    ],
+    [
+     -5.0,
+     -10.5
+    ],
+    [
+     -6.25,
+     -10.83
+    ],
+    [
+     -7.17,
+     -11.75
+    ],
+    [
+     -7.5,
+     -13.0
+    ],
+    [
+     -7.17,
+     -14.25
+    ],
+    [
+     -6.25,
+     -15.17
+    ],
+    [
+     -5.0,
+     -15.5
+    ],
+    [
+     -3.75,
+     -15.17
+    ],
+    [
+     -2.83,
+     -14.25
+    ]
+   ],
+   "side": "mid",
+   "priority": 38,
+   "full": "camo spawn at the west end of the tunnels (respawns every 90 s)",
+   "aka": [
+    "camo",
+    "top cloak",
+    "top camo"
+   ],
+   "area": false,
+   "zmin": -1.0
+  },
+  "Under cloak": {
+   "poly": [
+    [
+     -9.5,
+     -18.0
+    ],
+    [
+     -1.0,
+     -18.0
+    ],
+    [
+     -1.0,
+     -10.5
+    ],
+    [
+     -9.5,
+     -10.5
+    ]
+   ],
+   "side": "mid",
+   "priority": 32,
+   "full": "hall floor under the cloak, with the teleporter to the east hall",
+   "aka": [
+    "under camo",
+    "bottom cloak"
+   ],
+   "area": false,
+   "zmax": -1.0
+  },
+  "OS": {
+   "poly": [
+    [
+     20.6,
+     -19.7
+    ],
+    [
+     20.31,
+     -18.6
+    ],
+    [
+     19.5,
+     -17.79
+    ],
+    [
+     18.4,
+     -17.5
+    ],
+    [
+     17.3,
+     -17.79
+    ],
+    [
+     16.49,
+     -18.6
+    ],
+    [
+     16.2,
+     -19.7
+    ],
+    [
+     16.49,
+     -20.8
+    ],
+    [
+     17.3,
+     -21.61
+    ],
+    [
+     18.4,
+     -21.9
+    ],
+    [
+     19.5,
+     -21.61
+    ],
+    [
+     20.31,
+     -20.8
+    ]
+   ],
+   "side": "blue",
+   "priority": 38,
+   "full": "overshield on the raised step in the blue room, at the bottom of the big ramp",
+   "aka": [
+    "overshield",
+    "top OS"
+   ],
+   "area": false,
+   "zmin": -2.4
+  },
+  "Under OS": {
+   "poly": [
+    [
+     21.0,
+     -19.7
+    ],
+    [
+     20.65,
+     -18.4
+    ],
+    [
+     19.7,
+     -17.45
+    ],
+    [
+     18.4,
+     -17.1
+    ],
+    [
+     17.1,
+     -17.45
+    ],
+    [
+     16.15,
+     -18.4
+    ],
+    [
+     15.8,
+     -19.7
+    ],
+    [
+     16.15,
+     -21.0
+    ],
+    [
+     17.1,
+     -21.95
+    ],
+    [
+     18.4,
+     -22.3
+    ],
+    [
+     19.7,
+     -21.95
+    ],
+    [
+     20.65,
+     -21.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "blue room floor under the overshield step",
+   "aka": [
+    "under overshield",
+    "under the OS"
+   ],
+   "area": false,
+   "zmax": -2.4
+  },
+  "Big ramp": {
+   "poly": [
+    [
+     9.8,
+     -3.3
+    ],
+    [
+     14.0,
+     -3.3
+    ],
+    [
+     14.0,
+     -9.5
+    ],
+    [
+     17.6,
+     -17.4
+    ],
+    [
+     17.6,
+     -19.2
+    ],
+    [
+     14.2,
+     -19.2
+    ],
+    [
+     11.9,
+     -13.0
+    ],
+    [
+     11.9,
+     -9.8
+    ],
+    [
+     9.8,
+     -6.3
+    ]
+   ],
+   "side": "mid",
+   "priority": 31,
+   "full": "the long curved ramp from the overshield step in the blue room up past the tunnels to the red corridor",
+   "aka": [
+    "ramp",
+    "the ramp"
+   ],
+   "area": false,
+   "zmin": -1.8
+  },
+  "Bottom portal": {
+   "poly": [
+    [
+     6.3,
+     -27.9
+    ],
+    [
+     11.5,
+     -27.9
+    ],
+    [
+     11.5,
+     -24.3
+    ],
+    [
+     6.3,
+     -24.3
+    ]
+   ],
+   "side": "blue",
+   "priority": 34,
+   "full": "teleporter at the south end of the south hall, up to the top room (suggested name)",
+   "aka": [
+    "south portal",
+    "bottom tele"
+   ],
+   "area": false
+  },
+  "East portal": {
+   "poly": [
+    [
+     19.8,
+     -8.4
+    ],
+    [
+     24.2,
+     -8.4
+    ],
+    [
+     24.2,
+     -3.2
+    ],
+    [
+     19.8,
+     -3.2
+    ]
+   ],
+   "side": "mid",
+   "priority": 34,
+   "full": "teleporter in the east hall, to the floor under the cloak (suggested name)",
+   "aka": [
+    "east tele"
+   ],
+   "area": false
+  },
+  "Mid": {
+   "poly": [
+    [
+     -24.05,
+     -37.27
+    ],
+    [
+     -16.82,
+     -44.17
+    ],
+    [
+     38.45,
+     13.66
+    ],
+    [
+     31.22,
+     20.57
+    ]
+   ],
+   "side": "mid",
+   "priority": 10,
+   "full": "the middle band between the flags: tunnels, top room, the hall under them, the east hall",
+   "aka": [
+    "middle",
+    "center"
+   ],
+   "area": true
+  },
+  "Red side": {
+   "poly": [
+    [
+     -24.05,
+     -37.27
+    ],
+    [
+     31.22,
+     20.57
+    ],
+    [
+     -8.54,
+     58.58
+    ],
+    [
+     -63.82,
+     0.74
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "red's half (north and west): red room, the corridor east, the camo hall",
+   "aka": [
+    "red half",
+    "red"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     -16.82,
+     -44.17
+    ],
+    [
+     22.94,
+     -82.18
+    ],
+    [
+     78.22,
+     -24.34
+    ],
+    [
+     38.45,
+     13.66
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "blue's half (south and east): blue room, the south hall, the east hall",
+   "aka": [
+    "blue half",
+    "blue"
+   ],
+   "area": true
+  }
+ }
+}

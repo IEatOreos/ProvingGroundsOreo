@@ -1,0 +1,8 @@
+{
+ "game": "h3",
+ "objects": [],
+ "skipped": [
+  "man_cannon_01: no object tag in H3EK, H3ODSTEK",
+  "man_cannon_waterfall_2: no object tag in H3EK, H3ODSTEK"
+ ]
+}

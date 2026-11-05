@@ -1,0 +1,488 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+-6.738,
+7.559,
+-0.003
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-6.809,
+-7.491,
+-0.068
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+6.595,
+-7.303,
+-0.033
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+6.565,
+7.208,
+0.048
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-0.019,
+-1.176,
+2.17
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sword",
+"pos": [
+-0.009,
+-17.24,
+2.007
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "beam_rifle",
+"pos": [
+14.758,
+-0.007,
+2.088
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+17.892,
+-0.007,
+-0.288
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+0.009,
+17.284,
+2.011
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+-17.569,
+0.014,
+2.029
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-0.017,
+-20.484,
+-0.428
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+-0.01,
+20.534,
+-0.348
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "beam_rifle",
+"pos": [
+0.03,
+-9.844,
+1.372
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "binary_rifle",
+"pos": [
+0.034,
+9.822,
+1.375
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-8.474,
+10.513,
+0.088
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "beam_rifle",
+"pos": [
+8.471,
+10.518,
+0.088
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+8.483,
+-10.546,
+0.088
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "beam_rifle",
+"pos": [
+-8.48,
+-10.544,
+0.088
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+0.011,
+0.046,
+0.032
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+-21.669,
+0.002,
+1.041
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+24.249,
+0.011,
+0.049
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-17.941,
+0.004,
+2.034
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.004,
+16.693,
+1.972
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.004,
+16.693,
+1.972
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-0.005,
+-16.684,
+1.972
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-0.005,
+-16.684,
+1.972
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.024,
+0.011,
+2.0
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-14.895,
+0.004,
+2.028
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+16.546,
+0.006,
+2.683
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-0.005,
+16.232,
+1.961
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-0.007,
+-16.23,
+1.961
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+20.824,
+0.006,
+4.038
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+0.329,
+0.053,
+-0.023
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-5.888,
+6.731,
+-0.048
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+5.928,
+-6.715,
+-0.057
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+20.008,
+0.0,
+4.033
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-1.213,
+0.043,
+2.193
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-18.82,
+0.013,
+2.008
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+1.208,
+0.038,
+2.193
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-17.559,
+-0.016,
+-0.003
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-17.559,
+-0.016,
+-0.003
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+20.116,
+0.014,
+-0.559
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+20.116,
+0.014,
+-0.559
+],
+"team": 2
+},
+{
+"kind": "lift",
+"name": "dc_lg_rearlift",
+"pos": [
+22.766,
+0.008,
+0.0
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

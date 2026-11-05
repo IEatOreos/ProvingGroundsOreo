@@ -1,0 +1,3 @@
+{"volumes": [
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [3.503, 0.152, 5.18], "size": [43.04, 26.76, 18.798], "condition": "safe_zone volume not in the safe zone block (H2 / H3 engine): what it does is UNKNOWN"}
+]}

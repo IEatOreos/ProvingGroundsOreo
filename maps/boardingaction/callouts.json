@@ -1,0 +1,1653 @@
+{
+ "map": "boardingaction",
+ "generated": false,
+ "source": "docs/research/09-ce-map-callouts.md",
+ "base_radius": 5.0,
+ "roof_z": 17.03,
+ "points": {
+  "mid": [
+   9.96,
+   -0.03,
+   0
+  ],
+  "mid_hill": [
+   9.96,
+   -0.03,
+   0
+  ]
+ },
+ "holds": {
+  "red": [
+   [
+    1.72,
+    0.48,
+    0.42
+   ],
+   [
+    1.9,
+    -1.5,
+    0.22
+   ],
+   [
+    -1.0,
+    2.0,
+    2.72
+   ]
+  ],
+  "blue": [
+   [
+    18.2,
+    -0.54,
+    0.42
+   ],
+   [
+    18.0,
+    1.5,
+    0.22
+   ],
+   [
+    20.9,
+    -2.0,
+    2.72
+   ]
+  ]
+ },
+ "lanes": [
+  [
+   9.96,
+   -0.03,
+   0
+  ]
+ ],
+ "sneak": {},
+ "zones": {
+  "Red 1 left": {
+   "poly": [
+    [
+     -5.6,
+     7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     5.6,
+     23.5
+    ],
+    [
+     -5.6,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 1, left end (looking out from the red ship toward blue), teleporters at both ends",
+   "aka": [
+    "red 1 far left"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Red 1 mid": {
+   "poly": [
+    [
+     -5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     -5.6,
+     7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 1, middle section, teleporters at both ends",
+   "aka": [
+    "red 1",
+    "red 1 middle",
+    "red 1 center"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Red 1 right": {
+   "poly": [
+    [
+     -5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     -5.6,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 1, right end (looking out from the red ship toward blue), teleporters at both ends",
+   "aka": [
+    "red 1 far right"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Red 2 left": {
+   "poly": [
+    [
+     -5.6,
+     7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     5.6,
+     23.5
+    ],
+    [
+     -5.6,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 2, left end (looking out from the red ship toward blue)",
+   "aka": [
+    "red 2 far left"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Red 2 mid": {
+   "poly": [
+    [
+     -5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     -5.6,
+     7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 2, middle section",
+   "aka": [
+    "red 2",
+    "red 2 middle",
+    "red 2 center"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Red 2 right": {
+   "poly": [
+    [
+     -5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     -5.6,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 2, right end (looking out from the red ship toward blue)",
+   "aka": [
+    "red 2 far right"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Red 3 left": {
+   "poly": [
+    [
+     -5.6,
+     7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     5.6,
+     23.5
+    ],
+    [
+     -5.6,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 3, left end (looking out from the red ship toward blue), the flag in the middle",
+   "aka": [
+    "red 3 far left"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Red 3 mid": {
+   "poly": [
+    [
+     -5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     -5.6,
+     7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 22,
+   "full": "red ship floor 3, middle section, the flag in the middle",
+   "aka": [
+    "red 3",
+    "red 3 middle",
+    "red 3 center",
+    "red flag",
+    "red base"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Red 3 right": {
+   "poly": [
+    [
+     -5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     -5.6,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 3, right end (looking out from the red ship toward blue), the flag in the middle",
+   "aka": [
+    "red 3 far right"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Red 4 left": {
+   "poly": [
+    [
+     -5.6,
+     7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     5.6,
+     23.5
+    ],
+    [
+     -5.6,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 4, left end (looking out from the red ship toward blue)",
+   "aka": [
+    "red 4 far left"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Red 4 mid": {
+   "poly": [
+    [
+     -5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     -5.6,
+     7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 4, middle section",
+   "aka": [
+    "red 4",
+    "red 4 middle",
+    "red 4 center"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Red 4 right": {
+   "poly": [
+    [
+     -5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     -5.6,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 4, right end (looking out from the red ship toward blue)",
+   "aka": [
+    "red 4 far right"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Red 5 left": {
+   "poly": [
+    [
+     -5.6,
+     7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     5.6,
+     23.5
+    ],
+    [
+     -5.6,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 5, left end (looking out from the red ship toward blue), teleporters at both ends, the top deck",
+   "aka": [
+    "red 5 far left"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red 5 mid": {
+   "poly": [
+    [
+     -5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     5.6,
+     7.0
+    ],
+    [
+     -5.6,
+     7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 5, middle section, teleporters at both ends, the top deck",
+   "aka": [
+    "red 5",
+    "red 5 middle",
+    "red 5 center"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red 5 right": {
+   "poly": [
+    [
+     -5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -7.0
+    ],
+    [
+     -5.6,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 20,
+   "full": "red ship floor 5, right end (looking out from the red ship toward blue), teleporters at both ends, the top deck",
+   "aka": [
+    "red 5 far right"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red 1 left portal": {
+   "poly": [
+    [
+     0.0,
+     7.0
+    ],
+    [
+     4.2,
+     7.0
+    ],
+    [
+     4.2,
+     10.6
+    ],
+    [
+     0.0,
+     10.6
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "red floor 1 teleporter at the left end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "red 1 portal left",
+    "red 1 left tele"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Red 1 right portal": {
+   "poly": [
+    [
+     0.0,
+     -10.6
+    ],
+    [
+     4.2,
+     -10.6
+    ],
+    [
+     4.2,
+     -7.0
+    ],
+    [
+     0.0,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "red floor 1 teleporter at the right end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "red 1 portal right",
+    "red 1 right tele"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Red 5 left portal": {
+   "poly": [
+    [
+     -5.0,
+     7.0
+    ],
+    [
+     1.0,
+     7.0
+    ],
+    [
+     1.0,
+     10.6
+    ],
+    [
+     -5.0,
+     10.6
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "red floor 5 teleporter at the left end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "red 5 portal left",
+    "red 5 left tele"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red 5 right portal": {
+   "poly": [
+    [
+     -5.0,
+     -10.6
+    ],
+    [
+     1.0,
+     -10.6
+    ],
+    [
+     1.0,
+     -7.0
+    ],
+    [
+     -5.0,
+     -7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "red floor 5 teleporter at the right end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "red 5 portal right",
+    "red 5 right tele"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red snipe": {
+   "poly": [
+    [
+     0.5,
+     -23.5
+    ],
+    [
+     5.6,
+     -23.5
+    ],
+    [
+     5.6,
+     -17.0
+    ],
+    [
+     0.5,
+     -17.0
+    ]
+   ],
+   "side": "red",
+   "priority": 40,
+   "full": "sniper rifle spawn on red floor 5, right end",
+   "aka": [
+    "red 5 snipe",
+    "red sniper",
+    "red snipe spawn"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red OS": {
+   "poly": [
+    [
+     0.0,
+     -19.5
+    ],
+    [
+     5.6,
+     -19.5
+    ],
+    [
+     5.6,
+     -14.5
+    ],
+    [
+     0.0,
+     -14.5
+    ]
+   ],
+   "side": "red",
+   "priority": 40,
+   "full": "power-up corner: overshield in the indent at the top right of the red ship (looking out), floor 4",
+   "aka": [
+    "red power-up",
+    "red power-up corner",
+    "red overshield"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Red camo": {
+   "poly": [
+    [
+     0.0,
+     16.0
+    ],
+    [
+     5.6,
+     16.0
+    ],
+    [
+     5.6,
+     23.5
+    ],
+    [
+     0.0,
+     23.5
+    ]
+   ],
+   "side": "red",
+   "priority": 40,
+   "full": "camo spawn at the left end of red floor 1",
+   "aka": [
+    "red 1 camo"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Red 4 rockets": {
+   "poly": [
+    [
+     -2.6,
+     3.4
+    ],
+    [
+     2.6,
+     3.4
+    ],
+    [
+     2.6,
+     7.0
+    ],
+    [
+     -2.6,
+     7.0
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "rocket box on red floor 4, left of middle",
+   "aka": [
+    "red rocket box",
+    "red 4 rocket box",
+    "red rocket room"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Red 2 rockets": {
+   "poly": [
+    [
+     -2.4,
+     -7.0
+    ],
+    [
+     2.8,
+     -7.0
+    ],
+    [
+     2.8,
+     -2.4
+    ],
+    [
+     -2.4,
+     -2.4
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "rocket box on red floor 2, right of middle",
+   "aka": [
+    "red 2 rocket box",
+    "red rocket box 2"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Red shotgun": {
+   "poly": [
+    [
+     -0.5,
+     -3.2
+    ],
+    [
+     4.5,
+     -3.2
+    ],
+    [
+     4.5,
+     -0.6
+    ],
+    [
+     -0.5,
+     -0.6
+    ]
+   ],
+   "side": "red",
+   "priority": 36,
+   "full": "shotgun box next to the red flag on floor 3",
+   "aka": [
+    "red shotgun box",
+    "red 3 shotgun"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Blue 1 left": {
+   "poly": [
+    [
+     25.52,
+     -23.5
+    ],
+    [
+     14.32,
+     -23.5
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     25.52,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 1, left end (looking out from the blue ship toward red), teleporters at both ends",
+   "aka": [
+    "blue 1 far left"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Blue 1 mid": {
+   "poly": [
+    [
+     25.52,
+     -7.0
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     25.52,
+     7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 1, middle section, teleporters at both ends",
+   "aka": [
+    "blue 1",
+    "blue 1 middle",
+    "blue 1 center"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Blue 1 right": {
+   "poly": [
+    [
+     25.52,
+     7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     14.32,
+     23.5
+    ],
+    [
+     25.52,
+     23.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 1, right end (looking out from the blue ship toward red), teleporters at both ends",
+   "aka": [
+    "blue 1 far right"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Blue 2 left": {
+   "poly": [
+    [
+     25.52,
+     -23.5
+    ],
+    [
+     14.32,
+     -23.5
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     25.52,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 2, left end (looking out from the blue ship toward red)",
+   "aka": [
+    "blue 2 far left"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Blue 2 mid": {
+   "poly": [
+    [
+     25.52,
+     -7.0
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     25.52,
+     7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 2, middle section",
+   "aka": [
+    "blue 2",
+    "blue 2 middle",
+    "blue 2 center"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Blue 2 right": {
+   "poly": [
+    [
+     25.52,
+     7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     14.32,
+     23.5
+    ],
+    [
+     25.52,
+     23.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 2, right end (looking out from the blue ship toward red)",
+   "aka": [
+    "blue 2 far right"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Blue 3 left": {
+   "poly": [
+    [
+     25.52,
+     -23.5
+    ],
+    [
+     14.32,
+     -23.5
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     25.52,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 3, left end (looking out from the blue ship toward red), the flag in the middle",
+   "aka": [
+    "blue 3 far left"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Blue 3 mid": {
+   "poly": [
+    [
+     25.52,
+     -7.0
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     25.52,
+     7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 22,
+   "full": "blue ship floor 3, middle section, the flag in the middle",
+   "aka": [
+    "blue 3",
+    "blue 3 middle",
+    "blue 3 center",
+    "blue flag",
+    "blue base"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Blue 3 right": {
+   "poly": [
+    [
+     25.52,
+     7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     14.32,
+     23.5
+    ],
+    [
+     25.52,
+     23.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 3, right end (looking out from the blue ship toward red), the flag in the middle",
+   "aka": [
+    "blue 3 far right"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Blue 4 left": {
+   "poly": [
+    [
+     25.52,
+     -23.5
+    ],
+    [
+     14.32,
+     -23.5
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     25.52,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 4, left end (looking out from the blue ship toward red)",
+   "aka": [
+    "blue 4 far left"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Blue 4 mid": {
+   "poly": [
+    [
+     25.52,
+     -7.0
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     25.52,
+     7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 4, middle section",
+   "aka": [
+    "blue 4",
+    "blue 4 middle",
+    "blue 4 center"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Blue 4 right": {
+   "poly": [
+    [
+     25.52,
+     7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     14.32,
+     23.5
+    ],
+    [
+     25.52,
+     23.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 4, right end (looking out from the blue ship toward red)",
+   "aka": [
+    "blue 4 far right"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Blue 5 left": {
+   "poly": [
+    [
+     25.52,
+     -23.5
+    ],
+    [
+     14.32,
+     -23.5
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     25.52,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 5, left end (looking out from the blue ship toward red), teleporters at both ends, the top deck",
+   "aka": [
+    "blue 5 far left"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue 5 mid": {
+   "poly": [
+    [
+     25.52,
+     -7.0
+    ],
+    [
+     14.32,
+     -7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     25.52,
+     7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 5, middle section, teleporters at both ends, the top deck",
+   "aka": [
+    "blue 5",
+    "blue 5 middle",
+    "blue 5 center"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue 5 right": {
+   "poly": [
+    [
+     25.52,
+     7.0
+    ],
+    [
+     14.32,
+     7.0
+    ],
+    [
+     14.32,
+     23.5
+    ],
+    [
+     25.52,
+     23.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 20,
+   "full": "blue ship floor 5, right end (looking out from the blue ship toward red), teleporters at both ends, the top deck",
+   "aka": [
+    "blue 5 far right"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue 1 left portal": {
+   "poly": [
+    [
+     19.92,
+     -10.6
+    ],
+    [
+     15.72,
+     -10.6
+    ],
+    [
+     15.72,
+     -7.0
+    ],
+    [
+     19.92,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "blue floor 1 teleporter at the left end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "blue 1 portal left",
+    "blue 1 left tele"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Blue 1 right portal": {
+   "poly": [
+    [
+     19.92,
+     7.0
+    ],
+    [
+     15.72,
+     7.0
+    ],
+    [
+     15.72,
+     10.6
+    ],
+    [
+     19.92,
+     10.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "blue floor 1 teleporter at the right end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "blue 1 portal right",
+    "blue 1 right tele"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Blue 5 left portal": {
+   "poly": [
+    [
+     24.92,
+     -10.6
+    ],
+    [
+     18.92,
+     -10.6
+    ],
+    [
+     18.92,
+     -7.0
+    ],
+    [
+     24.92,
+     -7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "blue floor 5 teleporter at the left end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "blue 5 portal left",
+    "blue 5 left tele"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue 5 right portal": {
+   "poly": [
+    [
+     24.92,
+     7.0
+    ],
+    [
+     18.92,
+     7.0
+    ],
+    [
+     18.92,
+     10.6
+    ],
+    [
+     24.92,
+     10.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "blue floor 5 teleporter at the right end, goes straight across to the same spot on the other ship",
+   "aka": [
+    "blue 5 portal right",
+    "blue 5 right tele"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue snipe": {
+   "poly": [
+    [
+     19.42,
+     17.0
+    ],
+    [
+     14.32,
+     17.0
+    ],
+    [
+     14.32,
+     23.5
+    ],
+    [
+     19.42,
+     23.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "sniper rifle spawn on blue floor 5, right end",
+   "aka": [
+    "blue 5 snipe",
+    "blue sniper",
+    "blue snipe spawn"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue OS": {
+   "poly": [
+    [
+     19.92,
+     14.5
+    ],
+    [
+     14.32,
+     14.5
+    ],
+    [
+     14.32,
+     19.5
+    ],
+    [
+     19.92,
+     19.5
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "power-up corner: overshield in the indent at the top right of the blue ship (looking out), floor 4",
+   "aka": [
+    "blue power-up",
+    "blue power-up corner",
+    "blue overshield"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Blue camo": {
+   "poly": [
+    [
+     19.92,
+     -23.5
+    ],
+    [
+     14.32,
+     -23.5
+    ],
+    [
+     14.32,
+     -16.0
+    ],
+    [
+     19.92,
+     -16.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "camo spawn at the left end of blue floor 1",
+   "aka": [
+    "blue 1 camo"
+   ],
+   "area": false,
+   "zmax": -3.55
+  },
+  "Blue 4 rockets": {
+   "poly": [
+    [
+     22.52,
+     -7.0
+    ],
+    [
+     17.32,
+     -7.0
+    ],
+    [
+     17.32,
+     -3.4
+    ],
+    [
+     22.52,
+     -3.4
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "rocket box on blue floor 4, left of middle",
+   "aka": [
+    "blue rocket box",
+    "blue 4 rocket box",
+    "blue rocket room"
+   ],
+   "area": false,
+   "zmin": 1.45,
+   "zmax": 3.95
+  },
+  "Blue 2 rockets": {
+   "poly": [
+    [
+     22.32,
+     2.4
+    ],
+    [
+     17.12,
+     2.4
+    ],
+    [
+     17.12,
+     7.0
+    ],
+    [
+     22.32,
+     7.0
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "rocket box on blue floor 2, right of middle",
+   "aka": [
+    "blue 2 rocket box",
+    "blue rocket box 2"
+   ],
+   "area": false,
+   "zmin": -3.55,
+   "zmax": -1.05
+  },
+  "Blue shotgun": {
+   "poly": [
+    [
+     20.42,
+     0.6
+    ],
+    [
+     15.42,
+     0.6
+    ],
+    [
+     15.42,
+     3.2
+    ],
+    [
+     20.42,
+     3.2
+    ]
+   ],
+   "side": "blue",
+   "priority": 36,
+   "full": "shotgun box next to the blue flag on floor 3",
+   "aka": [
+    "blue shotgun box",
+    "blue 3 shotgun"
+   ],
+   "area": false,
+   "zmin": -1.05,
+   "zmax": 1.45
+  },
+  "Red fuel rod": {
+   "poly": [
+    [
+     -5.0,
+     15.0
+    ],
+    [
+     1.8,
+     15.0
+    ],
+    [
+     1.8,
+     20.5
+    ],
+    [
+     -5.0,
+     20.5
+    ]
+   ],
+   "side": "red",
+   "priority": 40,
+   "full": "fuel rod spawn at the left end of red floor 5",
+   "aka": [
+    "red 5 fuel rod"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Blue fuel rod": {
+   "poly": [
+    [
+     19.0,
+     -7.0
+    ],
+    [
+     24.0,
+     -7.0
+    ],
+    [
+     24.0,
+     -4.6
+    ],
+    [
+     19.0,
+     -4.6
+    ]
+   ],
+   "side": "blue",
+   "priority": 40,
+   "full": "fuel rod spawn on blue floor 5, left of middle, next to the left portal",
+   "aka": [
+    "blue 5 fuel rod"
+   ],
+   "area": false,
+   "zmin": 3.95
+  },
+  "Red side": {
+   "poly": [
+    [
+     -8,
+     -26
+    ],
+    [
+     9.96,
+     -26
+    ],
+    [
+     9.96,
+     26
+    ],
+    [
+     -8,
+     26
+    ]
+   ],
+   "side": "red",
+   "priority": 10,
+   "full": "the red ship (red base), every floor",
+   "aka": [
+    "red ship",
+    "red base",
+    "red"
+   ],
+   "area": true
+  },
+  "Blue side": {
+   "poly": [
+    [
+     9.96,
+     -26
+    ],
+    [
+     28,
+     -26
+    ],
+    [
+     28,
+     26
+    ],
+    [
+     9.96,
+     26
+    ]
+   ],
+   "side": "blue",
+   "priority": 10,
+   "full": "the blue ship (blue base), every floor",
+   "aka": [
+    "blue ship",
+    "blue base",
+    "blue"
+   ],
+   "area": true
+  }
+ }
+}

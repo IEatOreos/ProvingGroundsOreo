@@ -1,0 +1,2208 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+45.903,
+39.169,
+5.089
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+67.567,
+-50.736,
+6.265
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+65.632,
+-50.745,
+6.261
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+65.481,
+51.165,
+6.147
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+67.723,
+51.191,
+6.147
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+47.094,
+-39.875,
+5.081
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "beam_rifle",
+"pos": [
+23.855,
+-5.224,
+6.04
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+139.582,
+11.565,
+4.918
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle_red",
+"pos": [
+72.097,
+57.488,
+7.595
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+48.184,
+-54.7,
+6.076
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "smg_silenced",
+"pos": [
+134.818,
+-45.931,
+7.541
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+127.247,
+-40.439,
+7.606
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+74.554,
+27.118,
+5.275
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+71.82,
+33.511,
+4.422
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+81.52,
+57.677,
+9.026
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+60.285,
+-16.384,
+6.026
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+75.605,
+-41.142,
+4.421
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+103.222,
+27.669,
+4.425
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+103.666,
+28.332,
+4.425
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+105.425,
+29.205,
+4.425
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+30.791,
+25.021,
+6.022
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+137.839,
+4.24,
+5.723
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+137.966,
+-4.026,
+5.703
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+39.828,
+5.922,
+7.254
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+144.165,
+26.637,
+8.507
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+143.973,
+26.961,
+8.509
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "pistol_ammo",
+"pos": [
+44.724,
+40.582,
+5.06
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "pistol_ammo",
+"pos": [
+44.893,
+40.274,
+5.06
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+67.835,
+-50.709,
+6.102
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+65.389,
+-50.71,
+6.102
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+65.097,
+50.654,
+6.365
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+68.088,
+50.666,
+6.357
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+45.34,
+-38.609,
+5.109
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+45.555,
+-38.387,
+5.128
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+58.332,
+-61.614,
+6.095
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+72.127,
+34.62,
+6.05
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+82.239,
+61.901,
+9.043
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "claymore_grenade",
+"pos": [
+73.708,
+40.138,
+4.58
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "claymore_grenade",
+"pos": [
+73.335,
+40.044,
+4.546
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+69.952,
+-18.79,
+4.553
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+76.851,
+-40.01,
+4.449
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+33.482,
+-19.192,
+7.209
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+127.7,
+-43.045,
+9.682
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+151.841,
+3.573,
+6.893
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+151.863,
+-1.744,
+6.893
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+125.925,
+-1.002,
+5.116
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+125.876,
+0.968,
+5.116
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+136.183,
+-12.55,
+6.019
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+75.131,
+-21.246,
+63.523
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+74.394,
+-21.233,
+63.524
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+73.662,
+-21.239,
+63.524
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+72.963,
+-21.269,
+63.524
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+75.985,
+-23.704,
+63.532
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+74.73,
+-23.703,
+63.532
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+73.469,
+-23.712,
+63.527
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+72.177,
+-23.696,
+63.533
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-1.069,
+-10.206,
+4.613
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+151.841,
+3.573,
+6.893
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-26.786,
+-0.793,
+4.099
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-20.831,
+1.088,
+4.1
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-20.827,
+-31.787,
+4.103
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-26.776,
+-29.849,
+4.1
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-39.536,
+-18.777,
+2.276
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-39.541,
+-11.877,
+2.276
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-40.019,
+-30.726,
+6.03
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+128.36,
+17.489,
+8.661
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+133.223,
+15.087,
+6.161
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+128.255,
+-17.498,
+8.661
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+133.259,
+-15.123,
+6.161
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+127.411,
+0.009,
+6.233
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+142.46,
+27.142,
+9.492
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+142.451,
+-27.145,
+9.492
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+-43.51,
+-19.503,
+6.05
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-45.697,
+-29.822,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-29.822,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-6.238,
+-19.728,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-6.238,
+-10.916,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-100.945,
+-84.487,
+4.546
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-70.62,
+-59.413,
+6.051
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-77.925,
+-61.618,
+9.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-80.766,
+-63.588,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-71.24,
+-58.426,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-54.801,
+-58.214,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-52.0,
+-60.314,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.901,
+-53.914,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+6.947,
+-80.501,
+5.3
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+14.049,
+-67.498,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+17.0,
+-54.5,
+6.0
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+70.661,
+-37.504,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+72.005,
+-36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+84.449,
+-23.479,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+87.015,
+-28.012,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+86.001,
+-27.374,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+86.007,
+-33.604,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+83.107,
+-36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+46.005,
+-32.103,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+43.405,
+-25.503,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+43.405,
+-19.503,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+51.901,
+-53.914,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+52.0,
+-60.314,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+54.801,
+-58.214,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+60.201,
+-61.313,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+71.265,
+-58.418,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+77.925,
+-61.618,
+9.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+6.238,
+10.916,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+6.238,
+19.728,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+80.659,
+61.926,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+78.892,
+60.866,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+73.877,
+60.013,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+73.877,
+58.813,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+71.877,
+58.313,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+71.877,
+60.513,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+75.326,
+63.955,
+7.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+74.126,
+63.955,
+7.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+75.326,
+61.955,
+7.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+74.126,
+61.955,
+7.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+72.68,
+58.415,
+7.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+102.643,
+83.543,
+4.548
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+95.457,
+76.357,
+4.548
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+60.201,
+61.313,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+54.801,
+58.214,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+52.0,
+60.314,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+51.901,
+53.914,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+46.005,
+32.103,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+43.405,
+25.503,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+43.471,
+19.539,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+100.945,
+84.487,
+4.546
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+14.07,
+67.506,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-94.522,
+-78.064,
+4.546
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-29.822,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-28.622,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-29.822,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-49.697,
+-29.822,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-47.697,
+-29.822,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-45.697,
+-29.822,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-45.697,
+-28.622,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-47.697,
+-28.622,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-60.201,
+-61.313,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-29.822,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-46.527,
+-26.422,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-45.327,
+-26.422,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-46.527,
+-28.422,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-45.327,
+-28.422,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-47.697,
+-29.822,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-47.697,
+-31.021,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-49.697,
+-31.021,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-31.021,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-45.697,
+-31.021,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-47.697,
+-31.021,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-49.697,
+-31.021,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-49.697,
+-29.822,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-59.197,
+-31.104,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-59.197,
+-32.304,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-57.197,
+-32.304,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-57.197,
+-31.104,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-55.197,
+-32.304,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-55.197,
+-31.104,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-53.197,
+-32.304,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-53.197,
+-31.104,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.697,
+-28.622,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-49.958,
+-25.271,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-51.135,
+-25.979,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+52.11,
+-160.889,
+6.055
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+12.621,
+58.62,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+9.95,
+64.503,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+14.554,
+70.193,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+13.96,
+59.215,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+59.396,
+-175.999,
+4.549
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+79.104,
+63.482,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+100.945,
+-84.513,
+4.546
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+94.487,
+-78.064,
+4.546
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-84.427,
+-23.479,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-61.0,
+173.45,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-67.55,
+176.0,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-61.0,
+178.55,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-59.425,
+176.001,
+4.549
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-82.5,
+182.502,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-82.5,
+194.502,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-91.02,
+197.017,
+4.53
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-93.002,
+197.0,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-101.5,
+194.498,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-101.5,
+182.498,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+101.5,
+-182.498,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+101.5,
+-194.498,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+93.002,
+-197.0,
+4.5
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+91.008,
+-197.015,
+4.53
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+82.484,
+-194.513,
+4.53
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+70.637,
+-59.418,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-70.661,
+-37.504,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-87.004,
+-28.034,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-86.001,
+-27.374,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-86.007,
+-33.604,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-72.005,
+-36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-83.107,
+-36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-43.452,
+-19.492,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-5.538,
+-17.525,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-5.582,
+-15.321,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-5.585,
+-13.114,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-4.289,
+-13.112,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-4.287,
+-15.32,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-4.286,
+-17.523,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-59.0,
+260.45,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+87.011,
+27.974,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+84.427,
+23.479,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+86.007,
+33.604,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+86.001,
+27.374,
+6.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+83.107,
+36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+72.005,
+36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+70.641,
+37.495,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+-52.137,
+160.859,
+6.06
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+-58.502,
+162.0,
+6.0
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+61.7,
+117.0,
+6.0
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+56.517,
+102.921,
+6.01
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+71.212,
+58.424,
+10.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+71.24,
+58.417,
+9.15
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "gate_security_small",
+"pos": [
+89.502,
+-180.5,
+4.5
+],
+"group": "scenery"
+}
+],
+"teleporters": []
+}

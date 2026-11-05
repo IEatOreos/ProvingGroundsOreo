@@ -1,0 +1,423 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "rocket_launcher",
+"pos": [
+119.066,
+230.399,
+37.883
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+121.316,
+244.95,
+39.712
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+128.364,
+233.406,
+37.692
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+136.61,
+247.846,
+37.276
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+121.573,
+240.903,
+37.511
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+118.427,
+251.898,
+39.951
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+140.498,
+236.116,
+38.615
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "gravity_hammer",
+"pos": [
+131.112,
+248.101,
+39.758
+],
+"team": 8,
+"respawn": 120
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+111.518,
+248.179,
+41.089
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+149.832,
+242.085,
+36.938
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+122.761,
+247.659,
+39.745
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+123.125,
+247.81,
+39.744
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+119.17,
+248.742,
+38.239
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+118.921,
+248.478,
+38.242
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+130.934,
+226.647,
+40.125
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+131.525,
+226.672,
+40.127
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+142.362,
+236.965,
+40.151
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+142.0,
+236.575,
+40.154
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+118.56,
+243.172,
+39.736
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+118.018,
+243.159,
+39.739
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+115.989,
+232.15,
+41.885
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+115.604,
+231.734,
+41.874
+],
+"team": 0,
+"respawn": 45
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+115.955,
+239.176,
+41.232
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+126.504,
+249.22,
+39.719
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_large",
+"pos": [
+130.748,
+242.728,
+39.413
+],
+"team": 0,
+"respawn": 30
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+135.43,
+227.395,
+39.117
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+117.766,
+242.686,
+37.919
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+113.888,
+244.717,
+41.411
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+141.378,
+227.196,
+39.703
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+148.299,
+250.028,
+35.967
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_large",
+"pos": [
+125.824,
+256.083,
+36.993
+],
+"team": 0,
+"respawn": 30
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+113.842,
+256.877,
+38.392
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+134.772,
+245.784,
+37.416
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+146.646,
+241.812,
+37.073
+],
+"team": 0,
+"respawn": 15
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+119.216,
+245.654,
+41.484
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+140.805,
+233.393,
+40.597
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+122.711,
+248.65,
+39.7
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+143.379,
+234.954,
+38.6
+],
+"team": 1
+}
+],
+"teleporters": []
+}

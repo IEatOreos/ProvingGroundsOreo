@@ -1,0 +1,304 @@
+{
+ "h2a": {
+  "active_camo": {
+   "activation_energy_cost": 0.02,
+   "activation_mode": "toggle",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    4,
+    8
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.07,
+   "minimum_activation_energy": 0.1,
+   "tag": "objects\\equipment\\storm_active_camo\\storm_active_camo",
+   "warmup_time": 0.0
+  },
+  "hero_assist": {
+   "activation_energy_cost": 0.0,
+   "activation_mode": "toggle",
+   "active_energy_rate": -0.2,
+   "blocks": [
+    8,
+    24
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 0.5,
+   "inactive_energy_rate": 0.375,
+   "minimum_activation_energy": 0.01,
+   "tag": "objects\\equipment\\hero_assist\\hero_assist",
+   "warmup_time": 0.0
+  }
+ },
+ "h4": {
+  "active_camo": {
+   "activation_energy_cost": 0.02,
+   "activation_mode": "toggle",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    4,
+    8
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.07,
+   "minimum_activation_energy": 0.1,
+   "tag": "objects\\equipment\\storm_active_camo\\storm_active_camo",
+   "warmup_time": 0.0
+  },
+  "autosentry": {
+   "activation_energy_cost": 0.0,
+   "activation_mode": "toggle",
+   "active_energy_rate": -0.125,
+   "blocks": [
+    26
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.05555,
+   "minimum_activation_energy": 0.2,
+   "tag": "objects\\equipment\\storm_auto_turret\\storm_auto_turret",
+   "warmup_time": 0.0
+  },
+  "hardlight_shield": {
+   "activation_energy_cost": -0.05,
+   "activation_mode": "hold",
+   "active_energy_rate": -0.2,
+   "blocks": [
+    8,
+    13,
+    34
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.25,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.1,
+   "minimum_activation_energy": 0.21,
+   "tag": "objects\\equipment\\storm_active_shield\\storm_active_shield",
+   "warmup_time": 0.25
+  },
+  "hologram": {
+   "activation_energy_cost": -1.0,
+   "activation_mode": "hold",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    20
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.15,
+   "minimum_activation_energy": 1.0,
+   "tag": "objects\\equipment\\storm_hologram\\storm_hologram",
+   "warmup_time": 0.0
+  },
+  "jetpack": {
+   "activation_energy_cost": -0.05,
+   "activation_mode": "hold",
+   "active_energy_rate": -0.38,
+   "blocks": [
+    19
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 1.0,
+   "inactive_energy_rate": 0.15,
+   "minimum_activation_energy": 0.1,
+   "tag": "objects\\equipment\\storm_jet_pack\\storm_jet_pack",
+   "warmup_time": 0.0
+  },
+  "promethean_vision": {
+   "activation_energy_cost": -0.02,
+   "activation_mode": "toggle",
+   "active_energy_rate": -0.2,
+   "blocks": [
+    27
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.1,
+   "minimum_activation_energy": 0.22,
+   "tag": "objects\\equipment\\storm_forerunner_vision\\storm_forerunner_vision",
+   "warmup_time": 0.0
+  },
+  "regen_field": {
+   "activation_energy_cost": 0.0,
+   "activation_mode": "toggle",
+   "active_energy_rate": -1.0,
+   "blocks": [
+    8
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": 0.6,
+   "energy_recovery_time": 0.0,
+   "inactive_energy_rate": 0.033,
+   "minimum_activation_energy": 1.0,
+   "tag": "objects\\equipment\\storm_regen_field\\storm_regen_field",
+   "warmup_time": 0.5
+  },
+  "sprint": {
+   "activation_energy_cost": 0.0,
+   "activation_mode": "toggle",
+   "active_energy_rate": -0.25,
+   "blocks": [
+    24
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 4.0,
+   "inactive_energy_rate": 5.0,
+   "minimum_activation_energy": 0.01,
+   "tag": "objects\\equipment\\sprint\\sprint",
+   "warmup_time": 0.0
+  },
+  "thruster": {
+   "activation_energy_cost": -1.0,
+   "activation_mode": "hold",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    8,
+    22
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.33,
+   "minimum_activation_energy": 1.0,
+   "tag": "objects\\equipment\\storm_thruster_pack\\storm_thruster_pack",
+   "warmup_time": 0.0
+  }
+ },
+ "reach": {
+  "active_camo": {
+   "activation_energy_cost": -0.02,
+   "activation_mode": "toggle",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    3,
+    8,
+    9
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 1.8,
+   "inactive_energy_rate": 0.067,
+   "minimum_activation_energy": 0.01,
+   "tag": "objects\\equipment\\active_camouflage\\active_camouflage",
+   "warmup_time": 0.0
+  },
+  "armor_lock": {
+   "activation_energy_cost": -0.05,
+   "activation_mode": "hold",
+   "active_energy_rate": -0.2,
+   "blocks": [
+    5
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 3.0,
+   "inactive_energy_rate": 0.09,
+   "minimum_activation_energy": 0.166,
+   "tag": "objects\\equipment\\armor_lockup\\armor_lockup",
+   "warmup_time": 0.15
+  },
+  "drop_shield": {
+   "activation_energy_cost": 0.0,
+   "activation_mode": "hold",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    1
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 2.0,
+   "inactive_energy_rate": 0.054,
+   "minimum_activation_energy": 1.0,
+   "tag": "objects\\equipment\\drop_shield\\drop_shield",
+   "warmup_time": 0.5
+  },
+  "evade": {
+   "activation_energy_cost": -0.5,
+   "activation_mode": "hold",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    20
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 3.0,
+   "inactive_energy_rate": 2.0,
+   "minimum_activation_energy": 0.5,
+   "tag": "objects\\equipment\\evade\\evade",
+   "warmup_time": 0.0
+  },
+  "hologram": {
+   "activation_energy_cost": -1.0,
+   "activation_mode": "hold",
+   "active_energy_rate": 0.0,
+   "blocks": [
+    18
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 0.0,
+   "inactive_energy_rate": 0.15,
+   "minimum_activation_energy": 1.0,
+   "tag": "objects\\equipment\\hologram\\hologram",
+   "warmup_time": 0.0
+  },
+  "jetpack": {
+   "activation_energy_cost": -0.05,
+   "activation_mode": "hold",
+   "active_energy_rate": -0.24,
+   "blocks": [
+    17
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 0.0,
+   "inactive_energy_rate": 0.15,
+   "minimum_activation_energy": 0.1,
+   "tag": "objects\\equipment\\jet_pack\\jet_pack",
+   "warmup_time": 0.0
+  },
+  "sprint": {
+   "activation_energy_cost": 0.0,
+   "activation_mode": "toggle",
+   "active_energy_rate": -0.25,
+   "blocks": [
+    22
+   ],
+   "charges": -1.0,
+   "cooldown_time": 0.0,
+   "duration": -1.0,
+   "energy_recovery_time": 4.0,
+   "inactive_energy_rate": 5.0,
+   "minimum_activation_energy": 0.01,
+   "tag": "objects\\equipment\\sprint\\sprint",
+   "warmup_time": 0.0
+  }
+ }
+}

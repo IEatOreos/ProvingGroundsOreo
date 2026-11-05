@@ -1,0 +1,961 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+0.049,
+0.693,
+-0.106
+],
+"team": 8,
+"respawn": 150
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+15.912,
+3.228,
+1.792
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-15.894,
+-3.186,
+1.812
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+11.541,
+-12.105,
+0.285
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-11.537,
+12.126,
+0.278
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+4.324,
+-2.441,
+0.29
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+-4.554,
+2.591,
+0.359
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+2.974,
+-0.193,
+2.012
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-2.973,
+-0.193,
+2.017
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-10.832,
+9.183,
+1.82
+],
+"team": 8,
+"respawn": 130
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+10.847,
+-9.166,
+1.824
+],
+"team": 8,
+"respawn": 130
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+-0.102,
+-8.906,
+2.539
+],
+"team": 8,
+"respawn": 115
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+0.101,
+8.891,
+2.522
+],
+"team": 8,
+"respawn": 115
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+16.727,
+-6.427,
+0.366
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-16.854,
+6.487,
+0.207
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+-5.943,
+7.399,
+2.213
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+6.031,
+-7.479,
+2.194
+],
+"team": 8,
+"respawn": 45
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+-10.736,
+-6.546,
+0.175
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+10.091,
+7.461,
+0.003
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-14.654,
+2.775,
+1.77
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-2.894,
+9.559,
+0.229
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+2.418,
+-9.554,
+-0.126
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+14.708,
+-2.806,
+1.772
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+13.534,
+-12.616,
+1.927
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-13.464,
+12.577,
+1.898
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-1.241,
+-4.543,
+1.981
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+1.263,
+4.531,
+1.981
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "vehicle",
+"name": "fixed_turret",
+"pos": [
+-13.983,
+6.871,
+1.726
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "fixed_turret",
+"pos": [
+14.009,
+-6.885,
+1.726
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+17.483,
+0.027,
+1.416
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-11.972,
+11.653,
+1.914
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+-10.086,
+-9.148,
+-0.254
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.0,
+0.0,
+-0.338
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+5.313,
+-10.181,
+-0.349
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-18.674,
+-0.04,
+1.418
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-18.674,
+-0.04,
+1.418
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+18.724,
+0.025,
+1.411
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+18.724,
+0.025,
+1.411
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.0,
+-0.225,
+-0.353
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.0,
+-0.225,
+-0.353
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "rico_ballspawn",
+"pos": [
+0.003,
+-1.113,
+-0.375
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "rico_ballspawn",
+"pos": [
+3.306,
+11.4,
+1.314
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "rico_ballspawn",
+"pos": [
+-3.331,
+-11.415,
+1.315
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "rico_ballspawn",
+"pos": [
+0.009,
+7.505,
+2.454
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "rico_ballspawn",
+"pos": [
+0.009,
+-7.239,
+2.455
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "goal",
+"name": "rico_endzone",
+"pos": [
+-17.957,
+-0.046,
+1.418
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "goal",
+"name": "rico_endzone",
+"pos": [
+18.023,
+0.031,
+1.418
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "goal",
+"name": "rico_endzone",
+"pos": [
+0.0,
+0.0,
+2.552
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-0.004,
+-0.561,
+-0.398
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.009,
+6.905,
+2.4
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.009,
+-6.638,
+2.408
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-9.676,
+-6.47,
+-0.086
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+8.395,
+6.43,
+0.04
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-10.218,
+-9.148,
+-0.254
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+17.657,
+0.028,
+1.418
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-11.859,
+11.658,
+1.914
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+0.09,
+-0.203,
+-0.316
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+-10.399,
+-9.668,
+-0.18
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+11.81,
+8.749,
+-0.16
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+5.07,
+-10.538,
+-0.311
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "terr_object",
+"pos": [
+-5.085,
+10.555,
+0.135
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+-18.304,
+-0.031,
+1.419
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+18.368,
+0.029,
+1.423
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "as_bomb",
+"pos": [
+16.114,
+0.035,
+1.445
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "as_bomb",
+"pos": [
+-16.115,
+-0.034,
+1.44
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "as_bomb",
+"pos": [
+-0.091,
+-0.2,
+-0.318
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.009,
+-7.711,
+2.452
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.009,
+-7.711,
+2.452
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.009,
+7.978,
+2.449
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.009,
+7.978,
+2.449
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "bomb_arm",
+"name": "as_arm_zone",
+"pos": [
+17.841,
+0.026,
+1.418
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_arm",
+"name": "as_arm_zone",
+"pos": [
+-17.782,
+-0.047,
+1.419
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+0.0,
+0.0,
+1.979
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "haven",
+"name": "inf_haven",
+"pos": [
+5.313,
+-10.06,
+-0.349
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+0.276,
+9.797,
+2.443
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "as_goal",
+"pos": [
+-0.292,
+-9.745,
+2.443
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "bomb_arm",
+"name": "as_arm_zone",
+"pos": [
+-0.024,
+8.35,
+2.444
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "bomb_arm",
+"name": "as_arm_zone",
+"pos": [
+0.021,
+-8.351,
+2.446
+],
+"team": 2
+},
+{
+"kind": "lift",
+"name": "ca_sanctuary_sniperlift",
+"pos": [
+11.481,
+-14.315,
+0.149
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "ca_sanctuary_sniperlift",
+"pos": [
+-11.482,
+14.309,
+0.137
+],
+"group": "crates"
+},
+{
+"kind": "control",
+"name": "h2a_damage_on_switch",
+"pos": [
+-17.433,
+-0.074,
+3.663
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "h2a_damage_on_switch",
+"pos": [
+17.407,
+-0.012,
+3.598
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "timed_once_on_switch",
+"pos": [
+17.935,
+-3.039,
+5.93
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "timed_once_off_switch",
+"pos": [
+18.467,
+-3.047,
+5.93
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "timed_once_off_switch",
+"pos": [
+19.043,
+-3.022,
+5.93
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "timed_once_on_switch",
+"pos": [
+-17.647,
+-2.947,
+5.899
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "timed_once_off_switch",
+"pos": [
+-18.187,
+-2.942,
+5.899
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "timed_once_off_switch",
+"pos": [
+-18.703,
+-2.924,
+5.899
+],
+"group": "controls"
+}
+],
+"teleporters": []
+}

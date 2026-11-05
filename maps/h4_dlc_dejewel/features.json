@@ -1,0 +1,819 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-32.139,
+6.749,
+3.957
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+32.645,
+-6.614,
+3.926
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+-10.433,
+-7.716,
+1.144
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+10.428,
+7.717,
+1.146
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "rockets",
+"pos": [
+0.572,
+-0.085,
+0.73
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+-11.386,
+-17.517,
+4.1
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+11.278,
+17.485,
+4.146
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+34.956,
+11.448,
+1.842
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spartan_laser",
+"pos": [
+-34.72,
+-11.382,
+1.795
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+-1.004,
+6.671,
+0.294
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "railgun",
+"pos": [
+2.018,
+-13.634,
+0.357
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+-0.009,
+-1.314,
+-2.517
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sniper",
+"pos": [
+0.909,
+-6.8,
+0.313
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "railgun",
+"pos": [
+6.981,
+-12.284,
+1.198
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+-5.191,
+5.798,
+2.974
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "lmg",
+"pos": [
+4.971,
+-5.435,
+2.801
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+3.925,
+-3.623,
+-2.649
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+-3.922,
+3.651,
+-2.696
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+29.863,
+18.776,
+0.749
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+4.337,
+3.467,
+0.276
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-4.392,
+-3.491,
+0.281
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "ghost",
+"pos": [
+-29.274,
+-19.885,
+0.626
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-27.173,
+1.337,
+3.994
+],
+"team": 8
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+27.146,
+-1.366,
+3.994
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+10.446,
+13.257,
+3.969
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+10.446,
+13.257,
+3.969
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-10.369,
+-13.02,
+3.969
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-10.369,
+-13.02,
+3.969
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+1.313,
+-0.069,
+-2.592
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+1.313,
+-0.069,
+-2.592
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.018,
+3.014,
+0.361
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+30.077,
+-5.038,
+2.043
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.129,
+0.132,
+0.687
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-30.066,
+5.018,
+2.05
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+7.653,
+-20.464,
+-2.076
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-8.446,
+19.775,
+-2.085
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-28.82,
+3.913,
+1.596
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+28.938,
+-4.055,
+1.596
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-31.429,
+5.281,
+1.596
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+0.079,
+-0.06,
+0.687
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+31.23,
+-5.523,
+1.596
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+10.431,
+13.011,
+3.969
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-10.446,
+-12.691,
+3.958
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "grif_spawn",
+"pos": [
+0.002,
+-0.126,
+-2.592
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+-30.069,
+9.671,
+1.774
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+30.035,
+-9.682,
+1.774
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+33.545,
+-7.833,
+1.732
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+33.545,
+-7.833,
+1.732
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-33.555,
+7.857,
+1.72
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-33.555,
+7.857,
+1.72
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+-29.325,
+4.35,
+1.596
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+-1.146,
+-1.063,
+0.73
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "dom_base",
+"pos": [
+29.299,
+-4.363,
+1.575
+],
+"team": 8
+},
+{
+"kind": "lift",
+"name": "ff_grav_lift",
+"pos": [
+-8.545,
+-17.32,
+1.544
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "ff_grav_lift",
+"pos": [
+-12.325,
+-17.317,
+1.544
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "ff_grav_lift",
+"pos": [
+12.342,
+17.301,
+1.544
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "ff_grav_lift",
+"pos": [
+8.564,
+17.302,
+1.544
+],
+"group": "crates"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_sender",
+"pos": [
+-10.44,
+-6.86,
+2.703
+],
+"group": "crates",
+"channel": "alpha"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_receiver",
+"pos": [
+-36.057,
+-3.645,
+2.021
+],
+"group": "crates",
+"channel": "alpha"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_sender",
+"pos": [
+10.439,
+6.871,
+2.703
+],
+"group": "crates",
+"channel": "bravo"
+},
+{
+"kind": "teleporter",
+"name": "fw_teleporter_receiver",
+"pos": [
+36.053,
+3.641,
+2.021
+],
+"group": "crates",
+"channel": "bravo"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+-29.325,
+4.35,
+1.596
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+-1.146,
+-1.063,
+0.73
+],
+"group": "machines"
+},
+{
+"kind": "control",
+"name": "ca_ai_terminal",
+"pos": [
+29.299,
+-4.363,
+1.575
+],
+"group": "machines"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+-29.58,
+0.951,
+2.202
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+-25.965,
+5.342,
+2.159
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+-33.91,
+4.938,
+2.354
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+-30.71,
+8.861,
+2.257
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+33.999,
+-4.836,
+2.329
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+29.551,
+-0.886,
+2.226
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+25.999,
+-5.321,
+2.179
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+30.684,
+-8.914,
+2.329
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+-5.634,
+-5.069,
+0.771
+],
+"group": "crates"
+},
+{
+"kind": "shield",
+"name": "dom_damage_team_shield_small",
+"pos": [
+5.748,
+5.074,
+1.005
+],
+"group": "crates"
+}
+],
+"teleporters": [
+[
+[
+-10.44,
+-6.86,
+2.703
+],
+[
+-36.057,
+-3.645,
+2.021
+]
+],
+[
+[
+10.439,
+6.871,
+2.703
+],
+[
+36.053,
+3.641,
+2.021
+]
+]
+]
+}

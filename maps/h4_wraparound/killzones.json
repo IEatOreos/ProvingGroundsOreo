@@ -1,0 +1,5 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volume1", "center": [-7.338, -22.178, -13.944], "size": [91.593, 98.51, 15.432]},
+{"kind": "soft_safe", "shape": "box", "source": "scenario", "label": "safe_zone_soft", "center": [-0.763, -11.381, 2.546], "size": [56.942, 53.466, 13.61]},
+{"kind": "soft", "shape": "box", "source": "scenario", "label": "kill_soft", "center": [0.618, -14.412, 80.761], "size": [87.758, 35.427, 81.523]}
+]}

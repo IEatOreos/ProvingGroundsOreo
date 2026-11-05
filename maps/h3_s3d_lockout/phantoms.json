@@ -1,0 +1,7 @@
+{
+ "game": "h3",
+ "objects": [],
+ "skipped": [
+  "s3d_lockout_lift: no object tag in H3EK, H3ODSTEK"
+ ]
+}

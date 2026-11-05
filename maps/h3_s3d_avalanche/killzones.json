@@ -1,0 +1,14 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_0", "center": [2.417, -16.393, -42.481], "size": [47.651, 98.859, 68.67], "rotation": {"forward": [0.99993, -0.01128, 0.0], "up": [0.0, 0.0, 1.0]}},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_1", "center": [2.521, 80.65, -26.144], "size": [116.744, 68.017, 37.015]},
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [1.684, 18.919, 2.957], "size": [110.947, 130.563, 31.801], "condition": "safe_zone volume not in the safe zone block (H2 / H3 engine): what it does is UNKNOWN"},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_7", "center": [32.945, 50.666, -7.058], "size": [16.594, 4.447, 1.361]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_8", "center": [38.099, 53.764, -8.948], "size": [9.079, 7.936, 2.13]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_9", "center": [23.965, 53.424, -6.071], "size": [4.685, 3.963, 1.0]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_10", "center": [15.459, 58.329, -6.476], "size": [6.768, 3.5, 1.124]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_11", "center": [-26.966, 52.817, -9.525], "size": [13.73, 5.521, 3.233]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_12", "center": [-19.322, 56.233, -9.034], "size": [5.745, 3.294, 2.697]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_13", "center": [-17.398, 56.906, -6.582], "size": [3.942, 2.335, 1.0]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_14", "center": [-13.256, 57.404, -7.992], "size": [5.438, 1.452, 2.293]},
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_volumes_15", "center": [20.852, 56.284, -6.072], "size": [3.871, 1.675, 1.0]}
+]}

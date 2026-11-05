@@ -1,0 +1,610 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "plasma_rifle_red",
+"pos": [
+39.036,
+-11.522,
+6.041
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+51.66,
+-11.675,
+6.045
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+30.838,
+-25.463,
+6.025
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+15.739,
+-50.555,
+6.337
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "beam_rifle",
+"pos": [
+52.01,
+-7.449,
+8.272
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+42.196,
+-26.259,
+6.024
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "automag",
+"pos": [
+12.036,
+-57.322,
+6.046
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+39.899,
+-8.76,
+6.045
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "excavator",
+"pos": [
+34.141,
+-7.675,
+6.182
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+36.66,
+-5.249,
+6.043
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+35.131,
+-16.352,
+6.382
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+13.399,
+-67.288,
+6.075
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+11.957,
+-67.772,
+6.097
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+4.1,
+-80.139,
+6.821
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+-15.778,
+-65.38,
+7.575
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-14.93,
+-64.581,
+7.572
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+61.869,
+-14.206,
+6.015
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+33.238,
+-10.568,
+6.027
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+31.282,
+-24.988,
+6.044
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "claymore_grenade",
+"pos": [
+37.536,
+-11.921,
+6.07
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+12.671,
+-66.555,
+4.545
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_medium",
+"pos": [
+12.512,
+-66.952,
+4.542
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+26.306,
+-3.818,
+6.018
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "rocket_launcher_ammo",
+"pos": [
+-6.755,
+-14.949,
+4.599
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-6.785,
+-16.216,
+4.5
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-43.752,
+-23.928,
+6.286
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "sniper_rifle_ammo",
+"pos": [
+-37.707,
+-4.768,
+6.0
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+-13.552,
+-68.683,
+7.602
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "firebomb_grenade",
+"pos": [
+-13.711,
+-68.389,
+7.604
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+25.095,
+-5.577,
+8.296
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "health_pack_large",
+"pos": [
+24.579,
+-5.968,
+8.262
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+24.108,
+-5.266,
+8.294
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "claymore_grenade",
+"pos": [
+6.344,
+-74.185,
+7.58
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun_turret",
+"pos": [
+-12.419,
+-15.324,
+4.89
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "security_camera",
+"pos": [
+-25.175,
+-26.875,
+7.297
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-1.085,
+-10.37,
+4.613
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+4.1,
+-80.139,
+6.821
+],
+"team": 1
+},
+{
+"kind": "door",
+"name": "shield_door_small",
+"pos": [
+-43.486,
+-19.504,
+6.05
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-40.022,
+-30.572,
+6.03
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-20.825,
+-31.837,
+4.098
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-26.831,
+-29.889,
+4.099
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-20.819,
+1.151,
+4.098
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-26.843,
+-0.731,
+4.099
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-39.715,
+-18.939,
+2.275
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "shield_door_medium",
+"pos": [
+-39.681,
+-11.723,
+2.275
+],
+"group": "crates"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+70.661,
+-37.504,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+72.005,
+-36.504,
+7.65
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split",
+"pos": [
+85.702,
+-40.606,
+7.772
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-4.288,
+-13.11,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-4.287,
+-15.323,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-4.29,
+-17.524,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-5.579,
+-17.524,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-5.58,
+-15.326,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+-5.578,
+-13.111,
+4.55
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+3.39,
+-76.901,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+2.5,
+-73.836,
+6.05
+],
+"group": "scenery"
+},
+{
+"kind": "door",
+"name": "glass_door_split01",
+"pos": [
+2.501,
+-74.965,
+6.05
+],
+"group": "scenery"
+}
+],
+"teleporters": []
+}

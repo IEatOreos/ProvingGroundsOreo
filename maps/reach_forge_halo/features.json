@@ -1,0 +1,27 @@
+{
+"features": [
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+60.921,
+210.054,
+44.649
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-58.217,
+-204.778,
+2.875
+],
+"team": 1
+}
+],
+"teleporters": []
+}

@@ -1,0 +1,4 @@
+{"volumes": [
+{"kind": "hard", "shape": "box", "source": "scenario", "label": "kill_vol_cliff", "center": [-53.104, -3.359, -31.472], "size": [88.724, 116.486, 30.105]},
+{"kind": "safe", "shape": "box", "source": "scenario", "label": "safe_zone", "center": [8.236, 0.049, -5.476], "size": [49.978, 63.231, 15.378], "condition": "safe_zone volume not in the safe zone block (H2 / H3 engine): what it does is UNKNOWN"}
+]}

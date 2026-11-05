@@ -1,0 +1,4807 @@
+{
+ "netgame_flags": [
+  {
+   "type": "ctf - flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -104.634,
+    35.48,
+    18.281
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    -60.403,
+    49.763,
+    14.225
+   ],
+   "facing": 0.0
+  }
+ ],
+ "equipment": [
+  {
+   "item": "ammo_box",
+   "tag": "ammo_box",
+   "path": "ammo_box",
+   "pos": [
+    -99.234,
+    37.435,
+    17.693
+   ],
+   "yaw": 0.037,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "ammo_box",
+   "tag": "ammo_box",
+   "path": "ammo_box",
+   "pos": [
+    -94.27,
+    58.407,
+    17.7
+   ],
+   "yaw": 180.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  }
+ ],
+ "vehicles": [
+  {
+   "item": "machinegun",
+   "tag": "machinegun",
+   "path": "machinegun",
+   "pos": [
+    -75.537,
+    57.502,
+    16.5
+   ],
+   "yaw": -1.052,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "forklift",
+   "tag": "forklift",
+   "path": "forklift",
+   "pos": [
+    -82.719,
+    21.757,
+    15.489
+   ],
+   "yaw": -46.565,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "forklift",
+   "tag": "forklift",
+   "path": "forklift",
+   "pos": [
+    -84.214,
+    66.61,
+    16.489
+   ],
+   "yaw": -58.905,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  }
+ ],
+ "spawns": [
+  {
+   "pos": [
+    -104.634,
+    35.48,
+    18.281
+   ],
+   "team": 0,
+   "facing": 0.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -104.634,
+    35.48,
+    18.281
+   ],
+   "team": 1,
+   "facing": 0.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -72.924,
+    35.478,
+    17.925
+   ],
+   "team": 0,
+   "facing": -179.673,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -72.924,
+    35.478,
+    17.925
+   ],
+   "team": 1,
+   "facing": -179.673,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -92.596,
+    57.432,
+    18.4
+   ],
+   "team": 0,
+   "facing": 0.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -92.596,
+    57.432,
+    18.4
+   ],
+   "team": 1,
+   "facing": 0.0,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -62.936,
+    41.1,
+    13.597
+   ],
+   "team": 0,
+   "facing": 90.669,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -62.936,
+    41.1,
+    13.597
+   ],
+   "team": 1,
+   "facing": 90.669,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -91.722,
+    -3.002,
+    16.2
+   ],
+   "team": 0,
+   "facing": 87.585,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -91.722,
+    -3.002,
+    16.2
+   ],
+   "team": 1,
+   "facing": 87.585,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -78.833,
+    67.68,
+    17.2
+   ],
+   "team": 0,
+   "facing": -149.232,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -78.833,
+    67.68,
+    17.2
+   ],
+   "team": 1,
+   "facing": -149.232,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -75.433,
+    10.19,
+    18.4
+   ],
+   "team": 0,
+   "facing": 143.619,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -75.433,
+    10.19,
+    18.4
+   ],
+   "team": 1,
+   "facing": 143.619,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -92.531,
+    58.622,
+    15.755
+   ],
+   "team": 0,
+   "facing": -1.305,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -92.531,
+    58.622,
+    15.755
+   ],
+   "team": 1,
+   "facing": -1.305,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -102.049,
+    15.084,
+    16.197
+   ],
+   "team": 0,
+   "facing": 22.593,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -102.049,
+    15.084,
+    16.197
+   ],
+   "team": 1,
+   "facing": 22.593,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -92.133,
+    35.473,
+    18.177
+   ],
+   "team": 0,
+   "facing": 0.0,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -92.133,
+    35.473,
+    18.177
+   ],
+   "team": 1,
+   "facing": 0.0,
+   "games": [
+    "slayer"
+   ]
+  }
+ ],
+ "scenery": [],
+ "placed": [
+  {
+   "name": "gatehouse_frontdoor_closed",
+   "kind": "scenery",
+   "pos": [
+    -61.585,
+    28.982,
+    13.249
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "electrical_generator",
+   "kind": "scenery",
+   "pos": [
+    -102.533,
+    62.135,
+    15.05
+   ],
+   "rot": [
+    0.397,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "electrical_generator",
+   "kind": "scenery",
+   "pos": [
+    -106.108,
+    62.11,
+    15.05
+   ],
+   "rot": [
+    179.791,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -100.342,
+    33.092,
+    18.266
+   ],
+   "rot": [
+    90.0,
+    -3.485,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -99.922,
+    37.904,
+    18.266
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -74.602,
+    33.498,
+    18.266
+   ],
+   "rot": [
+    180.0,
+    87.306,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -74.603,
+    37.5,
+    18.265
+   ],
+   "rot": [
+    180.0,
+    87.277,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -96.701,
+    34.316,
+    18.266
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -96.698,
+    36.684,
+    18.266
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.774,
+    33.855,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.834,
+    32.468,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.781,
+    31.264,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.777,
+    30.107,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.661,
+    29.028,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.778,
+    27.598,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.7,
+    26.328,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.663,
+    25.211,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -156.552,
+    23.986,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -159.731,
+    24.674,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -159.562,
+    23.342,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -159.512,
+    22.176,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -160.468,
+    23.76,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -75.727,
+    59.267,
+    16.5
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -86.674,
+    23.148,
+    15.5
+   ],
+   "rot": [
+    -0.739,
+    -0.0,
+    0.02
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -90.057,
+    11.891,
+    15.5
+   ],
+   "rot": [
+    -0.117,
+    -0.0,
+    0.02
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -85.149,
+    45.372,
+    16.5
+   ],
+   "rot": [
+    -27.205,
+    -0.0,
+    0.02
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -63.959,
+    49.42,
+    14.374
+   ],
+   "rot": [
+    -155.646,
+    -4.017,
+    11.33
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -68.168,
+    55.45,
+    15.764
+   ],
+   "rot": [
+    65.258,
+    -8.054,
+    4.297
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -79.72,
+    14.765,
+    15.5
+   ],
+   "rot": [
+    95.507,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -159.547,
+    34.371,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -159.622,
+    32.897,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -159.628,
+    31.651,
+    15.324
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -75.719,
+    55.632,
+    16.5
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fuel_depot_container",
+   "kind": "scenery",
+   "pos": [
+    -97.801,
+    19.571,
+    15.5
+   ],
+   "rot": [
+    -43.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fuel_depot_container",
+   "kind": "scenery",
+   "pos": [
+    -84.17,
+    5.33,
+    15.5
+   ],
+   "rot": [
+    135.197,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fuel_depot_container",
+   "kind": "scenery",
+   "pos": [
+    -78.914,
+    22.232,
+    15.5
+   ],
+   "rot": [
+    180.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fuel_depot_container",
+   "kind": "scenery",
+   "pos": [
+    -79.015,
+    65.46,
+    16.5
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "monitor_flush",
+   "kind": "scenery",
+   "pos": [
+    -94.825,
+    57.406,
+    18.609
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "monitor_flush",
+   "kind": "scenery",
+   "pos": [
+    -74.307,
+    32.09,
+    18.79
+   ],
+   "rot": [
+    -90.0,
+    3.303,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "monitor_flush",
+   "kind": "scenery",
+   "pos": [
+    -74.308,
+    38.976,
+    18.79
+   ],
+   "rot": [
+    -90.0,
+    2.718,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "screen_halogram_wallmount_a",
+   "kind": "scenery",
+   "pos": [
+    -74.531,
+    11.016,
+    18.159
+   ],
+   "rot": [
+    180.0,
+    3.042,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fuel_depot_container",
+   "kind": "scenery",
+   "pos": [
+    -110.752,
+    66.248,
+    15.05
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "lounge_bench_b",
+   "kind": "scenery",
+   "pos": [
+    -95.949,
+    51.541,
+    15.05
+   ],
+   "rot": [
+    45.978,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "lounge_bench_b",
+   "kind": "scenery",
+   "pos": [
+    -97.156,
+    50.291,
+    15.05
+   ],
+   "rot": [
+    45.978,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "lounge_bench_b",
+   "kind": "scenery",
+   "pos": [
+    -96.247,
+    62.231,
+    15.05
+   ],
+   "rot": [
+    135.312,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "monitor_flush",
+   "kind": "scenery",
+   "pos": [
+    -93.635,
+    35.493,
+    18.698
+   ],
+   "rot": [
+    -90.0,
+    -0.222,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "m20_boulder_med_ro",
+   "kind": "scenery",
+   "pos": [
+    -70.976,
+    32.883,
+    14.881
+   ],
+   "rot": [
+    167.623,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -88.974,
+    11.836,
+    15.5
+   ],
+   "rot": [
+    -6.542,
+    -0.0,
+    0.02
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -62.931,
+    49.808,
+    14.376
+   ],
+   "rot": [
+    -163.459,
+    -4.017,
+    11.33
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -67.847,
+    56.511,
+    15.787
+   ],
+   "rot": [
+    79.647,
+    -6.185,
+    2.768
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -79.789,
+    15.861,
+    15.5
+   ],
+   "rot": [
+    89.738,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "security_wall_short_b",
+   "kind": "scenery",
+   "pos": [
+    -69.57,
+    41.86,
+    16.34
+   ],
+   "rot": [
+    151.286,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -81.973,
+    32.818,
+    17.917
+   ],
+   "rot": [
+    90.0,
+    44.617,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -76.685,
+    26.497,
+    17.915
+   ],
+   "rot": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -76.299,
+    17.28,
+    17.919
+   ],
+   "rot": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -76.297,
+    14.314,
+    17.917
+   ],
+   "rot": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -77.088,
+    42.207,
+    17.913
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -91.095,
+    45.408,
+    17.914
+   ],
+   "rot": [
+    -90.0,
+    -90.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -91.088,
+    47.432,
+    17.914
+   ],
+   "rot": [
+    -90.0,
+    -90.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -88.012,
+    54.485,
+    17.913
+   ],
+   "rot": [
+    -90.0,
+    -90.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -85.801,
+    34.702,
+    18.239
+   ],
+   "rot": [
+    84.047,
+    -3.08,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -85.802,
+    36.35,
+    18.244
+   ],
+   "rot": [
+    84.324,
+    2.791,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -89.002,
+    60.555,
+    17.915
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "pathfinding_helper_railing",
+   "kind": "scenery",
+   "pos": [
+    -89.326,
+    52.262,
+    17.913
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -84.776,
+    -8.06,
+    9.382
+   ],
+   "rot": [
+    56.281,
+    6.994,
+    -4.027
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -88.827,
+    -11.736,
+    9.373
+   ],
+   "rot": [
+    24.933,
+    3.638,
+    -6.702
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -86.964,
+    -10.538,
+    9.373
+   ],
+   "rot": [
+    39.046,
+    5.079,
+    -5.857
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -84.201,
+    -12.262,
+    9.382
+   ],
+   "rot": [
+    -134.215,
+    -2.232,
+    1.579
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -86.761,
+    -14.352,
+    9.399
+   ],
+   "rot": [
+    -146.974,
+    -2.232,
+    1.579
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -87.648,
+    -14.989,
+    9.402
+   ],
+   "rot": [
+    -141.762,
+    -2.232,
+    1.579
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -85.001,
+    -13.024,
+    9.392
+   ],
+   "rot": [
+    -138.088,
+    -2.232,
+    1.579
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -83.922,
+    -6.093,
+    9.407
+   ],
+   "rot": [
+    82.785,
+    3.889,
+    0.411
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -85.859,
+    -13.728,
+    9.396
+   ],
+   "rot": [
+    -143.727,
+    -1.67,
+    1.992
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -86.15,
+    -9.789,
+    9.373
+   ],
+   "rot": [
+    45.792,
+    5.788,
+    -5.279
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -82.744,
+    -10.715,
+    9.389
+   ],
+   "rot": [
+    -149.337,
+    4.907,
+    9.647
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -87.861,
+    -11.199,
+    9.373
+   ],
+   "rot": [
+    33.46,
+    5.079,
+    -5.857
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -88.366,
+    -15.8,
+    9.369
+   ],
+   "rot": [
+    -120.22,
+    -1.374,
+    3.605
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -81.8,
+    -10.543,
+    9.517
+   ],
+   "rot": [
+    171.844,
+    10.274,
+    9.404
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -83.469,
+    -11.431,
+    9.391
+   ],
+   "rot": [
+    -129.551,
+    -2.565,
+    1.532
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -84.225,
+    -7.104,
+    9.387
+   ],
+   "rot": [
+    64.336,
+    7.418,
+    -3.323
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -85.421,
+    -8.954,
+    9.382
+   ],
+   "rot": [
+    51.214,
+    6.994,
+    -4.027
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -77.194,
+    61.647,
+    16.5
+   ],
+   "rot": [
+    -18.729,
+    0.185,
+    -0.002
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -80.793,
+    53.043,
+    16.497
+   ],
+   "rot": [
+    22.195,
+    0.139,
+    0.134
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -85.494,
+    47.886,
+    16.496
+   ],
+   "rot": [
+    22.206,
+    0.116,
+    -0.051
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -87.766,
+    44.487,
+    16.5
+   ],
+   "rot": [
+    26.41,
+    -0.001,
+    -0.001
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "container_small",
+   "kind": "crates",
+   "pos": [
+    -98.25,
+    10.87,
+    15.499
+   ],
+   "rot": [
+    -14.028,
+    0.103,
+    -0.044
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "container_small",
+   "kind": "crates",
+   "pos": [
+    -92.22,
+    17.388,
+    15.5
+   ],
+   "rot": [
+    27.462,
+    -0.053,
+    -0.028
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "container_small",
+   "kind": "crates",
+   "pos": [
+    -83.311,
+    11.772,
+    15.498
+   ],
+   "rot": [
+    138.57,
+    -0.055,
+    0.048
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -92.543,
+    5.318,
+    15.496
+   ],
+   "rot": [
+    138.595,
+    0.006,
+    -0.127
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -95.615,
+    18.723,
+    15.496
+   ],
+   "rot": [
+    165.134,
+    0.109,
+    0.064
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -82.806,
+    19.935,
+    15.496
+   ],
+   "rot": [
+    178.618,
+    0.096,
+    -0.081
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -102.028,
+    17.966,
+    15.493
+   ],
+   "rot": [
+    172.322,
+    -0.082,
+    0.208
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -82.98,
+    64.694,
+    16.548
+   ],
+   "rot": [
+    -144.511,
+    0.002,
+    -0.004
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -79.295,
+    45.732,
+    16.5
+   ],
+   "rot": [
+    131.089,
+    0.71,
+    -0.811
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -88.351,
+    45.448,
+    16.497
+   ],
+   "rot": [
+    131.092,
+    0.032,
+    -0.032
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -94.832,
+    10.033,
+    15.497
+   ],
+   "rot": [
+    37.799,
+    0.025,
+    0.014
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -88.091,
+    31.337,
+    16.025
+   ],
+   "rot": [
+    26.45,
+    -0.045,
+    11.419
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -84.116,
+    29.91,
+    15.736
+   ],
+   "rot": [
+    2.36,
+    -0.793,
+    10.932
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -82.341,
+    44.675,
+    16.498
+   ],
+   "rot": [
+    2.567,
+    0.039,
+    -0.116
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -71.945,
+    55.88,
+    16.218
+   ],
+   "rot": [
+    -35.111,
+    -6.349,
+    0.345
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -65.99,
+    57.613,
+    15.605
+   ],
+   "rot": [
+    -35.559,
+    -6.364,
+    2.341
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -64.884,
+    43.102,
+    13.109
+   ],
+   "rot": [
+    -86.007,
+    2.056,
+    10.043
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -66.218,
+    52.022,
+    15.098
+   ],
+   "rot": [
+    -86.571,
+    -8.326,
+    10.913
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -60.403,
+    49.763,
+    14.225
+   ],
+   "rot": [
+    -86.107,
+    -3.575,
+    9.002
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -79.484,
+    57.561,
+    16.5
+   ],
+   "rot": [
+    -65.011,
+    -0.064,
+    -0.08
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -82.066,
+    49.0,
+    16.496
+   ],
+   "rot": [
+    118.707,
+    0.027,
+    0.123
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -87.308,
+    25.275,
+    15.498
+   ],
+   "rot": [
+    118.707,
+    -0.027,
+    -0.061
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "shield_door_medium",
+   "kind": "crates",
+   "pos": [
+    -67.349,
+    38.113,
+    12.896
+   ],
+   "rot": [
+    88.365,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "shield_door_large",
+   "kind": "crates",
+   "pos": [
+    -61.092,
+    38.189,
+    8.351
+   ],
+   "rot": [
+    88.365,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_light_hanging_a_recharge",
+   "kind": "crates",
+   "pos": [
+    -100.7,
+    64.759,
+    17.033
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_light_hanging_a_recharge",
+   "kind": "crates",
+   "pos": [
+    -104.3,
+    64.759,
+    17.033
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "shield_door_medium",
+   "kind": "crates",
+   "pos": [
+    -94.09,
+    54.408,
+    14.378
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "shield_door_medium",
+   "kind": "crates",
+   "pos": [
+    -94.09,
+    58.624,
+    14.378
+   ],
+   "rot": [
+    0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_light_hanging_a_recharge",
+   "kind": "crates",
+   "pos": [
+    -107.9,
+    64.759,
+    17.033
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -89.884,
+    -11.92,
+    9.388
+   ],
+   "rot": [
+    -8.248,
+    -3.215,
+    -5.191
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -145.185,
+    -48.093,
+    10.3
+   ],
+   "rot": [
+    74.451,
+    15.701,
+    -5.256
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -144.91,
+    -47.068,
+    10.3
+   ],
+   "rot": [
+    71.876,
+    10.42,
+    -3.154
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -144.565,
+    -46.06,
+    10.312
+   ],
+   "rot": [
+    71.876,
+    10.42,
+    -3.154
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -144.188,
+    -45.042,
+    10.354
+   ],
+   "rot": [
+    59.642,
+    4.564,
+    -1.226
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -143.609,
+    -44.109,
+    10.364
+   ],
+   "rot": [
+    58.341,
+    7.8,
+    -2.912
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "concrete_guard_rail",
+   "kind": "crates",
+   "pos": [
+    -142.967,
+    -43.243,
+    10.421
+   ],
+   "rot": [
+    46.64,
+    9.123,
+    -1.35
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ice_chunk_large_a",
+   "kind": "crates",
+   "pos": [
+    -2.772,
+    22.464,
+    -4.923
+   ],
+   "rot": [
+    -21.222,
+    45.433,
+    -16.246
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ice_chunk_large_a",
+   "kind": "crates",
+   "pos": [
+    -4.55,
+    14.512,
+    -4.185
+   ],
+   "rot": [
+    89.963,
+    -2.009,
+    47.257
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ice_chunk_large_b",
+   "kind": "crates",
+   "pos": [
+    -6.235,
+    23.322,
+    -4.992
+   ],
+   "rot": [
+    34.223,
+    6.068,
+    -6.25
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ice_chunk_large_b",
+   "kind": "crates",
+   "pos": [
+    1.872,
+    17.417,
+    -4.431
+   ],
+   "rot": [
+    -37.198,
+    -7.978,
+    -170.272
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ice_chunk_small_a",
+   "kind": "crates",
+   "pos": [
+    -7.743,
+    22.511,
+    -4.575
+   ],
+   "rot": [
+    -177.424,
+    5.829,
+    -169.52
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ice_chunk_small_a",
+   "kind": "crates",
+   "pos": [
+    1.25,
+    16.149,
+    -4.874
+   ],
+   "rot": [
+    -177.424,
+    5.829,
+    -3.87
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -90.88,
+    52.835,
+    17.685
+   ],
+   "rot": [
+    -36.998,
+    0.805,
+    1.236
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -91.075,
+    53.529,
+    17.693
+   ],
+   "rot": [
+    -69.209,
+    0.503,
+    -1.033
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -79.073,
+    48.368,
+    16.497
+   ],
+   "rot": [
+    -69.197,
+    -0.102,
+    0.156
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -84.328,
+    29.125,
+    15.582
+   ],
+   "rot": [
+    66.92,
+    -0.022,
+    11.306
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "h_grenade_crate",
+   "kind": "crates",
+   "pos": [
+    -99.152,
+    36.882,
+    17.706
+   ],
+   "rot": [
+    -90.421,
+    0.235,
+    0.206
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "h_grenade_crate",
+   "kind": "crates",
+   "pos": [
+    -94.329,
+    59.061,
+    17.708
+   ],
+   "rot": [
+    89.999,
+    0.914,
+    0.001
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "hu_mil_radio_big_sound_f20",
+   "kind": "crates",
+   "pos": [
+    -69.308,
+    40.065,
+    13.491
+   ],
+   "rot": [
+    86.922,
+    0.432,
+    1.901
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -94.793,
+    44.566,
+    17.7
+   ],
+   "rot": [
+    -12.382,
+    -0.001,
+    -0.002
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -94.793,
+    45.073,
+    17.7
+   ],
+   "rot": [
+    12.821,
+    -0.003,
+    0.002
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -80.306,
+    20.468,
+    15.549
+   ],
+   "rot": [
+    2.522,
+    -0.148,
+    -0.16
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -90.507,
+    12.376,
+    15.5
+   ],
+   "rot": [
+    19.65,
+    -0.139,
+    0.069
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -89.711,
+    12.262,
+    15.5
+   ],
+   "rot": [
+    -5.883,
+    0.054,
+    -0.058
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -95.486,
+    21.098,
+    15.498
+   ],
+   "rot": [
+    -5.883,
+    0.084,
+    -0.077
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -75.578,
+    51.275,
+    17.128
+   ],
+   "rot": [
+    12.808,
+    0.201,
+    -0.036
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -66.512,
+    55.381,
+    15.679
+   ],
+   "rot": [
+    -79.227,
+    37.55,
+    -79.9
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -77.975,
+    64.346,
+    16.5
+   ],
+   "rot": [
+    -29.938,
+    -0.0,
+    0.003
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "camping_stool",
+   "kind": "crates",
+   "pos": [
+    -94.277,
+    45.366,
+    17.7
+   ],
+   "rot": [
+    -53.749,
+    -0.0,
+    0.003
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -94.644,
+    44.067,
+    17.7
+   ],
+   "rot": [
+    -53.749,
+    0.003,
+    0.024
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -94.34,
+    44.593,
+    17.7
+   ],
+   "rot": [
+    -86.696,
+    0.057,
+    -0.001
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "camping_stool",
+   "kind": "crates",
+   "pos": [
+    -89.85,
+    52.851,
+    17.695
+   ],
+   "rot": [
+    -99.802,
+    0.312,
+    0.325
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -79.245,
+    62.488,
+    16.497
+   ],
+   "rot": [
+    84.834,
+    -1.075,
+    1.228
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -61.359,
+    50.98,
+    14.473
+   ],
+   "rot": [
+    41.91,
+    -3.95,
+    7.843
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -79.652,
+    53.26,
+    16.496
+   ],
+   "rot": [
+    21.87,
+    0.084,
+    -0.002
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -75.701,
+    39.859,
+    17.697
+   ],
+   "rot": [
+    50.205,
+    0.008,
+    0.005
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -74.789,
+    38.801,
+    17.698
+   ],
+   "rot": [
+    80.976,
+    0.004,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "fusion_coil",
+   "kind": "crates",
+   "pos": [
+    -74.591,
+    40.919,
+    17.7
+   ],
+   "rot": [
+    88.893,
+    -0.005,
+    0.014
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_55gal",
+   "kind": "crates",
+   "pos": [
+    -74.682,
+    31.293,
+    17.7
+   ],
+   "rot": [
+    132.798,
+    -0.005,
+    0.014
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -74.522,
+    31.736,
+    17.7
+   ],
+   "rot": [
+    132.779,
+    0.103,
+    -0.09
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -74.914,
+    30.809,
+    17.7
+   ],
+   "rot": [
+    104.338,
+    0.968,
+    1.494
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -76.321,
+    9.446,
+    17.698
+   ],
+   "rot": [
+    104.075,
+    -1.029,
+    -0.191
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "camping_stool",
+   "kind": "crates",
+   "pos": [
+    -76.329,
+    8.813,
+    17.697
+   ],
+   "rot": [
+    67.235,
+    -0.289,
+    -0.45
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -75.845,
+    8.345,
+    17.7
+   ],
+   "rot": [
+    67.235,
+    -0.289,
+    -0.45
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -94.569,
+    38.933,
+    17.697
+   ],
+   "rot": [
+    44.957,
+    -0.06,
+    0.067
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_55gal",
+   "kind": "crates",
+   "pos": [
+    -80.189,
+    57.057,
+    16.5
+   ],
+   "rot": [
+    44.95,
+    -0.056,
+    -0.103
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -82.789,
+    59.495,
+    16.498
+   ],
+   "rot": [
+    45.629,
+    1.219,
+    1.177
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -76.515,
+    42.816,
+    16.516
+   ],
+   "rot": [
+    45.612,
+    -0.009,
+    -0.179
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_55gal",
+   "kind": "crates",
+   "pos": [
+    -76.238,
+    42.544,
+    16.516
+   ],
+   "rot": [
+    45.616,
+    -0.014,
+    -0.017
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "camping_stool",
+   "kind": "crates",
+   "pos": [
+    -74.974,
+    40.411,
+    17.697
+   ],
+   "rot": [
+    45.617,
+    -0.653,
+    -0.034
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "camping_stool",
+   "kind": "crates",
+   "pos": [
+    -86.84,
+    -0.982,
+    15.497
+   ],
+   "rot": [
+    45.553,
+    -0.326,
+    -0.342
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "hu_mil_rucksack",
+   "kind": "crates",
+   "pos": [
+    -87.815,
+    -1.809,
+    15.493
+   ],
+   "rot": [
+    45.957,
+    -7.867,
+    -6.367
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_55gal",
+   "kind": "crates",
+   "pos": [
+    -87.518,
+    -1.158,
+    15.5
+   ],
+   "rot": [
+    45.616,
+    0.01,
+    -0.009
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_55gal",
+   "kind": "crates",
+   "pos": [
+    -101.913,
+    16.674,
+    15.497
+   ],
+   "rot": [
+    45.622,
+    -0.01,
+    -0.266
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -100.999,
+    17.74,
+    15.497
+   ],
+   "rot": [
+    45.623,
+    -0.058,
+    0.058
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "camping_stool",
+   "kind": "crates",
+   "pos": [
+    -91.537,
+    64.295,
+    17.697
+   ],
+   "rot": [
+    45.555,
+    -0.336,
+    -0.333
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "hu_mil_rucksack",
+   "kind": "crates",
+   "pos": [
+    -92.48,
+    64.093,
+    17.693
+   ],
+   "rot": [
+    42.769,
+    -8.23,
+    -5.932
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "drum_12gal",
+   "kind": "crates",
+   "pos": [
+    -92.14,
+    64.259,
+    17.749
+   ],
+   "rot": [
+    -0.71,
+    -45.554,
+    90.632
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -89.859,
+    54.206,
+    17.7
+   ],
+   "rot": [
+    -159.895,
+    -0.015,
+    -0.032
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -99.269,
+    65.868,
+    15.05
+   ],
+   "rot": [
+    -159.895,
+    -0.015,
+    -0.032
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -105.915,
+    58.754,
+    14.95
+   ],
+   "rot": [
+    -128.928,
+    -0.015,
+    -0.032
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -103.375,
+    54.282,
+    14.95
+   ],
+   "rot": [
+    -48.478,
+    -0.015,
+    -0.032
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -102.133,
+    59.412,
+    14.95
+   ],
+   "rot": [
+    -48.478,
+    -0.015,
+    -0.032
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -106.748,
+    55.258,
+    14.947
+   ],
+   "rot": [
+    -20.707,
+    0.004,
+    0.04
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -102.229,
+    52.925,
+    14.95
+   ],
+   "rot": [
+    30.564,
+    0.004,
+    0.04
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -102.194,
+    47.114,
+    15.047
+   ],
+   "rot": [
+    6.491,
+    -0.135,
+    -0.01
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_small",
+   "kind": "crates",
+   "pos": [
+    -102.99,
+    65.778,
+    15.047
+   ],
+   "rot": [
+    -18.218,
+    -0.029,
+    -0.053
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "oni_crate_giant",
+   "kind": "crates",
+   "pos": [
+    -87.259,
+    17.431,
+    15.5
+   ],
+   "rot": [
+    -14.511,
+    -0.003,
+    -0.004
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xl",
+   "kind": "crates",
+   "pos": [
+    -72.98,
+    48.108,
+    19.305
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -71.981,
+    47.362,
+    16.907
+   ],
+   "rot": [
+    12.486,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -71.658,
+    45.492,
+    16.851
+   ],
+   "rot": [
+    -1.148,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.361,
+    44.32,
+    20.629
+   ],
+   "rot": [
+    -1.148,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.224,
+    44.984,
+    20.534
+   ],
+   "rot": [
+    -1.148,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.257,
+    46.21,
+    20.239
+   ],
+   "rot": [
+    -1.148,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.534,
+    46.599,
+    20.239
+   ],
+   "rot": [
+    48.715,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.293,
+    45.677,
+    20.359
+   ],
+   "rot": [
+    -0.0,
+    -0.0,
+    -15.161
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.915,
+    46.933,
+    20.46
+   ],
+   "rot": [
+    48.715,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.019,
+    48.477,
+    20.41
+   ],
+   "rot": [
+    7.218,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.901,
+    47.545,
+    20.41
+   ],
+   "rot": [
+    7.218,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.529,
+    48.412,
+    20.41
+   ],
+   "rot": [
+    7.218,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.425,
+    47.59,
+    20.41
+   ],
+   "rot": [
+    7.218,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.464,
+    42.906,
+    19.844
+   ],
+   "rot": [
+    26.662,
+    -6.793,
+    13.255
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.046,
+    49.145,
+    20.458
+   ],
+   "rot": [
+    1.092,
+    0.288,
+    -14.784
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.946,
+    49.835,
+    20.283
+   ],
+   "rot": [
+    1.044,
+    0.431,
+    -22.451
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -73.43,
+    49.003,
+    20.508
+   ],
+   "rot": [
+    1.044,
+    0.431,
+    -22.451
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.918,
+    43.374,
+    19.746
+   ],
+   "rot": [
+    46.37,
+    -9.89,
+    9.999
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.3,
+    43.731,
+    20.04
+   ],
+   "rot": [
+    14.818,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -55.912,
+    54.565,
+    16.981
+   ],
+   "rot": [
+    28.54,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -54.726,
+    51.14,
+    16.019
+   ],
+   "rot": [
+    12.364,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -57.912,
+    57.707,
+    16.68
+   ],
+   "rot": [
+    40.052,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -60.49,
+    60.266,
+    16.71
+   ],
+   "rot": [
+    54.028,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -63.632,
+    62.166,
+    16.724
+   ],
+   "rot": [
+    68.998,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -55.912,
+    54.565,
+    20.535
+   ],
+   "rot": [
+    28.54,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -54.726,
+    51.14,
+    19.798
+   ],
+   "rot": [
+    12.364,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -57.912,
+    57.707,
+    20.443
+   ],
+   "rot": [
+    40.052,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -60.49,
+    60.266,
+    20.427
+   ],
+   "rot": [
+    54.028,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -63.632,
+    62.166,
+    20.389
+   ],
+   "rot": [
+    68.998,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -54.223,
+    47.501,
+    17.772
+   ],
+   "rot": [
+    1.018,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -54.176,
+    43.7,
+    17.38
+   ],
+   "rot": [
+    1.018,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -71.373,
+    43.73,
+    20.548
+   ],
+   "rot": [
+    -1.032,
+    -0.502,
+    -25.927
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -66.965,
+    63.575,
+    17.688
+   ],
+   "rot": [
+    60.165,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -68.851,
+    65.834,
+    17.704
+   ],
+   "rot": [
+    21.288,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -66.965,
+    63.575,
+    21.41
+   ],
+   "rot": [
+    60.165,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -68.851,
+    65.834,
+    21.551
+   ],
+   "rot": [
+    21.288,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -70.466,
+    69.449,
+    18.394
+   ],
+   "rot": [
+    21.288,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -70.466,
+    69.449,
+    22.088
+   ],
+   "rot": [
+    21.288,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_xxl",
+   "kind": "crates",
+   "pos": [
+    -72.755,
+    72.849,
+    18.768
+   ],
+   "rot": [
+    42.901,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "box_m",
+   "kind": "crates",
+   "pos": [
+    -72.957,
+    50.376,
+    19.949
+   ],
+   "rot": [
+    0.861,
+    0.731,
+    -40.33
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -100.342,
+    33.092,
+    18.266
+   ],
+   "rot": [
+    90.0,
+    -3.485,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -99.922,
+    37.904,
+    18.266
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -74.602,
+    33.498,
+    18.266
+   ],
+   "rot": [
+    180.0,
+    87.306,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -74.603,
+    37.5,
+    18.265
+   ],
+   "rot": [
+    180.0,
+    87.277,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -96.701,
+    34.316,
+    18.266
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -96.698,
+    36.684,
+    18.266
+   ],
+   "rot": [
+    -90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen",
+   "kind": "controls",
+   "pos": [
+    -84.801,
+    63.689,
+    16.985
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen",
+   "kind": "controls",
+   "pos": [
+    -87.04,
+    35.49,
+    16.988
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen",
+   "kind": "controls",
+   "pos": [
+    -93.907,
+    7.875,
+    15.973
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_cool",
+   "kind": "controls",
+   "pos": [
+    -84.801,
+    63.689,
+    16.985
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_cool",
+   "kind": "controls",
+   "pos": [
+    -87.04,
+    35.49,
+    16.988
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_cool",
+   "kind": "controls",
+   "pos": [
+    -93.907,
+    7.875,
+    15.973
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_disabled",
+   "kind": "controls",
+   "pos": [
+    -84.801,
+    63.689,
+    16.985
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_disabled",
+   "kind": "controls",
+   "pos": [
+    -87.04,
+    35.49,
+    16.988
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_disabled",
+   "kind": "controls",
+   "pos": [
+    -93.907,
+    7.875,
+    15.973
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "generator_x_large",
+   "kind": "machines",
+   "pos": [
+    -84.801,
+    63.689,
+    16.946
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "generator_x_large",
+   "kind": "machines",
+   "pos": [
+    -87.04,
+    35.49,
+    16.943
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "generator_x_large",
+   "kind": "machines",
+   "pos": [
+    -93.907,
+    7.875,
+    15.953
+   ],
+   "rot": [
+    89.322,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -82.842,
+    15.988,
+    15.5
+   ],
+   "rot": [
+    133.015,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -88.098,
+    1.013,
+    15.501
+   ],
+   "rot": [
+    124.912,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -76.899,
+    60.22,
+    16.5
+   ],
+   "rot": [
+    -116.079,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -88.769,
+    46.831,
+    16.5
+   ],
+   "rot": [
+    16.905,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -85.619,
+    6.952,
+    15.5
+   ],
+   "rot": [
+    101.469,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -97.857,
+    17.075,
+    15.5
+   ],
+   "rot": [
+    -27.126,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -75.969,
+    30.483,
+    17.7
+   ],
+   "rot": [
+    111.437,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -88.992,
+    59.193,
+    17.7
+   ],
+   "rot": [
+    -148.264,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -93.621,
+    44.667,
+    17.7
+   ],
+   "rot": [
+    -8.727,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -62.705,
+    48.365,
+    14.098
+   ],
+   "rot": [
+    -160.771,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -77.888,
+    64.462,
+    16.5
+   ],
+   "rot": [
+    -125.761,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -77.424,
+    49.243,
+    16.5
+   ],
+   "rot": [
+    -165.393,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -76.679,
+    40.132,
+    17.7
+   ],
+   "rot": [
+    -106.389,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "longsword",
+   "kind": "machines",
+   "pos": [
+    -705.327,
+    43.013,
+    105.113
+   ],
+   "rot": [
+    -0.335,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "door_interior_large_logo",
+   "kind": "machines",
+   "pos": [
+    -74.3,
+    35.5,
+    17.714
+   ],
+   "rot": [
+    -0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "door_interior_large_logo",
+   "kind": "machines",
+   "pos": [
+    -98.75,
+    35.5,
+    17.7
+   ],
+   "rot": [
+    -0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "door_interior_large_logo",
+   "kind": "machines",
+   "pos": [
+    -91.864,
+    35.5,
+    16.5
+   ],
+   "rot": [
+    -0.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -86.374,
+    16.533,
+    15.5
+   ],
+   "rot": [
+    69.62,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -79.634,
+    55.744,
+    16.5
+   ],
+   "rot": [
+    -107.33,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -83.698,
+    39.14,
+    16.507
+   ],
+   "rot": [
+    136.713,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  }
+ ]
+}

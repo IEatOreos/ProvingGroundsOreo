@@ -1,0 +1,564 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "incineration_cannon",
+"pos": [
+13.573,
+-26.801,
+-0.18
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "incineration_cannon",
+"pos": [
+-13.202,
+-26.453,
+-0.18
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sword",
+"pos": [
+13.573,
+-26.801,
+-0.18
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sword",
+"pos": [
+-13.202,
+-26.453,
+-0.18
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "scattershot",
+"pos": [
+-0.033,
+-15.599,
+-0.98
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+14.273,
+-17.789,
+2.4
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sticky_detonator",
+"pos": [
+-14.16,
+-17.802,
+2.4
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+-0.035,
+-32.828,
+-0.2
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doublefrag",
+"pos": [
+0.499,
+-2.159,
+-1.441
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+-15.2,
+-18.782,
+-0.2
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_doubleplasma",
+"pos": [
+15.236,
+-18.844,
+-0.2
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_double_forerunner",
+"pos": [
+14.492,
+-27.445,
+-0.18
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "ord_grenade_double_forerunner",
+"pos": [
+-14.591,
+-27.508,
+-0.18
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "incineration_cannon",
+"pos": [
+-0.002,
+-21.389,
+2.4
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "sword",
+"pos": [
+-0.002,
+-21.389,
+2.4
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "binary_rifle",
+"pos": [
+-15.387,
+-12.541,
+2.4
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "binary_rifle",
+"pos": [
+14.933,
+-12.609,
+2.4
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-0.013,
+-20.628,
+-0.2
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.007,
+-36.759,
+1.099
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-0.002,
+-1.262,
+0.299
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.487,
+-12.912,
+2.377
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-0.004,
+-27.057,
+3.05
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+14.203,
+-12.719,
+2.385
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-14.16,
+-12.69,
+2.476
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+0.013,
+0.472,
+0.334
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-0.073,
+-13.007,
+-0.987
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+0.105,
+-28.183,
+3.008
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+0.066,
+-4.057,
+-0.822
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+-7.644,
+-12.455,
+2.86
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "extraction",
+"name": "ext_site",
+"pos": [
+14.949,
+-16.297,
+0.396
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+13.887,
+-26.974,
+-0.18
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+-14.107,
+-27.146,
+-0.18
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball",
+"pos": [
+0.0,
+-15.813,
+2.356
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-0.038,
+-12.623,
+-0.987
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+14.277,
+-27.272,
+-0.106
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill",
+"pos": [
+-14.329,
+-27.258,
+-0.132
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+0.001,
+-30.854,
+2.388
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "bomb_goal",
+"name": "grif_goal",
+"pos": [
+-0.003,
+-1.846,
+0.283
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "bomb",
+"name": "grif_spawn",
+"pos": [
+-0.007,
+-16.49,
+2.358
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-0.012,
+-36.179,
+1.107
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-0.012,
+-36.179,
+1.107
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.014,
+-0.768,
+0.299
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.014,
+-0.768,
+0.299
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+0.037,
+-15.07,
+2.355
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+0.037,
+-15.07,
+2.355
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-15.142,
+-12.587,
+2.39
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-15.142,
+-12.587,
+2.39
+],
+"team": 2
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+14.634,
+-12.593,
+2.385
+],
+"team": 3
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+14.634,
+-12.593,
+2.385
+],
+"team": 3
+},
+{
+"kind": "launcher",
+"name": "man_cannon_mp_invisible_smart",
+"pos": [
+-8.607,
+-22.374,
+-0.05
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "man_cannon_mp_invisible_smart",
+"pos": [
+8.564,
+-22.34,
+-0.068
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

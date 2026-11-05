@@ -1,0 +1,1 @@
+{"cell": 0.25, "source": ["H4EK:levels\\multi\\ca_forge_ravine\\ca_forge_ravine_bsp.scenario_structure_bsp", "H4EK:levels\\multi\\ca_forge_ravine\\ca_forge_ravine_vista.scenario_structure_bsp"], "shaders": {"ca_forge_ravine_glass_pattern_01": "window"}, "counts": {"window": 0, "fence": 0, "solid": 2101}, "window": [], "fence": [], "window_floor": [], "fence_floor": []}

@@ -1,0 +1,345 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+-6.474,
+-2.828,
+11.703
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+7.772,
+-1.418,
+9.663
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+8.006,
+-1.457,
+7.461
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "energy_blade",
+"pos": [
+4.211,
+-9.114,
+6.413
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-1.527,
+-1.858,
+4.166
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-9.759,
+9.736,
+6.003
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-9.79,
+10.049,
+6.002
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-11.977,
+-0.965,
+7.884
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-12.045,
+-0.521,
+7.883
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-6.121,
+-3.054,
+11.591
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-5.579,
+-3.056,
+11.591
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+8.748,
+-7.96,
+9.663
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+7.448,
+-9.122,
+9.662
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+9.339,
+-1.773,
+7.915
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+9.289,
+-1.121,
+7.468
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-0.011,
+6.304,
+6.188
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-2.822,
+6.395,
+6.516
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+0.378,
+2.344,
+9.589
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+0.99,
+2.382,
+9.836
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_large",
+"pos": [
+-1.537,
+-0.194,
+9.554
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+6.568,
+-2.696,
+12.124
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+0.748,
+-8.347,
+9.638
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+-11.522,
+-6.347,
+9.962
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+-1.426,
+-0.653,
+7.658
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+-1.542,
+10.446,
+5.858
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_small",
+"pos": [
+4.427,
+-9.434,
+6.406
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+7.125,
+-1.635,
+7.415
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-9.606,
+9.114,
+5.958
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+7.125,
+-1.635,
+7.467
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-9.603,
+9.15,
+5.997
+],
+"team": 0
+},
+{
+"kind": "lift",
+"name": "s3d_lockout_lift",
+"pos": [
+-1.478,
+11.579,
+5.84
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}

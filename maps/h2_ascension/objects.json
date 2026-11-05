@@ -1,0 +1,2180 @@
+{
+ "netgame_flags": [
+  {
+   "type": "teleport to",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    3.19835,
+    6.901,
+    -0.585216
+   ],
+   "facing": 90.0
+  },
+  {
+   "type": "Oddball spawn",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.045,
+    0.0,
+    0.015777
+   ],
+   "facing": -159.658539
+  },
+  {
+   "type": "teleport from",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    11.050539,
+    -3.943649,
+    -5.430046
+   ],
+   "facing": 164.435638
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.074562,
+    4.791108,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.082657,
+    3.851824,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.191828,
+    3.789123,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.802605,
+    3.18309,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.936655,
+    3.161013,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -20.348621,
+    3.141968,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -20.445148,
+    3.204703,
+    0.762502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -20.460413,
+    4.797377,
+    0.762501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -20.355959,
+    4.875359,
+    0.762501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 1",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -16.172003,
+    4.847721,
+    0.762501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    15.811469,
+    13.268952,
+    1.662503
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    9.471008,
+    -4.916137,
+    -1.538128
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.559737,
+    2.472644,
+    0.319738
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.311535,
+    2.181634,
+    0.321158
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.23719,
+    1.27437,
+    0.32602
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.518552,
+    0.54012,
+    0.326691
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.515459,
+    -0.555536,
+    0.325668
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    2.224809,
+    -1.271433,
+    0.320517
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    1.379253,
+    -2.159245,
+    0.320975
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.661022,
+    -2.345744,
+    0.282997
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.59311,
+    -2.372745,
+    0.284662
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.232491,
+    -2.189053,
+    0.308575
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.192413,
+    -1.293905,
+    0.317359
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.474176,
+    -0.607042,
+    0.319017
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.478772,
+    0.545221,
+    0.318384
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -2.108582,
+    1.408033,
+    0.318881
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -1.419345,
+    2.127481,
+    0.324407
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.438515,
+    2.498365,
+    0.320083
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.686283,
+    -5.164517,
+    -1.538685
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    6.758727,
+    -4.398523,
+    -1.538743
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.019908,
+    -1.732498,
+    -1.537984
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    7.917974,
+    -1.304318,
+    -1.537625
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    9.04733,
+    -1.431475,
+    -1.537346
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    9.680184,
+    -1.851286,
+    -1.53728
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    10.107052,
+    -2.471832,
+    -1.537322
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    10.286086,
+    -3.148129,
+    -1.537447
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 3",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    10.142316,
+    -4.079674,
+    -1.537727
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    0.045,
+    0.0,
+    0.015274
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -2.54582,
+    -0.009126,
+    0.309123
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 2,
+   "team": 0,
+   "pos": [
+    8.3,
+    -3.3,
+    -1.537641
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -17.4,
+    -0.26,
+    1.262501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -17.4,
+    -0.26,
+    1.262501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb spawn",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -17.4,
+    -0.26,
+    1.262501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb return",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -17.4,
+    -0.26,
+    1.262501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 8,
+   "team": 8,
+   "pos": [
+    0.045,
+    0.0,
+    0.015713
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb spawn",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.045,
+    0.0,
+    0.015582
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    8.3,
+    -3.3,
+    -1.537648
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb spawn",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    8.3,
+    -3.3,
+    -1.537648
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb return",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    8.3,
+    -3.3,
+    -1.537648
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "CTF flag return",
+   "id": 0,
+   "team": 1,
+   "pos": [
+    8.3,
+    -3.3,
+    -1.537649
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 0",
+   "id": 1,
+   "team": 8,
+   "pos": [
+    0.045,
+    0.0,
+    0.015886
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Oddball spawn",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    0.603694,
+    0.517939,
+    0.043705
+   ],
+   "facing": 76.216873
+  },
+  {
+   "type": "Oddball spawn",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    -0.476028,
+    -0.572764,
+    0.041258
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 2,
+   "team": 0,
+   "pos": [
+    8.321681,
+    -0.578675,
+    -1.53764
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 1,
+   "team": 0,
+   "pos": [
+    -17.4,
+    -0.26,
+    1.2625
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 1,
+   "team": 0,
+   "pos": [
+    -20.017395,
+    -1.819153,
+    1.2625
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 3,
+   "team": 0,
+   "pos": [
+    13.4,
+    13.45,
+    1.662501
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 3,
+   "team": 0,
+   "pos": [
+    13.317138,
+    15.905103,
+    1.662496
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 4,
+   "team": 0,
+   "pos": [
+    0.0,
+    -18.5,
+    0.062489
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Territories flag",
+   "id": 4,
+   "team": 0,
+   "pos": [
+    -3.048937,
+    -21.057657,
+    0.062496
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    13.777061,
+    11.231686,
+    1.662505
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    13.674298,
+    11.220672,
+    1.662505
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    11.182294,
+    13.71162,
+    1.662498
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    11.20435,
+    13.827188,
+    1.662498
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    13.245523,
+    15.828802,
+    1.662496
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    13.367649,
+    15.818925,
+    1.662496
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 2",
+   "id": 0,
+   "team": 8,
+   "pos": [
+    15.829332,
+    13.377224,
+    1.662502
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -4.759182,
+    5.626761,
+    -2.942205
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -4.726189,
+    5.020134,
+    -2.898583
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -5.103084,
+    4.27467,
+    -2.833014
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -5.695303,
+    3.706013,
+    -2.798623
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -6.652043,
+    3.357763,
+    -2.830998
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -7.445858,
+    3.417418,
+    -2.855587
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -8.161097,
+    3.918151,
+    -2.945963
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -8.392316,
+    4.826427,
+    -3.043495
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -7.833977,
+    5.918092,
+    -3.113551
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -7.041553,
+    6.55145,
+    -3.089291
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -5.862385,
+    6.820593,
+    -3.048929
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "King Hill 4",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -5.032668,
+    6.45183,
+    -3.006132
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb return",
+   "id": 1,
+   "team": 0,
+   "pos": [
+    -16.294828,
+    -0.320819,
+    1.2625
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "Assault bomb return",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    9.856605,
+    -3.3,
+    -1.537648
+   ],
+   "facing": 0.0
+  }
+ ],
+ "equipment": [
+  {
+   "item": "battle_rifle",
+   "path": "multiplayer\\single_weapons\\battle_rifle",
+   "pos": [
+    7.22729,
+    -3.22421,
+    0.524514
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60
+  },
+  {
+   "item": "battle_rifle",
+   "path": "multiplayer\\single_weapons\\battle_rifle",
+   "pos": [
+    1.21944,
+    -17.674843,
+    0.062483
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60
+  },
+  {
+   "item": "magnum",
+   "path": "multiplayer\\single_weapons\\magnum",
+   "pos": [
+    0.09644,
+    11.181594,
+    -1.937505
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60
+  },
+  {
+   "item": "needler",
+   "path": "multiplayer\\single_weapons\\needler",
+   "pos": [
+    -6.4876,
+    -6.4936,
+    0.21071
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "needler",
+   "path": "multiplayer\\single_weapons\\needler",
+   "pos": [
+    -5.896931,
+    4.005928,
+    -2.815418
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_pistol",
+   "path": "multiplayer\\single_weapons\\plasma_pistol",
+   "pos": [
+    -4.37317,
+    -14.6731,
+    -1.99
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "rocket_launcher",
+   "path": "multiplayer\\single_weapons\\rocket_launcher",
+   "pos": [
+    13.8481,
+    -4.67263,
+    -5.79
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 75
+  },
+  {
+   "item": "shotgun",
+   "path": "multiplayer\\single_weapons\\shotgun",
+   "pos": [
+    0.103526,
+    8.233577,
+    0.06247
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 85
+  },
+  {
+   "item": "smg",
+   "path": "multiplayer\\single_weapons\\smg",
+   "pos": [
+    -2.626579,
+    -6.839765,
+    0.764149
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "smg",
+   "path": "multiplayer\\single_weapons\\smg",
+   "pos": [
+    7.453227,
+    0.527599,
+    -1.37227
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 60
+  },
+  {
+   "item": "sniper_rifle",
+   "path": "multiplayer\\single_weapons\\sniper_rifle",
+   "pos": [
+    5.26858,
+    13.4478,
+    -0.290004
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 80
+  },
+  {
+   "item": "sniper_rifle",
+   "path": "multiplayer\\single_weapons\\sniper_rifle",
+   "pos": [
+    -10.576229,
+    4.560785,
+    -3.1375
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 15
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -0.082092,
+    10.937946,
+    -1.937504
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    0.092948,
+    10.879041,
+    -1.937505
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    -5.515708,
+    4.11202,
+    -2.814802
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    7.682617,
+    0.781582,
+    -1.336118
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    7.510787,
+    0.819136,
+    -1.318328
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -19.848486,
+    -0.666978,
+    -0.33749
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -20.025747,
+    -0.481462,
+    -0.337489
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -1.4049,
+    -17.658398,
+    0.000999
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -1.217076,
+    -17.540356,
+    0.062487
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -3.050714,
+    -6.812806,
+    0.779374
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -3.170655,
+    -6.634891,
+    0.778976
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "frag_grenades",
+   "path": "multiplayer\\single_weapons\\frag_grenades",
+   "pos": [
+    -19.823122,
+    -0.36751,
+    -0.337488
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    14.31829,
+    14.23805,
+    1.6625
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    14.102339,
+    14.255043,
+    1.6625
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    -5.598627,
+    4.28004,
+    -2.82
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    -18.3759,
+    -0.783348,
+    3.201
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    -18.3664,
+    -1.02809,
+    3.20124
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "plasma_grenades",
+   "path": "multiplayer\\single_weapons\\plasma_grenades",
+   "pos": [
+    14.192739,
+    14.036859,
+    1.6625
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0
+  },
+  {
+   "item": "powerup_super_shield",
+   "path": "multiplayer\\powerups\\powerup_super_shield",
+   "pos": [
+    -8.041712,
+    -10.90257,
+    -1.937498
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 140
+  },
+  {
+   "item": "",
+   "path": "",
+   "pos": [
+    -16.063053,
+    -0.444074,
+    3.201544
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 220
+  }
+ ],
+ "vehicles": [
+  {
+   "item": "banshee",
+   "path": "multiplayer\\single_vehicles\\banshee",
+   "pos": [
+    -0.03399,
+    -21.244698,
+    0.062491
+   ],
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 155
+  }
+ ],
+ "spawns": [
+  {
+   "pos": [
+    0.025557,
+    8.19794,
+    0.001242
+   ],
+   "team": 0,
+   "facing": 3.30325,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -2.935055,
+    -6.750031,
+    0.797018
+   ],
+   "team": 0,
+   "facing": 68.974648,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    14.643528,
+    12.910344,
+    1.662502
+   ],
+   "team": 0,
+   "facing": -176.538193,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    3.837946,
+    -4.415468,
+    0.684053
+   ],
+   "team": 0,
+   "facing": 162.386978,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -1.407708,
+    -6.80301,
+    0.462403
+   ],
+   "team": 0,
+   "facing": 65.323372,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -7.687757,
+    3.640752,
+    -2.872567
+   ],
+   "team": 0,
+   "facing": 123.386833,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -10.605804,
+    4.615673,
+    -3.198757
+   ],
+   "team": 0,
+   "facing": -87.516762,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    7.735703,
+    -0.740118,
+    -1.552071
+   ],
+   "team": 0,
+   "facing": -84.126862,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    3.829035,
+    7.919837,
+    -0.837268
+   ],
+   "team": 0,
+   "facing": 118.476624,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -11.825738,
+    -7.155368,
+    -1.999
+   ],
+   "team": 0,
+   "facing": 132.716461,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -0.194878,
+    -18.665295,
+    0.001229
+   ],
+   "team": 0,
+   "facing": 79.581512,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -5.229918,
+    4.763574,
+    -2.880123
+   ],
+   "team": 0,
+   "facing": 80.86718,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    9.633068,
+    -5.298529,
+    -1.53765
+   ],
+   "team": 0,
+   "facing": 124.510651,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    6.337345,
+    -5.245103,
+    -1.539078
+   ],
+   "team": 0,
+   "facing": 35.785198,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    10.928017,
+    11.261351,
+    1.662503
+   ],
+   "team": 0,
+   "facing": -174.872513,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -19.816683,
+    -0.025345,
+    1.59075
+   ],
+   "team": 0,
+   "facing": -45.198101,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -19.643726,
+    1.635103,
+    2.262498
+   ],
+   "team": 0,
+   "facing": -87.292755,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -18.391546,
+    0.580987,
+    1.262501
+   ],
+   "team": 0,
+   "facing": -39.096344,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -16.695118,
+    0.516866,
+    1.262501
+   ],
+   "team": 0,
+   "facing": -112.638054,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -3.521446,
+    8.949745,
+    -2.93578
+   ],
+   "team": 0,
+   "facing": -115.05368,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    12.931232,
+    12.924839,
+    1.662501
+   ],
+   "team": 0,
+   "facing": -162.299255,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    13.594607,
+    11.758928,
+    1.662504
+   ],
+   "team": 0,
+   "facing": -143.762787,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    13.242329,
+    14.976464,
+    1.662497
+   ],
+   "team": 0,
+   "facing": -143.762787,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    11.642441,
+    10.489084,
+    1.662505
+   ],
+   "team": 0,
+   "facing": -132.665909,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    14.684756,
+    13.907506,
+    1.6625
+   ],
+   "team": 0,
+   "facing": -130.735397,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -1.413592,
+    -17.777512,
+    0.062488
+   ],
+   "team": 0,
+   "facing": -59.582077,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -0.931618,
+    -17.514448,
+    0.062487
+   ],
+   "team": 0,
+   "facing": -59.582077,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    0.879837,
+    -17.463678,
+    0.062484
+   ],
+   "team": 0,
+   "facing": -115.952148,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    1.228542,
+    -17.899813,
+    0.062484
+   ],
+   "team": 0,
+   "facing": -120.908966,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -1.575836,
+    -19.19989,
+    0.000999
+   ],
+   "team": 0,
+   "facing": -6.968294,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    1.408463,
+    -19.178612,
+    0.062484
+   ],
+   "team": 0,
+   "facing": 163.388229,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -1.652706,
+    -19.849503,
+    0.000999
+   ],
+   "team": 0,
+   "facing": 0.996894,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    1.307114,
+    -20.091883,
+    0.062485
+   ],
+   "team": 0,
+   "facing": 164.977203,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -2.553046,
+    -18.863934,
+    -0.822845
+   ],
+   "team": 0,
+   "facing": 95.447899,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -2.618814,
+    -16.310564,
+    -1.999
+   ],
+   "team": 0,
+   "facing": 141.411926,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -3.529597,
+    -6.191298,
+    0.781773
+   ],
+   "team": 0,
+   "facing": 33.324142,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -5.980066,
+    -3.616178,
+    0.058382
+   ],
+   "team": 0,
+   "facing": 14.613743,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    2.909348,
+    -4.918434,
+    0.684672
+   ],
+   "team": 0,
+   "facing": 117.298737,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    4.608274,
+    -4.077074,
+    0.591871
+   ],
+   "team": 0,
+   "facing": 137.291183,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    10.486662,
+    -4.420047,
+    -1.537652
+   ],
+   "team": 0,
+   "facing": 152.438278,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    2.620917,
+    8.144075,
+    1.132169
+   ],
+   "team": 0,
+   "facing": -97.78614,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    7.396843,
+    14.552186,
+    -0.040458
+   ],
+   "team": 0,
+   "facing": -169.296432,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    2.772538,
+    8.066626,
+    -0.837284
+   ],
+   "team": 0,
+   "facing": 75.903481,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -0.832468,
+    9.575551,
+    -1.937501
+   ],
+   "team": 0,
+   "facing": -138.633698,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -14.19231,
+    -4.90146,
+    -1.999001
+   ],
+   "team": 0,
+   "facing": 120.363388,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -17.360571,
+    -4.794346,
+    0.42236
+   ],
+   "team": 0,
+   "facing": 123.355675,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    1.198941,
+    15.078623,
+    -1.937502
+   ],
+   "team": 0,
+   "facing": -106.177132,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -19.886166,
+    -1.500427,
+    -0.337491
+   ],
+   "team": 0,
+   "facing": -87.292755,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -19.696192,
+    -5.103,
+    -0.22245
+   ],
+   "team": 0,
+   "facing": 110.888237,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -16.601864,
+    -1.3986,
+    1.2625
+   ],
+   "team": 0,
+   "facing": 134.6987,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -4.088071,
+    1.285375,
+    0.929042
+   ],
+   "team": 0,
+   "facing": -16.771166,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -1.65991,
+    6.518359,
+    0.542603
+   ],
+   "team": 0,
+   "facing": -100.317894,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    6.823946,
+    -0.62253,
+    0.522696
+   ],
+   "team": 0,
+   "facing": 134.29921,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -19.820391,
+    0.272794,
+    -0.33749
+   ],
+   "team": 0,
+   "facing": 64.963341,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -18.808367,
+    -5.848498,
+    0.022242
+   ],
+   "team": 0,
+   "facing": 24.266094,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -17.115004,
+    1.408834,
+    1.262501
+   ],
+   "team": 0,
+   "facing": -121.318626,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -6.092069,
+    3.733654,
+    -2.810928
+   ],
+   "team": 0,
+   "facing": 151.020569,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -4.771025,
+    8.486072,
+    -2.978913
+   ],
+   "team": 0,
+   "facing": 8.090106,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    6.469123,
+    1.981453,
+    0.710668
+   ],
+   "team": 0,
+   "facing": 179.204651,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -16.355299,
+    -1.263766,
+    3.2625
+   ],
+   "team": 0,
+   "facing": 95.580101,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    -18.135557,
+    0.272787,
+    3.2625
+   ],
+   "team": 0,
+   "facing": -20.440805,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    10.757103,
+    -3.29073,
+    -1.537651
+   ],
+   "team": 0,
+   "facing": -179.751938,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    10.402271,
+    -2.455967,
+    -1.537648
+   ],
+   "team": 0,
+   "facing": -156.135483,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    9.785294,
+    -1.707469,
+    -1.537645
+   ],
+   "team": 0,
+   "facing": -133.956482,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    9.038325,
+    -0.842347,
+    -1.537641
+   ],
+   "team": 0,
+   "facing": -99.96711,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    8.512447,
+    -5.720471,
+    -1.537646
+   ],
+   "team": 0,
+   "facing": 90.150963,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    7.588342,
+    -5.474776,
+    -1.537643
+   ],
+   "team": 0,
+   "facing": 69.523605,
+   "games": [
+    "all games"
+   ]
+  },
+  {
+   "pos": [
+    3.805001,
+    -7.353912,
+    -1.537633
+   ],
+   "team": 0,
+   "facing": 51.007805,
+   "games": [
+    "all games"
+   ]
+  }
+ ],
+ "scenery": []
+}

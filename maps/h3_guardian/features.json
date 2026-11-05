@@ -1,0 +1,640 @@
+{
+"features": [
+{
+"kind": "weapon",
+"name": "excavator",
+"pos": [
+13.287,
+-11.906,
+17.484
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "excavator",
+"pos": [
+-2.722,
+-19.459,
+19.033
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "smg",
+"pos": [
+1.62,
+-15.498,
+18.578
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "needler",
+"pos": [
+9.767,
+-14.835,
+18.745
+],
+"team": 8,
+"respawn": 120
+},
+{
+"kind": "weapon",
+"name": "shotgun",
+"pos": [
+-11.317,
+-19.52,
+16.787
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "excavator",
+"pos": [
+-5.999,
+-6.64,
+18.708
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+-9.68,
+-16.635,
+18.594
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+6.969,
+-0.542,
+16.105
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "plasma_pistol",
+"pos": [
+1.802,
+-4.372,
+15.983
+],
+"team": 8,
+"respawn": 90
+},
+{
+"kind": "weapon",
+"name": "battle_rifle",
+"pos": [
+-7.187,
+-12.002,
+18.252
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "covenant_carbine",
+"pos": [
+9.386,
+-8.969,
+18.235
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "spike_rifle",
+"pos": [
+6.967,
+-1.024,
+16.105
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-3.73,
+-9.97,
+15.855
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+-0.987,
+-23.085,
+16.705
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "assault_rifle",
+"pos": [
+2.002,
+-21.867,
+18.924
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "brute_shot",
+"pos": [
+1.976,
+2.648,
+16.806
+],
+"team": 8,
+"respawn": 120
+},
+{
+"kind": "weapon",
+"name": "plasma_rifle",
+"pos": [
+-5.039,
+-14.993,
+16.051
+],
+"team": 8,
+"respawn": 15
+},
+{
+"kind": "weapon",
+"name": "magnum",
+"pos": [
+-0.968,
+-23.491,
+16.705
+],
+"team": 8,
+"respawn": 30
+},
+{
+"kind": "weapon",
+"name": "sniper_rifle",
+"pos": [
+10.561,
+-8.987,
+16.693
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "weapon",
+"name": "gravity_hammer",
+"pos": [
+1.64,
+-9.111,
+16.836
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+7.204,
+-11.747,
+19.952
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+7.206,
+-12.091,
+19.952
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-4.682,
+-7.412,
+18.718
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "plasma_grenade",
+"pos": [
+-4.688,
+-7.804,
+18.718
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-4.579,
+-16.229,
+19.045
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+-4.972,
+-16.507,
+19.045
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+9.348,
+-1.486,
+16.592
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "grenade",
+"name": "frag_grenade",
+"pos": [
+9.674,
+-1.787,
+16.592
+],
+"team": 8,
+"respawn": 0
+},
+{
+"kind": "powerup",
+"name": "superflare_equipment",
+"pos": [
+-2.564,
+-16.668,
+19.096
+],
+"team": 8,
+"respawn": 90
+},
+{
+"kind": "weapon",
+"name": "bubbleshield_equipment",
+"pos": [
+1.254,
+-2.721,
+18.473
+],
+"team": 8,
+"respawn": 60
+},
+{
+"kind": "powerup",
+"name": "powerup_blue",
+"pos": [
+-9.67,
+-4.342,
+19.005
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "powerup",
+"name": "powerup_red",
+"pos": [
+10.225,
+-11.604,
+18.494
+],
+"team": 8,
+"respawn": 180
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+1.638,
+-9.999,
+18.256
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+-2.277,
+-18.59,
+19.0
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+2.677,
+-0.838,
+15.925
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+10.948,
+-10.013,
+18.104
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "ball",
+"name": "oddball_ball_spawn_point",
+"pos": [
+-8.232,
+-10.044,
+15.8
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+1.645,
+-10.004,
+18.2
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+-2.697,
+-18.213,
+19.0
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+10.436,
+-0.862,
+16.547
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "hill",
+"name": "koth_hill_static",
+"pos": [
+-8.265,
+-9.997,
+18.104
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+-4.401,
+-19.4,
+16.66
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+10.44,
+-4.608,
+17.324
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+-8.308,
+-10.012,
+18.061
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-4.5,
+-21.582,
+16.8
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+-4.492,
+-22.331,
+16.8
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+9.851,
+-1.311,
+16.547
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "flag_return",
+"name": "CTF flag return",
+"pos": [
+10.402,
+-0.847,
+16.547
+],
+"team": 1
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+13.216,
+-14.756,
+18.404
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+1.636,
+-10.028,
+16.448
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+10.935,
+-10.006,
+18.104
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+2.277,
+-0.722,
+15.925
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+-9.354,
+-5.744,
+18.3
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+-5.828,
+-9.995,
+15.811
+],
+"team": 8
+},
+{
+"kind": "objective",
+"role": "territory",
+"name": "territory_static",
+"pos": [
+-2.283,
+-17.812,
+18.989
+],
+"team": 8
+},
+{
+"kind": "launcher",
+"name": "man_cannon_guardian_iii",
+"pos": [
+4.723,
+-18.825,
+16.784
+],
+"group": "crates"
+},
+{
+"kind": "launcher",
+"name": "man_cannon_guardian_ii",
+"pos": [
+-1.803,
+-0.455,
+16.287
+],
+"group": "crates"
+},
+{
+"kind": "lift",
+"name": "minilift",
+"pos": [
+-3.015,
+-7.586,
+18.393
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}
