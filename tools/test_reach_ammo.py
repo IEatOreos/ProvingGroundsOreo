@@ -76,6 +76,30 @@ class ReachAmmoTests(unittest.TestCase):
                     bot.dry_since = 8.0
                 self.assertEqual(bot.choose_weapon(10, me, 'roam', None, snap), 1)
 
+    def test_loaded_sniper_does_not_trigger_low_ammo_rearming(self):
+        for tier in ['novice', 'average', 'strong', 'top', 'scaling']:
+            for total, mag in [(2, 2), (1, 1), (1, 0)]:
+                with self.subTest(tier=tier, total=total, mag=mag):
+                    bot = bot_for(tier)
+                    bot.ammo_max = {'sniper': 8}
+                    me = PlayerState(0, 0, 'test', Vec(), weapon='sniper',
+                                     weapons=['dmr', 'sniper'], ammo=[30, total], mag=[15, mag])
+                    snap = Snapshot(10, [me], ground_weapons=[('assault_rifle', Vec(1, 0, 0))])
+                    self.assertIsNone(bot.rearm_point(me, snap))
+
+    def test_empty_sniper_and_other_low_weapons_still_rearm(self):
+        for weapon, ammo, mag in [('sniper', [30, 0], [15, 0]),
+                                  ('sniper', [0, 0], [0, 0]),
+                                  ('dmr', [30, 2], [15, 2])]:
+            with self.subTest(weapon=weapon, ammo=ammo):
+                bot = bot_for('top')
+                bot.ammo_max = {weapon: 30}
+                me = PlayerState(0, 0, 'test', Vec(), weapon=weapon,
+                                 weapons=['magnum', weapon], ammo=ammo, mag=mag)
+                point = Vec(1, 0, 0)
+                snap = Snapshot(10, [me], ground_weapons=[('assault_rifle', point)])
+                self.assertEqual(bot.rearm_point(me, snap), point)
+
     def test_combat_observation_enables_later_low_mag_reload(self):
         for tier in ['novice', 'average', 'strong', 'top', 'scaling']:
             with self.subTest(tier=tier):

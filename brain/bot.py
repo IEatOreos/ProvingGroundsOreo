@@ -3212,6 +3212,10 @@ class Bot:
         top = s.__dict__.setdefault("ammo_max", {})
         if held >= 0:
             top[me.weapon] = max(top.get(me.weapon, 0), held)
+        # Even one remaining sniper round is worth keeping. Do not seek a
+        # replacement just because it is low; an empty sniper still rearms normally.
+        if me.weapon == "sniper" and held > 0:
+            return None
         low = s.dry(me) or (0 <= held < 6 and held < 0.5 * top.get(me.weapon, 0))
         if not low:
             return None
