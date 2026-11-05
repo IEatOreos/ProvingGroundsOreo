@@ -1107,6 +1107,14 @@ class Bot:
 
     # --- per tick
     def think(s, now, dt, snap, los, nav, callouts, items=None):
+        me = snap.player(s.id)
+        if me and me.alive:
+            # Observe full magazines during fights too, before reload_check needs the
+            # reference. First seeing 3 rounds after a kill must not make 3 look full.
+            top = s.__dict__.setdefault("mag_max", {})
+            for w, mag in zip(me.weapons, me.mag):
+                if mag >= 0:
+                    top[w] = max(top.get(w, 0), mag)
         previous_shot = getattr(s, "last_shot_t", -9.0)
         act = s.plan(now, dt, snap, los, nav, callouts, items)
         me = snap.player(s.id)

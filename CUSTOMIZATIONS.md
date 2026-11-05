@@ -20,6 +20,8 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 
 ## Open investigations and proposals
 
+- Local follow-up: Reach now supplies live magazine and total-ammo counts for recognized magazine-fed weapons; the bot remembers magazine maxima during combat too. DMR and sniper counts were verified against controlled shots, reloads, and sniper depletion. See CUSTOM_CHANGELOG.md for validation and remaining gameplay checks. Battery counts remain unknown.
+
 - Visible-target firing hesitation near a balcony: head line of sight is suspected, not confirmed.
 - Sniper miss percentages were discussed but have NOT been implemented.
 - Flight learning from demonstrations has NOT been implemented. The local companion vehicle recorder is excluded from this repository pending separate review.

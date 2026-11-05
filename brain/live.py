@@ -1080,7 +1080,7 @@ class LiveReach(LiveH3):
     UNIT_ZOOM = None      # the unit's desired zoom byte (not decoded)
     DEAD_AT, HEALTH_BLOCK = 0x138, 0x184   # (Live.vehicle_dead / vehicle_left; ghidra/hr_object_get_health.c)
     MAG_NAMES = {}        # (Halo 3's magazine sizes are not this game's)
-    AMMO_AT = None        # rounds not decoded for this game (LiveH2.rounds reads unknown)
+    AMMO_AT = None        # inherited layout disabled; Reach uses rounds() below
     # loose guns by this game's parent field (+0x14, the vehicle a seated unit rides and the holder of a flag here);
     # rounds unknown keep a gun. CE's reader (+0xD8, CE rounds) found no Reach power weapon lying loose, so no bot was
     # ever sent for one (director.power_runs; 0 runs live match 220515). H4 / H2A inherit it with theirs (+0x24)
@@ -1179,6 +1179,28 @@ class LiveReach(LiveH3):
         s._bare = set()           # units seen taking body damage with no shield damage
         s._bare_players = set()
         s._find()
+
+    # Magazine-fed Reach guns only: battery/charge weapons and objectives stay unknown.
+    ROUND_WEAPONS = {"dmr", "sniper", "assault_rifle", "magnum", "shotgun", "needle_rifle", "needler",
+                     "rockets", "fuelrod", "concussion_rifle", "grenade_launcher"}
+
+    def rounds(s, handle):
+        """Reach reserve +0x2C6, loaded +0x2CA (int16). DMR/sniper verified live,
+        including reload transfer and a completely empty sniper, 2026-11-05.
+        H4/H2A inherit this class, but must not use Reach's weapon layout.
+        """
+        if s.g.dll.lower() != "haloreach.dll":
+            return super().rounds(handle)
+        o = s.object(handle)
+        if not o or s.weapon_name(handle) not in s.ROUND_WEAPONS:
+            return -1, -1
+        b = s.g.read(o + 0x2C6, 6)
+        if b is None or len(b) != 6:
+            return -1, -1
+        reserve, mag = struct.unpack("<hxxh", b)
+        if reserve < 0 or mag < 0:
+            return -1, -1
+        return reserve + mag, mag    # zero is a known empty gun, even on the first read
 
     MAGAZINE = {15: "dmr", 32: "assault_rifle", 8: "magnum", 21: "needle_rifle", 4: "sniper", 6: "shotgun",
                 2: "rockets"}   # ponytail: by magazine size; battery weapons stay "unknown"
@@ -1484,6 +1506,8 @@ class LiveReach(LiveH3):
                 u = s.g.read(o, 0x400)
                 slots = struct.unpack_from("<4I", u, 0x350)
                 d["weapons"] = [s.weapon_name(w) for w in slots if w != NONE]
+                rounds = [s.rounds(w) for w in slots if w != NONE]
+                d["ammo"], d["mag"] = [a for a, _ in rounds], [m for _, m in rounds]
                 parent = struct.unpack_from("<I", u, 0x14)[0]
                 d["vehicle"] = parent if parent != NONE else -1
                 sh, hp = s._vitals(unit, *struct.unpack_from("<2f", u, 0x124))     # damage taken, 1.0 = gone
