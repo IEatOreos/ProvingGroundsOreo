@@ -142,6 +142,41 @@ def live_pieces(live):
     return [p for p in _pieces(live) if p[0]] if _tag_names(live) else []
 
 
+def live_items(live):
+    """A Forge creation's power items as they lie in the match (GitHub #11): loose weapons, equipment and powerups
+    (parent NONE) named by the map's own tag names, kept when brain/maps.py POWER knows them, as m["items"] rows. A
+    creation filed without its .mvar file kept Forge World's own placements as its items (variant.json holds only
+    scenery and crates): bots walked to guns the creation does not have and never to the ones it has."""
+    from .core import Vec
+    from .maps import POWER
+    names = _tag_names(live)
+    if not names or not hasattr(live, "_array"):
+        return []
+    ents, mx, _ = live._array(0x10)                      # (LiveReach.objects' layout: +4 type, +0x14 parent, +0x44 pos)
+    b = live.g.read(ents, mx * 0x18)
+    out = []
+    for i in range(mx):
+        salt, typ = struct.unpack_from("<H", b, i * 0x18)[0], b[i * 0x18 + 4]
+        if not salt or typ not in (2, 3):
+            continue
+        o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
+        head = live.g.read(o, 0x50)
+        tag, parent = struct.unpack_from("<I", head, 0)[0], struct.unpack_from("<I", head, 0x14)[0]
+        if parent != 0xFFFFFFFF:
+            continue                                      # in someone's hands (a starting gun)
+        # (LiveReach._own_name: the name may sit up to 4 tags before the index on Forge World)
+        key = (live._own_name(tag, "weapons") or live._own_name(tag, "powerups") or "") if hasattr(live, "_own_name") \
+            else ""
+        if key in POWER:
+            name, kind, value = POWER[key]
+            out.append(dict(name=name, kind=kind, value=value, pos=Vec(*struct.unpack_from("<3f", head, 0x44)),
+                            respawn=60 if kind == "powerup" else 45))
+            # (and the live reader names that tag so: it names loose objects by the nearest map placement, the canvas's
+            # here, so tools/live_bots.py item_check would read every one of these as gone from its spot)
+            live._names[tag] = name
+    return out
+
+
 def nav_pieces(pieces, game="reach"):
     """(blocks, shields) for the nav from pieces [(name, pos, axes)]: each piece's block() (thick no-pass shields as
     solid boxes too) and the shields (apply_shields). brain/maps.py builds a map variant's nav with them."""

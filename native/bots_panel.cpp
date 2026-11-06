@@ -16,6 +16,7 @@
 #undef small                                             // (rpcndr.h's: a ui::button parameter)
 #include "bots_panel.h"
 #include "model_view.h"
+#include "ui_layout.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -23,6 +24,9 @@
 #include <string.h>
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_internal.h"             // (SetKeyOwner: the 3D view keeps its arrow keys)
+
+int hb_panel_firefight = 0;      // overlay.cpp: the lobby open is Firefight's (it holds 4 players: you and 3 bots)
+static int roster_cap() { return hb_panel_firefight ? 3 : HB_ROSTER_MAX; }
 
 // ------------------------------------------------------------------ tables
 static const char* TEAM_NAME[HB_TEAMS_MAX] = { "Red", "Blue", "Green", "Orange", "Purple", "Gold", "Brown", "Pink" };
@@ -55,14 +59,15 @@ static const char* STYLE_ABOUT[8] = {
     "Pushes in and fights up close.", "Holds a spot and waits for you.", "Comes at you from the side.",
     "Plays the flag, ball or hill first.", "Throws a lot of grenades.", "Hunts whoever killed it last.",
     "Stays back at long range.", "The brain picks one each match." };
-static const char* TITLE_NAME[8] = { "", "HALO: CE", "HALO 2", "HALO 3", "", "HALO: REACH", "HALO 2: ANNIVERSARY", "HALO 4" };
+static const char* TITLE_NAME[9] = { "", "HALO: CE", "HALO 2", "HALO 3", "", "HALO: REACH", "HALO 2: ANNIVERSARY", "HALO 4",
+                                     "HALO 3: ODST" };   // (8: ODST, Firefight only: overlay.cpp title_of)
 
 static const char* TIER_KEY[5] = { "novice", "average", "strong", "top", "scaling" };
 const char* team_name(int t) { return t >= 0 && t < HB_TEAMS_MAX ? TEAM_NAME[t] : "?"; }
 const char* tier_name(int t) { return t >= 0 && t < 5 ? TIER_NAME[t] : "?"; }
 const char* tier_key(int t) { return t >= 0 && t < 5 ? TIER_KEY[t] : "top"; }
 const char* style_name(int s) { return s >= 0 && s < 8 ? STYLE_KEY[s] : "any"; }
-int roster_max_teams(int title) { return title == 1 ? 2 : HB_TEAMS_MAX; }
+int roster_max_teams(int title) { return hb_panel_firefight ? 1 : title == 1 ? 2 : HB_TEAMS_MAX; }   // (Firefight: yours)
 
 static int key_index(const char* s, const char* const* keys, int n, int fallback) {
     for (int i = 0; i < n; i++)
@@ -95,10 +100,11 @@ bool roster_parse_line(const char* line, hb_roster& r) {
     return true;
 }
 
-void roster_write(FILE* f, const hb_roster& r) {
-    fprintf(f, "roster=1\nteams=%d\n", r.teams);
+void roster_write(FILE* f, const hb_roster& r, const char* prefix) {
+    fprintf(f, "%sroster=1\n", prefix);
+    if (!*prefix) fprintf(f, "teams=%d\n", r.teams);
     for (int i = 0; i < r.n; i++)
-        fprintf(f, "bot=%u,%s,%s,%s\n", r.bot[i].team, tier_key(r.bot[i].tier), style_name(r.bot[i].style), r.bot[i].name);
+        fprintf(f, "%sbot=%u,%s,%s,%s\n", prefix, r.bot[i].team, tier_key(r.bot[i].tier), style_name(r.bot[i].style), r.bot[i].name);
 }
 
 // ------------------------------------------------------------------ names (brain/names.py, same lists)
@@ -576,7 +582,7 @@ int roster_on_team(const hb_roster& r, int team) {
 }
 
 bool roster_add(hb_roster& r, int team, int tier, int style, uint32_t seed) {
-    if (r.n >= HB_ROSTER_MAX) return false;
+    if (r.n >= roster_cap()) return false;
     hb_bot& b = r.bot[r.n];
     b.team = (uint8_t)team; b.tier = (uint8_t)tier; b.style = (uint8_t)style;
     r.n++;
@@ -598,9 +604,9 @@ static int mixed_tier(int k) { return roster_mixed_tier(k); }
 void roster_fill(hb_roster& r, int teams, int per_team, int tier, int style, uint32_t seed) {
     uint32_t s = seed | 1;
     r.n = 0;
-    r.teams = teams < 2 ? 2 : teams > HB_TEAMS_MAX ? HB_TEAMS_MAX : teams;
-    for (int k = 0; k < per_team && r.n < HB_ROSTER_MAX; k++)          // team by team, a row at a time:
-        for (int t = 0; t < r.teams && r.n < HB_ROSTER_MAX; t++)       // the cap cuts every team evenly
+    r.teams = hb_panel_firefight ? 1 : teams < 2 ? 2 : teams > HB_TEAMS_MAX ? HB_TEAMS_MAX : teams;
+    for (int k = 0; k < per_team && r.n < roster_cap(); k++)          // team by team, a row at a time:
+        for (int t = 0; t < r.teams && r.n < roster_cap(); t++)       // the cap cuts every team evenly
             roster_add(r, t, tier == 4 ? mixed_tier(r.n) : tier == 5 ? 4 : tier, style, rnd(s));
 }
 
@@ -882,7 +888,7 @@ static void bot_row(bots_panel_env& e, int i, float w, bool& changed) {
     if (ImGui::BeginPopupContextItem("row")) {               // right-click: the same actions by menu
         g_sel = i;
         push(BODY);
-        if (ImGui::BeginMenu("Move to")) {
+        if (!hb_panel_firefight && ImGui::BeginMenu("Move to")) {   // (Firefight: one team)
             for (int t = 0; t < roster_max_teams(e.title); t++) {
                 ImGui::PushStyleColor(ImGuiCol_Text, v4(TEAM_COL[t]));
                 if (ImGui::MenuItem(TEAM_NAME[t], nullptr, b.team == t)) { move_bot(r, i, t); changed = true; }
@@ -890,7 +896,7 @@ static void bot_row(bots_panel_env& e, int i, float w, bool& changed) {
             }
             ImGui::EndMenu();
         }
-        if (ImGui::MenuItem("Duplicate", "Ctrl+D", false, r.n < HB_ROSTER_MAX)) {
+        if (ImGui::MenuItem("Duplicate", "Ctrl+D", false, r.n < roster_cap())) {
             roster_add(r, b.team, b.tier, b.style, seed()); changed = true;
         }
         ImGui::Separator();
@@ -944,13 +950,13 @@ static void team_card(bots_panel_env& e, int t, ImVec2 size, bool& changed) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->AddRectFilled(p, ImVec2(p.x + size.x, p.y + size.y), SURF);
     dl->AddRect(p, ImVec2(p.x + size.x, p.y + size.y), LINE);
-    dl->AddRectFilled(p, ImVec2(p.x + size.x, p.y + px(4)), TEAM_COL[t]);
+    dl->AddRectFilled(p, ImVec2(p.x + size.x, p.y + px(4)), hb_panel_firefight ? ACCENT : TEAM_COL[t]);   // (Firefight: your side, not Red)
     bool folded = t >= roster_max_teams(e.title);            // Halo: CE: green and up play as red / blue
     // header: name, count, remove (the last team, when empty)
     push(BODY);
-    char head[48]; sprintf_s(head, "%s", TEAM_NAME[t]);
+    char head[48]; sprintf_s(head, "%s", hb_panel_firefight ? "Your team" : TEAM_NAME[t]);
     for (char* c = head; *c; c++) *c = (char)toupper((unsigned char)*c);
-    dl->AddText(ImVec2(p.x + px(14), p.y + px(14)), TEAM_COL[t], head);
+    dl->AddText(ImVec2(p.x + px(14), p.y + px(14)), hb_panel_firefight ? ACCENT : TEAM_COL[t], head);
     pop();
     int n = roster_on_team(r, t);
     push(SMALL);
@@ -991,7 +997,7 @@ static void team_card(bots_panel_env& e, int t, ImVec2 size, bool& changed) {
         ImGui::EndDragDropTarget();
     }
     ImGui::SetCursorScreenPos(ImVec2(p.x + px(8), p.y + size.y - add_h - px(4)));
-    ImGui::BeginDisabled(r.n >= HB_ROSTER_MAX);
+    ImGui::BeginDisabled(r.n >= roster_cap());
     char add[32]; sprintf_s(add, "+  Add bot##add%d", t);
     if (button(add, GHOST, ImVec2(size.x - px(16), add_h), true)) {
         int tier = *e.difficulty < 4 ? (int)*e.difficulty : *e.difficulty == 5 ? 4 : mixed_tier(r.n);
@@ -1135,6 +1141,13 @@ static void inspector(bots_panel_env& e, bool& changed) {
     if (g_sel < 0 || g_sel >= r.n) {
         caption("Selected bot");
         ImGui::Dummy(ImVec2(0, px(8)));
+        if (hb_panel_firefight) {                            // (Firefight: one team, yours)
+            muted("Pick a bot to change its difficulty or play style. Names, clan tags and armor are in Settings.");
+            ImGui::Dummy(ImVec2(0, px(12)));
+            muted("Firefight holds 4 players: you and up to 3 bots, all on your team. "
+                  "Right-click a bot for more; Del removes the picked one.");
+            return;
+        }
         muted("Pick a bot to change its team, difficulty or play style. Names, clan tags and armor are in Settings.");
         ImGui::Dummy(ImVec2(0, px(12)));
         muted("Drag a bot onto another team to move it, or pick it and press Ctrl+Left / Right. "
@@ -1155,6 +1168,7 @@ static void inspector(bots_panel_env& e, bool& changed) {
     ImGui::TextUnformatted(b.name);
     pop();
     ImGui::Dummy(ImVec2(0, px(6)));
+    if (!hb_panel_firefight) {                               // (Firefight: every bot on your team, no picker)
     caption("Team");
     int maxt = roster_max_teams(e.title);
     float chip = px(30), gap = px(6);
@@ -1179,6 +1193,7 @@ static void inspector(bots_panel_env& e, bool& changed) {
     ImGui::TextUnformatted(TEAM_NAME[b.team < HB_TEAMS_MAX ? b.team : 0]);
     ImGui::PopStyleColor();
     pop();
+    }
     ImGui::Dummy(ImVec2(0, px(2)));
     caption("Difficulty");
     int tier = b.tier < 5 ? b.tier : 3, rank = tier < 4 ? tier : -1, own = tier == 4 ? 0 : -1;
@@ -1214,7 +1229,7 @@ static void inspector(bots_panel_env& e, bool& changed) {
     }
     muted(STYLE_ABOUT[b.style < 8 ? b.style : HB_STYLE_ANY]);
     ImGui::Dummy(ImVec2(0, px(4)));
-    ImGui::BeginDisabled(r.n >= HB_ROSTER_MAX);
+    ImGui::BeginDisabled(r.n >= roster_cap());
     if (button("Duplicate", SECONDARY, ImVec2((W - px(8)) * 0.5f, 0), true)) {
         roster_add(r, b.team, b.tier, b.style, seed()); g_sel = r.n - 1; changed = true;
     }
@@ -1234,17 +1249,21 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     push(TITLE);
     ImGui::TextUnformatted("Quick setup");
     pop();
-    muted("Makes a new list of bots. You pick your own team in the lobby.");
+    muted(hb_panel_firefight ? "Makes a new list of bots for Firefight. They all fight on your team."
+                             : "Makes a new list of bots. You pick your own team in the lobby.");
     line(16);
     int maxt = roster_max_teams(e.title);
-    caption("Teams");
-    static const char* TN[7] = { "2", "3", "4", "5", "6", "7", "8" };
-    int ti = qs_teams - 2;
-    if (segmented("teams", TN, 7, &ti, W, nullptr, maxt - 1)) qs_teams = ti + 2;
-    if (maxt == 2) muted("Halo: CE team games have two teams.");
-    ImGui::Dummy(ImVec2(0, px(4)));
-    caption("Bots on each team");
-    int most = HB_ROSTER_MAX / qs_teams;
+    if (hb_panel_firefight) qs_teams = 1;
+    else {
+        caption("Teams");
+        static const char* TN[7] = { "2", "3", "4", "5", "6", "7", "8" };
+        int ti = qs_teams - 2;
+        if (segmented("teams", TN, 7, &ti, W, nullptr, maxt - 1)) qs_teams = ti + 2;
+        if (maxt == 2) muted("Halo: CE team games have two teams.");
+        ImGui::Dummy(ImVec2(0, px(4)));
+    }
+    caption(hb_panel_firefight ? "Bots" : "Bots on each team");
+    int most = hb_panel_firefight ? roster_cap() : roster_cap() / qs_teams;   // (Firefight: one team, yours)
     if (qs_per > most) qs_per = most;
     stepper("per", &qs_per, 1, most, qs_per == 1 ? "bot" : "bots");
     ImGui::Dummy(ImVec2(0, px(4)));
@@ -1282,14 +1301,16 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     line(18);
     int total = qs_per * qs_teams;
     char what[160];
-    sprintf_s(what, "%d bots: %d on each of %d teams.%s", total, qs_per, qs_teams,
-              r.n ? " Replaces the list you have now." : "");
+    if (hb_panel_firefight) sprintf_s(what, "%d %s on your team.%s", total, total == 1 ? "bot" : "bots",
+                                      r.n ? " Replaces the list you have now." : "");
+    else sprintf_s(what, "%d bots: %d on each of %d teams.%s", total, qs_per, qs_teams,
+                   r.n ? " Replaces the list you have now." : "");
     push(BODY);
     ImGui::PushStyleColor(ImGuiCol_Text, v4(r.n ? GOLD : TEXT));
     ImGui::TextWrapped("%s", what);
     ImGui::PopStyleColor();
     pop();
-    muted("In free-for-all game types every bot plays for itself.");
+    if (!hb_panel_firefight) muted("In free-for-all game types every bot plays for itself.");
     ImGui::Dummy(ImVec2(0, px(10)));
     float bw = px(160);
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + W - 2 * bw - px(10));
@@ -2957,7 +2978,8 @@ bool bots_panel(bots_panel_env& e) {
     g_make_texture = e.make_texture;
     g_env = &e;
     hb_roster& r = *e.roster;
-    if (r.teams < 2) r.teams = 2;
+    if (hb_panel_firefight) { r.teams = 1; for (int i = 0; i < r.n; i++) r.bot[i].team = 0; }   // (Firefight: yours)
+    else if (r.teams < 2) r.teams = 2;
     if (r.teams > HB_TEAMS_MAX) r.teams = HB_TEAMS_MAX;
     for (int i = 0; i < r.n; i++)
         if (r.bot[i].team + 1 > r.teams) r.teams = r.bot[i].team + 1;
@@ -2997,8 +3019,9 @@ bool bots_panel(bots_panel_env& e) {
     pop();
     ImGui::SameLine(0, px(16));
     ImGui::SetCursorPosY(h0.y + px(12));
-    char sub[64]; sprintf_s(sub, "%s%sCUSTOM GAME", e.title > 0 && e.title < 8 ? TITLE_NAME[e.title] : "",
-                            e.title > 0 && e.title < 8 && TITLE_NAME[e.title][0] ? "  /  " : "");
+    char sub[64]; sprintf_s(sub, "%s%s%s", e.title > 0 && e.title < 9 ? TITLE_NAME[e.title] : "",
+                            e.title > 0 && e.title < 9 && TITLE_NAME[e.title][0] ? "  /  " : "",
+                            hb_panel_firefight ? "FIREFIGHT" : "CUSTOM GAME");
     caption(sub);
     float tw = px(46) + px(12);
     push(BODY);
@@ -3058,14 +3081,16 @@ bool bots_panel(bots_panel_env& e) {
             ImGui::OpenPopup("Quick setup");
         }
         ImGui::SameLine(0, px(14));
-        ImGui::BeginDisabled(r.n < 2);
-        if (button("Balance teams", GHOST, ImVec2(0, 0), true)) { roster_balance(r); changed = true; }
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even out the team sizes");
-        ImGui::SameLine(0, px(2));
-        if (button("Shuffle teams", GHOST, ImVec2(0, 0), true)) { roster_shuffle(r, seed()); changed = true; }
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("New teams for everyone, same team sizes");
-        ImGui::EndDisabled();
-        ImGui::SameLine(0, px(2));
+        if (!hb_panel_firefight) {                          // (Firefight: one team, nothing to balance)
+            ImGui::BeginDisabled(r.n < 2);
+            if (button("Balance teams", GHOST, ImVec2(0, 0), true)) { roster_balance(r); changed = true; }
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even out the team sizes");
+            ImGui::SameLine(0, px(2));
+            if (button("Shuffle teams", GHOST, ImVec2(0, 0), true)) { roster_shuffle(r, seed()); changed = true; }
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("New teams for everyone, same team sizes");
+            ImGui::EndDisabled();
+            ImGui::SameLine(0, px(2));
+        }
         ImGui::BeginDisabled(r.n < 1);
         if (button("Remove all", DANGER_K, ImVec2(0, 0), true)) ImGui::OpenPopup("Remove all bots");
         ImGui::EndDisabled();
@@ -3137,13 +3162,15 @@ bool bots_panel(bots_panel_env& e) {
         dl->AddText(ImVec2(body0.x + (grid_w - ts.x) * 0.5f, body0.y + body_h * 0.36f), TEXT, t1);
         pop();
         push(BODY);
-        const char* t2 = "Choose how many teams and bots, and how hard they play.";
+        const char* t2 = hb_panel_firefight ? "Choose up to 3 bots for your team, and how hard they play."
+                                            : "Choose how many teams and bots, and how hard they play.";
         ImVec2 t2s = ImGui::CalcTextSize(t2);
         dl->AddText(ImVec2(body0.x + (grid_w - t2s.x) * 0.5f, body0.y + body_h * 0.36f + px(48)), TEXT2, t2);
         pop();
         ImGui::SetCursorScreenPos(ImVec2(body0.x + (grid_w - px(220)) * 0.5f, body0.y + body_h * 0.36f + px(92)));
         if (button("Quick setup##empty", PRIMARY, ImVec2(px(220), px(46)))) {
-            qs_teams = 2; qs_per = 4; qs_tier = (int)(*e.difficulty <= 5 ? *e.difficulty : 4);
+            qs_teams = hb_panel_firefight ? 1 : 2; qs_per = hb_panel_firefight ? 3 : 4;
+            qs_tier = (int)(*e.difficulty <= 5 ? *e.difficulty : 4);
             ImGui::OpenPopup("Quick setup");
         }
     } else {
@@ -3193,7 +3220,8 @@ bool bots_panel(bots_panel_env& e) {
         scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
     ImGui::EndDisabled();
     char lim[96];
-    sprintf_s(lim, "%d of %d bots. The game holds 16 players.", r.n, HB_ROSTER_MAX);
+    if (hb_panel_firefight) sprintf_s(lim, "%d of 3 bots. Firefight holds 4 players.", r.n);
+    else sprintf_s(lim, "%d of %d bots. The game holds 16 players.", r.n, HB_ROSTER_MAX);
     push(SMALL);
     float lw2 = ImGui::CalcTextSize(lim).x;
     pop();
@@ -3207,7 +3235,7 @@ bool bots_panel(bots_panel_env& e) {
         && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId)) {
         int maxt = roster_max_teams(e.title);
         if (ImGui::IsKeyPressed(ImGuiKey_Delete)) { roster_remove(r, g_sel); g_sel = -1; changed = true; }
-        else if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_D) && r.n < HB_ROSTER_MAX) {
+        else if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_D) && r.n < roster_cap()) {
             hb_bot b = r.bot[g_sel]; roster_add(r, b.team, b.tier, b.style, seed()); g_sel = r.n - 1; changed = true;
         } else if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_RightArrow)) {
             move_bot(r, g_sel, (r.bot[g_sel].team + 1) % maxt); changed = true;
@@ -3235,15 +3263,22 @@ bool bug_report_ui(bug_report_env& e) {
     bool save = false;
     e.hovered = false;
     if (e.show_button && !*e.open) {
-        // right of MCC's pause menu column, the stock buttons' dark fill and blue frame; the key that opens it too
+        // in MCC's footer row (Back's line and height), right-aligned on its frame's margin (ui_layout.h), the stock
+        // buttons' dark fill and blue frame; the key that opens it too. Placed on MCC's back buffer, mapped to the window.
         ImDrawList* dl = ImGui::GetForegroundDrawList();
-        ImVec2 a(D.x - px(380), D.y * 0.80f), b(D.x - px(60), D.y * 0.80f + px(56));
+        float bw = e.bb_w > 0 ? e.bb_w : D.x, bh = e.bb_h > 0 ? e.bb_h : D.y, kx = D.x / bw, ky = D.y / bh;
+        float fs = size(BODY), ks = size(SMALL);
+        float need = font->CalcTextSizeA(fs, 1e9f, 0, "Report bot bug").x + px(20 + 24 + 44 + 14);
+        ui_rect r = bug_button_rect(bw, bh, need / kx);
+        ImVec2 a(r.x0 * kx, r.y0 * ky), b(r.x1 * kx, r.y1 * ky);
+        float h = b.y - a.y;
+        if (fs > h * 0.62f) fs = h * 0.62f;
+        if (ks > h * 0.5f) ks = h * 0.5f;
         bool hov = io.MousePos.x >= a.x && io.MousePos.x <= b.x && io.MousePos.y >= a.y && io.MousePos.y <= b.y;
         dl->AddRectFilled(a, b, hov ? IM_COL32(24, 52, 74, 235) : IM_COL32(10, 22, 33, 215));
         dl->AddRect(a, b, hov ? IM_COL32(150, 215, 250, 255) : IM_COL32(78, 132, 168, 230), 0, 0, hov ? 2.0f : 1.2f);
-        float fs = size(BODY), ks = size(SMALL);
-        dl->AddText(font, fs, ImVec2(a.x + px(20), a.y + (b.y - a.y - fs) * 0.5f), TEXT, "Report bot bug");
-        ImVec2 k0(b.x - px(62), a.y + px(15)), k1(b.x - px(18), b.y - px(15));
+        dl->AddText(font, fs, ImVec2(a.x + px(20), a.y + (h - fs) * 0.5f), TEXT, "Report bot bug");
+        ImVec2 k0(b.x - px(14) - px(44), a.y + h * 0.2f), k1(b.x - px(14), b.y - h * 0.2f);
         dl->AddRect(k0, k1, IM_COL32(170, 200, 215, 220), px(3), 0, 1.2f);
         ImVec2 kt = font->CalcTextSizeA(ks, 1e9f, 0, "F9");
         dl->AddText(font, ks, ImVec2((k0.x + k1.x - kt.x) * 0.5f, (k0.y + k1.y - kt.y) * 0.5f), TEXT2, "F9");

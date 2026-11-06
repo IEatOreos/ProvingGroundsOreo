@@ -6,65 +6,69 @@
 <meta name="color-scheme" content="dark">
 <title>Project Proving Grounds</title>
 <style>
-  /* tokens: spacing 4/8/12/16/24/32/48, type 12/14/16/20/24, colours by role (contrast measured: text 6.2:1 or more,
-     control borders and focus 3:1 or more against their surfaces) */
+  /* tokens: spacing 4/8/12/16/24/32/48, type 12/14/16/20/24, colours by role, taken from the Proving Grounds art (the
+     dusk sky, the sand, the sign, the embers, the Spartan's blue and gold). Contrast measured (WCAG): every text colour
+     4.5:1 or more on every surface it is used on, control borders and the focus ring 3:1 or more */
   :root {
     --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
     --fs-xs: 12px; --fs-sm: 14px; --fs-md: 16px; --fs-lg: 20px; --fs-xl: 24px;
-    --r-sm: 4px; --r: 8px; --r-lg: 12px;
+    --r-sm: 2px; --r: 4px; --r-lg: 6px;
     --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-    --font-display: "Bahnschrift", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Bahnschrift", "Segoe UI", system-ui, sans-serif;    /* (DIN, as the sign's stencil; ships with Windows) */
     --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
-    --bg: #0a0e14; --surface: #111821; --raised: #18212d; --hover: #202b3a; --pressed: #151d28;
-    --border: #243041; --control: #5a6a80;
-    --text: #e8edf4; --text-2: #a9b5c6; --text-3: #8d9aae;
-    --accent: #5cc8ff; --accent-hover: #86d7ff; --accent-pressed: #3fb4ee; --accent-ink: #03131f; --focus: #9be0ff;
-    --ok: #5fd38a; --warn: #f2c14e; --bad: #ff8080; --danger: #c8323f; --danger-hover: #d9434f;
-    --ok-bg: #12291d; --warn-bg: #2d2511; --bad-bg: #331a1d; --accent-bg: #0f2636;
+    /* the dusk sky: backgrounds and surfaces */
+    --bg: #121417; --surface: #1a1d21; --raised: #24282d; --hover: #2d3238; --pressed: #1e2226; --sunken: #0d0f11;
+    --border: #353a40; --control: #858070;
+    /* the sign and the sand: text */
+    --heading: #f1e8d4; --text: #e9e1ce; --text-2: #cdbf9f; --text-3: #aea38b;
+    /* the embers: the primary action */
+    --ember: #f0872e; --ember-hover: #ff9c48; --ember-pressed: #d8731d; --ember-ink: #1c0d02;
+    /* the Spartan: secondary accents */
+    --blue: #93b2f2; --blue-bg: #1c2638; --blue-hover: #243149; --gold: #e3b456; --focus: #a9c4ff;
+    --sand: #d8bb88; --sand-ink: #1f1608;
+    --ok: #8fd394; --warn: #e3b456; --bad: #ff8f80; --danger: #b3402b; --danger-hover: #c24c35;
+    --ok-bg: #15261a; --warn-bg: #2b2415; --bad-bg: #331c18; --warn-line: #6b5524; --bad-line: #b5503d;
+    --scrim: 14, 15, 18;
   }
   * { box-sizing: border-box; }
-  body { --edge: max(var(--s5), calc((100% - 1280px) / 2 + var(--s5))); }   /* (header and footer line up with the content) */
+  body { --edge: max(var(--s5), calc((100% - 1280px) / 2 + var(--s5))); }   /* (the hero and footer line up with the content) */
   [hidden] { display: none !important; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   html { background: var(--bg); }
-  body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; color: var(--text);
-         background: radial-gradient(1200px 420px at 50% -220px, #12233a 0%, transparent 70%) no-repeat, var(--bg);
+  body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center;   /* (a tall window: the page in its middle, not a gap over the footer) */ color: var(--text); background: var(--bg);
          font: var(--fs-sm)/1.5 var(--font); -webkit-font-smoothing: antialiased; }
   p { margin: 0; }
   svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75;
           stroke-linecap: round; stroke-linejoin: round; }
   svg.i.sm { width: 16px; height: 16px; }
 
-  /* header */
-  .top { display: flex; align-items: center; gap: var(--s4); padding: var(--s3) var(--edge);
-         border-bottom: 1px solid var(--border); }
-  .brand { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
-  .mark { width: 36px; height: 36px; flex: none; }
-  h1 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: .08em; text-transform: uppercase;
-       background: linear-gradient(180deg, #f4f8fc 0%, #b9c7d6 55%, #8fa2b7 100%); -webkit-background-clip: text;
-       background-clip: text; color: transparent; }
-  .tagline { color: var(--text-2); font-size: var(--fs-xs); }
-  .version { margin-left: auto; color: var(--text-2); font-size: var(--fs-xs); padding: 2px var(--s2);
-             border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; }
-  .version:empty { display: none; }
-
+  /* hero: the art (docs/banner.jpg, cropped below the Halo logo to the whole sign, the sandbags and the helmet) and
+     the tagline over its dark sky */
+  .hero { position: relative; margin: var(--s3) var(--edge) 0; aspect-ratio: 1024 / 126; min-height: 100px;
+          border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;
+          background: url("/art.jpg") center 67% / cover no-repeat, var(--surface); }
+  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+                  background: radial-gradient(ellipse 46% 72% at 0 0, rgba(var(--scrim), .92) 0%, rgba(var(--scrim), .8) 55%,
+                                              rgba(var(--scrim), 0) 100%); }
+  .tagline { position: relative; max-width: 34%; padding: var(--s3) var(--s4); font: 600 var(--fs-md)/1.25 var(--font-display);
+             letter-spacing: .04em; color: var(--heading); text-wrap: balance; }
   /* connection banner */
-  .banner { display: flex; gap: var(--s3); align-items: center; margin: var(--s4) var(--s5) 0; padding: var(--s3) var(--s4);
-            border-radius: var(--r); background: var(--bad-bg); border: 1px solid #6b2c35; color: var(--text); }
+  .banner { display: flex; gap: var(--s3); align-items: center; margin: var(--s4) var(--edge) 0; padding: var(--s3) var(--s4);
+            border-radius: var(--r); background: var(--bad-bg); border: 1px solid var(--bad-line); color: var(--text); }
   .banner svg { color: var(--bad); }
   .banner:has(#banner:empty) { display: none; }
 
   /* layout */
-  main { flex: 1; width: 100%; max-width: 1280px; margin: 0 auto; padding: var(--s4) var(--s5); display: grid; gap: var(--s4);
+  main { flex: 0 1 auto; width: 100%; max-width: 1280px; margin: 0 auto; padding: var(--s3) var(--s5) var(--s2); display: grid; gap: var(--s3) var(--s4);
          grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr); align-items: start; align-content: start; }
   .col { display: grid; gap: var(--s4); align-content: start; }
   .wide { grid-column: 1 / -1; }
   @media (max-width: 820px) { main { grid-template-columns: minmax(0, 1fr); padding: var(--s4); } body { --edge: var(--s4); } }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s4) var(--s5);
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s3) var(--s5) var(--s4);
           min-width: 0; }
   .card-head { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
-  h2 { margin: 0; font: 600 var(--fs-sm)/1.3 var(--font-display); letter-spacing: .08em; text-transform: uppercase;
-       color: var(--text-2); }
+  h2 { margin: 0; font: 700 var(--fs-md)/1.2 var(--font-display); letter-spacing: .08em; text-transform: uppercase;
+       color: var(--heading); }
   .count { margin-left: auto; font-size: var(--fs-xs); color: var(--text-2); font-variant-numeric: tabular-nums; }
   .help { color: var(--text-2); font-size: var(--fs-xs); }
 
@@ -78,11 +82,11 @@
   button:focus-visible, input:focus-visible, summary:focus-visible {
     outline: 2px solid var(--focus); outline-offset: 2px; }
   button[aria-busy="true"] { cursor: progress; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-  button.primary:active { background: var(--accent-pressed); border-color: var(--accent-pressed); }
-  button.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
-  button.accent:hover { background: #143247; }
+  button.primary { background: var(--ember); border-color: var(--ember); color: var(--ember-ink); }
+  button.primary:hover { background: var(--ember-hover); border-color: var(--ember-hover); }
+  button.primary:active { background: var(--ember-pressed); border-color: var(--ember-pressed); }
+  button.accent { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+  button.accent:hover { background: var(--blue-hover); }
   button.quiet { background: transparent; border-color: transparent; color: var(--text-2); padding: 0 var(--s3); }
   button.quiet:hover { background: var(--raised); color: var(--text); }
   button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
@@ -108,49 +112,49 @@
   .msg[data-level="bad"]::before { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5M12 16v.01'/%3E%3C/svg%3E"); }
 
   /* Play */
-  .status { list-style: none; margin: 0 0 var(--s5); padding: 0; display: flex; flex-wrap: wrap;
-            background: var(--raised);
-            border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+  .status { list-style: none; margin: 0 0 var(--s3); padding: 0; display: flex; flex-wrap: wrap;
+            background: var(--raised); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
   .stat { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s2); row-gap: 2px;
-          align-content: start; padding: var(--s3) var(--s4); flex: 1 1 150px;
+          align-content: start; padding: var(--s2) var(--s4); flex: 1 1 150px;
           box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border); }   /* (a tile that wraps takes the whole row) */
+  #st-mods { flex: 1.8 1 200px; }
   .stat svg { width: 16px; height: 16px; align-self: center; color: var(--text-3); }
   .stat-value, .stat-detail { grid-column: 1 / -1; }
   .stat[data-level="ok"] svg { color: var(--ok); } .stat[data-level="warn"] svg { color: var(--warn); }
-  .stat[data-level="bad"] svg { color: var(--bad); } .stat[data-level="busy"] svg { color: var(--accent); }
-  .stat-label { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
-  .stat-value { font-weight: 600; }
+  .stat[data-level="bad"] svg { color: var(--bad); } .stat[data-level="busy"] svg { color: var(--blue); }
+  .stat-label { font: 600 var(--fs-xs)/1.5 var(--font-display); color: var(--text-2); text-transform: uppercase; letter-spacing: .08em; }
+  .stat-value { font-weight: 600; color: var(--heading); }
   .stat-detail { font-size: var(--fs-xs); color: var(--text-2); overflow-wrap: anywhere; }
   .stat-detail:empty { display: none; }
   .stat[data-level="busy"] .spinning { animation: spin .9s linear infinite; }
   .play-row { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
-  button#play { min-height: 48px; padding: 0 var(--s6) 0 var(--s5); font: 600 var(--fs-md)/1 var(--font-display);
-                letter-spacing: .1em; text-transform: uppercase; border-radius: var(--r); }
+  button#play { min-height: 52px; padding: 0 var(--s6) 0 var(--s5); font: 700 var(--fs-lg)/1 var(--font-display);
+                letter-spacing: .12em; text-transform: uppercase; border-radius: var(--r); }
   button#play svg.i { width: 18px; height: 18px; }
   button#play svg.idle { fill: currentColor; stroke: none; }
   label.check { display: flex; gap: var(--s2); align-items: flex-start; margin-top: var(--s4); padding: var(--s3);
-                border-radius: var(--r); background: var(--warn-bg); border: 1px solid #5a4a1f; cursor: pointer; }
-  label.check input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+                border-radius: var(--r); background: var(--warn-bg); border: 1px solid var(--warn-line); cursor: pointer; }
+  label.check input { width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--ember); flex: none; }
   /* the steps beside Play (under it when narrow), so the whole window fits without scrolling */
-  .play-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: start; }
+  .play-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: start; }
   .play-wrap .play-row { flex-direction: column; align-items: flex-start; gap: var(--s2); }
-  .howto { padding-left: var(--s5); border-left: 1px solid var(--border); }
+  .howto { padding-left: var(--s4); border-left: 1px solid var(--border); }
   @media (max-width: 820px) {
     .play-wrap { grid-template-columns: minmax(0, 1fr); }
     .howto { padding: var(--s4) 0 0; border-left: 0; border-top: 1px solid var(--border); }
   }
-  .howto ol { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: var(--s2); }
-  .howto-title { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em;
-                 margin-bottom: var(--s3); }
+  .howto ol { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: var(--s1); }
+  .howto-title { font: 600 var(--fs-xs)/1.5 var(--font-display); color: var(--text-2); text-transform: uppercase;
+                 letter-spacing: .08em; margin-bottom: var(--s1); }
   .howto li { counter-increment: step; display: grid; grid-template-columns: 24px 1fr; gap: var(--s2);
-              color: var(--text-2); }
-  .howto li::before { content: counter(step); width: 20px; height: 20px; border-radius: 50%; display: grid;
-                      place-items: center; font-size: var(--fs-xs); font-weight: 600; color: var(--text);
-                      background: var(--raised); border: 1px solid var(--border); margin-top: 1px; }
+              color: var(--text-2); line-height: 1.4; }
+  .howto li::before { content: counter(step); width: 20px; height: 20px; border-radius: var(--r-sm); display: grid;
+                      place-items: center; font: 700 var(--fs-xs)/1 var(--font-display); color: var(--sand-ink);
+                      background: var(--sand); margin-top: 1px; }
   .howto b { color: var(--text); font-weight: 600; white-space: nowrap; }
-  .log { margin-top: var(--s4); background: #070a0f; border: 1px solid var(--border); border-radius: var(--r);
+  .log { margin-top: var(--s4); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--r);
          padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; font: var(--fs-xs)/1.5 var(--font-mono);
-         white-space: pre-wrap; overflow-wrap: anywhere; color: #c9d3df; }
+         white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
   .log:empty { display: none; }
 
   /* setup */
@@ -158,15 +162,15 @@
   progress { width: 100%; height: 6px; border: 0; border-radius: 999px; overflow: hidden; background: var(--raised);
              appearance: none; margin-bottom: var(--s4); display: block; }
   progress::-webkit-progress-bar { background: var(--raised); }
-  progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
-  progress::-moz-progress-bar { background: var(--accent); }
+  progress::-webkit-progress-value { background: var(--gold); border-radius: 999px; }
+  progress::-moz-progress-bar { background: var(--gold); }
   .done { display: flex; align-items: center; gap: var(--s2); color: var(--ok); font-weight: 600; margin-bottom: var(--s4); }
   ol.steps { list-style: none; padding: 0; margin: 0 0 var(--s4); display: grid; gap: var(--s2) var(--s4);
              grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   ol.steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--s2); align-content: start; }
   ol.steps svg { margin-top: 2px; color: var(--text-3); grid-row: 1 / span 2; }
   ol.steps [data-state="done"] svg { color: var(--ok); } ol.steps [data-state="failed"] svg { color: var(--bad); }
-  ol.steps [data-state="working"] svg { color: var(--accent); animation: spin .9s linear infinite; }
+  ol.steps [data-state="working"] svg { color: var(--blue); animation: spin .9s linear infinite; }
   .step-name { font-weight: 500; }
   .step-note { font-size: var(--fs-xs); color: var(--text-2); overflow-wrap: anywhere; }
   [data-state="failed"] .step-note { color: var(--bad); }
@@ -185,31 +189,33 @@
   summary .path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
   details[open] summary .path { display: none; }
   .folder-body { margin-top: var(--s4); display: grid; gap: var(--s3); }
-  #folder-card[data-attention] { border-color: #6b2c35; order: -1; }   /* (the game is not found: this comes first) */
+  #folder-card[data-attention] { border-color: var(--bad-line); order: -1; }   /* (the game is not found: this comes first) */
   .field-label { display: block; font-size: var(--fs-xs); color: var(--text-2); margin-bottom: var(--s1); }
   .input-row { display: flex; gap: var(--s2); }
-  input[type="text"] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: #0b1017;
+  input[type="text"] { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--sunken);
                        border: 1px solid var(--control); border-radius: var(--r); min-height: 36px; padding: 0 var(--s3); }
   input[type="text"]::placeholder { color: var(--text-3); }
-  input[type="text"]:hover { border-color: #71839b; }
+  input[type="text"]:hover { border-color: var(--text-3); }
 
-  /* tools */
+  /* tools: a heading and four tiles (no card around them) */
+  .card.tools-sec { background: none; border: 0; padding: 0; }
+  .tools-sec .card-head { margin-bottom: var(--s2); }
   .tools { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); grid-template-columns: repeat(4, minmax(0, 1fr)); }
   @media (max-width: 900px) { .tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 520px) { .tools { grid-template-columns: minmax(0, 1fr); } }
   .tools li { display: flex; }
-  button.tool { width: 100%; height: 100%; min-height: 0; padding: var(--s3) var(--s4) var(--s4); display: grid; align-content: start; align-items: center;
+  button.tool { width: 100%; height: 100%; min-height: 0; padding: var(--s3) var(--s4); display: grid; align-content: start; align-items: center;
                 justify-items: start; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s2) var(--s3); text-align: left;
-                font-weight: 400; background: var(--raised); border-color: var(--border); border-radius: var(--r); }
-  button.tool:hover { background: var(--hover); border-color: var(--control); }
+                font-weight: 400; background: var(--surface); border-color: var(--border); border-radius: var(--r-lg); }
+  button.tool:hover { background: var(--raised); border-color: var(--control); }
   button.tool:active { background: var(--pressed); }
-  .tool-icon { width: 32px; height: 32px; grid-column: 1; grid-row: 1; border-radius: var(--r); display: grid; place-items: center; color: var(--accent);
-               background: var(--accent-bg); }
+  .tool-icon { width: 32px; height: 32px; grid-column: 1; grid-row: 1; border-radius: var(--r); display: grid; place-items: center; color: var(--blue);
+               background: var(--blue-bg); }
   .tool .ext { color: var(--text-3); justify-self: end; grid-column: 3; grid-row: 1; }
   button.tool:hover .ext { color: var(--text-2); }
   .tool-text { display: contents; }
   .tool-desc, .meter { grid-column: 1 / -1; }
-  .tool-name { font-weight: 600; font-size: var(--fs-sm); grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+  .tool-name { font-weight: 600; font-size: var(--fs-sm); color: var(--heading); grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
   .tool-desc { font-size: var(--fs-xs); color: var(--text-2); }
   .chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 500; line-height: 1;
           padding: var(--s1) var(--s2); border-radius: 999px; background: var(--hover); color: var(--text-2); }
@@ -218,24 +224,41 @@
   button.tool[aria-busy="true"] .chip.run { display: inline-flex; grid-column: 3; grid-row: 1; }
   button.tool[aria-busy="true"] .ext { display: none; }
   button.tool[aria-busy="true"] { cursor: pointer; }
-  .meter { justify-self: stretch; display: grid; gap: var(--s1); margin-top: var(--s1); }
+  .meter { justify-self: stretch; display: grid; grid-template-columns: auto minmax(40px, 1fr); align-items: center; gap: var(--s3); }
+  .meter .tool-desc { grid-column: auto; }
   .meter-bar { height: 4px; border-radius: 999px; background: var(--hover); overflow: hidden; }
-  .meter-bar span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; }
+  .meter-bar span { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 999px; }
   #tool-state { margin-left: auto; font-size: var(--fs-xs); }
   .card-head:has(#tool-state:not(:empty)) .hint { display: none; }
 
-  /* footer */
-  .top-actions { display: flex; align-items: center; gap: var(--s1); flex-wrap: wrap; justify-content: flex-end; }
-  footer { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; padding: var(--s3) var(--edge);
-           border-top: 1px solid var(--border); }
-  footer .legal { margin-left: auto; color: var(--text-3); font-size: var(--fs-xs); }
+  /* footer: the menu, the version and the notice */
+  footer { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; padding: 0 var(--edge) var(--s1); }
+  footer .more { display: flex; align-items: center; gap: var(--s1); flex-wrap: wrap; margin-left: calc(-1 * var(--s3)); }
+  footer button.quiet { min-height: 32px; padding: 0 var(--s2); }
+  footer .legal { color: var(--text-3); font-size: var(--fs-xs); }
+  .version:not(:empty)::after { content: "  |  "; white-space: pre; }
+  /* updates: the bar when a new version is out (never installed unasked), the check's state and the choice in the footer */
+  .update { position: fixed; right: var(--edge); bottom: 52px; z-index: 5; max-width: min(460px, calc(100% - 2 * var(--edge)));
+            display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; padding: var(--s3) var(--s4);
+            border-radius: var(--r-lg); background: var(--warn-bg); border: 1px solid var(--gold); color: var(--heading);
+            font-weight: 600; box-shadow: 0 8px 28px rgba(0, 0, 0, .55); }
+  .update[hidden] { display: none; }
+  .update-actions { margin-left: auto; display: flex; gap: var(--s2); }
+  .primary-sm { min-height: 32px; padding: 0 var(--s4); border-radius: var(--r); border: 1px solid var(--ember);
+                background: var(--ember); color: var(--ember-ink); font-weight: 700; cursor: pointer; }
+  .primary-sm:hover { background: var(--ember-hover); }
+  .primary-sm:disabled { opacity: .6; cursor: default; }
+  footer .upd { display: flex; align-items: center; gap: var(--s2); color: var(--text-3); font-size: var(--fs-xs); margin-left: auto; }
+  footer .upd button.quiet { min-height: 28px; font-size: var(--fs-xs); padding: 0 var(--s2); }
+  .updauto { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-2); }
+  .updauto input { accent-color: var(--ember); width: 16px; height: 16px; }
   button#uninstall:hover { color: var(--bad); }
 
   /* uninstall confirmation */
   dialog { width: min(480px, calc(100vw - 32px)); padding: var(--s5); color: var(--text); background: var(--surface);
-           border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: 0 24px 64px rgba(0, 0, 0, .55); }
-  dialog::backdrop { background: rgba(3, 6, 10, .7); }
-  dialog h2 { font: 600 var(--fs-lg)/1.3 var(--font); letter-spacing: 0; text-transform: none; color: var(--text);
+           border: 1px solid var(--control); border-radius: var(--r-lg); box-shadow: 0 24px 64px rgba(0, 0, 0, .55); }
+  dialog::backdrop { background: rgba(var(--scrim), .75); }
+  dialog h2 { font: 600 var(--fs-lg)/1.3 var(--font); letter-spacing: 0; text-transform: none; color: var(--heading);
               margin-bottom: var(--s2); }
   dialog p { color: var(--text-2); }
   dialog .actions { justify-content: flex-end; margin-top: var(--s5); }
@@ -268,28 +291,15 @@
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
 </svg>
 
-<header class="top">
-  <div class="brand">
-    <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
-      <defs><linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#f1f6fb"/><stop offset=".55" stop-color="#a9b9ca"/><stop offset="1" stop-color="#6f8399"/>
-      </linearGradient></defs>
-      <circle cx="18" cy="18" r="13" fill="none" stroke="url(#steel)" stroke-width="4"/>
-      <circle cx="18" cy="18" r="4" fill="#5cc8ff"/>
-    </svg>
-    <div>
-      <h1>Project Proving Grounds</h1>
-      <p class="tagline">PvP bots for Halo: The Master Chief Collection</p>
-    </div>
-  </div>
-  <span class="version" id="version"></span>
-  <nav class="top-actions" aria-label="More">
-    <button class="quiet" id="folder"><svg class="i sm" aria-hidden="true"><use href="#i-folder"/></svg>Open the install folder</button>
-    <button class="quiet" id="docs"><svg class="i sm" aria-hidden="true"><use href="#i-book"/></svg>Read the guide</button>
-    <button class="quiet" id="uninstall" hidden><svg class="i sm" aria-hidden="true"><use href="#i-trash"/></svg>Uninstall</button>
-  </nav>
+<header class="hero">
+  <h1 class="sr-only">Project Proving Grounds</h1>   <!-- (the sign in the art shows the name) -->
+  <p class="tagline">PvP bots for Halo: The Master Chief Collection</p>
 </header>
 <div class="banner"><svg class="i" aria-hidden="true"><use href="#i-bad"/></svg><span id="banner" role="alert"></span></div>
+<div class="update" id="updbar" hidden role="status">
+  <span id="updmsg"></span>
+  <span class="update-actions"><button class="quiet" id="updlater">Later</button><button class="quiet" id="updnotes">What's new</button><button class="primary-sm" id="updnow">Update</button></span>
+</div>
 
 <main>
   <section class="card" aria-labelledby="play-h">
@@ -339,6 +349,7 @@
         <button id="setup" class="accent"><svg class="i sm spin" aria-hidden="true"><use href="#i-spin"/></svg>Run setup</button>
         <button id="setup-force" aria-describedby="repair-help"><svg class="i sm idle" aria-hidden="true"><use href="#i-repair"/></svg>
           <svg class="i sm spin" aria-hidden="true"><use href="#i-spin"/></svg>Repair</button>
+        <button class="quiet" id="uninstall" hidden><svg class="i sm" aria-hidden="true"><use href="#i-trash"/></svg>Uninstall</button>
         <span id="setup-state" class="msg" aria-live="polite"></span>
       </div>
       <p class="help repair" id="repair-help">Repair builds every part again: for missing or broken 3D bots, pictures or
@@ -370,7 +381,7 @@
     </details>
   </div>
 
-  <section class="card wide" aria-labelledby="tools-h">
+  <section class="card wide tools-sec" aria-labelledby="tools-h">
     <div class="card-head"><h2 id="tools-h">Tools</h2><span class="count hint">Each opens in its own window</span>
       <p class="msg" id="tool-state" aria-live="polite"></p></div>
     <ul class="tools">
@@ -400,7 +411,13 @@
 </main>
 
 <footer>
-  <span class="legal">Not affiliated with or endorsed by Microsoft.</span>
+  <nav class="more" aria-label="More">
+    <button class="quiet" id="folder"><svg class="i sm" aria-hidden="true"><use href="#i-folder"/></svg>Open the install folder</button>
+    <button class="quiet" id="docs"><svg class="i sm" aria-hidden="true"><use href="#i-book"/></svg>Read the guide</button>
+  </nav>
+  <span class="upd"><span id="updstate"></span><button class="quiet" id="updcheck" title="Check GitHub for a new version now">Check</button>
+    <label class="updauto" title="Download and install new versions when the launcher opens (never while MCC runs)"><input type="checkbox" id="updauto"> Auto-update</label></span>
+  <span class="legal" title="Project Proving Grounds is not affiliated with or endorsed by Microsoft."><span class="version" id="version"></span>Not endorsed by Microsoft.</span>
 </footer>
 
 <dialog id="uninstall-ask" aria-labelledby="uninstall-t" aria-describedby="uninstall-q">
@@ -581,7 +598,7 @@ for (const b of document.querySelectorAll("[data-task]")) {
   };
 }
 $("folder").onclick = () => post("/folder");
-$("docs").onclick = () => post("/docs");
+$("docs").onclick = async () => { const r = await post("/docs"); if (r.ok && r.opened === false) window.open(r.url, "_blank"); };
 function askUninstall(open) {
   setText("uninstall-state", "");
   if (open) { $("uninstall-ask").showModal(); $("uninstall-no").focus(); }
@@ -595,6 +612,50 @@ $("uninstall-yes").onclick = async () => {
   if (!r.ok) { setText("uninstall-state", r.message, "bad"); return; }
   setText("uninstall-state", "Closing the mod's windows; the uninstaller opens in a moment ...", "dim");
 };
+// ---- updates (tools/updater.py): told, never forced; automatic only when the player turns it on
+let upd = null;
+function ago(unix) {
+  if (!unix) return "never";
+  const s = Math.max(0, Date.now() / 1000 - unix);
+  const when = new Date(unix * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return s < 90 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : when;
+}
+function showUpdate(u) {
+  upd = u;
+  const job = u.job || {};
+  const bar = $("updbar");
+  const busy = job.state === "downloading" || job.state === "installing" || job.state === "failed";
+  bar.hidden = !(busy || u.available && sessionStorage.getItem("upd-later") !== u.latest);
+  $("updlater").hidden = busy;
+  if (job.state === "downloading") {
+    const pct = job.total ? Math.round(100 * job.done / job.total) : 0;
+    $("updmsg").textContent = `Downloading version ${u.latest.replace(/^v/, "")} ... ${pct}%`;
+  } else if (job.state === "installing") {
+    $("updmsg").textContent = "Installing the update. The launcher closes and opens again when it is done.";
+  } else if (job.state === "failed") {
+    $("updmsg").textContent = job.error;
+  } else {
+    $("updmsg").textContent = `Version ${u.latest.replace(/^v/, "")} is available. You have ${u.current}.`;
+  }
+  $("updnow").disabled = job.state === "downloading" || job.state === "installing";
+  $("updnow").hidden = u.wine || !u.can_install;
+  $("updnow").textContent = job.state === "failed" ? "Try again" : "Update";
+  $("updstate").textContent = (u.available ? `Update available` : u.latest ? "Up to date" : "Updates") +
+    ` · checked ${ago(u.checked)}` + (u.error ? `. ${u.error}` : "");
+  $("updauto").checked = !!u.auto;
+}
+async function loadUpdate() { try { showUpdate(await (await fetch("/update")).json()); } catch (e) {} }
+$("updcheck").onclick = async () => { $("updstate").textContent = "Checking ..."; showUpdate(await post("/update/check")); };
+$("updauto").onchange = async (e) => { showUpdate(await post("/update/auto", { on: e.target.checked })); };
+$("updlater").onclick = () => { if (upd) sessionStorage.setItem("upd-later", upd.latest); $("updbar").hidden = true; };
+$("updnotes").onclick = () => { if (upd) post("/open", { url: upd.url }); };
+$("updnow").onclick = async () => {
+  const r = await post("/update/install");
+  if (r.ok === false && r.message) { $("updmsg").textContent = r.message; return; }
+  loadUpdate();
+};
+loadUpdate();
+setInterval(loadUpdate, 2000);
 refresh().then(() => {
   if (location.search.includes("setup=1") && state && state.mcc && state.setup.some(x => !x[1])) runSetup("setup");
 });

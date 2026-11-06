@@ -328,6 +328,63 @@ void hr_bot_solo_spawn(uint32_t player) {
     } __except (EXCEPTION_EXECUTE_HANDLER) {}
 }
 
+// Firefight respawns (GitHub #12: a bot that died stayed dead). The players update's per-player respawn handler
+// FUN_18004633c (ghidra/hr_respawn_tick.c) counts a dead player's respawn time (+0x1B4, +0x1B8 = 1 pending), then
+// spawns him with FUN_18004a9c8 and, in a game whose teams have lives (Firefight: game globals +0x16C + team * 4, the
+// team at player +0xAC, -1 = no limit; ghidra/hr_team_lives.c), takes one of his team's lives (FUN_18010e184); none
+// left, none spawn. Its why-not byte +0x408: 1 waiting, 13 the spawn failed.
+// Where a Firefight bot respawns. Firefight spawns everyone as co-op (FUN_1800810ac true): a dead player comes back at
+// the location stored in his player (+0x3EC position, +0x3F8 forward, +0x410 set; FUN_180049ce8,
+// ghidra/hr_spawn_where.c), which the person's death screen fills (its zone, "Pavilion"). Nothing fills a bot's, so
+// its spawn failed every time (live s186: why 13, no spawn point, a good biped). Before the respawn handler: a dead
+// bot of a team with lives (Firefight) gets the person's own last spawn point, or else a spot 1.5 u behind him;
+// the game then spawns it on time and takes the life from the team as for him (live s187 Beachhead: bots back
+// after 10.0 s like the person, the team's lives 6 -> 0 one per respawn, then they waited)
+void hr_bot_spawn_point(uint32_t player) {
+    static bool logged[HB_MAX_PLAYERS];
+    int index = player & 0xFFFF;
+    if (!g_shm || !g_hr || index >= HB_MAX_PLAYERS) return;
+    bool bot = false;
+    for (int i = 0; i < HB_MAX_PLAYERS; i++) bot |= g_shm->bot_player_index[i] == index;
+    if (!bot) return;
+    __try {
+        uint8_t* tls = hr_tls();
+        uint8_t* p = tls ? hr_player(tls, index) : nullptr;
+        uint8_t* gg = tls ? *(uint8_t**)(tls + 0x20) : nullptr;
+        if (!p || !gg) return;
+        if (*(int32_t*)(p + 0x28) != -1) { logged[index] = false; return; }
+        int team = (int8_t)p[0xAC];
+        if (team < 0 || team >= 8 || *(int32_t*)(gg + 0x16C + team * 4) < 0 || p[0x410]) return;   // (no lives: not Firefight)
+        uint8_t* me = nullptr;                      // the person: the first player no bot is
+        for (int i = 0; i < HB_MAX_PLAYERS && !me; i++) {
+            bool b = false;
+            for (int k = 0; k < HB_MAX_PLAYERS; k++) b |= g_shm->bot_player_index[k] == i;
+            if (!b && hr_live(tls, i)) me = hr_player(tls, i);
+        }
+        if (!me) return;
+        float* at = (float*)(p + 0x3EC);
+        const float* his = (const float*)(me + 0x3EC);
+        const char* from;
+        if (his[0] || his[1] || his[2]) {           // his last spawn point and facing (the game's own pick)
+            memcpy(p + 0x3EC, me + 0x3EC, 24);
+            from = "his last spawn point";
+        } else {
+            uint8_t* u = hr_object(tls, *(uint32_t*)(me + 0x28));
+            if (!u) return;                         // (he is down too, and never spawned at a point: wait)
+            const float* pos = (const float*)(u + 0x44);
+            const float* fwd = (const float*)(u + 0x50);
+            at[0] = pos[0] - 1.5f * fwd[0]; at[1] = pos[1] - 1.5f * fwd[1]; at[2] = pos[2] + 0.1f;
+            at[3] = fwd[0]; at[4] = fwd[1]; at[5] = 0.0f;
+            from = "behind him";
+        }
+        p[0x410] = 1;
+        if (!logged[index]) {
+            logged[index] = true;
+            logf("reach respawn: bot %d spawns at %s (%.1f %.1f %.1f)", index, from, at[0], at[1], at[2]);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
 // Invasion spawns by the player's rules ("if tier 1 > Spawn river unlocked, Spawn Spire locked, if tier 2 > Spawn spire
 // unlocked, Elites prefer spire spawn, Spartans prefer River and surrounding area spawn and ally"): while a bot is dead
 // the brain picks one of the spawns a person is offered (brain/invasion.py honor_spawn: a named spawn of its side and

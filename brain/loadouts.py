@@ -55,6 +55,17 @@ class Palette:
         s.seen = {}          # slot -> (primary, secondary)
         s.ability = {}       # slot -> armor ability kind ("" none)
         s.off = False        # the game refused a request (botcore without SET_LOADOUT)
+        s.sides = {}         # key -> the Palette of one side's kits (side())
+
+    def side(s, key):
+        """The palette one side's spawns teach (key None: this one). Invasion's attackers and defenders have their own
+        slots (live Boneyard B27: slot 1 the Spartans' DMR + AR and the Elites' needle rifle + plasma pistol; one palette
+        for both kept the last spawn's). The species goes with the role on a map, so the key is the role."""
+        if key is None:
+            return s
+        p = s.sides.setdefault(key, Palette())
+        p.off = p.off or s.off
+        return p
 
     def learn(s, slot, weapons, ability=""):
         guns = tuple(w for w in weapons[:2] if w not in ("none", "unknown"))

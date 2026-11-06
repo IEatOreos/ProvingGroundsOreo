@@ -161,7 +161,9 @@ def main():
             break
         time.sleep(1)
     have_map = os.path.exists(os.path.join(ROOT, "maps", map_name, "heightmap.npz"))
-    escort = o.game == "odst" and not have_map      # ODST without map data: the map-free escort brain
+    # Firefight without map data (ODST's kit exports none; Reach's DLC Firefight maps, Unearthed and Installation 04,
+    # are not exported: bots never joined there, GitHub #12): the map-free escort brain
+    escort = not have_map and (o.game == "odst" or (o.game == "reach" and getattr(live, "firefight", lambda: False)()))
     if not escort and not have_map and not o.lidar:     # LiDAR maps blind too
         sys.exit(f"bots do not know the map '{map_name}' yet (supported: "
                  f"{', '.join(d for d in os.listdir(os.path.join(ROOT, 'maps')) if os.path.isdir(os.path.join(ROOT, 'maps', d)))})")
@@ -208,17 +210,22 @@ def main():
     taken = {p["name"].lower() for p in players}
     names = [n for n, _ in looks.profiles() if n.lower() not in taken][::-1]
     names = make_names(16, taken=[p["name"] for p in players] + names) + names   # (popped from the end)
-    roster = botctl.roster(o.roster) if o.roster and not o.lidar else None
     firefight = getattr(live, "firefight", lambda: False)()
+    ff = firefight or o.game == "odst"
+    roster = botctl.roster(o.roster) if o.roster and not o.lidar else None
+    if roster is not None and ff:                    # Firefight's own list (botcore.cpp ff_seed: the first 3 till saved)
+        ff_list = botctl.roster(o.roster, firefight=True)
+        roster = ff_list if ff_list is not None else roster[:botctl.FIREFIGHT_PLAYERS - 1]
     # one cap on every path below, LiDAR included: Firefight holds 4 players in all (ODST crashed with more)
     room = botctl.player_cap(o.game, firefight) - len(players)
     if getattr(o, "max_bots", None) is not None:     # test override: leave room for Claude's probe bots
         room = min(room, int(o.max_bots))
     if room < botctl.MAX_PLAYERS - len(players):
         print(f"Firefight: {room} bots at most ({botctl.FIREFIGHT_PLAYERS} players in all)")
-    if roster is not None and not firefight and o.game != "odst":   # the BOTS panel's list (Firefight keeps its teammates)
-        print(f"bot list: {len(roster)} bots from {o.roster}")
+    if roster is not None:                           # the BOTS panel's list (Firefight: its first 3, all your teammates)
+        print(f"bot list: {len(roster)} bots from {o.roster}" + (f", {max(0, room)} join (Firefight)" if ff else ""))
         for team, name in roster_plan(roster, players, teams, o.game)[:max(0, room)]:
+            team = players[0]["team"] if ff else team
             r = botctl.add_bot(m, machine, team, name, o.game, look=looks.look(name, o.game), clan=looks.clan_of(name),
                                emblem=looks.emblem_of(name))
             print(f"bot {name} on team {team}:", "ok" if not r.get("fault") and r.get("result", -1) & 0xFFFFFFFF != 0xFFFFFFFF and r.get("result", -1) > -100 or r.get("result", -1) < -100 else r)
@@ -275,7 +282,8 @@ def main():
     subprocess.run([sys.executable, "-u", "-I", os.path.join(HERE, "live_bots.py"), str(o.minutes * 60),
                     "--tier", o.tier, "--personality", "rusher,flanker,camper,objector,spammer,grudger,sniper",
                     "--map", map_name, "--game", o.game, "--quiet"] + ([] if teams else ["--ffa"]) +
-                   (["--roster", o.roster] if roster is not None and not firefight else []) +   # each bot's own settings
+                   (["--roster", o.roster] if roster is not None else []) +   # each bot's own settings
+                   (["--ff-list"] if roster is not None and ff else []) +      # (Firefight's list: its ffbot= lines)
                    (["--collect", "on"] if getattr(o, "collector", "off") == "on" or
                     (o.roster and botctl.setting(o.roster, "collector", "0") == "1") else []) +   # Data collector (tools/collector.py)
                    (["--ride-only", o.ride_only] if getattr(o, "ride_only", None) else []) +   # test override: one kind

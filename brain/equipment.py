@@ -36,6 +36,7 @@ ITEM = {
     "evade": ("dash", 0.4, 0.0), "thruster": ("dash", 0.4, 0.0), "promethean_vision": ("self", 2.0, 12.0),
     "hardlight_shield": ("self", 5.0, 0.0), "regen_field": ("feet", 10.0, 0.6), "autosentry": ("front", 8.0, 8.0),
 }
+TRIP_KEEP = 3.0     # u off an enemy trip mine (Kit.avoid): live Rat's Nest s178, one went off on a bot at 2.0 u
 HEALS = {"regenerator", "drop_shield", "regen_field"}           # heal shields inside (both teams)
 DOMES = {"bubble_shield", "drop_shield"}                         # shots do not cross the dome
 TEAM_ITEMS = {"regenerator", "drop_shield", "deployable_cover", "regen_field"}   # hold them for the regroup
@@ -44,6 +45,11 @@ EXPLOSIVE_AIMED = {"rockets", "spartan_laser", "fuelrod", "incineration_cannon",
                    "missile_pod", "binary_rifle"}
 SNIPERS = {"sniper", "beam_rifle", "binary_rifle", "focus_rifle"}
 LUNGERS = {"sword", "gravity_hammer"}
+# a Flood survivor's hardlight shield (the owner, Nov 5): short blocks, the gun between them
+SURV_BLOCK_S = 0.6       # one block
+SURV_SHOOT_S = 1.2       # the gun before the next block
+SURV_MELEE_R = 1.8       # the melee on the let-go reaches him
+CORNER_R, CORNER_SIDES = 1.3, 5   # walls within this on at least this many of 8 sides: backed into a corner
 CQB = {"shotgun", "sword", "gravity_hammer", "scattershot", "excavator"}
 INFECTED_DASH_R = 11.0   # u: an infected thrusts / evades in at a survivor it fights from this near (6.5 u up)
 THRUST_REACH = 3.5      # u a thruster dash carries a Spartan (H4; the evade's 3.0-3.4 u): its end point
@@ -57,6 +63,11 @@ PLACED = {"autosentry", "regen_field", "drop_shield", "hologram", "thruster", "e
 # button is down
 HELD = {"sprint"}
 JET_RISE = 5.3      # u: the player's jetpack climb from standing (Reach: 5.3 u in 3.9 s; 7.6 with a jump first)
+# the tank a flight starts on (Kit.plan), an emergency excepted: a person lets the pack refill. Live Spire 20261105-143525,
+# 930-970 s: bots 2, 4 and 8 pressed "jetpack up the ledge" 0.6-0.7 s after each 4 s hold, on the tag's 0.1 minimum
+# (0.09-0.11 in the model), the game's on-state up 27-36 of ~105 ticks, 0.1-1.5 u climbed (owner: "not allowing their
+# jetpack to recharge before using it"); 66 of the match's 275 presses under half a tank. Refill from empty: 6 s (0.15/s)
+JET_FULL = 0.9
 
 # How each kind takes its button, per game (the player: "be able to differentiate between equipment you press once to
 # activate and the ones you have to hold, like armor lock and jet packs"):
@@ -175,7 +186,7 @@ class Energy:
         if on:
             s.level -= s.drain * dt
             if s.level <= 0.0:
-                s.level, on = 0.0, False
+                s.level, on, s.off_at = 0.0, False, now    # run dry: the recovery time runs from here (Halo 4's 1 s)
         elif s.on:
             s.off_at = now
         elif now - s.off_at >= s.recovery:
@@ -431,11 +442,25 @@ class Kit:
         """Spots to keep out of when moving: enemy trip mines (beeping), a power drain going off."""
         if s.lvl == 0:
             return []
-        # a power drain takes everyone's shields, ours too ("throw and back out of the radius")
-        return [(d["pos"], ITEM[d["kind"]][2]) for d in snap.deployed
+        # a power drain takes everyone's shields, ours too ("throw and back out of the radius"); a trip mine is kept
+        # TRIP_KEEP off (live Rat's Nest s178: one went off on a bot 2.0 u from it)
+        return [(d["pos"], TRIP_KEEP if d["kind"] == "trip_mine" else ITEM[d["kind"]][2]) for d in snap.deployed
                 if d["kind"] == "power_drain" or d["kind"] == "trip_mine" and d["team"] != me.team]
 
+    def hazards(s, me, snap):
+        """avoid() for the route planner (Terrain.nav hazards): ((x, y, z, r), ...), rounded so routes are cached."""
+        return tuple((round(p.x, 1), round(p.y, 1), round(p.z, 1), r) for p, r in s.avoid(me, snap))
+
     # ------------------------------------------------------------------ using our own
+    @staticmethod
+    def cornered(bot, me):
+        """Backed into a corner: walls within CORNER_R on CORNER_SIDES of 8 sides (no room to strafe out of a lunge)."""
+        try:
+            T = bot.air_terrain()
+            return sum(T.clearance(me.pos, k * math.pi / 4, far=CORNER_R + 0.2) < CORNER_R for k in range(8)) >= CORNER_SIDES
+        except Exception:                      # (no level data: a bot in a test, a map without a heightmap)
+            return False
+
     def situation(s, bot, now, me, snap):
         seen = [snap.player(k) for k in bot.per.visible_enemies()]
         seen = [e for e in seen if e is not None and e.alive and not (e.id in s.decoys)]
@@ -492,6 +517,7 @@ class Kit:
         x = s.situation(bot, now, me, snap)
         lvl = s.lvl
         cover = None
+        low = k == "jetpack" and s.energy is not None and s.energy.level < JET_FULL   # only an emergency flies (JET_FULL)
 
         def no_cover(within=None):
             """No cover near enough: the bot's reach (as decide()'s retreat), or a set distance (guide
@@ -533,14 +559,14 @@ class Kit:
         # novices: obvious cues only, and the bad uses (guide 02: "locking at full shield in the open")
         if lvl == 0:
             if x["hit"] and k in ("armor_lock", "bubble_shield", "drop_shield", "regenerator", "regen_field",
-                                  "hardlight_shield"):
+                                  "hardlight_shield") and not (survivor and k in ("armor_lock", "hardlight_shield")):
                 return (k, ITEM[k][0], None, 2.0, "shot at: used it")
             if k == "active_camo" and (x["travel"] or x["fight"]):
                 return (k, "self", None, 3.0, "camo on, running")
             if k == "hologram" and x["seen"]:
                 return (k, "aim", x["seen"][0].pos, 0.1, "hologram at a man who sees it")
             wp = getattr(bot, "wp", None)
-            if k == "jetpack" and (x["fight"] or wp is not None and wp.z - me.pos.z > 0.8
+            if k == "jetpack" and not low and (x["fight"] or wp is not None and wp.z - me.pos.z > 0.8
                                    and (wp - me.pos).flat() < 3.0):
                 return (k, "self", None, 1.0, "jetpack in the open")
             return None
@@ -565,9 +591,27 @@ class Kit:
             if k == "armor_lock" and not survivor:
                 return (k, "self", None, 2.0 if x["lunge"] is None else 1.2, "armor lock: " + (
                     "rocket / laser" if x["incoming"] else "vehicle" if x["splatter"] else "lunge"))
-            if k == "hardlight_shield" and x["splatter"] is None and (x["lunge"] is None or lvl >= 2):
+            # (a survivor never shields a lunge: the Flood lunge all game, and a shield up is a gun down. Live, the
+            # owner's Blood Cavern Flood 20261105-225014: "using the hardlight shield more than shooting", 104 blocks;
+            # it shoots the lunger, as armor lock's rule for survivors already said)
+            if k == "hardlight_shield" and x["splatter"] is None and (
+                    x["lunge"] is None and x["incoming"] is not None or x["lunge"] is not None and lvl >= 2 and not survivor):
                 # (not against a vehicle: EQ-HLS-04, "a Hardlight Shield does not stop a Warthog; the bot steps aside")
                 return (k, "self", None, 1.5, "hardlight: block it")
+            if k == "hardlight_shield" and survivor and x["lunge"] is not None and x["splatter"] is None:
+                # a survivor shoots the Flood; a short block (SURV_BLOCK_S, then SURV_SHOOT_S of gun before the next)
+                # only in the owner's three cases (Nov 5): reloading or out of ammo ("shield block > melee": the melee
+                # comes on the let-go, Kit.act), swarmed by 2+ lunging Flood ("looking for openings to shoot"), or
+                # backed into a corner
+                i = me.weapons.index(me.weapon) if me.weapon in (me.weapons or []) else -1
+                empty = 0 <= i < len(me.mag or []) and me.mag[i] == 0 or 0 <= i < len(me.ammo or []) and me.ammo[i] == 0
+                swarm = sum(1 for e in x["seen"] if e.weapon in LUNGERS and dist(e.pos, me.pos) < 4.5) >= 2
+                if empty:
+                    return (k, "self", None, SURV_BLOCK_S, "survivor: block, then melee")
+                if swarm:
+                    return (k, "self", None, SURV_BLOCK_S, "survivor: swarmed, block and shoot the gaps")
+                if s.cornered(bot, me):
+                    return (k, "self", None, SURV_BLOCK_S, "survivor: cornered, block")
             if k in ("thruster", "evade") and dash(danger) is not None:
                 return (k, "dash", dash(danger), 0.1, "dash out of the line")
             if k == "thruster" and x["lunge"] is not None:
@@ -579,6 +623,8 @@ class Kit:
                 return (k, "feet", None, 0.1, "bubble: blocks it")
             if k == "deployable_cover" and x["incoming"] is not None:
                 return (k, "front", x["incoming"].pos, 0.1, "cover toward the rocket")
+        if low:
+            return None              # the grenade and the lunge above; the fall brake is jet_brake's (JET_FULL)
         # 2. shield popped while being shot: a thruster dash into cover that is right there, else (him within 8 u) a
         # dash out of his aim or an armor lock, any tier (the player: all bots use every ability; the lock was Normal's
         # only, EQ-LOCK-01); with no cover near, a heal field, the bubble, the regenerator if the trade is ours
@@ -1014,6 +1060,8 @@ class Kit:
                 s.press_t0, s.press_hp = now, (me.shield, me.health)
                 note = "jetpack: brake the fall"
             s.hold_until, holding = now + 0.15, True
+        if holding and s.press[0] == "jetpack" and s.energy is not None and s.energy.level <= 0.0:
+            s.hold_until, holding = now, False      # the tank is dry: let go, not held on empty (JET_FULL's trace)
         if not holding:
             if s.toggled and s.energy is not None and s.energy.on and s.kind not in PLACED:
                 act.equipment = True                   # the run is over: tap it off
@@ -1031,6 +1079,8 @@ class Kit:
                 s.press_t0, s.press_hp = now, (me.shield, me.health)
                 # (Promethean Vision: a pulse every 10 s at most, EQ-PV-02; its unseen trigger would pulse it nonstop)
                 s.cool[k] = now + (10.0 if k == "promethean_vision" else 1.0 if s.energy is not None else 2.0)
+                if why.startswith("survivor:"):
+                    s.cool[k] = now + hold + SURV_SHOOT_S        # the gun again between blocks (the owner's openings)
                 note = f"{k}: {why}"
                 holding = True
         if holding:
@@ -1099,6 +1149,17 @@ class Kit:
                     s.energy.level = 0.0
                 act.equipment = act.ability = False
                 note = f"{k}: did not lock, fighting on"
+            elif k in ("armor_lock", "hardlight_shield") and why.startswith("survivor:"):
+                # a survivor's short block: never stretched by the danger (Flood are always near: the stretch held the
+                # shield up all game, the owner's Blood Cavern 225014); its let-go a melee when it came for an empty gun
+                act.fire, act.forward, act.strafe = False, 0.0, 0.0
+                if now >= s.hold_until - 0.04:
+                    s.hold_until = now
+                    act.equipment = act.ability = False
+                    if "melee" in why and any(dist(e.pos, me.pos) < SURV_MELEE_R for e in snap.players
+                                              if e.team != me.team and e.alive):
+                        act.melee = True
+                        note = "survivor: let go, melee"
             elif k in ("armor_lock", "hardlight_shield"):
                 act.fire, act.forward, act.strafe = False, 0.0, 0.0
                 if now - s.press_t0 > 0.5 and s.energy is not None:
@@ -1174,11 +1235,20 @@ class Kit:
     def steer_clear(s, me, snap, act):
         """Step round an enemy trip mine or power drain when the next step goes into it (guide 08:
         "never walk a known vehicle route without checking the ground"; "step out of the radius")."""
-        c, sn = math.cos(me.yaw), math.sin(me.yaw)
+        # (the step is taken along the facing this command asks: the body's facing was used, and a bot turning as it
+        # backed toward a mine sidestepped the wrong way)
+        c, sn = math.cos(act.yaw), math.sin(act.yaw)
         wx, wy = act.forward * c - act.strafe * sn, act.forward * sn + act.strafe * c   # strafe +1 = left
         if math.hypot(wx, wy) < 0.2:
             return
         for pos, r in s.avoid(me, snap):
+            off = Vec(me.pos.x - pos.x, me.pos.y - pos.y, 0.0)
+            if off.flat() < r and abs(me.pos.z - pos.z) < 1.5:
+                # already inside: straight out, whatever the way asks (live Rat's Nest s178: a bot pushing into a wall slid
+                # along it onto a mine, its commanded step pointing away the whole time)
+                n = off.flat() or 1.0
+                act.forward, act.strafe = (off.x * c + off.y * sn) / n, (-off.x * sn + off.y * c) / n
+                return
             ahead = Vec(me.pos.x + wx * 0.8, me.pos.y + wy * 0.8, me.pos.z)
             if dist(ahead, pos) >= r or dist(me.pos, pos) > r + 3.0:
                 continue

@@ -87,6 +87,18 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof dark);
     ShowWindow(hwnd, show);
     UpdateWindow(hwnd);
+    // in front of the window that opened it (the owner, Nov 6: "the launcher draws over any pop up windows"): a window
+    // started by the launcher's helper process is not let take the foreground by Windows, and opened behind the launcher.
+    // Joined to the foreground window's input for the call, as Windows allows
+    {
+        HWND fg = GetForegroundWindow();
+        DWORD fgt = fg ? GetWindowThreadProcessId(fg, nullptr) : 0, me = GetCurrentThreadId();
+        if (fgt && fgt != me) AttachThreadInput(fgt, me, TRUE);
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        BringWindowToTop(hwnd);
+        SetForegroundWindow(hwnd);
+        if (fgt && fgt != me) AttachThreadInput(fgt, me, FALSE);
+    }
 
     wchar_t base[MAX_PATH] = L"";
     SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, base);

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Guide - Project Proving Grounds</title>
+<style>
+  /* the launcher's tokens (tools/launcher.html): the Proving Grounds art's dusk sky, sand, sign, embers, Spartan blue */
+  :root {
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+    --fs-xs: 12px; --fs-sm: 14px; --fs-md: 16px; --fs-lg: 20px; --fs-xl: 24px;
+    --r: 4px; --r-lg: 6px;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: "Bahnschrift", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    --bg: #121417; --surface: #1a1d21; --raised: #24282d; --hover: #2d3238; --sunken: #0d0f11; --border: #353a40;
+    --heading: #f1e8d4; --text: #e9e1ce; --text-2: #cdbf9f; --text-3: #aea38b;
+    --ember: #f0872e; --blue: #93b2f2; --blue-bg: #1c2638; --gold: #e3b456; --focus: #a9c4ff;
+    --ok: #8fd394; --warn: #e3b456; --warn-bg: #2b2415; --warn-line: #6b5524; --scrim: 14, 15, 18;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scroll-padding-top: var(--s4); }
+  body { margin: 0; color: var(--text); background: var(--bg); font: var(--fs-md)/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: var(--blue); text-underline-offset: 2px; }
+  a:hover { color: var(--heading); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r); }
+  .skip { position: absolute; left: -999px; top: var(--s2); background: var(--raised); color: var(--heading); padding: var(--s2) var(--s3); }
+  .skip:focus { left: var(--s3); }
+
+  .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; }
+  nav { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: var(--s4) var(--s3) var(--s5);
+        background: var(--surface); border-right: 1px solid var(--border); }
+  .brand { display: block; margin: 0 var(--s2) var(--s4); font: 700 var(--fs-md)/1.2 var(--font-display); letter-spacing: .06em;
+           text-transform: uppercase; color: var(--heading); text-decoration: none; }
+  .brand small { display: block; margin-top: var(--s1); font: 400 var(--fs-xs) var(--font); letter-spacing: 0; text-transform: none; color: var(--text-3); }
+  .search { position: relative; margin: 0 var(--s1) var(--s4); }
+  .search input { width: 100%; padding: var(--s2) var(--s3); border-radius: var(--r); border: 1px solid #858070;
+                  background: var(--sunken); color: var(--text); font: var(--fs-sm) var(--font); }
+  .search input::placeholder { color: var(--text-3); }
+  nav h2 { margin: var(--s4) var(--s2) var(--s1); font: 600 var(--fs-xs)/1.4 var(--font-display); letter-spacing: .08em;
+           text-transform: uppercase; color: var(--text-3); }
+  nav ul { list-style: none; margin: 0; padding: 0; }
+  nav li a { display: block; padding: 6px var(--s2); border-radius: var(--r); color: var(--text-2); text-decoration: none; font-size: var(--fs-sm); }
+  nav li a:hover { background: var(--hover); color: var(--heading); }
+  nav li a[aria-current="true"] { background: var(--blue-bg); color: var(--heading); box-shadow: inset 3px 0 0 var(--ember); }
+  .noresult { margin: var(--s2); font-size: var(--fs-sm); color: var(--text-3); }
+
+  main { padding: 0 var(--s6) var(--s7); max-width: 900px; }
+  /* the art cropped below the Halo logo to the sign, sandbags and helmet (as the launcher's), the title under it */
+  .hero { margin: var(--s4) 0 var(--s4); aspect-ratio: 1024 / 150; min-height: 96px; border-radius: var(--r-lg);
+          border: 1px solid var(--border); background: url("/art.jpg") center 72% / cover no-repeat, var(--surface); }
+  .intro { margin: 0 0 var(--s5); }
+  .intro h1 { margin: 0; font: 700 var(--fs-xl)/1.15 var(--font-display); letter-spacing: .04em; color: var(--heading); }
+  .intro p { margin: var(--s1) 0 0; color: var(--text-2); }
+  section { padding-top: var(--s5); border-top: 1px solid var(--border); margin-top: var(--s5); }
+  section:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+  h2.title { margin: 0 0 var(--s3); font: 700 var(--fs-lg)/1.3 var(--font-display); letter-spacing: .03em; color: var(--heading); }
+  h3 { margin: var(--s5) 0 var(--s2); font: 600 var(--fs-md)/1.4 var(--font-display); letter-spacing: .02em; color: var(--heading); }
+  p, ul, ol { margin: 0 0 var(--s3); max-width: 72ch; }
+  li { margin: 0 0 var(--s1); }
+  li::marker { color: var(--text-3); }
+  strong { color: var(--heading); font-weight: 600; }
+  kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border: 1px solid var(--border); border-bottom-width: 2px;
+        border-radius: var(--r); background: var(--raised); font: 600 var(--fs-xs)/1.7 var(--font-mono); color: var(--heading); text-align: center; }
+  code { padding: 1px 5px; border-radius: var(--r); background: var(--sunken); font: var(--fs-sm) var(--font-mono); color: var(--text-2); }
+  .note { display: flex; gap: var(--s3); padding: var(--s3) var(--s4); margin: 0 0 var(--s4); border-radius: var(--r);
+          background: var(--warn-bg); border: 1px solid var(--warn-line); max-width: 72ch; }
+  .note::before { content: "!"; flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+                  background: var(--gold); color: #1f1608; font: 700 var(--fs-sm) var(--font-display); }
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps > li { position: relative; padding-left: 40px; margin-bottom: var(--s3); }
+  .steps > li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 1px; width: 26px; height: 26px;
+                        border-radius: var(--r); display: grid; place-items: center; background: #d8bb88; color: #1f1608;
+                        font: 700 var(--fs-sm) var(--font-display); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--s3); margin: 0 0 var(--s4); max-width: none; }
+  .card { padding: var(--s3) var(--s4); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+  .card h4 { margin: 0 0 var(--s1); font: 600 var(--fs-md) var(--font-display); color: var(--heading); }
+  .card p { margin: 0; font-size: var(--fs-sm); color: var(--text-2); }
+  table { width: 100%; max-width: 820px; border-collapse: collapse; margin: 0 0 var(--s4); font-size: var(--fs-sm); }
+  th, td { text-align: left; vertical-align: top; padding: var(--s2) var(--s3); border-bottom: 1px solid var(--border); }
+  th { font: 600 var(--fs-xs) var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--surface); }
+  td:first-child { color: var(--heading); width: 34%; }
+  .links { display: flex; flex-wrap: wrap; gap: var(--s2); margin: 0 0 var(--s4); }
+  .links a { padding: 6px var(--s3); border: 1px solid #4b5f87; border-radius: var(--r); background: var(--blue-bg); text-decoration: none; font-size: var(--fs-sm); }
+  .links a:hover { background: #243149; }
+  .hidden { display: none !important; }
+  mark { background: rgba(227, 180, 86, .35); color: var(--heading); border-radius: 2px; }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+    nav ul { display: flex; flex-wrap: wrap; gap: 2px; }
+    nav h2 { width: 100%; }
+    main { padding: 0 var(--s4) var(--s6); }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to the guide</a>
+<div class="layout">
+<nav aria-label="Guide sections">
+  <a class="brand" href="#start">Project Proving Grounds<small>Player's guide</small></a>
+  <div class="search"><label for="q" class="skip" style="position:absolute;left:-999px">Search the guide</label>
+    <input id="q" type="search" placeholder="Search the guide" autocomplete="off"></div>
+  <h2>Playing</h2>
+  <ul>
+    <li><a href="#start">Start a match</a></li>
+    <li><a href="#panel">The BOTS panel</a></li>
+    <li><a href="#difficulty">Difficulty</a></li>
+    <li><a href="#styles">Play styles</a></li>
+    <li><a href="#directors">Team directors</a></li>
+  </ul>
+  <h2>Maps</h2>
+  <ul>
+    <li><a href="#lidar">Map the maps (LiDAR)</a></li>
+    <li><a href="#simulator">LiDAR Simulator</a></li>
+    <li><a href="#viewer">LiDAR Viewer</a></li>
+    <li><a href="#paint">Paint the nav</a></li>
+  </ul>
+  <h2>Your games</h2>
+  <ul>
+    <li><a href="#observer">Observer and recordings</a></li>
+    <li><a href="#share">Share a game</a></li>
+    <li><a href="#report">Report a problem</a></li>
+  </ul>
+  <h2>Help</h2>
+  <ul>
+    <li><a href="#trouble">Troubleshooting</a></li>
+    <li><a href="#mcc">Which copy of MCC is used</a></li>
+    <li><a href="#files">Where things are</a></li>
+    <li><a href="#requirements">System requirements</a></li>
+    <li><a href="#uninstall">Uninstall</a></li>
+    <li><a href="#linux">Linux and Steam Deck</a></li>
+  </ul>
+  <p class="noresult hidden" id="noresult">Nothing in the guide matches.</p>
+</nav>
+
+<main id="content">
+<div class="hero" role="img" aria-label="Project Proving Grounds art: a sandbagged sign and a Spartan helmet on a battlefield at dusk"></div>
+<div class="intro"><h1>Player's guide</h1><p>How to play with bots in your offline Halo: The Master Chief Collection custom games, and how to use every tool.</p></div>
+
+<section id="start" data-title="Start a match">
+  <h2 class="title">Start a match</h2>
+  <div class="note"><p><strong>Offline custom games only, with Easy Anti-Cheat off.</strong> The mod will not run with anti-cheat on and never touches matchmaking, the Xbox network or Steam's online services.</p></div>
+  <ol class="steps">
+    <li>Press <strong>Play</strong> in the launcher. When Steam asks how to start MCC, choose the option with <strong>anti-cheat off</strong>.</li>
+    <li>In MCC open <strong>Multiplayer &gt; Custom Multiplayer</strong> and pick Halo: CE, Halo 2: Classic, Halo 2: Anniversary, Halo 3, Halo: Reach or Halo 4. For bot teammates against the Covenant, open <strong>Firefight &gt; Halo: Reach Custom Firefight</strong> or <strong>Halo 3: ODST Custom Firefight</strong>.</li>
+    <li>Select the <strong>BOTS</strong> tile next to START (or press <kbd>B</kbd>) and pick your bots.</li>
+    <li>Pick a map and game type, then START. The bots join a few seconds after the match loads.</li>
+  </ol>
+  <p>Up to 15 bots join, because a match holds 16 players. Bots show on the scoreboard as real players: they move, aim, strafe, jump-shot, take power weapons, drive and fly vehicles, play the objective and call out to their team.</p>
+  <div class="links">
+    <a href="https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/BOT_STATUS.pdf" target="_blank" rel="noopener">What works in each mode</a>
+    <a href="https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/KNOWN_BUGS.md" target="_blank" rel="noopener">Known bugs</a>
+    <a href="https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/UPDATES.md" target="_blank" rel="noopener">What's new</a>
+  </div>
+</section>
+
+<section id="panel" data-title="The BOTS panel">
+  <h2 class="title">The BOTS panel</h2>
+  <p>The BOTS panel lists the exact bots that join your next match, by team.</p>
+  <div class="cards">
+    <div class="card"><h4>Quick setup</h4><p>Choose how many teams (2 to 8; Halo: CE has 2), how many bots on each, a difficulty and a play style, then <strong>Make bots</strong>.</p></div>
+    <div class="card"><h4>Move bots</h4><p>Drag a bot to another team, press <kbd>Ctrl</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd>, or right-click it and choose <strong>Move to</strong>.</p></div>
+    <div class="card"><h4>Edit a bot</h4><p>Pick a bot to set its name, difficulty and play style. <kbd>Del</kbd> removes it. <strong>+ Add bot</strong> and <strong>+ Add team</strong> add more.</p></div>
+    <div class="card"><h4>Whole roster</h4><p><strong>Balance teams</strong>, <strong>Shuffle teams</strong>, <strong>New names</strong>, <strong>Difficulty for everyone</strong> and <strong>Remove all</strong>.</p></div>
+    <div class="card"><h4>Spectate</h4><p><strong>Spectate (no body)</strong> joins you as a free camera: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the left stick, the mouse to look, <kbd>Space</kbd> up, <kbd>Ctrl</kbd> or <kbd>C</kbd> down, <kbd>Shift</kbd> fast. Not in Halo 2: Anniversary yet.</p></div>
+    <div class="card"><h4>Settings</h4><p>Each bot's profile with its 3D look, emblem and clan tag. Re-roll any of them.</p></div>
+  </div>
+</section>
+
+<section id="difficulty" data-title="Difficulty">
+  <h2 class="title">Difficulty</h2>
+  <p>Pick a difficulty for each bot, or one for everyone. Every difficulty aims the way a person does; what changes is how fast the bots react and how smart they play.</p>
+  <table>
+    <thead><tr><th scope="col">Difficulty</th><th scope="col">How it plays</th></tr></thead>
+    <tbody>
+      <tr><td>Easy</td><td>Relaxed games. Reacts a little slower than a person, rarely dodges and only jumps to get around. It doesn't plan: in Slayer it wanders, in objective games it heads straight for the objective. It mostly aims at your chest.</td></tr>
+      <tr><td>Normal</td><td>An average player. Strafes in fights, follows its team's plan, knows some routes and power weapons, uses equipment when it makes sense and goes for your head about half the time once your shields are down.</td></tr>
+      <tr><td>Heroic</td><td>A good player. Reacts faster, strafes almost all the time and jump-shots, takes sneaky routes, knows where enemies spawn, checks its flanks and radar, and lands headshots nearly every time.</td></tr>
+      <tr><td>Legendary</td><td>A top player. The fastest reactions, constant strafing and jukes, holds the best spots, times every power weapon, uses every equipment trick and always goes for the head.</td></tr>
+      <tr><td>Scaling</td><td>Adjusts to you. Legendary's smarts, but its reactions and aim change after every game so you and the bots finish about even. The panel shows it as a percentage, where 100% is a skilled player; lock it in the panel's <strong>Advanced</strong> tab.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="styles" data-title="Play styles">
+  <h2 class="title">Play styles</h2>
+  <table>
+    <thead><tr><th scope="col">Style</th><th scope="col">What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Rusher</td><td>Pushes fights and hunts people down; never camps.</td></tr>
+      <tr><td>Camper</td><td>Holds power spots and defends; waits longer and crouches at its post.</td></tr>
+      <tr><td>Objective</td><td>Takes the flag, hill or ball, and skips far fights while it does.</td></tr>
+      <tr><td>Grenadier</td><td>Opens most fights with a grenade and makes enemy vehicles its job.</td></tr>
+      <tr><td>Grudge</td><td>Goes after whoever killed it last.</td></tr>
+      <tr><td>Sniper</td><td>Hangs back and defends from range.</td></tr>
+      <tr><td>Flanker</td><td>An all-rounder for now; side routes come with the difficulty.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="directors" data-title="Team directors">
+  <h2 class="title">Team directors</h2>
+  <p>Every team of bots has its own director that knows only what its own team knows: where teammates are, what they saw and heard, the score and the clock. It calls out map positions, hands out roles every two seconds (in CTF: runner, escort, defender, hunter), pulls bots back to defend after a death near the flag, and sets the team's play by the score: careful when the enemy is about to win, all in when behind late.</p>
+  <p>Nothing shows over the game. Every decision is in the <a href="#observer">Observer</a>'s event feed.</p>
+</section>
+
+<section id="lidar" data-title="Map the maps (LiDAR)">
+  <h2 class="title">Map the maps (LiDAR)</h2>
+  <p>Bots play better on a map they have mapped: every floor, height, jump and drop. No scans ship with the mod, because each PC maps its own; until then bots use the map pack's height data. There are two ways to map:</p>
+  <h3>LiDAR mode, in a match</h3>
+  <p>Tick <strong>LiDAR mode</strong> in the BOTS panel and start any match: up to 16 players, all bots on your team, nobody fights. The bots walk every floor, measure heights and jumps, and record where they fall. They also visit every objective place the map has for all its game types.</p>
+  <p>Every jump you land that beats walking, and survive for 5 seconds after, is learned: from the next match every bot can use it. A notice in the game says when a jump of yours is learned. Floor you walk crouched works the same way (Halo 2: Anniversary and Halo 4).</p>
+  <h3>The LiDAR Simulator, no game needed</h3>
+  <p>See <a href="#simulator">LiDAR Simulator</a>.</p>
+</section>
+
+<section id="simulator" data-title="LiDAR Simulator">
+  <h2 class="title">LiDAR Simulator</h2>
+  <p>Open the <strong>LiDAR Simulator</strong> from the launcher. It runs the bots on a map's level data and shows them mapping it in 3D: 16 bots map the floor and call jumps, and 8 aircraft fly the air above it.</p>
+  <ul>
+    <li><strong>Pick a map</strong> opens the map list; click a map. A map with Forge layouts the bots have played opens a list of its versions.</li>
+    <li><strong>Every map</strong> maps them all in turn, each saved when it finishes.</li>
+    <li><strong>Speed</strong>: 1x (real time) to 16x, or <strong>Max</strong>. Big maps run slower than asked on most PCs; the panel shows the real speed.</li>
+    <li><strong>Pause</strong> and <strong>Stop and save</strong>.</li>
+    <li><strong>Click spots to cover</strong> (<kbd>C</kbd>): click where the bots should go first. A pink ring turns green once a bot gets there, or a red cross if no bot finds a way within 2 minutes.</li>
+  </ul>
+  <p>A map runs until nothing new turns up for 45 seconds. Run it again to add to its scan. The simulator only knows the level data, so LiDAR mode in a real match fills in floor and steps the data lacks.</p>
+</section>
+
+<section id="viewer" data-title="LiDAR Viewer">
+  <h2 class="title">LiDAR Viewer</h2>
+  <p>The <strong>LiDAR Viewer</strong> shows any map's scan in 3D, and your LiDAR match live while one runs. The header shows the map, whether the scan comes from matches or the simulator, and the view buttons.</p>
+  <ul>
+    <li><strong>Maps</strong> (<kbd>L</kbd>): one entry per map, by game. A map with Forge layouts opens a list of its versions. <strong>Remove scan</strong> starts a map over; the files move to <code>backups\lidar</code>.</li>
+    <li><strong>Layers</strong>: switch deaths, jumps and paths, weapons, map features, windows and fences, air space, air paths, earlier runs and the grid on or off. Each shows its key.</li>
+    <li><strong>View</strong>: drag or the arrow keys to turn, right-drag or <kbd>Shift</kbd>-drag to move, the wheel to zoom. <strong>Top view</strong> (<kbd>T</kbd>), <strong>Reset view</strong> (<kbd>R</kbd>), <strong>Follow you</strong> (<kbd>F</kbd>).</li>
+  </ul>
+  <p>In a live scan bots are white dots and you are gold. Each step colours the floor by height. A jump turns magenta only if the bot lands and is still alive 5 seconds later, and a red cross marks a deadly edge.</p>
+</section>
+
+<section id="paint" data-title="Paint the nav">
+  <h2 class="title">Paint the nav</h2>
+  <p>An advanced tool: mark by hand where bots may and may not walk, on a top-down view of each floor of a map.</p>
+  <ol class="steps">
+    <li>Pick a map. The first time, press <strong>Make the roofless view</strong>: it takes a few seconds.</li>
+    <li>Move the <strong>Height</strong> slider to the floor you want; floors above it are cut away.</li>
+    <li>Pick a layer and paint with the left mouse button. Right-drag moves the view and the wheel zooms. <kbd>1</kbd> to <kbd>8</kbd> pick layers, <kbd>[</kbd> and <kbd>]</kbd> change the brush.</li>
+    <li><strong>Save</strong>. Bots use it from the next match.</li>
+  </ol>
+  <table>
+    <thead><tr><th scope="col">Layer</th><th scope="col">Means</th></tr></thead>
+    <tbody>
+      <tr><td>Walk</td><td>Floor bots may walk that the level data is missing.</td></tr>
+      <tr><td>Block</td><td>Floor bots must not walk.</td></tr>
+      <tr><td>Drive small, medium, large</td><td>Ground that vehicles of that size may drive.</td></tr>
+      <tr><td>Fly low, Fly high</td><td>Optional areas pilots keep to for attack runs and travel. Flying heights are set from the ground automatically.</td></tr>
+      <tr><td>Draw a jump (<kbd>J</kbd>)</td><td>Click where a jump takes off, then where it lands. Shift-click a jump to delete it.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="observer" data-title="Observer and recordings">
+  <h2 class="title">Observer and recordings</h2>
+  <p>Open the <strong>Observer</strong> from the launcher and pick a game; a game in progress shows LIVE. Scrub the timeline and click a bot to see what it saw, thought, was told and did.</p>
+  <p>The <strong>You</strong> section puts your numbers beside the bots': how fast you aim at enemies, your fights, speed and strafing, where you spend your time, fight distance and who aims first, and with the Data collector on, your accuracy, damage and guns.</p>
+  <h3>Data collector</h3>
+  <p>Turn on <strong>Data collector</strong> in the BOTS panel to record your shots, guns and equipment too. It reads only what the game itself knows; your keyboard, mouse and controller are never recorded, and everything stays on your PC.</p>
+  <h3>How many games are kept</h3>
+  <p>The Observer keeps your newest 5 games and the last 15 minutes of each. Press <strong>Keep game</strong> to keep one for good; exported games and games with bug reports are always kept. Change both in <strong>Recording settings</strong>.</p>
+</section>
+
+<section id="share" data-title="Share a game">
+  <h2 class="title">Share a game</h2>
+  <p>In the Observer, pick a game and press <strong>Export game</strong>. It saves one zip with everything recorded in that game: every player marked person or bot, everything the bots did and decided, and MCC's post-game report. A copy also goes to <code>logs\exports</code>.</p>
+  <p>Gamertags and clan tags become Player 1, Player 2 and so on, and Xbox ids are always removed. Tick <strong>Keep names</strong> to keep the names. <strong>Import game</strong> opens a zip someone shared with you.</p>
+</section>
+
+<section id="report" data-title="Report a problem">
+  <h2 class="title">Report a problem</h2>
+  <ol class="steps">
+    <li>In a match with bots, press <kbd>F9</kbd> or choose <strong>Report bot bug</strong> in the pause menu at the moment it happens.</li>
+    <li>Type what went wrong. The moment is saved with the recording around it in <code>logs\bug_reports</code>.</li>
+    <li>Attach that folder, zipped, or the Observer's export of the game, to a bug report on GitHub.</li>
+  </ol>
+  <div class="links">
+    <a href="https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml" target="_blank" rel="noopener">Report a bug</a>
+    <a href="https://github.com/AyoItzKye/project-proving-grounds/issues/new/choose" target="_blank" rel="noopener">Suggest an idea</a>
+  </div>
+</section>
+
+<section id="trouble" data-title="Troubleshooting">
+  <h2 class="title">Troubleshooting</h2>
+  <table>
+    <thead><tr><th scope="col">What you see</th><th scope="col">What to do</th></tr></thead>
+    <tbody>
+      <tr><td>No BOTS tile in the lobby</td><td>MCC was started with anti-cheat on: quit it and press Play again, choosing anti-cheat off. Or MCC updated since this version of the mod: check for a newer release.</td></tr>
+      <tr><td>The launcher says Windows Security removed inject.exe</td><td>The Windows Security exclusion is missing. Restore inject.exe from <strong>Windows Security &gt; Protection history</strong>, then run the installer again with the exclusion ticked, or add the install folder's <code>native\bin</code> under <strong>Virus &amp; threat protection &gt; Manage settings &gt; Exclusions</strong>.</td></tr>
+      <tr><td>Bots do not join</td><td>Look in <code>logs\brain.txt</code> (<strong>Open the install folder</strong> in the launcher), and attach it to a bug report.</td></tr>
+      <tr><td>The game stutters with many bots</td><td>Use fewer bots: the bots think on one CPU core. See <a href="#requirements">System requirements</a>.</td></tr>
+      <tr><td>Another mod is installed (ReShade, an ASI loader...)</td><td>The launcher lists files from other mods that can clash and offers to start without them for one session.</td></tr>
+      <tr><td>The game is not found, or the wrong copy of MCC is used</td><td>In the launcher, <strong>Game folder &gt; Choose folder</strong> and pick your MCC folder (the one with MCC, halo1, halo3... in it), or paste its path and press <strong>Use</strong>. Run <strong>Repair</strong> after switching to another copy.</td></tr>
+      <tr><td>A 3D bot, picture or effect is missing or broken</td><td>Press <strong>Repair</strong> in the launcher: it builds every part again. Also after installing more MCC games.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="mcc" data-title="Which copy of MCC is used">
+  <h2 class="title">Which copy of MCC is used</h2>
+  <ol>
+    <li>The <code>HB_MCC</code> environment variable, if it is set.</li>
+    <li>The folder you chose under <strong>Game folder</strong> in the launcher. It is kept through updates and Repair.</li>
+    <li>The copy Steam has installed, in any of your Steam libraries.</li>
+  </ol>
+  <p><strong>Play</strong> starts Steam's own copy through Steam. Any other copy starts directly from its folder with anti-cheat off; Steam must be running and signed in. If a copy is already running, the bots load into that one.</p>
+</section>
+
+<section id="files" data-title="Where things are">
+  <h2 class="title">Where things are</h2>
+  <p>Press <strong>Open the install folder</strong> in the launcher.</p>
+  <table>
+    <thead><tr><th scope="col">Folder</th><th scope="col">Holds</th></tr></thead>
+    <tbody>
+      <tr><td><code>maps\&lt;map&gt;</code></td><td>Each map's knowledge (callouts, positions, objects), its LiDAR scan and what the bots learned there.</td></tr>
+      <tr><td><code>logs</code></td><td>The bots' log, recordings, bug reports and exports.</td></tr>
+      <tr><td><code>native\bin</code></td><td>The mod itself, the BOTS panel's settings and pictures, and the 3D bots.</td></tr>
+      <tr><td><code>user</code></td><td>Your settings, kept through updates and Repair.</td></tr>
+      <tr><td><code>backups</code></td><td>Removed LiDAR scans, ready to copy back.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="requirements" data-title="System requirements">
+  <h2 class="title">System requirements</h2>
+  <table>
+    <thead><tr><th scope="col"></th><th scope="col">Minimum</th><th scope="col">Recommended</th></tr></thead>
+    <tbody>
+      <tr><td>Windows</td><td>10, 64-bit, or Linux / SteamOS with Proton</td><td>11, 64-bit</td></tr>
+      <tr><td>Game</td><td colspan="2">Halo: The Master Chief Collection on Steam, Easy Anti-Cheat off</td></tr>
+      <tr><td>CPU</td><td>4 cores, one as fast as an Intel Core i5-8400 or AMD Ryzen 5 3600</td><td>6+ cores, one as fast as an AMD Ryzen 5 5600X or Intel Core i5-12400</td></tr>
+      <tr><td>Memory</td><td>8 GB</td><td>16 GB</td></tr>
+      <tr><td>Graphics</td><td>MCC's own minimum</td><td>MCC's recommended</td></tr>
+      <tr><td>Storage</td><td>About 2.5 GB beside MCC</td><td>The same on an SSD</td></tr>
+    </tbody>
+  </table>
+  <p>The bots think on one CPU core, so a fast single core matters most; fewer bots need less.</p>
+</section>
+
+<section id="uninstall" data-title="Uninstall">
+  <h2 class="title">Uninstall</h2>
+  <p>Press <strong>Uninstall</strong> at the bottom of the launcher, or use <strong>Windows Settings &gt; Apps &gt; Installed apps &gt; Project Proving Grounds &gt; Uninstall</strong>. It removes the Windows Security exclusion and asks whether to keep your LiDAR scans, learned map data and recorded matches.</p>
+</section>
+
+<section id="linux" data-title="Linux and Steam Deck">
+  <h2 class="title">Linux and Steam Deck</h2>
+  <p>MCC runs on Linux and SteamOS through Proton, and so does the mod. Linux support is new: please <a href="#report">report</a> anything that doesn't work.</p>
+  <ol class="steps">
+    <li>Install MCC through Steam, start it once, then quit it.</li>
+    <li>Download <strong>ProjectProvingGrounds-Linux</strong> from the releases page and unpack it.</li>
+    <li>In a terminal in the unpacked folder, run <code>./install.sh</code>. It finds Steam and MCC, copies the mod and runs the first-time setup.</li>
+    <li>Paste the line it prints into <strong>Halo: The Master Chief Collection &gt; Properties &gt; General &gt; Launch Options</strong> in Steam.</li>
+    <li>Press Play in Steam (Game Mode works) and choose the <strong>anti-cheat off</strong> option.</li>
+  </ol>
+  <div class="links"><a href="https://github.com/AyoItzKye/project-proving-grounds/releases/latest" target="_blank" rel="noopener">Releases page</a></div>
+</section>
+</main>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+// open at the top (the app window brought back the last place it was scrolled to), or at the section asked for
+history.scrollRestoration = "manual";
+addEventListener("load", () => {
+  const s = location.hash && document.querySelector(location.hash);
+  if (s) s.scrollIntoView(); else scrollTo(0, 0);
+  document.querySelector("nav").scrollTop = 0;
+});
+const links = [...document.querySelectorAll("nav li a")];
+const sections = [...document.querySelectorAll("main section")];
+// the section in view is marked in the side list
+const spy = new IntersectionObserver((es) => {
+  for (const e of es) if (e.isIntersecting) links.forEach((a) => a.setAttribute("aria-current", a.hash === "#" + e.target.id));
+}, { rootMargin: "0px 0px -70% 0px" });
+sections.forEach((s) => spy.observe(s));
+// search: sections whose text has every word stay (and their entries in the side list)
+$("q").addEventListener("input", () => {
+  const words = $("q").value.toLowerCase().split(/\s+/).filter(Boolean);
+  let shown = 0;
+  for (const s of sections) {
+    const hit = !words.length || words.every((w) => s.textContent.toLowerCase().includes(w));
+    s.classList.toggle("hidden", !hit);
+    const a = links.find((l) => l.hash === "#" + s.id);
+    if (a) a.parentElement.classList.toggle("hidden", !hit);
+    shown += hit;
+  }
+  $("noresult").classList.toggle("hidden", shown > 0);
+  document.querySelectorAll("nav h2").forEach((h) => {
+    const list = h.nextElementSibling;
+    h.classList.toggle("hidden", ![...list.children].some((li) => !li.classList.contains("hidden")));
+  });
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); }
+  if (e.key === "Escape" && document.activeElement === $("q")) { $("q").value = ""; $("q").dispatchEvent(new Event("input")); }
+});
+// links out of the guide open in the browser (the launcher's /open), not inside the mod's window
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("a[target=_blank]");
+  if (!a) return;
+  e.preventDefault();
+  fetch("/open", { method: "POST", headers: { "X-Launcher": "1", "Content-Type": "application/json" },
+                   body: JSON.stringify({ url: a.href }) }).catch(() => window.open(a.href, "_blank"));
+});
+</script>
+</body>
+</html>

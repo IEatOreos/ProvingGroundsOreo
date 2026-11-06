@@ -7,6 +7,7 @@ as the maps define them (KNOWN, below), and the spots learned where they show:
          second one lands within R of it, or at once if no enemy was alive within ALONE u
   flag the player's bug report naming it ("out of bounds", "oob", "kill zone", "soft kill", "kill barrier"): at once,
          where he stood
+Neither on a Forge layout whose own .mvar was read (its kill zones all known: Oob.learn False).
 
 Kept per map or Forge layout in maps/<map>/oob.json: {"spots": [[x, y, z, source, t, note]], "candidates": [...]}.
 Terrain.set_oob (brain/terrain.py) makes the counted spots a soft wall: a step into a cell within R (and DZ of its
@@ -276,6 +277,22 @@ class Oob:
         s.spots, s.candidates, s.known = d["spots"], d["candidates"], d["known"]   # (known: deaths in known volumes)
         s.volumes = volumes(map_name)          # the map's own kill zones (killzones.json)
         s.hist, s.version = {}, 0              # (id -> [(t, pos, health, shield, riding)] last 2 s); bumped on change
+        # A Forge layout whose own map variant file was read (brain/mvar.write filed its killzones.json): every kill
+        # zone it has is known, its own and its base map's, so a death in none of them was a kill nobody was seen
+        # making (a grenade or a rocket round cover), not out of bounds. Learned there, they walled the ways to the
+        # objectives: Spire 20261105-004256 a spot 5 u from phase 2's territory; S3 / S4 three along the Spartans'
+        # lane to phase 1's territory A (its way 61.7 -> 72.2 u), phase 1 lost both rounds of S5 (045139) after 8 of 8
+        # taken; Boneyard spots on the stairs to phase 1's platform (249.0, 102.5) and the east ramp (262.2, 73.5).
+        # Nor a player's flag: it is filed where he stands, and a report names out of bounds about something else too
+        # (Spire 20261105-201917 at 342.8 s, from the spire's top: "... flies it into the fucking soft kill boundary
+        # it should be fucking detecting ...", the Falcon): a soft wall 4 u round the core's stand. The spots learned
+        # there before, deaths and flags, are dropped.
+        # ponytail: base maps (scenario + BSP kill zones) still learn; drop it there too once one shows the same
+        layout = "/" in map_name.replace("\\", "/")
+        s.learn = not (layout and os.path.exists(os.path.join(ROOT, map_name, "killzones.json")))
+        if not s.learn and (s.spots or s.candidates):
+            s.spots, s.candidates = [], []
+            s.version += 1                     # (saved so, at the brain's next save)
 
     def set_phase(s, T, phase):
         """The Invasion phase now (None: not Invasion): its standing gates' volumes join the known ones, on T too."""
@@ -288,8 +305,9 @@ class Oob:
         s.version += 1
 
     def flag(s, text, pos, t):
-        """the player's bug report: a spot where he stood when it names out of bounds. True if it did."""
-        if not pos or not WORDS.search(text or ""):
+        """the player's bug report: a spot where he stood when it names out of bounds (not on a layout whose kill zones
+        are all known: learn False). True if it did."""
+        if not pos or not s.learn or not WORDS.search(text or ""):
             return False
         s._add(pos[0], pos[1], pos[2], "flag", t, text)
         return True
@@ -326,6 +344,8 @@ class Oob:
                 s.version += 1
                 out.append((pos[0], pos[1], pos[2], True))
                 continue
+            if not s.learn:
+                continue                                     # (every kill zone of this layout known: Oob.learn)
             if max(e[1][2] for e in h) - pos[2] >= FALL:
                 continue                                     # a fall (LiDAR's deadly drops have it)
             foes = [q for tm, q in living if tm != team or tm < 0]

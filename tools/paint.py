@@ -227,7 +227,9 @@ def maps_list():
         if d is None:
             continue
         has_view = os.path.exists(os.path.join(d, "roofless.json"))
-        has_mesh = os.path.exists(os.path.join(d, "source", "bsp.obj")) and os.path.exists(os.path.join(d, "heightmap.npz"))
+        # (a heightmap is enough: tools/roofless.py draws the view from it where the level mesh is not there, as in an
+        # installed copy, which ships no maps/<map>/source)
+        has_mesh = os.path.exists(os.path.join(d, "heightmap.npz"))
         if has_view or has_mesh:
             out.append(dict(name=name, view=has_view, painted=os.path.exists(os.path.join(d, "paint.json"))))
     return out

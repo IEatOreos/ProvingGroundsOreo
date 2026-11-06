@@ -329,11 +329,19 @@ def run_map(name, o, switch, k, n, log, ctl=None):
     bounds = (T.x0, T.y0, T.x0 + T.nw * 0.25, T.y0 + T.nh * 0.25)
     # each spawn on the nearest reachable floor: a spawn whose own cell has no floor gave a NaN height
     # (Halo 3 Sandtrap, Reach Sword Base and Condemned failed the tour)
-    spawns = [T._center(*T._reachable_node(*T._node(p), p.z)) for mode in m["spawns"].values() for team in mode.values() for p in team]
+    # only spawn points inside the map's nav window: a Forge layout without its own .mvar read keeps its base map's
+    # spawns, all over the canvas, and bots started outside the layout (GitHub #10, "Bots spawn outside Forge World
+    # Creations while in LiDAR SIM"); out of the window they were clamped to its edge
+    wx0, wy0, wx1, wy1 = getattr(T, "window", (-1e9, -1e9, 1e9, 1e9))
+    inside = lambda p: wx0 + 1 <= p.x <= wx1 - 1 and wy0 + 1 <= p.y <= wy1 - 1
+    spawns = [T._center(*T._reachable_node(*T._node(p), p.z)) for mode in m["spawns"].values() for team in mode.values()
+              for p in team if inside(p)]
     spawns = [(c.x, c.y, c.z) for c in spawns if not math.isnan(c.z)]
-    if not spawns:                                   # no spawn points: any reachable floor
-        c = T._center(*map(int, np.argwhere(T.lwalk & T.reach)[0]))
-        spawns = [(c.x, c.y, c.z)]
+    if not spawns:                                   # no spawn points in it: reachable floor, the window's middle first
+        cells = np.argwhere(T.lwalk & T.reach)
+        mid = np.array([T.lz.shape[1] / 2, T.lz.shape[2] / 2])
+        picks = cells[np.argsort(np.abs(cells[:, 1:] - mid).sum(axis=1))[:16]]
+        spawns = [(c.x, c.y, c.z) for c in (T._center(*map(int, k)) for k in picks)]
     rng = random.Random(sum(map(ord, name)))
     walkers = [(Roomba(i, rng), Body(spawns[i % len(spawns)])) for i in range(o.walkers)]
     from brain import oob                            # the map's kill zones: bots keep out as in a match, the director
@@ -354,7 +362,10 @@ def run_map(name, o, switch, k, n, log, ctl=None):
     if ctl is not None:
         ctl.started(name, T, getattr(rec, "director", None))
     speed, anchor, ran = None, (0.0, time.time()), 0.0       # pacing from the last speed change; real s run
-    while t < o.minutes * 60 and (ran < o.max_real or (ctl is not None and ctl.speed > 0)):
+    # (--max-real bounds a command-line batch only: in the Simulator window a map at Max speed was cut at 240 real s
+    # before its coverage target, GitHub issue #8 "LiDAR Sim cuts off prematurely"; the window's maps end by coverage
+    # and the quiet rule below, or the player's Stop)
+    while t < o.minutes * 60 and (ran < o.max_real or ctl is not None):
         if ctl is not None:
             if ctl.stop_now:
                 break

@@ -5,123 +5,213 @@
 <title>LiDAR view</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --bg: #0b0f14; --card: rgba(12, 19, 28, 0.86); --line: #24425a; --text: #d3dde8; --dim: #8fa3b6;
+  :root { --bg: #0b0f14; --card: rgba(12, 19, 28, 0.9); --line: #24425a; --text: #d3dde8; --dim: #8fa3b6;
+          --btn: #16263a; --btn-on: #23507a; --primary: #1d5f96; --primary-line: #3d8ad0;
           --gold: #ffc94d; --violet: #b48cff; --orange: #ff9a3d; --magenta: #ff5bd8; --red: #ff4b4b; --green: #5fe08a; --cyan: #4fd8ff; --sky: #8fd3ff; --lime: #a8f05a; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
                font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
   canvas { display: block; width: 100%; height: 100%; cursor: grab; }
   canvas:active { cursor: grabbing; }
-  .card { position: absolute; z-index: 2; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
-  #maps { background: rgba(12, 19, 28, 0.97); z-index: 3; }
-  #hud { top: 12px; left: 12px; min-width: 270px; max-width: 340px; max-height: calc(100% - 90px); overflow-y: auto; }
-  #hud h1 { font-size: 16px; margin: 0 0 2px; font-weight: 600; letter-spacing: 0.5px; }
-  #map { color: var(--dim); margin-bottom: 8px; overflow-wrap: break-word; }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 12px; font-weight: 600; margin-left: 6px; vertical-align: 2px; }
+  body.cover canvas { cursor: crosshair; }
+  [hidden] { display: none !important; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+  h2 { font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--dim); margin: 0 0 8px; }
+  button { background: var(--btn); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px;
+           min-height: 28px; font: inherit; font-size: 13px; cursor: pointer; }
+  button:hover { border-color: #5a93c6; }
+  button[aria-pressed="true"] { background: var(--btn-on); border-color: #3d7ab0; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button:disabled:hover { border-color: var(--line); }
+  button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+  button.primary { background: var(--primary); border-color: var(--primary-line); font-weight: 600; }
+  button.primary:hover { background: #2a77b8; }
+  kbd { display: inline-block; min-width: 1.4em; padding: 1px 4px; border: 1px solid #3a5670; border-radius: 3px; background: #0e1824;
+        color: var(--dim); font: 600 11px/1.3 "Segoe UI", system-ui, sans-serif; text-align: center; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 9px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
+          white-space: nowrap; flex: none; }
   .live { background: #1e5b34; color: #b9f7cf; } .replay { background: #234a74; color: #cfe5ff; }
-  .stored { background: #3d3f4a; color: #e0e2ea; } .waiting { background: #5c4a1c; color: #ffe7a6; }
-  .offline { background: #6b2323; color: #ffd0d0; } .rec { background: #b3261e; color: #fff; }
-  .row { display: flex; justify-content: space-between; gap: 12px; }
-  .row b { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .legend { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
-  .key { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
-  .sw { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+  .stored { background: #3d3f4a; color: #e0e2ea; } .simscan { background: #3f2f6b; color: #e2d6ff; }
+  .waiting { background: #5c4a1c; color: #ffe7a6; } .offline { background: #6b2323; color: #ffd0d0; } .rec { background: #b3261e; color: #fff; }
+
+  /* header bar: where you are, the map picker, the view controls */
+  #bar { position: absolute; z-index: 4; top: 0; left: 0; right: 0; height: 56px; box-sizing: border-box; display: flex; align-items: center;
+         gap: 16px; padding: 0 12px; background: rgba(9, 14, 21, 0.95); border-bottom: 1px solid var(--line); }
+  #app { font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--dim); white-space: nowrap; flex: none; }
+  #where { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  #b-maps { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 46%; padding: 4px 8px 4px 12px; min-height: 36px; }
+  #b-maps[aria-expanded="true"] { background: var(--btn-on); border-color: #3d7ab0; }
+  #mapname { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .caret { width: 0; height: 0; border: 5px solid transparent; border-top-color: currentColor; margin-top: 5px; flex: none; }
+  #b-maps[aria-expanded="true"] .caret { transform: rotate(180deg); margin: 0 0 5px; }
+  #mapsub { color: var(--dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #viewbar { display: flex; align-items: center; gap: 6px; flex: none; }
+  #viewbar .glabel { color: var(--dim); font-size: 12px; margin-right: 2px; }
+  #viewbar button { display: flex; align-items: center; gap: 6px; }
+
+  /* left column: stats, legend */
+  #left { position: absolute; z-index: 2; top: 68px; left: 12px; bottom: 52px; width: 300px; display: flex; flex-direction: column;
+          gap: 8px; pointer-events: none; }
+  #left > * { pointer-events: auto; }
+  #hud { flex: none; padding: 10px 12px; overflow-y: auto; max-height: 100%; box-sizing: border-box; }
+  .grp + .grp { margin-top: 8px; }
+  .grp h3 { margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #7f95aa; }
+  .row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 1.5; }
+  .row > span { color: #c3cfdb; }
+  .row b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #legend { min-height: 0; padding: 0; overflow-y: auto; }
+  #legend summary { position: sticky; top: 0; background: #0c131c; padding: 9px 12px; cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+                    color: var(--dim); list-style-position: inside; }
+  #legend .keys { padding: 0 12px 10px; font-size: 13px; line-height: 1.35; }
+  .key { margin: 4px 0; padding-left: 20px; text-indent: -20px; }
+  .key > span { display: inline-block; vertical-align: -1px; margin-right: 8px; text-indent: 0; }
+  .sw { width: 12px; height: 12px; border-radius: 2px; }
   .dot { border-radius: 50%; border: 2px solid #000; width: 10px; height: 10px; }
   .x { color: var(--red); font-weight: 700; width: 12px; text-align: center; }
-  .arc { width: 14px; height: 7px; border: 2px solid; border-bottom: none; border-radius: 8px 8px 0 0; flex: none; }
-  #ramp { height: 8px; border-radius: 2px; margin: 4px 0 0;
+  .arc { width: 14px; height: 7px; border: 2px solid; border-bottom: none; border-radius: 8px 8px 0 0; }
+  .dia { transform: rotate(45deg) scale(0.8); border: 1px solid #000; }
+  #ramp { height: 8px; border-radius: 2px; margin: 8px 0 0;
           background: linear-gradient(90deg, rgb(41,71,204), rgb(26,158,219) 35%, rgb(56,204,120) 70%, rgb(199,242,140)); }
   #rampv { display: flex; justify-content: space-between; color: var(--dim); font-size: 12px; }
-  #tools { top: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 6px; max-width: 520px; justify-content: flex-end; padding: 8px; }
-  button { background: #16263a; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px;
-           font: inherit; font-size: 13px; cursor: pointer; }
-  button[aria-pressed="true"] { background: #23507a; border-color: #3d7ab0; }
-  button:disabled { opacity: 0.4; cursor: default; }
-  button:disabled:hover { border-color: var(--line); }
-  button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
-  button u { text-decoration-color: var(--dim); }
-  #help { bottom: 12px; left: 12px; color: var(--dim); font-size: 12px; padding: 6px 10px; }
-  #msg { top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 460px; text-align: center; display: none; font-size: 15px; }
+
+  /* right column: layers, simulator */
+  #right { position: absolute; z-index: 2; top: 68px; right: 12px; bottom: 12px; width: 268px; display: flex; flex-direction: column;
+           gap: 8px; overflow-y: auto; pointer-events: none; }
+  #right > * { pointer-events: auto; flex: none; }
+  #layers { padding: 10px 8px 8px; }
+  #layers h2 { padding: 0 4px; }
+  #layers button { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border-color: transparent; padding: 3px 6px;
+                   text-align: left; }
+  #layers button:hover { background: #13243a; border-color: transparent; }
+  #layers button .lname { flex: 1; }
+  .sw-track { width: 26px; height: 14px; border-radius: 7px; background: #2a3a4c; position: relative; flex: none; transition: background .12s; }
+  .sw-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #8fa3b6;
+                     transition: left .12s; }
+  [aria-pressed="true"] > .sw-track { background: #2f80c4; }
+  [aria-pressed="true"] > .sw-track::after { left: 14px; background: #fff; }
+  #layers button[aria-pressed="false"] .lname { color: var(--dim); }
+  @media (prefers-reduced-motion: reduce) { .sw-track, .sw-track::after { transition: none; } }
+
+  #sim p { margin: 6px 0; font-size: 13px; }
+  #sim-state { color: #e8f2ff; font-size: 14px !important; font-weight: 600; margin-top: 0 !important; }
+  #sim .acts { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+  #sim .acts button { flex: 1; }
+  #sim .field { margin-top: 10px; }
+  #sim .flabel { display: block; color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+  #sim-speeds { display: flex; }
+  #sim-speeds button { flex: 1; border-radius: 0; padding: 4px 0; margin-left: -1px; }
+  #sim-speeds button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+  #sim-speeds button:last-child { border-radius: 0 4px 4px 0; }
+  #sim-speeds button[aria-pressed="true"] { position: relative; z-index: 1; }
+  #sim .pair { display: flex; gap: 6px; }
+  #sim-cover { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center; }
+  #sim .dim { color: var(--dim); }
+  #sim .dim:empty { display: none; }
+
+  #help { position: absolute; z-index: 2; bottom: 12px; left: 12px; max-width: calc(100% - 320px); color: var(--dim); font-size: 12px;
+          padding: 6px 10px; }
+  #msg { position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 460px; text-align: center;
+         display: none; font-size: 15px; }
   #msg.on { display: block; }
   .wtag { position: absolute; transform: translate(-50%, -160%); color: var(--orange); font-size: 12px; font-weight: 600;
           text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; white-space: nowrap; }
   .ftag { color: #f2f4f8; font-weight: 500; font-size: 11px; }
-  .dia { transform: rotate(45deg) scale(0.8); border: 1px solid #000; }
   .tag { position: absolute; transform: translate(-50%, -150%); color: var(--gold); font-weight: 600; font-size: 13px;
          text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; white-space: nowrap; }
-  button:hover { border-color: #5a93c6; }
-  #maps { top: 108px; right: 12px; width: min(660px, calc(100% - 48px)); max-height: calc(100% - 140px); display: none;
-          flex-direction: column; padding: 12px 14px; }
+
+  /* the map picker: drops from the map name in the header */
+  #maps { position: absolute; z-index: 5; top: 60px; left: 12px; width: min(760px, calc(100% - 24px)); max-height: calc(100% - 80px);
+          box-sizing: border-box; display: none; flex-direction: column; background: rgba(12, 19, 28, 0.98); padding: 12px 14px;
+          box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55); }
   #maps.on { display: flex; }
-  #maps h2 { font-size: 16px; margin: 0; font-weight: 600; }
   #maps .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  #maps .head h2 { margin: 0; }
   #games { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
-  #games button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 3px 5px; }
-  #games img { height: 34px; max-width: 100%; object-fit: contain; }
+  #games button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px 5px; }
+  #games img { height: 30px; max-width: 100%; object-fit: contain; }
   #games .gname { font-size: 12px; font-weight: 600; line-height: 1.2; text-align: center; }
   #games .gcount { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
   #games button[aria-pressed="true"] .gcount { color: #cfe5ff; }
-  #maps label { color: var(--dim); font-size: 12px; display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; }
-  #maplist { list-style: none; margin: 0; padding: 2px; overflow-y: auto; flex: 1; display: grid; gap: 8px; align-content: start;
-             grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
-  #maplist button { width: 100%; height: 100%; padding: 0; text-align: left; display: flex; flex-direction: column;
-                    overflow: hidden; position: relative; border-radius: 5px; }
-  #maplist img { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; display: block; background: var(--bg); }
-  #maplist button:hover img { filter: brightness(1.15); }
-  #maplist button[aria-current="true"] { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
-  #maplist .mtext { padding: 6px 8px 7px; }
-  #maplist .mname { display: block; font-weight: 600; font-size: 14px; }
-  #maplist .mstat { display: block; color: var(--dim); font-size: 12px; line-height: 1.35; }
-  #maplist .none { color: #6c7f92; }
-  #maplist .pill { position: absolute; top: 6px; left: 6px; margin: 0; box-shadow: 0 0 4px #000; }
-  #maplist li { position: relative; }
-  #maplist .mdel { position: absolute; top: 6px; right: 6px; width: auto; height: auto; display: block; padding: 2px 8px;
-                   border-radius: 4px; font-size: 12px; background: rgba(11, 15, 20, 0.85); }
-  #maplist .mdel:hover, #maplist .mdel:focus-visible { border-color: var(--red); color: #ffd0d0; }
-  #maps-note { margin: 0 0 8px; font-size: 13px; color: var(--sky); }
-  #maps-note:empty { display: none; }
-  #maps .empty { grid-column: 1 / -1; color: var(--dim); font-size: 13px; padding: 8px 2px; }
-  #sim { bottom: 12px; right: 12px; width: min(380px, calc(100% - 48px)); display: none; }
-  #sim.on { display: block; }
-  #sim h2 { font-size: 16px; margin: 0 0 6px; font-weight: 600; }
-  #sim p { margin: 6px 0; font-size: 13px; }
-  #sim-state { color: #e8f2ff; font-size: 14px !important; }
-  #sim .srow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
-  #sim .srow > span { color: var(--dim); font-size: 12px; min-width: 44px; }
-  #sim button.primary { background: #1d5f96; border-color: #3d8ad0; font-weight: 600; }
-  #sim .dim { color: var(--dim); }
-  body.cover canvas { cursor: crosshair; }
-  #maplist .msim { position: absolute; top: 6px; left: 6px; width: auto; height: auto; padding: 4px 10px; font-weight: 600;
-    background: #1d5f96; border-color: #3d8ad0; display: inline-block; }
-  #maplist .msim:hover, #maplist .msim:focus-visible { background: #2a77b8; }
-  #maplist li { position: relative; }
+  #maps label { color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; }
   #maps-pick { margin: 0 0 8px; font-size: 13px; color: #e8f2ff; }
-  #maps-pick:empty { display: none; }
+  #maps-note { margin: 0 0 8px; font-size: 13px; color: var(--sky); }
+  #maps-pick:empty, #maps-note:empty { display: none; }
+  #maplist, .msub { list-style: none; margin: 0; padding: 0; }
+  #maplist { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 2px; }
+  .mrow { display: flex; align-items: center; gap: 8px; background: #101c2b; border: 1px solid #1b3247; border-radius: 6px; padding-right: 8px; }
+  .mrow:hover { border-color: #2f5878; }
+  .mrow.cur { border-color: var(--cyan); }
+  .mopen { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: none; border: none; padding: 6px 8px;
+           text-align: left; border-radius: 6px; }
+  .mopen:hover { border: none; }
+  .mopen img { width: 96px; height: 48px; object-fit: cover; border-radius: 4px; background: var(--bg); flex: none; }
+  .mtext { flex: 1; min-width: 0; }
+  .mname { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mstat { display: block; color: var(--dim); font-size: 12px; line-height: 1.35; }
+  .mstat.none { color: #7d90a3; }
+  .mrow .pill { margin-left: 4px; }
+  .macts { display: flex; gap: 6px; flex: none; }
+  .macts .mdel { background: none; border-color: transparent; color: var(--dim); }
+  .macts .mdel:hover, .macts .mdel:focus-visible { border-color: var(--red); color: #ffd0d0; }
+  .mcount { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; white-space: nowrap; flex: none; }
+  .mopen[aria-expanded="true"] .caret { transform: rotate(180deg); margin: 0 0 5px; }
+  .msub { margin: 4px 0 2px 52px; padding-left: 12px; border-left: 2px solid #23425c; display: flex; flex-direction: column; gap: 4px; }
+  .msub .mopen { padding: 7px 10px; }
+  #maps .empty { color: var(--dim); font-size: 13px; padding: 8px 2px; }
   #backlive { margin-top: 10px; align-self: flex-start; }
+
+  @media (max-width: 1100px) { #viewbar .glabel, #mapsub { display: none; } }
+  @media (max-height: 800px) { #layers button { min-height: 24px; padding: 1px 6px; } #sim .field { margin-top: 6px; } #sim .acts { margin: 6px 0 2px; } }
 </style>
 </head>
 <body>
 <canvas id="c" aria-label="3D view of what the LiDAR bots have mapped"></canvas>
-<div id="hud" class="card" role="region" aria-label="LiDAR status and legend">
-  <h1>LiDAR <span id="pill" class="pill waiting">CONNECTING</span></h1>
-  <div id="map">&nbsp;</div>
-  <div class="row"><span>Bots mapping</span><b id="nbots">0</b></div>
-  <div class="row"><span>People</span><b id="npeople">0</b></div>
-  <div class="row"><span>Aircraft</span><b id="ncraft">0</b></div>
-  <div class="row"><span>Called jumps: landed / missed</span><b id="ncalls">0 / 0</b></div>
-  <div class="row"><span>Air space mapped (cells)</span><b id="nairsp">0</b></div>
-  <div class="row"><span>Floor marked (this run / earlier)</span><b id="ncells">0</b></div>
-  <div class="row" id="covrow" hidden><span>Reachable floor covered (target)</span><b id="ncover">0</b></div>
-  <div class="row"><span>Falls to death</span><b id="nfalls">0</b></div>
-  <div class="row"><span>Upright walls (cover)</span><b id="nwall">0</b></div>
-  <div class="row"><span>Map windows / fences (cells)</span><b id="nkinds">0</b></div>
-  <div class="row"><span>Jumps you landed</span><b id="nlinks">0</b></div>
-  <div class="row"><span>Crouch paths you walked</span><b id="ncrawl">0</b></div>
-  <div class="row"><span>Recorded paths</span><b id="nroute">0</b></div>
-  <div class="row"><span>Jumps and drops bots can do</span><b id="ncan">0</b></div>
-  <div class="row"><span>Weapon spots found</span><b id="nweap">0</b></div>
-  <div class="row"><span>Map: weapons / objectives / usable</span><b id="nfeat">0</b></div>
-  <div class="row"><span>Jumps shown: two-way / one-way</span><b id="nways">0</b></div>
-  <div class="legend">
+<header id="bar">
+  <span id="app">LiDAR Viewer</span>
+  <div id="where">
+    <button id="b-maps" aria-expanded="false" aria-controls="maps" aria-haspopup="dialog" aria-keyshortcuts="L" title="Choose a map (L)">
+      <span id="mapname">Loading map</span><span class="caret" aria-hidden="true"></span><kbd>L</kbd>
+    </button>
+    <span id="pill" class="pill waiting" role="status">CONNECTING</span>
+    <span id="mapsub"></span>
+  </div>
+  <div id="viewbar" role="toolbar" aria-label="View">
+    <span class="glabel" aria-hidden="true">View</span>
+    <button id="b-top" aria-keyshortcuts="T">Top view <kbd>T</kbd></button>
+    <button id="b-reset" aria-keyshortcuts="R" title="Fit the whole map in view">Reset view <kbd>R</kbd></button>
+    <button id="b-follow" aria-pressed="false" aria-keyshortcuts="F" title="Keep the view on you">Follow you <kbd>F</kbd></button>
+  </div>
+</header>
+<div id="left">
+  <section id="hud" class="card" aria-label="Scan stats">
+    <div class="grp"><h3>Now</h3>
+      <div class="row"><span>Bots mapping</span><b id="nbots">0</b></div>
+      <div class="row"><span>People</span><b id="npeople">0</b></div>
+      <div class="row"><span>Aircraft</span><b id="ncraft">0</b></div>
+      <div class="row"><span>Called jumps: landed / missed</span><b id="ncalls">0 / 0</b></div>
+    </div>
+    <div class="grp"><h3>Floor and walls</h3>
+      <div class="row"><span>Floor marked: this run / earlier</span><b id="ncells">0</b></div>
+      <div class="row" id="covrow" hidden><span>Floor covered (target)</span><b id="ncover">0</b></div>
+      <div class="row"><span>Air space mapped (cells)</span><b id="nairsp">0</b></div>
+      <div class="row"><span>Upright walls (cover)</span><b id="nwall">0</b></div>
+      <div class="row"><span>Map windows / fences (cells)</span><b id="nkinds">0</b></div>
+      <div class="row"><span>Falls to death</span><b id="nfalls">0</b></div>
+    </div>
+    <div class="grp"><h3>Jumps and paths</h3>
+      <div class="row"><span>Jumps you landed</span><b id="nlinks">0</b></div>
+      <div class="row"><span>Jumps and drops bots can do</span><b id="ncan">0</b></div>
+      <div class="row"><span>Jumps shown: two-way / one-way</span><b id="nways">0</b></div>
+      <div class="row"><span>Crouch paths you walked</span><b id="ncrawl">0</b></div>
+      <div class="row"><span>Recorded paths</span><b id="nroute">0</b></div>
+    </div>
+    <div class="grp"><h3>Map</h3>
+      <div class="row"><span>Weapons / objectives / usable</span><b id="nfeat">0</b></div>
+      <div class="row"><span>Weapon spots found</span><b id="nweap">0</b></div>
+    </div>
+  </section>
+  <details id="legend" class="card" open>
+    <summary>Legend</summary>
+    <div class="keys">
     <div class="key"><span class="sw" style="background:linear-gradient(90deg,rgb(41,71,204),rgb(199,242,140))"></span>Floor a bot walked (colour = height)</div>
     <div class="key"><span class="sw" style="background:linear-gradient(90deg,rgba(41,71,204,.7),rgba(199,242,140,.7))"></span>Floor painted around a player (stops at edges)</div>
     <div class="key"><span class="sw" style="background:#ff8012"></span>Ramp on a placed piece: a slope you can walk up (orange centre)</div>
@@ -130,66 +220,75 @@
     <div class="key"><span class="sw" style="background:#ffb31f;height:16px"></span>Fence (grate, railing, mesh): a wall bots see and shoot through</div>
     <div class="key"><span class="sw" style="background:var(--gold)"></span>Floor people walked</div>
     <div class="key"><span class="sw" style="background:var(--violet)"></span>Floor walked crouched (every bot crouches here)</div>
-    <div class="key"><span class="sw" style="background:var(--magenta)"></span>Jump or fall that landed (alive 5 s after)</div>
-    <div class="key"><span class="sw" style="background:#fff;opacity:.55"></span>In the air, or landed under 5 s ago (kept if still alive at 5 s)</div>
-    <div class="key"><span class="sw dot" style="background:var(--orange)"></span>Weapon spot from the map (name shown) <span class="sw dia" style="background:#f273ff;margin-left:6px"></span>powerup</div>
-    <div class="key"><span class="sw dia" style="background:#ff4d4d"></span><span class="sw dia" style="background:#598cff;margin-left:4px"></span><span class="sw dia" style="background:#fff;margin-left:4px"></span>Objective point: red / blue / either team (flags, returns, hills, bombs...)</div>
-    <div class="key"><span class="sw dot" style="background:transparent;border:2px solid #4cf2ff"></span>Teleporter (line to its exit) <span class="sw dia" style="background:var(--lime);margin-left:6px"></span>man cannon <span class="sw dot" style="background:transparent;border:2px solid var(--lime);margin-left:6px"></span>lift</div>
-    <div class="key"><span class="sw dia" style="background:#ffeb40"></span>Switch / control <span class="sw dot" style="background:transparent;border:2px solid var(--sky);margin-left:6px"></span>shield <span class="sw dia" style="background:#8cbfff;margin-left:6px"></span>vehicle</div>
-    <div class="key"><span class="sw dia" style="background:#ff8c26"></span>Armor ability / equipment <span class="sw dot" style="background:#99e699;margin-left:6px"></span>spawn point</div>
-    <div class="key"><span class="sw dot" style="background:transparent;border:2px solid #ff5959"></span>Kill / safe / trait zone, out of bounds <span class="sw dia" style="background:#ffd64d;margin-left:6px"></span>your note (bug report)</div>
-    <div class="key"><span class="x">&#x2715;</span>Stepped off here and fell to death (faint line: the fall)</div>
+    <div class="key" data-layer="trail"><span class="sw" style="background:var(--magenta)"></span>Jump or fall that landed (alive 5 s after)</div>
+    <div class="key" data-layer="trail"><span class="sw" style="background:#fff;opacity:.55"></span>In the air, or landed under 5 s ago (kept if still alive at 5 s)</div>
+    <div class="key" data-layer="feat weap"><span class="sw dot" style="background:var(--orange)"></span>Weapon spot (name shown) <span class="sw dia" style="background:#f273ff;margin-left:6px"></span>powerup</div>
+    <div class="key" data-layer="feat"><span class="sw dia" style="background:#ff4d4d"></span><span class="sw dia" style="background:#598cff;margin-left:4px"></span><span class="sw dia" style="background:#fff;margin-left:4px"></span>Objective point: red / blue / either team (flags, returns, hills, bombs...)</div>
+    <div class="key" data-layer="feat"><span class="sw dot" style="background:transparent;border:2px solid #4cf2ff"></span>Teleporter (line to its exit) <span class="sw dia" style="background:var(--lime);margin-left:6px"></span>man cannon <span class="sw dot" style="background:transparent;border:2px solid var(--lime);margin-left:6px"></span>lift</div>
+    <div class="key" data-layer="feat"><span class="sw dia" style="background:#ffeb40"></span>Switch / control <span class="sw dot" style="background:transparent;border:2px solid var(--sky);margin-left:6px"></span>shield <span class="sw dia" style="background:#8cbfff;margin-left:6px"></span>vehicle</div>
+    <div class="key" data-layer="feat"><span class="sw dia" style="background:#ff8c26"></span>Armor ability / equipment <span class="sw dot" style="background:#99e699;margin-left:6px"></span>spawn point</div>
+    <div class="key" data-layer="feat"><span class="sw dot" style="background:transparent;border:2px solid #ff5959"></span>Kill / safe / trait zone, out of bounds <span class="sw dia" style="background:#ffd64d;margin-left:6px"></span>your note (bug report)</div>
+    <div class="key" data-layer="dead"><span class="x">&#x2715;</span>Stepped off here and fell to death (faint line: the fall)</div>
     <div class="key"><span class="sw dot" style="background:#e8f0ff"></span>Bot <span class="sw dot" style="background:var(--cyan);margin-left:6px"></span>bot trying a jump to confirm it</div>
     <div class="key"><span class="sw dot" style="background:transparent;border:2px solid #fff2b8"></span>Where a bot called its jump ("I want to land there"); it counts only if it lands on it</div>
-    <div class="key"><span class="sw dia" style="background:#ffb340"></span>Floor not covered yet <span class="sw dia" style="background:var(--cyan);margin-left:6px"></span>a bot on its way <span class="sw dia" style="background:#a05050;margin-left:6px"></span>no way found</div>
-    <div class="key"><span class="sw dot" style="background:var(--lime)"></span>Aircraft <span class="sw" style="background:rgba(143,211,255,.35);margin-left:6px"></span>air space they flew</div>
+    <div class="key" data-when="cover"><span class="sw dia" style="background:#ffb340"></span>Floor not covered yet <span class="sw dia" style="background:var(--cyan);margin-left:6px"></span>a bot on its way <span class="sw dia" style="background:#a05050;margin-left:6px"></span>no way found</div>
+    <div class="key"><span class="sw dot" style="background:var(--lime)"></span>Aircraft</div>
+    <div class="key" data-layer="airsp"><span class="sw" style="background:rgba(143,211,255,.35)"></span>Air space the aircraft flew</div>
     <div class="key"><span class="sw dot" style="background:var(--gold);width:13px;height:13px"></span>You (and other people)</div>
-    <div class="key"><span class="arc" style="border-color:#fff2b8"></span>A jump you made (dot: where you landed)</div>
-    <div class="key"><span class="sw dot" style="background:#fff2b8"></span><span class="sw dot" style="background:#fff2b8;margin-left:-4px"></span>Dots at both ends: two-way (back and forth); one dot: one-way</div>
-    <div class="key"><span class="sw dot" style="background:var(--violet)"></span>A crouch path you walked (dotted line)</div>
-    <div class="key"><span class="sw dot" style="background:var(--sky)"></span>A recorded path (one way; dot: its end)</div>
+    <div class="key" data-layer="link"><span class="arc" style="border-color:#fff2b8"></span>A jump you made (dot: where you landed)</div>
+    <div class="key" data-layer="link"><span class="sw dot" style="background:#fff2b8"></span><span class="sw dot" style="background:#fff2b8;margin-left:-4px"></span>Dots at both ends: two-way (back and forth); one dot: one-way</div>
+    <div class="key" data-layer="link"><span class="sw dot" style="background:var(--violet)"></span>A crouch path you walked (dotted line)</div>
+    <div class="key" data-layer="link"><span class="sw dot" style="background:var(--sky)"></span>A recorded path (one way; dot: its end)</div>
     <div class="key"><span class="sw dot" style="background:#fff"></span>The path you are recording now</div>
-    <div class="key"><span class="arc" style="border-color:#ccffe6"></span>A jump or drop bots can do (done twice)</div>
-    <div class="key"><span class="arc" style="border-color:var(--red)"></span>Your jump, bots keep failing it</div>
+    <div class="key" data-layer="link"><span class="arc" style="border-color:#ccffe6"></span>A jump or drop bots can do (done twice)</div>
+    <div class="key" data-layer="link"><span class="arc" style="border-color:var(--red)"></span>Your jump, bots keep failing it</div>
     <div id="ramp" aria-hidden="true"></div>
     <div id="rampv"><span id="zlo">low</span><span>height</span><span id="zhi">high</span></div>
-  </div>
+    </div>
+  </details>
 </div>
-<div id="tools" class="card" role="toolbar" aria-label="View options">
-  <button id="b-old" aria-pressed="true" title="E"><u>E</u>arlier runs</button>
-  <button id="b-trail" aria-pressed="true" title="P">Air <u>p</u>aths</button>
-  <button id="b-dead" aria-pressed="true" title="D"><u>D</u>eaths</button>
-  <button id="b-link" aria-pressed="true" title="J"><u>J</u>umps</button>
-  <button id="b-weap" aria-pressed="true" title="W"><u>W</u>eapons</button>
-  <button id="b-airsp" aria-pressed="true" title="A"><u>A</u>ir space</button>
-  <button id="b-feat" aria-pressed="true" title="M"><u>M</u>ap features</button>
-  <button id="b-kinds" aria-pressed="true" title="K">Windows and fences (<u>K</u>)</button>
-  <button id="b-maps" aria-pressed="false" aria-controls="maps" title="L">Maps <u>l</u>ist</button>
-  <button id="b-grid" aria-pressed="true" title="G"><u>G</u>rid</button>
-  <button id="b-follow" aria-pressed="false" title="F"><u>F</u>ollow you</button>
-  <button id="b-top" title="T"><u>T</u>op view</button>
-  <button id="b-reset" title="R"><u>R</u>eset view</button>
+<div id="right">
+  <section id="layers" class="card" aria-labelledby="layers-h">
+    <h2 id="layers-h">Layers</h2>
+    <button id="b-dead" aria-pressed="true" aria-keyshortcuts="D"><span class="sw-track" aria-hidden="true"></span><span class="lname">Deaths</span><kbd>D</kbd></button>
+    <button id="b-link" aria-pressed="true" aria-keyshortcuts="J"><span class="sw-track" aria-hidden="true"></span><span class="lname">Jumps and paths</span><kbd>J</kbd></button>
+    <button id="b-weap" aria-pressed="true" aria-keyshortcuts="W"><span class="sw-track" aria-hidden="true"></span><span class="lname">Weapons found</span><kbd>W</kbd></button>
+    <button id="b-feat" aria-pressed="true" aria-keyshortcuts="M"><span class="sw-track" aria-hidden="true"></span><span class="lname">Map features</span><kbd>M</kbd></button>
+    <button id="b-kinds" aria-pressed="true" aria-keyshortcuts="K"><span class="sw-track" aria-hidden="true"></span><span class="lname">Windows and fences</span><kbd>K</kbd></button>
+    <button id="b-airsp" aria-pressed="true" aria-keyshortcuts="A"><span class="sw-track" aria-hidden="true"></span><span class="lname">Air space</span><kbd>A</kbd></button>
+    <button id="b-trail" aria-pressed="true" aria-keyshortcuts="P"><span class="sw-track" aria-hidden="true"></span><span class="lname">Air paths</span><kbd>P</kbd></button>
+    <button id="b-old" aria-pressed="true" aria-keyshortcuts="E"><span class="sw-track" aria-hidden="true"></span><span class="lname">Earlier runs</span><kbd>E</kbd></button>
+    <button id="b-grid" aria-pressed="true" aria-keyshortcuts="G"><span class="sw-track" aria-hidden="true"></span><span class="lname">Grid</span><kbd>G</kbd></button>
+  </section>
+  <section id="sim" class="card" aria-labelledby="sim-h" hidden>
+    <h2 id="sim-h">Simulator</h2>
+    <p id="sim-state" role="status" aria-live="polite">Pick a map to simulate.</p>
+    <p id="sim-rate" class="dim"></p>
+    <div class="acts">
+      <button id="sim-pick" class="primary" title="Choose a map (or a Forge layout) and watch the bots map it">Pick a map</button>
+      <button id="sim-all" title="Every map in turn">Every map</button>
+    </div>
+    <div class="acts">
+      <button id="sim-pause">Pause</button>
+      <button id="sim-stop" title="Stop and save what was mapped">Stop and save</button>
+    </div>
+    <div class="field">
+      <span class="flabel" id="sim-speed-l">Speed</span>
+      <div id="sim-speeds" role="group" aria-labelledby="sim-speed-l"></div>
+    </div>
+    <div class="field">
+      <span class="flabel">Spots to cover first</span>
+      <div class="pair">
+        <button id="sim-cover" aria-pressed="false" aria-keyshortcuts="C">Click the map <kbd>C</kbd></button>
+        <button id="sim-clear">Clear spots</button>
+      </div>
+    </div>
+    <p id="sim-spots" class="dim"></p>
+    <p id="sim-last" class="dim"></p>
+  </section>
 </div>
-<div id="sim" class="card" role="region" aria-label="Simulator">
-  <h2>Simulator</h2>
-  <p id="sim-state" role="status" aria-live="polite">Pick a map to simulate.</p>
-  <div class="srow">
-    <button id="sim-pick" class="primary" title="Choose a map (or a Forge layout) and watch the bots map it">Pick a map</button>
-    <button id="sim-all" title="Every map in turn">Every map</button>
-    <button id="sim-pause">Pause</button>
-    <button id="sim-stop" title="Stop and save what was mapped">Stop</button>
-  </div>
-  <div class="srow" id="sim-speeds" role="group" aria-label="Speed"><span>Speed</span></div>
-  <p id="sim-rate" class="dim"></p>
-  <div class="srow">
-    <button id="sim-cover" aria-pressed="false" title="C"><u>C</u>lick spots to cover</button>
-    <button id="sim-clear">Clear spots</button>
-  </div>
-  <p id="sim-spots" class="dim"></p>
-  <p id="sim-last" class="dim"></p>
-</div>
-<div id="maps" class="card" role="dialog" aria-label="Maps by game">
-  <div class="head"><h2>Maps</h2><button id="maps-close" title="Esc" aria-label="Close the maps list">Close</button></div>
+<div id="maps" class="card" role="dialog" aria-labelledby="maps-h">
+  <div class="head"><h2 id="maps-h">Maps</h2><button id="maps-close" aria-label="Close the maps list">Close <kbd>Esc</kbd></button></div>
   <div id="games" role="group" aria-label="Game"></div>
   <label><input type="checkbox" id="scanned-only"> Scanned maps only</label>
   <p id="maps-pick"></p>
@@ -197,7 +296,7 @@
   <ul id="maplist" aria-label="Maps"></ul>
   <button id="backlive" hidden>Back to the live scan</button>
 </div>
-<div id="help" class="card">Drag or arrow keys to turn &middot; right-drag or Shift-drag to move &middot; wheel or +/- to zoom &middot; keys shown underlined</div>
+<div id="help" class="card">Drag or arrow keys to turn &middot; right-drag or Shift-drag to move &middot; wheel or +/- to zoom</div>
 <div id="msg" class="card" role="status" aria-live="polite"></div>
 <script>
 "use strict";
@@ -425,7 +524,7 @@ let simState = null, pickMode = false, coverMode = false;
 const spotOpen = new Buf(), spotDone = new Buf(), spotLost = new Buf();
 const patchBufs = [new Buf(), new Buf(), new Buf()];   // the director's patches not covered yet: open, a bot on it, left
 function setCoverage(c) {   // tools/lidar_director.py view(): coverage of the reachable floor and its open patches
-  $("covrow").hidden = !c;
+  if ($("covrow").hidden !== !c) { $("covrow").hidden = !c; legendRows(); }
   for (const b of patchBufs) b.clear();
   if (!c) return;
   const open = c.patches.filter(p => p[4] !== 2).length, left = c.patches.length - open;
@@ -443,11 +542,12 @@ async function simPost(body) {
 function speedName(v) { return v ? v + "x" : "Max"; }
 function renderSim() {
   const s = simState, card = $("sim");
-  card.classList.toggle("on", !!s);
+  card.hidden = !s;
   if (!s) return;
+  $("app").textContent = "LiDAR Simulator";
   const box = $("sim-speeds");
-  if (box.children.length !== s.speeds.length + 1) {
-    while (box.children.length > 1) box.lastChild.remove();
+  if (box.children.length !== s.speeds.length) {
+    box.innerHTML = "";
     for (const v of s.speeds) {
       const b = document.createElement("button");
       b.textContent = speedName(v); b.dataset.speed = v;
@@ -473,7 +573,7 @@ function renderSim() {
     ? "Click the map where the bots should go first (the nearest 3 bots go to each spot)."
     : marked.length ? open.length + " spot" + (open.length === 1 ? "" : "s") + " to cover (" + open.reduce((a, p) => a + p.bots, 0) + " bots on the way), " +
       done.length + " covered" + (lost.length ? ", " + lost.length + " with no way there" : "")
-    : "No spots marked: turn on \"Click spots to cover\", then click the map.");
+    : "No spots marked: press \"Click the map\", then click where the bots should go first.");
   $("sim-clear").disabled = !marked.length;
   $("sim-cover").disabled = !running;
   if (!running && coverMode) setCover(false);
@@ -564,7 +664,15 @@ addEventListener("mousemove", e => {
   }
 });
 canvas.addEventListener("wheel", e => { e.preventDefault(); cam.dist = Math.min(800, Math.max(2, cam.dist * Math.pow(1.0015, e.deltaY))); }, { passive: false });
-function toggle(k) { show[k] = !show[k]; $("b-" + k).setAttribute("aria-pressed", show[k]); }
+function toggle(k) { show[k] = !show[k]; $("b-" + k).setAttribute("aria-pressed", show[k]); legendRows(); }
+function legendRows() {   // the legend lists only what is drawn: rows of layers turned off are left out
+  for (const r of document.querySelectorAll("#legend [data-layer]")) r.hidden = !r.dataset.layer.split(" ").some(k => show[k]);
+  for (const r of document.querySelectorAll("#legend [data-when=cover]")) r.hidden = $("covrow").hidden;
+}
+const legend = $("legend");       // open or closed, kept between visits
+if (localStorage.getItem("lidar.legend") === "closed") legend.open = false;
+legend.addEventListener("toggle", () => localStorage.setItem("lidar.legend", legend.open ? "open" : "closed"));
+legendRows();
 for (const k of ["old", "trail", "dead", "link", "grid", "follow", "weap", "airsp", "feat", "kinds"]) $("b-" + k).onclick = () => toggle(k);
 $("b-top").onclick = () => { cam.pitch = 1.55; };
 $("b-reset").onclick = () => fit();
@@ -585,6 +693,11 @@ addEventListener("keydown", e => {
 
 // --- data
 function setPill(kind, text) { const p = $("pill"); p.className = "pill " + kind; p.textContent = text; }
+let viewSrc = "scan", mapLine = "";   // a stored scan's source (matches or the simulator); the header's game and runs line
+function storedPill() {
+  if (!gotData) setPill("waiting", "NO SCAN");
+  else if (viewSrc === "sim") setPill("simscan", "SIMULATOR SCAN"); else setPill("stored", "MATCH SCAN");
+}
 function counts() {
   const a = now[0].n + now[1].n + now[3].n + now[4].n, b = old[0].n + old[1].n + old[3].n + old[4].n;
   $("nwall").textContent = nwalls.toLocaleString();
@@ -614,20 +727,22 @@ async function loadStored() {
     const url = browseName ? "/map?name=" + encodeURIComponent(browseName) + "&src=" + encodeURIComponent(browseSrc) : "/map";
     const d = await (await fetch(url)).json();
     cell = d.cell; zstep = d.zstep; mode = d.mode; session = d.session; browsing = !!d.browse;
-    document.title = (mode === "sim" ? "LiDAR Simulator · " : mode === "live" ? "LiDAR live · " : "LiDAR · ") + d.title;
-    $("map").textContent = d.title + " (" + gameName(gameOf(d.map)) + ")" + (d.src === "sim" ? " · simulator scan" : "") +
-      (d.runs ? " · " + d.runs + " run" + (d.runs === 1 ? "" : "s") + ", " + d.bot_minutes + " bot-minutes" : " · no scan yet");
+    document.title = (mode === "sim" ? "LiDAR Simulator · " : mode === "live" ? "LiDAR live · " : "LiDAR Viewer · ") + d.title;
+    if (mode === "sim") $("app").textContent = "LiDAR Simulator";
+    $("mapname").textContent = d.title; $("b-maps").title = d.title + ": choose another map (L)";
     for (const w of d.walk) addCell(w, true);
     setFeatures(d.features);
     setWallKinds(d.wall_kinds);
     storedDeaths = d.deaths || [];
     gotData = d.walk.length > 0;
+    viewSrc = d.src === "sim" ? "sim" : "scan";
+    mapLine = gameName(gameOf(d.map)) + (d.runs ? " · " + d.runs + " run" + (d.runs === 1 ? "" : "s") + ", " + d.bot_minutes + " bot-minutes" : "");
+    $("mapsub").textContent = mapLine;
     if (browsing) {             // another map than the one being mapped: its stored scan, no live polling
       setLinks(d.links || []); setWeapons(d.weapons); setDeaths(storedDeaths, falls, otherDeaths);
       $("nfalls").textContent = falls.n.toLocaleString();
-      setPill("stored", d.src === "sim" ? "SIMULATOR SCAN" : "STORED SCAN");
+      storedPill();
       msg(gotData ? "" : "No LiDAR scan of this map yet: showing its map features only.");
-      $("help").textContent = "Stored scan of another map · L: maps list · drag to turn · right-drag to move · wheel to zoom";
     }
   } catch (e) { failed = true; }
   heightRange(); counts(); buildGrid(); if (!fitted) fit();
@@ -635,7 +750,8 @@ async function loadStored() {
   if (!browsing) poll();
 }
 // --- the maps list: maps sorted by game, scan status, open one
-let mapsData = null, mapsGame = null, mapsTimer = null, mapsKey = "";
+let mapsData = null, mapsGame = null, mapsTimer = null, mapsKey = "", expanded = null;
+const baseOf = n => n.split("/")[0];
 const ago = t => { const s = Date.now() / 1000 - t; return s < 3600 ? Math.max(1, Math.round(s / 60)) + " min ago"
   : s < 86400 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " days ago"; };
 async function loadMaps() {
@@ -662,46 +778,95 @@ function renderMaps() {
     b.onclick = () => { mapsGame = k; $("maplist").scrollTop = 0; renderMaps(); };
     tabs.appendChild(b);
   }
-  let list = mapsData.maps.filter(m => m.game === mapsGame);
-  if ($("scanned-only").checked) list = list.filter(m => m.scan || m.sim);
+  // one entry per map; a map with Forge layouts (maps/<map>/variants) opens a list: the base map, then each layout
+  const scannedOnly = $("scanned-only").checked, has = m => !!(m.scan || m.sim);
   const isLive = m => liveMode && m.name === mapsData.live;
   const first = m => isLive(m) * 2 + (m.name === cur);     // the live map, then the open one, then scanned ones
-  list.sort((a, b) => first(b) - first(a) || !!(b.scan || b.sim) - !!(a.scan || a.sim) || a.title.localeCompare(b.title));
+  if (!expanded) expanded = new Set([baseOf(cur)]);        // the open map's layouts start listed
+  const groups = new Map();
+  for (const m of mapsData.maps) if (m.game === mapsGame) {
+    if (!groups.has(baseOf(m.name))) groups.set(baseOf(m.name), []);
+    groups.get(baseOf(m.name)).push(m);
+  }
+  const list = [];
+  for (const [base, all] of groups) {
+    const shown = scannedOnly ? all.filter(has) : all;
+    if (!shown.length) continue;
+    const top = all.find(m => m.name === base) || all[0];
+    list.push({ base, title: top.title, all, shown, rank: Math.max(...shown.map(first)), scanned: shown.some(has) });
+  }
+  list.sort((a, b) => b.rank - a.rank || b.scanned - a.scanned || a.title.localeCompare(b.title));
   if (!list.length) {
     box.innerHTML = '<li class="empty">No scanned ' + gameName(mapsGame) + ' maps yet. Untick "Scanned maps only" to see them all.</li>';
   }
-  for (const m of list) {   // a picture button per map: MCC's thumbnail, its real name, its scan
-    const li = document.createElement("li"), b = document.createElement("button"), s = m.scan || m.sim;
-    const badge = isLive(m) ? '<span class="pill live">LIVE</span>' : m.name === cur ? '<span class="pill stored">OPEN</span>' : "";
-    b.innerHTML = '<img alt="" loading="lazy" src="/art/maps/' + m.name.split("/")[0] + '.jpg">' + badge +   // (a map variant: its map's picture)
-      '<span class="mtext"><span class="mname"></span><span class="mstat"></span></span>';
-    b.querySelector(".mname").textContent = m.title;
-    const st = b.querySelector(".mstat");
-    st.textContent = (s ? (m.scan ? "" : "Simulator: ") + s.runs + " run" + (s.runs === 1 ? "" : "s") + ", " +
-      s.cells.toLocaleString() + " floor cells, " + s.links + " paths · " + ago(s.updated) : "No scan yet (map features only)") +
+  const badge = m => isLive(m) ? '<span class="pill live">LIVE</span>' : m.name === cur ? '<span class="pill stored">OPEN</span>' : "";
+  const status = (m, inGroup) => { const s = m.scan || m.sim;
+    return (s ? (m.scan ? "" : "Simulator: ") + s.runs + " run" + (s.runs === 1 ? "" : "s") + ", " +
+      s.cells.toLocaleString() + " floor cells, " + s.links + " path" + (s.links === 1 ? "" : "s") + " · " + ago(s.updated) : "No scan yet (map features only)") +
       (m.scan && m.sim ? " · simulator scan too" : "") + (m.mcc ? "" : " · editing kit test level, not in MCC") +
-      (m.name.includes("/variants/") ? " · Forge layout from your matches" : "");
-    if (!s) st.classList.add("none");
-    b.title = m.title + " (" + m.name + ")";
+      (!inGroup && m.name.includes("/variants/") ? " · Forge layout from your matches" : ""); };
+  const row = (m, label, inGroup) => {   // a map (or one layout of it): open it, simulate it, remove its scan
+    const li = document.createElement("li"), b = document.createElement("button");
+    li.className = "mrow" + (m.name === cur ? " cur" : "");
+    b.className = "mopen";
+    b.innerHTML = (inGroup ? "" : '<img alt="" loading="lazy" src="/art/maps/' + baseOf(m.name) + '.jpg">') +
+      '<span class="mtext"><span class="mname"></span><span class="mstat"></span></span>' + badge(m);
+    b.querySelector(".mname").textContent = label;
+    const st = b.querySelector(".mstat");
+    st.textContent = status(m, inGroup);
+    if (!has(m)) st.classList.add("none");
+    b.title = m.title;
     b.dataset.key = "m:" + m.name;
     if (m.name === cur) b.setAttribute("aria-current", "true");
     b.onclick = () => pickMode && simState ? simulate(m) : openMap(m, isLive(m));
-    li.appendChild(b); box.appendChild(li);
+    const acts = document.createElement("span");
+    acts.className = "macts";
     if (simState) {               // the simulator serves this view: simulate any map from here
       const go = document.createElement("button");
       go.className = "msim"; go.textContent = "Simulate"; go.dataset.key = "s:" + m.name;
       go.title = "Watch the bots map " + m.title; go.setAttribute("aria-label", go.title);
       go.onclick = () => simulate(m);
-      li.appendChild(go);
+      acts.appendChild(go);
     }
-    if (s && !isLive(m)) {          // the map being scanned now cannot be removed (the run would write it back)
+    if (has(m) && !isLive(m)) {     // the map being scanned now cannot be removed (the run would write it back)
       const del = document.createElement("button");
-      del.className = "mdel"; del.textContent = "Remove"; del.dataset.key = "d:" + m.name;
+      del.className = "mdel"; del.textContent = "Remove scan"; del.dataset.key = "d:" + m.name;
       del.title = "Remove the " + (m.scan ? "" : "simulator ") + "LiDAR scan of " + m.title;
       del.setAttribute("aria-label", del.title);
       del.onclick = () => removeScan(m);
-      li.appendChild(del);
+      acts.appendChild(del);
     }
+    li.append(b, acts);
+    return li;
+  };
+  for (const g of list) {
+    if (g.all.length === 1) { box.appendChild(row(g.shown[0], g.title, false)); continue; }
+    // a map with layouts: its entry drops down to the base map and each layout (named by the layout's own title)
+    const labels = g.shown.map(m => m.name === g.base ? "Base map"
+      : m.title.startsWith(g.title + ": ") ? m.title.slice(g.title.length + 2) : m.title);
+    const ids = g.shown.map(m => m.name.split("/variants/")[1] || "");
+    const label = i => labels.filter(l => l === labels[i]).length > 1 || labels[i] === g.title
+      ? labels[i] + " (layout " + ids[i].slice(1, 5).toUpperCase() + ")" : labels[i];
+    const li = document.createElement("li"), head = document.createElement("div"), b = document.createElement("button");
+    const open = expanded.has(g.base), layouts = g.all.length - 1, inside = g.all.some(m => m.name === cur);
+    const subId = "sub-" + g.base;
+    head.className = "mrow" + (inside && !open ? " cur" : "");
+    b.className = "mopen"; b.dataset.key = "x:" + g.base;
+    b.setAttribute("aria-expanded", open); b.setAttribute("aria-controls", subId);
+    b.innerHTML = '<img alt="" loading="lazy" src="/art/maps/' + g.base + '.jpg"><span class="mtext"><span class="mname"></span>' +
+      '<span class="mstat"></span></span>' + (g.all.some(isLive) ? '<span class="pill live">LIVE</span>' : inside ? '<span class="pill stored">OPEN</span>' : "");
+    b.querySelector(".mname").textContent = g.title;
+    b.querySelector(".mstat").textContent = "Base map and " + layouts + " Forge layout" + (layouts === 1 ? "" : "s") + " · " +
+      g.all.filter(has).length + " of " + g.all.length + " scanned";
+    b.title = (open ? "Hide" : "Show") + " the layouts of " + g.title;
+    b.onclick = () => { if (expanded.has(g.base)) expanded.delete(g.base); else expanded.add(g.base); renderMaps(); };
+    b.insertAdjacentHTML("beforeend", '<span class="mcount">' + g.shown.length + ' versions<span class="caret" aria-hidden="true"></span></span>');
+    head.appendChild(b);
+    const sub = document.createElement("ul");
+    sub.className = "msub"; sub.id = subId; sub.hidden = !open;
+    sub.setAttribute("aria-label", "Versions of " + g.title);
+    if (open) g.shown.forEach((m, i) => sub.appendChild(row(m, label(i), true)));
+    li.append(head, sub); box.appendChild(li);
   }
   box.scrollTop = scroll;
   if (focused) { const f = document.querySelector('[data-key="' + focused + '"]'); if (f) f.focus(); }
@@ -737,8 +902,8 @@ function openMap(m, live) {
 }
 function showMaps(on) {
   if (!on) pickMode = false;
-  $("maps-pick").textContent = on && pickMode ? "Pick a map to simulate: click its picture. Forge layouts the bots played on are listed under their map." : "";
-  $("maps").classList.toggle("on", on); $("b-maps").setAttribute("aria-pressed", on);
+  $("maps-pick").textContent = on && pickMode ? "Pick a map to simulate: click it. A map with Forge layouts lists its base map and each layout." : "";
+  $("maps").classList.toggle("on", on); $("b-maps").setAttribute("aria-expanded", on);
   clearInterval(mapsTimer);
   if (on) { loadMaps(); mapsTimer = setInterval(loadMaps, 5000); $("maps-close").focus(); }
 }
@@ -771,7 +936,7 @@ async function poll() {
     const c = d.calls || { made: 0, missed: 0 };
     $("ncalls").textContent = c.made + " / " + c.missed;
     $("nairsp").textContent = (now[KIND_AIRSPACE].n + old[KIND_AIRSPACE].n).toLocaleString();
-    if (mode === "sim" && d.note) $("map").textContent = d.note;
+    if (mode === "sim" && d.note) $("mapsub").textContent = d.note; else $("mapsub").textContent = mapLine;
     setDeaths(storedDeaths.concat(d.deaths), falls, otherDeaths);
     $("nfalls").textContent = falls.n.toLocaleString();
     setLinks(d.links);
@@ -787,17 +952,17 @@ async function poll() {
   else if (mode === "live" && recording) setPill("rec", recording.state === "rec" ? "RECORDING PATH" : "SAVING PATH");
   else if (mode === "live") setPill(d.players.length ? "live" : "waiting", d.players.length ? "LIVE" : "WAITING");
   else if (mode === "replay") setPill("replay", d.note ? "REPLAY DONE" : "REPLAY");
-  else if (mode === "sim") setPill("replay", "SIMULATION");
-  else setPill("stored", "STORED");
+  else if (mode === "sim") setPill(simState && simState.current ? "live" : "replay", !simState || !simState.current ? "READY" : simState.paused ? "PAUSED" : "SIMULATING");
+  else storedPill();
   if (offline && gotData) msg("");
   else if (offline && simState) msg("The LiDAR Simulator has stopped. Open it again from the launcher.");
   else if (offline) msg("Cannot reach the mapper. It runs during a LiDAR match (BOTS panel &gt; LiDAR mode); after a match, open the <b>LiDAR Viewer</b> from the launcher to see the stored map.");
   else if (!gotData && mode === "stored") msg("No LiDAR data for this map yet.");
-  else if (simState && !simState.current && !simState.last) msg("Pick a map to simulate: <b>Pick a map</b> in the Simulator panel (bottom right).");
+  else if (simState && !simState.current && !simState.last) msg("Pick a map to simulate: <b>Pick a map</b> in the Simulator panel.");
   else if (!gotData) msg("Waiting for the bots. They start mapping a few seconds after the match begins.");
   else msg("");
   $("help").textContent = offline && gotData ? "Mapper stopped (match over?): showing what it recorded. Drag to turn · right-drag to move · wheel to zoom"
-    : "Drag or arrow keys to turn · right-drag or Shift-drag to move · wheel or +/- to zoom · keys shown underlined";
+    : "Drag or arrow keys to turn · right-drag or Shift-drag to move · wheel or +/- to zoom";
   setTimeout(poll, mode === "stored" || offline ? 2000 : 250);
 }
 

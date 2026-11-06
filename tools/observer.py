@@ -48,8 +48,14 @@ def trace_files():
     out = []
     for logs in [LOGS] + recording.other_logs(LOGS):
         own, saved = logs == LOGS, recording.saved(logs)
+        # bug reports belong to their game (the owner, Nov 6: "bug reports should not be in the same list as games"):
+        # each game lists its reports (bugs: [{t, time, text}]); a report's own copy of the recording shows only
+        # when the game's recording is gone (rotated out), as that game
+        reports = {os.path.basename(os.path.dirname(p)): p for p in glob.glob(os.path.join(logs, "bug_reports", "*", "trace.jsonl"))}
+        games = {os.path.basename(p)[len("trace_"):-len(".jsonl")] for p in glob.glob(os.path.join(logs, "trace_*.jsonl"))}
+        copies = [p for stem, p in reports.items() if stem not in games]
         for path in glob.glob(os.path.join(logs, "trace_*.jsonl")) + glob.glob(os.path.join(logs, "evidence", "*.jsonl")) \
-                + glob.glob(os.path.join(logs, "sim_*.jsonl")) + glob.glob(os.path.join(logs, "bug_reports", "*", "trace.jsonl")) \
+                + glob.glob(os.path.join(logs, "sim_*.jsonl")) + copies \
                 + glob.glob(os.path.join(logs, "qc_keep", "*.jsonl")) \
                 + glob.glob(os.path.join(logs, "imported", "*", "trace_*.jsonl")):   # (games imported from a shared zip)
             try:
@@ -57,14 +63,36 @@ def trace_files():
             except OSError:
                 continue                                  # (rotated out this second)
             rel = os.path.relpath(path, logs).replace("\\", "/")
-            label = match_label(path) or bug_label(path) or rel.replace(".jsonl", "")
+            copy_of = os.path.basename(os.path.dirname(path)) if path in copies else None
+            stem = copy_of or (os.path.basename(path)[len("trace_"):-len(".jsonl")] if rel.startswith("trace_") else None)
+            bugs = game_bugs(reports[stem]) if stem in reports else []
+            label = match_label(path) or (match_label(f"trace_{copy_of}.jsonl") if copy_of else None) \
+                or rel.replace(".jsonl", "")
             if rel.startswith("imported/"):
                 label = "Imported: " + label
             stamp = recording.stamp_of(path) if "/" not in rel else None
             out.append(dict(file=rel if own else path.replace("\\", "/"), label=label, map=trace_map(path),
                             bytes=st.st_size, mtime=st.st_mtime, live=time.time() - st.st_mtime < LIVE_S,
-                            kept=(stamp in saved) if stamp else None, copy=None if own else os.path.dirname(logs)))
+                            kept=(stamp in saved) if stamp else None, copy=None if own else os.path.dirname(logs),
+                            bugs=bugs))
     return sorted(out, key=lambda d: -d["mtime"])
+
+
+def game_bugs(report_trace):
+    """A game's bug reports (bug_reports/<game>/reports.json): [{t, time, text}], in match order."""
+    try:
+        rs = json.load(open(os.path.join(os.path.dirname(report_trace), "reports.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    out = []
+    for r in rs if isinstance(rs, list) else []:
+        try:
+            t = float(r.get("t"))
+        except (TypeError, ValueError):
+            continue
+        out.append(dict(t=t, time=time.strftime("%H:%M:%S", time.localtime(r.get("unix", 0))) if r.get("unix") else "",
+                        text=" ".join(str(r.get("description", "")).split())[:400]))
+    return sorted(out, key=lambda b: b["t"])
 
 
 def bug_label(path):

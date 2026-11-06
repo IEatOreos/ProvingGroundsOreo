@@ -458,7 +458,32 @@ static void f_sprint(uint8_t* tls, uint8_t* act, uint8_t* unit, bool want) {
 // player's template slots (his own pickup prompt), so Use on the flag took nothing (Lockdown and Zenith CTF: a runner
 // held Use 474 ticks on it). A bot gets its own: the nearest loose weapon within 1 u while it holds Use on foot with no
 // seat asked. (Calling the host's pickup directly, FUN_18008f6e4, crashed MCC: the equipment path)
-static uint32_t g_offer_at[HB_MAX_PLAYERS * 2];   // H2A: the tick a bot was last offered a pickup (f_interaction)
+static uint32_t g_offer_at[HB_MAX_PLAYERS * 2];   // H2A: the tick a bot took a pickup (the quiet after it, f_update)
+static uint32_t g_hold_obj[HB_MAX_PLAYERS * 2];   // H2A: the object a bot is holding Use on (0: none), and until when
+static uint32_t g_hold_until[HB_MAX_PLAYERS * 2], g_hold_from[HB_MAX_PLAYERS * 2];
+static const uint32_t HOLD_TICKS = 90;            // 3 s: the longest a held pickup is offered (Assault's bomb takes ~1)
+static const uint64_t H2A_USE = 0xC00000ull;      // +0x40 Use, as maps/_inputs/h2a.json decodes the brain's action
+
+static uint8_t* f_entity(uint8_t* tls, uint32_t handle) {   // a weapon object by its handle, nullptr if gone
+    uint8_t* hdr = *(uint8_t**)(tls + 0x18);
+    uint8_t* ents = hdr ? *(uint8_t**)(hdr + 0x50) : nullptr;
+    uint32_t i = handle & 0xFFFF;
+    if (!ents || !handle || (int32_t)i >= *(int32_t*)(hdr + 0x2C)) return nullptr;
+    uint8_t* e = ents + (size_t)i * 0x18;
+    if (*(uint16_t*)e != (uint16_t)(handle >> 16) || e[4] != 2) return nullptr;
+    return *(uint8_t**)(e + 0x10);
+}
+
+// who holds a weapon object: its parent (+0x24) when that is a unit (entry type 0 biped, 1 vehicle), else NONE. A gun on
+// a weapon pad and Assault's bomb on its stand have the pad or the stand as parent (brain/live.py PARENT_AT): counted
+// as held, the bomb was never offered (live Lockdown Multi-Bomb s175: "BOMB AT BASE" for 4 min, bots on it)
+static uint32_t f_holder(uint8_t* tls, uint8_t* o) {
+    uint32_t p = *(uint32_t*)(o + 0x24);
+    uint8_t* hdr = p != 0xFFFFFFFFu ? *(uint8_t**)(tls + 0x18) : nullptr;
+    uint8_t* ents = hdr ? *(uint8_t**)(hdr + 0x50) : nullptr;
+    if (!ents || (int32_t)(p & 0xFFFF) >= *(int32_t*)(hdr + 0x2C)) return p;
+    return ents[(size_t)(p & 0xFFFF) * 0x18 + 4] <= 1 ? p : 0xFFFFFFFFu;
+}
 
 static void f_interaction(uint8_t* tls, uint8_t* act, uint8_t* unit, uint32_t b, int index) {
     static uint32_t next_offer[HB_MAX_PLAYERS * 2];
@@ -466,9 +491,39 @@ static void f_interaction(uint8_t* tls, uint8_t* act, uint8_t* unit, uint32_t b,
         memset(act + 0x64 + 12 * k, 0, 8);
         *(uint32_t*)(act + 0x64 + 12 * k + 8) = 0xFFFFFFFFu;
     }
+    if (index < 0 || index >= HB_MAX_PLAYERS * 2) return;
     int want = (int)((b >> HB_SEAT_SHIFT) & 15) - 1;
+    uint32_t now = g_shm->game_tick;
+    if (g_hold_obj[index]) {
+        // a pickup the game takes only after Use is held a while (GitHub #7, H2A Assault's bomb: "requires a hold press
+        // not a tap"): the same object offered every tick while Use stays down, never another; the quiet (no Use, f_update)
+        // starts once it is in this bot's hands. It used to start at the offer and let go of the hold the next tick
+        // The hold is botcore's own (f_update keeps Use down): the brain pulses its action (live Lockdown Multi-Bomb s173,
+        // trace 040313: a bot stood on its bomb 4 min, Use in some ticks and not the next, and every gap ended the hold)
+        uint8_t* o = f_entity(tls, g_hold_obj[index]);
+        uint32_t holder = o ? f_holder(tls, o) : 0xFFFFFFFFu;
+        uint32_t mine = unit ? *(uint32_t*)(f_player(tls, index) + 0x2C) : 0xFFFFFFFFu;
+        const float* q = o ? (const float*)(o + 0x40) : nullptr;
+        const float* me = unit ? (const float*)(unit + 0x40) : nullptr;
+        bool reach = q && me && (q[0] - me[0]) * (q[0] - me[0]) + (q[1] - me[1]) * (q[1] - me[1]) < 1.44f &&
+                     fabsf(q[2] - me[2]) < 1.5f;                   // (walked off it: let go, Use near a seat boards)
+        if (o && holder == 0xFFFFFFFFu && reach && want < 0 && now < g_hold_until[index]) {
+            *(uint16_t*)(act + 0x64) = 13;
+            *(uint32_t*)(act + 0x6C) = g_hold_obj[index];
+            return;
+        }
+        bool took = o && holder != 0xFFFFFFFFu && holder == mine;
+        if (took) g_offer_at[index] = now - 1;                    // taken: the quiet from now
+        logf("h2a pickup: bot %d %s %08x (tag %08x) after %u ticks%s", index, took ? "took" : "let go of",
+             g_hold_obj[index], o ? *(uint32_t*)(o + 8) : 0u,
+             now - g_hold_from[index], took ? "" : !o ? " (gone)" : holder != 0xFFFFFFFFu ? " (someone else's)" :
+             !reach ? " (walked off)" : want >= 0 ? " (a seat asked)" : " (3 s up)");
+        g_hold_obj[index] = 0;
+        next_offer[index] = now + 45;
+        return;
+    }
     if (!(b & HB_BTN_ACTION) || want >= 0 || !unit || *(uint32_t*)(unit + 0x24) != 0xFFFFFFFFu) return;
-    if (index < 0 || index >= HB_MAX_PLAYERS * 2 || g_shm->game_tick < next_offer[index]) return;
+    if (now < next_offer[index]) return;
     uint8_t* hdr = *(uint8_t**)(tls + 0x18);
     uint8_t* ents = hdr ? *(uint8_t**)(hdr + 0x50) : nullptr;
     if (!ents) return;
@@ -478,16 +533,17 @@ static void f_interaction(uint8_t* tls, uint8_t* act, uint8_t* unit, uint32_t b,
     for (int i = 0, mx = *(int32_t*)(hdr + 0x2C); i < mx; i++) {
         uint8_t* e = ents + (size_t)i * 0x18;
         uint8_t* o = *(uint16_t*)e && e[4] == 2 ? *(uint8_t**)(e + 0x10) : nullptr;   // type 2: a weapon
-        if (!o || *(uint32_t*)(o + 0x24) != 0xFFFFFFFFu) continue;                      // loose: nobody holds it
+        if (!o || f_holder(tls, o) != 0xFFFFFFFFu) continue;                            // loose: no unit holds it
         const float* q = (const float*)(o + 0x40);
         float d = (q[0] - me[0]) * (q[0] - me[0]) + (q[1] - me[1]) * (q[1] - me[1]);
         if (d < best && fabsf(q[2] - me[2]) < 1.5f) { best = d; pick = ((uint32_t)*(uint16_t*)e << 16) | (uint32_t)i; }
     }
     if (pick == 0xFFFFFFFFu) return;
-    // one offer a 1.5 s: the held Use took the next loose gun the tick after a flag pickup (its own, dropped by the swap;
-    // the brain hears of the carry a few ticks late), so the flag fell again after 0.2 s (Zenith CTF s126, 4 of 5 carries)
-    next_offer[index] = g_shm->game_tick + 45;
-    g_offer_at[index] = g_shm->game_tick;
+    // only this object while the hold lasts, and 1.5 s before the next offer: the held Use took the next loose gun the
+    // tick after a flag pickup (its own, dropped by the swap; the brain hears of the carry a few ticks late), so the flag
+    // fell again after 0.2 s (Zenith CTF s126, 4 of 5 carries)
+    g_hold_obj[index] = pick;                          // (offered on until taken: above)
+    g_hold_until[index] = now + HOLD_TICKS; g_hold_from[index] = now;
     *(uint16_t*)(act + 0x64) = 13;   // (one of the three accepted; 5 worked too, the 0.2 s drops were the weapon request's)
     *(uint32_t*)(act + 0x6C) = pick;
 }
@@ -625,6 +681,8 @@ static void f_update(h4f_game& G, uint8_t* actions) {
             if (mask & 1) memcpy(act, actions + 0x10, F_ACTION);    // the player's as the template
             f_fill(G, tls, act, index, a);
             hb_apply_buttons(g_shm, (uint32_t)G.id, act, F_ACTION, a.buttons, G.map_prev[i]);   // v8 (shared.h)
+            if (G.id == 6 && index < HB_MAX_PLAYERS * 2 && g_hold_obj[index])
+                *(uint64_t*)(act + 0x40) |= H2A_USE;      // a held pickup (f_interaction): Use stays down till it is in hand
             if (G.id == 6 && index < HB_MAX_PLAYERS * 2 && g_offer_at[index] &&
                 g_shm->game_tick > g_offer_at[index] && g_shm->game_tick < g_offer_at[index] + 45) {
                 // a pickup just offered: no Use and no weapon switch while it happens. The flag is in no weapon slot, so

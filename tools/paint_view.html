@@ -89,8 +89,8 @@ const LAYERS = [
   ["drive_s", "Drive small", "#ffd23f", "Mongoose, Ghost"],
   ["drive_m", "Drive medium", "#ff9f1c", "Warthog"],
   ["drive_l", "Drive large", "#c27a3a", "Scorpion, Wraith"],
-  ["fly_low", "Fly low", "#3fd8ff", "Take-off and attack runs"],
-  ["fly_high", "Fly high", "#7a86ff", "Travel"],
+  ["fly_low", "Fly low", "#3fd8ff", "Optional: an area pilots keep their attack runs in. Flying heights are set from the ground automatically."],
+  ["fly_high", "Fly high", "#7a86ff", "Optional: an area pilots keep to when they travel. Flying heights are set from the ground automatically."],
   ["erase", "Eraser", "#6b7280", "Every layer at this height"],
 ];
 const CELL = 0.5, CUT_HEAD = 1.6;
@@ -154,14 +154,23 @@ async function openMap(name) {
   for (const [layer, cells] of Object.entries(d.paint || {}))
     if (paint[layer]) for (const [x, y, z] of cells) { const c = {x, y, z}; paint[layer].set(keyOf(x, y, c), c); }
   $("empty").hidden = !!view;
-  if (!view) { $("emptytext").textContent = "This map has no roofless view yet."; img = null; draw(); markDirty(false); setStatus(""); return; }
+  if (!view) {
+    // made on its own the first time a map is opened (the owner, Nov 6: no button to press first); the button stays only
+    // to try again if it failed
+    $("emptytext").textContent = "Making this map's top-down view… (a few seconds, once per map)";
+    $("build").hidden = true; img = null; draw(); markDirty(false);
+    if (!(await makeView(name))) { $("emptytext").textContent = "Could not make this map's top-down view."; $("build").hidden = false; }
+    return;
+  }
+  $("build").hidden = true;
   $("cut").max = view.levels.length - 1;
   level = view.levels.length - 1;
   const wantH = parseFloat(new URLSearchParams(location.search).get("h"));   // ?h=-24: open at the floor nearest that height
   if (!isNaN(wantH)) view.levels.forEach((l, k) => { if (l.cut !== null && Math.abs(l.z - wantH) < Math.abs(view.levels[level].z - wantH) + (view.levels[level].cut === null ? 1e9 : 0)) level = k; });
   $("cut").value = level;
+  resize(); fit();                       // (fit to this map first: its picture drew at the last map's place, or none)
   await loadLevel();
-  fit(); markDirty(false); setStatus(""); counts();
+  draw(); markDirty(false); setStatus(""); counts();
 }
 function loadLevel() {
   return new Promise(res => {
@@ -353,12 +362,18 @@ $("size").oninput = e => { $("sizelabel").textContent = e.target.value + " u"; d
 $("allh").onchange = draw; $("hidepaint").onchange = draw;
 $("showlinks").onchange = draw; $("showmarks").onchange = draw; $("jumptool").onclick = () => pickTool("jump");
 $("undo").onclick = doUndo; $("redo").onclick = doRedo; $("save").onclick = save;
-$("build").onclick = async () => {
-  setStatus("Making the roofless view… (a few seconds)");
-  const r = await fetch("/api/build?name=" + encodeURIComponent(mapName), {method: "POST"});
-  if (!r.ok) { setStatus("Could not make the view: " + ((await r.json()).error || r.status), "err"); return; }
-  dirty = false; await openMap(mapName);
-};
+async function makeView(name) {
+  setStatus("Making the top-down view… (a few seconds)");
+  let r;
+  try { r = await fetch("/api/build?name=" + encodeURIComponent(name), {method: "POST"}); }
+  catch (e) { setStatus("Could not make the view: the painter stopped", "err"); return false; }
+  if (!r.ok) { setStatus("Could not make the view: " + ((await r.json().catch(() => ({}))).error || r.status), "err"); return false; }
+  if (name !== mapName) return true;           // (another map was picked meanwhile)
+  dirty = false; await openMap(name);
+  return true;
+}
+$("build").textContent = "Try again";
+$("build").onclick = () => { $("build").hidden = true; makeView(mapName); };
 window.addEventListener("resize", resize);
 buildTools(); $("sizelabel").textContent = $("size").value + " u"; resize(); loadMaps();
 </script>

@@ -32,7 +32,10 @@ def load_obj(path):
 
 FLOOR_NZ = 0.7   # walkable: slopes up to about 45 degrees (the base ramps are 32)
 LAYER_GAP = 1.0  # a walkable surface this far above another is a separate floor level
-MAX_FLOORS = 4   # floor levels kept per cell (Prisoner and Derelict stack three)
+MAX_FLOORS = 8   # floor levels kept per cell, lowest first (Prisoner and Derelict stack three). 4 dropped the upper
+# treads of stairs over a pit and a walkway (Boneyard's stairs at (257.5, 106.3): -10.5, -9.5, -7.7, -6.2 kept, the -5.0
+# tread people walk lost; live bots stuck 10-60 s there, issue #4), and walk cells people stood on with no floor in a
+# full cell: 855 on Boneyard, 6,003 on Warhouse, 4,590 on Construct (22 of 59 maps over 50)
 WALL_BIN = 0.25  # wall bitmask height bins from wall_z0
 WALL_WORDS = 4   # 4 x 64 bins = 64 units of height
 MARGIN = 40.0    # the grid covers the play area (spawns, flags, items, vehicles) plus this
@@ -118,7 +121,7 @@ def rasterize(v, f, cell, bounds=None, floor_min=-np.inf):
 def stack_floors(cells, zs, h, w):
     """Walkable floor levels per cell, lowest first: a surface starts a new level when it is at
     least LAYER_GAP above the previous level's top (a doorway, the roof over it, a catwalk above
-    that). Returns (MAX_FLOORS, h, w), NaN where a cell has fewer levels."""
+    that). Returns (levels, h, w), levels up to MAX_FLOORS (as many as a cell has), NaN where a cell has fewer."""
     out = np.full((MAX_FLOORS, h * w), np.nan)
     order = np.lexsort((zs, cells))
     cells, zs = cells[order], zs[order]
@@ -134,7 +137,9 @@ def stack_floors(cells, zs, h, w):
     idx = level[keep] * (h * w) + cells[keep]
     flat = out.reshape(-1)
     np.fmax.at(flat, idx, zs[keep])
-    return out.reshape(MAX_FLOORS, h, w)
+    out = out.reshape(MAX_FLOORS, h, w)
+    used = int(np.isfinite(out).any(axis=(1, 2)).sum())     # (only the levels some cell has: no empty layers to carry)
+    return out[:max(used, 1)]
 
 
 def render(top, x0, y0, cell, objs, zones, out_png, scale=2):

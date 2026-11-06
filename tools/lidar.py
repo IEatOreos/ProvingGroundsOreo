@@ -811,8 +811,11 @@ def map_list():
                                                  human_links=sum(1 for l in data.get("links", []) if l.get("human")),
                                                  cells=sum(1 for w in walk if len(w) == 5 and w[3] not in (KIND_AIR, KIND_AIRSPACE)),
                                                  updated=round(stamp)))
-                if _SCAN_INFO[p][1]["cells"] or _SCAN_INFO[p][1]["links"]:
-                    item[key] = _SCAN_INFO[p][1]
+                info = _SCAN_INFO[p][1]
+                # (the simulator also writes its jumps into lidar.json: a lidar.json with no floor and only bots'
+                # links is the simulator's, not a scan from matches; the view opens the simulator's scan for it)
+                if info["cells"] or (info["human_links"] if key == "scan" else info["links"]):
+                    item[key] = info
         out.append(item)
     return out
 
@@ -2519,9 +2522,16 @@ def serve(hub, port=PORT):
                 s.send(json.dumps(dict(maps=map_list(), live=h.rec.map, mode=h.mode)).encode(), "application/json")
             elif u.path == "/map":
                 name, src = (q.get("name") or [""])[0], (q.get("src") or ["scan"])[0]
-                if not name or (name == h.rec.map and src == ("sim" if h.mode == "sim" else "scan")):
-                    s.send(json.dumps(h.stored_view()).encode(), "application/json")
+                if not name or (name == h.rec.map and src == ("sim" if h.mode == "sim" else getattr(h, "view_src", "scan"))):
+                    view = h.stored_view()
+                    if getattr(h, "view_src", "scan") == "sim":
+                        view.update(src="sim")
+                    s.send(json.dumps(view).encode(), "application/json")
                 elif map_ok(name):
+                    if src == "scan":                # no scan from matches, a simulator one: show that
+                        it = next((m for m in map_list() if m["name"] == name), {})
+                        if "scan" not in it and "sim" in it:
+                            src = "sim"
                     path = os.path.join(ROOT, "maps", name, "lidar_sim.json" if src == "sim" else "lidar.json")
                     view = Hub(Recorder(name, count_run=False, path=path), "stored").stored_view()
                     view.update(browse=True, src=src)  # another map than the one being mapped: stored data only
@@ -3039,17 +3049,23 @@ def view(o):
     """The stored data of a map in the 3D view (no game needed); the newest map by default. If
     the live view already runs (a LiDAR match), just open it."""
     import appwindow
-    name = o.map
+    name, src = o.map, "scan"
     if not name:
-        found = sorted((os.path.getmtime(p), os.path.basename(os.path.dirname(p)))
-                       for p in __import__("glob").glob(os.path.join(ROOT, "maps", "*", "lidar.json")))
-        found += sorted((os.path.getmtime(p), os.path.relpath(os.path.dirname(p), os.path.join(ROOT, "maps")).replace("\\", "/"))
-                        for p in __import__("glob").glob(os.path.join(ROOT, "maps", "*", "variants", "*", "lidar.json")))
-        found.sort()
+        # the newest scan with floor in it, from matches or from the simulator (a simmed map has a lidar.json with
+        # only the simulator's jumps: map_list leaves that out)
+        found = []
+        for m in map_list():
+            for key in ("scan", "sim"):
+                if key in m:
+                    found.append((m[key]["updated"], m["name"], key))
         if not found:
-            sys.exit("no LiDAR data yet: run a LiDAR match first (BOTS panel > LiDAR mode)")
-        name = found[-1][1]
-    hub = Hub(Recorder(name, count_run=False), "stored")
+            sys.exit("no LiDAR data yet: run a LiDAR match or the LiDAR Simulator first")
+        _, name, src = max(found)
+    elif "sim" in (it := next((m for m in map_list() if m["name"] == name), {})) and "scan" not in it:
+        src = "sim"                                  # a map named with only a simulator scan: show that one
+    path = os.path.join(ROOT, "maps", name, "lidar_sim.json") if src == "sim" else None
+    hub = Hub(Recorder(name, count_run=False, path=path), "stored")
+    hub.view_src = src                               # (the page's label: SIMULATOR SCAN; the window reopened shows it too)
     srv = serve(hub, getattr(o, "port", PORT))       # (--port: a second view beside a running one)
     url = f"http://127.0.0.1:{getattr(o, 'port', PORT)}/"
     if o.open:

@@ -76,7 +76,14 @@
   #help kbd { background: #1d2a38; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; font-size: var(--f-s); }
   .empty { color: var(--dim); }
   #nogames { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: var(--s4); }
-  #nogames[hidden] { display: none; }
+  #nogames[hidden], #mappair[hidden], #bugsec[hidden] { display: none; }
+  #bugs { list-style: none; margin: 0; padding: 0; }
+  #bugs button { display: block; width: 100%; text-align: left; margin: 0 0 var(--s1); padding: 6px 8px; border-radius: 4px;
+                 border: 1px solid #5a4a22; background: #2a2413; color: inherit; font: inherit; cursor: pointer; }
+  #bugs button:hover { border-color: var(--gold); }
+  #bugs .bt { color: var(--gold); font-weight: 600; margin-right: 6px; }
+  #bugs .bw { opacity: .75; font-size: 12px; }
+  #bugs .bx { display: block; margin-top: 2px; white-space: normal; }
   #nogames .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: var(--s4);
     max-width: 560px; }
   #nogames h2 { margin: 0 0 var(--s2); font-size: var(--f-l); }
@@ -106,7 +113,7 @@
     <button id="recbtn" title="How many games are kept and how long each recording can be">Recording settings</button>
     <span class="pair"><button id="importbtn" title="Open a game someone exported (a .zip from Export game): it is added to the game list as Imported">Import game</button>
     <input type="file" id="importfile" accept=".zip,application/zip" hidden></span>
-    <span class="pair"><label for="mappick" class="sub">Map</label>
+    <span class="pair" id="mappair" hidden><label for="mappick" class="sub">Map</label>
     <select id="mappick" aria-label="Map to draw under this game"></select></span>
     <span id="livebadge" class="badge live" hidden>LIVE</span>
     <span id="status" role="status" aria-live="polite">Loading the list of games…</span>
@@ -120,6 +127,7 @@
       <div id="nogames" role="status" hidden></div>
     </div>
     <aside>
+      <section id="bugsec" hidden><h2>Bug reports in this game</h2><ol id="bugs"></ol></section>
       <section><h2>You</h2><div id="you" class="empty">No game loaded.</div></section>
       <section><h2>Players</h2><div id="botlist" class="empty">No game loaded.</div></section>
       <section><h2 id="insp-title">Selected bot</h2><div id="inspector" class="empty">Click a bot on the map or in the list.</div></section>
@@ -279,7 +287,8 @@ async function loadList(keep) {
     for (const d of groups.get(k)) {
       const o = document.createElement("option");
       o.value = d.file; o.dataset.info = JSON.stringify(d);
-      o.textContent = `${d.live ? "● LIVE  " : ""}${d.label}  (${d.map || "map?"}, ${(d.bytes / 1e6).toFixed(1)} MB${d.kept ? ", kept" : ""})`;
+      const nb = (d.bugs || []).length;
+      o.textContent = `${d.live ? "● LIVE  " : ""}${nb ? "⚑ " : ""}${d.label}  (${d.map || "map?"}, ${(d.bytes / 1e6).toFixed(1)} MB${d.kept ? ", kept" : ""}${nb ? `, ${nb} bug report${nb > 1 ? "s" : ""}` : ""})`;
       into.appendChild(o);
     }
   }
@@ -291,6 +300,20 @@ async function loadList(keep) {
   }
 }
 const URLP = new URLSearchParams(location.search);
+// this game's bug reports (F9 / the pause menu's Report bot bug): when, what was written; a click goes to that moment
+function showBugs(bugs) {
+  const ol = $("bugs"); ol.innerHTML = "";
+  $("bugsec").hidden = !bugs.length;
+  for (const b of bugs) {
+    const li = document.createElement("li"), btn = document.createElement("button");
+    const m = Math.floor(b.t / 60), sec = Math.floor(b.t % 60).toString().padStart(2, "0");
+    btn.innerHTML = `<span class="bt">${m}:${sec}</span><span class="bw">${esc(b.time || "")}</span>` +
+                    `<span class="bx">${esc(b.text || "(no note)")}</span>`;
+    btn.title = "Go to this moment in the recording";
+    btn.onclick = () => { if (playing) setPlaying(false); seek(b.t - 3); };   // (3 s before: what led up to it)
+    li.appendChild(btn); ol.appendChild(li);
+  }
+}
 // the empty list says why and how to record a game, and where it looked (/settings: logs, on, copies)
 async function showNoGames() {
   $("status").textContent = "No recorded games yet.";
@@ -314,11 +337,14 @@ async function loadTrace(file) {
   $("banner").style.display = "none";
   $("livebadge").hidden = !info.live;
   showKeep(info);
+  showBugs(info.bugs || []);
   follow = info.live; $("follow").setAttribute("aria-pressed", follow);
   $("status").textContent = "Loading…";
   await pull(true);
   S.mapName = S.mapName || info.map;
-  await fillMaps(S.mapName);
+  // The map comes from the game itself; the picker is only for old games that did not record it (before Oct 23).
+  $("mappair").hidden = !!S.mapName;
+  if (!S.mapName) await fillMaps(S.mapName);
   await loadBase(S.mapName);
   if (!S.hasThink) banner("This game was recorded before the observer lines (Oct 23): positions, goals and facing only, no decisions, beliefs or callouts.");
   now = follow ? S.tEnd : S.tStart;

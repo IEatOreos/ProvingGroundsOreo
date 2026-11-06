@@ -5,6 +5,103 @@ What changed in each version. Download the newest one from the [Releases page](h
 Click a version to see what changed since the one before it.
 
 <details open>
+<summary><b>0.2.2 s181</b> (November 6, 2026): Firefight on DLC maps, one brain per match</summary>
+
+### Fixed
+- **Firefight** ([#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12)): after a match on Unearthed or Installation 04, the bots' brain for that match kept running into the next one and gave your bots a second set of orders. It now stops when its match ends.
+
+</details>
+
+<details>
+<summary><b>0.2.2 s180</b> (November 6, 2026): Firefight bots respawn, Installation 04</summary>
+
+### Fixed
+- **Firefight** ([#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12)):
+  - Bots now respawn when they die, the same way you do: after the same wait, at the same spawn point, and each respawn uses one of your team's shared lives. When the team runs out of lives, they stay down, just like you.
+  - Bots now join on Installation 04 too.
+  - The BOTS tile no longer covers the last stat on the Firefight post-game screen.
+
+</details>
+
+<details>
+<summary><b>0.2.2 s179</b> (November 6, 2026): Halo 3 trip mines, Firefight teammates that fight like teammates</summary>
+
+### Fixed
+- **Halo 3**: bots now see thrown equipment (trip mines, bubble shields, regenerators and the rest) and route around an enemy trip mine instead of walking into it ([#9](https://github.com/AyoItzKye/project-proving-grounds/issues/9)).
+- **Firefight** ([#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12)):
+  - Bots now join on Reach's DLC Firefight maps (tested on Unearthed).
+  - A bot that runs out of ammo now goes for a dropped gun, a Covenant one included. Reach bots also read how many rounds they have left.
+  - Bots only melee when an enemy is right in front of them. They used to swing at the air and hit teammates after a fight.
+  - Your teammates stay on foot with you instead of taking vehicles across the map, where they drove into walls.
+  - On the Elite side (Versus' Elite rounds), bots now fight beside the Covenant instead of shooting them.
+
+</details>
+
+<details>
+<summary><b>0.2.2 s178</b> (November 6, 2026): weapon pickups on Forge creations</summary>
+
+### Fixed
+- **Halo: Reach Forge creations**: bots now see and pick up the weapons placed on a creation ([#11](https://github.com/AyoItzKye/project-proving-grounds/issues/11)). They used to ignore all of them.
+- **Halo: Reach**: a dropped gun that isn't on one of the map's weapon spots is now recognised too, so bots can pick it up when their own guns run dry.
+
+</details>
+
+<details>
+<summary><b>0.2.2 s177</b> (November 6, 2026): Firefight bots that actually follow you, Halo 2 Anniversary bomb and flag pickups</summary>
+
+### Fixed
+- **Firefight** (s165 said these worked; in a real match they did not):
+  - The BOTS tile now shows in the Reach and ODST Firefight lobbies, next to START.
+  - Firefight has its own list of up to 3 bots, all on your team. Your 16-player list is kept as it is.
+  - The bots on that list are the ones who join (s165 added 3 random teammates instead).
+  - Teammates stay a few steps behind you and fight what comes, instead of wandering off or driving away.
+- **Halo 2 Anniversary**:
+  - Bots pick up the Assault bomb, which needs Use held ([#7](https://github.com/AyoItzKye/project-proving-grounds/issues/7)).
+  - Bots pick up the enemy flag in CTF again.
+- **The BOTS panel**:
+  - Closing it with Esc no longer backs you out of the lobby.
+  - The BOTS tile no longer shows on top of the post-game scoreboard.
+
+</details>
+
+<details>
+<summary><b>0.2.2 s165</b> (November 6, 2026): Invasion rework, vehicles fixed, Firefight bots panel, launcher updates</summary>
+
+### New
+- **Update check in the launcher**: it checks GitHub for a new version (at most every 6 hours, or with **Check**), shows when it last checked, and tells you when one is out. **Auto-update** is off unless you turn it on; nothing is ever installed without it or the **Update** button.
+- **Firefight**: the BOTS tile and panel now show in the Reach and ODST Firefight lobbies, with up to 3 bots (Firefight holds 4 players). Teammates follow you, and while you're down they hold a safe spot nearby instead of running into the open.
+- **Observer**: the game list shows games only. A game with bug reports has a flag, and a **Bug reports** section lists each report with its time; click one to jump to that moment.
+- **A real player's guide**: **Read the guide** in the launcher opens a searchable guide in the mod's own window.
+- **The launcher** in the Proving Grounds art's colours, with the sign as the app icon.
+- **Flight heights from the map**: aircraft pick their attack and travel heights from the ground under them; painting airspace is optional.
+
+### Fixed
+- **Invasion**:
+  - Attackers take and hold the territories from inside them, and shoot on the way in instead of stopping to fight far from the objective.
+  - The core carrier no longer drops the core by meleeing, and a dropped core is picked up again at once.
+  - Attackers climb the Spire to the core.
+  - Bots no longer get stuck on Boneyard's stairs, plank and walkway ([#4](https://github.com/AyoItzKye/project-proving-grounds/issues/4)) or in the rock on the way to Spire's B.
+  - Both teams play with the same brain (team 2 was always thinking last).
+- **Vehicles**:
+  - Bots take empty Banshees.
+  - A bot mans your Warthog's gun when you drive.
+  - Falcon pilots fetch gunners and stay under the map's kill ceiling.
+  - Aircraft climb over the Spire instead of flying into its side.
+- **Halo 4 Flood**: survivors shoot the Flood instead of hiding behind the hardlight shield. The shield comes out only as a short block when reloading (then a melee), when swarmed, or when cornered.
+- **Jetpacks**: bots let them refill before flying again.
+- **Paint the nav**: works in an installed copy, and opens a map straight away.
+- **LiDAR Viewer**: shows maps you mapped in the Simulator. Its controls are grouped, and a map's Forge layouts are in one drop-down.
+- **LiDAR Simulator**: maps are no longer cut short at Max speed ([#8](https://github.com/AyoItzKye/project-proving-grounds/issues/8)), and bots start inside Forge creations ([#10](https://github.com/AyoItzKye/project-proving-grounds/issues/10)).
+- **Windows**: windows the launcher opens now come to the front instead of opening behind it.
+- **In-game UI**: the BOTS tile and the **Report bot bug** button are placed correctly at every resolution, not just ultrawide.
+
+### Known problems in this version
+- **Invasion** is still not fully right: on Boneyard the first attack loses most rounds, and custom Forge Invasion maps aren't played ([#2](https://github.com/AyoItzKye/project-proving-grounds/issues/2)).
+- The [Known bugs](KNOWN_BUGS.md) page lists every open report from GitHub with its status.
+
+</details>
+
+<details>
 <summary><b>0.2.1</b> (November 2026): melee weapons, Infection and Flood, wrecks, LiDAR, Theater, a new launcher</summary>
 
 ### New

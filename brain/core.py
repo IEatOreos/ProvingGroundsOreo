@@ -76,7 +76,6 @@ class PlayerState:
     ability_on: bool = False   # that ability is running (armor lock held, jetpack on, camo on ...)
     decoy: bool = False        # a hologram (the game's truth: bots tell it only from what it does)
     tracker: bool = True       # enemies show on this player's motion tracker (the match settings: live.tracker())
-    head_pos: Vec | None = None  # Live animated head target marker, when available.
 
 
 @dataclass
@@ -116,7 +115,10 @@ class Snapshot:
     inv_core: object = None
     inv_core_carrier: object = None
     inv_armed: bool = False    # Breakpoint's bomb lies armed in its plant zone (brain/invasion.py)
+    inv_bomb: bool = False     # phase 3's object is Breakpoint's bomb, not the core (a melee drops the core, not the bomb)
     inv_delivery: object = None
+    inv_stand: object = None   # where phase 3's core (Breakpoint's bomb in its run) stands until taken: off it, it is
+                               # dropped, the defenders' to return (Bot.return_point)
     inv_phase_t: float = 0.0   # seconds into the phase (brain/invasion.py Watch; the director's push)
     # the other objective modes (brain/modes.py: territories, assault, stockpile, headhunter, infection):
     # zones [(Vec, radius, owner team or -1)], objects to carry [{pos, carrier, kind}], each team's goals {team: [Vec]}

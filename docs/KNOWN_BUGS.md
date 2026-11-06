@@ -1,4 +1,4 @@
-# Known bugs (0.2.1)
+# Known bugs (0.2.2-s178)
 
 What I already know is broken or buggy in this version, so you don't have to report it (but if you find something worse, or a way to make it happen every time, a [bug report](https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml) still helps).
 
@@ -95,7 +95,7 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 
 **Not working yet**
 
-- **Invasion**: Not working right now: bots don't push the objectives properly, get stuck on Boneyard's stairs, and custom Forge Invasion maps aren't played. Fixing it is my top priority.
+- **Invasion**: Improving, not done: on Spire both sides now take the phases and deliver the core; on Boneyard the first attack still loses most rounds, and custom Forge Invasion maps (issue #2) aren't played yet. Being fixed first.
 - **Scorpion**: Bots get in but spend most of the time stuck or standing still. They do board enemy tanks and take out the driver.
 
 **Works, but buggy**
@@ -135,4 +135,17 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 - **Scorpion**: Bots drive and fire it, but sit still a lot. I've only checked one match.
 - **Banshee**: Bots have flown it, but didn't shoot from it, and can't use its bomb or boost yet.
 
-*Last updated November 4, 2026.*
+## Reported on GitHub
+
+| Issue | What | Status | Notes |
+|---|---|---|---|
+| [#2](https://github.com/AyoItzKye/project-proving-grounds/issues/2) | Invasion on custom Forge maps | Open | Bots don't play custom Forge Invasion layouts yet. |
+| [#4](https://github.com/AyoItzKye/project-proving-grounds/issues/4) | Bots stuck on Boneyard's stairs | Fixed in 0.2.2 | A floor in the map data that isn't there in the game, and how bots run the route up, both fixed. |
+| [#5](https://github.com/AyoItzKye/project-proving-grounds/issues/5) | Bots at High Ground's gate | Open | Bots can't use the gate terminal yet. |
+| [#7](https://github.com/AyoItzKye/project-proving-grounds/issues/7) | Halo 2 Anniversary Assault bomb not picked up | Fixed in 0.2.2 s177 | Bots now hold Use until the bomb is in their hands (it also sits on a stand the pickup used to skip). Tested on Lockdown Multi-Bomb: bombs taken and one armed. |
+| [#8](https://github.com/AyoItzKye/project-proving-grounds/issues/8) | LiDAR Simulator stops early | Fixed in 0.2.2 | At Max speed a map was cut after 4 minutes; now it runs until mapped. |
+| [#9](https://github.com/AyoItzKye/project-proving-grounds/issues/9) | Halo 3 bots ignore trip mines | Fixed in 0.2.2 s179 | Bots now see Halo 3's thrown equipment and whose it is, and route around an enemy trip mine. Tested on Rat's Nest: mines, a bubble shield and a regenerator read with their owners. |
+| [#10](https://github.com/AyoItzKye/project-proving-grounds/issues/10) | LiDAR Simulator bots start outside Forge creations | Fixed in 0.2.2 | They started on Forge World's own spawns; now inside the creation. |
+| [#11](https://github.com/AyoItzKye/project-proving-grounds/issues/11) | No weapon pickups on Forge creations | Fixed in 0.2.2 s178 | The guns on a creation read as unknown (bots only know guns by the map's own spots, and a creation's guns are not on Forge World's), and a creation without its map file kept Forge World's power weapon spots. Now they are named from the game its| [#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12) | Firefight | Fixed in 0.2.2 s180 | Every part of the report is fixed. Up to 3 bots join your team from the BOTS tile in the Reach and ODST Firefight lobbies and stay a few steps behind you (s177). They now also join on the DLC maps (Unearthed, Installation 04), go for a dropped gun when they run dry, only melee an enemy in front of them, stay on foot with you, fight beside the Covenant on the Elite side (s179), and respawn like you on your team's shared lives (s180). Tested on Beachhead, Unearthed and Installation 04. Firefight's enemy types still get no special tactics. |
+
+*Last updated November 6, 2026.*

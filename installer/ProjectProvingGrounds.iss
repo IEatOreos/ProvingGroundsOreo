@@ -80,12 +80,19 @@ Name: "{autodesktop}\Project Proving Grounds"; Filename: "{app}\python\pythonw.e
 
 [Run]
 Filename: "{app}\python\pythonw.exe"; Parameters: "-I ""{app}\tools\launcher.py"" --setup"; WorkingDir: "{app}"; Description: "Open Project Proving Grounds and run the first-time setup"; Flags: postinstall nowait skipifsilent
+; an update from the launcher (tools/launcher.py: Setup /SILENT /UPDATE=1): the launcher opens again when it is done
+Filename: "{app}\python\pythonw.exe"; Parameters: "-I ""{app}\tools\launcher.py"""; WorkingDir: "{app}"; Flags: nowait; Check: LauncherUpdate
 
 [UninstallDelete]
 ; the app window's WebView2 data (cache, settings: tools/appwindow.py)
 Type: filesandordirs; Name: "{localappdata}\ProjectProvingGrounds"
 
 [Code]
+function LauncherUpdate: Boolean;     { started by the launcher's update (tools/launcher.py) }
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
 const
   MARK = '\installer\windows-security-exclusion.txt';
 

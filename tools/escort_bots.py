@@ -24,6 +24,7 @@ HZ = 30
 CHEST = 0.45                          # aim this far above the feet (Elites and Brutes stand tall)
 TIERS = {"novice": (0.45, 0.06), "average": (0.30, 0.035), "strong": (0.22, 0.02), "top": (0.15, 0.012)}   # reaction s, aim error rad
 RANGE = 28.0
+MATCH_GONE = 6                         # failed reads in a row (0.5 s apart) that mean the match is over
 
 
 def wrap(a):
@@ -118,13 +119,14 @@ def main():
     ap.add_argument("--game", default="odst")
     ap.add_argument("--tier", default="average")
     o = ap.parse_args()
-    from brain.live import LiveODST
-    live, m = {"odst": LiveODST}[o.game](), botctl.shm()
+    from brain.live import LiveODST, LiveReach
+    live, m = {"odst": LiveODST, "reach": LiveReach}[o.game](), botctl.shm()   # (Reach: its Firefight maps)
     rng = random.Random(5)
     bots = {}
     trail = []
     log = open(os.path.join(HERE, "..", "logs", f"escort_{o.game}.jsonl"), "w")
     t0 = time.time()
+    fails = 0
     while time.time() - t0 < o.seconds:
         tick = time.time()
         now = tick - t0
@@ -133,8 +135,15 @@ def main():
             enemies = live.ai_units(players)
         except Exception as e:                       # a read raced the game (match over, object gone)
             print("read failed:", e)
+            fails += 1
+            # the match is over (3 s of failed reads, as live_bots): stop. botcore ends play.py at the next match, not
+            # this child: live Nov 6 an Installation 04 escort brain drove the next match's bots beside its brain
+            if fails >= MATCH_GONE:
+                print("game gone, brain stopping:", e, flush=True)
+                break
             time.sleep(0.5)
             continue
+        fails = 0
         ps = {p["index"]: p for p in players}
         person = ps.get(0)
         if person and person["pos"] and (not trail or math.dist(trail[-1][:2], person["pos"][:2]) > 0.75):
@@ -146,7 +155,8 @@ def main():
             me = ps.get(index)
             if not me or not me["pos"] or not person or not person["pos"]:
                 continue
-            fwd, strafe, yaw, pitch, buttons = bots[index].think(now, me, person, trail, enemies)
+            foes = [e for e in enemies if e["team"] != me["team"]]     # (Versus' Elite round: the Covenant are allies)
+            fwd, strafe, yaw, pitch, buttons = bots[index].think(now, me, person, trail, foes)
             botctl.act(m, slot, fwd, strafe, yaw, pitch, buttons)
             b = bots[index]
             tgt = next((e for e in enemies if e["index"] == b.target), None)

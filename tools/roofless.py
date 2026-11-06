@@ -138,15 +138,80 @@ def draw(v, f, box, cut, px, zlo, zhi, zs=None):
     return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
 
 
+def draw_hm(hm, box, cut, px, zlo, zhi, zs=None):
+    """The same view from the heightmap alone (an installed copy has no level mesh: maps/<map>/source is not shipped).
+    Each cell shows its highest floor at or under the cut (no cut: the top floor); lit by the floor's slope, coloured,
+    contoured and ledge-outlined like draw()."""
+    from PIL import Image
+    fl = hm["floors"]
+    cut_fl = np.where(fl <= cut + 0.05, fl, np.nan) if cut is not None else fl
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # (a column with no floor under the cut: NaN, drawn empty)
+        g = np.nanmax(cut_fl, axis=0)                    # (rows south to north, cols west to east)
+    x0, y0, cell = float(hm["x0"]), float(hm["y0"]), float(hm["cell"])
+    bx0, by0, bx1, by1 = box
+    W, H = int((bx1 - bx0) * px) + 1, int((by1 - by0) * px) + 1
+    X = bx0 + (np.arange(W) + 0.5) / px
+    Y = by1 - (np.arange(H) + 0.5) / px
+    ci = np.clip(((X - x0) / cell).astype(int), 0, g.shape[1] - 1)
+    rj = np.clip(((Y - y0) / cell).astype(int), 0, g.shape[0] - 1)
+    inb = ((X - x0) >= 0)[None, :] & ((X - x0) < g.shape[1] * cell)[None, :] & \
+        ((Y - y0) >= 0)[:, None] & ((Y - y0) < g.shape[0] * cell)[:, None]
+    h = np.where(inb, g[rj[:, None], ci[None, :]], np.nan)
+    empty = ~np.isfinite(h)
+    hz = np.where(empty, zlo, h)
+    gy, gx = np.gradient(np.where(np.isfinite(g), g, np.nanmin(g) if np.isfinite(g).any() else 0.0), cell)
+    nrm = np.stack([-gx, -gy, np.ones_like(gx)], -1)
+    nrm /= np.linalg.norm(nrm, axis=-1, keepdims=True)
+    l = np.clip(nrm @ LIGHT, 0.15, 1.0)[rj[:, None], ci[None, :]]
+    if cut is None:
+        lin = (hz - zlo) / max(1e-6, zhi - zlo)
+        share = 0.65 * np.searchsorted(zs, hz) / len(zs) + 0.35 * lin if zs is not None and len(zs) else lin
+        dim, step_h = 1.0, CONTOUR
+    else:
+        share = (hz - (cut - LOCAL)) / LOCAL
+        dim, step_h = np.where(share < 0, 0.45, 1.0), CONTOUR / 2
+    rgb = ramp(share) * ((0.5 + 0.5 * l) * dim)[..., None]
+    band = np.floor(hz / step_h)
+    edge = np.zeros_like(empty)
+    ledge = np.zeros_like(empty)
+    for dy, dx in ((0, 1), (1, 0)):
+        a = (slice(0, H - dy), slice(0, W - dx))
+        b = (slice(dy, H), slice(dx, W))
+        diff = hz[b] - hz[a]
+        both = ~empty[a] & ~empty[b]
+        step = both & (np.abs(diff) >= LEDGE)
+        edge[a] |= both & (band[a] != band[b]) & ~step
+        ledge[a] |= step & (diff < 0)
+        ledge[b] |= step & (diff > 0)
+    rgb[edge] *= 0.6
+    rgb[ledge] = rgb[ledge] * 0.25 + np.array([245, 245, 245]) * 0.75
+    rgb[empty] = (18, 20, 24)
+    return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
+
+
+def hm_box(hm):
+    """The heightmap's floor extent (x0, y0, x1, y1), a unit of margin."""
+    fl = hm["floors"]
+    rows, cols = np.nonzero(np.isfinite(fl).any(axis=0))
+    x0, y0, cell = float(hm["x0"]), float(hm["y0"]), float(hm["cell"])
+    return (x0 + cols.min() * cell - 1, y0 + rows.min() * cell - 1, x0 + (cols.max() + 1) * cell + 1,
+            y0 + (rows.max() + 1) * cell + 1)
+
+
 def build(name, px=12):
     d = os.path.join(ROOT, "maps", name)
     src = os.path.join(d, "source", "bsp.obj")
-    if not os.path.exists(src):
-        sys.exit(f"{name}: no level mesh ({src})")
-    v, f = load_obj(src)
-    objs = json.load(open(os.path.join(d, "objects.json")))
-    box, _ = play_area(v, objs)
     hm = np.load(os.path.join(d, "heightmap.npz"))
+    if os.path.exists(src):
+        v, f = load_obj(src)
+        objs = json.load(open(os.path.join(d, "objects.json")))
+        box, _ = play_area(v, objs)
+        paint = lambda cut, zlo, zhi, zs: draw(v, f, box, cut, px, zlo, zhi, zs)   # noqa: E731
+    else:                                            # an installed copy: the heightmap only
+        box = hm_box(hm)
+        paint = lambda cut, zlo, zhi, zs: draw_hm(hm, box, cut, px, zlo, zhi, zs)  # noqa: E731
     lz = hm["floors"]                                # (levels, rows, cols) walkable floor heights, NaN: none
     walk = np.isfinite(lz)
     # cuts one unit apart from just over the lowest floor to the top, then everything: floors joined by ramps never
@@ -160,7 +225,7 @@ def build(name, px=12):
     os.makedirs(out, exist_ok=True)
     levels = []
     for k, (z, cut) in enumerate(lv):
-        img = draw(v, f, box, cut, px, zlo, zhi, np.sort(zs))
+        img = paint(cut, zlo, zhi, np.sort(zs))
         png = f"level_{k}.png"
         img.save(os.path.join(out, png))
         levels.append(dict(z=z, cut=cut, png=png))
@@ -195,6 +260,15 @@ def selftest():
     st = np.asarray(draw(v2, f, (0, 0, 10, 10), None, 4, -1, 3)).astype(int)
     col = st[20, 18:23]
     assert col.min(axis=1).max() > 180 and st[20, 8].min() < 180 and st[20, 32].min() < 180, col
+    # the heightmap view (no mesh): a floor at 0 with a 1 u step up at x 5; under a 0.5 cut only the low half shows
+    fl = np.full((1, 10, 10), np.nan)
+    fl[0][:, :5], fl[0][:, 5:] = 0.0, 1.0
+    hm = dict(floors=fl, x0=0.0, y0=0.0, cell=1.0)
+    assert hm_box(hm) == (-1.0, -1.0, 11.0, 11.0), hm_box(hm)
+    full = np.asarray(draw_hm(hm, (0, 0, 10, 10), None, 4, -1, 3)).astype(int)
+    low = np.asarray(draw_hm(hm, (0, 0, 10, 10), 0.5, 4, -1, 3)).astype(int)
+    assert full[20, 18:23].min(axis=1).max() > 180, "no ledge outline on the heightmap step"
+    assert (low[20, 30] == (18, 20, 24)).all() and (low[20, 8] != (18, 20, 24)).any(), "the cut did not hide the upper floor"
     print("roofless OK")
 
 

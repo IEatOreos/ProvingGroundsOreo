@@ -13,16 +13,19 @@ Reach and ODST Firefight (bots fill your team). Up to 15 bots: the game holds 16
 > Offline custom games only, with Easy Anti-Cheat off. The mod refuses to run with anti-cheat on and never touches
 > matchmaking, Xbox network or Steam online services.
 
-## What works right now
+## Status, updates and bugs
 
-An honest rating of every game, game mode and vehicle in this version, from green (good to go) to red (not working
-yet). Click the picture for the full sheet: what to expect in each mode and with each vehicle.
+Everything about where the mod stands is in three places:
+
+| | |
+|---|---|
+| **[Updates](docs/UPDATES.md)** | What changed in each version (new, fixed, changed, known problems), newest first. |
+| **[Known bugs](docs/KNOWN_BUGS.md)** | Everything known to be broken, by game, and every bug reported on GitHub with its status. |
+| **[Bot status sheet (PDF)](docs/BOT_STATUS.pdf)** | An honest rating of every game, mode and vehicle, from green (good to go) to red (not working yet). |
 
 [![How the bots play each game: summary](docs/bot_status.png)](docs/BOT_STATUS.pdf)
 
-**[Open the full bot status sheet (PDF)](docs/BOT_STATUS.pdf)** · **[Known bugs](docs/KNOWN_BUGS.md)** · **[Updates](docs/UPDATES.md)**
-
-Found a bug? **[Report it here](https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml)** (how: [Report a problem](#report-a-problem)).
+Found a bug that isn't on the Known bugs page? **[Report it here](https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml)** (how: [Report a problem](#report-a-problem)). The launcher tells you when a new version is out.
 
 ## Install
 

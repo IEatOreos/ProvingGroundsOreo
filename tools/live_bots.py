@@ -48,6 +48,28 @@ def place_ok(p):
     return p is not None and len(p) == 3 and all(isinstance(c, (int, float)) and math.isfinite(c) and abs(c) < 1e5 for c in p)
 
 
+def think_order(bots, n):
+    """The bots in the order they think and send their sticks on pass n: the teams interleaved, the first team swapping
+    every pass. In index order team 1 (players 7-12) always acted last on the pass's snapshot (passes a median 35 ms,
+    p90 109 ms), live B21-B28 / S14 it did worse on both maps in both roles (tools/test_team_fair.py)."""
+    teams = {}
+    for index, b in bots.items():
+        teams.setdefault(getattr(b, "game_team", getattr(b, "team", 0)), []).append((index, b))
+    keys = sorted(teams, reverse=bool(n % 2))
+    out = []
+    for k in range(max((len(v) for v in teams.values()), default=0)):
+        out += [teams[t][k] for t in keys if k < len(teams[t])]
+    return out
+
+
+def roster_pick(styles, tiers, dealt, team):
+    """(style, tier) for a team's next bot: dealt round-robin within its team, so the rosters mirror (over all bots by
+    join order team 0 got rusher..grudger and team 1 sniper..spammer, its tiers shifted: tools/test_team_fair.py)."""
+    k = dealt.get(team, 0)
+    dealt[team] = k + 1
+    return styles[k % len(styles)], tiers[k % len(tiers)]
+
+
 def think_dt(elapsed):
     """The time step the bots think with: the real time since the last pass, so turning, aiming and moving keep their
     real-time speeds on a PC that needs longer than 1/HZ for a pass; never under 1/HZ (a pass that came early or the
@@ -130,7 +152,6 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
                                    equipment=d.get("equipment", ""), ability_on=on,
                                    # the match's motion tracker setting for him (off in SWAT)
                                    tracker=d.get("tracker", True),
-                                   head_pos=Vec(*d["head_pos"]) if d.get("head_pos") is not None else None,
                                    camo_until=now + 0.3 if on and d.get("equipment") == "active_camo" else 0.0))
     bad = ability_misread(players, now)
     for p in players:
@@ -218,6 +239,11 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
             honks.append(v["handle"])
     snap = Snapshot(now, players, flags, mode="ctf" if flags else "slayer", vehicles=vehicles, honks=honks,
                     ground_weapons=GROUND["list"], shieldless=now - live.shields_at > 3.0)
+    if type(live).__name__ == "LiveH3":          # Halo 3's equipment out in the world (#9; Reach / H4 readers inherit
+        try:                                     # LiveH3 but their object tables differ)
+            snap.deployed = live.deployed(raw, now)
+        except Exception:
+            snap.deployed = []
     if hasattr(live, "match_state") and now - MATCH["t"] > 0.5:      # score, the variant's limit, time left
         MATCH["t"] = now
         try:
@@ -410,26 +436,28 @@ def loadout_check(live, ask, bots, palette, state, snap, now, trace=None):
         if not me:
             continue
         st = state.setdefault(index, dict(alive=False, born=None, asked=None))
+        # (Invasion: each side its own slots, Palette.side; the round change swaps a team's side)
+        pal = palette.side(("attack" if me.team == snap.inv_attackers else "defend") if snap.mode == "invasion" else None)
         if me.alive:
             if not st["alive"]:
                 st["born"] = now
             elif st["born"] is not None and now - st["born"] > 1.0:   # a moment after the spawn
                 b.slot, st["born"] = live.loadout(index), None
-                palette.learn(b.slot, me.weapons, me.equipment)
+                pal.learn(b.slot, me.weapons, me.equipment)
         else:
             if st["alive"]:
                 record_death(b, now, snap)
             team = [p.equipment for p in snap.players if p.team == me.team and p.id != index and p.alive and p.equipment]
-            want = want_slot(b, palette, st["asked"] if st["asked"] is not None else getattr(b, "slot", None), now, team)
+            want = want_slot(b, pal, st["asked"] if st["asked"] is not None else getattr(b, "slot", None), now, team)
             if want:
                 slot, why, n = want
                 if ask(index, slot):
                     st["asked"] = slot
                     if trace:
                         trace.write(json.dumps(dict(t=round(now, 3), id=index, loadout=slot, why=why, n=n,
-                                                    guns=palette.seen.get(slot))) + chr(10))
+                                                    guns=pal.seen.get(slot))) + chr(10))
                 else:
-                    palette.off = True
+                    palette.off = pal.off = True
                     print(f"{now:6.1f}s loadouts off: botcore refused SET_LOADOUT (restart MCC to load s59 or newer)",
                           flush=True)
         st["alive"] = me.alive
@@ -653,6 +681,7 @@ def main():
     ap.add_argument("--personality", default="rusher")
     ap.add_argument("--roster", help="botcore.ini with the BOTS panel's list: each bot's difficulty and play "
                     "style by its name (bots not on it get --tier / --personality)")
+    ap.add_argument("--ff-list", action="store_true", help="Firefight: --roster's Firefight list (ffbot= lines)")
     ap.add_argument("--map", default="bloodgulch", help="map folder in maps/ (play.py passes the running map)")
     ap.add_argument("--ffa", action="store_true", help="free for all: every player is an enemy")
     ap.add_argument("--game", default="ce", choices=("ce", "h2", "h3", "reach", "odst", "h2a", "h4"), help="ce = Halo CE (halo1.dll), h2 = Halo 2, h3 = Halo 3, reach = Halo: Reach, h2a = Halo 2 Anniversary, h4 = Halo 4")
@@ -670,7 +699,11 @@ def main():
     # Scaling difficulty (brain/scaling.py): one skill rating with no limit, set from the person's last Scaling games'
     # K/D; every bot on Scaling (its row on the BOTS list, else --tier) is made from it, both teams
     SCALE, SCALE_CFG = None, scaling.settings()
-    on_list = [b["tier"] for b in (botctl.roster(o.roster) or [])] if o.roster else []
+    panel = (botctl.roster(o.roster) or []) if o.roster else []
+    if o.roster and o.ff_list:   # Firefight's own list (play.py), else the list's first 3 till it is saved (ff_seed)
+        ff_list = botctl.roster(o.roster, firefight=True)
+        panel = ff_list if ff_list is not None else panel[:botctl.FIREFIGHT_PLAYERS - 1]
+    on_list = [b["tier"] for b in panel]
     if "scaling" in o.tier.split(",") + on_list:
         SCALE = scaling.update(n=scaling.games_window(o.roster) if o.roster else scaling.GAMES, cfg=SCALE_CFG)["play"]
         print("Scaling difficulty:", scaling.summary(SCALE, SCALE_CFG["weights"]),
@@ -721,6 +754,14 @@ def main():
                     print(f"  done in {variant_strategy.build(name):.0f} s", flush=True)
                 MAP = get_map(name)
                 T = map_terrain(MAP)
+                from brain import variants as _variants
+                if o.game == "reach" and not os.path.exists(os.path.join(_variants.ROOT, name, "mvar_objects.json")):
+                    # no .mvar file: its items are the canvas's placements, not what it has (#11): what lies in it
+                    from brain.forge import live_items
+                    found = live_items(live)
+                    print(f"map variant {name}: {len(found)} power items lying in it (was {len(MAP['items'])} of the "
+                          f"canvas's): {sorted({it['name'] for it in found})}", flush=True)
+                    MAP["items"] = found
                 print(f"map variant {name}: {MAP['variant']['count']} objects of its own, {len(MAP['live_blocks'])} "
                       f"pieces in the nav ({getattr(T, 'face_kinds', {})}), {len(MAP['shields'])} shields, nav window "
                       f"{MAP['window']}", flush=True)
@@ -740,7 +781,8 @@ def main():
     comms, said = [], 0           # director log: every callout spoken
     said_calls = set()            # callouts already in the trace
     everyone = Everyone()         # the world line rows: still time, teammates formed up, who is in sights
-    listed = {b["name"].lower(): b for b in (botctl.roster(o.roster) or [])} if o.roster else {}
+    listed = {b["name"].lower(): b for b in panel}
+    dealt = {}                         # team -> bots dealt a style / tier so far (roster_pick)
     flag_before = {}
     t0 = time.time()
     paused = [0.0]               # seconds the game sat paused, off the brain's clock (the loop below)
@@ -808,6 +850,7 @@ def main():
     seen_errors = set()
     last_items = 0.0
     last_think = None                  # the time of the last pass the bots thought on (think_dt)
+    passes = 0                         # think passes so far (think_order: which team goes first)
     names_due = None if o.game == "reach" else float("inf")   # Reach: logs/reach_names.txt once, 20 s after bots join (after any refresh)
     # Reach Invasion (brain/invasion.py): the map's setup from its scenario; the watcher runs while the variant is it
     inv_styles = None                             # a map variant read from its file: its game variant's phases
@@ -1014,8 +1057,9 @@ def main():
                         tiers, pers = o.tier.split(","), o.personality.split(",")
                         mine = listed.get(me.name.lower(), {})        # its row on the BOTS panel's list
                         style = mine.get("style", "any")
-                        style = style if style != "any" else pers[len(bots) % len(pers)]
-                        tier = mine.get("tier") or tiers[len(bots) % len(tiers)]
+                        p_style, p_tier = roster_pick(pers, tiers, dealt, me.team)   # (per team: the rosters mirror)
+                        style = style if style != "any" else p_style
+                        tier = mine.get("tier") or p_tier
                         prof = (scaling.profile(SCALE, style, rng, SCALE_CFG["weights"]) if tier == "scaling" else
                                 make_profile(tier, style, rng))
                         side = me.team % 2                 # map knowledge (holds, home) is red/blue
@@ -1115,7 +1159,8 @@ def main():
                                   loadout_state, snap, now, trace)
                 dt = think_dt(now - last_think if last_think is not None else 0.0)
                 last_think = now
-                for index, b in bots.items():
+                passes += 1
+                for index, b in think_order(bots, passes):    # (the teams interleaved, the first swapping)
                     me = snap.player(index)
                     if not me or not me.alive:
                         continue

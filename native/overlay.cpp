@@ -13,6 +13,7 @@
 #include "shared.h"
 #include "model_view.h"
 #include "bots_panel.h"
+#include "ui_layout.h"
 #include "third_party/minhook/include/MinHook.h"
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_impl_win32.h"
@@ -20,6 +21,7 @@
 
 extern hb_shared* g_shm;
 extern hb_roster g_roster;           // botcore.cpp: the BOTS panel's list
+extern hb_roster g_ff_roster;        // botcore.cpp: Firefight's list (3 bots, your team)
 extern uint32_t g_collector;         // botcore.cpp: the brain records the player (Data collector)
 extern uint32_t g_scale_games;       // botcore.cpp: Scaling difficulty's games averaged
 extern uint32_t g_sounds;            // botcore.cpp: the BOTS panel's sound volume, 0-100 (0 off)
@@ -51,8 +53,19 @@ typedef HANDLE(WINAPI* createfile_fn)(LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUT
 // not covered by the carnage report or a menu) is checked on the frame itself (probe_lobby).
 static createfile_fn o_createfile;
 static volatile LONG g_session;      // title of the last custom game lobby opened: 1 CE, 2 Halo 2
-                                     // Classic, 3 Halo 3, 5 Reach, 6 H2A, 7 H4 (the titles with bots), 4 any other, 0 none
+                                     // Classic, 3 Halo 3, 5 Reach, 6 H2A, 7 H4, 8 ODST (the titles with bots), 4 any other, 0 none
 static volatile DWORD g_lobby_gfx_at;
+static volatile LONG g_ff_lobby;     // the lobby last opened is Firefight's (FirefightCustomGame.gfx): it holds 4 players
+static bool bots_title(LONG t) { return t >= 1 && t <= 8 && t != 4; }
+extern int hb_panel_firefight;   // (bots_panel.cpp: the roster's cap, 3 bots in Firefight)
+static const wchar_t* wcsistr(const wchar_t* s, const wchar_t* f) {   // (MCC opens some screens in lower case)
+    for (; *s; s++) {
+        const wchar_t *a = s, *b = f;
+        while (*a && *b && towlower(*a) == towlower(*b)) { a++; b++; }
+        if (!*b) return s;
+    }
+    return nullptr;
+}
 
 static LONG title_of(LPCWSTR name) {
     if (wcsstr(name, L"halo1\\")) return 1;
@@ -61,6 +74,7 @@ static LONG title_of(LPCWSTR name) {
     if (wcsstr(name, L"haloreach\\")) return 5;
     if (wcsstr(name, L"groundhog\\")) return 6;
     if (wcsstr(name, L"halo4\\")) return 7;
+    if (wcsstr(name, L"halo3odst\\")) return 8;
     return 4;
 }
 
@@ -72,7 +86,8 @@ static HANDLE WINAPI h_createfile(LPCWSTR name, DWORD a, DWORD s, LPSECURITY_ATT
             logf("lobby file %ls", name);
         }
         if (wcsstr(name, L"\\Screens\\")) {
-            if (wcsstr(name, L"MultiplayerCustomGame.gfx")) g_lobby_gfx_at = GetTickCount();
+            if (wcsistr(name, L"MultiplayerCustomGame.gfx")) { g_lobby_gfx_at = GetTickCount(); g_ff_lobby = 0; hb_panel_firefight = 0; }
+            else if (wcsistr(name, L"FirefightCustomGame.gfx")) { g_lobby_gfx_at = GetTickCount(); g_ff_lobby = 1; hb_panel_firefight = 1; }
         } else if (wcsstr(name, L"game_variants\\") || wcsstr(name, L"\\maps\\info\\")) {
             LONG title = title_of(name);
             if (g_lobby_gfx_at && GetTickCount() - g_lobby_gfx_at < 1500) {   // the lobby's own title
@@ -112,14 +127,28 @@ static bool frame_pixel(const uint8_t* p, DXGI_FORMAT f) {
     return b > 55 && b > r + 25 && g > r + 15;
 }
 
+static bool white_pixel(const uint8_t* p, DXGI_FORMAT f) {   // (MCC's title letters)
+    int r, g, b;
+    if (f == DXGI_FORMAT_B8G8R8A8_UNORM || f == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB) { b = p[0]; g = p[1]; r = p[2]; }
+    else if (f == DXGI_FORMAT_R10G10B10A2_UNORM) {
+        uint32_t v = *(const uint32_t*)p; r = (v & 1023) >> 2; g = ((v >> 10) & 1023) >> 2; b = ((v >> 20) & 1023) >> 2;
+    } else { r = p[0]; g = p[1]; b = p[2]; }
+    return r > 200 && g > 200 && b > 200;
+}
+
+static UINT g_probe_rows0, g_probe_rows1, g_probe_solid0, g_probe_solid1;
+static ID3D11Texture2D* g_title;
+static UINT g_title_w, g_title_h;
+static DXGI_FORMAT g_title_fmt;
+static LONG g_probe_ff_logged = -1;
 static void probe_lobby(IDXGISwapChain* sc) {
     ID3D11Texture2D* back = nullptr;
     if (FAILED(sc->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back)) || !back) return;
     D3D11_TEXTURE2D_DESC bd;
     back->GetDesc(&bd);
-    float W = (float)bd.Width, H = (float)bd.Height, w16 = H * 16 / 9, x0 = (W - w16) / 2;
-    if (w16 > W) { w16 = W; x0 = 0; }
-    UINT top = (UINT)(H * 0.152f), bot = (UINT)(H * 0.285f), h = bot - top;
+    float W = (float)bd.Width, H = (float)bd.Height;                     // (ui_layout.h: MCC's fitted 16:9 page)
+    ui_rect rows = mcc_probe_rows(W, H);
+    UINT top = (UINT)rows.y0, bot = (UINT)rows.y1, h = bot - top;
     if (!g_probe || g_probe_h != h || g_probe_fmt != bd.Format) {
         if (g_probe) g_probe->Release();
         D3D11_TEXTURE2D_DESC sd{};
@@ -130,9 +159,8 @@ static void probe_lobby(IDXGISwapChain* sc) {
         g_probe_h = h; g_probe_fmt = bd.Format;
     }
     bool ok = g_probe && bd.SampleDesc.Count == 1;
-    const float edges[2] = { 0.383f, 0.508f };             // OPTIONS and START left frame lines
-    for (int e = 0; e < 2 && ok; e++) {
-        UINT x = (UINT)(x0 + w16 * edges[e]), left = x > 6 ? x - 6 : 0;
+    for (int e = 0; e < 2 && ok; e++) {                   // OPTIONS' and START's left frame lines
+        UINT x = (UINT)mcc_probe_x(W, H, e, g_ff_lobby != 0), left = x > 6 ? x - 6 : 0;   // (Firefight: its own row)
         if (left + 12 > bd.Width || bot > bd.Height) { ok = false; break; }
         D3D11_BOX box;                                     // field order is left, top, FRONT, right, bottom, back
         box.left = left; box.right = left + 12;
@@ -141,33 +169,88 @@ static void probe_lobby(IDXGISwapChain* sc) {
         g_ctx->CopySubresourceRegion(g_probe, 0, 0, 0, 0, back, 0, &box);
         D3D11_MAPPED_SUBRESOURCE m;
         if (FAILED(g_ctx->Map(g_probe, 0, D3D11_MAP_READ, 0, &m))) { ok = false; break; }
-        UINT rows = 0;
+        UINT rows = 0, solid = 0;
         for (UINT y = 0; y < h; y++) {
             const uint8_t* row = (const uint8_t*)m.pData + y * m.RowPitch;
-            for (int xx = 0; xx < 12; xx++) if (frame_pixel(row + xx * 4, bd.Format)) { rows++; break; }
+            int on = 0;
+            for (int xx = 0; xx < 12; xx++) on += frame_pixel(row + xx * 4, bd.Format);
+            rows += on > 0;
+            solid += on == 12;
         }
         g_ctx->Unmap(g_probe, 0);
-        ok = rows > h * 7 / 10;
+        if (e == 0) g_probe_rows0 = rows; else g_probe_rows1 = rows;
+        if (e == 0) g_probe_solid0 = solid; else g_probe_solid1 = solid;
+        // a line down the tile height, not a blue band: the carnage report's blue team rows are blue straight across
+        // (the tile showed over the scoreboard, live H2A Nov 6); in the lobby the strip is solid in 37% of rows at most
+        // (its video behind the tiles; "a line only" made the tile blink there, s175-s176)
+        ok = rows > h * 7 / 10 && solid < h * 6 / 10;
+    }
+    // Firefight's post-game report has the lobby's tile row (map, time, waves, difficulty, skull combo, and a 6th, TIME
+    // MULTIPLIER, under the BOTS tile till s179) and opens no file on Back: its title tells them apart (ui_layout.h)
+    UINT title = 0;
+    if (ok && g_ff_lobby) {
+        ui_rect tb = mcc_ff_title_probe(W, H);
+        UINT tl = (UINT)tb.x0, tt = (UINT)tb.y0, tw = (UINT)(tb.x1 - tb.x0), th = (UINT)(tb.y1 - tb.y0);
+        if (!g_title || g_title_w != tw || g_title_h != th || g_title_fmt != bd.Format) {
+            if (g_title) g_title->Release();
+            D3D11_TEXTURE2D_DESC sd{};
+            sd.Width = tw; sd.Height = th; sd.MipLevels = 1; sd.ArraySize = 1; sd.Format = bd.Format;
+            sd.SampleDesc.Count = 1; sd.Usage = D3D11_USAGE_STAGING; sd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            g_title = nullptr;
+            g_dev->CreateTexture2D(&sd, nullptr, &g_title);
+            g_title_w = tw; g_title_h = th; g_title_fmt = bd.Format;
+        }
+        D3D11_MAPPED_SUBRESOURCE m;
+        D3D11_BOX box{tl, tt, 0, tl + tw, tt + th, 1};
+        if (g_title && tl + tw <= bd.Width && tt + th <= bd.Height) {
+            g_ctx->CopySubresourceRegion(g_title, 0, 0, 0, 0, back, 0, &box);
+            if (SUCCEEDED(g_ctx->Map(g_title, 0, D3D11_MAP_READ, 0, &m))) {
+                for (UINT y = 0; y < th; y++)
+                    for (UINT x = 0; x < tw; x++) title += white_pixel((const uint8_t*)m.pData + y * m.RowPitch + x * 4, bd.Format);
+                g_ctx->Unmap(g_title, 0);
+            }
+        }
+        ok = title * 100 > tw * th * 3;                   // (letters: 9.6% of the box in the lobby, 0 after a match)
     }
     back->Release();
+    if (ok != g_lobby_visible || g_ff_lobby != g_probe_ff_logged) {      // (evidence: which row was read, what it found)
+        logf("lobby probe: %s lobby, %ux%u, OPTIONS %u (%u solid) START %u (%u solid) of %u rows, title %u -> %s",
+             g_ff_lobby ? "Firefight" : "custom game", bd.Width, bd.Height, g_probe_rows0, g_probe_solid0, g_probe_rows1,
+             g_probe_solid1, h, title, ok ? "on screen" : "not seen");
+        g_probe_ff_logged = g_ff_lobby;
+    }
     g_lobby_visible = ok;
 }
 
 static bool in_ce_menus() {
     __try {
-        return (g_session >= 1 && g_session <= 7 && g_session != 4) && g_lobby_visible && g_exe[0x4000B8C + 0x11] == 0;
+        return bots_title(g_session) && g_lobby_visible && g_exe[0x4000B8C + 0x11] == 0;
     } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
 
 static const char* DIFF_NAME[6] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling", "Mixed" };   // (bots_panel.cpp tiers, then Mixed)
 
-// --- the tile: same place and size as the lobby's tiles, right of START (measured from
-// screenshots: tiles sit in a 16:9 area centred in the window; START spans x 0.508-0.630 of it,
-// y 0.146-0.292 of the height)
-static ImVec4 tile_rect(ImVec2 disp) {
-    float w16 = disp.y * 16.0f / 9.0f, x0 = (disp.x - w16) * 0.5f;
-    if (w16 > disp.x) { w16 = disp.x; x0 = 0; }
-    return ImVec4(x0 + w16 * 0.637f, disp.y * 0.1463f, x0 + w16 * 0.759f, disp.y * 0.2925f);
+// MCC lays its menus out on the back buffer; the window shows that buffer stretched to its client area. The two differ
+// when the window was moved or resized without MCC resizing its buffer (a borderless window put on another monitor):
+// MCC's menus are placed by the buffer's size, so ours are too, then mapped into the window ImGui draws and clicks in
+// (io.DisplayFramebufferScale makes ImGui render window units onto the whole buffer).
+static float g_bb_w, g_bb_h;              // the back buffer, every frame (h_present)
+static ImVec2 bb_size() {
+    ImVec2 d = ImGui::GetIO().DisplaySize;
+    return g_bb_w > 0 && g_bb_h > 0 ? ImVec2(g_bb_w, g_bb_h) : d;
+}
+static ImVec4 to_ui(ui_rect r) {          // back buffer px -> window px
+    ImVec2 d = ImGui::GetIO().DisplaySize, b = bb_size();
+    float kx = d.x / b.x, ky = d.y / b.y;
+    return ImVec4(r.x0 * kx, r.y0 * ky, r.x1 * kx, r.y1 * ky);
+}
+// our windows' scale: MCC's menu page fitted into the window (ui_layout.h mcc_content), in window px
+static float ui_scale() { ImVec2 d = ImGui::GetIO().DisplaySize; return mcc_content(d.x, d.y).s; }
+
+// --- the tile: same size as the lobby's tiles, the next slot right of START (ui_layout.h bots_tile_rect)
+static ImVec4 tile_rect() {
+    ImVec2 b = bb_size();
+    return to_ui(bots_tile_rect(b.x, b.y, g_ff_lobby != 0));
 }
 
 static ImFont* g_font_label;   // Bahnschrift (Windows), close to MCC's condensed UI font
@@ -201,7 +284,7 @@ static void draw_helmet(ImDrawList* dl, ImVec2 c, float r, float t, ImU32 line) 
 
 static void draw_tile(float t) {
     ImGuiIO& io = ImGui::GetIO();
-    ImVec4 r = tile_rect(io.DisplaySize);
+    ImVec4 r = tile_rect();
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     ImVec2 a(r.x, r.y), b(r.z, r.w);
     ImVec2 m = io.MousePos;
@@ -224,13 +307,15 @@ static void draw_tile(float t) {
     else if (g_shm->bots_enabled)
     {
         // the list in a few words: 7v8 Legendary, 12 bots Mixed (more than two teams), No bots
-        int teams = 0, tier = -1;
-        for (int t = 0; t < HB_TEAMS_MAX; t++) teams += roster_on_team(g_roster, t) > 0;
-        for (int i = 0; i < g_roster.n; i++) tier = tier < 0 || tier == g_roster.bot[i].tier ? g_roster.bot[i].tier : 5;
+        const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;   // (Firefight: its own list of 3)
+        int teams = 0, tier = -1, n = R.n;
+        for (int t = 0; t < HB_TEAMS_MAX; t++) teams += roster_on_team(R, t) > 0;
+        for (int i = 0; i < n; i++) tier = tier < 0 || tier == R.bot[i].tier ? R.bot[i].tier : 5;
         const char* d = tier < 0 ? "" : DIFF_NAME[tier < 6 ? tier : 5];
-        if (!g_roster.n) sprintf_s(sum, "No bots");
-        else if (teams <= 2) sprintf_s(sum, "%dv%d %s", roster_on_team(g_roster, 0), roster_on_team(g_roster, 1), d);
-        else sprintf_s(sum, "%d bots %s", g_roster.n, d);
+        if (!n) sprintf_s(sum, "No bots");
+        else if (g_ff_lobby) sprintf_s(sum, "%d %s %s", n, n == 1 ? "bot" : "bots", d);
+        else if (teams <= 2) sprintf_s(sum, "%dv%d %s", roster_on_team(R, 0), roster_on_team(R, 1), d);
+        else sprintf_s(sum, "%d bots %s", R.n, d);
     }
     else
         sprintf_s(sum, "OFF");
@@ -290,12 +375,13 @@ static void draw_panel() {
     bots_panel_env e{};
     e.make_texture = make_texture;
     e.render_model = render_model; e.model_has = model_has; e.model_zoom = mv_set_zoom; e.model_head = mv_head; e.model_headroom = mv_set_headroom;
-    e.roster = &g_roster; e.enabled = &g_shm->bots_enabled; e.difficulty = &g_shm->difficulty;
+    e.roster = g_ff_lobby ? &g_ff_roster : &g_roster;     // (Firefight: its own list of 3; the 16-player list is kept)
+    e.enabled = &g_shm->bots_enabled; e.difficulty = &g_shm->difficulty;
     e.lidar_mode = &g_shm->lidar_mode; e.lidar_players = &g_shm->lidar_players;
     e.collector = &g_collector;
     e.sounds = &g_sounds; e.play_sound = play_sound; e.scale_games = &g_scale_games;
     e.pad = g_pad_last;
-    e.title = (int)g_session; e.scale = ImGui::GetIO().DisplaySize.y / 1080.0f;
+    e.title = (int)g_session; e.scale = ui_scale();
     e.f_title = e.f_head = e.f_body = e.f_small = g_font_small;
     e.open = &g_panel;
     if (bots_panel(e)) { g_shm->settings_seq++; save_settings(); }
@@ -313,7 +399,7 @@ static bool g_bug_ui;                // last frame: the report UI is up over the
 static char g_bug_text[1001];
 
 static bool in_match() {
-    return g_session >= 1 && g_session <= 7 && g_session != 4 && mcc_menu_state() == 1 && !g_playback;
+    return bots_title(g_session) && mcc_menu_state() == 1 && !g_playback;
 }
 
 static bool cursor_up() {
@@ -409,13 +495,21 @@ static void pad_frame() {
     g_pad_held = (g_show_tile && g_panel) || (g_pad_held && any);
 }
 
+static DWORD g_esc_eat;              // Esc closed the panel at this tick: its release (and repeats) stay ours
 static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_KEYDOWN || msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MOUSEWHEEL) g_pad_last = false;
+    // MCC backs out of the lobby on Esc's release: closing the panel with Esc left the lobby too (live Nov 6), as the
+    // pad's B would without g_pad_held
+    if (g_esc_eat && (msg == WM_KEYUP || msg == WM_KEYDOWN) && wp == VK_ESCAPE && GetTickCount() - g_esc_eat < 3000) {
+        if (msg == WM_KEYUP) g_esc_eat = 0;
+        return 0;
+    }
     if (g_ready && g_show_tile) {
         bool typing = g_panel && ImGui::GetIO().WantTextInput;   // a bot's name being typed: B and Esc are its
         if (!typing && msg == WM_KEYDOWN && wp == 'B' && !(lp & (1 << 30))) { g_panel = !g_panel; return 0; }
         if (!typing && msg == WM_KEYDOWN && wp == VK_ESCAPE && g_panel && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId)) {
-            g_panel = false; play_sound(PS_BACK, g_sounds); return 0;   // (a confirmation open: Esc closes just that)
+            g_panel = false; play_sound(PS_BACK, g_sounds);   // (a confirmation open: Esc closes just that)
+            g_esc_eat = GetTickCount() | 1; return 0;
         }
         ImGui_ImplWin32_WndProcHandler(h, msg, wp, lp);
         bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
@@ -466,11 +560,12 @@ static void draw_notice() {
     if (a <= 0) return;
     ImGuiIO& io = ImGui::GetIO();
     ImDrawList* dl = ImGui::GetForegroundDrawList();
-    float h = io.DisplaySize.y, ts = h * 0.036f, ls = h * 0.022f;
+    ui_page pg = mcc_content(io.DisplaySize.x, io.DisplaySize.y);    // (MCC's page: 16:10 and 32:9 alike)
+    float h = pg.h, ts = h * 0.036f, ls = h * 0.022f;
     ImVec2 tsz = g_font_label->CalcTextSizeA(ts, 1e9f, 0, text);
     ImVec2 lsz = line ? g_font_small->CalcTextSizeA(ls, 1e9f, 0, line) : ImVec2(0, 0);
     float w = (tsz.x > lsz.x ? tsz.x : lsz.x) + h * 0.06f, bh = tsz.y + lsz.y + h * 0.035f;
-    ImVec2 p0(io.DisplaySize.x * 0.5f - w * 0.5f, h * 0.17f), p1(p0.x + w, p0.y + bh);
+    ImVec2 p0(io.DisplaySize.x * 0.5f - w * 0.5f, pg.y0 + h * 0.17f), p1(p0.x + w, p0.y + bh);
     int A = (int)(a * 255);
     dl->AddRectFilled(p0, p1, IM_COL32(6, 18, 28, (int)(a * 215)));
     dl->AddRect(p0, p1, IM_COL32(110, 200, 255, (int)(a * 230)), 0, 0, 2.0f);
@@ -518,8 +613,17 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             }
         }
         if (g_ready) {
+            DXGI_SWAP_CHAIN_DESC scd;                             // the back buffer's size (MCC lays out on it)
+            if (SUCCEEDED(sc->GetDesc(&scd))) {
+                RECT cr{};
+                GetClientRect(g_hwnd, &cr);
+                if (scd.BufferDesc.Width != (UINT)g_bb_w || scd.BufferDesc.Height != (UINT)g_bb_h)
+                    logf("overlay: back buffer %ux%u, window client %ldx%ld", scd.BufferDesc.Width, scd.BufferDesc.Height,
+                         cr.right - cr.left, cr.bottom - cr.top);
+                g_bb_w = (float)scd.BufferDesc.Width; g_bb_h = (float)scd.BufferDesc.Height;
+            }
             static unsigned frame;
-            if ((g_session >= 1 && g_session <= 7 && g_session != 4) && frame++ % 8 == 0) probe_lobby(sc);   // the lobby must be on screen
+            if (bots_title(g_session) && frame++ % 8 == 0) probe_lobby(sc);   // the lobby must be on screen
             g_show_tile = in_ce_menus();
             if (!g_show_tile) g_panel = false;
             if (g_show_tile && g_panel && !g_parked && o_getcursorpos) { o_getcursorpos(&g_park_at); g_parked = true; }
@@ -545,6 +649,11 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 t_ours = true;                                       // (our frame reads the real cursor)
                 ImGui_ImplWin32_NewFrame();
                 t_ours = false;
+                {                                                    // window units onto the whole back buffer
+                    ImGuiIO& fio = ImGui::GetIO();
+                    if (fio.DisplaySize.x > 0 && fio.DisplaySize.y > 0 && g_bb_w > 0 && g_bb_h > 0)
+                        fio.DisplayFramebufferScale = ImVec2(g_bb_w / fio.DisplaySize.x, g_bb_h / fio.DisplaySize.y);
+                }
                 ImGui::GetIO().MouseDrawCursor = bug && g_bug_open && !pause;   // the game hides the cursor in play
                 // keyboard navigation (Tab, arrows, Space / Enter, Esc) while the panel is open: every control by keys
                 // (the keyboard pass: without it Tab reached only the two text boxes); off otherwise, so the lobby's
@@ -555,8 +664,9 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 ImGui::NewFrame();
                 pad_frame();
                 if (bug) {
-                    bug_report_env be{ ImGui::GetIO().DisplaySize.y / 1080.0f, g_font_small, pause, &g_bug_open,
-                                       g_bug_text, (int)sizeof g_bug_text, false };
+                    ImVec2 bb = bb_size();
+                    bug_report_env be{ ui_scale(), g_font_small, pause, &g_bug_open,
+                                       g_bug_text, (int)sizeof g_bug_text, false, bb.x, bb.y };
                     bool saved = bug_report_ui(be);
                     if (g_bug_open && !g_bug_was_open) g_bug_from_menu = pause;   // how it was opened, for the report
                     if (saved) save_bug_report();

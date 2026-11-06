@@ -4,7 +4,7 @@ first-time setup, the map tools, mapped maps, mods that can clash), lets the pla
 (Repair: all of it again), opens the tools (Observer, LiDAR Simulator, LiDAR Viewer, nav painter), each in its own app
 window (tools/appwindow.py), and uninstalls (the installer's own uninstaller, once everything of the mod is closed).
 
-A small local server (127.0.0.1 only) serves tools/launcher.html and runs the tasks as their own processes, with
+A small local server (127.0.0.1 only) serves tools/launcher.html (its picture: docs/banner.jpg) and runs the tasks as their own processes, with
 this Python. It stops a while after its window closes, unless a task it started is still running. Starting it again
 while it runs just opens its window again.
 
@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +27,7 @@ sys.path.insert(0, ROOT)
 import appwindow  # noqa: E402
 import conflicts  # noqa: E402
 import setup  # noqa: E402
+import updater  # noqa: E402
 from brain import paths  # noqa: E402
 
 PORT = 8793
@@ -78,6 +80,25 @@ def uninstall(srv):
     conflicts.stop_inside(ROOT, keep={os.getpid()})
     subprocess.Popen([exe], cwd=os.path.dirname(ROOT), creationflags=0x00000008)   # DETACHED_PROCESS
     srv.shutdown()
+
+
+def close_for_update(srv):
+    """The update's installer runs: everything of the mod closes (the tools, their windows, this launcher) so it can
+    replace the files; it opens the launcher again when done (installer: LauncherUpdate)."""
+    time.sleep(1.5)                                  # (the page shows "Installing" first)
+    conflicts.stop_inside(ROOT, keep={os.getpid()})
+    srv.shutdown()
+
+
+def auto_update(srv):
+    """At the launcher's start: the update check (at most every 6 hours); with automatic updates on (the player's
+    choice, off by default) a newer version is downloaded and installed, never while MCC runs."""
+    try:
+        got = updater.check()
+        if got["auto"] and got["available"] and got["can_install"] and not paths.wine() and not conflicts.mcc_running():
+            updater.install(on_start=lambda: close_for_update(srv))
+    except Exception:
+        pass                                         # (offline: the page says when it last checked)
 
 
 def pick_folder(start=None):
@@ -216,6 +237,15 @@ class Handler(BaseHTTPRequestHandler):
         path, _, query = self.path.partition("?")
         if path == "/":
             self.send(open(os.path.join(HERE, "launcher.html"), "rb").read(), "text/html; charset=utf-8")
+        elif path == "/art.jpg":                     # the page's hero: the README's banner (docs/banner.jpg ships)
+            try:
+                self.send(open(os.path.join(ROOT, "docs", "banner.jpg"), "rb").read(), "image/jpeg")
+            except OSError:
+                self.send({"error": "not found"}, code=404)
+        elif path == "/guide":                       # the player's guide, in the launcher's look (Read the guide)
+            self.send(open(os.path.join(HERE, "guide.html"), "rb").read(), "text/html; charset=utf-8")
+        elif path == "/update":                      # the update check's last answer (tools/updater.py)
+            self.send(dict(updater.info(), wine=paths.wine()))
         elif path == "/status":
             self.send(status())
         elif path.startswith("/log/"):
@@ -242,8 +272,27 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/folder":
             os.startfile(ROOT)
             self.send({"ok": True})
-        elif self.path == "/docs":
-            os.startfile(os.path.join(ROOT, "README.md"))
+        elif self.path == "/docs":                   # the guide in the mod's own window (it opened README.md as raw text)
+            url = f"http://127.0.0.1:{self.server.server_address[1]}/guide"
+            if paths.wine():                         # (no app window under Wine: the page opens it in the browser)
+                return self.send({"ok": True, "url": "/guide", "opened": False})
+            appwindow.open_window(url, (1180, 820), "Guide - Project Proving Grounds")
+            self.send({"ok": True, "opened": True})
+        elif self.path == "/update/check":
+            self.send(dict(updater.check(force=True), wine=paths.wine()))
+        elif self.path == "/update/auto":
+            self.send(updater.set_auto(bool(body.get("on"))))
+        elif self.path == "/update/install":         # the player pressed Update (never on its own: automatic is opt-in)
+            if conflicts.mcc_running():
+                return self.send({"ok": False, "message": "Close MCC first: the bots are loaded into it."}, code=400)
+            if paths.wine() or not updater.info()["can_install"]:
+                return self.send({"ok": False, "message": "Download the new version from the releases page."}, code=400)
+            self.send({"ok": updater.install(on_start=lambda: close_for_update(self.server))})
+        elif self.path == "/open":                   # a link out of the guide, in the default browser: web pages only
+            url = str(body.get("url", ""))
+            if not url.startswith("https://github.com/AyoItzKye/"):
+                return self.send({"ok": False}, code=400)
+            webbrowser.open(url)
             self.send({"ok": True})
         elif self.path == "/uninstall":
             if not uninstaller():
@@ -291,6 +340,7 @@ def main():
             appwindow.open_window(url, (1040, 700))
         return
     threading.Thread(target=watch_idle, args=(srv,), daemon=True).start()
+    threading.Thread(target=auto_update, args=(srv,), daemon=True).start()   # (the update check, tools/updater.py)
     if "--no-window" not in sys.argv:
         appwindow.open_window(url, (1040, 700))
     srv.serve_forever()

@@ -115,18 +115,20 @@ TIER_KEYS = ("novice", "average", "strong", "top", "scaling")
 STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "any")
 
 
-def roster(path):
+def roster(path, firefight=False):
     """The BOTS panel's list from botcore.ini (native/bots_panel.cpp roster_write: "bot=<team>,<tier>,<style>,
     <name>"): [{name, team, tier, style}] in the panel's order, exactly the bots of the next match. None when
-    the file has no list (written by a build from before)."""
+    the file has no list (written by a build from before). firefight: Firefight's own list ("ffbot=", 3 bots)."""
     try:
         lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
     except OSError:
         return None
-    if not any(line.startswith("roster=") for line in lines):
+    pre = "ff" if firefight else ""
+    if not any(line.startswith(pre + "roster=") for line in lines):
         return None
     out = []
     for line in lines:
+        line = line[len(pre):] if pre and line.startswith(pre + "bot=") else ("" if pre else line)
         parts = line[4:].split(",", 3) if line.startswith("bot=") else []
         if len(parts) == 4 and parts[3]:
             team, tier, style, name = parts

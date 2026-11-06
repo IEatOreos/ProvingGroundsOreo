@@ -322,6 +322,7 @@ static DWORD g_brain_due;            // match started: start the brain when the 
 static void ini_path(wchar_t* out) { swprintf_s(out, MAX_PATH, L"%sbotcore.ini", g_dir); }
 
 hb_roster g_roster;                  // the BOTS panel's list: exactly the bots of the next match (bots_panel.h)
+hb_roster g_ff_roster;               // Firefight's list: up to 3 bots, all on your team (botcore.ini ffbot=)
 uint32_t g_prejoin = 1;              // H2A, Halo 4: a match's first tick waits for the bots (native/h4f.cpp f_prejoin; botcore.ini prejoin=0: off)
 uint32_t g_collector = 0;            // the brain records the player for the Observer (collector=; tools/collector.py)
 uint32_t g_scale_games = 5;         // Scaling difficulty: the player's last games averaged (scale_games=)
@@ -359,14 +360,23 @@ void save_settings() {
             g_scale_games);                                                                           // (prejoin kept: a save
                                                                                                    // dropped it)
     roster_write(f, g_roster);
+    roster_write(f, g_ff_roster, "ff");
     fclose(f);
+}
+
+// Firefight's own list (4 players: you and 3 bots, all on your team), first made from the list's first 3: the 16-player
+// list is never cut to fit Firefight
+static void ff_seed() {
+    g_ff_roster.n = 0; g_ff_roster.teams = 1;
+    for (int i = 0; i < g_roster.n && g_ff_roster.n < 3; i++) { g_ff_roster.bot[g_ff_roster.n] = g_roster.bot[i]; g_ff_roster.bot[g_ff_roster.n++].team = 0; }
 }
 
 static void load_settings() {
     g_shm->bots_enabled = 1; g_shm->red_players = 4; g_shm->blue_players = 4; g_shm->difficulty = 4;
     g_shm->lidar_mode = 0; g_shm->lidar_players = HB_MAX_PLAYERS;
     g_roster.n = 0; g_roster.teams = 2;
-    bool listed = false;                                    // written by a build with the bot list
+    g_ff_roster.n = 0;
+    bool listed = false, ff_listed = false;                 // written by a build with the bot list (Firefight's)
     wchar_t p[MAX_PATH]; ini_path(p);
     FILE* f = _wfopen(p, L"r");
     if (f) {
@@ -374,6 +384,8 @@ static void load_settings() {
         while (fgets(line, sizeof line, f)) {
             unsigned v;
             if (!strncmp(line, "roster=", 7)) listed = true;
+            if (!strncmp(line, "ffroster=", 9)) { ff_listed = true; continue; }
+            if (!strncmp(line, "ffbot=", 6)) { if (g_ff_roster.n < 3) roster_parse_line(line + 2, g_ff_roster); continue; }
             if (roster_parse_line(line, g_roster)) continue;
             if (sscanf_s(line, "enabled=%u", &v) == 1) g_shm->bots_enabled = v != 0;
             else if (sscanf_s(line, "red=%u", &v) == 1) g_shm->red_players = v > 8 ? 8 : v;
@@ -401,9 +413,13 @@ static void load_settings() {
                              : roster_mixed_tier(g_roster.n);
                     roster_add(g_roster, t, tier, HB_STYLE_ANY, s += 7919);
                 }
+        ff_seed(); ff_listed = true;
         save_settings();
         logf("bot list made from the old team sizes: %d red, %d blue", red, blue);
     }
+    if (!ff_listed) ff_seed();
+    for (int i = 0; i < g_ff_roster.n; i++) g_ff_roster.bot[i].team = 0;
+    g_ff_roster.teams = 1;
     // a list saved on Scaling before it was a bot's own difficulty (s149 and before kept Mixed's on the bots): Scaling
     // for every bot, once, so the list shows what plays
     bool scaled = false;
