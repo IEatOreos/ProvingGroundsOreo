@@ -121,8 +121,28 @@ class Profile:
 
 
 def make_profile(tier, personality, rng=random):
-    """Tier + personality, each value jittered +-10% so no two bots are identical."""
+    """Build a bot profile, with precision overrides for Legendary."""
     vals = {**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
-    return Profile(tier=tier, personality=personality, turn=TURN[tier], **jit)
+    turn = TURN[tier]
+
+    if tier == "top":
+        jit.update(
+            aim_err=0.0,
+            lag=0.001,
+            track=0.001,
+            overshoot=0.0,
+            lead=0.0,
+            flick=0.05,
+            reaction=0.0,
+            decide=0.01,
+        )
+        turn = math.radians(1000)
+
+    return Profile(
+        tier=tier,
+        personality=personality,
+        turn=turn,
+        **jit,
+    )
 

@@ -40,6 +40,7 @@ KING_TAKE, KING_TAKE_HOLD = True, 4.0
 WAVE = True
 WAVE_GATHER_S, WAVE_GO_S, WAVE_COOL_S = 6.0, 20.0, 4.0
 SCREEN_BACK, SCREEN_AHEAD, CUTOFF_AHEAD = 8.0, 12.0, 10.0
+LEGENDARY_POWER_RUN_R = 80.0  # fixed Legendary contests power weapons from farther away; Scaling keeps POWER_RUN_R
 POWER_RUN_R = 40.0          # a power weapon lying this near (on its level) sends one of the team for it (power_runs)
 POWER_PRESS_R = 10.0        # ... this near for an attacker whose objective is pressing (Bot.pressing: Invasion's attackers)
 POWER_DETOUR = 12.0         # ... or this much more than its straight way to the objective (press_fetch_ok)
@@ -645,7 +646,8 @@ class Director:
 
     def power_runs(s, now, snap):
         """A power weapon lying loose (the map's items of value 0.8 or more: the sniper, the rockets) gets one fetcher on
-        the team: the nearest bot within POWER_RUN_R on its level holding none. Not the carrier, not a man in a vehicle,
+        the team: the nearest eligible bot in range on its level holding none (40 u normally, 80 fixed Legendary).
+        Not the carrier, not a man in a vehicle,
         not Easy (no plans), not a defender while the core is at stake (Bot.urgent). Bot.fetch = (where, name, until);
         dropped once it is gone from there or the time is up."""
         power = {it["name"] for it in s.map.get("items", []) if it["kind"] == "weapon" and it["value"] >= 0.8}
@@ -684,10 +686,18 @@ class Director:
                     continue
                 if b.pressing(p, snap) and not s.press_fetch_ok(p, q, snap):
                     continue
-                if dist(p.pos, q) < POWER_RUN_R and abs(p.pos.z - q.z) < 6.0:
-                    near.append((dist(p.pos, q), b))
+                fixed_legendary = b.p.tier == "top" and b.p.extra is None
+                radius = LEGENDARY_POWER_RUN_R if fixed_legendary else POWER_RUN_R
+                distance = dist(p.pos, q)
+                if distance < radius and abs(p.pos.z - q.z) < 6.0:
+                    near.append((distance, b, fixed_legendary))
             if near:
-                min(near, key=lambda x: x[0])[1].fetch = (q, n, until, spawn)
+                distance, fetcher, fixed_legendary = min(near, key=lambda x: x[0])
+                if fixed_legendary and spawn is None:
+                    # Use the pickup ETA's nominal walking speed plus a travel margin.
+                    # Farther calls must not expire after 25 s before the bot can arrive.
+                    until = max(until, now + distance / 2.3 + 10.0)
+                fetcher.fetch = (q, n, until, spawn)
 
     def press_fetch_ok(s, p, q, snap):
         """May an attacker on the clock (Bot.pressing) go for a power weapon at q? Only one right by it (POWER_PRESS_R) or

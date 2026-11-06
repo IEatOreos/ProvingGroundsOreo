@@ -152,6 +152,7 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
                                    equipment=d.get("equipment", ""), ability_on=on,
                                    # the match's motion tracker setting for him (off in SWAT)
                                    tracker=d.get("tracker", True),
+                                   head_pos=Vec(*d["head_pos"]) if d.get("head_pos") is not None else None,
                                    camo_until=now + 0.3 if on and d.get("equipment") == "active_camo" else 0.0))
     bad = ability_misread(players, now)
     for p in players:

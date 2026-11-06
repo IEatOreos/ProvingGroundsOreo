@@ -1,6 +1,6 @@
 # Custom Project Proving Grounds workflow
 
-This is a customized installation based on upstream Project Proving Grounds 0.2.1.
+This is a customized installation based on upstream Project Proving Grounds 0.2.2-s181.
 Read CUSTOMIZATIONS.md and docs/CUSTOM_RELEASE_WORKFLOW.md before making changes.
 
 - Make small targeted changes. Preserve upstream logic and license notices.

@@ -1241,6 +1241,65 @@ class LiveReach(LiveH3):
         s._bare_players = set()
         s._find()
 
+    ROUND_WEAPONS = {"dmr", "sniper", "assault_rifle", "magnum", "shotgun", "needle_rifle", "needler",
+                     "rockets", "fuelrod", "concussion_rifle", "grenade_launcher"}
+
+    def rounds(s, handle):
+        """Reach reserve +0x2C6, loaded +0x2CA (int16). DMR/sniper verified live,
+        including reload transfer and a completely empty sniper, 2026-11-05.
+        H4/H2A inherit this class, but must not use Reach's weapon layout.
+        """
+        if s.g.dll.lower() != "haloreach.dll":
+            if s.AMMO_AT == LiveReach.AMMO_AT:
+                return -1, -1       # a Reach instance must not read these fields from another game
+            return super().rounds(handle)
+        o = s.object(handle)
+        name = s.weapon_name(handle) if o else "none"
+        if o and name == "unknown":
+            try:
+                return super().rounds(handle)  # upstream tag-based fallback
+            except (OSError, struct.error, TypeError):
+                return -1, -1
+        if not o or name not in s.ROUND_WEAPONS:
+            return -1, -1
+        b = s.g.read(o + 0x2C6, 6)
+        if b is None or len(b) != 6:
+            return -1, -1
+        reserve, mag = struct.unpack("<hxxh", b)
+        if reserve < 0 or mag < 0:
+            return -1, -1
+        # Preserve the new upstream tag/magazine naming caches.
+        try:
+            raw_tag = s.g.read(o, 4)
+            if raw_tag is not None and len(raw_tag) == 4:
+                tag = struct.unpack("<I", raw_tag)[0]
+                for key, value in (("_rounds_seen", max(reserve, mag)), ("_mag_seen", mag)):
+                    cache = s.__dict__.setdefault(key, {})
+                    cache[tag] = max(cache.get(tag, 0), value)
+        except OSError:
+            pass
+        return reserve + mag, mag    # zero is a known empty gun, even on the first read
+
+    def spartan_head_position(s, address, unit, feet):
+        """Transform the Reach Spartan's target_head marker by its live head bone."""
+        size, offset = struct.unpack_from("<HH", unit, 0x178)
+        # Verified on the 82-node multiplayer Spartan layout.
+        if (size, offset) != (82 * 52, 0xF1C):
+            return None
+        raw = s.g.read(address + offset + 38 * 52, 52)
+        if raw is None or len(raw) != 52:
+            return None
+        scale, *matrix = struct.unpack("<13f", raw)
+        if not all(map(math.isfinite, (scale, *matrix))) or not 0.95 <= scale <= 1.05:
+            return None
+        if any(abs(sum(v*v for v in matrix[k:k+3]) - 1.0) > 0.08 for k in (0, 3, 6)):
+            return None
+        point = tuple(matrix[9+i] + scale * (0.01772663 * matrix[i] - 0.0063144267 * matrix[3+i])
+                      for i in range(3))
+        if math.hypot(point[0] - feet[0], point[1] - feet[1]) > 0.8 or not 0.15 < point[2] - feet[2] < 1.05:
+            return None
+        return point
+
     MAGAZINE = {15: "dmr", 32: "assault_rifle", 8: "magnum", 21: "needle_rifle", 4: "sniper", 6: "shotgun",
                 2: "rockets"}   # ponytail: by magazine size; battery weapons stay "unknown"
 
@@ -1584,6 +1643,8 @@ class LiveReach(LiveH3):
                 d["weapon"] = s.weapon_name(held) if held != NONE else (d["weapons"][0] if d["weapons"] else "none")
                 rounds = [s.rounds(w) for w in slots if w != NONE]
                 d["ammo"], d["mag"] = [a for a, _ in rounds], [g for _, g in rounds]
+                if parent == NONE:
+                    d["head_pos"] = s.spartan_head_position(o, u, d["pos"])
                 d["equipment"], d["ability_on"] = s.ability(struct.unpack_from("<I", u, s.ABILITY_AT)[0])
             out.append(d)
         for d in out:                # enemies on his motion tracker (tracker() per game)

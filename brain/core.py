@@ -75,6 +75,7 @@ class PlayerState:
     equipment: str = ""        # the equipment / armor ability carried (brain/equipment.py kinds), "" none
     ability_on: bool = False   # that ability is running (armor lock held, jetpack on, camo on ...)
     decoy: bool = False        # a hologram (the game's truth: bots tell it only from what it does)
+    head_pos: Vec | None = None  # Live animated head marker when available.
     tracker: bool = True       # enemies show on this player's motion tracker (the match settings: live.tracker())
 
 

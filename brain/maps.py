@@ -474,6 +474,11 @@ def _build(m, window):
     if any(kinds.get(k) for k in ("window", "fence", "window_floor", "fence_floor")):
         T.set_wall_kinds(kinds)
     T.walls_learned = [list(c) for c in learned]
+    open_areas = []                      # custom: air under a lone overhead surface over a ground hole in the export
+    for nm in names:                     # (Terrain.set_open_under; Breakpoint's tower-to-bridge gap)
+        so = os.path.join(ROOT, nm, "sight_open.json")
+        open_areas += read_json(so).get("areas", []) if os.path.exists(so) else []
+    T.set_open_under(open_areas)
     if m.get("shields"):                 # Forge shields (brain/forge.py): sight-line stops and one-way barriers
         from .forge import apply_shields
         apply_shields(T, m["shields"])

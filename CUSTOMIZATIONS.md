@@ -1,6 +1,8 @@
 # Custom Legendary bots
 
-This is a custom derivative of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds), based on the installed upstream version 0.2.1. Original credits and licensing remain in LICENSE.md and NOTICE.md. This repository is not the upstream author's official release.
+This is a custom derivative of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds), now based on installed upstream version 0.2.2-s181. Original credits and licensing remain in LICENSE.md and NOTICE.md. This repository is not the upstream author's official release.
+
+The 2026-11-06 migration merges our custom behavior into the new installed source and keeps its new native binaries, Firefight lifecycle changes, pickup fixes, vehicle improvements, hazard avoidance and melee validation. See docs/UPSTREAM_MIGRATION_2026-11-06.md for provenance, validation and remaining live checks. The following initial-snapshot section is historical; later notes describe current overrides.
 
 The original README.md documents the upstream mod, and its download and issue links point to upstream. Custom release details belong in CUSTOM_CHANGELOG.md and docs/CUSTOM_RELEASE_WORKFLOW.md. VERSION retains the upstream version; CUSTOM_VERSION identifies our derivative.
 
@@ -37,7 +39,7 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 - Local follow-up: Breakpoint only. maps/reach_dlc_invasion/sight_open.json opens sight and shot rays under a thin overhead surface where the level export has no ground (the tower ledge to bridge gap), via Terrain.set_open_under. tools/test_breakpoint_sight.py covers it; live confirmation is pending.
 
 - Visible-target firing hesitation near a balcony: head line of sight is suspected, not confirmed.
-- Sniper miss percentages were discussed but have NOT been implemented.
+- The initial sniper miss-percentage proposal was implemented later: fixed Easy/Normal/Heroic use 10%/25%/50% intended sniper hits, as described above.
 - Flight learning from demonstrations has NOT been implemented. The local companion vehicle recorder is excluded from this repository pending separate review.
 
 ## Baseline and backups
