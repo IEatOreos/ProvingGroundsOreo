@@ -606,6 +606,15 @@ class Perception:
         return [k for k, b in s.beliefs.items() if isinstance(k, int) and b.seen and k in s.recognized]
 
 
+SNIPER_HIT_CHANCE = {"novice": 0.10, "average": 0.25, "strong": 0.50}
+
+
+def percentage_sniper(prof, me):
+    """Fixed Easy/Normal/Heroic sniper rifles only; other guns, vehicles and Scaling stay unchanged."""
+    return (prof.extra is None and prof.tier in SNIPER_HIT_CHANCE
+            and me.weapon == "sniper" and me.vehicle == -1)
+
+
 class Aim:
     """Re-aims at a tracking interval, flicks with Fitts-law timing, overshoots sometimes,
     leads imperfectly and tightens while it stays on one target (focus)."""
@@ -619,10 +628,15 @@ class Aim:
         s.target = None
         s.focus = 0.0
 
-    def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False):
+    def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False, precise=False):
         # gun: what the shot comes out of when it is not the gun in hand (a vehicle's turret: vehicles.GUNNER_GUN);
         # origin: where that shot leaves (vehicles.gun_height), else the eye; crouched: the target is (his head and
         # chest lower: core.CROUCH_HEAD, CROUCH_CHEST)
+        if precise and target_id is not None:
+            # The percentage roll, rather than human aim error, controls these shots.
+            point = tpos + Vec(0, 0, aim_height(True, crouched))
+            s.target, s.goal, s.flick = target_id, angles_to(origin or eye(me), point), None
+            return s.goal
         if target_id != s.target:
             s.target, s.focus = target_id, 0.0
         s.focus = min(1.0, s.focus + dt / 1.5)
@@ -1119,6 +1133,7 @@ class Bot:
                     top[w] = max(top.get(w, 0), mag)
         previous_shot = getattr(s, "last_shot_t", -9.0)
         act = s.plan(now, dt, snap, los, nav, callouts, items)
+        s.sniper_missed_last = False
         me = snap.player(s.id)
         if not s.grenades_allowed():
             act.grenade = False   # final safeguard for every grenade path, including boarding
@@ -1126,7 +1141,7 @@ class Bot:
             s.turn_cap(me, act, dt)
             shot_part = getattr(s, "shot_part", None)
             if (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
-                    and s.p.tier == "top" and s.p.extra is None
+                    and ((s.p.tier == "top" and s.p.extra is None) or percentage_sniper(s.p, me))
                     and shot_part is not None and shot_part[1]):
                 target = snap.player(shot_part[0])
                 if target is not None and target.alive:
@@ -1150,7 +1165,56 @@ class Bot:
                 s.last_shot_t, s.next_fire = previous_shot, now
         else:
             s.nade_retry = None
+        s.percentage_sniper_shot(now, me, snap, act)
         return act
+
+    def percentage_sniper_shot(s, now, me, snap, act):
+        """Apply one intended hit/miss outcome, retained through unacknowledged fire requests.
+
+        Magazine consumption acknowledges shots. Without a decoded magazine, normal cadence
+        bounds new rolls; post-grenade retries retain their outcome until recovery ends.
+        """
+        if me is None or not me.alive or not percentage_sniper(s.p, me):
+            s.sniper_roll = None
+            return
+        mag = s.current_mag(me)
+        state = getattr(s, "sniper_roll", None)
+        if state is not None and mag != state["mag"]:
+            s.sniper_roll = state = None    # observe consumption/reload even between fire requests
+        part = getattr(s, "shot_part", None)
+        target = snap.player(part[0]) if part else None
+        if target is not None and target.vehicle != -1:
+            return
+        if act.fire and (act.grenade or act.melee or act.weapon >= 0):
+            act.fire = s.shot_now = s.fired_last = False  # no unrolled shot during another weapon action
+        if not act.fire:
+            return
+        if target is None or not target.alive:
+            act.fire = s.shot_now = s.fired_last = False
+            return
+        if mag == 0:
+            return                      # a trigger may initiate automatic reload, not a shot
+        if (state is None or mag != state["mag"]
+                or (mag < 0 and now >= state["next_roll"] and getattr(s, "nade_retry", None) is None)):
+            state = s.sniper_roll = dict(
+                mag=mag, hit=s.rng.random() < SNIPER_HIT_CHANCE[s.p.tier],
+                side=s.rng.choice((-1.0, 1.0)), margin=s.rng.uniform(0.9, 1.3),
+                next_roll=max(getattr(s, "next_fire", now), now + FIRE_GAP["sniper"]))
+        head = target.head_pos or target.pos + Vec(0, 0, aim_height(True, crouched(target)))
+        point = head
+        if not state["hit"]:
+            yaw, _ = angles_to(eye(me), head)
+            side = state["side"] * state["margin"]
+            point = head + Vec(-math.sin(yaw) * side, math.cos(yaw) * side, 0.4)
+            s.sniper_missed_last = True
+        yaw, pitch = angles_to(eye(me), point)
+        turn = wrap(act.yaw - yaw)
+        c, sn = math.cos(turn), math.sin(turn)
+        f, st = act.forward, act.strafe
+        act.forward = max(-1.0, min(1.0, f * c - st * sn))
+        act.strafe = max(-1.0, min(1.0, f * sn + st * c))
+        act.yaw, act.pitch = yaw, pitch
+        s.note("sniper: intended " + ("hit" if state["hit"] else "miss"))
 
     def grenades_allowed(s):
         return LEGENDARY_GRENADES or s.p.tier != "top" or s.p.extra is not None
@@ -3376,7 +3440,7 @@ class Bot:
         parts = getattr(s.per, "target_parts", {}).get(tid)
         fixed_legendary = s.p.tier == "top" and s.p.extra is None
         chest_only = fixed_legendary and me.weapon == "assault_rifle"
-        head_only = (fixed_legendary and not chest_only and target is not None
+        head_only = ((fixed_legendary or percentage_sniper(s.p, me)) and not chest_only and target is not None
                      and me.vehicle == -1 and target.vehicle == -1
                      and me.weapon not in SPLASH and me.weapon not in CHARGE and me.weapon not in LUNGE)
         if target is not None and (head_only or parts is not None):
@@ -3402,7 +3466,8 @@ class Bot:
             head = s.aim_head(now, me, target, tid)
         aim_at = (s.weak_point(me, tid, b, snap, me.weapon)
                   if target is not None and target.vehicle != -1 and me.weapon in VEHICLE_KILLERS else b.pos)
-        act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target))
+        act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
+                                     precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1)
         s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
         lo, hi = WEAPON_RANGE.get(me.weapon, (5.0, 25.0))
         to = (b.pos - me.pos).norm()
@@ -3509,6 +3574,8 @@ class Bot:
         loose = profiles.LOOSE.get(s.p.tier) if profiles.LOOSE_AIM else None
         if s.p.extra and profiles.LOOSE_AIM:     # (Scaling difficulty's own, brain/scaling.py)
             loose = dict(follow=s.p.extra["loose_follow"], early=s.p.extra["loose_early"])
+        if percentage_sniper(s.p, me) and target is not None and target.vehicle == -1:
+            loose = None             # no difficulty-specific early/follow-through sniper error
         seen_fire = now - s.per.last_seen.get(tid, -9.0) < 0.25 + (loose["follow"] if loose else 0.0)
         # ... and a clear line to him now, or no shot: the grace above, the looser trigger's follow-through and a hit
         # through the level (Perception: the man shooting us counts as seen 1.5 s) emptied guns into the walls he went
@@ -3522,7 +3589,7 @@ class Bot:
         slack = (2.5 if w in AUTO else 1.6) if d < SHORT_BAND and s.p.tactics > 0.15 else 1.0
         on = (s.aim.on_target(me, b.pos, act.yaw, act.pitch, slack)
               or (loose is not None and s.aim.landing(now, loose["early"], tid))) and seen_fire
-        if head_only and w == "dmr":
+        if head_only and (w == "dmr" or percentage_sniper(s.p, me)):
             # The final shot command snaps to the live head after the turn cap.
             on = seen_fire
         if not on and seen_now and clear and d < 1.6:
@@ -3952,7 +4019,8 @@ class Bot:
         if st is None or hp < st[1] - 0.005:
             s.dry_shots[tid] = st = [0, hp, None]    # first look, or it just took damage
         st[1] = hp
-        if s.fired_last and s.aim.on_target(me, target.pos) and dist(me.pos, target.pos) > s.DRY_MIN_RANGE:
+        if (s.fired_last and not getattr(s, "sniper_missed_last", False)
+                and s.aim.on_target(me, target.pos) and dist(me.pos, target.pos) > s.DRY_MIN_RANGE):
             st[0] += 1
             st[2] = st[2] if st[2] is not None else s.now
         if st[0] >= (s.p.extra or {}).get("dry_shots", s.DRY_SHOTS.get(s.p.tier, 24)) and s.now - st[2] >= s.DRY_SECONDS:
