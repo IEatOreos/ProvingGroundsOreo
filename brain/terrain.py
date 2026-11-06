@@ -918,6 +918,31 @@ class Terrain:
         s.wall_kinds = used
         return used
 
+    def set_open_under(s, areas):
+        """Custom: open air under a lone overhead surface where the exported level has no ground (maps/<map>/
+        sight_open.json, maps._build). areas: [{"x": [lo, hi], "y": [lo, hi], "above": z}]; in each box, cells with
+        no floor whose lowest surface is over z get no ground for the sight / shot / crosshair rays (_ray, aim_hit).
+        Walking, falls and aircraft keep s.low. Returns the cells opened."""
+        s.ray_low = None
+        if not areas:
+            return 0
+        rl = s.low.copy()
+        xs = s.x0 + (np.arange(s.w) + 0.5) * s.cell
+        ys = s.y0 + (np.arange(s.h) + 0.5) * s.cell
+        nofloor = ~np.isfinite(s.floors).any(axis=0)
+        for a in areas:
+            box = (((ys >= a["y"][0]) & (ys <= a["y"][1]))[:, None]
+                   & ((xs >= a["x"][0]) & (xs <= a["x"][1]))[None, :])
+            with np.errstate(invalid="ignore"):
+                rl[box & nofloor & np.isfinite(rl) & (rl > float(a["above"]))] = np.nan
+        opened = int((np.isfinite(s.low) & ~np.isfinite(rl)).sum())
+        s.ray_low = rl if opened else None
+        return opened
+
+    def _ray_low(s):
+        rl = getattr(s, "ray_low", None)
+        return s.low if rl is None else rl
+
     def _ray(s, a, b, part, mode=None, *, source_height=EYE):
         """Eye of a to height part of b over the real level: blocked by a steep face (wall bitmask)
         at the ray's height, by the ray crossing a floor level (a slab between storeys), or by the ray
@@ -943,7 +968,7 @@ class Terrain:
         t = np.linspace(0.0, 1.0, n)[1:-1]          # skip both end points (the players themselves)
         xs, ys, zs = a.x + dx * t, a.y + dy * t, za + (zb - za) * t
         j, i = s._ij(xs, ys)
-        lows = np.nan_to_num(s.low[j, i], nan=-1e3)
+        lows = np.nan_to_num(s._ray_low()[j, i], nan=-1e3)
         if (zs < lows - 0.05).any():
             return False                             # through the ground
         W = s.walls[j, i]
@@ -982,7 +1007,7 @@ class Terrain:
             W = W.copy()
             k = min(W.shape[-1], s.see_clear.shape[-1])
             W[:, :k] &= ~s.see_clear[j, i, :k]
-        hit = (zs < np.nan_to_num(s.low[j, i], nan=-1e3) - 0.05) | s._wall_bit(W, zs)
+        hit = (zs < np.nan_to_num(s._ray_low()[j, i], nan=-1e3) - 0.05) | s._wall_bit(W, zs)
         fl = s.floors[:, j, i]
         with np.errstate(invalid="ignore"):
             hit |= (((np.r_[o.z, zs[:-1]] - fl) * (zs - fl) < 0) & np.isfinite(fl)).any(axis=0)

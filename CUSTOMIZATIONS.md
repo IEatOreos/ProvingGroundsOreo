@@ -22,6 +22,7 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 
 - Local follow-up: Reach now supplies live magazine and total-ammo counts for recognized magazine-fed weapons; the bot remembers magazine maxima during combat too. DMR and sniper counts were verified against controlled shots, reloads, and sniper depletion. See CUSTOM_CHANGELOG.md for validation and remaining gameplay checks. Battery counts remain unknown.
 - Local follow-up: A held sniper with any remaining total ammunition is exempt from low-ammo rearming. Empty-sniper behavior and deliberate upgrade decisions remain unchanged. Eight ammo/rearm regression tests passed; gameplay confirmation is pending a bot-process restart.
+- Local follow-up: Breakpoint only. maps/reach_dlc_invasion/sight_open.json opens sight and shot rays under a thin overhead surface where the level export has no ground (the tower ledge to bridge gap), via Terrain.set_open_under. tools/test_breakpoint_sight.py covers it; live confirmation is pending.
 
 - Visible-target firing hesitation near a balcony: head line of sight is suspected, not confirmed.
 - Sniper miss percentages were discussed but have NOT been implemented.

@@ -1,0 +1,6 @@
+{
+  "note": "Open air under the thin sloped surface 16-26 u over the gap between the tower ledge and the bridge (x 1.9-6.6, y 11-23): the level export has no ground under it. Only cells with no floor whose lowest surface is above 'above' open (Terrain.set_open_under).",
+  "areas": [
+    {"x": [1.5, 7.0], "y": [10.5, 23.5], "above": 5.0}
+  ]
+}
