@@ -1,4 +1,4 @@
-"""Regression scenarios for Reach's AR-to-shotgun loadout upgrade.
+"""Regression scenarios for Reach's shotgun and Focus Rifle loadout upgrades.
 
 Run: python tools/test_reach_loadout.py
 """
@@ -35,8 +35,8 @@ class ReachLoadoutTests(unittest.TestCase):
                 me = player_with()
                 point = Vec(1, 0, 0)
                 snap = Snapshot(10, [me], ground_weapons=[('shotgun', point)])
-                self.assertAlmostEqual(loadout_value(me.weapons, bot.rank, bot.game), 0.95)
-                self.assertAlmostEqual(loadout_value(['dmr', 'shotgun'], bot.rank, bot.game), 1.01)
+                self.assertAlmostEqual(loadout_value(me.weapons, bot.rank, bot.game), 0.91)
+                self.assertAlmostEqual(loadout_value(['dmr', 'shotgun'], bot.rank, bot.game), 0.97)
                 self.assertEqual(bot.upgrade_point(me, snap, reach=14), point)
                 self.assertEqual(bot.gun_to_drop(me, 'item', point), 1)
                 # The real selection path equips the AR for replacement, retaining the DMR.
@@ -48,11 +48,36 @@ class ReachLoadoutTests(unittest.TestCase):
         snap = Snapshot(10, [me], ground_weapons=[('assault_rifle', Vec(1, 0, 0))])
         self.assertIsNone(bot.upgrade_point(me, snap, reach=14))
 
+    def test_focus_replaces_dmr_and_keeps_the_short_range_secondary(self):
+        for tier in ['novice', 'average', 'strong', 'top', 'scaling']:
+            for secondary, before, after in [('assault_rifle', 0.91, 0.98), ('shotgun', 0.97, 1.04)]:
+                with self.subTest(tier=tier, secondary=secondary):
+                    bot = bot_for(tier)
+                    me = player_with(secondary=secondary)
+                    me.weapon = secondary
+                    point = Vec(1, 0, 0)
+                    snap = Snapshot(10, [me], ground_weapons=[('focus_rifle', point)])
+                    self.assertAlmostEqual(loadout_value(me.weapons, bot.rank, bot.game), before)
+                    self.assertAlmostEqual(loadout_value(['focus_rifle', secondary], bot.rank, bot.game), after)
+                    self.assertAlmostEqual(loadout_value(['dmr', 'focus_rifle'], bot.rank, bot.game), 0.92)
+                    self.assertEqual(bot.upgrade_point(me, snap, reach=14), point)
+                    self.assertEqual(bot.gun_to_drop(me, 'item', point), 0)
+                    self.assertEqual(bot.choose_weapon(10, me, 'item', point, snap), 0)
+
+    def test_loaded_focus_ar_does_not_swap_back_for_a_dmr(self):
+        bot = bot_for()
+        me = player_with(primary='focus_rifle')
+        me.ammo[0], me.mag[0] = -1, -1  # battery remains unknown, not empty
+        snap = Snapshot(10, [me], ground_weapons=[('dmr', Vec(1, 0, 0))])
+        self.assertIsNone(bot.upgrade_point(me, snap, reach=14))
+
     def test_other_games_keep_original_ar_rating_and_pickups(self):
         for game, primary in [('ce', 'pistol'), ('h3', 'battle_rifle'), ('h4', 'dmr')]:
             with self.subTest(game=game):
                 bot = bot_for(game=game)
                 self.assertEqual(proficiency('assault_rifle', game=game)[0], 1.0)
+                self.assertEqual(bot.rank('dmr'), 3.6)
+                self.assertEqual(bot.rank('focus_rifle'), 3.2)
                 me = player_with(primary=primary)
                 snap = Snapshot(10, [me], ground_weapons=[('shotgun', Vec(1, 0, 0))])
                 self.assertIsNone(bot.upgrade_point(me, snap, reach=14))

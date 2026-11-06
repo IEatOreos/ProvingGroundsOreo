@@ -389,7 +389,7 @@ EMP_GAMES = {"h3", "odst", "reach", "h4"}
 # games where the magnum is a real gun (guide 03: Reach's 5-shot kill, Halo 4's 6), the AR a fair one (Reach: the
 # plasma repeater is the Elites' assault rifle; the plasma pistol is the weakest gun in the game, kept for its
 # overcharge: the repeater had no rank or band row, read as a 2 u gun, and the pistol won every fight past 4 u)
-RANK_GAME = {"reach": {"magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6},
+RANK_GAME = {"reach": {"dmr": 3.5, "focus_rifle": 3.6, "magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6},
              "h3": {"magnum": 1.2}}
 
 
