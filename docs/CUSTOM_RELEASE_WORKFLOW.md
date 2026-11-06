@@ -16,13 +16,17 @@ Use a private GitHub repository, as requested by the user. The account/organizat
 
 After approximately three meaningful updates, or when the user asks, prepare a candidate release. This count is a reminder, not permission to publish.
 
-1. Review the full diff since the last approved version and inspect files for private data and oversized artifacts.
+1. Fetch the latest remote history and review the owner's collaborator's incoming commits before preparing the candidate. Integrate those commits while preserving their identities and intended behavior, then review the full diff since the last approved version and inspect files for private data and oversized artifacts.
 2. Set CUSTOM_VERSION and finalize the matching changelog entry. Preserve VERSION for the upstream version unless the upstream integration explicitly requires otherwise.
 3. Run relevant checks and prepare a concrete summary with the target repository, version, changes, files/artifacts to upload, and remaining gameplay checks.
 4. Ask for explicit approval to push that exact candidate and, separately if applicable, publish its GitHub release. Do not push, upload, publish tags, or create public releases before approval.
-5. After approval, push only the approved commits to the confirmed private repository. Publish a release/tag only when included in that approval. Verify the remote commit and links, then record the result.
+5. After approval, push only the approved candidate to the confirmed private repository using a normal push. The candidate must descend from the current remote head. If the remote has advanced, fetch, integrate, and revalidate before retrying; obtain approval again if the candidate changes materially. Publish a release/tag only when included in that approval. Verify the remote commit and links, then record the result.
 
 Initial publication follows the same approval gate. No automation should push on a timer or after a commit count.
+
+## Preserve collaborator work
+
+The owner explicitly requires preserving the coding collaborator's commits and changes. Review both histories and overlapping file edits before integration. Use normal merges that retain existing commit identities; do not rebase published collaborator commits, force-push, reset away their work, or copy older whole files over newer versions. A preserved commit in history is not sufficient if conflict resolution silently removes its behavior: reconcile the actual code and run relevant checks. Ask the owner when conflicting intentions cannot be reconciled. Do not stage or alter unrelated work in the shared installation.
 
 ## Upstream updates
 

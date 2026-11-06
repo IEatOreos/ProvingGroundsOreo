@@ -1,5 +1,11 @@
 # Custom release history
 
+## Local workflow — preserve collaborator commits, 2026-11-05
+
+- Recorded the owner's requirement to preserve the coding collaborator's commits and intended behavior in AGENTS.md and docs/CUSTOM_RELEASE_WORKFLOW.md.
+- Future pushes require fetching/reviewing the latest remote commits, merging incoming work without rewriting published history, reconciling overlapping behavior, and using normal pushes. Force-pushing or overwriting newer files with older copies is prohibited.
+- Documentation only; no bot behavior changed and no GitHub upload performed.
+
 ## Unreleased — Focus Rifle range ratings, 2026-11-05
 
 - Set the Focus Rifle proficiency tuple to the requested (0.1, 1.0, 1.0, 1.0). This changes AI range/loadout valuation, not the weapon's actual damage, battery, or aiming mechanics.
