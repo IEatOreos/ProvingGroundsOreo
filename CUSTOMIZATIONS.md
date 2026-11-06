@@ -20,6 +20,8 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 
 ## Open investigations and proposals
 
+- Fixed Legendary decision interval is now 0.01 seconds with no decision-interval random variation. Other difficulties and Scaling retain their existing timing. The shared live loop remains 30 Hz, so decisions are processed on available loop updates; restart the bot process to apply.
+
 - Fixed Legendary reaction delay is now 0 seconds (previously 1/30 second). Scaling and other difficulties retain their settings. The live update loop still limits when a newly visible target can be processed; restart the bot process to apply.
 
 - Current Reach loadout follow-up: Focus Rifle range ratings are (0.1, 1.0, 1.0, 1.0), with Focus ranked 3.6 and DMR 3.5. DMR+AR scores 0.91, DMR+Focus 0.92, and Focus+AR 0.98; an eligible ordinary Focus pickup replaces the DMR while retaining the AR (or shotgun). Power-fetch classification and unknown battery counts are unchanged. Other games retain their prior weapon ranks.

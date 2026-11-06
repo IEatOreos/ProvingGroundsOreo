@@ -135,6 +135,7 @@ def make_profile(tier, personality, rng=random):
             lead=0.0,
             flick=0.05,
             reaction=0.0,
+            decide=0.01,
         )
         turn = math.radians(1000)
 

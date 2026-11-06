@@ -1271,7 +1271,8 @@ class Bot:
             s.T().learn_shot_through(line[0], line[1])   # his round reached us through what the data calls a wall: a
             s.per.shot_line = None                       # fence it does not name (Terrain.learn_shot_through)
         if now >= s.next_decide:
-            s.next_decide = now + s.p.decide * s.rng.uniform(0.8, 1.3)
+            fixed_legendary = s.p.tier == "top" and s.p.extra is None
+            s.next_decide = now + s.p.decide * (1.0 if fixed_legendary else s.rng.uniform(0.8, 1.3))
             was, s.goal = s.goal, s.decide(now, me, snap)
             if s.goal[0] == "fight" and s.goal != was:
                 s.target_at = now              # a new target: held TARGET_HOLD s (pick_target)
