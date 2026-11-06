@@ -66,8 +66,9 @@ BANDS = {
     "sticky_detonator": (0.4, 0.9, 0.5, 0.1), "boltshot": (0.8, 0.4, 0.05, 0.0)}
 
 
-# the same gun name, another game's gun: Reach's and Halo 4's magnum kills in 5-6 shots (guide 03), Halo 2 / 3's does not
-BANDS_GAME = {"reach": {"magnum": (0.8, 0.8, 0.4, 0.1)}, "h4": {"magnum": (0.8, 0.8, 0.4, 0.1)}}
+# Per-game ratings: Reach/H4 magnums differ from H2/H3; Reach's AR rates below the shotgun at Short band.
+BANDS_GAME = {"reach": {"magnum": (0.8, 0.8, 0.4, 0.1), "assault_rifle": (0.8, 0.6, 0.1, 0.0)},
+              "h4": {"magnum": (0.8, 0.8, 0.4, 0.1)}}
 
 
 def band(d):
@@ -139,6 +140,7 @@ COMMIT_S, COMMIT_WEAK_S = 6.0, 10.0   # a fight lasts until the target dies or i
 TARGET_HOLD = 1.0                      # s a new target in view is kept before another may take over (guide 09 4.5)
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
+UPGRADE_GAIN_GAME = {"reach": 0.05}    # accepts the 0.06 gain from DMR+AR to DMR+shotgun
 UPGRADE_R, UPGRADE_ON_WAY = 14.0, 6.0  # u: a better gun this near is weighed; this near, its post does not hold it back
 EYES_KEEP = 3.0                        # s every bot keeps watching where a man it saw went (look_point)
 HIT_KEEP, HIT_WHIP = 2.0, 0.35         # a hit is turned to this long at least, with this spin at least (Normal's): Easy too
@@ -3253,6 +3255,7 @@ class Bot:
         inv = [w for w in me.weapons if w not in ("none",)]
         ammo = [me.ammo[i] if i < len(me.ammo) else -1 for i in range(len(inv))]
         have = loadout_value(inv, s.rank, s.game)
+        minimum_gain = UPGRADE_GAIN_GAME.get(s.game, UPGRADE_GAIN)
         skip = getattr(s, "rearm_skip", {})
         rest = s.swap_rested(me, snap)
         best = None
@@ -3265,7 +3268,7 @@ class Bot:
                 continue
             keep = inv if len(inv) < 2 else [w for k, w in enumerate(inv) if k != s.drop_slot(inv, ammo, n)]
             gain = loadout_value(keep + [n], s.rank, s.game) - have
-            if gain > UPGRADE_GAIN and (best is None or gain - 0.01 * d > best[0]):
+            if gain > minimum_gain and (best is None or gain - 0.01 * d > best[0]):
                 best = (gain - 0.01 * d, q, n)
         if best is None:
             return None

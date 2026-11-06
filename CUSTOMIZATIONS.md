@@ -20,6 +20,8 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 
 ## Open investigations and proposals
 
+- Local follow-up: Reach AR Short-band proficiency is 0.8 (shotgun remains 1.0), and Reach's ordinary upgrade cutoff is 0.05 so DMR+shotgun is accepted over DMR+AR (gain 0.06). Applies across Reach difficulties; other games retain their existing values. Gameplay confirmation requires restarting the bot process.
+
 - Local follow-up: Fixed Legendary power-weapon fetch calls now cover 80 world units instead of 40, with a distance-based travel allowance for loose weapons. Other difficulties and Scaling retain their existing range. Weapon classifications, urgency checks, and timed-spawn deadlines remain unchanged. Gameplay confirmation is pending a bot-process restart.
 
 - Local follow-up: Reach now supplies live magazine and total-ammo counts for recognized magazine-fed weapons; the bot remembers magazine maxima during combat too. DMR and sniper counts were verified against controlled shots, reloads, and sniper depletion. See CUSTOM_CHANGELOG.md for validation and remaining gameplay checks. Battery counts remain unknown.
