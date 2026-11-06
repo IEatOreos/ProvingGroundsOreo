@@ -57,7 +57,7 @@ BANDS = {
     "spartan_laser": (0.4, 1.0, 1.0, 1.0), "missile_pod": (0.3, 0.8, 0.6, 0.3), "excavator": (1.0, 0.2, 0.0, 0.0),
     "gravity_hammer": (1.0, 0.2, 0.0, 0.0), "spike_rifle": (0.8, 0.4, 0.05, 0.0),
     # Halo: Reach
-    "dmr": (0.6, 1.0, 1.0, 0.7), "needle_rifle": (0.6, 1.0, 0.9, 0.5), "focus_rifle": (0.1, 0.8, 1.0, 0.8),
+    "dmr": (0.6, 1.0, 1.0, 0.7), "needle_rifle": (0.6, 1.0, 0.9, 0.5), "focus_rifle": (0.1, 1.0, 1.0, 1.0),
     "grenade_launcher": (0.4, 0.9, 0.4, 0.1), "plasma_launcher": (0.3, 0.9, 0.7, 0.3), "concussion_rifle": (0.6, 0.8, 0.3, 0.05),
     "plasma_repeater": (0.9, 0.7, 0.2, 0.0),
     # Halo 4
