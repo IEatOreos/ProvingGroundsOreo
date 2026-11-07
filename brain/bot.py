@@ -488,6 +488,16 @@ def head_solution(me, target):
     return eye(me), head or target.pos + Vec(0, 0, aim_height(True, crouched(target)))
 
 
+def chest_solution(me, target):
+    return eye(me), target.pos + Vec(0, 0, aim_height(False, crouched(target)))
+
+
+def reach_demon_direct_fire(prof, game, me, target):
+    return (game == "reach" and profiles.fixed_demon(prof)
+            and (me.weapon in AUTO or me.weapon in PRECISION or me.weapon == "shotgun")
+            and me.vehicle == -1 and target is not None and target.vehicle == -1)
+
+
 class Perception:
     def __init__(s, prof, rng):
         s.p, s.rng = prof, rng
@@ -641,7 +651,7 @@ class Perception:
                 s.beliefs[best.id] = Belief(best.pos, best.vel, now, False, "hit")
         return best
 
-    def update(s, now, me, snap, los, callouts):
+    def update(s, now, me, snap, los, callouts, game=None):
         s.target_parts = {}
         terrain = getattr(los, "__self__", None)
         part_los = getattr(terrain, "target_parts", None)
@@ -678,6 +688,8 @@ class Perception:
                 parts = part_los(me.pos, e.pos, eye(me).z - me.pos.z,
                                  aim_height(False, stance), aim_height(True, stance), mode=vision_mode)
                 ray = live_head_ray(me, e)
+                if e.head_pos is not None and reach_demon_direct_fire(s.p, game, me, e):
+                    ray = head_solution(me, e)
                 if ray is not None and getattr(terrain, "point_los", None) is not None:
                     parts = (parts[0], terrain.point_los(*ray, mode=vision_mode))
                 s.target_parts[e.id] = parts
@@ -1483,11 +1495,12 @@ class Bot:
             shot_part = getattr(s, "shot_part", None)
             if (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
                     and ((profiles.fixed_high(s.p)) or percentage_sniper(s.p, me))
-                    and shot_part is not None and shot_part[1]):
+                    and shot_part is not None):
                 target = snap.player(shot_part[0])
-                if target is not None and target.alive:
-                    origin, head = head_solution(me, target)
-                    yaw, pitch = angles_to(origin, head)
+                if (target is not None and target.alive
+                        and (shot_part[1] or reach_demon_direct_fire(s.p, s.game, me, target))):
+                    origin, point = head_solution(me, target) if shot_part[1] else chest_solution(me, target)
+                    yaw, pitch = angles_to(origin, point)
                     # Keep the intended movement direction while snapping the shot.
                     turn = wrap(act.yaw - yaw)
                     c, sn = math.cos(turn), math.sin(turn)
@@ -1671,7 +1684,7 @@ class Bot:
         if s.goal[0] == "fight" and s.goal[1] in allies:
             s.goal, s.next_decide = ("roam", None), now
         busy = s.goal[0] in ("fight", "retreat")
-        for e in s.per.update(now, me, snap, los, callouts):
+        for e in s.per.update(now, me, snap, los, callouts, game=s.game):
             s.reports.append(("seen", e.id, e.pos, now, busy))
             if e.has_flag:
                 s.reports.append(("flag_carrier", e.id, e.pos, now, busy))
@@ -4163,11 +4176,23 @@ class Bot:
         parts = getattr(s.per, "target_parts", {}).get(tid)
         fixed_high = profiles.fixed_high(s.p)
         chest_only = fixed_high and me.weapon == "assault_rifle"
+        direct_fire = parts is not None and reach_demon_direct_fire(s.p, s.game, me, target)
         head_only = ((fixed_high or percentage_sniper(s.p, me)) and not chest_only and target is not None
                      and me.vehicle == -1 and target.vehicle == -1
                      and me.weapon not in SPLASH and me.weapon not in CHARGE and me.weapon not in LUNGE)
         if target is not None and (head_only or parts is not None):
-            if head_only:
+            if direct_fire:
+                # A covered preferred part must not veto a clear shot at the other part.
+                chest_clear = s.line_clear(now, me, tid, snap, head=False)
+                head_clear = s.line_clear(now, me, tid, snap, head=True)
+                head = head_clear and (not chest_only or not chest_clear)
+                can_learn_block = chest_clear and head_clear
+                glassed = s.__dict__.setdefault("glassed", {})
+                if any(parts) and not (chest_clear or head_clear):
+                    glassed.setdefault(tid, now)
+                else:
+                    glassed.pop(tid, None)
+            elif head_only:
                 head = True
                 can_learn_block = bool(parts and all(parts))
             else:
@@ -4190,6 +4215,8 @@ class Bot:
         aim_at = (s.weak_point(me, tid, b, snap, me.weapon)
                   if target is not None and target.vehicle != -1 and me.weapon in VEHICLE_KILLERS else b.pos)
         ray = live_head_ray(me, target) if head else None
+        if direct_fire:
+            ray = head_solution(me, target) if head else chest_solution(me, target)
         act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
                                      precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1,
                                      origin=ray[0] if ray else None, target_point=ray[1] if ray else None,
@@ -4243,7 +4270,7 @@ class Bot:
             else:
                 s.move_to(me, b.pos + b.vel * min(1.0, unseen), act, nav)
             if glassed > 0.5:
-                s.note("seen through glass: go round")
+                s.note("shot obstructed: go round" if direct_fire else "seen through glass: go round")
         elif rush and not hold:
             # the sword or hammer in hand: run him down by the nav (a straight line stopped at Construct's ledges, 144
             # "edge stop"s in one fight), aiming a little ahead of where he goes. Not across the open at a far man who
@@ -4315,8 +4342,13 @@ class Bot:
         # ... and a clear line to him now, or no shot: the grace above, the looser trigger's follow-through and a hit
         # through the level (Perception: the man shooting us counts as seen 1.5 s) emptied guns into the walls he went
         # behind. Grenades go on (the flush below)
-        clear = s.line_clear(now, me, tid, snap)
-        seen_fire = seen_fire and clear
+        if direct_fire:
+            clear = head_clear if head else chest_clear
+            seen_now = s.per.last_seen.get(tid) == now
+            seen_fire = seen_now and clear
+        else:
+            clear = s.line_clear(now, me, tid, snap)
+            seen_fire = seen_fire and clear
         w = me.weapon
         # how close to the man the crosshair must be: his width at range; up close a spray or a spam lands with
         # the crosshair anywhere on him and a little off, so more shots beat careful ones. A Recruit's trigger
@@ -4324,16 +4356,18 @@ class Bot:
         slack = (2.5 if w in AUTO else 1.6) if d < SHORT_BAND and s.p.tactics > 0.15 else 1.0
         on = (s.aim.on_target(me, b.pos, act.yaw, act.pitch, slack)
               or (loose is not None and s.aim.landing(now, loose["early"], tid))) and seen_fire
-        if head_only and (w == "dmr" or percentage_sniper(s.p, me)):
-            # The final shot command snaps to the live head after the turn cap.
+        if (head_only or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me)):
+            # The final shot command snaps to the selected part after the turn cap.
             on = seen_fire
         if not on and seen_now and clear and d < 1.6:
             # point blank: he fills the view. A man circling us at arm's length is hit by shooting while
             # turning, not by waiting for the aim to settle, but on his body: it fired anywhere within
             # 0.6 rad of him (34 degrees) and missed the player standing still
             on = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - act.yaw)) < math.atan2(0.2, max(d, 0.3))
-        if on and target is not None and not s.kit.can_shoot(now, me, target, snap):
+        if (on or direct_fire and seen_fire) and target is not None and not s.kit.can_shoot(now, me, target, snap):
             on = False                 # into an armor lock, through a dome, at a decoy shot once
+            if direct_fire:
+                seen_fire = False      # stop an automatic burst when the target becomes protected
         if s.dry(me):                  # nothing to shoot with: punch if close, else go rearm
             on = False
             if d < MELEE_R:
@@ -4503,6 +4537,8 @@ class Bot:
                     splash_hold=bool(blast and (d < blast or mates_near)), dry=bool(s.dry(me)),
                     charge=round(now - s.charge_since, 2) if getattr(s, "charge_since", None) is not None else None,
                     zoom=act.zoom)
+        if direct_fire:
+            s.fx.update(part="head" if head else "chest", line=clear)
 
     def relocate_point(s, now, me, snap):
         """After a kill in SWAT (no shields: every shot gives the shooter away) or with a sniper, Normal and up move off
@@ -5374,18 +5410,23 @@ class Bot:
         selected = getattr(s, "shot_part", None)
         if head is None and selected is not None and selected[0] == tid:
             head = selected[1]
+        direct_fire = head is not None and reach_demon_direct_fire(s.p, s.game, me, e)
         ray = live_head_ray(me, e) if head else None
+        if direct_fire and head and e.head_pos is not None:
+            ray = head_solution(me, e)
         # sight passes windows and fences, a round only fences and glass that breaks (Terrain.sees / shot_los,
         # maps/<map>/wall_kinds.json): a man seen behind bullet-proof glass gets no shot (s.glassed: since when). Only a
         # window between: where the level data has a solid wall too, Perception's line stands (the man shooting us, a
         # test's world), as before the wall kinds
         glassed = s.__dict__.setdefault("glassed", {})
         T = s.T() if s.map is not None else None
-        if (ray is None and getattr(T, "see_clear", None) is not None
-                and T.sees(me.pos, e.pos) and not T.shot_los(me.pos, e.pos)):
-            glassed.setdefault(tid, now)
-            return False
-        glassed.pop(tid, None)
+        if not direct_fire:
+            if (ray is None and getattr(T, "see_clear", None) is not None
+                    and T.sees(me.pos, e.pos) and not T.shot_los(me.pos, e.pos)):
+                glassed.setdefault(tid, now)
+                return False
+            glassed.pop(tid, None)
+        # Reach Demon's selected part has its own shot ray below, including material and vehicle checks.
         if head is None:
             a = me.pos + Vec(0, 0, EYE)
             b = e.pos + Vec(0, 0, CROUCH_CHEST if crouched(e) else CHEST)
@@ -5426,12 +5467,17 @@ class Bot:
             return
         if me.weapon in CHARGE and getattr(s, "charge_since", None) is not None and me.vehicle == -1:
             return
-        for e in snap.players:
+        selected = getattr(s, "shot_part", None)
+        target = snap.player(selected[0]) if selected is not None else None
+        direct_fire = reach_demon_direct_fire(s.p, s.game, me, target)
+        for e in (target,) if direct_fire else snap.players:
             if e.team == me.team or not e.alive or e.id == me.id:
                 continue
             d = dist(me.pos, e.pos)
             off = abs(wrap(math.atan2(e.pos.y - me.pos.y, e.pos.x - me.pos.x) - act.yaw))
-            if (d < 2.0 or off < max(0.15, math.atan2(1.2, d))) and s.line_clear(now, me, e.id, snap):
+            # A Demon DMR command snaps to its checked point after the view turn cap.
+            aligned = (direct_fire and me.weapon == "dmr") or d < 2.0 or off < max(0.15, math.atan2(1.2, d))
+            if aligned and s.line_clear(now, me, e.id, snap):
                 return
         act.fire = s.shot_now = False
         s.note("no clear line: hold fire")

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Reach Demon fires at the exposed part, 2026-11-07
+
+- Reach Demon checks head and chest separately for ordinary handheld fire against an on-foot enemy. The DMR, sniper and other non-AR guns in this path prefer the head. The AR prefers the chest. Either can use the other part if it has a clear shot. The live head point, when available, is shared by sight, the shot check and aim. A generic height-based shot check can no longer veto a clear ray to the selected part.
+- The final DMR and sniper command corrects to the selected point. Weapon cadence, sniper alignment, solid cover, bulletproof materials and vehicle obstruction still apply. An automatic burst stops on lost sight or when Armor Lock or another ability protects the target. The trace records the chosen part and whether its shot line was clear.
+- In an offline replay of the Boneyard match at 80.539 s, the recorded positions gave Demon a clear chest ray and a covered head. The previous Demon held fire and the new Demon requested a chest shot. The replay uses recorded positions and stance heights. Nine new tests and all 183 regression tests passed. Live gameplay still needs a check after the next bot-process launch.
+
 ### Friend's clip review: Demon keeps its opponent through hunts and retreats; Powerhouse railing trap, 2026-11-07
 
 - The owner's friend reviewed the owner's Powerhouse clips and proposed four fixes (Powerhouse is reach_30_settlement). Each was checked against logs/trace_reach_30_settlement_20261107-134849, -135726 and -140335 before any change.
