@@ -202,6 +202,16 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
     # one on its side or roof is no ride (brain/vehicles.py upright), nor a wreck (usable): nobody is sent to it; its
     # riders keep it
     vehicles = [v for v in vehicles if v["occupied"] or V.usable(v)]
+    if type(live) is LiveReach:
+        # The turret object has the parent-relative mount position. Keep the chassis position
+        # for perception and movement, and carry a separate origin for aiming the chaingun.
+        mounts = {parent_of[h]: pos for h, _, _, pos in objs
+                  if h in parent_of and name[h] == "warthog_chaingun"}
+        origins = {v["handle"]: V.warthog_gun_origin(v, mounts[v["handle"]])
+                   for v in vehicles if v["handle"] in mounts and V.kind_of(v["kind"]) == "warthog"}
+        for p in players:
+            if p.turret == "warthog_chaingun":
+                p.turret_origin = origins.get(p.vehicle)
     vpos = {v["handle"]: v["pos"] for v in vehicles}
     for p in players:                          # a rider's biped position does not follow the vehicle
         if p.vehicle in vpos:

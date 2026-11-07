@@ -380,6 +380,21 @@ GUN_HEIGHT = {"warthog_chaingun": 0.92, "falcon_side_gun": 0.38}
 # Reach's does (not measured on its model)
 GUN_HEIGHT_KIND = {"warthog": 0.92}
 
+SCORPION_TURN = math.radians(90.0)  # Reach Boneyard: upper sustained driver view speed in the owner's recording.
+SCORPION_SETTLE = 0.10              # s of aligned aim before requesting a shot; barrel orientation is not read.
+
+
+def warthog_gun_origin(v, mount):
+    """Reach chaingun attachment position in the Warthog frame, with the calibrated shot height."""
+    if mount is None or len(mount) != 3 or not all(math.isfinite(c) for c in mount):
+        return None
+    if math.hypot(*mount[:2]) > 2.5 or abs(mount[2]) > 2.0:
+        return None                    # reject a world position or a bad attachment read
+    frame = frame_of(v)
+    if frame is None:
+        return None
+    return frame[1](mount[0], mount[1], GUN_HEIGHT["warthog_chaingun"])
+
 
 def gun_height(turret, kind=None):
     """GUN_HEIGHT for the gun a gunner sits in (its name, the snapshot's turret), else by the vehicle's kind

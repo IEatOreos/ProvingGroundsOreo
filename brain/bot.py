@@ -1323,7 +1323,8 @@ class Bot:
         """No view turns quicker than the profile's turn speed; the walk is re-aimed from the view it wanted to the view it
         gets, so it still goes where it meant to."""
         dy, dp = wrap(act.yaw - me.yaw), act.pitch - me.pitch
-        most = s.p.turn * max(dt, 1e-3)
+        rate = vehicles.SCORPION_TURN if getattr(s, "scorpion_turn", False) else s.p.turn
+        most = min(s.p.turn, rate) * max(dt, 1e-3)
         turn = math.hypot(dy, dp)
         if turn <= most:
             return
@@ -1340,6 +1341,7 @@ class Bot:
     def plan(s, now, dt, snap, los, nav, callouts, items=None):
         me = snap.player(s.id)
         act = Action(yaw=me.yaw, pitch=me.pitch)
+        s.scorpion_turn = False
         s.item_timers = items or {}
         s.now = now
         s.vehicles_now = getattr(snap, "vehicles", ())     # (move_to: an Elephant's bay, way_in)
@@ -2864,6 +2866,11 @@ class Bot:
             return                                # (no place read this tick: Spire, live, a tick failed on it)
         v = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None)
         sp = vehicles.spec(v["kind"]) if v else None
+        scorpion = (s.game == "reach" and profiles.fixed_high(s.p)
+                    and v is not None and vehicles.kind_of(v["kind"]) == "scorpion")
+        s.scorpion_turn = scorpion and getattr(s, "seat_for", None) == me.vehicle and s.seat == "driver"
+        previous_settle = getattr(s, "scorpion_settle", None)
+        s.scorpion_settle = None
         if now < getattr(s, "exit_until", 0.0):   # getting out: Use held (a one-tick press never left a Reach Warthog:
             act.action, act.fire = True, False    # a driver sat wedged 200 s with the throttle down, Boneyard)
             act.forward = act.strafe = 0.0
@@ -2897,6 +2904,7 @@ class Bot:
                 or (v is not None and vehicles.kind_of(v["kind"]) in vehicles.TANKS)) else None
             if s.crew_ride is not None:
                 s.drive_to = s.patrol_point(me)
+        s.scorpion_turn = scorpion and s.seat == "driver"
         seen = s.per.visible_enemies()
         bt = getattr(s, "board_try", None)
         if (bt is not None and bt[0] == me.vehicle and now - bt[1] < 15.0
@@ -2926,8 +2934,11 @@ class Bot:
                 aim_at = s.weak_point(me, tid, b, snap, vehicles.seat_gun(vehicles.kind_of(v["kind"]), "gunner")) \
                     if gunner and v is not None else b.pos
                 h = vehicles.gun_height(me.turret, vehicles.kind_of(v["kind"]) if v is not None else None) if gunner else None
+                origin = me.turret_origin if gunner else None
+                if origin is None and h is not None:
+                    origin = me.pos + Vec(0, 0, h)
                 act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=gun,
-                                                origin=me.pos + Vec(0, 0, h) if h is not None else None,
+                                                origin=origin,
                                                 crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
                 # a mounted gun is held down while it tracks, as people spray a turret: 2.5 times the hand gun's window,
                 # 4 times once firing (live: a Falcon gunner 0.4 deg off a man 16 u away fired on 34% of its ticks by
@@ -2942,7 +2953,9 @@ class Bot:
                 if gone:
                     k = max(gone, key=lambda k: s.per.beliefs[k].t)
                     q = s.per.beliefs[k]
-                    act.yaw, act.pitch = s.aim.step(now, dt, me, None, q.pos, Vec(), False, gun="assault_rifle")
+                    act.yaw, act.pitch = s.aim.step(now, dt, me, None, q.pos, Vec(), False,
+                                                    gun="assault_rifle", origin=me.turret_origin,
+                                                    protected=me.turret_origin is not None and profiles.fixed_high(s.p))
                     fire = aimed = True
                     s.att = ["spin", k, round(q.pos.x, 1), round(q.pos.y, 1)]
             if not aimed and v is not None and not me.has_flag:
@@ -3150,7 +3163,18 @@ class Bot:
             if now >= s.next_strafe_flip:
                 s.strafe_dir, s.next_strafe_flip = -s.strafe_dir, now + s.rng.uniform(0.5, 1.4)
             if not passes:
-                act.fire = armed and (s.aim.on_target(me, aim_at) or dist(me.pos, b.pos) < 15)
+                aligned = armed and s.aim.on_target(me, aim_at)
+                if s.scorpion_turn:
+                    # Check both the view readback and the new command. The cannon may still
+                    # be traversing after the view arrives, so require continuous alignment.
+                    if aligned and s.aim.on_target(me, aim_at, act.yaw, act.pitch):
+                        key = (me.vehicle, tid)
+                        since = (previous_settle[1] if previous_settle and previous_settle[0] == key
+                                 and 0 < now - previous_settle[2] <= 1.5 * dt else now)
+                        s.scorpion_settle = key, since, now
+                        act.fire = now - since >= vehicles.SCORPION_SETTLE
+                else:
+                    act.fire = aligned or (armed and dist(me.pos, b.pos) < 15)
         elif seen:                               # a gunner's vehicle: circle the fight in its range, side on
             tid = ctid                            # (the man its gun is on: guide 17 §4.5, the arc kept on him)
             b = s.per.beliefs[tid]
@@ -3205,7 +3229,7 @@ class Bot:
             if v is not None and act.forward >= 1.0 and dist(me.pos, target) > TRAVEL_BOOST_FROM:
                 s.travel_boost(now, me, v, act, air)
             s.att = ["path", None, round(w.x, 1), round(w.y, 1)]
-            if meet and armed:                   # Easy on its trip: the gun on whoever is in front of its nose
+            if meet and armed and not s.scorpion_turn:  # travel shots have no cannon alignment check
                 head = s.heading(me, v)
                 act.fire = any(dist(me.pos, q.pos) < 35.0 and abs(wrap(math.atan2(q.pos.y - me.pos.y, q.pos.x - me.pos.x)
                                                                        - head)) < 0.25

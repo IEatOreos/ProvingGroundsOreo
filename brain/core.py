@@ -78,6 +78,7 @@ class PlayerState:
     head_pos: Vec | None = None  # Live animated head marker when available.
     tracker: bool = True       # enemies show on this player's motion tracker (the match settings: live.tracker())
     view_pos: Vec | None = None  # Validated Halo 4 unit view point, paired with its animated head.
+    turret_origin: Vec | None = None  # Live mounted gun aim origin, when decoded.
 
 
 @dataclass
