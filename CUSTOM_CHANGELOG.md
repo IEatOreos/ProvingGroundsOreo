@@ -1,5 +1,11 @@
 # Custom release history
 
+## Local documentation — main AI review handoff, 2026-11-06
+
+- Add docs/AI_REVIEW_HANDOFF_2026-11-06.md describing the combined published code through 9a4cf17 / 0.2.2-custom.4. Organize by Reach, Halo 4, other game scope, brain/difficulty, weapons/ammo, equipment/maps, director/vehicles, LiDAR, native menu/reporting, and upstream integration.
+- Include the complete 27-commit ledger, current values and superseded settings, file/function/test map, repository access and runtime setup, test command, release validation evidence, and unresolved proposals. Distinguish retained upstream behavior, custom changes, owner confirmation, offline checks, and unverified gameplay.
+- Validation: all listed commits match the published history, linked local references and named source/test files exist, and the embedded Python test snippet compiles. Documentation only. This handoff is prepared locally for the owner to share.
+
 ## 0.2.2-custom.4 — source update, 2026-11-06
 
 - Publish the approved recent bot updates: independent Demon difficulty and restored Legendary attributes with protected head/turret precision (6a31238); Legendary zero overshoot, Demon 140-degree zero-edge-delay vision and deterministic eligible radar, and resource-call priorities (f022024, bfbb62d). Power calls rank Demon → Legendary → Heroic/Scaling → Normal; gunner calls tie Legendary/Heroic/Scaling, and reserve Demon's power jobs before new gunner assignments.
