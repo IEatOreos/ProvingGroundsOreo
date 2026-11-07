@@ -142,6 +142,10 @@ CORNER_HOLD = (1.2, 2.8)               # s: the angle is held this long (random 
 CORNER_STANDOFF = (5.0, 6.5)           # u: held from at least the first off where he would come out, backing to the second
 CORNER_SWING_W = 3.5                   # u: the swing comes onto the corner this far to the side of it
 CORNER_SWING_S = 2.0                   # s at most for the swing, then the chase
+CORNER_CLIMB = 1.0                     # u: a man this far over us with no walkable way up to him nearby is held, not pushed
+# shield recharge before Demon has watched its own (Perception.learn_regen): a live Reach Slayer game (Forge World,
+# Nov 7) refilled 2.0 s after the last hit, empty to 95% in 1.9 s
+REGEN_DELAY, REGEN_RATE = 2.0, 0.5
 
 
 def _flat_norm(v, me):
@@ -476,7 +480,54 @@ class Perception:
         s.clear_at = {}      # enemy id -> last time a clear line ran from our eye to him (Bot.line_clear: no shot without)
         s.mags = {}          # enemy id -> (gun, rounds in its magazine) at the last look: his gunfire (fired)
         s.last_vitals = {}   # enemy id -> (shield, health, t) when our eyes last had him (Demon corner reads)
+        s.foe_hurt = {}      # enemy id -> last time we saw his shield or body go down (his recharge clock)
         s.radar_dots = {}    # enemy id -> (pos, t, heading) of his last motion-tracker dot (Demon radar read)
+        # this match's shield recharge, learned from our own shield as a player learns it: the delay from the last
+        # hit to the refill starting, and the refill rate (shield share a second). REGEN_* until it has been seen
+        s.regen_delay, s.regen_rate = REGEN_DELAY, REGEN_RATE
+
+    def seen_vitals(s, e, now):
+        """Our eyes have enemy e: his shield and body now, and whether they went down since the last look."""
+        prev = s.last_vitals.get(e.id)
+        if prev is not None and e.shield + e.health < prev[0] + prev[1] - 1e-3:
+            s.foe_hurt[e.id] = now
+        s.last_vitals[e.id] = (e.shield, e.health, now)
+
+    def learn_regen(s, now, me):
+        """Our own shield refilling: how long after the last hit it starts, and how fast (a respawn's jump to full and a
+        death's long wait are not a refill)."""
+        sh = me.shield
+        prev = getattr(s, "_own_shield", None)
+        s._own_shield = (sh, now)
+        hurt = getattr(s, "hurt_at", None)
+        if prev is None or hurt is None or sh <= prev[0] + 1e-3:
+            return
+        step, dt = sh - prev[0], now - prev[1]
+        if step > 0.3 or not 0.0 < dt < 0.5:
+            return                                   # a respawn or a gap in the reads
+        if getattr(s, "_regen_from", None) != hurt:
+            s._regen_from = hurt
+            delay = now - hurt
+            if 0.3 < delay < 10.0:
+                s.regen_delay = delay if getattr(s, "_regen_seen", 0) == 0 else 0.5 * s.regen_delay + 0.5 * delay
+                s._regen_seen = getattr(s, "_regen_seen", 0) + 1
+        rate = step / dt
+        if 0.05 < rate < 5.0:
+            s.regen_rate = rate if getattr(s, "_rate_seen", 0) == 0 else 0.8 * s.regen_rate + 0.2 * rate
+            s._rate_seen = getattr(s, "_rate_seen", 0) + 1
+
+    def est_shield(s, k, now, shieldless=False):
+        """Enemy k's shield (his body, without shields) now, from the last look plus the refill since his last hit at
+        this match's recharge; None if never seen."""
+        v = s.last_vitals.get(k)
+        if v is None:
+            return None
+        if shieldless:
+            return v[1]
+        sh, t = v[0], v[2]
+        # (no hit seen on him: the clock from our last look, the latest his last hit can have been to our knowledge)
+        start = s.foe_hurt.get(k, t) + s.regen_delay
+        return sh if now <= start else min(1.0, sh + s.regen_rate * (now - start))
 
     def radar_heading(s, k, pos, now):
         """Demon: the way a dot is moving, from its successive positions on the tracker (a good player reads
@@ -582,6 +633,8 @@ class Perception:
         peripheral_multiplier = 1.0 if demon else 1.5 if fixed_high else 1.6
         new_sightings = []
         s.hurt_by(now, me, snap, los)
+        if demon:
+            s.learn_regen(now, me)
         for e in snap.players:
             if e.team == me.team or not e.alive:
                 s.beliefs.pop(e.id, None) if not e.alive else None
@@ -621,7 +674,7 @@ class Perception:
                 if e.id in s.recognized:
                     s.beliefs[e.id] = Belief(e.pos, e.vel, now, True, "eyes")
                     s.last_seen[e.id] = now
-                    s.last_vitals[e.id] = (e.shield, e.health, now)
+                    s.seen_vitals(e, now)
                 elif e.id not in s.pending:
                     # (the man shooting us: a person finds him by the damage arc in about his usual reaction time; 0.5
                     # of it before turned Legendary onto a shooter in 0.21 s to the player's 0.40, live Spire)
@@ -635,7 +688,7 @@ class Perception:
                     s.recognized.add(e.id)
                     s.beliefs[e.id] = Belief(e.pos, e.vel, now, True, "eyes")
                     s.last_seen[e.id] = now
-                    s.last_vitals[e.id] = (e.shield, e.health, now)
+                    s.seen_vitals(e, now)
                     new_sightings.append(e)
                 continue
             # not visible: lose recognition after a short grace, keep the memory
@@ -1223,20 +1276,22 @@ class Bot:
         objective, or running off: push. Returns ("push" | "hold" | "swing", point to move to)."""
         last = s.per.last_seen.get(tid, -9.0)
         st = getattr(s, "corner", None)
-        if st is None or st["tid"] != tid or st["lost"] != last:
-            vit = s.per.last_vitals.get(tid)
-            if vit is None:
-                healthy = True
-            elif snap.shieldless:
-                healthy = vit[1] > 0.5
-            else:
-                healthy = vit[0] > CORNER_HEALTHY
-            carrier = target is not None and getattr(target, "has_flag", False)
-            bait = (healthy and d < CORNER_NEAR and not carrier and me.weapon not in LUNGE
-                    and me.vehicle == -1 and (target is None or target.vehicle == -1))
-            st = s.corner = dict(tid=tid, lost=last, mode="hold" if bait else "push",
-                                 until=now + s.rng.uniform(*CORNER_HOLD), swing=None, swing_until=0.0)
         guess = s.guess(now, me, tid, b)
+        # his shield now, as a player reckons it: what it was at the last look plus the refill since (est_shield)
+        est = s.per.est_shield(tid, now, snap.shieldless)
+        healthy = est is None or est > (0.5 if snap.shieldless else CORNER_HEALTHY)
+        carrier = target is not None and getattr(target, "has_flag", False)
+        can_hold = (not carrier and me.weapon not in LUNGE and me.vehicle == -1
+                    and (target is None or target.vehicle == -1))
+        if st is None or st["tid"] != tid or st["lost"] != last:
+            up = s.out_of_reach(me, guess, d)
+            bait = can_hold and d < CORNER_NEAR and (healthy or up)
+            st = s.corner = dict(tid=tid, lost=last, mode="hold" if bait else "push", up=up,
+                                 why="cracked" if can_hold and d < CORNER_NEAR else "other",
+                                 until=now + s.rng.uniform(*CORNER_HOLD), swing=None, swing_until=0.0)
+        elif st["mode"] == "push" and st["why"] == "cracked" and healthy and d < CORNER_NEAR:
+            # pushed a cracked man, and his shield is back by now: the corner is a bait again (once a break)
+            st.update(mode="hold", why="recharged", until=now + s.rng.uniform(*CORNER_HOLD))
         # running off (the tracker shows him heading away, already farther than the corner): no bait, chase
         if st["mode"] != "push" and b.source == "radar" and now - b.t < 0.3 and b.vel.flat() > 1.0:
             away = (b.pos - me.pos)
@@ -1244,10 +1299,9 @@ class Bot:
                 st["mode"] = "push"
         if st["mode"] == "push":
             return "push", guess
-        appear = s.man_appears(me, guess)
-        if appear is None:
-            st["mode"] = "push"
-            return "push", guess
+        # where he comes back into view; none found (we stand at the corner already, or he is up on a ledge): the
+        # place he is reckoned to be stands for it
+        appear = s.man_appears(me, guess) or guess
         if st["mode"] == "hold" and now >= st["until"]:
             st["mode"], st["swing_until"] = "swing", now + CORNER_SWING_S
         if st["mode"] == "hold":
@@ -1260,6 +1314,9 @@ class Bot:
             if T.walkable(back) and T.los(back, appear):
                 return "hold", back
             return "hold", me.pos
+        if st.get("up"):
+            st["mode"] = "push"          # no swing onto a ledge: the chase goes round by the nav
+            return "push", guess
         # swing: come onto the corner wide, a few units to the side of it, revealing it bit by bit (slicing the pie)
         if st["swing"] is None:
             T, line = s.T(), appear - me.pos
@@ -1270,6 +1327,17 @@ class Bot:
             st["mode"] = "push"
             return "push", guess
         return "swing", st["swing"]
+
+    def out_of_reach(s, me, p, d):
+        """p is over us (CORNER_CLIMB) and no walkable way leads up to it within a short walk: a man on a ledge we
+        cannot run onto (live Forge World, Nov 7: a push strafed into a platform's wall 3 s, its man 1.9 u up)."""
+        if p.z - me.pos.z < CORNER_CLIMB:
+            return False
+        try:
+            steps = s.T().path_ahead(me.pos, p, n=int((d * 2.0 + 8.0) / 0.25), limit=d * 2.0 + 8.0)
+        except Exception:
+            return False
+        return not steps or dist(steps[-1], p) > 1.5
 
     def on_death(s, killer_id):
         s.last_killer = killer_id

@@ -153,6 +153,54 @@ class CornerTests(unittest.TestCase):
         self.assertEqual(how, "hold")
         self.assertLess(point.x, 0.0)               # backed away from the corner at x = 2
 
+    def test_cracked_then_recharged_becomes_a_hold(self):
+        # live Forge World 480 s: seen at half shields, pushed; his shield was full again a second later
+        bot, me, enemy, snap, b = self.setup(shield=0.5)
+        self.assertEqual(bot.corner_plan(19.5, me, b, enemy, 1, 6.0, 0.5, snap)[0], "push")
+        later = 19.0 + bot.per.regen_delay + 0.6 / bot.per.regen_rate
+        self.assertEqual(bot.corner_plan(later, me, b, enemy, 1, 6.0, later - 19.0, snap)[0], "hold")
+
+    def test_hit_restarts_his_recharge_clock(self):
+        p = demon_bot().per
+        e = PlayerState(1, 1, "enemy", Vec())
+        e.shield, e.health = 1.0, 1.0
+        p.seen_vitals(e, 10.0)
+        e.shield = 0.2
+        p.seen_vitals(e, 11.0)
+        self.assertAlmostEqual(p.est_shield(1, 11.0 + p.regen_delay), 0.2)
+        self.assertGreater(p.est_shield(1, 11.0 + p.regen_delay + 1.0), 0.6)
+
+    def test_at_the_corner_still_holds(self):
+        # no reappearance spot found (standing at the corner): hold back from where he is reckoned to be
+        bot, me, enemy, snap, b = self.setup(shield=1.0, d=4.5)
+        bot.man_appears = lambda me, p: None
+        how, point = bot.corner_plan(20.0, me, b, enemy, 1, 4.5, 1.0, snap)
+        self.assertEqual(how, "hold")
+        self.assertLess(point.x, 0.0)
+
+    def test_ledge_without_a_way_up_is_held_even_cracked(self):
+        bot, me, enemy, snap, b = self.setup(shield=0.1, d=4.8)
+        b.pos = enemy.pos = Vec(4.8, 0, 1.9)
+        bot._terrain.path_ahead = lambda a, p, n=80, **kw: []
+        self.assertEqual(bot.corner_plan(20.0, me, b, enemy, 1, 4.8, 1.0, snap)[0], "hold")
+        how, _ = bot.corner_plan(20.0 + CORNER_HOLD[1] + 0.01, me, b, enemy, 1, 4.8, 1.0, snap)
+        self.assertEqual(how, "push")             # no swing onto a ledge
+
+    def test_learns_this_matchs_recharge_from_own_shield(self):
+        p = demon_bot().per
+        me = PlayerState(0, 0, "bot", Vec())
+        me.shield, me.health = 1.0, 1.0
+        p.update(0.0, me, Snapshot(0.0, [me]), lambda *a: True, [])
+        me.shield = 0.0
+        p.update(1.0, me, Snapshot(1.0, [me]), lambda *a: True, [])   # hit at 1.0
+        t = 1.0
+        for i in range(1, 40):                                         # refill from 4.0 s at 0.25 a second
+            t = 4.0 + i / 30
+            me.shield = min(1.0, 0.25 * (t - 4.0))
+            p.update(t, me, Snapshot(t, [me]), lambda *a: True, [])
+        self.assertAlmostEqual(p.regen_delay, 3.0 + 1 / 30, delta=0.05)
+        self.assertAlmostEqual(p.regen_rate, 0.25, delta=0.03)
+
     def test_hold_lengths_vary(self):
         lengths = set()
         for seed in range(6):

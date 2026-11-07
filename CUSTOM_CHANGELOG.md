@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Demon corner follow-up from the first live match, 2026-11-07
+
+- Owner's Reach Forge World 1v1 Slayer against one Demon (logs/trace_reach_forge_halo_20261107-022003.jsonl). Of 28 breaks of line of sight during fights, Demon held 4 (2 continued to a swing and then a push) and pushed 24, mostly targets 10 or more units away or cracked targets. Its 291 hunt destinations were within 0.5 units of the owner's true position, because they came from live tracker dots.
+- **Shield recharge estimate.** Demon judges a target's shield by its value when last seen plus the recharge since. Demon learns this match's recharge delay and rate from its own shield (defaults 2.0 seconds and 0.5 shield per second, measured in that match), and a hit seen on the target restarts his clock. A target pushed while cracked becomes a hold once his estimated shield is back. Fixes the push at 480 seconds, which was triggered by a half-shield sighting although the shield was full one second later.
+- **Close-corner fallback.** When no reappearance spot is found (Demon is already at the corner), it holds back from its estimate of the target's position instead of pushing. This was the likely cause of the push at 484 seconds against a full-shield target 4.5 units away.
+- **Ledge hold.** If the target is at least 1 unit higher with no short walkable way up, Demon holds whatever the target's shield, then resumes the chase via the nav without a swing. Fixes the 3-second strafe into a platform wall below the owner (1.9 units up) at 480–483 seconds.
+- Recharge retreats were checked in the same match: Demon left cover at 0.94–0.95 shield, as designed (the 95% threshold). Shields began refilling 2.0 seconds after the last hit and filled from empty in 1.9 seconds, so a recharge retreat lasted about 3–4 seconds. Some retreat goals at full shields while the owner was dead have an unidentified cause, because the trace does not record decision scores. Unchanged.
+- Validation: 5 new tests in tools/test_demon_anticipate.py (19 in total). The full suite (130 tests) and the compile check (94 sources) pass. Gameplay is untested; the bot process must be restarted.
+
 ### Demon radar reads, out-of-sight prediction and corner discipline, 2026-11-07
 
 - **Radar reads (Demon only).** Demon now works out which way each motion-tracker dot is moving by comparing its successive positions. A dot older than 0.5 seconds starts a new heading. Unsuppressed fire puts the shooter on Demon's tracker even when crouched or standing still, within the existing tracker range, the tracker setting and jamming. A crouch-walking enemy who isn't firing stays off the tracker. Other tiers keep heading-less dots and the existing radar and heard-gunfire rules.
