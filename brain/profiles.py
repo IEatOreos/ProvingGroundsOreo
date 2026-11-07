@@ -100,10 +100,16 @@ def fixed_demon(prof):
 
 
 def resource_priority(prof):
-    """New resource calls: Demon, Legendary, Heroic, Normal, Scaling, Easy."""
+    """Power calls: Demon, Legendary, Heroic/Scaling, Normal, Easy."""
     if prof.extra is not None:
-        return 4
+        return 2
     return {DEMON: 0, "top": 1, "strong": 2, "average": 3}.get(prof.tier, 5)
+
+
+def gunner_priority(prof):
+    """Legendary, Heroic and Scaling share the same gunner-call weight."""
+    priority = resource_priority(prof)
+    return 1 if priority == 2 else priority
 
 
 def precision_profile(prof):

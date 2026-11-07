@@ -244,7 +244,6 @@ class Director:
         if now >= s.next_roles:
             s.next_roles = now + 2.0
             s.assign_roles(now, snap)
-            s.power_runs(now, snap)        # every mode (audit PW-03: Invasion only before)
         s.blitz_tick(now, snap)
         s.wave_tick(now, snap)
         s.core_wave_tick(now, snap)
@@ -728,6 +727,7 @@ class Director:
             s.roles[b.id] = "runner" if point is not None else "free"
             b.order, b.via_left = (Order("runner", point) if point is not None else Order("free")), []
         if not alive:
+            s.power_runs(now, snap)
             return
         slots = s.role_slots(now, snap, len(alive))
         free = list(alive)
@@ -805,6 +805,8 @@ class Director:
             s.roles[b.id] = "free"
             b.set_order(Order("free"))
         s.backup_orders(now, snap, alive)
+        # Reserve weapon fetchers before any new vehicle/gunner calls.
+        s.power_runs(now, snap)        # every mode, as before
         s.vehicle_orders(now, snap, alive)
 
     BACKUP_R, BACKUP_REACH, BACKUP_MAX = 12.0, 40.0, 3   # u: enemies this near a post we hold; helpers this far; at most
@@ -871,7 +873,6 @@ class Director:
             return      # survivors hold their rooms, the infected run on foot (live Rat's Nest: zombies sent to drive
                         # Mongooses 584 of 618 order rows; issue #3)
         players = {b.id: snap.player(b.id) for b in alive}
-        s.honk_orders(now, snap, alive, players)
         # (our objective carrier's escorts stay on him: live Spire at 417 s four of his six escorts were sent to a
         # Warthog's gun or waited at a wheel as he dropped off the top with the core, 0 of his within 25 u)
         s.carrying = any(p.team == s.team and p.alive and p.has_flag for p in snap.players)
@@ -887,7 +888,9 @@ class Director:
         ff = snap.mode == "firefight"
         s.crew_orders(now, snap, players, [b for b in foot if not ff or s.roles.get(b.id) != "escort"],
                       [] if ff else busy)
-        foot = [b for b in foot if s.roles.get(b.id) != "drive"]
+        # A Demon takes an eligible power-vehicle job before an empty gun calls it.
+        s.honk_orders(now, snap, alive, players)
+        foot = [b for b in foot if s.roles.get(b.id) not in ("drive", "ride", "board") and s.gunner_available(b)]
         for v in snap.vehicles:
             if v.get("team") != s.team or not vehicles.needs_gunner(v, snap):
                 continue
@@ -895,7 +898,7 @@ class Director:
             if any(b.order.role == "ride" and b.order.target == v["handle"] for b in alive):
                 continue
             near = min((b for b in foot if dist(players[b.id].pos, vp) <= 25.0),
-                       key=lambda b: (profiles.resource_priority(b.p), dist(players[b.id].pos, vp)), default=None)
+                       key=lambda b: (profiles.gunner_priority(b.p), dist(players[b.id].pos, vp)), default=None)
             if near is None or dist(players[near.id].pos, vp) > 25.0:
                 continue
             near.set_order(Order("ride", vp, target=v["handle"]))
@@ -911,6 +914,11 @@ class Director:
         s.vehicle_jobs(now, snap, alive, players)
 
     CALL_R, CALL_TRIP = 12.0, 25.0     # u: a teammate this near a vehicle of ours, his objective this far, is called aboard
+
+    @staticmethod
+    def gunner_available(b):
+        """Do not divert Demon from a reserved weapon or vehicle to a new seat."""
+        return b.order.role != "drive" and (not profiles.fixed_demon(b.p) or getattr(b, "fetch", None) is None)
 
     def rider_calls(s, now, snap, alive, players):
         """Drivers call riders ("this guy with the warthog has no gunner or passenger or anything",; "flagging down other
@@ -959,13 +967,13 @@ class Director:
             def wanted(b):
                 return b.id in was or s.rider_ok(b, players, gun_free, bound, person)
             cands = sorted((b for b in alive if b not in coming and b.p.teamwork > 0 and players[b.id] is not None
-                            and players[b.id].vehicle == -1 and not players[b.id].has_flag
+                            and players[b.id].vehicle == -1 and not players[b.id].has_flag and s.gunner_available(b)
                             and dist(players[b.id].pos, vp) < call_r and wanted(b)),
                            key=lambda b: (b.id not in was, dist(players[b.id].pos, vp)))
             while cands:
                 # Keep earlier commitments; prioritize difficulty for new gun seats only.
                 if gun_free:
-                    b = min(cands, key=lambda b: (b.id not in was, profiles.resource_priority(b.p),
+                    b = min(cands, key=lambda b: (b.id not in was, profiles.gunner_priority(b.p),
                                                  dist(players[b.id].pos, vp)))
                     cands.remove(b)
                 else:
@@ -1030,13 +1038,13 @@ class Director:
         way = (lambda p, q: (p - q).flat()) if air else dist
         cands = [(dist(me.pos, players[x.id].pos), x) for x in alive if x is not b and players[x.id] is not None
                  and players[x.id].vehicle == -1 and not players[x.id].has_flag and x.p.teamwork > 0
-                 and x.p.tier != "novice" and now - skip.get(x.id, -99.0) > 30.0
+                 and x.p.tier != "novice" and now - skip.get(x.id, -99.0) > 30.0 and s.gunner_available(x)
                  and x.order.role not in ("ride", "board", "ferry")
                  and s.rider_ok(x, players, True, [players[x.id].pos])
                  and (goal is None or way(me.pos, players[x.id].pos) + way(players[x.id].pos, goal) - way(me.pos, goal)
                       <= s.PICKUP_DETOUR)]
         d, x = min((c for c in cands if c[0] <= s.PICKUP_R or air and goal is not None),
-                   key=lambda c: (profiles.resource_priority(c[1].p), c[0]), default=(None, None))
+                   key=lambda c: (profiles.gunner_priority(c[1].p), c[0]), default=(None, None))
         if x is None or d > s.PICKUP_R and not (air and goal is not None):
             b.pickup_at = None
             return None
@@ -1218,8 +1226,8 @@ class Director:
         duds = s.map.get("_vehicle_duds", {})
         empty = {v["handle"]: v for v in snap.vehicles if not v["occupied"] and vehicles.roles_of(v["kind"])
                  and vehicles.usable(v, now, duds)}
-        free = {b.id: b for b in foot}
-        near = {b.id: b for b in busy}
+        free = {b.id: b for b in foot if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
+        near = {b.id: b for b in busy if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
         for h, (bid, since) in list(crews.items()):
             if h in empty and (bid in free or bid in near) and now - since < 30.0:
                 b, v = (free.pop(bid, None) or near.pop(bid)), empty.pop(h)
@@ -1315,12 +1323,12 @@ class Director:
             coming = [b for b in alive if b.order.target == h and b.order.role in ("ride", "board")]
             free = len(sp["seats"]) - v.get("riders", 0) - len(coming)
             foot = sorted((b for b in alive if b not in coming and players[b.id] is not None and players[b.id].alive
-                           and players[b.id].vehicle == -1 and dist(players[b.id].pos, vp) < 20.0),
+                           and players[b.id].vehicle == -1 and dist(players[b.id].pos, vp) < 20.0 and s.gunner_available(b)),
                           key=lambda b: (not players[b.id].has_flag, dist(players[b.id].pos, vp)))
             holders = [b for b in foot if players[b.id].has_flag]
             others = [b for b in foot if not players[b.id].has_flag]
             if free > 0 and vehicles.needs_gunner(v, snap) and not any(b.order.role == "ride" for b in coming) and others:
-                b = min(others, key=lambda b: (profiles.resource_priority(b.p), dist(players[b.id].pos, vp)))
+                b = min(others, key=lambda b: (profiles.gunner_priority(b.p), dist(players[b.id].pos, vp)))
                 others.remove(b)
                 b.set_order(Order("ride", vp, target=h), sure=True)
                 s.roles[b.id], free = "ride", free - 1

@@ -37,7 +37,7 @@ def scenario(participants, loose=True):
 
 class LegendaryPowerFetchTests(unittest.TestCase):
     def test_difficulty_priority_and_fallback_override_distance(self):
-        tiers = ['demon', 'top', 'strong', 'average', 'scaling']
+        tiers = ['demon', 'top', 'strong', 'average']
         for start in range(len(tiers)):
             group = [participant(tier, 30-i*4, pid=i) for i, tier in enumerate(tiers[start:])]
             director, snap = scenario(list(reversed(group)))
