@@ -3,7 +3,7 @@
 ## Unreleased — Reach Scorpion chest aim, 2026-11-07
 
 - Fixed Legendary and Demon Scorpion drivers aim the main cannon at the chest of standing and crouched infantry instead of applying the normal splash weapon aim at the feet. Vehicle targets, other weapons, and Scaling keep their existing aim. The Scorpion's turn cap and firing alignment checks still apply.
-- Offline driver checks confirmed both chest heights and the existing aim for vehicle targets, Scaling and the Wraith. All 42 selected regression tests passed. Chest aim still needs a gameplay check after restarting the bot process.
+- Offline driver checks confirmed both chest heights and the existing aim for vehicle targets, Scaling and the Wraith. All 42 selected regression tests passed. The owner tested the change in gameplay and reported that it appeared to fix the Scorpion aiming at infantry feet.
 
 ## Unreleased — Reach Warthog gunner alignment and Scorpion turning, 2026-11-07
 
