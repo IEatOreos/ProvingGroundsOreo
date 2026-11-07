@@ -28,6 +28,9 @@ import math
 import os
 import re
 import statistics as st
+import subprocess
+import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
@@ -187,6 +190,53 @@ def keep(tr, map_name, info, a):
     json.dump(d, open(os.path.join(CACHE, os.path.basename(tr)[:-len(".jsonl")] + ".json"), "w", encoding="utf-8"))
 
 
+def keep_skip(tr, why):
+    """A match that is no match of his (bots only, two people, no person found, a file that would not read): kept as
+    a skip so the run after each match does not read it again."""
+    os.makedirs(CACHE, exist_ok=True)
+    st_ = os.stat(tr)
+    json.dump(dict(skip=why, size=st_.st_size, mtime=int(st_.st_mtime)),
+              open(os.path.join(CACHE, os.path.basename(tr)[:-len(".jsonl")] + ".json"), "w", encoding="utf-8"))
+
+
+LOCK = os.path.join(CACHE, "run.lock")
+LOCK_STALE = 20 * 60     # s: a lock older than this is a run that died
+
+
+def lock():
+    """One background run at a time (tools/play.py starts one at every match): False when another holds it."""
+    os.makedirs(CACHE, exist_ok=True)
+    try:
+        if time.time() - os.path.getmtime(LOCK) < LOCK_STALE:
+            return False
+    except OSError:
+        pass
+    with open(LOCK, "w") as f:
+        f.write(str(os.getpid()))
+    return True
+
+
+def unlock():
+    try:
+        os.remove(LOCK)
+    except OSError:
+        pass
+
+
+def start_background(python=sys.executable):
+    """Summarise the matches not read yet in a separate low-priority process, its output in logs/owner_profile/
+    last_run.txt (tools/play.py at each match start: the last match's carnage report is copied then). Never raises."""
+    try:
+        os.makedirs(CACHE, exist_ok=True)
+        flags = 0x00004000 | getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0   # BELOW_NORMAL
+        with open(os.path.join(CACHE, "last_run.txt"), "w", encoding="utf-8") as log:
+            subprocess.Popen([python, "-I", os.path.abspath(__file__), "--background"], cwd=ROOT, stdout=log,
+                             stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, creationflags=flags)
+        return True
+    except Exception:
+        return False
+
+
 def unpack(d):
     return d["map"], d["info"], (d["kills"], d["deaths"], d["fights"], [tuple(x) for x in d["track"]], d["minutes"])
 
@@ -271,7 +321,24 @@ def main():
     ap.add_argument("--maps", nargs="*", help="only these maps")
     ap.add_argument("--out", help="write <out>/<map>.json instead of maps/<map>/owner_profile.json")
     ap.add_argument("--dry", action="store_true", help="print, write nothing")
+    ap.add_argument("--background", action="store_true",
+                    help="the run tools/play.py starts at each match: one at a time (a lock), errors logged, not raised")
     o = ap.parse_args()
+    if o.background:
+        if not lock():
+            print("another run is under way: nothing to do")
+            return
+        try:
+            run(o)
+        except Exception as e:                       # (a background run must never take anything down with it)
+            print(f"failed: {type(e).__name__}: {e}")
+        finally:
+            unlock()
+        return
+    run(o)
+
+
+def run(o):
     per_map = collections.defaultdict(list)
     skipped = []
     seen = set()
@@ -295,23 +362,40 @@ def main():
             continue
         seen.add(os.path.basename(tr))
         c = cached(tr)
+        if c is not None and "skip" in c:
+            skipped.append((os.path.basename(tr), c["skip"]))
+            continue
         if c is not None:
             take(*unpack(c), "")
             continue
-        players, gametype = carnage(cr)
-        map_name, names, rows = read_trace(tr)
+
+        def skip(why):
+            skipped.append((os.path.basename(tr), why))
+            if not o.dry and o.player is None:
+                keep_skip(tr, why)
+        try:
+            players, gametype = carnage(cr)
+            map_name, names, rows = read_trace(tr)
+        except (OSError, ValueError) as e:          # (deleted by the rotation meanwhile, or cut short)
+            skipped.append((os.path.basename(tr), f"unreadable: {type(e).__name__}"))
+            continue
         if not rows or map_name is None:
+            skip("no world rows")
             continue
         humans = [p for p in players if p[0] not in names.values() and (o.player is None or p[0] == o.player)]
         if len(humans) != 1:
-            skipped.append((os.path.basename(tr), f"{len(humans)} matching people"))
+            skip(f"{len(humans)} people in the carnage report")
             continue
         name, team, k, d = humans[0]
         ids = {i for _, W in rows for i, w in W.items() if not w[8]}
         if len(ids) != 1:
-            skipped.append((os.path.basename(tr), f"{len(ids)} people in the trace"))
+            skip(f"{len(ids)} people in the trace")
             continue
-        a = analyse(rows, ids.pop())
+        try:
+            a = analyse(rows, ids.pop())
+        except Exception as e:                      # (a trace this does not understand: say so, do not read it again)
+            skip(f"analysis failed: {type(e).__name__}: {e}")
+            continue
         info = dict(trace=os.path.basename(tr), gametype=gametype, player=name, kills=k, deaths=d, minutes=round(a[4], 1))
         if not o.dry:
             keep(tr, map_name, info, a)
@@ -320,7 +404,10 @@ def main():
         if os.path.basename(f)[:-len(".json")] + ".jsonl" in seen:
             continue
         try:
-            take(*unpack(json.load(open(f, encoding="utf-8"))), "; recording gone, kept summary")
+            d = json.load(open(f, encoding="utf-8"))
+            if "skip" in d:
+                continue
+            take(*unpack(d), "; recording gone, kept summary")
         except (OSError, ValueError, KeyError):
             skipped.append((os.path.basename(f), "unreadable summary"))
     for tr, why in skipped:

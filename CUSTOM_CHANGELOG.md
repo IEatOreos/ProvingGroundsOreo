@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Owner play profile runs automatically, 2026-11-07
+
+- tools/play.py `match_trace` (each recorded match start, after the carnage report copy and the rotation) now starts `tools/owner_profile.py --background`. It is a separate, below-normal-priority, windowless process, logging to logs/owner_profile/last_run.txt. The last match is summarized while its recording is still on disk; the rotation reaches it only 4 matches later (5 games kept by default). Profiles are rewritten each time. Any failure to start is ignored so a match always starts, and only the install's own logs/ folder triggers it.
+- The tool runs one background run at a time: a lock in logs/owner_profile/, released at the end, and treated as stale after 20 minutes. Matches that aren't the owner's (bots only, no person or several, no world rows, unreadable, analysis failed) are kept as skip markers, so later runs don't read them again; a file that changes is read again. Errors are logged, not raised.
+- Validation: lock, stale-lock and skip-marker tests in tools/test_owner_profile.py. The hook returns immediately. All 145 regression tests and the tools/recording.py self-check pass. Takes effect the next time the launcher starts a match.
+
 ### Owner play profile tool, 2026-11-07
 
 - New tools/owner_profile.py ("play like the owner") reads the owner's recorded matches (logs/trace_*.jsonl with their carnage reports). Matches where the owner got fewer than `--min-kills` kills (default 1) are skipped as spectating, and so are matches with no carnage report, no person, or more than one person. Per map it writes maps/<map>/owner_profile.json with:

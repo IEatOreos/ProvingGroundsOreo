@@ -61,6 +61,14 @@ def match_trace(map_name, logs=os.path.join(ROOT, "logs"), games=None, after=Non
     old = sorted(glob.glob(os.path.join(logs, "trace_*_????????-??????.jsonl")), key=os.path.getmtime)
     keep_carnage(old)
     recording.rotate(logs, games, after)
+    if os.path.normcase(os.path.abspath(logs)) == os.path.normcase(os.path.abspath(os.path.join(ROOT, "logs"))):
+        # (custom) the owner's play profile: the last match, its carnage report just copied, summarised in the background
+        # while it is still here (4 more matches before the rotation reaches it); tools/owner_profile.py
+        try:
+            import owner_profile
+            owner_profile.start_background()
+        except Exception:
+            pass                     # (never in the way of a match starting)
     return os.path.join(logs, f"trace_{map_name}_{time.strftime('%Y%m%d-%H%M%S')}.jsonl")
 
 

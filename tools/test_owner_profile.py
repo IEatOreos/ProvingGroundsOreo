@@ -51,5 +51,39 @@ class OwnerProfileTests(unittest.TestCase):
         self.assertEqual(sorted(len(m) for _, m in c), [1, 3])
 
 
+class BackgroundTests(unittest.TestCase):
+    """The run tools/play.py starts at each match: one at a time, and matches that are not his read once."""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.mkdtemp()
+        self.saved = op.CACHE, op.LOCK
+        op.CACHE, op.LOCK = self.tmp, os.path.join(self.tmp, "run.lock")
+
+    def tearDown(self):
+        import shutil
+        op.CACHE, op.LOCK = self.saved
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_one_run_at_a_time(self):
+        self.assertTrue(op.lock())
+        self.assertFalse(op.lock())                  # a second run while the first holds it
+        op.unlock()
+        self.assertTrue(op.lock())
+        old = __import__("time").time() - op.LOCK_STALE - 5
+        os.utime(op.LOCK, (old, old))                # a run that died long ago does not block forever
+        self.assertTrue(op.lock())
+        op.unlock()
+
+    def test_a_skipped_match_is_kept_as_a_skip(self):
+        tr = os.path.join(self.tmp, "trace_x_20260101-000000.jsonl")
+        open(tr, "w").write("{}\n")
+        op.keep_skip(tr, "0 people in the carnage report")
+        c = op.cached(tr)
+        self.assertEqual(c["skip"], "0 people in the carnage report")
+        open(tr, "a").write("{}\n")                  # the file changed: read again
+        self.assertIsNone(op.cached(tr))
+
+
 if __name__ == "__main__":
     unittest.main()
