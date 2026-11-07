@@ -14,7 +14,7 @@ from . import profiles
 import math
 import random
 from .core import PlayerState, Vec, dist
-from .bot import Bot, Order
+from .bot import Bot, Order, VEHICLE_TRIP, GETAWAY_PARK_R
 from .callouts import Call, VoiceChannel, TIMING, LISTENER_BUSY
 from .modes import NEW_MODES
 from .match import posture, tempo, one_flag_posture, Posture
@@ -1072,14 +1072,21 @@ class Director:
             me = players[b.id]
             v = next((x for x in snap.vehicles if me is not None and x["handle"] == me.vehicle), None)
             sp = vehicles.spec(v["kind"]) if v else None
-            if sp is None or sp["move"] == "none" or getattr(b, "seat", "") != "driver" or b.order.role == "ferry":
+            if v is None or vehicles.kind_of(v["kind"]) != "mongoose":
+                b.mongoose_trip = None
+            if (sp is None or sp["move"] == "none" or getattr(b, "seat", "") != "driver"
+                    or (b.order.role == "ferry" and vehicles.kind_of(v["kind"]) != "mongoose")):
                 b.vjob = None
                 continue
             kind, fights = vehicles.kind_of(v["kind"]), sp["gun"] is not None
             aboard = [x for x in snap.players if x.alive and x.vehicle == v["handle"] and x.id != b.id]
             job = None
             # (their carrier away in a vehicle: anything of ours that drives goes after him, guide 17 PUR rules)
-            if theirs is not None and (fights or theirs.vehicle not in (None, -1)) and theirs.vehicle != v["handle"]:
+            if kind == "mongoose":
+                job = s.mongoose_job(now, b, me, snap, aboard, getaway_available=getaway is None)
+                if job[0] == "getaway":
+                    getaway = b
+            elif theirs is not None and (fights or theirs.vehicle not in (None, -1)) and theirs.vehicle != v["handle"]:
                 job = ("hunt", theirs.pos)
             elif ours is not None and ours.id != b.id and fights and ours.vehicle != v["handle"] and kind not in vehicles.TANKS:
                 job = ("escort", ours.pos)
@@ -1113,6 +1120,91 @@ class Director:
                 b.drive_to = job[1]
             if b.vjob != was and b.vjob is not None:
                 s.event(now, "vehicle", f"{me.name}: {b.vjob.replace('_', '-')} ({v['kind']})")
+
+    MONGOOSE_PICKUP_WAIT = 8.0
+    MONGOOSE_GETAWAY_WAIT = 20.0
+
+    def mongoose_job(s, now, b, me, snap, aboard, *, getaway_available=True):
+        """A finite transport trip, with stable deadlines across the director's role passes."""
+        if snap.mode == "race":
+            b.mongoose_trip = None
+            return ("taxi", snap.race_next.get(b.id) or b.order.point or me.pos)
+        trip = getattr(b, "mongoose_trip", None)
+        if trip is None or trip["vehicle"] != me.vehicle:
+            trip = b.mongoose_trip = dict(vehicle=me.vehicle, key=None, carrier=None,
+                                          wait_since=None, done=None)
+        if trip["done"] is not None:
+            return ("dismount", me.pos)
+
+        if b.order.role == "ferry":
+            trip["carrier"] = b.order.target
+        carrier = snap.player(trip["carrier"])
+        flag = (snap.flags or {}).get(1 - s.side) if snap.mode == "ctf" else None
+        objective = (snap.mode, snap.inv_phase, flag.state if flag else None, flag.carrier if flag else None)
+        job, point, reason = None, None, None
+        if trip["carrier"] is not None:
+            if (carrier is None or not carrier.alive or not carrier.has_flag or carrier.team != me.team
+                    or carrier.vehicle not in (-1, me.vehicle) or snap.mode not in ("ctf", "assault", "stockpile")):
+                reason = "carrier pickup no longer needed"
+            else:
+                home = s.carry_point(snap)
+                point = home if carrier.vehicle == me.vehicle else carrier.pos
+                job = "taxi" if carrier.vehicle == me.vehicle else "pickup"
+                # Role assignment runs again every two seconds, so retain this carrier explicitly.
+                b.order = Order("ferry", home, target=carrier.id)
+        else:
+            rider_goals = [s.bots[p.id].order.point for p in aboard if p.id in s.bots
+                           and s.bots[p.id].order.role in ("runner", "escort", "mid")
+                           and s.bots[p.id].order.point is not None]
+            point = b.order.point if b.order.role != "drive" else None
+            if point is None:
+                point = getattr(b, "drive_to", None)
+            if rider_goals:
+                point = rider_goals[0]
+            if aboard:
+                carrier = next((p for p in aboard if p.has_flag), None)
+                if carrier is not None and snap.mode in ("ctf", "assault", "stockpile"):
+                    trip["carrier"] = carrier.id
+                    point = s.carry_point(snap)
+                    b.order = Order("ferry", point, target=carrier.id)
+                job, point = "taxi", point or s.straight_objective(snap, me.pos)
+            else:
+                park = s.getaway_park(snap, me.pos) if GETAWAY and getaway_available and b.order.role != "runner" else None
+                if park is not None:
+                    job, point = "getaway", park
+                elif point is not None and (dist(me.pos, point) > VEHICLE_TRIP or trip["key"] == ("taxi", point)):
+                    job = "taxi"
+            if trip["key"] is not None and trip["key"][0] == "getaway" and trip.get("objective") != objective:
+                reason = "getaway objective changed"
+            if job == "getaway" and flag is not None and flag.state == "carried":
+                runner = snap.player(flag.carrier)
+                if runner is None or not runner.alive:
+                    reason = "getaway carrier unavailable"
+
+        key = ("ferry", trip["carrier"]) if trip["carrier"] is not None else (job, point)
+        if reason is None and (job is None or point is None):
+            reason = "no useful transport trip"
+        if reason is None:
+            if trip["key"] != key:
+                trip.update(key=key, wait_since=None, objective=objective)
+                trip.setdefault("until", now + max(60.0, dist(me.pos, point) / 3.0 + 30.0))
+            waiting = (job == "pickup" and dist(me.pos, point) < 6.0
+                       or job == "getaway" and (me.pos - point).flat() < GETAWAY_PARK_R)
+            if waiting and trip["wait_since"] is None:
+                trip["wait_since"] = now
+            elif not waiting:
+                trip["wait_since"] = None
+            wait_limit = s.MONGOOSE_PICKUP_WAIT if job == "pickup" else s.MONGOOSE_GETAWAY_WAIT
+            if waiting and now - trip["wait_since"] >= wait_limit:
+                reason = "transport wait expired"
+            elif now >= trip["until"]:
+                reason = "transport trip expired"
+            elif job == "taxi" and dist(me.pos, point) < 6.0:
+                reason = "transport destination reached"
+        if reason is not None:
+            trip["done"] = reason
+            return ("dismount", me.pos)
+        return (job, point)
 
     @staticmethod
     def ferry_seat(v):
@@ -1186,7 +1278,8 @@ class Director:
             k = vehicles.kind_of(v["kind"]) if v else None
             seat_ok = sp is not None and k not in vehicles.TANKS and (
                 "passenger" in sp["seats"] or bool(vehicles.REACH_SEATS.get(k, {}).get("passenger")))
-            if v and seat_ok and getattr(b, "seat", "") == "driver" and v.get("riders", 0) < len(sp["seats"]):
+            if (v and seat_ok and getattr(b, "seat", "") == "driver" and v.get("riders", 0) < len(sp["seats"])
+                    and not (k == "mongoose" and getattr(b, "vjob", None) == "dismount")):
                 drivers.append((dist(Vec(*v["pos"]), carrier.pos), b, v))
         if not drivers:
             return
@@ -1228,8 +1321,12 @@ class Director:
                  and vehicles.usable(v, now, duds)}
         free = {b.id: b for b in foot if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
         near = {b.id: b for b in busy if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
+        mongoose_goals = {bid: (getattr(b, "drive_to", None) if b.order.role == "drive" else b.order.point)
+                          for bid, b in free.items()}
         for h, (bid, since) in list(crews.items()):
-            if h in empty and (bid in free or bid in near) and now - since < 30.0:
+            if (h in empty and (bid in free or bid in near) and now - since < 30.0
+                    and not (vehicles.kind_of(empty[h]["kind"]) == "mongoose"
+                             and now < getattr(s.bots[bid], "vehicle_retry_at", 0.0))):
                 b, v = (free.pop(bid, None) or near.pop(bid)), empty.pop(h)
                 near.pop(bid, None)
                 b.set_order(Order("drive", Vec(*v["pos"]), target=h), sure=True)   # (it took the job)
@@ -1254,6 +1351,10 @@ class Director:
                          if role in vehicles.roles_of(v["kind"])
                          for bid, b in (free if vehicles.taxi_ok(v["kind"]) else {**near, **free}).items()
                          if skip.get((bid, v["handle"]), 0.0) <= now
+                         and (vehicles.kind_of(v["kind"]) != "mongoose" or (
+                             now >= getattr(b, "vehicle_retry_at", 0.0) and mongoose_goals.get(bid) is not None
+                             and Bot.trip_ok(v, players[bid], mongoose_goals[bid])
+                             and (snap.mode == "race" or dist(players[bid].pos, mongoose_goals[bid]) > VEHICLE_TRIP)))
                          and dist(players[bid].pos, Vec(*v["pos"])) <= (s.CREW_REACH if bid in free else s.POWER_R)]
                 d, b, v = min(pairs, key=lambda x: x[0], default=(None, None, None))
                 if d is None or d > s.CREW_REACH:
@@ -1267,6 +1368,8 @@ class Director:
                 if b.order.role != "drive":      # a rogue moment: it plays on its own this round
                     skip[(b.id, v["handle"])] = now + 10.0
                     continue
+                if vehicles.kind_of(v["kind"]) == "mongoose":
+                    b.drive_to = mongoose_goals[b.id]
                 del empty[v["handle"]]
                 crews[v["handle"]] = (b.id, now)
                 s.roles[b.id] = "drive"

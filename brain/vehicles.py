@@ -110,7 +110,7 @@ ROLES = {"banshee": ("anti_air",), "hornet": ("anti_air",), "falcon": ("anti_air
          "rwarthog": ("anti_air",), "gauss": ("anti_vehicle",), "scorpion": ("anti_vehicle",),
          "wraith": ("anti_vehicle",), "chopper": ("anti_vehicle", "harasser"), "mantis": ("anti_vehicle",),
          "revenant": ("anti_vehicle",), "warthog": ("transport",), "thog": ("transport",),
-         "mongoose": ("transport", "harasser"), "spectre": ("transport",), "elephant": ("transport",),
+         "mongoose": ("transport",), "spectre": ("transport",), "elephant": ("transport",),
          "prowler": ("transport",), "ghost": ("harasser",), "gungoose": ("harasser",), "sabre": ("anti_air",),
          "seraph": ("anti_air",)}
 ROLE_ORDER = ("anti_air", "anti_vehicle", "transport", "harasser")

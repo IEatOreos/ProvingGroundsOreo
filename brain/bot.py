@@ -103,6 +103,7 @@ GROUND_RISE = 15.0           # u: a goal this far over the bot is no trip for a 
 GETAWAY_PARK_R = 3.0         # u: the getaway ride parks this near its spot (director.vehicle_jobs)
 RIDE_OUT_R = 10.0            # a rider this near his objective gets out (a runner at their flag: director.vehicle_jobs taxi)
 CALLED_WAIT_R = 15.0         # a driver waits (8 s at most) for a teammate called aboard while he is this near (crew_coming)
+MONGOOSE_RETRY = 30.0        # finish the objective on foot before choosing another transport trip
 
 
 # projectile speed in world units per second (CE kit tags, tools/ce_projectiles.py: mean of
@@ -2708,6 +2709,11 @@ class Bot:
                 or (foe.equipment == "armor_lock" and foe.ability_on)):
             return False
         kind = vehicles.kind_of(v["kind"]) if v is not None else None
+        if kind == "mongoose":
+            # A splatter along the trip is useful; chasing a man replaces the transport job.
+            off = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - s.heading(me, v)))
+            if off >= math.radians(20.0):
+                return False
         if foe.vehicle == -1:
             if foe.weapon in ANTI_VEHICLE:
                 return False
@@ -2887,7 +2893,8 @@ class Bot:
             # the team's pick for a role (director.crew_orders): it works the vehicle where the fights and the objective
             # are, never getting out at the end of a trip A tank too
             s.crew_ride = me.vehicle if s.seat == "driver" and (
-                s.order.role == "drive" or (v is not None and vehicles.kind_of(v["kind"]) in vehicles.TANKS)) else None
+                s.order.role == "drive" and (v is None or vehicles.kind_of(v["kind"]) != "mongoose")
+                or (v is not None and vehicles.kind_of(v["kind"]) in vehicles.TANKS)) else None
             if s.crew_ride is not None:
                 s.drive_to = s.patrol_point(me)
         seen = s.per.visible_enemies()
@@ -3018,8 +3025,12 @@ class Bot:
             act.yaw, act.forward, act.strafe, act.fire = math.atan2(w.y - me.pos.y, w.x - me.pos.x), 1.0, 0.0, False
             s.att = ["retreat", None, round(w.x, 1), round(w.y, 1)]
             return
-        target = getattr(s, "drive_to", None) or s.roam(me)
-        if s.order.role == "ferry":              # pick up our carrier, then run him home
+        mongoose = v is not None and vehicles.kind_of(v["kind"]) == "mongoose"
+        transport_done = mongoose and getattr(s, "vjob", None) == "dismount" and snap.mode != "race"
+        target = me.pos if transport_done else getattr(s, "drive_to", None) or s.roam(me)
+        if transport_done:
+            seen = []
+        elif s.order.role == "ferry":              # pick up our carrier, then run him home
             c = snap.player(s.order.target)
             target = c.pos if c is not None and c.alive and c.vehicle != me.vehicle else (s.order.point or target)
         elif getattr(s, "vjob", None) == "getaway" and (me.pos - target).flat() < GETAWAY_PARK_R:
@@ -3030,7 +3041,8 @@ class Bot:
             s.note("vehicle: getaway, waiting for the carrier")
             return
         air = sp is not None and sp["move"] == "air"
-        if getattr(s, "vjob", None) == "pickup" and s.order.role != "ferry" and (me.pos - target).flat() < 6.0:
+        if (getattr(s, "vjob", None) == "pickup" and (s.order.role != "ferry" or mongoose)
+                and (me.pos - target).flat() < 6.0):
             # by the teammate it came for (director.gunner_pickup): stopped for him to take the gun
             s.hold_for_crew(now, me, act, air)
             s.att = ["park", None, round(me.pos.x, 1), round(me.pos.y, 1)]
@@ -3044,7 +3056,7 @@ class Bot:
                 and s.order.role in ("ride", "ferry", "driver_wait") and not easy:
             s.hold_for_crew(now, me, act, air)  # the gunner is coming (the director called one): wait for him
             return
-        if v is not None and not easy and s.crew_coming(now, me, v, sp, snap, seen):
+        if v is not None and not easy and not transport_done and s.crew_coming(now, me, v, sp, snap, seen):
             s.hold_for_crew(now, me, act, air)  # a teammate is coming for a free seat: wait for him
             s.note("vehicle: waiting for crew")
             return
@@ -3054,7 +3066,9 @@ class Bot:
         # a taxi with riders for the objective (director.vehicle_jobs) drives its trip as Easy does, its gunner and its
         # own gun on whoever it meets, no circling round a fight (Avalanche, round 1: the attackers' runners spent 25%
         # of their time in vehicles and 57% of it 40-50 u from the flag, by their own base)
-        meet, seen = (seen, []) if easy or getattr(s, "vjob", None) in ("taxi", "getaway", "pickup") else ([], seen)
+        trip_job = getattr(s, "vjob", None)
+        transit = trip_job in ("taxi", "getaway", "pickup") and not (mongoose and trip_job == "taxi")
+        meet, seen = (seen, []) if easy or transit else ([], seen)
         if seen and not armed and not gunned:
             # no gun at the wheel and none manned (a lone Warthog or Falcon, a Mongoose): it runs a man on foot down
             # when it can, else goes on with its trip: transports fight nobody (guide 17 §4.2)
@@ -3268,12 +3282,15 @@ class Bot:
         # 2.5 u under gate 3 for 30 s and more, never out)
         race_out = snap.mode == "race" and s.game != "reach" and (getattr(s, "ground_end", False) or (
             target.z - me.pos.z > 1.5 and (target - me.pos).flat() < 6.0))
-        arrived = ((dist(me.pos, target) < 6 and snap.mode != "race") or end or race_out) and s.order.role != "ferry"
+        arrived = transport_done or (((dist(me.pos, target) < 6 and snap.mode != "race") or end or race_out)
+                                     and s.order.role != "ferry")
+        if mongoose and trip_job == "getaway" and not transport_done and not end:
+            arrived = False       # reach the parking radius before waiting for the carrier
         s.ground_end = False
         # (a runner at the wheel gets out at their flag, whatever it boarded as: live Avalanche 070402, runners took a
         # Mongoose, Warthog or Wraith as the team's crew, then drove 1-3 u under the flag platform, 4 u below it, for
         # 1,100-5,000 rows each, never out: the flag was never carried in 558 s)
-        working = ((getattr(s, "crew_ride", None) == me.vehicle and s.order.role != "runner")
+        working = not mongoose and ((getattr(s, "crew_ride", None) == me.vehicle and s.order.role != "runner")
                    or getattr(s, "vjob", None) in ("escort", "hunt", "anti_vehicle")
                    or (v is not None and not vehicles.taxi_ok(v["kind"])))
         if arrived and working:
@@ -3329,6 +3346,17 @@ class Bot:
             act.action, act.forward, act.fire = True, 0.0, False
             # held in Reach (a one-tick press did not get out) and, untested, the games after Halo 2; CE and Halo 2: a press
             s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
+            if mongoose:
+                s.vehicle_retry_at = max(getattr(s, "vehicle_retry_at", 0.0), now + MONGOOSE_RETRY)
+                trip = getattr(s, "mongoose_trip", None)
+                if trip is not None:
+                    trip["done"] = trip["done"] or ("transport stalled" if stuck else "transport destination reached")
+                s.vjob, s.crew_ride = "dismount", None
+                if s.order.role in ("drive", "ferry"):
+                    s.order = Order("free")
+                s.goal, s.next_decide, s.vehicle_until = ("roam", None), now, now
+                reason = trip["done"] if trip is not None else "trip finished"
+                s.note("mongoose: " + reason + ", continue on foot")
             s.reversed_n = 0
             s.drive_to = None if not stuck else target
             s.drive_pos = None

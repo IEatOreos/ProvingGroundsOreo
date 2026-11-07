@@ -1,5 +1,14 @@
 # Custom release history
 
+## Unreleased — Finite Mongoose transport trips, 2026-11-06
+
+- Apply the owner's five approved Mongoose changes. Remove ordinary Mongoose from the harasser role, require a useful distant destination for director-assigned transport, preserve the destination when assigning a driver, and exclude Mongoose from persistent crew-patrol arrival behavior. Completed trips request dismount and continue on foot.
+- Give ordinary Mongoose drivers explicit finite taxi, carrier-pickup and CTF-getaway jobs. Remember the carrier across role passes, stop for boarding, carry a boarded carrier home, and cancel invalid/dead/dropped/carried-away targets. Keep only one getaway vehicle per team. Reassess getaway objective changes and carrier death.
+- Chosen defaults: 8 seconds waiting beside a carrier, 20 seconds parked for a getaway, 30 seconds of automatic ride cooldown after dismount, and a travel deadline of max(60 seconds, initial straight-line distance / 3 + 30 seconds). Reassigned moving destinations cannot restart that deadline. Race checkpoints remain the continuous riding case.
+- Keep emergency evasions, reversing/stuck recovery and opportunistic splatters. Ordinary Mongoose taxi trips can splatter eligible infantry within 18 units and 20 degrees ahead rather than detouring into a chase. Shared vehicle logic keeps its existing behavior for other chassis, including armed Gungoose and Warthog crew patrols. Use the existing per-game exit hold/retry mechanism and add Mongoose completion reasons to bot notes.
+- Files: brain/vehicles.py, brain/director.py, brain/bot.py, tools/test_mongoose_transport.py and current customization notes. No native rebuild is needed. This changes ordinary Mongoose behavior across supported games through the shared brain.
+- Validation: all 111 regression tests pass, including 16 new tests through real director/driver entry points covering arrival, no-purpose dismount, cooldown, finite moving-target deadlines, pickup/home delivery, wait cancellation, getaway approach, race, splatters, evasion, reversing, and Warthog patrol preservation. All 92 Python sources compile in memory and whitespace checks pass. The existing LiDAR localhost endpoint test requires socket access and passed on the full run. Gameplay remains untested; restart the bot process/launcher to apply.
+
 ## Local documentation — main AI review handoff, 2026-11-06
 
 - Add docs/AI_REVIEW_HANDOFF_2026-11-06.md describing the combined published code through 9a4cf17 / 0.2.2-custom.4. Organize by Reach, Halo 4, other game scope, brain/difficulty, weapons/ammo, equipment/maps, director/vehicles, LiDAR, native menu/reporting, and upstream integration.
