@@ -664,7 +664,7 @@ class Aim:
         s.focus = 0.0
 
     def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False, precise=False,
-             target_point=None, protected=False):
+             target_point=None, protected=False, splash_at_feet=True):
         # gun: what the shot comes out of when it is not the gun in hand (a vehicle's turret: vehicles.GUNNER_GUN);
         # origin: where that shot leaves (vehicles.gun_height), else the eye; crouched: the target is (his head and
         # chest lower: core.CROUCH_HEAD, CROUCH_CHEST)
@@ -698,8 +698,7 @@ class Aim:
         lead_t = d / PROJECTILE_SPEED.get(gun, 360.0)   # flight time of this gun's shot
         # lead: bullet flight plus the ~0.05 s from our read of the game to the shot leaving;
         # explosives at the feet (the splash still kills a near miss), else chest or head
-        h = (0.05 if gun in SPLASH else (CROUCH_HEAD if aim_head else CROUCH_CHEST) if crouched else
-             0.62 if aim_head else 0.35)
+        h = 0.05 if gun in SPLASH and splash_at_feet else aim_height(aim_head, crouched)
         aim_pt = tpos + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", p.lead)) + Vec(0, 0, h)
         if target_point is not None:
             aim_pt = target_point + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", p.lead))
@@ -3108,13 +3107,15 @@ class Bot:
             kind = vehicles.kind_of(v["kind"]) if v is not None else None
             cam, arc = vehicles.driver_view(kind, (b.pos - me.pos).flat())
             aim_at = aim_at + Vec(0.0, 0.0, (b.pos - me.pos).flat() * math.tan(arc))
+            foe = snap.player(tid)
+            chest_shot = scorpion and foe is not None and foe.vehicle in (None, -1)
             act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=st.get("gun"),
                                             origin=me.pos + Vec(0.0, 0.0, cam) if cam else None,
-                                            crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
+                                            crouched=crouched(foe), protected=profiles.fixed_high(s.p),
+                                            splash_at_feet=not chest_shot)
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             d = dist(me.pos, b.pos)
             lo, hi = st["rng"]
-            foe = snap.player(tid)
             passes = air and st["role"] == "air"
             if st["role"] == "charge" and not air:
                 # a Chopper's guns point where it does: straight at him, the boost into him close in (the player's

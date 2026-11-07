@@ -1,11 +1,16 @@
 # Custom release history
 
+## Unreleased — Reach Scorpion chest aim, 2026-11-07
+
+- Fixed Legendary and Demon Scorpion drivers aim the main cannon at the chest of standing and crouched infantry instead of applying the normal splash weapon aim at the feet. Vehicle targets, other weapons, and Scaling keep their existing aim. The Scorpion's turn cap and firing alignment checks still apply.
+- Offline driver checks confirmed both chest heights and the existing aim for vehicle targets, Scaling and the Wraith. All 42 selected regression tests passed. Chest aim still needs a gameplay check after restarting the bot process.
+
 ## Unreleased — Reach Warthog gunner alignment and Scorpion turning, 2026-11-07
 
 - Aim the Reach Warthog chaingun from the attached turret's horizontal position, rotated into map coordinates, with the existing calibrated firing height. Keep the chassis position for navigation and perception. Fall back to the existing origin when attachment data is unavailable or invalid.
 - Boneyard's second report requested the owner's Scorpion turning speed for Legendary and Demon. Cap Reach's fixed Legendary and Demon Scorpion drivers at 90 degrees per second, based on the recorded sustained yaw rate (90.3 degrees per second at the 90th percentile of moving samples). Require 0.10 seconds of continuous aim alignment before requesting cannon fire, including at close range. The game reader does not expose the live barrel direction, so this is a settling check on view readback and aim commands.
 - Offline driver checks confirmed the turn cap, firing after settling, resetting when the target moves out of alignment, and Scaling exclusion. Attachment transform and fallback checks passed, and all 92 Python source files compiled. The suite passed 110 of 111 tests; the sandbox denied the LiDAR localhost connection in the remaining test.
-- Restart the bot process after the match. Live confirmation is pending for both the Warthog impact offset and the Scorpion's cannon timing.
+- The owner confirmed in gameplay that the Warthog aim correction and Scorpion turning sensitivity worked. The confirmation did not separately measure cannon timing.
 
 ## 0.2.2-custom.5 — Mongoose transport source update, 2026-11-06
 
