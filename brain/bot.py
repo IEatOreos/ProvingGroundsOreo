@@ -633,8 +633,8 @@ class Perception:
         vision_mode = "see" if getattr(los, "__name__", "") == "sees" else None
         fixed_high = profiles.fixed_high(s.p)
         demon = profiles.fixed_demon(s.p)
-        center_half = math.radians(70) if demon else math.radians(50) if fixed_high else FOV_HALF
-        peripheral_half = math.radians(70) if demon else math.radians(60) if fixed_high else PERIPHERAL_HALF
+        center_half = math.radians(90) if demon else math.radians(50) if fixed_high else FOV_HALF
+        peripheral_half = center_half if demon else math.radians(60) if fixed_high else PERIPHERAL_HALF
         peripheral_multiplier = 1.0 if demon else 1.5 if fixed_high else 1.6
         new_sightings = []
         s.hurt_by(now, me, snap, los)

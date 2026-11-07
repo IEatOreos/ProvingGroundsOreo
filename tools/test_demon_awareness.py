@@ -21,10 +21,10 @@ class DemonAwarenessTests(unittest.TestCase):
         return p, me, enemy, snap
 
     def test_demon_full_cone_and_edges_have_zero_configured_delay(self):
-        for angle in (-70.1, -69.9, -60, 0, 60, 69.9, 70.1):
+        for angle in (-90.1, -89.9, -70.1, -60, 0, 60, 70.1, 89.9, 90.1):
             p, me, _, snap = self.perception('demon', angle)
             p.update(10, me, snap, lambda *a: True, [])
-            if abs(angle) < 70:
+            if abs(angle) < 90:
                 self.assertEqual(p.pending[1], 10)
                 p.update(10, me, snap, lambda *a: True, [])
                 self.assertIn(1, p.visible_enemies())

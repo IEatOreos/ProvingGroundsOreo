@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Demon 180-degree horizontal vision, 2026-11-07
+
+- Widen Demon's visual detection from 140 to 180 degrees (90 degrees to either side) in `brain/bot.py`. The entire cone uses Demon's zero configured recognition delay. The ordinary sight range, line-of-sight checks and other difficulties retain their existing rules.
+- Validation: updated `tools/test_demon_awareness.py` to check both edges of the wider cone, including zero delay inside and no visual detection just outside. All 134 regression tests passed across the suite and the localhost-only rerun. Syntax and whitespace checks passed. Live gameplay is untested; the change takes effect on the next bot-process launch.
+
 ### Demon mends in cover after winning a fight, 2026-11-07
 
 - Owner's request: once Demon wins a fight with any shield or health lost, it goes to cover until both are back. A win means the target died within one second of Demon's last shot. Demon uses painted cover from the remaining known threats (or from the kill spot when none are known). Without painted cover, it searches up to 10 units for the nearest walkable spot, a short walk away, that no threat can see. At the spot it crouches, which keeps it off the enemy's motion tracker, and watches out of cover.
