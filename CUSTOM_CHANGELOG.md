@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Demon mends in cover after winning a fight, 2026-11-07
+
+- Owner's request: once Demon wins a fight with any shield or health lost, it goes to cover until both are back. A win means the target died within one second of Demon's last shot. Demon uses painted cover from the remaining known threats (or from the kill spot when none are known). Without painted cover, it searches up to 10 units for the nearest walkable spot, a short walk away, that no threat can see. At the spot it crouches, which keeps it off the enemy's motion tracker, and watches out of cover.
+- Mending (score 2.9; 3.1 while already under way) outranks objectives, weapon pickups, hunts and a newly visible enemy at range; Demon fires back while moving. It still loses to an enemy within the close-fight range, a hit from an unseen shooter, and a tracker dot at arm's length. A teammate on a loose objective (`stay_on`) and the flag-grab reduction keep their rules. Demon stops mending when its shield is full and its health is full or has stopped refilling for 1.5 seconds (Reach health refills only partially), when the enemy carries our flag or objective, or after 15 seconds at most. A new hiding spot is chosen if a visible enemy can see the current one. Excluded: carriers, vehicles, matches without shields and Race. Other tiers are unchanged.
+- Validation: 4 new tests (won-fight mend and end, stalled health, no mend at full or for Legendary, the cap). The full suite (134 tests) and the compile check pass. On Forge World, a hiding spot was found for 35 of 40 random positions, in under 1 ms (median) and at most 18 ms, once per kill. Gameplay is untested; the bot process must be restarted.
+
 ### Demon corner follow-up from the first live match, 2026-11-07
 
 - Owner's Reach Forge World 1v1 Slayer against one Demon (logs/trace_reach_forge_halo_20261107-022003.jsonl). Of 28 breaks of line of sight during fights, Demon held 4 (2 continued to a swing and then a push) and pushed 24, mostly targets 10 or more units away or cracked targets. Its 291 hunt destinations were within 0.5 units of the owner's true position, because they came from live tracker dots.

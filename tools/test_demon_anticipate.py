@@ -211,5 +211,49 @@ class CornerTests(unittest.TestCase):
         self.assertGreater(len(lengths), 3)
 
 
+class MendTests(unittest.TestCase):
+    def setup(self, tier="demon", shield=0.3, health=1.0):
+        bot = Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
+        bot._terrain = OpenFloor(wall_x=2.5)          # anything past x = 2.5 is hidden from the dead man at x = -8
+        me = PlayerState(0, 0, "bot", Vec())
+        me.shield, me.health = shield, health
+        dead = PlayerState(1, 1, "enemy", Vec(-8, 0, 0))
+        dead.alive = False
+        snap = Snapshot(30.0, [me, dead])
+        bot.goal, bot.last_shot_t = ("fight", 1), 29.6
+        bot.per.hurt_at = 29.0
+        return bot, me, dead, snap
+
+    def test_won_fight_mends_in_cover_and_ends_when_full(self):
+        bot, me, dead, snap = self.setup()
+        spot = bot.mend_point(30.0, me, snap, [])
+        self.assertIsNotNone(spot)
+        self.assertGreater(spot.x, 2.5)              # out of the kill spot's line
+        bot.goal = ("retreat", spot)
+        me.shield = 0.8
+        self.assertEqual(bot.mend_point(32.0, me, snap, []), spot)   # still not full: stays
+        me.shield = 1.0
+        self.assertIsNone(bot.mend_point(33.0, me, snap, []))        # full: done
+
+    def test_body_that_stops_refilling_counts_as_full(self):
+        bot, me, dead, snap = self.setup(shield=1.0, health=0.6)
+        self.assertIsNotNone(bot.mend_point(30.0, me, snap, []))
+        bot.goal = ("retreat", bot.mend["spot"])
+        self.assertIsNone(bot.mend_point(30.0 + 1.6, me, snap, []))
+
+    def test_full_after_the_kill_or_other_tiers_do_not_mend(self):
+        bot, me, dead, snap = self.setup(shield=1.0, health=1.0)
+        self.assertIsNone(bot.mend_point(30.0, me, snap, []))
+        bot, me, dead, snap = self.setup(tier="top")
+        self.assertIsNone(bot.mend_point(30.0, me, snap, []))
+
+    def test_capped(self):
+        bot, me, dead, snap = self.setup()
+        bot.mend_point(30.0, me, snap, [])
+        bot.goal = ("retreat", bot.mend["spot"])
+        bot.per.hurt_at = 30.0 + 14.0                  # kept getting chipped: the shield never read full
+        self.assertIsNone(bot.mend_point(30.0 + 15.1, me, snap, []))
+
+
 if __name__ == "__main__":
     unittest.main()

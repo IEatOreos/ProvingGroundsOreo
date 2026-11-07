@@ -146,6 +146,11 @@ CORNER_CLIMB = 1.0                     # u: a man this far over us with no walka
 # shield recharge before Demon has watched its own (Perception.learn_regen): a live Reach Slayer game (Forge World,
 # Nov 7) refilled 2.0 s after the last hit, empty to 95% in 1.9 s
 REGEN_DELAY, REGEN_RATE = 2.0, 0.5
+# Demon after a won fight (Bot.mend_point): into cover until shield and body are back
+MEND_SCORE = 2.9     # over objectives, guns, hunts and a new fight in sight (1.5 + 0.4); with decide's 0.2 for the goal in
+                     # hand 3.1, under the 3.15+ turn on an unseen shooter or a dot at arm's length
+MEND_MAX = 15.0      # s at most
+MEND_STALL = 1.5     # s with the body no longer refilling (Reach's health refills only so far): that is full enough
 
 
 def _flat_norm(v, me):
@@ -1328,6 +1333,61 @@ class Bot:
             return "push", guess
         return "swing", st["swing"]
 
+    def mend_point(s, now, me, snap, seen):
+        """Demon after winning a fight (the man it fought died within a second of its last shot) with any shield or
+        body lost: into cover until both are back, wherever it is going (MEND_SCORE: over its objective, guns and
+        hunts). A man right on it (decide's close-fight rule), a hit from one unseen or a radar dot at arm's length
+        (the 3.2 turns on him) still win, as for a person. Ends when the shield is full and the body full or no longer
+        refilling for MEND_STALL s, or after MEND_MAX s. None: not mending."""
+        m = getattr(s, "mend", None)
+        if not profiles.fixed_demon(s.p) or me.vehicle != -1 or me.has_flag or snap.shieldless or snap.mode == "race":
+            s.mend = None
+            return None
+        g = s.goal
+        dead = snap.player(g[1]) if g[0] == "fight" and isinstance(g[1], int) else None
+        won = dead is not None and not dead.alive and now - getattr(s, "last_shot_t", -9.0) <= 1.0
+        hurt = me.shield < 0.99 or me.health < 0.99
+        if m is None and won and hurt:
+            m = s.mend = dict(t=now, kill=dead.pos, spot=None, hp=me.health, hp_t=now)
+            s.note("won the fight: into cover to recharge")
+        if m is None:
+            return None
+        if me.health > m["hp"] + 1e-3:
+            m["hp"], m["hp_t"] = me.health, now                # the body still refilling
+        body_done = me.health >= 0.99 or now - m["hp_t"] > MEND_STALL
+        shield_done = me.shield >= 0.99 or now - getattr(s.per, "hurt_at", -99.0) > SHIELD_BACK   # (a 0 read)
+        if (shield_done and body_done) or now - m["t"] > MEND_MAX or s.theft(me, snap):
+            s.mend = None
+            return None
+        threats = [b.pos for k, b in s.per.beliefs.items() if isinstance(k, int) and now - b.t < 10.0] or [m["kill"]]
+        spot = m["spot"]
+        T = s.T()
+        # a new man in sight with a line onto the spot: another one
+        if spot is not None and any(T.los(s.per.beliefs[k].pos, spot) for k in seen if k in s.per.beliefs):
+            spot = None
+        if spot is None:
+            spot = s.cover_from(me, threats) or s.hidden_spot(me, threats) or me.pos
+            m["spot"] = spot
+        return spot
+
+    def hidden_spot(s, me, threats):
+        """The nearest walkable place a short walk off that no threat has a line to (maps without LiDAR cover spots:
+        cover_from finds none there). Rings out to 10 u."""
+        T = s.T()
+        for r in (1.5, 3.0, 4.5, 6.0, 8.0, 10.0):
+            for i in range(12):
+                a = i * math.pi / 6
+                p = Vec(me.pos.x + math.cos(a) * r, me.pos.y + math.sin(a) * r, me.pos.z)
+                try:
+                    if not T.walkable(p) or any(T.los(t, p) for t in threats):
+                        continue
+                    steps = T.path_ahead(me.pos, p, n=int((r * 2.0 + 4.0) / 0.25), limit=r * 2.0 + 4.0)
+                except Exception:
+                    continue
+                if steps and dist(steps[-1], p) < 1.0 and abs(steps[-1].z - me.pos.z) < 1.5:
+                    return steps[-1]
+        return None
+
     def out_of_reach(s, me, p, d):
         """p is over us (CORNER_CLIMB) and no walkable way leads up to it within a short walk: a man on a ledge we
         cannot run onto (live Forge World, Nov 7: a push strafed into a platform's wall 3 s, its man 1.9 u up)."""
@@ -1721,6 +1781,9 @@ class Bot:
                 # recharging in cover: watch out of it, not the wall it hides behind
                 post = point
             s.move_to(me, point, act, nav)
+            if kind == "retreat" and getattr(s, "mend", None) is not None and (me.pos - point).flat() < 1.0:
+                act.crouch = True     # Demon mending in cover: crouched, off the enemy's motion tracker
+                act.sprint = False
             gate = s.tele_watching(now)
             if gate is not None and (me.pos - gate).flat() >= 2.0:
                 act.forward = act.strafe = 0.0      # off the teleporter's exit: it stands and watches it (look_point)
@@ -2313,6 +2376,9 @@ class Bot:
             if cover is not None and dist(me.pos, cover) <= reach + 2.0:
                 scores[("retreat", cover)] = max(scores.get(("retreat", cover), 0.0), 1.6 + 0.6 * s.p.tactics)
                 s.recharge_until = now + 7.0
+        mend = s.mend_point(now, me, snap, seen)
+        if mend is not None:
+            scores[("retreat", mend)] = max(scores.get(("retreat", mend), 0.0), MEND_SCORE)
         if avoid:
             away = s.cover_from(me, threats) or s.away_from(me, threats)
             scores[("retreat", away)] = 1.0
