@@ -16,6 +16,7 @@ import json
 import math
 import os
 
+from . import profiles
 from .core import Vec, angles_to, dist, eye, wrap
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -860,17 +861,20 @@ class Kit:
     def fight_jet(s, bot, now, x, me, arg):
         """A jetpack flight in a fight, or None: (point, why). After a man who runs from us up a ledge (he looks away, 1
         u to JET_RISE up within reach); up and over to the cover a retreat heads for when it stands up there; Heroic
-        and up take the high ground: a floor 2 u to JET_RISE up within 6 u that sees him, while he looks elsewhere,
-        past 6 u from him, our shield over half."""
+        and up take the high ground while the enemy looks elsewhere and our shield is over half. Fixed Legendary
+        and Demon take that opening from closer range and need less of a gap in the enemy's aim."""
         if s.kind != "jetpack" or me.vehicle != -1 or me.has_flag:
             return None
         goal, tgt = bot.goal[0], x["target"]
-        if goal == "fight" and tgt is not None and tgt.alive and not facing_me(tgt, me, 0.5):
+        if goal == "fight" and tgt is not None and tgt.alive:
             up = tgt.pos.z - me.pos.z
-            if 1.0 <= up <= JET_RISE and s.air_ok(bot, me, tgt.pos):
+            if 1.0 <= up <= JET_RISE and not facing_me(tgt, me, 0.5) and s.air_ok(bot, me, tgt.pos):
                 return tgt.pos, "jetpack after him"
-            if (s.lvl >= 2 and up < 1.0 and dist(tgt.pos, me.pos) > 6.0 and me.shield > 0.5
-                    and now >= s.cool.get("high_ground", 0.0)):
+            fixed_high = profiles.fixed_high(bot.p)
+            if (s.lvl >= 2 and up < 1.0 and me.shield > 0.5
+                    and now >= s.cool.get("high_ground", 0.0)
+                    and dist(tgt.pos, me.pos) > (4.0 if fixed_high else 6.0)
+                    and not facing_me(tgt, me, 0.35 if fixed_high else 0.5)):
                 hg = s.high_ground(bot, me, tgt)
                 if hg is not None:
                     return hg, "jetpack to the high ground"

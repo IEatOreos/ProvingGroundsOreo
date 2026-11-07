@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### More Jet Pack high-ground openings for Legendary and Demon, 2026-11-07
+
+- In `brain/equipment.py`, fixed Legendary and Demon can boost for a high-ground shot when the enemy is more than 4 world units away and aiming about 20 degrees or more off the bot. The previous thresholds were more than 6 units and about 29 degrees. The move still requires more than half shields, at least 90% Jet Pack charge, and a clear flight to a perch with sight of the target.
+- All 155 regression tests passed. Focused checks covered both new openings, Heroic and Scaling, direct enemy aim, shield and flag restrictions, and the failed-search cooldown. Live gameplay is pending the next bot-process launch.
+
 ### Demon power-weapon runs: reachable guns only, commit when close, 2026-11-07
 
 - Diagnosis from the all-Demon Headlong 8v8 (logs/trace_reach_cex_headlong_20261107-032305, before the ramp and lift fixes): of 282 Demon weapon assignments, 25 (8%) ended holding the gun. A median assignment spanned 10 s, 7 s of it actually heading for the gun. Of 253 run trips, 107 ended for a fight, 57 for a hunt and 48 for an objective. Of 156 times a Demon came within 3 u of its gun without taking it, 83 were 2+ u below or above it: 52 under the sword (reachable only by the air lifts and man cannon, now recorded) and 20 under rockets at (1.4, -24.8, 8.1) that no spawn reaches even now (the map loader marks them unreachable). Boneyard: 49 trips, 3 guns. The two Settlement games: 26 trips, none.
