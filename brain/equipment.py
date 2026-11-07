@@ -625,17 +625,18 @@ class Kit:
                 return (k, "front", x["incoming"].pos, 0.1, "cover toward the rocket")
         if low:
             return None              # the grenade and the lunge above; the fall brake is jet_brake's (JET_FULL)
-        # 2. shield popped while being shot: a thruster dash into cover that is right there, else (him within 8 u) a
-        # dash out of his aim or an armor lock, any tier (the player: all bots use every ability; the lock was Normal's
-        # only, EQ-LOCK-01); with no cover near, a heal field, the bubble, the regenerator if the trade is ours
+        # Armor Lock is a melee-weapon proximity response, independent of our shields or recent damage.
+        if (k == "armor_lock" and not survivor and any(
+                e.weapon in LUNGERS and dist(e.pos, me.pos) <= 6.0 for e in x["seen"])):
+            return (k, "self", None, 2.0, "armor lock: sword or hammer within 6 units")
+        # 2. Shield popped while being shot: dash out of his aim or into cover; with no cover near,
+        # a heal field, bubble or regenerator.
         if x["cracked"] and x["hit"]:
             close = next((e for e in x["seen"] if dist(e.pos, me.pos) < 8.0), None)
             if k == "thruster" and not no_cover():
                 return (k, "dash", cover, 0.1, "thruster to cover")
             if k == "evade" and close is not None:
                 return (k, "dash", side(close), 0.1, "dash out of his aim, shield down")
-            if k == "armor_lock" and close is not None and not survivor:
-                return (k, "self", None, 2.0, "armor lock: shield down, he is close")
             if k == "bubble_shield" and no_cover(1.0):
                 return (k, "feet", None, 0.1, "shield down, no cover within 10 ft: bubble")
             if no_cover():
@@ -643,8 +644,6 @@ class Kit:
                     return (k, "feet", None, 0.6, "shield down, no cover: heal field")
                 if k == "regenerator" and (x["winning"] or x["mates"] or lvl < 2) and mist_ours():
                     return (k, "feet", None, 0.1, "regenerator: winning the trade")
-                if k == "armor_lock" and lvl < 2 and not survivor:
-                    return (k, "self", None, 2.0, "armor lock: shield down")
         if k == "evade" and x["hit"] and me.shield < 0.6:
             # the player's evades under fire (7 of 27 at shield 0.6 or less, a man 1.6-9 u off, sideways or back)
             close = next((e for e in x["seen"] if dist(e.pos, me.pos) < 9.0), None)
