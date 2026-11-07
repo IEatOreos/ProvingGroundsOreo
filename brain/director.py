@@ -690,6 +690,8 @@ class Director:
                 radius = LEGENDARY_POWER_RUN_R if fixed_high else POWER_RUN_R
                 distance = dist(p.pos, q)
                 if distance < radius and abs(p.pos.z - q.z) < 6.0:
+                    if fixed_high and not s.fetch_reachable(p.pos, q):
+                        continue        # (custom) no run at a gun it has no way to: it stood under it
                     near.append((distance, b, fixed_high))
             if near:
                 distance, fetcher, fixed_high = min(near, key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
@@ -698,6 +700,20 @@ class Director:
                     # Farther calls must not expire after 25 s before the bot can arrive.
                     until = max(until, now + distance / 2.3 + 10.0)
                 fetcher.fetch = (q, n, until, spawn)
+
+    def fetch_reachable(s, a, q):
+        """(Custom: fixed Legendary and Demon fetchers.) A way from a to the gun at q by the nav, people's jumps and rides
+        included (Terrain.reaches human=True, as a bot that jumps walks). Live Headlong 20261107-032305: of 282 Demon
+        runs 25 got the gun; 83 times a Demon stood 2+ u under its gun, 20 of them under rockets no spawn reaches. No
+        terrain (a test's bare director): no check."""
+        try:
+            T = s.terrain()
+        except Exception:
+            return True
+        try:
+            return not T.inside(q.x, q.y) or bool(T.reaches(a, q, human=True))
+        except Exception:
+            return True
 
     def press_fetch_ok(s, p, q, snap):
         """May an attacker on the clock (Bot.pressing) go for a power weapon at q? Only one right by it (POWER_PRESS_R) or

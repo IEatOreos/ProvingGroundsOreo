@@ -153,6 +153,9 @@ MEND_MAX = 15.0      # s at most
 MEND_STALL = 1.5     # s with the body no longer refilling (Reach's health refills only so far): that is full enough
 MEND_SEEN_SHIELD = 0.5   # with a man in view, mending waits while our shield is at least this (fight first)
 LOS_COVER_KEEP = 0.5     # s a line-of-sight cover spot is kept for the same place and threats (Bot.los_cover)
+# Demon a few steps from the power weapon it was sent for (decide's fetch): grab it before a new fight
+FETCH_COMMIT_R, FETCH_COMMIT_DZ = 10.0, 2.0   # u flat and up / down from the gun
+FETCH_COMMIT_SCORE = 2.95                     # over a committed fight (2.6 + 0.3) and a mend (2.9), under 3.15+ turns
 
 
 def _flat_norm(v, me):
@@ -2527,7 +2530,14 @@ class Bot:
                 # us: a fetcher who walked past fights lost Normal a third of its kills in the sim once runs went to
                 # every mode isoR / isoP)
                 busy = hit_recent or any(dist(me.pos, s.per.beliefs[k].pos) < 15.0 for k in seen)
-                scores[("item", fetch[0])] = max(scores.get(("item", fetch[0]), 0.0), 1.2 if busy else 1.85)
+                want = 1.2 if busy else 1.85
+                if (profiles.fixed_demon(s.p) and (me.pos - fetch[0]).flat() < FETCH_COMMIT_R
+                        and abs(me.pos.z - fetch[0].z) < FETCH_COMMIT_DZ):
+                    # Demon a few steps from the gun: take it, then fight with it (live Headlong: 107 of 253 runs left
+                    # for a fight, 57 for a hunt; 25 of 282 got the gun). A man close in is still fought first (decide's
+                    # close-fight rule, CLOSE_FIGHT_R), and the one shooting it from out of view still turns it (3.15+)
+                    want = FETCH_COMMIT_SCORE
+                scores[("item", fetch[0])] = max(scores.get(("item", fetch[0]), 0.0), want)
             # urgency: while a man runs with our flag or the core, a gun lying about waits unless ours are dry or it is
             # right by us (one theft drew 66 gun choices from its 6 defenders in 10 s, Boardwalk)
             if s.theft(me, snap) and not s.dry(me):

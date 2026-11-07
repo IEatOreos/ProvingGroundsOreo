@@ -142,5 +142,73 @@ class LegendaryPowerFetchTests(unittest.TestCase):
         self.assertEqual(bot.fetch[3], 0)
 
 
+class UnreachableGunTests(unittest.TestCase):
+    """(Custom) no fixed Legendary or Demon run at a gun the nav has no way to (Director.fetch_reachable)."""
+
+    def test_unreachable_gun_gets_no_fixed_high_fetcher(self):
+        for tier in ('demon', 'top'):
+            with self.subTest(tier=tier):
+                bot, player = participant(tier, 20)
+                director, snap = scenario([(bot, player)])
+                director.fetch_reachable = lambda a, q: False
+                director.power_runs(snap.time, snap)
+                self.assertIsNone(getattr(bot, 'fetch', None))
+
+    def test_reachable_gun_still_called_and_other_tiers_unchanged(self):
+        bot, player = participant('demon', 20)
+        director, snap = scenario([(bot, player)])
+        director.fetch_reachable = lambda a, q: True
+        director.power_runs(snap.time, snap)
+        self.assertIsNotNone(bot.fetch)
+        heroic, hp = participant('strong', 20)
+        director, snap = scenario([(heroic, hp)])
+        director.fetch_reachable = lambda a, q: False     # (not consulted for Heroic)
+        director.power_runs(snap.time, snap)
+        self.assertIsNotNone(heroic.fetch)
+
+    def test_unreachable_for_the_demon_falls_to_a_legendary_who_can(self):
+        demon, dp = participant('demon', 10, pid=0)
+        top, tp = participant('top', 30, pid=1)
+        director, snap = scenario([(demon, dp), (top, tp)])
+        director.fetch_reachable = lambda a, q: a.x > 20      # only the Legendary 30 u off has a way
+        director.power_runs(snap.time, snap)
+        self.assertIsNone(getattr(demon, 'fetch', None))
+        self.assertIsNotNone(top.fetch)
+
+    def test_bare_director_without_terrain_keeps_calling(self):
+        director, snap = scenario([participant('demon', 20)])
+        self.assertTrue(director.fetch_reachable(Vec(20, 0, 0), Vec()))
+
+
+class DemonFetchCommitTests(unittest.TestCase):
+    """(Custom) a Demon a few steps from the gun it was sent for takes it before a new fight (Bot.decide, a real map)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from brain.maps import load_map
+        cls.map = load_map("reach_cex_headlong")
+
+    def decide(self, tier, gun_off):
+        from brain.bot import Bot, Belief
+        b = Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), self.map, random.Random(5))
+        me = PlayerState(0, 0, "bot", Vec(-27.3 + gun_off, 14.6, 7.6), weapon="dmr", weapons=["dmr", "assault_rifle"],
+                         ammo=[45, 160], mag=[15, 32])
+        foe = PlayerState(1, 1, "foe", Vec(me.pos.x, me.pos.y - 14.0, 7.6), weapon="dmr", weapons=["dmr"], ammo=[45], mag=[15])
+        foe.yaw = 3.14
+        snap = Snapshot(100.0, [me, foe], mode="slayer")
+        b.per.beliefs[1] = Belief(foe.pos, Vec(), 100.0, True, "eyes")
+        b.per.recognized.add(1)
+        b.per.last_seen[1] = 100.0
+        b.fetch = (Vec(-27.3, 14.6, 7.6), "rockets", 130.0, None)
+        return b.decide(100.0, me, snap)[0]
+
+    def test_demon_takes_the_gun_close_by_over_a_man_in_view(self):
+        self.assertEqual(self.decide("demon", 6.0), "item")
+
+    def test_far_gun_and_other_tiers_keep_the_fight(self):
+        self.assertEqual(self.decide("demon", 20.0), "fight")
+        self.assertEqual(self.decide("top", 6.0), "fight")
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

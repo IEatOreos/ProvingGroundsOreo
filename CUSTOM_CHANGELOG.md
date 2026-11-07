@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Demon power-weapon runs: reachable guns only, commit when close, 2026-11-07
+
+- Diagnosis from the all-Demon Headlong 8v8 (logs/trace_reach_cex_headlong_20261107-032305, before the ramp and lift fixes): of 282 Demon weapon assignments, 25 (8%) ended holding the gun. A median assignment spanned 10 s, 7 s of it actually heading for the gun. Of 253 run trips, 107 ended for a fight, 57 for a hunt and 48 for an objective. Of 156 times a Demon came within 3 u of its gun without taking it, 83 were 2+ u below or above it: 52 under the sword (reachable only by the air lifts and man cannon, now recorded) and 20 under rockets at (1.4, -24.8, 8.1) that no spawn reaches even now (the map loader marks them unreachable). Boneyard: 49 trips, 3 guns. The two Settlement games: 26 trips, none.
+- `Director.fetch_reachable`: fixed Legendary and Demon fetchers are sent only to a gun the nav reaches from where they stand, with people's jumps and rides included (as bots that jump walk). An unreachable gun falls to the next eligible fetcher who can reach it. Without terrain (a bare test director) there is no check. Other tiers keep the existing rules.
+- `Bot.decide`: a Demon within 10 u flat (and 2 u up or down) of the gun it was sent for scores the run 2.95. That is over a new fight in view (about 1.9), a committed fight (2.6 + 0.3 aggression) and a mend (2.9). A man inside the close-fight range and a turn on an unseen shooter or a dot at arm's length still win. Farther away the run keeps its previous score.
+- Not addressed yet: 73 same-floor near misses at Headlong and 33 at Boneyard, where the Demon reached the gun but did not take it (the pickup presses within 1.2 u, holding the gun to swap out). These wait for a match after the ramp and lift fixes.
+- Validation: 6 new tests in tools/test_legendary_power_fetch.py, including decisions on the real Headlong map (gun 6 u away: the gun over a man in view; 20 u away, or Legendary: the fight). The real Headlong guns check as expected: the unreachable rockets from 0 of 59 spawns, the sword and the west rockets from 59 of 59. All 155 regression tests pass. Gameplay is untested; the bot process must be restarted.
+
 ### Demon line-of-sight cover, 2026-11-07
 
 - Cover was only LiDAR-painted spots (`cover_from`). In normal matches, base Boneyard, Launch Station and Headlong have none: the owner's LiDAR runs were filed under map variants. On those maps the losing-fight, after-fight recharge, regroup, relocate and power-weapon cover rules never found cover. For Demon only, `cover_from` now falls back to `los_cover` when no painted spot qualifies: the nearest spot within 10 u, a short walk away, that breaks every threat's line of sight (`hidden_spot`). The result is kept 0.5 s for the same place and threats. Other tiers keep painted cover only.
