@@ -1,5 +1,13 @@
 # Custom release history
 
+## Unreleased — LiDAR mode records vehicle drives and shows them in the 3D view, 2026-11-06
+
+- The owner asked to record driving paths in LiDAR mode instead of painting them; items 1 and 2 of the plan (record in LiDAR mode; show drives in the LiDAR viewer/simulator). Item 3, a Paint-page eraser and vehicle-size tags for recorded drives, is deferred.
+- tools/lidar.py main (LiDAR matches) now runs the existing RideWatch each tick, as normal bot matches already did. Every vehicle a person or bot drives or flies is merged into maps/<map>/rides.json at the one-minute LiDAR save and at match end. The bots' vehicle ground, people's "road" preference and aircraft heights (brain/maps.py rides_layers, Terrain._build_vnav) use it from the next match. Recording and saving errors are logged and never stop the mapping. The in-game LiDAR notice now mentions drives.
+- RideWatch keeps a live feed of its samples (person drive / bots-only drive / flown air; up to 300,000, oldest dropped). Hub.live sends new samples after the page's `rsince`; rides_view gives every view (live match, LiDAR Viewer, LiDAR Simulator, other maps) the stored drives, using the same thresholds as the nav: a person once, bots twice. Flown air is drawn at its mean flown height.
+- tools/lidar_view.html: new "Vehicle drives" layer (key V) with legend rows. Person drives are mint, bot-only drives faint mint, flights light blue. A "Vehicle drives: people / bots" stat; a driven but unscanned map still frames its drives.
+- Validation: tools/test_lidar_drives.py (8 tests: person/bot feed and save thresholds, flight heights, feed trimming, riderless/dead/unknown vehicles, bad files, Hub feed only with a watch, the /live rsince endpoint including a 400 on bad input, page wiring). The LiDAR self-check and all other test suites pass. Browser check: the stored Park view drew the 459 recorded person-drive cells and the V toggle hid them and their legend; a stand-in live server driving a fake Warthog streamed new samples onto the page every poll. Not yet tried in a real LiDAR match.
+
 ## Unreleased — Clarified gunner weights and Demon resource precedence, 2026-11-06
 
 - Apply the owner's clarification: power calls rank Demon → Legendary → Heroic/Scaling → Normal; gunner calls rank Demon → Legendary/Heroic/Scaling → Normal. Equal-weight candidates use distance; Easy retains its existing eligibility rules.
