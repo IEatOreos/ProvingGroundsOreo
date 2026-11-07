@@ -327,6 +327,31 @@ class CommitTests(unittest.TestCase):
         self.assertIsNotNone(bot.mend_point(30.1, me, snap, [2]))    # cracked: into cover
 
 
+class CarriedTargetTests(CommitTests):
+    """The committed opponent survives a short hunt or retreat (Bot.carried_target)."""
+
+    def test_after_a_retreat_the_same_man_is_taken_back(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.commit_carry, bot.goal = 1, ("retreat", Vec(-3, 0, 0))    # was fighting 1, backed off
+        self.assertEqual(bot.pick_target(50.0, me, snap, [1, 2]), 1)
+
+    def test_released_when_he_dies_or_the_window_runs_out(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.commit_carry, bot.goal = 1, ("hunt", Vec(0, 5, 0))
+        cur.alive = False
+        self.assertIsNone(bot.carried_target(50.0, snap))
+        bot, me, cur, new, snap = self.setup()
+        bot.commit_carry, bot.goal = 1, ("hunt", Vec(0, 5, 0))
+        bot.per.last_seen[1] = 50.0 - 6.5
+        self.assertIsNone(bot.carried_target(50.0, snap))
+
+    def test_shooter_still_takes_over(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.commit_carry, bot.goal = 1, ("retreat", Vec(-3, 0, 0))
+        bot.per.attacker_id, bot.per.attacker_t, bot.per.attacker_notice = 2, 50.0, 0.0
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [1, 2], {1: 50.0, 2: 60.0}, 2, 1), 2)
+
+
 class LosCoverTests(unittest.TestCase):
     """cover_from on a map with no LiDAR cover: Demon takes any spot that breaks the threat's line of sight."""
 

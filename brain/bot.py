@@ -1787,6 +1787,10 @@ class Bot:
             # back off toward safety (a wall between us and them if LiDAR found one) while still
             # shooting at the closest threat; by the nav, a straight line can run into a wall
             t = min(s.per.visible_enemies(), key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
+            if profiles.fixed_demon(s.p):
+                held = s.carried_target(now, snap)     # (Demon: still the man it was fighting, while it sees him)
+                if held in s.per.visible_enemies():
+                    t = held
             s.fight(now, dt, me, snap, t, act, nav)
             yaw = act.yaw
             s.move_to(me, arg, act, nav)
@@ -2257,6 +2261,8 @@ class Bot:
         scored = {k: s.threat(now, me, snap, k) for k in seen}
         best = max(scored, key=scored.get)
         cur = s.goal[1] if s.goal[0] == "fight" else None
+        if cur is None and profiles.fixed_demon(s.p):
+            cur = s.carried_target(now, snap)     # (the man it fought before a short hunt or retreat)
         if profiles.fixed_demon(s.p) and cur is not None and best != cur:
             return s.demon_commit(now, me, snap, seen, scored, best, cur)
         if cur in scored and best != cur and s.shot_by_other(now, me, snap, best, cur, seen):
@@ -2270,6 +2276,20 @@ class Bot:
             if scored[best] < (1.25 + 0.75 * (1.0 - s.p.tactics)) * (1.0 + 2.0 * max(0.0, done)) * scored[cur]:
                 return cur
         return best
+
+    def carried_target(s, now, snap):
+        """Demon's committed opponent kept through a short hunt or retreat (custom; the owner's friend's review of his
+        Powerhouse clips, Nov 7: "keep Demon's committed opponent through brief hunt and retreat transitions"): the last
+        man it fought, while he lives and was seen within COMMIT_S (the fight's own reacquisition window). None
+        otherwise."""
+        k = getattr(s, "commit_carry", None)
+        if k is None:
+            return None
+        e = snap.player(k)
+        if e is None or not e.alive or now - s.per.last_seen.get(k, -99.0) >= COMMIT_S or k not in s.per.beliefs:
+            s.commit_carry = None
+            return None
+        return k
 
     def demon_commit(s, now, me, snap, seen, scored, best, cur):
         """Demon finishes the fight it is in (the owner's Settlement 3v3v3v3, Nov 7: he won 58% of his fights and broke
@@ -2369,6 +2389,8 @@ class Bot:
     def decide(s, now, me, snap):
         seen = s.per.visible_enemies()
         scores = {}
+        if s.goal[0] == "fight" and isinstance(s.goal[1], int):
+            s.commit_carry = s.goal[1]          # the man it fights, carried through a hunt or a retreat (carried_target)
         post = getattr(s, "posture", 0.5)     # the team's score posture (director, brain/match.py)
         post = s.kit.posture(now, me, post)   # its own overshield: aggressive while it lasts (EQ-OS-02)
         friends = sum(1 for p in snap.players if p.team == me.team and p.alive and p.id != me.id
