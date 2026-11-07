@@ -101,7 +101,11 @@ def load_map(name):
     m["lanes"] = [_v(p) for p in cfg["lanes"]]
     patrols = os.path.join(d, "infantry_patrols.json")
     if os.path.exists(patrols):
-        m["infantry_patrols"] = tuple(_v(p) for p in read_json(patrols).values())
+        team_ids = {"red": 0, "blue": 1}
+        m["infantry_patrols"] = tuple(
+            (_v(p["pos"]), team_ids[p["team"]]) if isinstance(p, dict) else (_v(p), None)
+            for p in read_json(patrols).values()
+        )
     m["sneak"] = {0: [[_v(p) for p in r] for r in cfg.get("sneak", {}).get("red", [])],
                   1: [[_v(p) for p in r] for r in cfg.get("sneak", {}).get("blue", [])]}
     # objective spots by game type (Halo: Reach netgame flags, tools/reach_export.py): KotH hills, ball spawns,

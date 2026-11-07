@@ -812,7 +812,7 @@ class Director:
 
     def infantry_patrol_orders(s, now, snap, alive):
         """Send one or two available infantry bots to a lightly visited map position."""
-        points = s.map.get("infantry_patrols", ())
+        points = [point for point, team in s.map.get("infantry_patrols", ()) if team is None or team == s.team]
         if not points or snap.mode == "invasion":
             return
         visits = s.__dict__.setdefault("infantry_patrol_visits", {})
@@ -834,7 +834,8 @@ class Director:
         patrollers = []
         for bot in getattr(s, "infantry_patrollers", ()):
             point, until = bot.infantry_patrol
-            if now < until and bot in alive and eligible(bot, point) and dist(snap.player(bot.id).pos, point) >= 4.0:
+            if (point in points and now < until and bot in alive and eligible(bot, point)
+                    and dist(snap.player(bot.id).pos, point) >= 4.0):
                 patrollers.append(bot)
             else:
                 if now >= until:

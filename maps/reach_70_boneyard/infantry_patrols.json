@@ -1,4 +1,6 @@
 {
   "Banshee Building": [308.33, 106.76, -7.0],
-  "West upper level": [249.79, 90.02, -4.0]
+  "West upper level": [249.79, 90.02, -4.0],
+  "Red patrol": {"pos": [302.7, 91.89, -8.0], "team": "red"},
+  "Blue patrol": {"pos": [299.91, 113.31, -7.0], "team": "blue"}
 }
