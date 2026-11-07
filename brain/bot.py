@@ -1484,8 +1484,21 @@ class Bot:
                     s.note(f"board: the {v['kind']} would not take me, leaving it")
             s.unstuck(now, me, act, snap)
             return act
+        patrol_target = None
+        patrol_seen = s.per.visible_enemies() if kind == "patrol" else []
         if kind == "fight":
             s.fight(now, dt, me, snap, arg, act, nav)
+        elif patrol_seen:
+            patrol_target = s.pick_target(now, me, snap, patrol_seen)
+            s.fight(now, dt, me, snap, patrol_target, act, nav)
+            # Keep the weapon on the threat and turn the walking input toward the patrol waypoint.
+            walk = Action(yaw=act.yaw, pitch=act.pitch)
+            s.move_to(me, arg, walk, nav)
+            angle = walk.yaw - act.yaw
+            c, sn = math.cos(angle), math.sin(angle)
+            act.forward = walk.forward * c - walk.strafe * sn
+            act.strafe = walk.forward * sn + walk.strafe * c
+            act.jump, act.crouch, act.sprint = walk.jump, act.crouch or walk.crouch, False
         elif kind == "retreat" and s.per.visible_enemies():
             # back off toward safety (a wall between us and them if LiDAR found one) while still
             # shooting at the closest threat; by the nav, a straight line can run into a wall
@@ -1721,10 +1734,11 @@ class Bot:
         s.fired_last = s.shot_now
         if s.shot_now:
             s.last_shot_t = now
-        act.weapon = s.choose_weapon(now, me, kind, arg, snap)
+        weapon_goal = ("fight", patrol_target) if patrol_target is not None else (kind, arg)
+        act.weapon = s.choose_weapon(now, me, *weapon_goal, snap)
         if now < getattr(s, "flag_quiet_until", 0.0):
             act.weapon, act.action, act.reload = -1, False, False     # the flag just came into our hands (above)
-        elif act.weapon < 0 and kind not in ("fight", "retreat") and not me.has_flag:   # (nothing to reload in the objective)
+        elif act.weapon < 0 and weapon_goal[0] not in ("fight", "retreat") and not me.has_flag:
             s.reload_check(now, me, act)
         return act
 
@@ -2263,7 +2277,7 @@ class Bot:
                     del scores[k]
         patrol = getattr(s, "infantry_patrol", None)
         if (patrol is not None and now < patrol[1] and snap.mode != "invasion" and not infected
-                and me.vehicle in (None, -1) and not me.has_flag and not hit_recent
+                and me.vehicle in (None, -1) and not me.has_flag and (seen or not hit_recent)
                 and all(dist(me.pos, s.per.beliefs[k].pos) >= 18.0 for k in seen)
                 and not any(kind == "retreat" for kind, _ in scores)
                 and dist(me.pos, patrol[0]) >= 4.0):
