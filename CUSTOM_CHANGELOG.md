@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Demon fight commitment, 2026-11-07
+
+- From the owner's Settlement 3v3v3v3 (logs/trace_reach_30_settlement_20261107-041239, owner 35-15 against a three-Demon team): the owner won 58% of his fights (an enemy in his sights for 0.5 s or more) and broke off 27%. The Demons won 34–42% and broke off 40–48%, with the same 1.1–1.3 s time to kill. Of the Demons' break-offs, about a third switched to another enemy, about a third were the target leaving sight briefly or the aim moving to another man, and 13–23% went to cover with the target still in view.
+- `Bot.demon_commit` (Demon only, from `pick_target`):
+  - A target that left sight stays the target for 0.8 seconds, or 1.6 seconds when its estimated shield is at or below half, and Demon chases it through the existing chase and corner logic.
+  - A visible target is kept for 2 seconds after it is taken on. After that, a new enemy must pose 2x its threat (rising as the kill nears) to take over, against 1.25x for the other tiers.
+  - Demon still turns at once on the enemy shooting it now (`shot_by_other`), an enemy at arm's length, or an enemy within 10 units aiming at it while the current target is looking away. A kill about to land (`finishing`) still goes first.
+- Mending after a won fight waits while an enemy is in view and Demon's shield is at least 0.5: it fights first, and the mend stays owed until no enemy is in view or the shield drops below half. Mending still takes priority when cracked.
+- Legendary and the other tiers keep their targeting rules.
+- Validation: 6 new tests in tools/test_demon_anticipate.py. The full suite (140 tests) and the compile check (94 sources) pass. This install has no match simulator, so gameplay is the test; the bot process must be restarted.
+
 ### Infantry patrol trios, 2026-11-07
 
 - In `brain/director.py`, roll once per new infantry patrol. Half of assignments send one Spartan and half try to send up to three to the same waypoint. If fewer than three qualify, send the eligible Spartans. Applies to maps with infantry patrols, including Boneyard and Headlong, outside Invasion.

@@ -151,6 +151,7 @@ MEND_SCORE = 2.9     # over objectives, guns, hunts and a new fight in sight (1.
                      # hand 3.1, under the 3.15+ turn on an unseen shooter or a dot at arm's length
 MEND_MAX = 15.0      # s at most
 MEND_STALL = 1.5     # s with the body no longer refilling (Reach's health refills only so far): that is full enough
+MEND_SEEN_SHIELD = 0.5   # with a man in view, mending waits while our shield is at least this (fight first)
 
 
 def _flat_norm(v, me):
@@ -158,6 +159,11 @@ def _flat_norm(v, me):
     f = Vec(v.x, v.y, 0.0)
     return f.norm() if f.flat() > 1e-3 else Vec(-math.cos(me.yaw), -math.sin(me.yaw), 0.0)
 TARGET_HOLD = 1.0                      # s a new target in view is kept before another may take over (guide 09 4.5)
+# Demon's fight commitment (Bot.demon_commit)
+COMMIT_HOLD = 2.0                      # s a target in view is kept before another may take over
+COMMIT_MARGIN = 2.0                    # x the threat a man in view must pose to take over (others: 1.25 at full tactics)
+COMMIT_GAP, COMMIT_HURT_GAP = 0.8, 1.6   # s out of sight the man fought stays the target (his shield down: longer)
+COMMIT_THREAT_R = 10.0                 # u: a man this close aiming at us takes over from one looking away
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
 UPGRADE_R, UPGRADE_ON_WAY = 14.0, 6.0  # u: a better gun this near is weighed; this near, its post does not hold it back
@@ -1359,6 +1365,10 @@ class Bot:
         if (shield_done and body_done) or now - m["t"] > MEND_MAX or s.theft(me, snap):
             s.mend = None
             return None
+        if seen and me.shield >= MEND_SEEN_SHIELD and not snap.shieldless:
+            # a man in view and our shield holding: fight him first, mend after (the owner's Settlement game: 13-23% of
+            # the Demons' broken-off fights went to cover with the man still in view)
+            return None
         threats = [b.pos for k, b in s.per.beliefs.items() if isinstance(k, int) and now - b.t < 10.0] or [m["kill"]]
         spot = m["spot"]
         T = s.T()
@@ -2201,6 +2211,8 @@ class Bot:
         scored = {k: s.threat(now, me, snap, k) for k in seen}
         best = max(scored, key=scored.get)
         cur = s.goal[1] if s.goal[0] == "fight" else None
+        if profiles.fixed_demon(s.p) and cur is not None and best != cur:
+            return s.demon_commit(now, me, snap, seen, scored, best, cur)
         if cur in scored and best != cur and s.shot_by_other(now, me, snap, best, cur, seen):
             return best
         if cur in scored and best != cur:
@@ -2212,6 +2224,37 @@ class Bot:
             if scored[best] < (1.25 + 0.75 * (1.0 - s.p.tactics)) * (1.0 + 2.0 * max(0.0, done)) * scored[cur]:
                 return cur
         return best
+
+    def demon_commit(s, now, me, snap, seen, scored, best, cur):
+        """Demon finishes the fight it is in (the owner's Settlement 3v3v3v3, Nov 7: he won 58% of his fights and broke
+        off 27%; the Demons won 34-42% and broke off 40-48%, a third of those by switching to another man and many when
+        the man ducked out of sight a moment). The man it fights stays its target:
+        - out of sight a moment (COMMIT_GAP s, COMMIT_HURT_GAP s when his shield is down by its reckoning): it goes after
+          him (fight: the chase and corner_plan), not the next man in view;
+        - in view: another man must threaten COMMIT_MARGIN x as much, more as the kill nears, and not before
+          COMMIT_HOLD s.
+        Either way it turns at once on the man shooting it now (shot_by_other), one at arm's length, or one aiming at it
+        close in while the man it fights is not."""
+        cb = s.per.beliefs.get(cur)
+        tgt = snap.player(cur)
+        if cb is None or tgt is None or not tgt.alive:
+            return best
+        e = snap.player(best)
+        d_best = dist(me.pos, s.per.beliefs[best].pos)
+        if s.shot_by_other(now, me, snap, best, cur, seen) or d_best <= 1.5:
+            return best
+        if (e is not None and d_best < COMMIT_THREAT_R and aims_at(e, me, 0.2)
+                and not (cur in seen and aims_at(tgt, me, 0.2))):
+            return best                      # a man close in with us in his sights, the one we fight looking away
+        est = s.per.est_shield(cur, now, snap.shieldless)
+        hurt = est is not None and est <= 0.5
+        if cur not in seen:
+            gone = now - s.per.last_seen.get(cur, -9.0)
+            return cur if gone <= (COMMIT_HURT_GAP if hurt else COMMIT_GAP) else best
+        if now - getattr(s, "target_at", -9.0) < COMMIT_HOLD or s.finishing(snap, seen):
+            return cur
+        done = 1.0 - (tgt.shield + tgt.health) / 2.0
+        return best if scored[best] >= COMMIT_MARGIN * (1.0 + 2.0 * max(0.0, done)) * scored[cur] else cur
 
     def shot_by_other(s, now, me, snap, k, cur, seen):
         """Turn on k right now, whatever the hold and the kill under way? When k is the one hitting us this second

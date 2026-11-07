@@ -1,4 +1,5 @@
 """Demon radar heading, out-of-sight prediction (brain/anticipate.py) and corner discipline (Bot.corner_plan)."""
+import math
 import random
 import sys
 import unittest
@@ -253,6 +254,77 @@ class MendTests(unittest.TestCase):
         bot.goal = ("retreat", bot.mend["spot"])
         bot.per.hurt_at = 30.0 + 14.0                  # kept getting chipped: the shield never read full
         self.assertIsNone(bot.mend_point(30.0 + 15.1, me, snap, []))
+
+
+class CommitTests(unittest.TestCase):
+    """Demon finishes the fight it is in (Bot.demon_commit)."""
+
+    def setup(self, tier="demon"):
+        bot = Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
+        bot._terrain = OpenFloor()
+        me = PlayerState(0, 0, "bot", Vec())
+        cur = PlayerState(1, 1, "cur", Vec(10, 0, 0))
+        new = PlayerState(2, 2, "new", Vec(0, 12, 0))
+        for e in (cur, new):
+            e.yaw = math.pi / 2 if e is cur else 0.0     # both looking away from us
+            e.weapon, e.weapons, e.mag = "dmr", ["dmr"], [10]
+        snap = Snapshot(50.0, [me, cur, new])
+        bot.goal, bot.target_at = ("fight", 1), 40.0
+        for e in (cur, new):
+            bot.per.beliefs[e.id] = Belief(e.pos, Vec(), 50.0, True, "eyes")
+            bot.per.last_seen[e.id] = 50.0
+            bot.per.last_vitals[e.id] = (1.0, 1.0, 50.0)
+        return bot, me, cur, new, snap
+
+    def test_keeps_a_man_who_ducked_out_a_moment(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.per.last_seen[1] = 49.5
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 1)
+
+    def test_lets_a_healthy_man_go_after_the_gap_but_chases_a_hurt_one(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.per.last_seen[1] = 48.9
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 2)
+        bot.per.last_vitals[1] = (0.1, 1.0, 48.9)
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 1)
+
+    def test_in_view_needs_twice_the_threat(self):
+        bot, me, cur, new, snap = self.setup()
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [1, 2], {1: 50.0, 2: 90.0}, 2, 1), 1)
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [1, 2], {1: 50.0, 2: 110.0}, 2, 1), 2)
+        bot.target_at = 49.0                                  # within COMMIT_HOLD of taking him on
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [1, 2], {1: 50.0, 2: 500.0}, 2, 1), 1)
+
+    def test_turns_on_a_close_man_aiming_at_it(self):
+        bot, me, cur, new, snap = self.setup()
+        new.pos = Vec(0, 8, 0)                                # 8 u off, looking straight at us
+        bot.per.beliefs[2] = Belief(new.pos, Vec(), 50.0, True, "eyes")
+        new.yaw = -math.pi / 2
+        new.pitch = math.atan2(0.35 - 0.62, 8.0)
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [1, 2], {1: 50.0, 2: 60.0}, 2, 1), 2)
+
+    def test_legendary_keeps_its_old_rule(self):
+        bot, me, cur, new, snap = self.setup(tier="top")
+        bot.per.last_seen[1] = 49.5
+        bot.threat = lambda now, me, snap, k: 80.0
+        self.assertEqual(bot.pick_target(50.0, me, snap, [2]), 2)   # out of sight: the man in view, as before
+
+    def test_mending_waits_while_a_man_is_in_view_and_the_shield_holds(self):
+        bot = Bot(0, 0, make_profile("demon", "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
+        bot._terrain = OpenFloor(wall_x=2.5)
+        me = PlayerState(0, 0, "bot", Vec())
+        me.shield, me.health = 0.7, 1.0
+        dead = PlayerState(1, 1, "enemy", Vec(-8, 0, 0))
+        dead.alive = False
+        other = PlayerState(2, 2, "other", Vec(-6, 6, 0))
+        snap = Snapshot(30.0, [me, dead, other])
+        bot.goal, bot.last_shot_t = ("fight", 1), 29.6
+        bot.per.hurt_at = 29.0
+        bot.per.beliefs[2] = Belief(other.pos, Vec(), 30.0, True, "eyes")
+        self.assertIsNone(bot.mend_point(30.0, me, snap, [2]))       # fight him first
+        self.assertIsNotNone(bot.mend)                               # but the mend is still owed
+        me.shield = 0.3
+        self.assertIsNotNone(bot.mend_point(30.1, me, snap, [2]))    # cracked: into cover
 
 
 if __name__ == "__main__":
