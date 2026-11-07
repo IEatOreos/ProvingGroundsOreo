@@ -152,6 +152,7 @@ MEND_SCORE = 2.9     # over objectives, guns, hunts and a new fight in sight (1.
 MEND_MAX = 15.0      # s at most
 MEND_STALL = 1.5     # s with the body no longer refilling (Reach's health refills only so far): that is full enough
 MEND_SEEN_SHIELD = 0.5   # with a man in view, mending waits while our shield is at least this (fight first)
+LOS_COVER_KEEP = 0.5     # s a line-of-sight cover spot is kept for the same place and threats (Bot.los_cover)
 
 
 def _flat_norm(v, me):
@@ -1395,7 +1396,9 @@ class Bot:
                 except Exception:
                     continue
                 if steps and dist(steps[-1], p) < 1.0 and abs(steps[-1].z - me.pos.z) < 1.5:
-                    return steps[-1]
+                    q = steps[-1]                 # (where the walk ends, up to 1 u off: hidden there too)
+                    if not any(T.los(t, q) for t in threats):
+                        return q
         return None
 
     def out_of_reach(s, me, p, d):
@@ -6663,6 +6666,32 @@ class Bot:
         return s._terrain
 
     def cover_from(s, me, threats):
+        """Cover from threats: the nearest LiDAR-painted spot (lidar_cover); for Demon, on a map or in a place with none,
+        any nearby spot a short walk off that breaks every threat's line of sight (los_cover). (Custom: the owner's base
+        Boneyard, Launch Station and Headlong had no painted cover, their LiDAR runs filed under map variants, so the
+        losing-fight, recharge and regroup retreats never found any.)"""
+        spot = s.lidar_cover(me, threats)
+        if spot is None and threats and profiles.fixed_demon(s.p):
+            spot = s.los_cover(me, threats)
+        return spot
+
+    def los_cover(s, me, threats):
+        """hidden_spot, kept LOS_COVER_KEEP s while we and the threats stay within a unit (cover_from runs in several
+        of each decision's rules, and Demon decides every tick)."""
+        now = getattr(s, "now", 0.0)
+        key = (round(me.pos.x), round(me.pos.y), round(me.pos.z),
+               tuple(sorted((round(t.x), round(t.y), round(t.z)) for t in threats)))
+        c = getattr(s, "_los_cover", None)
+        if c is not None and c[0] == key and now < c[1]:
+            return c[2]
+        try:
+            spot = s.hidden_spot(me, threats)
+        except Exception:
+            spot = None
+        s._los_cover = (key, now + LOS_COVER_KEEP, spot)
+        return spot
+
+    def lidar_cover(s, me, threats):
         """The nearest wall LiDAR painted (maps/<map>/lidar.json "cover": the floor in front of an
         upright wall, glass excluded) within 10 units that stands between us and every threat:
         the wall faces each of them and their line of sight to the spot is blocked. None if none."""

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Demon line-of-sight cover, 2026-11-07
+
+- Cover was only LiDAR-painted spots (`cover_from`). In normal matches, base Boneyard, Launch Station and Headlong have none: the owner's LiDAR runs were filed under map variants. On those maps the losing-fight, after-fight recharge, regroup, relocate and power-weapon cover rules never found cover. For Demon only, `cover_from` now falls back to `los_cover` when no painted spot qualifies: the nearest spot within 10 u, a short walk away, that breaks every threat's line of sight (`hidden_spot`). The result is kept 0.5 s for the same place and threats. Other tiers keep painted cover only.
+- `hidden_spot`, also used by the after-kill mend, now checks that the walk's actual end point, up to 1 u from the candidate, is hidden too. Before, some returned spots were still in view.
+- Validation: on 60 random spawn and threat pairs per map, cover was found 59/60 (Boneyard), 60/60 (Launch Station) and 60/60 (Headlong), all hidden from the threat, about 1.4 u away (median), in 0.4–1.9 ms (median) and at most 21 ms. 4 new tests; all 149 regression tests pass. Gameplay is untested; the bot process must be restarted.
+
 ### Owner play profile runs automatically, 2026-11-07
 
 - tools/play.py `match_trace` (each recorded match start, after the carnage report copy and the rotation) now starts `tools/owner_profile.py --background`. It is a separate, below-normal-priority, windowless process, logging to logs/owner_profile/last_run.txt. The last match is summarized while its recording is still on disk; the rotation reaches it only 4 matches later (5 games kept by default). Profiles are rewritten each time. Any failure to start is ignored so a match always starts, and only the install's own logs/ folder triggers it.

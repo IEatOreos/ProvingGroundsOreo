@@ -327,5 +327,40 @@ class CommitTests(unittest.TestCase):
         self.assertIsNotNone(bot.mend_point(30.1, me, snap, [2]))    # cracked: into cover
 
 
+class LosCoverTests(unittest.TestCase):
+    """cover_from on a map with no LiDAR cover: Demon takes any spot that breaks the threat's line of sight."""
+
+    def bot(self, tier):
+        b = Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
+        b._terrain = OpenFloor(wall_x=2.5)            # a wall at x = 2.5; the threat stands west of it
+        return b
+
+    def test_demon_finds_line_of_sight_cover(self):
+        b, me = self.bot("demon"), PlayerState(0, 0, "bot", Vec())
+        spot = b.cover_from(me, [Vec(-8, 0, 0)])
+        self.assertIsNotNone(spot)
+        self.assertGreater(spot.x, 2.5)               # behind the wall from him
+        self.assertLessEqual((spot - me.pos).flat(), 10.0)
+
+    def test_other_tiers_keep_painted_cover_only(self):
+        b, me = self.bot("top"), PlayerState(0, 0, "bot", Vec())
+        self.assertIsNone(b.cover_from(me, [Vec(-8, 0, 0)]))
+
+    def test_no_cover_in_the_open(self):
+        b, me = self.bot("demon"), PlayerState(0, 0, "bot", Vec())
+        b._terrain = OpenFloor()                      # no wall anywhere: nothing breaks his line
+        self.assertIsNone(b.cover_from(me, [Vec(-8, 0, 0)]))
+
+    def test_kept_for_the_same_place_and_threats(self):
+        b, me = self.bot("demon"), PlayerState(0, 0, "bot", Vec())
+        b.now = 10.0
+        first = b.cover_from(me, [Vec(-8, 0, 0)])
+        b._terrain = OpenFloor()                      # (would find none now)
+        b.now = 10.3
+        self.assertEqual(b.cover_from(me, [Vec(-8, 0, 0)]), first)
+        b.now = 10.6
+        self.assertIsNone(b.cover_from(me, [Vec(-8, 0, 0)]))
+
+
 if __name__ == "__main__":
     unittest.main()
