@@ -10,6 +10,7 @@
   enemy is about to win, all in when behind late), with each mode's own plans (CTF carries and escorts, Invasion
   phases, King hill pushes, ...).
 """
+from . import profiles
 import math
 import random
 from .core import PlayerState, Vec, dist
@@ -686,14 +687,14 @@ class Director:
                     continue
                 if b.pressing(p, snap) and not s.press_fetch_ok(p, q, snap):
                     continue
-                fixed_legendary = b.p.tier == "top" and b.p.extra is None
-                radius = LEGENDARY_POWER_RUN_R if fixed_legendary else POWER_RUN_R
+                fixed_high = profiles.fixed_high(b.p)
+                radius = LEGENDARY_POWER_RUN_R if fixed_high else POWER_RUN_R
                 distance = dist(p.pos, q)
                 if distance < radius and abs(p.pos.z - q.z) < 6.0:
-                    near.append((distance, b, fixed_legendary))
+                    near.append((distance, b, fixed_high))
             if near:
-                distance, fetcher, fixed_legendary = min(near, key=lambda x: x[0])
-                if fixed_legendary and spawn is None:
+                distance, fetcher, fixed_high = min(near, key=lambda x: x[0])
+                if fixed_high and spawn is None:
                     # Use the pickup ETA's nominal walking speed plus a travel margin.
                     # Farther calls must not expire after 25 s before the bot can arrive.
                     until = max(until, now + distance / 2.3 + 10.0)

@@ -5,6 +5,8 @@ from dataclasses import dataclass, replace
 import math
 import random
 
+DEMON = "demon"
+
 # Hands: a good human's. Reaction, tracking, lead and aim error (live: a Spartan is 0.0125 rad wide at 20 units);
 # difficulty lives mostly in what a bot knows and decides (memory, radar, teamwork, CRAFT below).
 HANDS = dict(reaction=0.22, track=0.10, lead=0.8, decide=0.10, overshoot=0.30, aim_err=0.009, lag=0.09, flick=1.0)
@@ -72,6 +74,35 @@ CRAFT = {
     "top":     dict(jump=1.0,  strafe=1.0,  juke=1.0, routes=1.0, map_iq=1.0, tactics=1.0,  aware=1.0),
 }
 
+# Explicit Demon settings: later edits to Legendary's rows must not change Demon.
+REACTION[DEMON] = 0.70
+SHARP[DEMON] = dict(lag=0.045, flick=0.7, aim_err=0.006, track=0.08)
+TURN[DEMON] = math.radians(1000)
+PRESS[DEMON] = 1.0
+TIERS[DEMON] = dict(HANDS, lag=0.045, flick=0.7, aim_err=0.006, track=0.08,
+                    reaction=0.154, memory=10, radar=1.0, teamwork=0.95)
+CRAFT[DEMON] = dict(jump=1.0, strafe=1.0, juke=1.0, routes=1.0, map_iq=1.0, tactics=1.0, aware=1.0)
+
+DEMON_AIM = dict(aim_err=0.0, lag=0.001, track=0.001, overshoot=0.0,
+                 lead=0.0, flick=0.05, turn=math.radians(1000))
+# An independent protected exception: future Demon tuning must not alter Legendary's retained aim.
+LEGENDARY_AIM = dict(aim_err=0.0, lag=0.001, track=0.001, overshoot=0.0,
+                     lead=0.0, flick=0.05, turn=math.radians(1000))
+
+
+def fixed_high(prof):
+    """Fixed Legendary or Demon; Scaling's top tier is excluded."""
+    return prof.tier in ("top", DEMON) and prof.extra is None
+
+
+def fixed_demon(prof):
+    return prof.tier == DEMON and prof.extra is None
+
+
+def precision_profile(prof):
+    """Keep Legendary's established head/turret aim without changing its base attributes."""
+    return replace(prof, **LEGENDARY_AIM) if fixed_high(prof) and not fixed_demon(prof) else prof
+
 # Traits are 0..1. Personalities only change *what* a bot prefers, never how well it aims.
 PERSONALITIES = {
     "rusher":   dict(aggression=0.9, caution=0.2, camping=0.0, jumpy=0.6, crouchy=0.2, grenades=0.5, grudge=0.5, objective=0.4),
@@ -118,42 +149,25 @@ class Profile:
     # Scaling difficulty's own settings for what the brain otherwise looks up by tier (head_aim, ram_err, loose_follow,
     # loose_early: brain/scaling.py); None on the tiers
     extra: dict = None
-    # custom: the difficulty's shown name when it differs from tier ("demon": fixed Legendary, see make_profile)
+    # Optional displayed label; Demon now also has its own real tier.
     label: str = None
 
 
-# Custom: Demon is fixed Legendary under its own name. It builds the "top" profile exactly (tier stays "top", extra
-# None), so every fixed Legendary rule applies to it; only label differs (traces, reports).
-DEMON = "demon"
-
-
 def make_profile(tier, personality, rng=random):
-    """Build a bot profile, with precision overrides for Legendary."""
-    if tier == DEMON:
-        p = make_profile("top", personality, rng)
-        p.label = DEMON
-        return p
+    """Build stock tier attributes; Demon retains our former fixed Legendary overrides."""
     vals = {**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     turn = TURN[tier]
 
-    if tier == "top":
-        jit.update(
-            aim_err=0.0,
-            lag=0.001,
-            track=0.001,
-            overshoot=0.0,
-            lead=0.0,
-            flick=0.05,
-            reaction=0.0,
-            decide=0.01,
-        )
-        turn = math.radians(1000)
+    if tier == DEMON:
+        jit.update({k: v for k, v in DEMON_AIM.items() if k != "turn"}, reaction=0.0, decide=0.01)
+        turn = DEMON_AIM["turn"]
 
     return Profile(
         tier=tier,
         personality=personality,
         turn=turn,
+        label=DEMON if tier == DEMON else None,
         **jit,
     )
 

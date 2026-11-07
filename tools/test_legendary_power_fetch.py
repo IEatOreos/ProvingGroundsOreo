@@ -37,10 +37,11 @@ def scenario(participants, loose=True):
 
 class LegendaryPowerFetchTests(unittest.TestCase):
     def test_fixed_legendary_receives_distant_call(self):
-        bot, player = participant('top', 60)
-        director, snap = scenario([(bot, player)])
-        director.power_runs(snap.time, snap)
-        self.assertEqual(bot.fetch[:2], (Vec(), 'rockets'))
+        for tier in ('top','demon'):
+            bot, player = participant(tier, 60)
+            director, snap = scenario([(bot, player)])
+            director.power_runs(snap.time, snap)
+            self.assertEqual(bot.fetch[:2], (Vec(), 'rockets'))
 
     def test_other_difficulties_and_scaling_keep_original_range(self):
         for tier in ['novice', 'average', 'strong', 'scaling']:

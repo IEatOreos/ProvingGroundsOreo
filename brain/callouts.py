@@ -151,6 +151,8 @@ TIMING = {
     "top":     dict(p_call=0.95, decide=(0.10, 0.25), onset=0.38, urgent_start=0.28, rate=6.0, hear=0.15,
                     busy_skip=0.05, dead=(0.90, 0.4), self_gap=0.5),
 }
+TIMING["demon"] = dict(p_call=0.95, decide=(0.10, 0.25), onset=0.38, urgent_start=0.28, rate=6.0,
+                       hear=0.15, busy_skip=0.05, dead=(0.90, 0.4), self_gap=0.5)
 ONSET_SIGMA = 0.20
 START_FLOOR = 0.22      # no speech starts sooner than this after recognition
 BUSY_EXTRA = 0.40       # speaker in a fight starts later (lognormal, clamped 0.2 to 1.0)

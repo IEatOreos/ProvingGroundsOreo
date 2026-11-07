@@ -189,7 +189,7 @@ STALE_S = 6.0                       # a fight with nobody hurt this long (past 6
 # shield pops, then the head), as often as guide 01 says: a Regular about half the time, Veteran consistent,
 # Elite near-perfect. In the player's Settlement game chest shots landed 50%, head shots 31% Easy 20% (the
 # player: Easy bots kept up with Legendary in H2A SWAT, where one head shot kills)
-HEAD_AIM = {"novice": 0.20, "average": 0.5, "strong": 0.9, "top": 0.97}
+HEAD_AIM = {"novice": 0.20, "average": 0.5, "strong": 0.9, "top": 0.97, "demon": 0.97}
 
 # how much a player wants each weapon in hand (CE: the pistol is the all-round king)
 WEAPON_RANK = {"rockets": 5.0, "sniper": 4.0, "fuelrod": 4.0, "shotgun": 3.0, "pistol": 3.2,
@@ -312,7 +312,7 @@ AIR_ROOF_M = 2.5     # u: an aircraft's middle stays this far under the map's ro
 # u (median 16.5), about every 17 s; the cycle to the shot 0.67 s, the shot to the cycle back 0.44 s
 # (logs/tmp/owner_fuelrod.py, his key 1 pairs)
 FUELROD_R, FUELROD_EVERY, FUELROD_FIRE, FUELROD_SHOT, FUELROD_BACK = (10.0, 31.0), 15.0, 0.67, 0.15, 0.44
-RAM_ERR = {"average": 20.0, "strong": 12.0}   # a ram's heading error, degrees at most (guide 18 2.1; Easy never rams)
+RAM_ERR = {"average": 20.0, "strong": 12.0, "top": 0.0, "demon": 0.0}   # a ram's heading error, degrees at most (guide 18 2.1; Easy never rams)
 BOOST_R, BOOST_CONE, BOOST_HOLD, BOOST_EVERY = 8.0, math.radians(20.0), 0.85, 3.0   # Bot.ram_boost (a skilled player's)
 FLEE_D, FLEE_PROGRESS, FLEE_REST = 8.0, 0.6, 5.0   # a boarder fled by open ground FLEE_D u on; under FLEE_PROGRESS u
                                                    # in a flee: none for FLEE_REST s (Bot.drive, open_way)
@@ -543,10 +543,10 @@ class Perception:
         terrain = getattr(los, "__self__", None)
         part_los = getattr(terrain, "target_parts", None)
         vision_mode = "see" if getattr(los, "__name__", "") == "sees" else None
-        fixed_legendary = s.p.tier == "top" and s.p.extra is None
-        center_half = math.radians(50) if fixed_legendary else FOV_HALF
-        peripheral_half = math.radians(60) if fixed_legendary else PERIPHERAL_HALF
-        peripheral_multiplier = 1.5 if fixed_legendary else 1.6
+        fixed_high = profiles.fixed_high(s.p)
+        center_half = math.radians(50) if fixed_high else FOV_HALF
+        peripheral_half = math.radians(60) if fixed_high else PERIPHERAL_HALF
+        peripheral_multiplier = 1.5 if fixed_high else 1.6
         new_sightings = []
         s.hurt_by(now, me, snap, los)
         for e in snap.players:
@@ -651,6 +651,8 @@ class Aim:
 
     def __init__(s, prof, rng):
         s.p, s.rng = prof, rng
+        s.precision = profiles.precision_profile(prof)
+        s.active_profile = prof
         s.next_sample = 0.0
         s.goal = None          # (yaw, pitch) the hand is moving toward
         s.flick = None         # (start_yaw, start_pitch, goal_yaw, goal_pitch, t0, dur)
@@ -659,10 +661,15 @@ class Aim:
         s.focus = 0.0
 
     def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False, precise=False,
-             target_point=None):
+             target_point=None, protected=False):
         # gun: what the shot comes out of when it is not the gun in hand (a vehicle's turret: vehicles.GUNNER_GUN);
         # origin: where that shot leaves (vehicles.gun_height), else the eye; crouched: the target is (his head and
         # chest lower: core.CROUCH_HEAD, CROUCH_CHEST)
+        p = s.precision if protected else s.p
+        if p is not s.active_profile:
+            s.next_sample, s.flick = 0.0, None
+        s.active_profile = p
+        unerring = profiles.fixed_demon(s.p) or (protected and profiles.fixed_high(s.p))
         if precise and target_id is not None:
             # The percentage roll, rather than human aim error, controls these shots.
             point = target_point if target_point is not None else tpos + Vec(0, 0, aim_height(True, crouched))
@@ -677,11 +684,11 @@ class Aim:
         # was 0.1-0.3 s ago) missed strafing targets nearly always (live traces).
         sample = now >= s.next_sample
         if sample:
-            s.next_sample = now + s.p.track * s.rng.uniform(0.8, 1.2)
+            s.next_sample = now + p.track * s.rng.uniform(0.8, 1.2)
             s.v_est = tvel
-            # Fixed Legendary has no random under/over-leading.
-            s.lead_k = s.p.lead if s.p.tier == "top" and s.p.extra is None else s.p.lead * s.rng.uniform(0.6, 1.2)
-            spread = s.p.aim_err * (1.0 - 0.7 * s.focus)
+            # Demon and protected head/turret aim keep the prior precise leading policy.
+            s.lead_k = p.lead if unerring else p.lead * s.rng.uniform(0.6, 1.2)
+            spread = p.aim_err * (1.0 - 0.7 * s.focus)
             s.err = (s.rng.gauss(0, spread), s.rng.gauss(0, spread * 0.6))
         d = dist(me.pos, tpos)
         gun = gun or me.weapon
@@ -690,13 +697,13 @@ class Aim:
         # explosives at the feet (the splash still kills a near miss), else chest or head
         h = (0.05 if gun in SPLASH else (CROUCH_HEAD if aim_head else CROUCH_CHEST) if crouched else
              0.62 if aim_head else 0.35)
-        aim_pt = tpos + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", s.p.lead)) + Vec(0, 0, h)
+        aim_pt = tpos + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", p.lead)) + Vec(0, 0, h)
         if target_point is not None:
-            aim_pt = target_point + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", s.p.lead))
+            aim_pt = target_point + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", p.lead))
         # from where our eye is when the shot leaves: a person's hand follows his own strafe without thinking.
         # Uncounted, bots moving fast sideways hit 25% to 31% standing, and Legendary, always strafing, hit
         # 40% in the sim to Easy's 52%
-        own_lead = 0.0 if s.p.tier == "top" and s.p.extra is None else 0.05
+        own_lead = 0.0 if unerring else 0.05
         gy, gp = angles_to((origin or eye(me)) + me.vel * own_lead, aim_pt)
         gy, gp = gy + s.err[0], gp + s.err[1]
         # how fast the aim point swings (a man crossing): the hand trails it by about rate x lag (on_target)
@@ -712,16 +719,16 @@ class Aim:
             if (delta > 0.35 and target_id is not None      # flicks are for a target; looking around
                     and (s.flick is None or abs(wrap(gy - s.flick[2])) > 0.6)):   # turns smoothly (below)
                 s.focus = 0.0
-                over = 1.0 + (s.rng.uniform(0.08, 0.18) if s.rng.random() < s.p.overshoot else 0.0)
-                dur = (0.06 + 0.07 * math.log2(1 + delta / 0.05)) * (s.p.track / 0.18) ** 0.3 * s.p.flick   # (a person flicks
+                over = 1.0 + (s.rng.uniform(0.08, 0.18) if s.rng.random() < p.overshoot else 0.0)
+                dur = (0.06 + 0.07 * math.log2(1 + delta / 0.05)) * (p.track / 0.18) ** 0.3 * p.flick   # (a person flicks
                 # onto a man at up to 435 deg/s, p95 of the player's Cyberdyne acquisitions; 0.08 + 0.09 peaked near
                 # 200)
-                dur = max(dur, 1.5 * delta / s.p.turn)   # its peak speed within the turn speed (Bot.turn_cap; the smooth
+                dur = max(dur, 1.5 * delta / p.turn)   # its peak speed within the turn speed (Bot.turn_cap; the smooth
                                                          # swing peaks at 1.5x its mean)
                 v = getattr(s, "v_est", tvel) - me.vel
                 rx, ry = aim_pt.x - me.pos.x, aim_pt.y - me.pos.y
                 omega = (rx * v.y - ry * v.x) / max(rx * rx + ry * ry, 0.25)
-                land = gy + omega * dur * s.lead_k / max(s.p.lead, 1e-3)
+                land = gy + omega * dur * s.lead_k / max(p.lead, 1e-3)
                 s.flick = (me.yaw, me.pitch, me.yaw + wrap(land - me.yaw) * over,
                            me.pitch + (gp - me.pitch) * over, now, dur)
         s.goal = (gy, gp)
@@ -742,7 +749,7 @@ class Aim:
         # tracking, theirs 0.07-0.17). Heroic and Legendary's hands are quicker (profiles.SHARP: lag 0.065 / 0.045
         # s)
         rate = (9.0 if target_id is not None else 6.5) * dt
-        gain = 1.0 - math.exp(-dt / s.p.lag)
+        gain = 1.0 - math.exp(-dt / p.lag)
         if target_id is None and abs(wrap(gy - me.yaw)) > 1.2 and getattr(s, "quick_ok", False):
             rate, gain = 12.0 * dt, max(gain, 0.5)   # a new way to go behind us: one quick turn (a person swings
                                                       # 180 degrees in about 0.3 s, then walks)
@@ -754,8 +761,8 @@ class Aim:
             rate, gain = (8.0 + 10.0 * whip) * dt, max(gain, 0.3 + 0.4 * whip)
         dy = max(-rate, min(rate, wrap(gy - me.yaw)))
         dp = max(-rate, min(rate, gp - me.pitch))
-        fixed_legendary = s.p.tier == "top" and s.p.extra is None
-        tremor = s.rng.gauss(0, TREMOR * (s.p.extra or {}).get("tremor_k", 1.0)) if target_id is not None and not fixed_legendary else 0.0
+        fixed_high = unerring
+        tremor = s.rng.gauss(0, TREMOR * (p.extra or {}).get("tremor_k", 1.0)) if target_id is not None and not fixed_high else 0.0
         return me.yaw + dy * gain + tremor, me.pitch + dp * gain + tremor * 0.5
 
     def on_target(s, me, tpos, yaw=None, pitch=None, slack=1.0):
@@ -773,7 +780,7 @@ class Aim:
         # body width): a smooth pursuit never closes on a moving point, and a strong bot dead on a man crossing at 2.2
         # u/s 8 u off (0.000-0.003 rad) held fire 0.9 s, its plan's lead point 0.015 rad ahead of the hand, the window
         # 0.014 (tools/test_equipment.py part 11; logs/tmp/dbg_aim.py). The aim itself is unchanged
-        trail = min(getattr(s, "goal_rate", 0.0) * s.p.lag, math.atan2(0.12, d))
+        trail = min(getattr(s, "goal_rate", 0.0) * s.active_profile.lag, math.atan2(0.12, d))
         return abs(wrap(gy - yaw)) < math.atan2(0.12 * slack, d) + trail and abs(gp - pitch) < math.atan2(0.22 * slack, d)
 
     def landing(s, now, early, target_id):
@@ -1189,7 +1196,7 @@ class Bot:
             s.turn_cap(me, act, dt)
             shot_part = getattr(s, "shot_part", None)
             if (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
-                    and ((s.p.tier == "top" and s.p.extra is None) or percentage_sniper(s.p, me))
+                    and ((profiles.fixed_high(s.p)) or percentage_sniper(s.p, me))
                     and shot_part is not None and shot_part[1]):
                 target = snap.player(shot_part[0])
                 if target is not None and target.alive:
@@ -1215,7 +1222,7 @@ class Bot:
         return act
 
     def grenades_allowed(s):
-        return LEGENDARY_GRENADES or s.p.tier != "top" or s.p.extra is not None
+        return LEGENDARY_GRENADES or not profiles.fixed_high(s.p)
 
     @staticmethod
     def current_mag(me):
@@ -1385,8 +1392,8 @@ class Bot:
             s.T().learn_shot_through(line[0], line[1])   # his round reached us through what the data calls a wall: a
             s.per.shot_line = None                       # fence it does not name (Terrain.learn_shot_through)
         if now >= s.next_decide:
-            fixed_legendary = s.p.tier == "top" and s.p.extra is None
-            s.next_decide = now + s.p.decide * (1.0 if fixed_legendary else s.rng.uniform(0.8, 1.3))
+            fixed_demon = profiles.fixed_demon(s.p)
+            s.next_decide = now + s.p.decide * (1.0 if fixed_demon else s.rng.uniform(0.8, 1.3))
             was, s.goal = s.goal, s.decide(now, me, snap)
             if s.goal[0] == "fight" and s.goal != was:
                 s.target_at = now              # a new target: held TARGET_HOLD s (pick_target)
@@ -1556,7 +1563,7 @@ class Bot:
             s.aim.quick_ok = (me.vel.flat() > 1.0 or walking) and not s.per.pending
             act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
             arr = getattr(s, "arrive", None)       # Heroic and up: a grenade onto a landing he is 0.8-2.5 s from (a lift
-            if (arr is not None and s.att and s.att[1] == "landing" and s.p.tier in ("strong", "top")   # exit: INTER-LIFT-02)
+            if (arr is not None and s.att and s.att[1] == "landing" and s.p.tier in ("strong", "top", "demon")   # exit: INTER-LIFT-02)
                     and now >= s.grenade_ready_at and 0.8 <= arr[1] - now <= 2.5 and 6.0 < dist(me.pos, arr[0]) < 18.0
                     and abs(wrap(angles_to(eye(me), arr[0])[0] - act.yaw)) < 0.3):
                 act.grenade, s.grenade_ready_at = True, now + s.rng.uniform(5, 10)
@@ -2912,7 +2919,7 @@ class Bot:
                 h = vehicles.gun_height(me.turret, vehicles.kind_of(v["kind"]) if v is not None else None) if gunner else None
                 act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=gun,
                                                 origin=me.pos + Vec(0, 0, h) if h is not None else None,
-                                                crouched=crouched(snap.player(tid)))
+                                                crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
                 # a mounted gun is held down while it tracks, as people spray a turret: 2.5 times the hand gun's window,
                 # 4 times once firing (live: a Falcon gunner 0.4 deg off a man 16 u away fired on 34% of its ticks by
                 # the hand gun's window)
@@ -3074,7 +3081,7 @@ class Bot:
             aim_at = aim_at + Vec(0.0, 0.0, (b.pos - me.pos).flat() * math.tan(arc))
             act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=st.get("gun"),
                                             origin=me.pos + Vec(0.0, 0.0, cam) if cam else None,
-                                            crouched=crouched(snap.player(tid)))
+                                            crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             d = dist(me.pos, b.pos)
             lo, hi = st["rng"]
@@ -3701,9 +3708,9 @@ class Bot:
         d = dist(me.pos, b.pos)
         target = snap.player(tid)
         parts = getattr(s.per, "target_parts", {}).get(tid)
-        fixed_legendary = s.p.tier == "top" and s.p.extra is None
-        chest_only = fixed_legendary and me.weapon == "assault_rifle"
-        head_only = ((fixed_legendary or percentage_sniper(s.p, me)) and not chest_only and target is not None
+        fixed_high = profiles.fixed_high(s.p)
+        chest_only = fixed_high and me.weapon == "assault_rifle"
+        head_only = ((fixed_high or percentage_sniper(s.p, me)) and not chest_only and target is not None
                      and me.vehicle == -1 and target.vehicle == -1
                      and me.weapon not in SPLASH and me.weapon not in CHARGE and me.weapon not in LUNGE)
         if target is not None and (head_only or parts is not None):
@@ -3732,7 +3739,8 @@ class Bot:
         ray = live_head_ray(me, target) if head else None
         act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
                                      precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1,
-                                     origin=ray[0] if ray else None, target_point=ray[1] if ray else None)
+                                     origin=ray[0] if ray else None, target_point=ray[1] if ray else None,
+                                     protected=head_only and profiles.fixed_high(s.p))
         s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
         lo, hi = WEAPON_RANGE.get(me.weapon, (5.0, 25.0))
         to = (b.pos - me.pos).norm()
@@ -3956,7 +3964,7 @@ class Bot:
                 s.notes.append("grenade: flush him out")
         if head and on and s.rng.random() < s.p.crouchy * 0.5:
             act.crouch = True      # crouch at the kill
-        if (not fixed_legendary and s.grenades_allowed() and now - s.engaged_since < 0.6 and 4 < d < 25 and now >= s.grenade_ready_at and not mates_near
+        if (not fixed_high and s.grenades_allowed() and now - s.engaged_since < 0.6 and 4 < d < 25 and now >= s.grenade_ready_at and not mates_near
                 and getattr(s, "nade_open", False)):   # a Regular "forgets to throw grenades" (guide 01 s9): by tactics
             act.grenade = True     # grenade opener (from 4 u: a frag's blast is under 2 u)
             s.nade_open = False
@@ -3966,7 +3974,7 @@ class Bot:
             act.grenade = True     # the Grenadier sticks the vehicle up close (vehicle_mission)
             s.grenade_ready_at = now + s.rng.uniform(3, 6)
             s.notes.append("grenade: the vehicle")
-        elif (not fixed_legendary and s.grenades_allowed() and seen_now and 4 < d < 22 and now >= s.grenade_ready_at and not mates_near
+        elif (not fixed_high and s.grenades_allowed() and seen_now and 4 < d < 22 and now >= s.grenade_ready_at and not mates_near
               and s.rng.random() < NADE_RATE * dt * s.p.grenades):
             # another one into a fight that goes on (a person throws through a long fight). Easy too since (the
             # player: yes to Easy toward 70%; 0.55-0.63 a minute live, the player 2.37)
@@ -4268,7 +4276,7 @@ class Bot:
     # line is blocked. The old 4..16 shots fired within one burst: a shield hit the reader missed
     # or a late damage read taught bots that open lines were walls, so they ignored players
     # standing in front of them (1064 learned blocks on H2A Zenith)
-    DRY_SHOTS = {"novice": 40, "average": 24, "strong": 16, "top": 12}
+    DRY_SHOTS = {"novice": 40, "average": 24, "strong": 16, "top": 12, "demon": 12}
     DRY_SECONDS = 3.0
     DRY_MIN_RANGE = 8.0            # closer than this the level data's sight line is trusted
 

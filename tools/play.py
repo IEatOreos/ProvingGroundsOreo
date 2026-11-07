@@ -271,8 +271,7 @@ def main():
         return
     if escort:                                       # the map-free escort brain (tools/escort_bots.py)
         tier = o.tier.split(",")[0] if "," not in o.tier else "average"
-        if tier in ("scaling", "demon"):             # (this brain takes a named tier: Scaling plays Legendary's game;
-                                                     # custom Demon is Legendary)
+        if tier == "scaling":                       # Scaling uses the escort brain's Legendary settings
             tier = "top"
         subprocess.run([sys.executable, "-u", "-I", os.path.join(HERE, "escort_bots.py"), str(o.minutes * 60),
                         "--game", o.game, "--tier", tier])

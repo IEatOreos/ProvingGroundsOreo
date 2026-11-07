@@ -1,10 +1,6 @@
-"""Demon difficulty (custom): fixed Legendary under its own name.
-
-Checks that a "demon" profile is the fixed Legendary profile exactly (tier "top", extra None, same numbers for the
-same random draws), that only its label differs, that the BOTS list and the trace carry the name, and that the native
-menu's tier and difficulty tables agree with the Python keys. Run: python tools/test_demon_difficulty.py
-"""
-import dataclasses
+"""Demon is a distinct tier retaining the prior tuned profile; native menu keys stay compatible."""
+import hashlib
+import json
 import os
 import random
 import re
@@ -22,16 +18,26 @@ import botctl  # noqa: E402
 
 
 class DemonProfileTests(unittest.TestCase):
-    def test_demon_is_fixed_legendary(self):
+    def test_demon_is_distinct_and_retains_pre_split_numeric_profiles(self):
+        numbers=[]
+        for style in sorted(PERSONALITIES):
+            for seed in range(5):
+                demon=make_profile('demon',style,random.Random(seed))
+                numbers.append({k:v for k,v in vars(demon).items() if isinstance(v,(float,int))})
+        digest=hashlib.sha256(json.dumps(numbers,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        # Golden numeric profiles from the pre-split brain, 7 styles x 5 seeds.
+        self.assertEqual(digest,'721b76b80d487e920f091e3db8008e5c86de8cc23f1178b336d754723c9337da')
         for style in PERSONALITIES:
             for seed in range(5):
                 top = make_profile("top", style, random.Random(seed))
                 demon = make_profile("demon", style, random.Random(seed))
-                self.assertEqual(demon.tier, "top")
+                self.assertEqual(demon.tier, "demon")
                 self.assertIsNone(demon.extra)
                 self.assertEqual(demon.label, "demon")
                 self.assertIsNone(top.label)
-                self.assertEqual(dataclasses.replace(demon, label=None), top, f"{style} seed {seed}")
+                self.assertNotEqual(demon.reaction,top.reaction)
+                self.assertEqual(demon.reaction,0.0)
+                self.assertEqual(demon.decide,0.01)
 
     def test_trace_names_demon(self):
         demon = make_profile("demon", "rusher", random.Random(1))

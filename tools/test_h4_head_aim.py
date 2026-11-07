@@ -81,7 +81,7 @@ class H4HeadAimTests(unittest.TestCase):
         for precise in (False,True):
             aim=Aim(bot.p,random.Random(8))
             got=aim.step(0,1/30,me,1,target.pos,Vec(),True,origin=me.view_pos,
-                         target_point=target.head_pos,precise=precise)
+                         target_point=target.head_pos,precise=precise,protected=True)
             expected=angles_to(me.view_pos,target.head_pos)
             self.assertAlmostEqual(got[0],expected[0])
             self.assertAlmostEqual(got[1],expected[1])
@@ -127,7 +127,7 @@ class H4HeadAimTests(unittest.TestCase):
             def sees(self,*args): return False
         terrain=Terrain()
         bot.per.update(0,me,snap,terrain.sees,[])
-        bot.per.update(.1,me,snap,terrain.sees,[])
+        bot.per.update(1,me,snap,terrain.sees,[])  # Legendary now has its stock recognition delay
         self.assertEqual(bot.per.target_parts[1],(False,True))
         self.assertIn(1,bot.per.visible_enemies())
 

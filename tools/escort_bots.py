@@ -23,6 +23,7 @@ import botctl  # noqa: E402
 HZ = 30
 CHEST = 0.45                          # aim this far above the feet (Elites and Brutes stand tall)
 TIERS = {"novice": (0.45, 0.06), "average": (0.30, 0.035), "strong": (0.22, 0.02), "top": (0.15, 0.012)}   # reaction s, aim error rad
+TIERS["demon"] = (0.15, 0.012)  # explicit campaign/Firefight settings, independently tunable
 RANGE = 28.0
 MATCH_GONE = 6                         # failed reads in a row (0.5 s apart) that mean the match is over
 
