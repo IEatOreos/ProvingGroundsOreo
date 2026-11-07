@@ -390,7 +390,7 @@ static void load_settings() {
             if (sscanf_s(line, "enabled=%u", &v) == 1) g_shm->bots_enabled = v != 0;
             else if (sscanf_s(line, "red=%u", &v) == 1) g_shm->red_players = v > 8 ? 8 : v;
             else if (sscanf_s(line, "blue=%u", &v) == 1) g_shm->blue_players = v > 8 ? 8 : v;
-            else if (sscanf_s(line, "difficulty=%u", &v) == 1) g_shm->difficulty = v % 6;
+            else if (sscanf_s(line, "difficulty=%u", &v) == 1) g_shm->difficulty = v % 7;   // (6: Demon)
             else if (sscanf_s(line, "lidar_players=%u", &v) == 1) g_shm->lidar_players = v < 2 ? 2 : v > HB_MAX_PLAYERS ? HB_MAX_PLAYERS : v;
             else if (sscanf_s(line, "lidar=%u", &v) == 1) g_shm->lidar_mode = v != 0;
             else if (sscanf_s(line, "prejoin=%u", &v) == 1) g_prejoin = v != 0;
@@ -409,8 +409,7 @@ static void load_settings() {
         for (int k = 0; k < (red > blue ? red : blue); k++)
             for (int t = 0; t < 2; t++)
                 if (k < (t ? blue : red)) {
-                    int tier = g_shm->difficulty < 4 ? (int)g_shm->difficulty : g_shm->difficulty == 5 ? 4
-                             : roster_mixed_tier(g_roster.n);
+                    int tier = roster_difficulty_tier(g_shm->difficulty, g_roster.n);
                     roster_add(g_roster, t, tier, HB_STYLE_ANY, s += 7919);
                 }
         ff_seed(); ff_listed = true;
@@ -443,14 +442,15 @@ static void start_brain() {
         g_shm->actions[i].seq = 0;
     }
     if (!g_shm->bots_enabled) return;
-    // 5 Scaling: one skill percentage with no limit, set by the player's K/D after each game (brain/scaling.py)
-    static const char* TIERS[6] = { "novice", "average", "strong", "top", "strong,average,top,novice", "scaling" };
+    // 5 Scaling: one skill percentage with no limit, set by the player's K/D after each game (brain/scaling.py);
+    // 6 Demon (custom): fixed Legendary under its own name (brain/profiles.py)
+    static const char* TIERS[7] = { "novice", "average", "strong", "top", "strong,average,top,novice", "scaling", "demon" };
     wchar_t root[MAX_PATH], cmd[2048], out[MAX_PATH];
     swprintf_s(root, L"%s..\\..", g_dir);
     wchar_t ini[MAX_PATH]; ini_path(ini);                    // the BOTS panel's list: these bots join
     wchar_t py[MAX_PATH + 2]; hb_python(root, py, MAX_PATH + 2);     // (an install's own Python, else PATH's)
     swprintf_s(cmd, L"%s -u -I \"%s\\tools\\play.py\" --red %u --blue %u --tier %S --minutes 600 --wait 120 --lidar %u --roster \"%s\"",
-               py, root, g_shm->red_players, g_shm->blue_players, TIERS[g_shm->difficulty % 6],
+               py, root, g_shm->red_players, g_shm->blue_players, TIERS[g_shm->difficulty % 7],
                g_shm->lidar_mode ? g_shm->lidar_players : 0u, ini);
     swprintf_s(out, L"%s\\logs\\brain.txt", root);
     SECURITY_ATTRIBUTES sa{ sizeof sa, nullptr, TRUE };

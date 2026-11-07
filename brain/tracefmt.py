@@ -128,7 +128,8 @@ def think_line(now, index, b):
 
 def meta_line(now, map_name, game, index, name, team, prof):
     return json.dumps(dict(t=round(now, 3), meta=dict(map=map_name, game=game, bot=dict(
-        id=index, name=name, team=team, tier=prof.tier, pers=prof.personality)))) + chr(10)
+        id=index, name=name, team=team, tier=getattr(prof, "label", None) or prof.tier,   # (custom: "demon")
+        pers=prof.personality)))) + chr(10)
 
 
 def blitz_rows(directors):

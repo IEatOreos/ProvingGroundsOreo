@@ -228,7 +228,7 @@ static bool in_ce_menus() {
     } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
 
-static const char* DIFF_NAME[6] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling", "Mixed" };   // (bots_panel.cpp tiers, then Mixed)
+static const char* DIFF_NAME[7] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling", "Demon", "Mixed" };   // (bots_panel.cpp tiers, then Mixed)
 
 // MCC lays its menus out on the back buffer; the window shows that buffer stretched to its client area. The two differ
 // when the window was moved or resized without MCC resizing its buffer (a borderless window put on another monitor):
@@ -310,8 +310,8 @@ static void draw_tile(float t) {
         const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;   // (Firefight: its own list of 3)
         int teams = 0, tier = -1, n = R.n;
         for (int t = 0; t < HB_TEAMS_MAX; t++) teams += roster_on_team(R, t) > 0;
-        for (int i = 0; i < n; i++) tier = tier < 0 || tier == R.bot[i].tier ? R.bot[i].tier : 5;
-        const char* d = tier < 0 ? "" : DIFF_NAME[tier < 6 ? tier : 5];
+        for (int i = 0; i < n; i++) tier = tier < 0 || tier == R.bot[i].tier ? R.bot[i].tier : HB_TIERS;
+        const char* d = tier < 0 ? "" : DIFF_NAME[tier < HB_TIERS ? tier : HB_TIERS];
         if (!n) sprintf_s(sum, "No bots");
         else if (g_ff_lobby) sprintf_s(sum, "%d %s %s", n, n == 1 ? "bot" : "bots", d);
         else if (teams <= 2) sprintf_s(sum, "%dv%d %s", roster_on_team(R, 0), roster_on_team(R, 1), d);

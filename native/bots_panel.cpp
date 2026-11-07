@@ -33,16 +33,19 @@ static const char* TEAM_NAME[HB_TEAMS_MAX] = { "Red", "Blue", "Green", "Orange",
 static const ImU32 TEAM_COL[HB_TEAMS_MAX] = {
     IM_COL32(229, 72, 60, 255), IM_COL32(61, 134, 230, 255), IM_COL32(72, 184, 92, 255), IM_COL32(240, 138, 44, 255),
     IM_COL32(154, 90, 214, 255), IM_COL32(229, 191, 60, 255), IM_COL32(154, 106, 60, 255), IM_COL32(229, 106, 174, 255) };
-// 4 Scaling: a difficulty of its own, no rank
-static const char* TIER_NAME[5] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling" };
+// 4 Scaling: a difficulty of its own, no rank. 5 Demon (custom): fixed Legendary under its own name (brain/profiles.py)
+static const char* TIER_NAME[6] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling", "Demon" };
 static const ImU32 SCALE_COL = IM_COL32(196, 206, 216, 255);   // neutral: no rank colour
-static const ImU32 TIER_COL[5] = { IM_COL32(95, 224, 138, 255), IM_COL32(110, 200, 255, 255), IM_COL32(255, 154, 61, 255),
-                                   IM_COL32(255, 91, 75, 255), SCALE_COL };
+static const ImU32 DEMON_COL = IM_COL32(200, 30, 60, 255);     // custom: deep crimson
+static const ImU32 TIER_COL[6] = { IM_COL32(95, 224, 138, 255), IM_COL32(110, 200, 255, 255), IM_COL32(255, 154, 61, 255),
+                                   IM_COL32(255, 91, 75, 255), SCALE_COL, DEMON_COL };
 // brain/profiles.py TIERS, CRAFT and REACTION: what each level knows and does (Scaling: brain/scaling.py)
 static const char* SCALE_ABOUT = "A difficulty of its own. Legendary's game sense, with reaction, aim and turn speed set "
                                  "by your K/D: after every game they rise or fall, without limit, until your games even "
                                  "out.";
-static const char* TIER_ABOUT[5] = {
+static const char* DEMON_ABOUT = "Plays exactly like Legendary: the same aim, reactions, decisions and game sense, "
+                                 "under its own name.";
+static const char* TIER_ABOUT[6] = {
     "Plays for itself. Reacts a beat slower than a good player, never jumps, walks straight at you and fights in "
     "the open. No motion tracker, no teamwork. You should win most fights.",
     "Reacts like a good player. Strafes, jumps now and then, uses side routes and backs off from a losing fight. "
@@ -51,7 +54,7 @@ static const char* TIER_ABOUT[5] = {
     "knows when power weapons come back.",
     "Reacts about a third faster than a good player and uses everything: focus fire with the team, sneaky routes, "
     "constant awareness and every power weapon and respawn timed.",
-    SCALE_ABOUT };
+    SCALE_ABOUT, DEMON_ABOUT };
 // brain/profiles.py PERSONALITIES order (rusher, camper, flanker, objector, spammer, grudger, sniper)
 static const char* STYLE_KEY[8] = { "rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "any" };
 static const char* STYLE_NAME[8] = { "Rusher", "Camper", "Flanker", "Objective", "Grenadier", "Grudge", "Sniper", "Any style" };
@@ -62,10 +65,24 @@ static const char* STYLE_ABOUT[8] = {
 static const char* TITLE_NAME[9] = { "", "HALO: CE", "HALO 2", "HALO 3", "", "HALO: REACH", "HALO 2: ANNIVERSARY", "HALO 4",
                                      "HALO 3: ODST" };   // (8: ODST, Firefight only: overlay.cpp title_of)
 
-static const char* TIER_KEY[5] = { "novice", "average", "strong", "top", "scaling" };
+static const char* TIER_KEY[HB_TIERS] = { "novice", "average", "strong", "top", "scaling", "demon" };
 const char* team_name(int t) { return t >= 0 && t < HB_TEAMS_MAX ? TEAM_NAME[t] : "?"; }
-const char* tier_name(int t) { return t >= 0 && t < 5 ? TIER_NAME[t] : "?"; }
-const char* tier_key(int t) { return t >= 0 && t < 5 ? TIER_KEY[t] : "top"; }
+const char* tier_name(int t) { return t >= 0 && t < HB_TIERS ? TIER_NAME[t] : "?"; }
+const char* tier_key(int t) { return t >= 0 && t < HB_TIERS ? TIER_KEY[t] : "top"; }
+
+// The "for everyone" difficulty (shared.h difficulty: 0..3 the ranks, 4 Mixed, 5 Scaling, 6 Demon) <-> a bot's tier
+int roster_difficulty_tier(uint32_t d, int k) {
+    return d < 4 ? (int)d : d == 5 ? HB_TIER_SCALING : d == 6 ? HB_TIER_DEMON : roster_mixed_tier(k);
+}
+static uint32_t tier_difficulty(int tier) {
+    return tier == HB_TIER_SCALING ? 5u : tier == HB_TIER_DEMON ? 6u : (uint32_t)tier;
+}
+// the difficulty pickers' buttons in rank order (Demon after Legendary), Scaling last: its hover box is the last item's
+static const uint32_t DIFF_SHOWN[7] = { 0, 1, 2, 3, 6, 4, 5 };
+static int difficulty_slot(uint32_t d) {
+    for (int i = 0; i < 7; i++) if (DIFF_SHOWN[i] == d) return i;
+    return 5;                                                 // (Mixed)
+}
 const char* style_name(int s) { return s >= 0 && s < 8 ? STYLE_KEY[s] : "any"; }
 int roster_max_teams(int title) { return hb_panel_firefight ? 1 : title == 1 ? 2 : HB_TEAMS_MAX; }   // (Firefight: yours)
 
@@ -93,7 +110,7 @@ bool roster_parse_line(const char* line, hb_roster& r) {
     hb_bot& b = r.bot[r.n++];
     int t = atoi(team);
     b.team = (uint8_t)(t < 0 ? 0 : t >= HB_TEAMS_MAX ? HB_TEAMS_MAX - 1 : t);
-    b.tier = (uint8_t)key_index(tier, TIER_KEY, 5, 3);
+    b.tier = (uint8_t)key_index(tier, TIER_KEY, HB_TIERS, 3);
     b.style = (uint8_t)key_index(style, STYLE_KEY, 8, HB_STYLE_ANY);
     strncpy_s(b.name, name, 15);
     if (b.team + 1 > r.teams) r.teams = b.team + 1;
@@ -607,7 +624,7 @@ void roster_fill(hb_roster& r, int teams, int per_team, int tier, int style, uin
     r.teams = hb_panel_firefight ? 1 : teams < 2 ? 2 : teams > HB_TEAMS_MAX ? HB_TEAMS_MAX : teams;
     for (int k = 0; k < per_team && r.n < roster_cap(); k++)          // team by team, a row at a time:
         for (int t = 0; t < r.teams && r.n < roster_cap(); t++)       // the cap cuts every team evenly
-            roster_add(r, t, tier == 4 ? mixed_tier(r.n) : tier == 5 ? 4 : tier, style, rnd(s));
+            roster_add(r, t, roster_difficulty_tier((uint32_t)tier, r.n), style, rnd(s));
 }
 
 void roster_balance(hb_roster& r) {
@@ -818,7 +835,8 @@ bool icon_x(const char* id, float size_, const char* tip) {
     return r;
 }
 
-// difficulty as rank chevrons: one (Easy) to four (Legendary); Scaling, no rank: a gauge (its needle moves both ways)
+// difficulty as rank chevrons: one (Easy) to four (Legendary), five (Demon); Scaling, no rank: a gauge (its needle
+// moves both ways)
 void chevrons(ImDrawList* dl, ImVec2 c, int tier, float scale_ = 1.0f) {
     float w = px(9) * scale_, h = px(5) * scale_, gap = px(5) * scale_;
     if (tier == 4) {
@@ -829,7 +847,7 @@ void chevrons(ImDrawList* dl, ImVec2 c, int tier, float scale_ = 1.0f) {
         dl->AddCircleFilled(o, px(2.2f) * scale_, TIER_COL[4]);
         return;
     }
-    int n = tier + 1;
+    int n = tier == HB_TIER_DEMON ? 5 : tier + 1;
     float top = c.y - (n - 1) * gap * 0.5f;
     for (int k = 0; k < n; k++) {
         float y = top + k * gap;
@@ -875,7 +893,7 @@ static void bot_row(bots_panel_env& e, int i, float w, bool& changed) {
     if (ImGui::Selectable("##row", sel, ImGuiSelectableFlags_AllowOverlap, ImVec2(w, h))) g_sel = i;
     ImGui::PopStyleColor(3);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) && !ImGui::IsMouseDragging(0))
-        ImGui::SetTooltip("%s, %s. Drag to another team to move.", TIER_NAME[b.tier < 5 ? b.tier : 3],
+        ImGui::SetTooltip("%s, %s. Drag to another team to move.", TIER_NAME[b.tier < HB_TIERS ? b.tier : 3],
                           b.style < 8 ? STYLE_NAME[b.style] : "");
     if (ImGui::BeginDragDropSource()) {                       // drag onto another team to move it
         ImGui::SetDragDropPayload("HB_BOT", &i, sizeof i);
@@ -909,7 +927,7 @@ static void bot_row(bots_panel_env& e, int i, float w, bool& changed) {
     if (i < r.n) {                                           // (still there after the menu)
         ImDrawList* dl = ImGui::GetWindowDrawList();
         if (sel) dl->AddRectFilled(p, ImVec2(p.x + px(3), p.y + h), GOLD);
-        chevrons(dl, ImVec2(p.x + px(22), p.y + h * 0.5f), b.tier < 5 ? b.tier : 3);
+        chevrons(dl, ImVec2(p.x + px(22), p.y + h * 0.5f), b.tier < HB_TIERS ? b.tier : 3);
         // the name, then its play style on the right when both fit; a long name is cut with "..."
         // and the style moves to the tooltip (narrow cards at eight teams, 15-character names)
         const char* st = b.style < HB_STYLE_ANY ? STYLE_NAME[b.style] : "";
@@ -1000,7 +1018,7 @@ static void team_card(bots_panel_env& e, int t, ImVec2 size, bool& changed) {
     ImGui::BeginDisabled(r.n >= roster_cap());
     char add[32]; sprintf_s(add, "+  Add bot##add%d", t);
     if (button(add, GHOST, ImVec2(size.x - px(16), add_h), true)) {
-        int tier = *e.difficulty < 4 ? (int)*e.difficulty : *e.difficulty == 5 ? 4 : mixed_tier(r.n);
+        int tier = roster_difficulty_tier(*e.difficulty, r.n);
         if (roster_add(r, t, tier, HB_STYLE_ANY, seed())) { g_sel = r.n - 1; changed = true; }
     }
     ImGui::EndDisabled();
@@ -1132,7 +1150,7 @@ static void sync_difficulty(bots_panel_env& e) {
     if (!r.n) return;
     for (int i = 1; i < r.n; i++)
         if (r.bot[i].tier != r.bot[0].tier) { *e.difficulty = 4; return; }
-    *e.difficulty = r.bot[0].tier == 4 ? 5u : (uint32_t)r.bot[0].tier;
+    *e.difficulty = tier_difficulty(r.bot[0].tier);
 }
 
 static void inspector(bots_panel_env& e, bool& changed) {
@@ -1196,11 +1214,17 @@ static void inspector(bots_panel_env& e, bool& changed) {
     }
     ImGui::Dummy(ImVec2(0, px(2)));
     caption("Difficulty");
-    int tier = b.tier < 5 ? b.tier : 3, rank = tier < 4 ? tier : -1, own = tier == 4 ? 0 : -1;
+    // the four ranks, then Demon and Scaling on a row of their own (the inspector is too narrow for five ranks)
+    static const char* OWN_NAME[2] = { "Demon", "Scaling" };
+    static const ImU32 OWN_COL[2] = { DEMON_COL, SCALE_COL };
+    int tier = b.tier < HB_TIERS ? b.tier : 3, rank = tier < 4 ? tier : -1;
+    int own = tier == HB_TIER_DEMON ? 0 : tier == HB_TIER_SCALING ? 1 : -1;
     if (segmented("tier", TIER_NAME, 4, &rank, W, TIER_COL)) { b.tier = (uint8_t)rank; sync_difficulty(e); changed = true; }
-    if (segmented("tier_s", &TIER_NAME[4], 1, &own, W, &TIER_COL[4])) { b.tier = 4; sync_difficulty(e); changed = true; }
+    if (segmented("tier_s", OWN_NAME, 2, &own, W, OWN_COL)) {
+        b.tier = (uint8_t)(own == 0 ? HB_TIER_DEMON : HB_TIER_SCALING); sync_difficulty(e); changed = true;
+    }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
-    tier = b.tier < 5 ? b.tier : 3;                          // (Scaling on a row of its own: no rank among the four)
+    tier = b.tier < HB_TIERS ? b.tier : 3;
     muted(TIER_ABOUT[tier]);
     if (tier == 4) {
         ImGui::Dummy(ImVec2(0, px(4)));
@@ -1268,11 +1292,13 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     stepper("per", &qs_per, 1, most, qs_per == 1 ? "bot" : "bots");
     ImGui::Dummy(ImVec2(0, px(4)));
     caption("Difficulty");
-    static const char* DN[6] = { "Easy", "Normal", "Heroic", "Legendary", "Mixed", "Scaling" };
-    static const ImU32 DC[6] = { TIER_COL[0], TIER_COL[1], TIER_COL[2], TIER_COL[3], ACCENT, TIER_COL[4] };
-    segmented("qtier", DN, 6, &qs_tier, W, DC);
+    static const char* DN[7] = { "Easy", "Normal", "Heroic", "Legendary", "Demon", "Mixed", "Scaling" };   // (DIFF_SHOWN)
+    static const ImU32 DC[7] = { TIER_COL[0], TIER_COL[1], TIER_COL[2], TIER_COL[3], DEMON_COL, ACCENT, SCALE_COL };
+    int qslot = difficulty_slot((uint32_t)qs_tier);
+    if (segmented("qtier", DN, 7, &qslot, W, DC)) qs_tier = (int)DIFF_SHOWN[qslot];
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
-    muted(qs_tier < 4 ? TIER_ABOUT[qs_tier] : qs_tier == 4 ? "A mix of all four, like a real lobby." : SCALE_ABOUT);
+    muted(qs_tier < 4 ? TIER_ABOUT[qs_tier] : qs_tier == 4 ? "A mix of all four, like a real lobby."
+          : qs_tier == 6 ? DEMON_ABOUT : SCALE_ABOUT);
     if (qs_tier == 5) scale_games_setting(e, changed);
     ImGui::Dummy(ImVec2(0, px(4)));
     caption("Play style");
@@ -3077,7 +3103,7 @@ bool bots_panel(bots_panel_env& e) {
             int most = 0;
             for (int t = 0; t < r.teams; t++) most = roster_on_team(r, t) > most ? roster_on_team(r, t) : most;
             qs_per = most ? most : 4;
-            qs_tier = (int)(*e.difficulty <= 5 ? *e.difficulty : 4);
+            qs_tier = (int)(*e.difficulty <= 6 ? *e.difficulty : 4);
             ImGui::OpenPopup("Quick setup");
         }
         ImGui::SameLine(0, px(14));
@@ -3170,7 +3196,7 @@ bool bots_panel(bots_panel_env& e) {
         ImGui::SetCursorScreenPos(ImVec2(body0.x + (grid_w - px(220)) * 0.5f, body0.y + body_h * 0.36f + px(92)));
         if (button("Quick setup##empty", PRIMARY, ImVec2(px(220), px(46)))) {
             qs_teams = hb_panel_firefight ? 1 : 2; qs_per = hb_panel_firefight ? 3 : 4;
-            qs_tier = (int)(*e.difficulty <= 5 ? *e.difficulty : 4);
+            qs_tier = (int)(*e.difficulty <= 6 ? *e.difficulty : 4);
             ImGui::OpenPopup("Quick setup");
         }
     } else {
@@ -3206,14 +3232,14 @@ bool bots_panel(bots_panel_env& e) {
     float rowh = px(46);                                    // everything centred on the Done button's row
     ImGui::SetCursorScreenPos(ImVec2(f0.x, f0.y + (rowh - px(18)) * 0.5f));
     caption("Difficulty");
-    static const char* DN[6] = { "Easy", "Normal", "Heroic", "Legendary", "Mixed", "Scaling" };
-    static const ImU32 DC[6] = { TIER_COL[0], TIER_COL[1], TIER_COL[2], TIER_COL[3], ACCENT, TIER_COL[4] };
-    int d = (int)(*e.difficulty <= 5 ? *e.difficulty : 4);
+    static const char* DN[7] = { "Easy", "Normal", "Heroic", "Legendary", "Demon", "Mixed", "Scaling" };   // (DIFF_SHOWN)
+    static const ImU32 DC[7] = { TIER_COL[0], TIER_COL[1], TIER_COL[2], TIER_COL[3], DEMON_COL, ACCENT, SCALE_COL };
+    int d = difficulty_slot(*e.difficulty <= 6 ? *e.difficulty : 4);
     ImGui::SetCursorScreenPos(ImVec2(f0.x + px(140), f0.y + (rowh - px(36)) * 0.5f));
     ImGui::BeginDisabled(r.n == 0 || *e.lidar_mode);
-    if (segmented("all", DN, 6, &d, px(600), DC)) {
-        *e.difficulty = (uint32_t)d;
-        for (int i = 0; i < r.n; i++) r.bot[i].tier = (uint8_t)(d < 4 ? d : d == 5 ? 4 : mixed_tier(i));   // (both teams)
+    if (segmented("all", DN, 7, &d, px(600), DC)) {
+        *e.difficulty = DIFF_SHOWN[d];
+        for (int i = 0; i < r.n; i++) r.bot[i].tier = (uint8_t)roster_difficulty_tier(*e.difficulty, i);   // (both teams)
         changed = true;
     }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_AllowWhenDisabled))

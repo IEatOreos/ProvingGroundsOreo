@@ -112,7 +112,7 @@ def bug_label(path):
     return f"Bug reports {when}, {n}: {text[:50]}{'...' if len(text) > 50 else ''}"
 
 
-TIER_NAME = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary"}
+TIER_NAME = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary", "demon": "Demon"}
 
 
 def match_label(path):

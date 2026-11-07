@@ -404,7 +404,7 @@ async function loadYou() {
   } catch (e) { if (game === S) { S.youState = "error"; S.youError = "the observer server did not answer"; } }
   renderYou(); dirty = true;
 }
-const TIER_ORDER = ["Easy", "Normal", "Heroic", "Legendary"];
+const TIER_ORDER = ["Easy", "Normal", "Heroic", "Legendary", "Demon"];
 function renderYou() {
   const el = $("you");
   if (!S) { el.className = "empty"; el.textContent = "No game loaded."; return; }

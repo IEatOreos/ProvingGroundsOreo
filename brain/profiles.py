@@ -118,10 +118,21 @@ class Profile:
     # Scaling difficulty's own settings for what the brain otherwise looks up by tier (head_aim, ram_err, loose_follow,
     # loose_early: brain/scaling.py); None on the tiers
     extra: dict = None
+    # custom: the difficulty's shown name when it differs from tier ("demon": fixed Legendary, see make_profile)
+    label: str = None
+
+
+# Custom: Demon is fixed Legendary under its own name. It builds the "top" profile exactly (tier stays "top", extra
+# None), so every fixed Legendary rule applies to it; only label differs (traces, reports).
+DEMON = "demon"
 
 
 def make_profile(tier, personality, rng=random):
     """Build a bot profile, with precision overrides for Legendary."""
+    if tier == DEMON:
+        p = make_profile("top", personality, rng)
+        p.label = DEMON
+        return p
     vals = {**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     turn = TURN[tier]

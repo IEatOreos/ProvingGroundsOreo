@@ -111,7 +111,7 @@ def settings(m):
     return struct.unpack_from("<5I", m, OFF_SETTINGS)
 
 
-TIER_KEYS = ("novice", "average", "strong", "top", "scaling")
+TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon")   # (demon: custom, fixed Legendary renamed)
 STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "any")
 
 

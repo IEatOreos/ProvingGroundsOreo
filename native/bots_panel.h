@@ -12,11 +12,15 @@ struct ImFont;
 #define HB_ROSTER_MAX 15        // the game holds 16 players: you and 15 bots
 #define HB_TEAMS_MAX 8
 #define HB_STYLE_ANY 7          // the brain deals a play style
+#define HB_TIER_SCALING 4       // hb_bot.tier: Scaling (brain/scaling.py)
+#define HB_TIER_DEMON 5         // hb_bot.tier: Demon (custom: fixed Legendary under its own name)
+#define HB_TIERS 6
 
 struct hb_bot {
     char name[16];              // up to 15 characters, the game's name field
     uint8_t team;               // 0 red, 1 blue, 2.. (Halo 3 / Reach colour order)
-    uint8_t tier;               // 0 Easy (novice) .. 3 Legendary (top), 4 Scaling (brain/scaling.py)
+    uint8_t tier;               // 0 Easy (novice) .. 3 Legendary (top), 4 Scaling (brain/scaling.py), 5 Demon (custom:
+                                // fixed Legendary under its own name, brain/profiles.py)
     uint8_t style;              // 0..6 brain/profiles.py PERSONALITIES order, 7 any
 };
 
@@ -29,7 +33,7 @@ struct hb_roster {
 struct bots_panel_env {
     hb_roster* roster;
     uint32_t* enabled;          // bots join at all
-    uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling
+    uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling, 6 demon
     uint32_t* lidar_mode;       // mapping bots instead of fighters
     uint32_t* lidar_players;    // players in all in LiDAR mode (2..16)
     uint32_t* collector;        // records the player each match for the Observer (tools/collector.py); may be null
@@ -94,9 +98,10 @@ int  profiles_species();                                // 0 Spartans only, 1 mi
 int  profiles_elite_share();                            // mixed: the percent rolled Elite, -1 each game's own mix
 int  roster_on_team(const hb_roster& r, int team);
 int  roster_mixed_tier(int k);                          // "Mixed": Heroic, Normal, Legendary, Easy in turn
+int  roster_difficulty_tier(uint32_t difficulty, int k); // a "for everyone" difficulty as the k-th bot's tier
 const char* team_name(int team);
 const char* tier_name(int tier);
-const char* tier_key(int tier);                         // novice average strong top (brain/profiles.py), scaling
+const char* tier_key(int tier);                         // novice average strong top (brain/profiles.py), scaling, demon
 const char* style_name(int style);                      // rusher .. sniper, any (brain/profiles.py)
 
 // botcore.ini lines: "roster=1", "teams=N", "bot=<team>,<tier key>,<style key>,<name>" (tools/botctl.py reads

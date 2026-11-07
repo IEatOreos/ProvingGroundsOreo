@@ -111,7 +111,7 @@ struct hb_shared {
     // v4: the Bots tab (overlay in the CE custom game lobby) settings, also saved in botcore.ini
     uint32_t bots_enabled;      // 1 = fill teams with bots when a match starts
     uint32_t red_players, blue_players;   // wanted team sizes, people included
-    uint32_t difficulty;        // 0 easy (novice) .. 3 legendary (top), 4 mixed, 5 scaling
+    uint32_t difficulty;        // 0 easy (novice) .. 3 legendary (top), 4 mixed, 5 scaling, 6 demon
     uint32_t settings_seq;      // bumped on every change
     // v5: ADD_BOT name (empty = "Bot N")
     wchar_t  cmd_name[16];
