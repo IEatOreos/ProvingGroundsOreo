@@ -1,5 +1,12 @@
 # Custom release history
 
+## 0.2.2-custom.5 — Mongoose transport source update, 2026-11-06
+
+- Publish the owner's approved five Mongoose fixes from 1b59ccd. Ordinary Mongoose becomes transport-only, with finite destinations, cancellation of empty/invalid jobs, bounded carrier/getaway waits, automatic ride cooldown, and retained evasions/recovery/forward splatters. Chosen defaults and full validation are recorded in the implementation entry below.
+- Include the main-AI review handoff from 4c0fc95 and add a post-baseline Mongoose follow-up note so its 0.2.2-custom.4 review baseline remains explicit. All prior collaborator and owner commits retain their identities.
+- Validation: 111 regression tests passed and 92 Python sources compiled for the implementation, followed by passing targeted checks after final cleanup. Release preparation changes documentation/version only; whitespace checks pass. Gameplay still needs a bot-process restart and live confirmation.
+- The owner requested this normal source push to IEatOreos/ProvingGroundsOreo main. Machine settings, learned maps, fixtures, logs and installed binaries remain local. No installer, tag or GitHub Release is included.
+
 ## Unreleased — Finite Mongoose transport trips, 2026-11-06
 
 - Apply the owner's five approved Mongoose changes. Remove ordinary Mongoose from the harasser role, require a useful distant destination for director-assigned transport, preserve the destination when assigning a driver, and exclude Mongoose from persistent crew-patrol arrival behavior. Completed trips request dismount and continue on foot.

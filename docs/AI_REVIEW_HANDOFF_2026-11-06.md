@@ -2,6 +2,12 @@
 
 Prepared November 6, 2026 for the main AI/developer reviewing the owner's custom Project Proving Grounds code. This document describes the combined work of the owner, this coding assistant, and the owner's coding collaborator. It covers the published customization history, final behavior, integration points, validation, and open proposals.
 
+## Post-baseline follow-up — 0.2.2-custom.5
+
+After the review baseline documented below, commit `1b59ccd` implements the owner's five Mongoose transport fixes. Ordinary Mongoose is transport-only, assigned trips need useful destinations, and arrival dismounts instead of starting another crew patrol. Carrier pickup waiting is 8 seconds, getaway parking is 20 seconds, and automatic ride cooldown is 30 seconds. A distance-based travel deadline cannot be restarted by moving goals. Carrier identity survives role passes, invalid carrier/getaway tasks end, and race checkpoints, emergency evasion, stuck reversing and forward opportunistic splatters remain supported. All 111 regression tests passed for this implementation, with 92 Python source syntax checks. Gameplay confirmation remains pending.
+
+The 0.2.2-custom.5 source publication includes this handoff and the Mongoose fixes. The tables and 27-commit ledger below intentionally retain their verified 0.2.2-custom.4 baseline. Consult `CUSTOM_CHANGELOG.md` and commit `1b59ccd` for this subsequent implementation. In particular, the earlier retained Mongoose harasser/crew-patrol behavior is superseded by this follow-up.
+
 ## 1. Repository and review baseline
 
 | Item | Value |
@@ -473,4 +479,4 @@ Use `git show <commit>` for an exact patch and `git log --follow -- <path>` for 
 - [Upstream architecture and tool guide bundled with this source](CODE_GUIDE.md)
 - [Published commit history](https://github.com/IEatOreos/ProvingGroundsOreo/commits/main)
 
-This handoff is a local documentation deliverable prepared after the published review baseline. Its own commit and publication status should be checked separately from `9a4cf17`.
+This handoff was created after the review baseline in documentation commit `4c0fc95` and is included with the approved 0.2.2-custom.5 source publication. Use the post-baseline note above when reviewing Mongoose behavior.
