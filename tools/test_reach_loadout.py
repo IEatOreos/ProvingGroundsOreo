@@ -1,4 +1,4 @@
-"""Regression scenarios for Reach's shotgun and Focus Rifle loadout upgrades.
+"""Regression scenarios for Reach weapon pickups and selection.
 
 Run: python tools/test_reach_loadout.py
 """
@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from brain.bot import Bot, loadout_value, proficiency
+from brain.bot import Belief, Bot, loadout_value, proficiency
 from brain.core import PlayerState, Snapshot, Vec
 from brain.profiles import make_profile
 from brain.scaling import profile as scaling_profile
@@ -28,6 +28,27 @@ def player_with(primary='dmr', secondary='assault_rifle'):
 
 
 class ReachLoadoutTests(unittest.TestCase):
+    def test_readies_loaded_rockets_after_close_radar_contact_ages_out(self):
+        bot = bot_for(tier='average')
+        me = player_with(secondary='rockets')
+        me.weapon = 'rockets'
+        me.mag[1] = 2
+        enemy = PlayerState(1, 1, 'enemy', Vec(3.9, 0, 0))
+        bot.per.beliefs[enemy.id] = Belief(enemy.pos, Vec(), 10, False, 'radar')
+        self.assertEqual(bot.choose_weapon(10, me, 'hold', None, Snapshot(10, [me, enemy])), 0)
+        me.weapon = 'dmr'
+        self.assertEqual(bot.choose_weapon(14, me, 'hold', None, Snapshot(14, [me, enemy])), 1)
+
+    def test_readies_rockets_in_range_when_loaded(self):
+        for magazine, slot in [(2, 1), (0, -1)]:
+            with self.subTest(magazine=magazine):
+                bot = bot_for(tier='average')
+                me = player_with(secondary='rockets')
+                me.mag[1] = magazine
+                enemy = PlayerState(1, 1, 'enemy', Vec(14, 0, 0))
+                bot.per.beliefs[enemy.id] = Belief(enemy.pos, Vec(), 10, True, 'eyes')
+                self.assertEqual(bot.choose_weapon(10, me, 'fight', enemy.id, Snapshot(10, [me, enemy])), slot)
+
     def test_reach_prefers_dmr_shotgun_and_selects_ar_to_drop(self):
         for tier in ['novice', 'average', 'strong', 'top', 'scaling']:
             with self.subTest(tier=tier):
