@@ -16,7 +16,7 @@ The following inventory comes from the customization handoff. It is not a verifi
 - Fixed Legendary grenades remain enabled, excluding fight-opening and random visible-enemy pressure throws. Tactical grenade uses remain.
 - Shared post-grenade firing retries include semiautomatic trigger releases. The two-second retry window is not a mandatory delay. Actual weapon recovery timing remains unresolved.
 - Fixed Legendary detection uses a 120-degree horizontal cone. Reaction takes 50% longer between 50 and 60 degrees from center. Normal and Scaling retain their original FOV settings. Sight range remains 80 world units.
-- Radar was investigated but not customized.
+- Radar was investigated but not customized at this initial snapshot; see the current Demon override below.
 
 Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain/live.py, brain/terrain.py, tools/live_bots.py.
 
@@ -30,13 +30,13 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 
 - Demon retains the 0.01-second decision interval without timing variation. Legendary now uses the upstream 0.10-second base interval, profile variation and per-decision jitter. The shared live loop remains 30 Hz, so deadlines are processed on available updates; restart the bot process to apply.
 
-- Demon retains zero configured reaction delay. Legendary's base attributes now match the upstream profile, including 0.154-second base reaction, 0.08-second tracking, 0.045-second aim lag, 0.006 aim error, 0.30 overshoot, 0.8 lead and 0.7 flick factor, with normal profile variation. Protected Legendary head-directed and vehicle aim still uses the prior precision parameters; live head markers and final DMR/sniper corrections are preserved. Scaling and lower tiers retain their settings.
+- Demon retains zero configured reaction delay. Legendary's base attributes now match the upstream profile, including 0.154-second base reaction, 0.08-second tracking, 0.045-second aim lag, 0.006 aim error, zero overshoot, 0.8 lead and 0.7 flick factor, with normal profile variation. Protected Legendary head-directed and vehicle aim still uses the prior precision parameters; live head markers and final DMR/sniper corrections are preserved. Scaling and lower tiers retain their settings.
 
 - Current Reach loadout follow-up: Focus Rifle range ratings are (0.1, 1.0, 1.0, 1.0), with Focus ranked 3.6 and DMR 3.5. DMR+AR scores 0.91, DMR+Focus 0.92, and Focus+AR 0.98; an eligible ordinary Focus pickup replaces the DMR while retaining the AR (or shotgun). Power-fetch classification and unknown battery counts are unchanged. Other games retain their prior weapon ranks.
 
 - Local follow-up: Reach AR Short-band proficiency is 0.8 (shotgun remains 1.0), and Reach's ordinary upgrade cutoff is 0.05 so DMR+shotgun is accepted over DMR+AR (gain 0.06). Applies across Reach difficulties; other games retain their existing values. Gameplay confirmation requires restarting the bot process.
 
-- Local follow-up: Fixed Legendary and Demon power-weapon fetch calls cover 80 world units instead of 40, with a distance-based travel allowance for loose weapons. Lower difficulties and Scaling retain their existing range. Weapon classifications, urgency checks, and timed-spawn deadlines remain unchanged. Their existing 120-degree perception and tactical grenade policy are also retained; this split restores Legendary profile attributes without undoing those behavior customizations. Gameplay confirmation is pending a bot-process restart.
+- Local follow-up: Fixed Legendary and Demon power-weapon fetch calls cover 80 world units instead of 40, with a distance-based travel allowance for loose weapons. Lower difficulties and Scaling retain their existing range. Weapon classifications, urgency checks, and timed-spawn deadlines remain unchanged. Legendary retains 120-degree perception; Demon now has a 140-degree cone with no edge delay. Their tactical grenade policy remains. Gameplay confirmation is pending a bot-process restart.
 
 - Local follow-up: Reach now supplies live magazine and total-ammo counts for recognized magazine-fed weapons; the bot remembers magazine maxima during combat too. DMR and sniper counts were verified against controlled shots, reloads, and sniper depletion. See CUSTOM_CHANGELOG.md for validation and remaining gameplay checks. Battery counts remain unknown.
 - Local follow-up: A held sniper with any remaining total ammunition is exempt from low-ammo rearming. Empty-sniper behavior and deliberate upgrade decisions remain unchanged. Eight ammo/rearm regression tests passed; gameplay confirmation is pending a bot-process restart.
@@ -52,3 +52,12 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 No earlier Git history or verified pristine source baseline exists for the customized installation. The first commit captures the installed state on 2026-11-05; do not claim it proves every historical edit. Local backups described by the handoff remain separate from the repository and are not uploaded.
 
 Upstream migrations must also preserve the later sniper live-head change, which was backed up separately after the 0.2.1 migration.
+
+## Current resource calls and Demon awareness
+
+- Legendary flick overshoot is exactly zero across personalities; its other restored attributes and protected head/turret precision remain. Scaling keeps its own overshoot calculation.
+- Demon sees within a 140-degree horizontal cone (70 degrees each side), with zero configured recognition delay throughout. Sight range and line-of-sight restrictions remain; the 30 Hz loop still bounds processing.
+- Demon always notices eligible motion-tracker contacts, bypassing the ordinary awareness probability. Tracker range, motion/crouching, jamming and match tracker settings remain enforced; this creates a radar belief, not visual confirmation. Other difficulties retain their radar probabilities.
+- New power-weapon, power-vehicle and gunner calls use Demon, Legendary, Heroic, Normal, then Scaling priority, with distance breaking same-tier ties. Existing assignments stay in place. Easy retains existing eligibility rules. Objective/urgency, range, timing, rider and availability checks remain.
+- Power vehicles use the existing `not vehicles.taxi_ok(kind)` classification. Nearest vehicle/role choice is retained; the eligible driver for that power vehicle is then selected by difficulty, including eligible nearby objective bots within their original 15-unit limit. Ordinary transport/passenger/ferry choices remain unchanged.
+- Gunner inclusion, Scaling-after-Normal and deterministic eligible Demon radar are the stated defaults pending owner clarification. Changes need a bot-process restart and live testing; no automatic restart or GitHub push.

@@ -544,9 +544,10 @@ class Perception:
         part_los = getattr(terrain, "target_parts", None)
         vision_mode = "see" if getattr(los, "__name__", "") == "sees" else None
         fixed_high = profiles.fixed_high(s.p)
-        center_half = math.radians(50) if fixed_high else FOV_HALF
-        peripheral_half = math.radians(60) if fixed_high else PERIPHERAL_HALF
-        peripheral_multiplier = 1.5 if fixed_high else 1.6
+        demon = profiles.fixed_demon(s.p)
+        center_half = math.radians(70) if demon else math.radians(50) if fixed_high else FOV_HALF
+        peripheral_half = math.radians(70) if demon else math.radians(60) if fixed_high else PERIPHERAL_HALF
+        peripheral_multiplier = 1.0 if demon else 1.5 if fixed_high else 1.6
         new_sightings = []
         s.hurt_by(now, me, snap, los)
         for e in snap.players:
@@ -616,7 +617,8 @@ class Perception:
             # motion tracker (if the match settings show him enemies): moving, not crouched, in range; skill decides
             # whether it is noticed
             moving = e.vel.flat() > 0.6 and not e.crouching
-            if me.tracker and d < RADAR_RANGE and moving and not getattr(s, "jammed", False) and s.rng.random() < s.p.radar * 0.15:
+            if (me.tracker and d < RADAR_RANGE and moving and not getattr(s, "jammed", False)
+                    and (demon or s.rng.random() < s.p.radar * 0.15)):
                 s.beliefs[e.id] = Belief(e.pos, Vec(), now, False, "radar")
             # his gunfire within earshot: about where the shots came from, a belief look_point pre-aims toward. Not over
             # a hit a moment ago (that turns the bot on its shooter); Easy (aware 0) does not listen for it

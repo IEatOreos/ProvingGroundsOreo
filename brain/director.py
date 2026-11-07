@@ -647,7 +647,7 @@ class Director:
 
     def power_runs(s, now, snap):
         """A power weapon lying loose (the map's items of value 0.8 or more: the sniper, the rockets) gets one fetcher on
-        the team: the nearest eligible bot in range on its level holding none (40 u normally, 80 fixed Legendary).
+        the team: highest-priority eligible difficulty, then nearest, holding none (40 u normally, 80 Legendary/Demon).
         Not the carrier, not a man in a vehicle,
         not Easy (no plans), not a defender while the core is at stake (Bot.urgent). Bot.fetch = (where, name, until);
         dropped once it is gone from there or the time is up."""
@@ -693,7 +693,7 @@ class Director:
                 if distance < radius and abs(p.pos.z - q.z) < 6.0:
                     near.append((distance, b, fixed_high))
             if near:
-                distance, fetcher, fixed_high = min(near, key=lambda x: x[0])
+                distance, fetcher, fixed_high = min(near, key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
                 if fixed_high and spawn is None:
                     # Use the pickup ETA's nominal walking speed plus a travel margin.
                     # Farther calls must not expire after 25 s before the bot can arrive.
@@ -894,7 +894,8 @@ class Director:
             vp = Vec(*v["pos"])
             if any(b.order.role == "ride" and b.order.target == v["handle"] for b in alive):
                 continue
-            near = min(foot, key=lambda b: dist(players[b.id].pos, vp), default=None)
+            near = min((b for b in foot if dist(players[b.id].pos, vp) <= 25.0),
+                       key=lambda b: (profiles.resource_priority(b.p), dist(players[b.id].pos, vp)), default=None)
             if near is None or dist(players[near.id].pos, vp) > 25.0:
                 continue
             near.set_order(Order("ride", vp, target=v["handle"]))
@@ -961,7 +962,14 @@ class Director:
                             and players[b.id].vehicle == -1 and not players[b.id].has_flag
                             and dist(players[b.id].pos, vp) < call_r and wanted(b)),
                            key=lambda b: (b.id not in was, dist(players[b.id].pos, vp)))
-            for b in cands:
+            while cands:
+                # Keep earlier commitments; prioritize difficulty for new gun seats only.
+                if gun_free:
+                    b = min(cands, key=lambda b: (b.id not in was, profiles.resource_priority(b.p),
+                                                 dist(players[b.id].pos, vp)))
+                    cands.remove(b)
+                else:
+                    b = cands.pop(0)
                 if free <= 0:
                     break
                 if s.roles.get(b.id) == "defender" and not gun_free and b.id not in was:
@@ -1027,7 +1035,8 @@ class Director:
                  and s.rider_ok(x, players, True, [players[x.id].pos])
                  and (goal is None or way(me.pos, players[x.id].pos) + way(players[x.id].pos, goal) - way(me.pos, goal)
                       <= s.PICKUP_DETOUR)]
-        d, x = min(cands, key=lambda c: c[0], default=(None, None))
+        d, x = min((c for c in cands if c[0] <= s.PICKUP_R or air and goal is not None),
+                   key=lambda c: (profiles.resource_priority(c[1].p), c[0]), default=(None, None))
         if x is None or d > s.PICKUP_R and not (air and goal is not None):
             b.pickup_at = None
             return None
@@ -1234,12 +1243,18 @@ class Director:
         for role in ([first] if first else []) + [r for r in vehicles.ROLE_ORDER if r != first]:
             while role == "harasser" or role not in filled:
                 pairs = [(dist(players[bid].pos, Vec(*v["pos"])), b, v) for v in empty.values()
-                         if role in vehicles.roles_of(v["kind"]) for bid, b in free.items()
-                         if skip.get((bid, v["handle"]), 0.0) <= now]
+                         if role in vehicles.roles_of(v["kind"])
+                         for bid, b in (free if vehicles.taxi_ok(v["kind"]) else {**near, **free}).items()
+                         if skip.get((bid, v["handle"]), 0.0) <= now
+                         and dist(players[bid].pos, Vec(*v["pos"])) <= (s.CREW_REACH if bid in free else s.POWER_R)]
                 d, b, v = min(pairs, key=lambda x: x[0], default=(None, None, None))
                 if d is None or d > s.CREW_REACH:
                     break
-                del free[b.id]
+                if not vehicles.taxi_ok(v["kind"]):
+                    d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),
+                                  key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
+                free.pop(b.id, None)
+                near.pop(b.id, None)
                 b.set_order(Order("drive", Vec(*v["pos"]), target=v["handle"]))
                 if b.order.role != "drive":      # a rogue moment: it plays on its own this round
                     skip[(b.id, v["handle"])] = now + 10.0
@@ -1259,7 +1274,8 @@ class Director:
                 continue
             vp = Vec(*v["pos"])
             d, b = min(((dist(players[bid].pos, vp), b) for bid, b in near.items()
-                        if skip.get((bid, h), 0.0) <= now), key=lambda x: x[0], default=(None, None))
+                        if skip.get((bid, h), 0.0) <= now and dist(players[bid].pos, vp) <= s.POWER_R),
+                       key=lambda x: (profiles.resource_priority(x[1].p), x[0]), default=(None, None))
             if d is None or d > s.POWER_R:
                 continue
             del near[b.id]
@@ -1304,7 +1320,8 @@ class Director:
             holders = [b for b in foot if players[b.id].has_flag]
             others = [b for b in foot if not players[b.id].has_flag]
             if free > 0 and vehicles.needs_gunner(v, snap) and not any(b.order.role == "ride" for b in coming) and others:
-                b = others.pop(0)
+                b = min(others, key=lambda b: (profiles.resource_priority(b.p), dist(players[b.id].pos, vp)))
+                others.remove(b)
                 b.set_order(Order("ride", vp, target=h), sure=True)
                 s.roles[b.id], free = "ride", free - 1
                 s.event(now, "vehicle", f"{players[b.id].name}: on the gun (honked)")

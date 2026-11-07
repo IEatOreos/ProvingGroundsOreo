@@ -99,6 +99,13 @@ def fixed_demon(prof):
     return prof.tier == DEMON and prof.extra is None
 
 
+def resource_priority(prof):
+    """New resource calls: Demon, Legendary, Heroic, Normal, Scaling, Easy."""
+    if prof.extra is not None:
+        return 4
+    return {DEMON: 0, "top": 1, "strong": 2, "average": 3}.get(prof.tier, 5)
+
+
 def precision_profile(prof):
     """Keep Legendary's established head/turret aim without changing its base attributes."""
     return replace(prof, **LEGENDARY_AIM) if fixed_high(prof) and not fixed_demon(prof) else prof
@@ -158,6 +165,9 @@ def make_profile(tier, personality, rng=random):
     vals = {**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     turn = TURN[tier]
+
+    if tier == "top":
+        jit["overshoot"] = 0.0
 
     if tier == DEMON:
         jit.update({k: v for k, v in DEMON_AIM.items() if k != "turn"}, reaction=0.0, decide=0.01)

@@ -36,6 +36,23 @@ def scenario(participants, loose=True):
 
 
 class LegendaryPowerFetchTests(unittest.TestCase):
+    def test_difficulty_priority_and_fallback_override_distance(self):
+        tiers = ['demon', 'top', 'strong', 'average', 'scaling']
+        for start in range(len(tiers)):
+            group = [participant(tier, 30-i*4, pid=i) for i, tier in enumerate(tiers[start:])]
+            director, snap = scenario(list(reversed(group)))
+            director.power_runs(snap.time, snap)
+            self.assertIsNotNone(getattr(group[0][0], 'fetch', None))
+            self.assertEqual(sum(getattr(b, 'fetch', None) is not None for b, p in group), 1)
+
+    def test_ineligible_demon_does_not_block_legendary(self):
+        demon, dp = participant('demon', 81, pid=0)
+        top, tp = participant('top', 70, pid=1)
+        director, snap = scenario([(demon, dp), (top, tp)])
+        director.power_runs(snap.time, snap)
+        self.assertIsNone(getattr(demon, 'fetch', None))
+        self.assertIsNotNone(top.fetch)
+
     def test_fixed_legendary_receives_distant_call(self):
         for tier in ('top','demon'):
             bot, player = participant(tier, 60)

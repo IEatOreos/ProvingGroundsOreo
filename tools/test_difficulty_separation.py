@@ -19,12 +19,19 @@ from escort_bots import TIERS as ESCORT_TIERS
 
 
 class DifficultySeparationTests(unittest.TestCase):
-    def test_legendary_matches_stock_numeric_profiles(self):
+    def test_legendary_only_changes_stock_overshoot(self):
         values=[]
         for style in sorted(profiles.PERSONALITIES):
             for seed in range(5):
                 p=profiles.make_profile('top',style,random.Random(seed))
-                values.append({k:v for k,v in vars(p).items() if isinstance(v,(float,int))})
+                self.assertEqual(p.overshoot, 0.0)
+                numeric = {k:v for k,v in vars(p).items() if isinstance(v,(float,int))}
+                # Replay stock jitter to restore only overshoot for the stock fingerprint.
+                rng = random.Random(seed)
+                stock = {**profiles.TIERS['top'], **profiles.CRAFT['top'], **profiles.PERSONALITIES[style]}
+                original = {k:v*rng.uniform(.9,1.1) for k,v in stock.items()}
+                numeric['overshoot'] = original['overshoot']
+                values.append(numeric)
                 self.assertGreater(p.reaction,.1385)
                 self.assertLess(p.reaction,.1695)
                 self.assertGreater(p.decide,.0899)
