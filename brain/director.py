@@ -808,6 +808,53 @@ class Director:
         # Reserve weapon fetchers before any new vehicle/gunner calls.
         s.power_runs(now, snap)        # every mode, as before
         s.vehicle_orders(now, snap, alive)
+        s.infantry_patrol_orders(now, snap, alive)
+
+    def infantry_patrol_orders(s, now, snap, alive):
+        """Give one available infantry bot a short trip to a lightly visited map position."""
+        points = s.map.get("infantry_patrols", ())
+        if not points or snap.mode == "invasion":
+            return
+        visits = s.__dict__.setdefault("infantry_patrol_visits", {})
+        for point in points:
+            if any(p.alive and p.team == s.team and p.vehicle in (None, -1)
+                   and dist(p.pos, point) < 4.0 for p in snap.players):
+                visits[point] = now
+
+        roles = ("free", "mid", "hunter") if snap.mode == "slayer" else ("free", "mid")
+
+        def eligible(bot, point):
+            p = snap.player(bot.id)
+            order = bot.order
+            return (s.roles.get(bot.id) in roles and order.role in roles and bot.id not in snap.vips
+                    and p.vehicle in (None, -1) and not p.has_flag and getattr(bot, "fetch", None) is None
+                    and (snap.mode == "slayer" or order.point is None or dist(order.point, point) <= 25.0)
+                    and getattr(bot, "goal_ban", {}).get(bot._goal_key(("patrol", point)), 0) <= now)
+
+        current = getattr(s, "infantry_patroller", None)
+        if current is not None and current.infantry_patrol is not None:
+            point, until = current.infantry_patrol
+            if now < until and now - visits.get(point, -math.inf) >= 25.0:
+                if current in alive and eligible(current, point):
+                    return
+            if now >= until:
+                visits[point] = now
+            current.infantry_patrol = None
+        s.infantry_patroller = None
+
+        for point in sorted(points, key=lambda p: visits.get(p, -math.inf)):
+            if now - visits.get(point, -math.inf) < 25.0:
+                continue
+            nearby = [(dist(snap.player(b.id).pos, point), b) for b in alive if eligible(b, point)]
+            for distance, bot in sorted(nearby, key=lambda pair: pair[0]):
+                if distance > 35.0:
+                    break
+                pos = snap.player(bot.id).pos
+                terrain = s.terrain()
+                if terrain.inside(point.x, point.y) and terrain.reaches(pos, point):
+                    bot.infantry_patrol = (point, now + 25.0)
+                    s.infantry_patroller = bot
+                    return
 
     BACKUP_R, BACKUP_REACH, BACKUP_MAX = 12.0, 40.0, 3   # u: enemies this near a post we hold; helpers this far; at most
     BACKUP = True                                        # (False: the play before, for A/B)

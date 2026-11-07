@@ -1402,7 +1402,7 @@ class Bot:
             if s.goal[0] == "fight" and s.goal != was:
                 s.target_at = now              # a new target: held TARGET_HOLD s (pick_target)
         kind, arg = s.goal
-        if isinstance(arg, Vec) and kind in ("objective", "item", "hunt", "hold"):
+        if isinstance(arg, Vec) and kind in ("objective", "item", "hunt", "hold", "patrol"):
             s.headway(now, me, (kind, arg), snap)
         else:
             s.way_key = None        # fighting, driving: the clock starts again when we travel
@@ -2261,11 +2261,18 @@ class Bot:
                 # where Halo 4's Flood, with pickups off there, hunted; 1.0 conversions a zombie-minute to 1.5-2.5)
                 for k in [k for k in scores if k[0] in ("item", "vehicle", "retreat", "hold")]:
                     del scores[k]
+        patrol = getattr(s, "infantry_patrol", None)
+        if (patrol is not None and now < patrol[1] and snap.mode != "invasion" and not infected
+                and me.vehicle in (None, -1) and not me.has_flag and not seen and not hit_recent
+                and not any(kind == "retreat" for kind, _ in scores)
+                and dist(me.pos, patrol[0]) >= 4.0):
+            scores[("patrol", patrol[0])] = 1.25
         s.board_check(me, snap, scores)
         s.stay_on(scores, me, snap, seen)
         bans = getattr(s, "goal_ban", {})
         grab = getattr(s, "grab_point", None)
-        for k in [k for k in scores if k[0] in ("objective", "item", "hunt", "hold") and bans.get(s._goal_key(k), 0) > now]:
+        for k in [k for k in scores if k[0] in ("objective", "item", "hunt", "hold", "patrol")
+                  and bans.get(s._goal_key(k), 0) > now]:
             if k[0] == "objective" and grab is not None and dist(k[1], grab) < 1.0:
                 continue                    # an objective to pick up is never given up (headway; Spire, live)
             del scores[k]                   # gave up on it lately: it could not be reached
@@ -2330,7 +2337,7 @@ class Bot:
         # (Firefight teammates stay on foot with the person; a ride to his gun is its own order: live Beachhead Nov 6,
         # 596 rows off to a Mongoose for a hunt 35.5 u away, and driving, they went into walls, GitHub #12)
         ff_mate = snap.mode == "firefight" and s.order.role in ("escort", "defender")
-        if (far and trip > VEHICLE_TRIP and not me.has_flag and best[0] != "fight" and not urgent and not infected
+        if (far and trip > VEHICLE_TRIP and not me.has_flag and best[0] not in ("fight", "patrol") and not urgent and not infected
                 and not ff_mate and now >= getattr(s, "vehicle_retry_at", 0.0)):
             # any vehicle the table knows (brain/vehicles.py), by its value, nearness and the trip's length
             # (not on wheels to a goal far over it: live Spire 20261105-060020 phase 3, five attackers took turns in
