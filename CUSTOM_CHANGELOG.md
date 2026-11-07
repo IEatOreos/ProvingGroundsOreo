@@ -1,5 +1,12 @@
 # Custom release history
 
+## 0.2.2-custom.4 — source update, 2026-11-06
+
+- Publish the approved recent bot updates: independent Demon difficulty and restored Legendary attributes with protected head/turret precision (6a31238); Legendary zero overshoot, Demon 140-degree zero-edge-delay vision and deterministic eligible radar, and resource-call priorities (f022024, bfbb62d). Power calls rank Demon → Legendary → Heroic/Scaling → Normal; gunner calls tie Legendary/Heroic/Scaling, and reserve Demon's power jobs before new gunner assignments.
+- Include teammate-coordination workflow documentation (dde7dcc) and the collaborator's LiDAR vehicle-path recording/view support (a57893f), both approved for this combined push. Preserve all existing commit identities. The fetched GitHub main is an ancestor; no incoming merge is needed. Machine settings, learned-map data and fixtures remain excluded.
+- Validation: all 95 tests pass with local fixtures; the isolated committed-source snapshot passes 92 with 3 fixture-dependent skips. All 91 brain/tools Python sources and the LiDAR viewer JavaScript pass syntax checks; Git whitespace checks pass. Gameplay remains untested for these changes; restart the bot process/launcher to apply. No new Warthog missed-shot fix is claimed.
+- Owner explicitly approved pushing both the bot changes and the collaborator's LiDAR feature to main in IEatOreos/ProvingGroundsOreo. No binary, installer, tag, or GitHub Release is included; upstream VERSION remains unchanged.
+
 ## Unreleased — LiDAR mode records vehicle drives and shows them in the 3D view, 2026-11-06
 
 - The owner asked to record driving paths in LiDAR mode instead of painting them; items 1 and 2 of the plan (record in LiDAR mode; show drives in the LiDAR viewer/simulator). Item 3, a Paint-page eraser and vehicle-size tags for recorded drives, is deferred.
