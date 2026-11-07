@@ -26,6 +26,8 @@ Initial publication follows the same approval gate. No automation should push on
 
 ## Preserve collaborator work
 
+The owner reiterated on 2026-11-06 that this is a team workflow: check the collaborator's local work as well as GitHub before publishing. Inspect local HEAD and all outgoing commits, staged/unstaged changes and new files, then fetch and review remote changes. A pending teammate commit is not automatically approved for upload just because it is an ancestor of our change. Explain the combined candidate and confirm any additional feature outside the requested upload before pushing. Preserve in-progress files and commit identities. Immediately before publication, recheck local/remote state; publish only the reviewed commit so a concurrently advanced local branch cannot silently add unreviewed changes.
+
 The owner explicitly requires preserving the coding collaborator's commits and changes. Review both histories and overlapping file edits before integration. Use normal merges that retain existing commit identities; do not rebase published collaborator commits, force-push, reset away their work, or copy older whole files over newer versions. A preserved commit in history is not sufficient if conflict resolution silently removes its behavior: reconcile the actual code and run relevant checks. Ask the owner when conflicting intentions cannot be reconciled. Do not stage or alter unrelated work in the shared installation.
 
 ## Upstream updates
