@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Headlong Red side ramp, lifts, man cannon and the ledge power position, 2026-11-07
+
+- Owner report 3's ledge (-10.01, -9.37, 10.36), the east end of the Red side sniper floor over Mid, was reachable only from that floor's own spawns. In the 03:23 match the owner walked a ramp from the middle level (z 7.6) up to it; the level data's 0.1 u height steps read as 0.2 u rises per 0.25 u nav cell, over MAX_RISE 0.18, so the ramp had no link. New maps/reach_cex_headlong/moves_review.json (the existing reviewed-floor mechanism) approves that walk as floor at the owner's recorded foot heights every 0.1 u. Walking alone, the ledge is now reachable from 582 of 584 spawns. Ramp cells shifted up 0.1–0.2 to the walked heights, and no power position or patrol spot lost reach.
+- The owner's LiDAR session (variant reach_cex_headlong@v2e9a3603) recorded his rides on the two air lifts and the man cannon, which lands on the same sniper floor. His three bug reports from that session point at these. Normal Headlong matches load the base map, so the three rides were copied into the base map's local, gitignored maps/reach_cex_headlong/lidar.json. A backup of that file is in logs/. With the rides, the ledge is reachable from all 584 spawns, and each lift top and the cannon landing is reachable from below. Bots that jump at all (everyone but Easy) plan with people's rides. The lidar.json change is local data and is not committed.
+- The ledge is added as an owner power position (score 1.0, 6.5 u above its surroundings, duck cover) with `power_positions.py --add`.
+- Validation: reachability checks above; all 134 regression tests pass. Gameplay is untested; the bot process must be restarted.
+
 ### Headlong patrol areas and owner power positions from bug reports, 2026-11-07
 
 - The owner's six F9 reports from the Headlong 8v8 (logs/bug_reports/reach_cex_headlong_20261107-032305) mark spots where the owner stood. New maps/reach_cex_headlong/infantry_patrols.json lists the four patrol requests (reports 1, 4, 5 and 6: north spawn, southwest lower level, west spawn, man cannon), shared by both teams. Patrol orders, timers and the Invasion exclusion are the existing rules.
