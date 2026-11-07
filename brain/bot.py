@@ -9,11 +9,13 @@ from .profiles import HANDS
 from . import profiles
 from .terrain import MAX_DROP, MAX_RISE, ROUTE_JUMP, ROUTE_CROUCH, EYE, CHEST
 from . import vehicles
+from . import anticipate
 
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
 SIGHT_RANGE = 80.0
 RADAR_RANGE = 25.0               # CE motion tracker, world units
+RADAR_TRACK_GAP = 0.5            # s: a tracker dot unseen longer than this starts a new heading (Perception.radar_heading)
 # (lo, hi) world units (1 = 10 ft) the weapon wins at: past hi the bot closes in, under lo it backs off (and
 # switches if it can). Guide 01 bands: Short under 4, Medium 4-10, Long 10-20. Automatics and close-quarters
 # weapons have no lo: they want the man close (guide 03: "spray plus melee at Short band"); precision rifles
@@ -132,6 +134,20 @@ def crouched(p):
 
 TREMOR = 0.0025                       # rad: the hand's wobble per tick while tracking a man (Aim.step)
 COMMIT_S, COMMIT_WEAK_S = 6.0, 10.0   # a fight lasts until the target dies or is unseen this long (shield down: longer)
+# Demon's corner discipline (Bot.corner_plan) and read of where a man went (Bot.guess, brain/anticipate.py)
+GUESS_KEEP = 0.4                       # s a guess at one trace is kept before it is worked out again
+CORNER_HEALTHY = 0.5                   # shield share at the last sighting over which his break of sight is a bait
+CORNER_NEAR = 10.0                     # u: a healthy man ducking out this near is held, not chased round the corner
+CORNER_HOLD = (1.2, 2.8)               # s: the angle is held this long (random each time: no timing to learn)
+CORNER_STANDOFF = (5.0, 6.5)           # u: held from at least the first off where he would come out, backing to the second
+CORNER_SWING_W = 3.5                   # u: the swing comes onto the corner this far to the side of it
+CORNER_SWING_S = 2.0                   # s at most for the swing, then the chase
+
+
+def _flat_norm(v, me):
+    """v flattened and normalised; none (on the spot): back the way the player faces."""
+    f = Vec(v.x, v.y, 0.0)
+    return f.norm() if f.flat() > 1e-3 else Vec(-math.cos(me.yaw), -math.sin(me.yaw), 0.0)
 TARGET_HOLD = 1.0                      # s a new target in view is kept before another may take over (guide 09 4.5)
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
@@ -459,6 +475,21 @@ class Perception:
         s.last_seen = {}     # enemy id -> last time our eyes had him (radar and callouts do not count)
         s.clear_at = {}      # enemy id -> last time a clear line ran from our eye to him (Bot.line_clear: no shot without)
         s.mags = {}          # enemy id -> (gun, rounds in its magazine) at the last look: his gunfire (fired)
+        s.last_vitals = {}   # enemy id -> (shield, health, t) when our eyes last had him (Demon corner reads)
+        s.radar_dots = {}    # enemy id -> (pos, t, heading) of his last motion-tracker dot (Demon radar read)
+
+    def radar_heading(s, k, pos, now):
+        """Demon: the way a dot is moving, from its successive positions on the tracker (a good player reads
+        the dot's drift, not a game velocity). Smoothed; a dot gone over RADAR_TRACK_GAP s starts fresh."""
+        prev = s.radar_dots.get(k)
+        heading = Vec()
+        if prev is not None and 1e-3 < now - prev[1] <= RADAR_TRACK_GAP:
+            dt = now - prev[1]
+            inst = Vec((pos.x - prev[0].x) / dt, (pos.y - prev[0].y) / dt, 0.0)
+            old = prev[2]
+            heading = Vec(0.5 * old.x + 0.5 * inst.x, 0.5 * old.y + 0.5 * inst.y, 0.0) if old.flat() > 0 else inst
+        s.radar_dots[k] = (pos, now, heading)
+        return heading
 
     def fired(s, e):
         """Did enemy e fire since the last look? His magazine went down with the same gun in hand (live games read
@@ -590,6 +621,7 @@ class Perception:
                 if e.id in s.recognized:
                     s.beliefs[e.id] = Belief(e.pos, e.vel, now, True, "eyes")
                     s.last_seen[e.id] = now
+                    s.last_vitals[e.id] = (e.shield, e.health, now)
                 elif e.id not in s.pending:
                     # (the man shooting us: a person finds him by the damage arc in about his usual reaction time; 0.5
                     # of it before turned Legendary onto a shooter in 0.21 s to the player's 0.40, live Spire)
@@ -603,6 +635,7 @@ class Perception:
                     s.recognized.add(e.id)
                     s.beliefs[e.id] = Belief(e.pos, e.vel, now, True, "eyes")
                     s.last_seen[e.id] = now
+                    s.last_vitals[e.id] = (e.shield, e.health, now)
                     new_sightings.append(e)
                 continue
             # not visible: lose recognition after a short grace, keep the memory
@@ -618,9 +651,15 @@ class Perception:
             # motion tracker (if the match settings show him enemies): moving, not crouched, in range; skill decides
             # whether it is noticed
             moving = e.vel.flat() > 0.6 and not e.crouching
-            if (me.tracker and d < RADAR_RANGE and moving and not getattr(s, "jammed", False)
-                    and (demon or s.rng.random() < s.p.radar * 0.15)):
-                s.beliefs[e.id] = Belief(e.pos, Vec(), now, False, "radar")
+            tracked = me.tracker and d < RADAR_RANGE and not getattr(s, "jammed", False)
+            # Demon: unsuppressed fire shows on the tracker too, standing or crouched (Halo's red dot on firing)
+            dot = tracked and (moving or (demon and shot))
+            if dot and (demon or s.rng.random() < s.p.radar * 0.15):
+                # Demon reads which way the dot drifts (radar_heading); the other tiers see a dot, no heading
+                heading = s.radar_heading(e.id, e.pos, now) if demon else Vec()
+                s.beliefs[e.id] = Belief(e.pos, heading, now, False, "radar")
+                if demon:
+                    continue        # the dot is exact: no rougher "heard" guess over it
             # his gunfire within earshot: about where the shots came from, a belief look_point pre-aims toward. Not over
             # a hit a moment ago (that turns the bot on its shooter); Easy (aware 0) does not listen for it
             b = s.beliefs.get(e.id)
@@ -1160,6 +1199,77 @@ class Bot:
             rec[1:] = [hp, mine, now]
             if now - rec[0] > STALE_S and dist(me.pos, b.pos) > 6.0:
                 scores[key] *= 0.25
+
+    def guess(s, now, me, k, b):
+        """Demon: where enemy k most likely is now (anticipate.predict over what belief b says), kept GUESS_KEEP s
+        per trace. Every other tier: where it last knew him (b.pos), as before."""
+        if not profiles.fixed_demon(s.p) or b is None or s.map is None or not s.map.get("name"):
+            return b.pos if b is not None else None
+        cache = s.__dict__.setdefault("_guess", {})
+        c = cache.get(k)
+        if c is not None and c[0] == b.t and c[1] == b.pos and now < c[2]:
+            return c[3]
+        try:
+            T = s.T()
+        except Exception:
+            T = None
+        pt = anticipate.predict(T, me.pos, b, now, tracker=bool(getattr(me, "tracker", False)), radar_range=RADAR_RANGE)
+        cache[k] = (b.t, b.pos, now + GUESS_KEEP, pt)
+        return pt
+
+    def corner_plan(s, now, me, b, target, tid, d, unseen, snap):
+        """Demon on a man who broke sight close by. Healthy when last seen, he is baiting the chase round the corner:
+        hold the angle he comes back through (a random CORNER_HOLD s), then swing wide onto it; cracked, carrying the
+        objective, or running off: push. Returns ("push" | "hold" | "swing", point to move to)."""
+        last = s.per.last_seen.get(tid, -9.0)
+        st = getattr(s, "corner", None)
+        if st is None or st["tid"] != tid or st["lost"] != last:
+            vit = s.per.last_vitals.get(tid)
+            if vit is None:
+                healthy = True
+            elif snap.shieldless:
+                healthy = vit[1] > 0.5
+            else:
+                healthy = vit[0] > CORNER_HEALTHY
+            carrier = target is not None and getattr(target, "has_flag", False)
+            bait = (healthy and d < CORNER_NEAR and not carrier and me.weapon not in LUNGE
+                    and me.vehicle == -1 and (target is None or target.vehicle == -1))
+            st = s.corner = dict(tid=tid, lost=last, mode="hold" if bait else "push",
+                                 until=now + s.rng.uniform(*CORNER_HOLD), swing=None, swing_until=0.0)
+        guess = s.guess(now, me, tid, b)
+        # running off (the tracker shows him heading away, already farther than the corner): no bait, chase
+        if st["mode"] != "push" and b.source == "radar" and now - b.t < 0.3 and b.vel.flat() > 1.0:
+            away = (b.pos - me.pos)
+            if away.flat() > CORNER_NEAR and (b.vel.x * away.x + b.vel.y * away.y) > 0:
+                st["mode"] = "push"
+        if st["mode"] == "push":
+            return "push", guess
+        appear = s.man_appears(me, guess)
+        if appear is None:
+            st["mode"] = "push"
+            return "push", guess
+        if st["mode"] == "hold" and now >= st["until"]:
+            st["mode"], st["swing_until"] = "swing", now + CORNER_SWING_S
+        if st["mode"] == "hold":
+            # a standoff where the corner is in sight but he cannot step out onto us at arm's length
+            off = me.pos - appear
+            if off.flat() >= CORNER_STANDOFF[0]:
+                return "hold", me.pos
+            back = appear + _flat_norm(off, me) * CORNER_STANDOFF[1]
+            T = s.T()
+            if T.walkable(back) and T.los(back, appear):
+                return "hold", back
+            return "hold", me.pos
+        # swing: come onto the corner wide, a few units to the side of it, revealing it bit by bit (slicing the pie)
+        if st["swing"] is None:
+            T, line = s.T(), appear - me.pos
+            side = Vec(-line.y, line.x, 0.0).norm() * CORNER_SWING_W
+            opts = [p for p in (appear + side, appear - side) if T.walkable(p) and T.los(me.pos, p)]
+            st["swing"] = max(opts, key=lambda p: dist(p, guess)) if opts else guess
+        if now >= st["swing_until"] or (me.pos - st["swing"]).flat() < 1.2:
+            st["mode"] = "push"
+            return "push", guess
+        return "swing", st["swing"]
 
     def on_death(s, killer_id):
         s.last_killer = killer_id
@@ -2191,7 +2301,9 @@ class Bot:
                 want *= 0.4
             if snap.mode == "infection" and s.order.role == "defender":
                 want *= 0.2      # Infection: a survivor in its hold, an infected at its corner: let him come (issue #3)
-            scores[("hunt", b.pos)] = max(scores.get(("hunt", b.pos), 0.0), want)   # (never under the close-dot check's)
+            # (Demon: where he got to since, anticipate.predict; the others go to where he was)
+            hunt_at = s.guess(now, me, hk, b) if isinstance(hk, int) else b.pos
+            scores[("hunt", hunt_at)] = max(scores.get(("hunt", hunt_at), 0.0), want)   # (never under the close-dot check's)
             hit = [b for b in known if b.source == "hit" and now - b.t < 2.0]
             if hit:   # being shot by someone we have not seen: turn and find him (everyone does)
                 scores[("hunt", hit[-1].pos)] = max(scores.get(("hunt", hit[-1].pos), 0.0), 1.4 + 0.4 * s.p.aggression)
@@ -3861,7 +3973,16 @@ class Bot:
             # of sight: chase by the nav to where he went (a little along his last velocity); the straight run at the
             # wall he went behind lost him in 54% of live Lockdown fights (tools/fight_ends.py --map). A novice still
             # runs straight at where he was
-            s.move_to(me, b.pos + b.vel * min(1.0, unseen), act, nav)
+            if profiles.fixed_demon(s.p) and unseen > 0.5 and not hold:
+                # Demon: no chase into his bait (corner_plan), and the chase goes where he got to (anticipate)
+                how, point = s.corner_plan(now, me, b, target, tid, d, unseen, snap)
+                if how == "hold" and (point - me.pos).flat() < 0.5:
+                    s.steer(me, me.pos, act, False)      # in place: strafing below, aim on the corner
+                else:
+                    s.move_to(me, point, act, nav)
+                s.note({"hold": "corner: hold the angle", "swing": "corner: swing wide"}.get(how, "corner: push"))
+            else:
+                s.move_to(me, b.pos + b.vel * min(1.0, unseen), act, nav)
             if glassed > 0.5:
                 s.note("seen through glass: go round")
         elif rush and not hold:
@@ -6206,7 +6327,8 @@ class Bot:
             # behind cover: pre-aim where he would come into view on his way to us, at any distance. Seen, shot by, on
             # radar, heard or called out alike. Walking, the look stays within LOOK_CONE of the way it goes; until only
             # glances, and only at men within 6 u
-            spot = s.man_appears(me, b.pos)
+            # (Demon: where he would come out from where he got to, not from where he was: anticipate.predict)
+            spot = s.man_appears(me, s.guess(now, me, k, b) if isinstance(k, int) else b.pos)
             if spot is not None:
                 s.att = label
                 return spot

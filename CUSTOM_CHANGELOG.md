@@ -1,5 +1,14 @@
 # Custom release history
 
+## Unreleased
+
+### Demon radar reads, out-of-sight prediction and corner discipline, 2026-11-07
+
+- **Radar reads (Demon only).** Demon now works out which way each motion-tracker dot is moving by comparing its successive positions. A dot older than 0.5 seconds starts a new heading. Unsuppressed fire puts the shooter on Demon's tracker even when crouched or standing still, within the existing tracker range, the tracker setting and jamming. A crouch-walking enemy who isn't firing stays off the tracker. Other tiers keep heading-less dots and the existing radar and heard-gunfire rules.
+- **Out-of-sight prediction (Demon only).** The new `brain/anticipate.py` estimates where an unseen enemy has reached since his last trace. Candidates are: continuing along his last heading on the walkable path, nearby painted cover hidden from the bot, or staying put. A tracker dot that disappears more than 3 units inside tracker range is read as the enemy crouching or stopping, so the guess stays near the last dot. The prediction uses only the last trace, its heading and the map, never the live position. It feeds Demon's main hunt destination and its out-of-sight pre-aim (`man_appears`). Damage-direction hunts, other tiers and Demon's fight aim are unchanged, including the protected head corrections. Only h2_warlock and h2a_ca_ascension currently have painted cover; on other maps, prediction uses heading and staying put only.
+- **Corner discipline (Demon only).** When a fight target breaks line of sight within 10 units with more than half his shields when last seen, Demon no longer chases him round the corner. It holds a standoff at least 5 units from where he would reappear for a random 1.2–2.8 seconds. It then swings wide, offset 3.5 units to the side of the corner, for up to 2 seconds before resuming the chase. The existing flush-grenade roll still applies. Demon pushes immediately when the target was cracked, carries the flag or objective, is fleeing on the tracker, is out of range of the rule, or when Demon holds a sword or hammer or is in a vehicle. CTF defender holds and the sniper lane-hold keep their previous rules.
+- Validation: tools/test_demon_anticipate.py adds 14 tests (radar heading, crouched shooters, prediction cases, Demon-only gating, hold/swing/push choices, backing off, varied hold length). The full regression suite (125 tests) and the compile check (94 sources) pass. On real map data (Breakpoint, Warlock, Ascension), a prediction takes about 2 ms (median), at most 7 ms, and is cached for 0.4 seconds per trace. Gameplay is untested; the bot process must be restarted.
+
 ## 0.2.2-custom.6 — Reach vehicle aim and Boneyard patrols, 2026-11-07
 
 - Correct the Reach Warthog chaingun’s horizontal firing origin. For fixed Legendary and Demon, limit Scorpion turret turns to 90 degrees per second, require aim to settle before firing, and aim the main cannon at infantry chests.
