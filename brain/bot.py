@@ -156,6 +156,9 @@ LOS_COVER_KEEP = 0.5     # s a line-of-sight cover spot is kept for the same pla
 # Demon a few steps from the power weapon it was sent for (decide's fetch): grab it before a new fight
 FETCH_COMMIT_R, FETCH_COMMIT_DZ = 10.0, 2.0   # u flat and up / down from the gun
 FETCH_COMMIT_SCORE = 2.95                     # over a committed fight (2.6 + 0.3) and a mend (2.9), under 3.15+ turns
+# (custom) Bot.shoot_back: a man in view shooting a fixed Legendary / Demon is fought over its errands
+SHOT_BACK_OVER = ("item", "vehicle", "objective", "hold", "patrol")
+SHOT_BACK_R, SHOT_BACK_AIM, SHOT_BACK_MARGIN = 40.0, 0.25, 0.4   # u; rad off his view; over the errand (its 0.2 stick + rng)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
 DEMON_STAND_R, DEMON_STAND_COVER = 6.0, 2.5   # u: a man this near, no retreat to cover farther than the second (stand_ground)
@@ -2135,7 +2138,9 @@ class Bot:
         else:
             s.dry_since = None
         if cur >= 0 and d is not None and ready:
-            if mag[cur] == 0 and not recruit and d < 15.0:
+            # (custom: only to a gun that fires at him there, fight's OUT_OF_REACH hold: a Demon's DMR ran dry at 13 u,
+            # it went to the assault rifle, 11 u, and held fire a second while the owner killed it; it reloads instead)
+            if mag[cur] == 0 and not recruit and d < 15.0 and d <= reach(inv[ready[0]], s.game) * OUT_OF_REACH:
                 return pick(ready[0], "empty magazine mid-fight")       # faster than the reload
             if me.weapon in BLAST and d < BLAST[me.weapon] + 0.5:
                 return pick(ready[0], "inside its own blast")
@@ -2400,6 +2405,31 @@ class Bot:
             if b is None or dist(me.pos, b.pos) > DRY_FIGHT_R:
                 scores[k] *= 0.3
 
+    def shoot_back(s, me, snap, scores, seen, hit_recent, regroup):
+        """(Custom) fixed Legendary and Demon on foot, shot in the last 2 s by a man it sees (his view on it): the fight
+        with him over every errand (a gun, a seat, a post, a hold; SHOT_BACK_OVER), however close the gun it was sent
+        for. A retreat to cover, a regroup and a hunt keep their scores. Live Forge World Nov 7: a Demon 2 u from the
+        hammer it was sent for (2.95 + 0.2) walked on while the owner took its shield to 0.11 at 6 u (fight 1.76), and
+        one went for a Warthog to fetch a plasma pistol (2.4) under his fire at 10 u. Returns whether it lifted one."""
+        if not (hit_recent and seen and regroup is None and not me.has_flag and me.vehicle in (None, -1)
+                and profiles.fixed_high(s.p)):
+            return False
+        errands = [v for k, v in scores.items() if k[0] in SHOT_BACK_OVER]
+        if not errands:
+            return False
+        att = getattr(s.per, "attacker_id", None)
+        lifted = False
+        for key in [k for k in scores if k[0] == "fight" and k[1] in seen]:
+            e, b = snap.player(key[1]), s.per.beliefs.get(key[1])
+            if e is None or b is None or dist(me.pos, b.pos) > SHOT_BACK_R:
+                continue
+            if e.id == att or aims_at(e, me, SHOT_BACK_AIM):
+                scores[key] = max(scores[key], max(errands) + SHOT_BACK_MARGIN)
+                lifted = True
+        if lifted:
+            s.note("shot at: answering him")
+        return lifted
+
     def decide(s, now, me, snap):
         seen = s.per.visible_enemies()
         scores = {}
@@ -2409,7 +2439,10 @@ class Bot:
         post = s.kit.posture(now, me, post)   # its own overshield: aggressive while it lasts (EQ-OS-02)
         friends = sum(1 for p in snap.players if p.team == me.team and p.alive and p.id != me.id
                       and dist(p.pos, me.pos) < 12)
-        hit_recent = now - getattr(s, "hit_at", -9.0) < 2.0
+        # (custom: perception's hurt_at too, every tick: hit_at is only set inside fight, so a bot shot on its way to a
+        # gun or a seat read "not hit" and its under-fire exceptions never held; live Forge World Nov 7, two Demons
+        # walked to a hammer and a Warthog while the owner broke their shields)
+        hit_recent = now - max(getattr(s, "hit_at", -9.0), getattr(s.per, "hurt_at", -9.0)) < 2.0
         avoid = False
         if seen and not me.has_flag:
             t = s.pick_target(now, me, snap, seen)
@@ -2636,6 +2669,7 @@ class Bot:
             for k in scores:
                 if k[0] in ("fight", "hunt", "item", "hold"):
                     scores[k] *= 0.3
+        shot_back = s.shoot_back(me, snap, scores, seen, hit_recent, regroup)
         if not me.has_flag and scores:
             # a man in sight within CLOSE_FIGHT_R is fought whatever the post (live Spire Invasion: an attacker and a
             # defender walked 14 s side by side at 0.4 u to the same territory, each scoring its post 2.0 / 1.8 over
@@ -2707,6 +2741,7 @@ class Bot:
         # the director called it onto a gun or a seat (a honk): it goes unless the fight is close. Any fight used to
         # win: live, Boneyard, two bots called to a Warthog's gun traded shots 25 u away and never got there
         close_fight = best[0] == "fight" and best[1] in s.per.beliefs and dist(me.pos, s.per.beliefs[best[1]].pos) < 8.0
+        close_fight = close_fight or (shot_back and best[0] == "fight")     # (custom: the man shooting it, shoot_back)
         # (the core at stake: on foot, by the lift and the drops; on a loose objective: no seat, no ride, stay_on)
         urgent = s.urgent(me, snap) or getattr(s, "stay_at", None) is not None
         if s.order.role in ("ride", "board", "drive") and not close_fight and not urgent:

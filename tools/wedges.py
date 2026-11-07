@@ -2,7 +2,8 @@
 Warthogs at (-143.4, -352.7) and (-140.3, -353.5) with the throttle down, 70 half-seconds; the vehicle ground ran them
 into a gap a Warthog does not fit through). A wedge: a bot at the wheel, under 1 u/s for half a second with the throttle
 down; spots 1.5 u apart are merged; a spot counts once it held at least MIN_SAMPLES of them over at least two stops (two
-bots, or one bot 20 s apart). Written to maps/<map>/wedges.json {"wedges": [[x, y, z, samples]]}, merged with what is
+bots, or one bot 20 s apart) and under half of them had another player or vehicle within BODY_R (a fight scrum).
+Written to maps/<map>/wedges.json {"wedges": [[x, y, z, samples]]}, merged with what is
 there; brain/maps.py terrain hands them to Terrain._build_vnav, which leaves the vehicle ground WEDGE_R round each one
 (never the walking ground: a man fits through).
 
@@ -18,6 +19,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
 MIN_SAMPLES, MERGE, WEDGE_R = 6, 1.5, 2.5
+BODY_R, BODY_SHARE, ABOARD_R = 3.0, 0.5, 1.6
 
 
 def learn(paths, name):
@@ -29,12 +31,15 @@ def learn(paths, name):
     objs = json.load(open(os.path.join(ROOT, "maps", name, "objects.json"), encoding="utf-8"))
     pads = [v["pos"] for v in objs.get("vehicles", [])]
     people = driven(name)
-    spots, kinds = [], {}                          # [x, y, z, samples, {stop keys}]
+    spots, kinds = [], {}                          # [x, y, z, samples, {stop keys}, body-blocked samples]
     for path in paths:
-        last, stop = {}, {}
+        last, stop, world = {}, {}, ((), ())
         for line in open(path, encoding="utf-8"):
             if '"world"' in line:
-                kinds.update({v[0]: v[1] for v in json.loads(line).get("vehicles") or ()})
+                w = json.loads(line)
+                kinds.update({v[0]: v[1] for v in w.get("vehicles") or ()})
+                world = ([(r[0], r[3:6]) for r in w.get("world") or () if r[2]],
+                         [(v[0], v[2:5]) for v in w.get("vehicles") or ()])
                 continue
             if '"seat": "driver"' not in line:
                 continue
@@ -55,20 +60,35 @@ def learn(paths, name):
             if k not in stop or t - stop[k][1] > 20.0:
                 stop[k] = (f"{os.path.basename(path)}#{k}@{round(t)}", t)
             stop[k] = (stop[k][0], t)
+            body = blocked(k, d.get("veh"), p, world)
             s = next((s for s in spots if math.dist(s[:2], p[:2]) < MERGE and abs(s[2] - p[2]) < 1.5), None)
             if s is None:
-                spots.append([p[0], p[1], p[2], 1, {stop[k][0]}])
+                spots.append([p[0], p[1], p[2], 1, {stop[k][0]}, int(body)])
             else:
                 s[3] += 1
                 s[4].add(stop[k][0])
-    found = [[round(x, 2), round(y, 2), round(z, 2), n] for x, y, z, n, stops in spots if n >= MIN_SAMPLES
-             and len(stops) >= 2 and not near((x, y, z), pads, 3.0)]
+                s[5] += body
+    # (a spot where half the samples or more had someone else beside the driver is a fight scrum, not scenery: Boneyard
+    # 15 of 41 spots and Headlong 7 of 9, 2026-11-07, mostly in open middles a vehicle drives fine)
+    found = [[round(x, 2), round(y, 2), round(z, 2), n] for x, y, z, n, stops, nb in spots if n >= MIN_SAMPLES
+             and len(stops) >= 2 and nb < BODY_SHARE * n and not near((x, y, z), pads, 3.0)]
     # what the vehicle ground leaves: the floor round each spot (WEDGE_R, a half-unit lattice) no person drove. People
     # drove up to the Spire spot and turned west; the vehicle ground ran on south where nobody ever drove
     cells = sorted({(round(w[0] + dx * 0.5, 2), round(w[1] + dy * 0.5, 2), w[2]) for w in found
                     for dx in range(-5, 6) for dy in range(-5, 6) if math.hypot(dx * 0.5, dy * 0.5) <= WEDGE_R
                     and not near((w[0] + dx * 0.5, w[1] + dy * 0.5, w[2]), people, 0.75)})
     return found, [list(c) for c in cells]
+
+
+def blocked(k, veh, p, world):
+    """Another live player or another vehicle within BODY_R of the driver at the last world row: a stop against a body,
+    not against the map. Who rides the driver's own vehicle (its gunner, within ABOARD_R of its middle; the world row
+    holds no seat) is no block."""
+    players, vehicles = world
+    own = next((vp for h, vp in vehicles if h == veh), None)
+    return any(pid != k and math.dist(pp[:2], p[:2]) < BODY_R and abs(pp[2] - p[2]) < 2.5
+               and not (own is not None and math.dist(pp[:2], own[:2]) < ABOARD_R) for pid, pp in players) or \
+        any(h != veh and math.dist(vp[:2], p[:2]) < BODY_R and abs(vp[2] - p[2]) < 2.5 for h, vp in vehicles)
 
 
 def driven(name):
