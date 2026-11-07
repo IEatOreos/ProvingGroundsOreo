@@ -1,6 +1,7 @@
 """Demon is a distinct tier retaining the prior tuned profile; native menu keys stay compatible."""
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -23,7 +24,10 @@ class DemonProfileTests(unittest.TestCase):
         for style in sorted(PERSONALITIES):
             for seed in range(5):
                 demon=make_profile('demon',style,random.Random(seed))
-                numbers.append({k:v for k,v in vars(demon).items() if isinstance(v,(float,int))})
+                self.assertEqual(demon.turn, math.radians(480))
+                # Use the original turn cap when comparing the rest to the pre-split profile.
+                values = dict(vars(demon), turn=math.radians(1000))
+                numbers.append({k:v for k,v in values.items() if isinstance(v,(float,int))})
         digest=hashlib.sha256(json.dumps(numbers,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         # Golden numeric profiles from the pre-split brain, 7 styles x 5 seeds.
         self.assertEqual(digest,'721b76b80d487e920f091e3db8008e5c86de8cc23f1178b336d754723c9337da')

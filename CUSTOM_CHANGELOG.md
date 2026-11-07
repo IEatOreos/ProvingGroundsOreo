@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Demon aim turn cap, 2026-11-07
+
+- Lower Demon's general aim turn cap from 1,000 to 480 degrees per second in `brain/profiles.py` for all personalities, including Warthog gunner aim. Reach Scorpion drivers still use the dedicated 90-degree-per-second cap. Protected final DMR and sniper head-shot corrections still apply on the firing tick.
+- All 140 regression tests passed. The profile test checks the new cap and compares the other numeric settings with the prior profile. A focused check confirmed the general and Scorpion turn limits for Demon and Legendary across all personalities. Gameplay testing is pending the next bot-process launch.
+
 ### Demon fight commitment, 2026-11-07
 
 - From the owner's Settlement 3v3v3v3 (logs/trace_reach_30_settlement_20261107-041239, owner 35-15 against a three-Demon team): the owner won 58% of his fights (an enemy in his sights for 0.5 s or more) and broke off 27%. The Demons won 34–42% and broke off 40–48%, with the same 1.1–1.3 s time to kill. Of the Demons' break-offs, about a third switched to another enemy, about a third were the target leaving sight briefly or the aim moving to another man, and 13–23% went to cover with the target still in view.

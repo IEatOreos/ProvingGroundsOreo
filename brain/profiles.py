@@ -77,14 +77,14 @@ CRAFT = {
 # Explicit Demon settings: later edits to Legendary's rows must not change Demon.
 REACTION[DEMON] = 0.70
 SHARP[DEMON] = dict(lag=0.045, flick=0.7, aim_err=0.006, track=0.08)
-TURN[DEMON] = math.radians(1000)
+TURN[DEMON] = math.radians(480)
 PRESS[DEMON] = 1.0
 TIERS[DEMON] = dict(HANDS, lag=0.045, flick=0.7, aim_err=0.006, track=0.08,
                     reaction=0.154, memory=10, radar=1.0, teamwork=0.95)
 CRAFT[DEMON] = dict(jump=1.0, strafe=1.0, juke=1.0, routes=1.0, map_iq=1.0, tactics=1.0, aware=1.0)
 
 DEMON_AIM = dict(aim_err=0.0, lag=0.001, track=0.001, overshoot=0.0,
-                 lead=0.0, flick=0.05, turn=math.radians(1000))
+                 lead=0.0, flick=0.05)
 # An independent protected exception: future Demon tuning must not alter Legendary's retained aim.
 LEGENDARY_AIM = dict(aim_err=0.0, lag=0.001, track=0.001, overshoot=0.0,
                      lead=0.0, flick=0.05, turn=math.radians(1000))
@@ -170,19 +170,16 @@ def make_profile(tier, personality, rng=random):
     """Build stock tier attributes; Demon retains our former fixed Legendary overrides."""
     vals = {**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
-    turn = TURN[tier]
-
     if tier == "top":
         jit["overshoot"] = 0.0
 
     if tier == DEMON:
-        jit.update({k: v for k, v in DEMON_AIM.items() if k != "turn"}, reaction=0.0, decide=0.01)
-        turn = DEMON_AIM["turn"]
+        jit.update(DEMON_AIM, reaction=0.0, decide=0.01)
 
     return Profile(
         tier=tier,
         personality=personality,
-        turn=turn,
+        turn=TURN[tier],
         label=DEMON if tier == DEMON else None,
         **jit,
     )
