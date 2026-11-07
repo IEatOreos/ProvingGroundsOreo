@@ -22,6 +22,8 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
 
 ## Open investigations and proposals
 
+- Halo 4 now supplies a paired animated head marker and cached unit view point for the captured 120-node Spartan rig. Head-directed tracking, final DMR/sniper corrections, sniper hit/miss rolls and head visibility use the matched endpoints; invalid or unsupported layouts retain the legacy pair. Reach and H2A readers are unchanged. All 2,780 saved poses passed offline replay and 50 regression tests pass; post-fix gameplay is still unconfirmed. See docs/HALO4_HEAD_AIM_2026-11-06.md.
+
 - Fixed Easy/Normal/Heroic sniper-rifle shots against on-foot targets now use precise head aim with intended hit chances of 10%/25%/50%. Random aim error and loose early/follow-through fire are bypassed for this path; misses fire beside/above the target. Known magazine consumption acknowledges shots so rejected attempts retain their roll. Undecoded magazines use a cadence-bounded fallback. Legendary, Scaling, other weapons, and vehicle combat retain their prior behavior. Deliberate misses do not teach false blocked sightlines. Gameplay requires a bot-process restart and live confirmation; intended percentages are not guaranteed match hit rates.
 
 - Fixed Legendary decision interval is now 0.01 seconds with no decision-interval random variation. Other difficulties and Scaling retain their existing timing. The shared live loop remains 30 Hz, so decisions are processed on available loop updates; restart the bot process to apply.

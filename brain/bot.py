@@ -428,6 +428,25 @@ def percentage_sniper(prof, me):
             and me.weapon == "sniper" and me.vehicle == -1)
 
 
+def live_head_ray(me, target):
+    """A matched Halo 4 view/head pair; never combine one live endpoint with a generic other end."""
+    if (target is not None and me.vehicle == -1 and target.vehicle == -1
+            and getattr(me, "view_pos", None) is not None
+            and getattr(target, "view_pos", None) is not None and target.head_pos is not None):
+        return me.view_pos, target.head_pos
+    return None
+
+
+def head_solution(me, target):
+    ray = live_head_ray(me, target)
+    if ray is not None:
+        return ray
+    # Reach's existing animated-head correction keeps its original origin. An
+    # unsupported H4 shooter retains the legacy pair instead of mixing coordinates.
+    head = target.head_pos if getattr(target, "view_pos", None) is None else None
+    return eye(me), head or target.pos + Vec(0, 0, aim_height(True, crouched(target)))
+
+
 class Perception:
     def __init__(s, prof, rng):
         s.p, s.rng = prof, rng
@@ -552,6 +571,9 @@ class Perception:
                 stance = crouched(e)
                 parts = part_los(me.pos, e.pos, eye(me).z - me.pos.z,
                                  aim_height(False, stance), aim_height(True, stance), mode=vision_mode)
+                ray = live_head_ray(me, e)
+                if ray is not None and getattr(terrain, "point_los", None) is not None:
+                    parts = (parts[0], terrain.point_los(*ray, mode=vision_mode))
                 s.target_parts[e.id] = parts
                 line = any(parts)
             else:
@@ -636,13 +658,14 @@ class Aim:
         s.target = None
         s.focus = 0.0
 
-    def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False, precise=False):
+    def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False, precise=False,
+             target_point=None):
         # gun: what the shot comes out of when it is not the gun in hand (a vehicle's turret: vehicles.GUNNER_GUN);
         # origin: where that shot leaves (vehicles.gun_height), else the eye; crouched: the target is (his head and
         # chest lower: core.CROUCH_HEAD, CROUCH_CHEST)
         if precise and target_id is not None:
             # The percentage roll, rather than human aim error, controls these shots.
-            point = tpos + Vec(0, 0, aim_height(True, crouched))
+            point = target_point if target_point is not None else tpos + Vec(0, 0, aim_height(True, crouched))
             s.target, s.goal, s.flick = target_id, angles_to(origin or eye(me), point), None
             return s.goal
         if target_id != s.target:
@@ -668,6 +691,8 @@ class Aim:
         h = (0.05 if gun in SPLASH else (CROUCH_HEAD if aim_head else CROUCH_CHEST) if crouched else
              0.62 if aim_head else 0.35)
         aim_pt = tpos + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", s.p.lead)) + Vec(0, 0, h)
+        if target_point is not None:
+            aim_pt = target_point + getattr(s, "v_est", tvel) * ((lead_t + 0.05) * getattr(s, "lead_k", s.p.lead))
         # from where our eye is when the shot leaves: a person's hand follows his own strafe without thinking.
         # Uncounted, bots moving fast sideways hit 25% to 31% standing, and Legendary, always strafing, hit
         # 40% in the sim to Easy's 52%
@@ -1168,10 +1193,8 @@ class Bot:
                     and shot_part is not None and shot_part[1]):
                 target = snap.player(shot_part[0])
                 if target is not None and target.alive:
-                    head = target.head_pos
-                    if head is None:
-                        head = target.pos + Vec(0, 0, aim_height(True, crouched(target)))
-                    yaw, pitch = angles_to(eye(me), head)
+                    origin, head = head_solution(me, target)
+                    yaw, pitch = angles_to(origin, head)
                     # Keep the intended movement direction while snapping the shot.
                     turn = wrap(act.yaw - yaw)
                     c, sn = math.cos(turn), math.sin(turn)
@@ -1270,14 +1293,14 @@ class Bot:
                 mag=mag, hit=s.rng.random() < SNIPER_HIT_CHANCE[s.p.tier],
                 side=s.rng.choice((-1.0, 1.0)), margin=s.rng.uniform(0.9, 1.3),
                 next_roll=max(getattr(s, "next_fire", now), now + FIRE_GAP["sniper"]))
-        head = target.head_pos or target.pos + Vec(0, 0, aim_height(True, crouched(target)))
+        origin, head = head_solution(me, target)
         point = head
         if not state["hit"]:
-            yaw, _ = angles_to(eye(me), head)
+            yaw, _ = angles_to(origin, head)
             side = state["side"] * state["margin"]
             point = head + Vec(-math.sin(yaw) * side, math.cos(yaw) * side, 0.4)
             s.sniper_missed_last = True
-        yaw, pitch = angles_to(eye(me), point)
+        yaw, pitch = angles_to(origin, point)
         turn = wrap(act.yaw - yaw)
         c, sn = math.cos(turn), math.sin(turn)
         f, st = act.forward, act.strafe
@@ -3706,8 +3729,10 @@ class Bot:
             head = s.aim_head(now, me, target, tid)
         aim_at = (s.weak_point(me, tid, b, snap, me.weapon)
                   if target is not None and target.vehicle != -1 and me.weapon in VEHICLE_KILLERS else b.pos)
+        ray = live_head_ray(me, target) if head else None
         act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
-                                     precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1)
+                                     precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1,
+                                     origin=ray[0] if ray else None, target_point=ray[1] if ray else None)
         s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
         lo, hi = WEAPON_RANGE.get(me.weapon, (5.0, 25.0))
         to = (b.pos - me.pos).norm()
@@ -4876,19 +4901,21 @@ class Bot:
         e = snap.player(tid) if isinstance(tid, int) else None
         if e is None:
             return True
+        selected = getattr(s, "shot_part", None)
+        if head is None and selected is not None and selected[0] == tid:
+            head = selected[1]
+        ray = live_head_ray(me, e) if head else None
         # sight passes windows and fences, a round only fences and glass that breaks (Terrain.sees / shot_los,
         # maps/<map>/wall_kinds.json): a man seen behind bullet-proof glass gets no shot (s.glassed: since when). Only a
         # window between: where the level data has a solid wall too, Perception's line stands (the man shooting us, a
         # test's world), as before the wall kinds
         glassed = s.__dict__.setdefault("glassed", {})
         T = s.T() if s.map is not None else None
-        if getattr(T, "see_clear", None) is not None and T.sees(me.pos, e.pos) and not T.shot_los(me.pos, e.pos):
+        if (ray is None and getattr(T, "see_clear", None) is not None
+                and T.sees(me.pos, e.pos) and not T.shot_los(me.pos, e.pos)):
             glassed.setdefault(tid, now)
             return False
         glassed.pop(tid, None)
-        selected = getattr(s, "shot_part", None)
-        if head is None and selected is not None and selected[0] == tid:
-            head = selected[1]
         if head is None:
             a = me.pos + Vec(0, 0, EYE)
             b = e.pos + Vec(0, 0, CROUCH_CHEST if crouched(e) else CHEST)
@@ -4896,12 +4923,15 @@ class Bot:
             parts = getattr(s.per, "target_parts", {}).get(tid)
             if parts is None or not parts[int(head)]:
                 return False
-            if getattr(T, "target_parts", None) is not None:
+            if ray is not None and getattr(T, "point_los", None) is not None:
+                if not T.point_los(*ray, mode="shot"):
+                    return False
+            elif getattr(T, "target_parts", None) is not None:
                 shot_parts = T.target_parts(me.pos, e.pos, eye(me).z - me.pos.z,
                                             aim_height(False, crouched(e)), aim_height(True, crouched(e)), mode="shot")
                 if not shot_parts[int(head)]:
                     return False
-            a, b = eye(me), e.pos + Vec(0, 0, aim_height(head, crouched(e)))
+            a, b = ray if ray is not None else (eye(me), e.pos + Vec(0, 0, aim_height(head, crouched(e))))
         ab = b - a
         L2 = ab.x * ab.x + ab.y * ab.y + ab.z * ab.z
         if L2 < 4.0:

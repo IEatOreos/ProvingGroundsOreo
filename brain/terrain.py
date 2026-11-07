@@ -907,6 +907,12 @@ class Terrain:
             return False                             # learned blocks never hide a man in front of you
         return s._ray(a, b, CHEST, mode) or s._ray(a, b, EYE, mode)
 
+    def point_los(s, origin, point, mode=None):
+        """A ray between live world-space endpoints, using existing material/barrier rules."""
+        if not all(map(math.isfinite, (origin.x, origin.y, origin.z, point.x, point.y, point.z))):
+            return False
+        return s._ray(origin, point, 0.0, mode, source_height=0.0)
+
     def target_parts(s, a, b, source_height, chest_height, head_height, mode=None):
         """Chest/head rays at aiming heights, using the current sight or bullet material rules."""
         if not math.isfinite(a.x + a.y + a.z + b.x + b.y + b.z):

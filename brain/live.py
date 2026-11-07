@@ -1826,6 +1826,50 @@ class LiveH4F(LiveReach):
     DEAD_AT, HEALTH_BLOCK = 0x16C, 0x1D0
     AMMO_AT = None              # (rounds not decoded here: Reach's +0x2C6 / +0x2CA are not these games')
 
+    def h4_spartan_pose(s, address, unit, position):
+        """Halo 4's captured 120-node Spartan rig: (animated target_head, cached view point).
+
+        Nov 6 standing/strafe/crouch captures: block descriptor +0x1BC, head node 54;
+        exported target_head local marker (-6.9422384e-8, .02300628, -.006868857).
+        +0xD50 follows the model base +0x64 at .60 standing / .42 crouched, unlike
+        the CE-style position +.62 assumption. Return both or neither; never apply
+        this rig/field to Reach, H2A, a vehicle or an unsupported model layout.
+        """
+        unknown = (None, None)
+        if s.g.dll.lower() != "halo4.dll" or unit is None or len(unit) < 0x1C0:
+            return unknown
+        size, offset = struct.unpack_from("<HH", unit, 0x1BC)
+        if size != 120 * 52 or offset % 4 or not 0x700 <= offset <= 0x8000:
+            return unknown
+        raw = s.g.read(address + offset + 54 * 52, 52)
+        view_raw = s.g.read(address + 0xD50, 12)
+        if raw is None or len(raw) != 52 or view_raw is None or len(view_raw) != 12:
+            return unknown
+        scale, *m = struct.unpack("<13f", raw)
+        view = struct.unpack("<3f", view_raw)
+        base = struct.unpack_from("<3f", unit, 0x64)
+        if not all(map(math.isfinite, (scale, *m, *view, *base, *position))) or not .95 <= scale <= 1.05:
+            return unknown
+        axes = [m[k:k+3] for k in (0, 3, 6)]
+        if any(abs(sum(x*y for x, y in zip(a, b)) - float(i == j)) > .08
+               for i, a in enumerate(axes) for j, b in enumerate(axes)):
+            return unknown
+        cross = (axes[0][1]*axes[1][2]-axes[0][2]*axes[1][1],
+                 axes[0][2]*axes[1][0]-axes[0][0]*axes[1][2],
+                 axes[0][0]*axes[1][1]-axes[0][1]*axes[1][0])
+        if sum(x*y for x, y in zip(cross, axes[2])) < .9:
+            return unknown
+        marker = (-6.9422384e-8, .02300628, -.006868857)
+        head = tuple(m[9+i] + scale * sum(marker[j]*m[j*3+i] for j in range(3)) for i in range(3))
+        if (math.hypot(head[0]-position[0], head[1]-position[1]) > .8
+                or not -.2 < head[2]-position[2] < 1.05
+                or math.hypot(view[0]-base[0], view[1]-base[1]) > .2
+                or not .3 < view[2]-base[2] < .8
+                or sum((view[k]-position[k])**2 for k in range(3)) > 1.0
+                or sum((view[k]-head[k])**2 for k in range(3)) > .25):
+            return unknown
+        return head, view
+
     # objects for LiveH3.flags / balls / objective_items (Adrift): TLS +0x18, entry +4 type (2 weapon), object +8 tag,
     # +0x24 parent (a held gun's: the unit; a map gun's: the weapon pad it rests on), +0x40 position, absolute
     # attached or not; unit +0x640 the 4 weapon handles
@@ -2039,6 +2083,8 @@ class LiveH4F(LiveReach):
                 d["vehicle"] = parent if parent != NONE and s.object(parent) else -1
                 sh, hp = s._vitals(unit, *struct.unpack_from("<2f", u, 0x158))
                 d.update(pos=struct.unpack_from("<3f", u, 0x40), aim=struct.unpack_from("<3f", u, 0x4E0), shield=sh, health=hp)
+                if d["vehicle"] == -1:
+                    d["head_pos"], d["view_pos"] = s.h4_spartan_pose(o, u, d["pos"])
                 d["equipment"], d["ability_on"] = s.ability(struct.unpack_from("<I", u, s.ABILITY_AT)[0])
             out.append(d)
         s._held = held
