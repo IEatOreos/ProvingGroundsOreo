@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Infantry patrol trios, 2026-11-07
+
+- In `brain/director.py`, roll once per new infantry patrol. Half of assignments send one Spartan and half try to send up to three to the same waypoint. If fewer than three qualify, send the eligible Spartans. Applies to maps with infantry patrols, including Boneyard and Headlong, outside Invasion.
+- All 134 regression tests passed. A focused director check covered both outcomes, the three-bot cap, smaller groups when eligibility is limited, and independent arrivals. Gameplay testing is pending a bot-process restart.
+
 ### Headlong Red side ramp, lifts, man cannon and the ledge power position, 2026-11-07
 
 - Owner report 3's ledge (-10.01, -9.37, 10.36), the east end of the Red side sniper floor over Mid, was reachable only from that floor's own spawns. In the 03:23 match the owner walked a ramp from the middle level (z 7.6) up to it; the level data's 0.1 u height steps read as 0.2 u rises per 0.25 u nav cell, over MAX_RISE 0.18, so the ramp had no link. New maps/reach_cex_headlong/moves_review.json (the existing reviewed-floor mechanism) approves that walk as floor at the owner's recorded foot heights every 0.1 u. Walking alone, the ledge is now reachable from 582 of 584 spawns. Ramp cells shifted up 0.1–0.2 to the walked heights, and no power position or patrol spot lost reach.

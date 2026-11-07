@@ -811,7 +811,7 @@ class Director:
         s.infantry_patrol_orders(now, snap, alive)
 
     def infantry_patrol_orders(s, now, snap, alive):
-        """Send one or two available infantry bots to a lightly visited map position."""
+        """Send up to three available infantry bots to a lightly visited map position."""
         points = [point for point, team in s.map.get("infantry_patrols", ()) if team is None or team == s.team]
         if not points or snap.mode == "invasion":
             return
@@ -857,8 +857,8 @@ class Director:
                 if terrain.inside(point.x, point.y) and terrain.reaches(pos, point):
                     bot.infantry_patrol = (point, now + 40.0)
                     patrollers.append(bot)
-                    # Roll once on the first reachable assignment, then look for a partner.
-                    if len(patrollers) == 2 or s.rng.random() >= 0.5:
+                    # Roll once after assigning the first bot to decide whether to fill a trio.
+                    if len(patrollers) == 3 or (len(patrollers) == 1 and s.rng.random() >= 0.5):
                         break
             if patrollers:
                 return
