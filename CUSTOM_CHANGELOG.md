@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Demon turns on radar flankers and does not turn its back on a man on it, 2026-11-07
+
+- Owner's clips and bug report from Powerhouse (logs/trace_reach_30_settlement_20261107-135726 and -140335; F9 at 227.5 s, "Bot decided to never shoot at me"). At the report, Slayer7 was killing HeadshotTV in front of it (6 DMR rounds, on target 103 of 140 ticks) while the owner stood 11–12 u away, 88–108° off its aim, outside its 180° vision, on its tracker and not shooting. Across both games the owner killed Demons 21 times. In 11 of them the Demon knew him by a tracker dot under 1 s old through its last 3 s, and 6 of those never turned on him (an item, a retreat, another man). Several died retreating with him 5–9 u behind (Slayer7 at 49 and 152 s, Havoc94 at 40 s).
+- Demon only: the close-dot check in `decide` (turn on a fresh tracker dot or an unseen hit, as a hunt with the existing `turn_ok` and `finishing` guards) reaches out to 12 u, against 3.5 u before, while Demon's shield is at least half (always without shields). Cracked, it stays at arm's length.
+- New `Bot.stand_ground` (Demon only): with an enemy within 6 u, in sight or on the tracker in the last 0.6 s, retreats to cover farther than 2.5 u are dropped. The close-fight rule fights a man in sight; one only on the tracker gets a turn (a hunt at his dot, 3.2). Not with the objective, not in a vehicle. The stuck-in-a-room clip has no bug report, so its spot is not identified yet.
+- Validation: 5 new tests (a decision on the real Headlong map turns on a 9 u dot; Legendary and a cracked Demon do not; far cover is dropped and near cover kept with a man at 4 u; a tracker-only chaser is faced; a man 8 u off, or Legendary, keeps the retreat). All 165 regression tests pass. Gameplay is untested; takes effect on the next match.
+
 ### Reach bots ready loaded rockets after a close fight, 2026-11-07
 
 - In the Powerhouse match, OutlawMarine switched from rockets to the DMR after a radar contact at about 3.9 units and carried both loaded rockets for the rest of that life. In `brain/bot.py`, Reach bots from Normal upward can switch to a loaded launcher as soon as it scores above the current gun between fights or against a target outside the close splash penalty and within rocket range. The swap cooldown and close splash and friendly-fire checks still apply.

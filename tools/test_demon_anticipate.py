@@ -388,5 +388,68 @@ class DemonBladeTests(unittest.TestCase):
         self.assertEqual(self.pick("top", "gravity_hammer", 6.0), "gravity_hammer")
 
 
+class RadarAndStandTests(unittest.TestCase):
+    """Demon turns on a flanker on its tracker, and does not turn its back on a man right on it."""
+
+    @classmethod
+    def setUpClass(cls):
+        from brain.maps import load_map
+        cls.map = load_map("reach_cex_headlong")
+
+    def demon(self, tier="demon", shield=1.0):
+        b = Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), self.map, random.Random(5))
+        me = PlayerState(0, 0, "bot", Vec(-27.3, 14.6, 7.6), weapon="dmr", weapons=["dmr", "assault_rifle"],
+                         ammo=[45, 160], mag=[15, 32])
+        me.shield = shield
+        return b, me
+
+    def test_flanker_on_the_tracker_is_turned_on(self):
+        b, me = self.demon()
+        foe = PlayerState(1, 1, "foe", Vec(me.pos.x + 9.0, me.pos.y, 7.6), weapon="dmr", weapons=["dmr"], ammo=[45], mag=[15])
+        snap = Snapshot(100.0, [me, foe], mode="slayer")
+        b.per.beliefs[1] = Belief(foe.pos, Vec(), 100.0, False, "radar")
+        self.assertEqual(b.decide(100.0, me, snap)[0], "hunt")
+
+    def test_legendary_and_a_cracked_demon_keep_arms_length(self):
+        for tier, shield in (("top", 1.0), ("demon", 0.2)):
+            with self.subTest(tier=tier, shield=shield):
+                b, me = self.demon(tier, shield)
+                foe = PlayerState(1, 1, "foe", Vec(me.pos.x + 9.0, me.pos.y, 7.6), weapon="dmr", weapons=["dmr"],
+                                  ammo=[45], mag=[15])
+                snap = Snapshot(100.0, [me, foe], mode="slayer")
+                b.per.beliefs[1] = Belief(foe.pos, Vec(), 100.0, False, "radar")
+                b.decide(100.0, me, snap)
+                self.assertNotIn(2.7 + 0.5 * b.p.aware, [v for k, v in b.last_scores.items() if k[0] == "hunt"])
+
+    def test_no_retreat_far_from_a_man_on_it(self):
+        b, me = self.demon(shield=0.2)
+        b.per.beliefs[1] = Belief(Vec(me.pos.x + 4.0, me.pos.y, 7.6), Vec(), 100.0, True, "eyes")
+        far, near = Vec(me.pos.x - 6.0, me.pos.y, 7.6), Vec(me.pos.x - 2.0, me.pos.y, 7.6)
+        scores = {("retreat", far): 2.9, ("retreat", near): 2.5, ("fight", 1): 1.9}
+        b.notes = []
+        b.stand_ground(100.0, me, Snapshot(100.0, [me], mode="slayer"), scores)
+        self.assertNotIn(("retreat", far), scores)
+        self.assertIn(("retreat", near), scores)          # cover right there still counts
+
+    def test_radar_only_chaser_is_faced(self):
+        b, me = self.demon(shield=0.2)
+        dot = Vec(me.pos.x + 4.0, me.pos.y, 7.6)
+        b.per.beliefs[1] = Belief(dot, Vec(), 100.0, False, "radar")
+        scores = {("retreat", Vec(me.pos.x - 6.0, me.pos.y, 7.6)): 2.9}
+        b.notes = []
+        b.stand_ground(100.0, me, Snapshot(100.0, [me], mode="slayer"), scores)
+        self.assertEqual(scores, {("hunt", dot): 3.2})
+
+    def test_far_man_and_other_tiers_keep_the_retreat(self):
+        for tier, d in (("demon", 8.0), ("top", 4.0)):
+            b, me = self.demon(tier, 0.2)
+            b.per.beliefs[1] = Belief(Vec(me.pos.x + d, me.pos.y, 7.6), Vec(), 100.0, True, "eyes")
+            key = ("retreat", Vec(me.pos.x - 6.0, me.pos.y, 7.6))
+            scores = {key: 2.9}
+            b.notes = []
+            b.stand_ground(100.0, me, Snapshot(100.0, [me], mode="slayer"), scores)
+            self.assertIn(key, scores)
+
+
 if __name__ == "__main__":
     unittest.main()

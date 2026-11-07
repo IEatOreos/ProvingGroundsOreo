@@ -157,6 +157,10 @@ LOS_COVER_KEEP = 0.5     # s a line-of-sight cover spot is kept for the same pla
 FETCH_COMMIT_R, FETCH_COMMIT_DZ = 10.0, 2.0   # u flat and up / down from the gun
 FETCH_COMMIT_SCORE = 2.95                     # over a committed fight (2.6 + 0.3) and a mend (2.9), under 3.15+ turns
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
+DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
+DEMON_STAND_R, DEMON_STAND_COVER = 6.0, 2.5   # u: a man this near, no retreat to cover farther than the second (stand_ground)
+DEMON_STAND_FRESH = 0.6            # s: a tracker dot this fresh counts as a man on us
+DEMON_STAND_SCORE = 3.2            # the turn on a man on us only on the tracker (as decide's close-dot hunt)
 
 
 def _flat_norm(v, me):
@@ -1344,6 +1348,31 @@ class Bot:
             return "push", guess
         return "swing", st["swing"]
 
+    def stand_ground(s, now, me, snap, scores):
+        """Demon (custom) does not turn its back on a man right on it: with an enemy within DEMON_STAND_R (in sight, or
+        on its tracker in the last DEMON_STAND_FRESH s), no retreat to cover farther than DEMON_STAND_COVER; it fights
+        him (decide's close-fight rule), or, him only on the tracker, turns to him (a hunt at his dot). The owner's
+        Powerhouse games, Nov 7: Demons he killed from 5-9 u behind were retreating (Slayer7 at 49 and 152 s, Havoc94
+        at 40 s). Not with the objective in hand."""
+        if not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle != -1:
+            return
+        near = [(dist(me.pos, b.pos), k, b) for k, b in s.per.beliefs.items() if isinstance(k, int)
+                and (b.seen or (b.source in ("radar", "hit") and now - b.t < DEMON_STAND_FRESH))]
+        if not near:
+            return
+        d, k, b = min(near, key=lambda x: x[0])
+        if d >= DEMON_STAND_R:
+            return
+        dropped = [key for key in scores if key[0] == "retreat" and isinstance(key[1], Vec)
+                   and (me.pos - key[1]).flat() > DEMON_STAND_COVER]
+        if not dropped:
+            return
+        for key in dropped:
+            del scores[key]
+        if not b.seen and not any(key[0] in ("fight", "hunt") for key in scores):
+            scores[("hunt", b.pos)] = max(scores.get(("hunt", b.pos), 0.0), DEMON_STAND_SCORE)
+        s.note("he is on me: no turning my back")
+
     def mend_point(s, now, me, snap, seen):
         """Demon after winning a fight (the man it fought died within a second of its last shot) with any shield or
         body lost: into cover until both are back, wherever it is going (MEND_SCORE: over its objective, guns and
@@ -2392,8 +2421,14 @@ class Bot:
             # mid-fight (the player's Reach game: bots shot someone 10 units off while the player closed in
             # from 3 units on their radar); a cracked target in view is finished first. A novice tunnels
             cur = s.goal[1] if s.goal[0] == "fight" else None
+            # Demon (custom): a man on its tracker out to DEMON_RADAR_TURN_R is checked too, its shield holding (the
+            # owner's Powerhouse games, Nov 7: of 21 Demons he killed, 11 knew him by a dot under 1 s old through their
+            # last 3 s and 6 of those never turned on him: an item, a retreat, another man). Cracked: arm's length only
+            radius = 3.5
+            if profiles.fixed_demon(s.p) and (snap.shieldless or me.shield >= 0.5):
+                radius = DEMON_RADAR_TURN_R
             near = [(dist(me.pos, b.pos), k) for k, b in s.per.beliefs.items() if isinstance(k, int) and not b.seen
-                    and b.source in ("radar", "hit") and now - b.t < 1.0 and k != cur and dist(me.pos, b.pos) < 3.5]
+                    and b.source in ("radar", "hit") and now - b.t < 1.0 and k != cur and dist(me.pos, b.pos) < radius]
             if near and not s.finishing(snap, seen) and s.turn_ok(now, me, seen, min(near)[0], snap, min(near)[1]):
                 # a hunt (look_point watches the corner he would come round). As a "fight" on a man never seen it
                 # aimed at the dot through the wall, and the next decision skipped that dot (the target in hand), went
@@ -2557,6 +2592,7 @@ class Bot:
         s.vehicle_mission(now, me, snap, scores)
         s.keep_role(scores, me, snap, seen)
         s.break_stalemates(now, me, snap, scores)
+        s.stand_ground(now, me, snap, scores)
         if snap.mode == "race":
             # Race scores laps, not kills (RACE-01): the gate first; far fights, hunts and guns lying about only on the
             # way (a man close in is still fought, below). Live Rat Race: bots chose fights in 50-90% of their
