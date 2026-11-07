@@ -1,6 +1,10 @@
 # Custom release history
 
-## Unreleased
+## 0.2.2-custom.7 — Demon awareness and fights, vehicle wall guard, 2026-11-07
+
+- Covers the 21 commits since 0.2.2-custom.6 (989cb8d). 18 were already on GitHub without a version; 3 are new in this candidate: Codex's Reach Demon exposed-part fire (1f8e070), the ground vehicle wall guard (ed2b87f), and Legendary/Demon shooting back with the wedges body filter (1e0bd78). Each entry below gives its own behavior and validation.
+- Demon gets radar heading reading and out-of-sight prediction, corner discipline, mending in cover, 180-degree vision, a 480°/s aim turn cap, fight commitment through short hunts and retreats, turning on radar flankers, line-of-sight cover, power-weapon runs only to reachable guns, rifles kept out until a hammer or sword can reach, Reach exposed head/chest fire, and answering a visible shooter. Legendary and Demon get more Jet Pack high-ground openings. Ground vehicles look ahead for walls. Also included: infantry patrol trios, the owner play profile tool (run automatically at match start), Headlong patrols and power positions, Reach rocket re-equipping, and `wedges.py` skipping fight scrums.
+- Validation at the candidate: all 211 regression tests pass. Gameplay is untested for the three new commits, and for most of the Demon changes beyond what each entry records. The bot process must be restarted to pick them up.
 
 ### Legendary and Demon shoot back on the way to a gun or a seat; wedges skip fight scrums, 2026-11-07
 
