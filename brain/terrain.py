@@ -2076,6 +2076,36 @@ class Terrain:
         for k in ("_vground", "_vpiece", "_vnear"):
             s.__dict__.pop(k, None)
 
+    def drive_clear(s, p, yaw, far=6.0):
+        """A ground vehicle's short look ahead (Bot.ground_guard): how far its centre goes from p along yaw (flat) before
+        a wall, stepping cell to cell as the nav does (_layer: each floor a step up or a drop on from the last, so ramps
+        and drops are open): no floor a step on (a face, a lip), or a cell beside a rising wall (near_wall) off the
+        vehicle's ground (painted drive cells run by walls). far when nothing is in the way or the line leaves the grid."""
+        if getattr(s, "graph_v", None) is None:
+            s._build_vnav()
+        if not s.inside(p.x, p.y):
+            return far
+        start = s._node(p)
+        prev = float(s.lz[start])
+        if not math.isfinite(prev):
+            return far
+        tan = float(s.tz[start]) if s.tz is not None else 0.0
+        c, sn, step = math.cos(yaw), math.sin(yaw), NAV_CELL * 0.8   # (0.8 of a cell: fly_clear's, no cell skipped)
+        cell, t = start[1:], step
+        while t <= far:
+            x, y = p.x + c * t, p.y + sn * t
+            if not s.inside(x, y):
+                return far
+            jj, ii = s._cell(Vec(x, y, 0.0))
+            if (jj, ii) != cell:
+                ll = s._layer(jj, ii, prev, reach_from=prev, tan=tan)
+                if ll is None or (s.near_wall[ll, jj, ii] and not s.vroomy[ll, jj, ii]):
+                    return t
+                cell, prev = (jj, ii), float(s.lz[ll, jj, ii])
+                tan = float(s.tz[ll, jj, ii]) if s.tz is not None else 0.0
+            t += step
+        return far
+
     def vnav(s, a, b, lookahead=24):
         """Next point to drive toward from a to b (vehicles: _build_vnav's ground, a longer look ahead than on foot),
         or the walking answer where the vehicle's ground does not reach (off it; no way on it: see below)."""

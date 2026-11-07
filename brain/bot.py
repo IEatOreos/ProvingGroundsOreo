@@ -1705,6 +1705,7 @@ class Bot:
             s.way_key = None        # fighting, driving: the clock starts again when we travel
         if me.vehicle != -1:
             s.drive(now, dt, me, snap, act, nav)
+            s.ground_guard(me, act, snap)
             s.air_guard(me, act, snap)
             s.air_roof_guard(me, act, snap)
             s.fire_gate(now, me, act, snap)
@@ -5167,6 +5168,99 @@ class Bot:
             if best is None or c > best[0]:
                 best = (c, w)
         return best[1] if best is not None and (best[0] > here + 1.0 or skip is not None) else None
+
+    # A ground or hover vehicle's driver looks GROUND_LOOK s ahead at its speed (GROUND_LOOK_U u at least and at most)
+    # along where it steers and where it slides; GROUND_NOSE: its centre to its front (INFERRED from live traces Nov 7: at
+    # 31 crashes into scenery the centre stopped a median 0.7 u from the wall cells); within GROUND_EASE s of contact the
+    # throttle falls with the time left, to GROUND_CRAWL at contact; a turn round a wall is kept GROUND_TURN_S s (no
+    # flipping side to side)
+    GROUND_LOOK, GROUND_LOOK_U, GROUND_NOSE, GROUND_EASE, GROUND_CRAWL, GROUND_TURN_S = 0.6, (2.0, 6.0), 1.0, 0.5, 0.35, 1.0
+    GROUND_OFFS = (0.35, 0.7, 1.05, 1.4)
+    GROUND_AIMING = ("aim", "spin", "scan")       # (drive's att: the heading is the gun's, never turned off it)
+
+    def ground_guard(s, me, act, snap):
+        """Every ground and hover driver (Warthog, Ghost, Mongoose, tanks), after drive: a short look ahead on the floor it
+        drives (Terrain.drive_clear) where it steers and where it is sliding. drive steered only at its next point or a
+        man, and nothing looked for walls (live Boneyard and Headlong Nov 7: 31 crashes into scenery in 80 driving
+        minutes, in its trips, splatters, aiming and the run on through after a ram). A wall ahead: where the heading is
+        the steering, the nearest heading off it that is open (kept a second); where it is the gun's, the push that way is
+        dropped (a Ghost's strafe turned the other way). Within GROUND_EASE s of contact, by either look: the throttle
+        eased by the time left (GROUND_CRAWL at least), no boost.
+        A splatter or charge looks only as far as its man (he may stand by a wall)."""
+        v = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None)
+        sp = vehicles.spec(v["kind"]) if v else None
+        now = getattr(s, "now", 0.0)
+        if (not sp or sp["move"] not in ("ground", "hover") or getattr(s, "seat", "driver") != "driver"
+                or now < getattr(s, "exit_until", 0.0) or now < getattr(s, "reverse_until", 0.0)
+                or math.hypot(act.forward, act.strafe) < 0.3 or not math.isfinite(me.pos.x + me.pos.y + me.pos.z)):
+            return
+        T = s.T()
+        if not hasattr(T, "drive_clear"):
+            return
+        hover = sp["move"] == "hover"
+        att = getattr(s, "att", None) or [None]
+        speed = me.vel.flat()
+        look = min(s.GROUND_LOOK_U[1], max(s.GROUND_LOOK_U[0], s.GROUND_NOSE + s.GROUND_LOOK * speed))
+        to = math.hypot(att[2] - me.pos.x, att[3] - me.pos.y) if len(att) >= 4 and att[2] is not None else None
+        if att[0] in ("splatter", "charge") and to is not None:
+            look = min(look, to + 0.5)
+        # a trip's next point (vnav's, its line on the vehicle's ground): turned off only for a wall short of it; a wall
+        # past it (the corner it turns at) only slows it
+        steer_look = min(look, to + 0.5) if att[0] in ("path", "retreat") and to is not None else look
+        ease_d = s.GROUND_NOSE + s.GROUND_EASE * speed     # (contact within GROUND_EASE s)
+        clear = lambda yaw, far=look: T.drive_clear(me.pos, yaw, far)
+        hit = lambda d, far=look: d if d < far - 1e-6 else math.inf     # (far: nothing in the way that far)
+        near = math.inf
+        if att[0] in s.GROUND_AIMING:
+            # the heading is the gun's: each push checked on its own (forward along it, a hover's strafe across it)
+            if abs(act.forward) >= 0.2:
+                d = hit(clear(act.yaw if act.forward > 0 else act.yaw + math.pi))
+                if d < ease_d:
+                    act.forward = 0.0
+                    s.note("vehicle: wall ahead, holding")
+            if hover and abs(act.strafe) >= 0.2:
+                side = act.yaw + math.copysign(math.pi / 2, act.strafe)
+                d = clear(side)
+                if d < ease_d:
+                    if clear(side + math.pi) >= ease_d:
+                        act.strafe, s.strafe_dir = -act.strafe, -s.strafe_dir
+                        s.note("vehicle: wall beside, strafing the other way")
+                    else:
+                        act.strafe = 0.0
+        elif act.forward > 0:
+            move = act.yaw + (math.atan2(act.strafe, act.forward) if hover else 0.0)
+            d = clear(move)
+            if d < steer_look:
+                turn = getattr(s, "ground_turn", None)
+                side = turn[1] if turn is not None and now < turn[0] else 0.0
+                best = (min(d, steer_look), 0.0)
+                for off in s.GROUND_OFFS:
+                    for o in ((off, -off) if side >= 0 else (-off, off)):
+                        c = clear(move + o, steer_look)
+                        if c > best[0] + 0.25:
+                            best = (c, o)
+                    if best[0] >= steer_look:
+                        break
+                if best[1]:
+                    act.yaw += best[1]
+                    s.ground_turn = (now + s.GROUND_TURN_S, math.copysign(1.0, best[1]))
+                    s.note("vehicle: wall ahead, steering round")
+                    d = clear(act.yaw + (math.atan2(act.strafe, act.forward) if hover else 0.0))
+            near = min(near, hit(d))
+        if speed > 2.0:                                    # where it is sliding (a Ghost drifts on, a Warthog runs wide)
+            near = min(near, hit(clear(math.atan2(me.vel.y, me.vel.x))))
+        # (the throttle by how soon: full at GROUND_EASE s from contact, GROUND_CRAWL at contact)
+        cap = max(s.GROUND_CRAWL, (near - s.GROUND_NOSE) / max(0.5, s.GROUND_EASE * speed))
+        if near < ease_d and act.forward > cap:
+            act.forward = cap
+            if hover:
+                act.strafe = max(-cap, min(cap, act.strafe))
+            if act.fire2:                                  # no boost into it (Bot.boost sends it as vertical in Reach)
+                act.fire2 = False
+                if s.game == "reach":
+                    act.vertical = 0.0
+            s.tboost_until = 0.0
+            s.note("vehicle: wall close, easing off")
 
     def air_guard(s, me, act, snap):
         """Every flyer's driver (Banshee, Hornet, Falcon, any "air" vehicle): a short-sighted LiDAR ahead every tick and a
