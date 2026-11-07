@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Headlong patrol areas and owner power positions from bug reports, 2026-11-07
+
+- The owner's six F9 reports from the Headlong 8v8 (logs/bug_reports/reach_cex_headlong_20261107-032305) mark spots where the owner stood. New maps/reach_cex_headlong/infantry_patrols.json lists the four patrol requests (reports 1, 4, 5 and 6: north spawn, southwest lower level, west spawn, man cannon), shared by both teams. Patrol orders, timers and the Invasion exclusion are the existing rules.
+- Power positions: reports 2 (13.55, 17.84) and 6 (man cannon, 7.92, -2.7) are added to Headlong's positions.json with `owner: true` and score 1.0, above every computed spot, so the Slayer anchor's weighted post pick favors them. Report 3, the ledge at (-10.01, -9.37, 10.36), is not added: the level's nav reaches it only from the 3 spawns on that ledge (none of the other 37 tested), even with jump links, so an anchor sent there would stall. It waits on the owner describing the way up.
+- tools/power_positions.py gains `--add X,Y,Z` (one map) to write an owner-marked row, measured like the computed spots (sightlines, height, duck spot). A later full regeneration keeps owner rows and drops computed spots within half the spacing of them.
+- Validation: the map loads 4 patrol points and 10 positions with the owner's first. The patrol points (reports 1, 4, 5, 6) and the two power positions are reachable from all 40 tested slayer spawns. The owner-row merge was checked. All 134 regression tests pass, and the compile check passes. Gameplay is untested; the bot process must be restarted.
+
 ### Demon 180-degree horizontal vision, 2026-11-07
 
 - Widen Demon's visual detection from 140 to 180 degrees (90 degrees to either side) in `brain/bot.py`. The entire cone uses Demon's zero configured recognition delay. The ordinary sight range, line-of-sight checks and other difficulties retain their existing rules.

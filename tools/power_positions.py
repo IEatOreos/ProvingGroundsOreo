@@ -118,12 +118,65 @@ def positions(m, T, top=8, spacing=9.0, rng=None, cand_max=MAX_CAND, samples=SAM
             for c, s, v, h, d in chosen]
 
 
+OWNER_SCORE = 1.0     # an owner-marked spot (custom): over every scored one, so the anchor's weighted pick favours it
+
+
+def describe(m, T, xyz, rng=None, samples=SAMPLES):
+    """An owner-marked power position (custom: the owner's in-game reports) as a positions.json row: its own sightline
+    count, height over the floor round it and duck spot by the same measures as positions(), scored OWNER_SCORE."""
+    rng = rng or random.Random(1)
+    l, j, i = floor_nodes(T)
+    k = max(1, len(l) // 40000)
+    nodes = list(zip(l[::k].tolist(), j[::k].tolist(), i[::k].tolist()))
+    pts = np.array([[T._center(a, b, c).x, T._center(a, b, c).y, T.lz[a, b, c]] for a, b, c in nodes])
+    w = traffic(m, pts.tolist())
+    sample = pts[rng.choices(range(len(pts)), weights=w, k=samples) if w else
+                 rng.sample(range(len(pts)), min(samples, len(pts)))]
+    c, a = list(xyz), Vec(*xyz)
+    seen = [q for q in sample if math.hypot(q[0] - c[0], q[1] - c[1]) < SIGHT and T.los(a, Vec(*q))]
+    near = pts[(np.abs(pts[:, 0] - c[0]) < 15) & (np.abs(pts[:, 1] - c[1]) < 15)]
+    height = c[2] - float(np.median(near[:, 2])) if len(near) else 0.0
+    duck = False
+    for q in pts[(np.abs(pts[:, 0] - c[0]) < 3) & (np.abs(pts[:, 1] - c[1]) < 3) & (np.abs(pts[:, 2] - c[2]) < 1.5)][::3]:
+        if sum(T.los(Vec(*q), Vec(*s)) for s in seen) < 0.5 * len(seen):
+            duck = True
+            break
+    return dict(pos=[round(float(v), 2) for v in c], score=OWNER_SCORE, sees=len(seen), height=round(height, 1),
+                duck=duck, owner=True)
+
+
+def merge_owner(out, old, spacing=9.0):
+    """Keep the owner-marked rows of the old file (custom) over a fresh scoring: scored spots within half the spacing of
+    one are dropped, the owner's go first."""
+    mine = [r for r in old if r.get("owner")]
+    keep = [r for r in out if all(math.hypot(r["pos"][0] - o["pos"][0], r["pos"][1] - o["pos"][1]) >= 0.5 * spacing
+                                  for o in mine)]
+    return mine + keep
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("maps", nargs="*")
     ap.add_argument("--top", type=int, default=8)
     ap.add_argument("--spacing", type=float, default=9.0)
+    ap.add_argument("--add", action="append", default=[], metavar="X,Y,Z",
+                    help="add an owner-marked power position to the one map named (kept over later scorings)")
     o = ap.parse_args()
+    if o.add:
+        if len(o.maps) != 1:
+            ap.error("--add needs exactly one map")
+        name = o.maps[0]
+        m = get_map(name)
+        T = terrain(m)
+        f = os.path.join(ROOT, "maps", name, "positions.json")
+        rows = json.load(open(f)) if os.path.exists(f) else []
+        for spec in o.add:
+            row = describe(m, T, [float(v) for v in spec.split(",")])
+            rows = [r for r in rows if math.hypot(r["pos"][0] - row["pos"][0], r["pos"][1] - row["pos"][1]) > 1.0]
+            rows.insert(0, row)
+            print(f"{name}: added {row}", flush=True)
+        json.dump(rows, open(f, "w"), indent=1)
+        return
     names = o.maps or sorted(d for d in os.listdir(os.path.join(ROOT, "maps"))
                              if os.path.exists(os.path.join(ROOT, "maps", d, "heightmap.npz")))
     for name in names:
@@ -133,7 +186,9 @@ def main():
         except Exception as e:                       # a map the nav cannot load: skip, say so
             print(f"{name}: failed ({type(e).__name__}: {e})", flush=True)
             continue
-        json.dump(out, open(os.path.join(ROOT, "maps", name, "positions.json"), "w"), indent=1)
+        f = os.path.join(ROOT, "maps", name, "positions.json")
+        out = merge_owner(out, json.load(open(f)) if os.path.exists(f) else [], o.spacing)
+        json.dump(out, open(f, "w"), indent=1)
         print(f"{name}: {len(out)} positions in {time.time() - t0:.0f} s; best {out[0] if out else None}", flush=True)
 
 

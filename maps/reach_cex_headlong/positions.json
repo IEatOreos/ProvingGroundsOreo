@@ -1,6 +1,30 @@
 [
  {
   "pos": [
+   7.92,
+   -2.7,
+   7.48
+  ],
+  "score": 1.0,
+  "sees": 3,
+  "height": 2.3,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   13.55,
+   17.84,
+   6.86
+  ],
+  "score": 1.0,
+  "sees": 2,
+  "height": 3.2,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
    -11.54,
    -1.5,
    10.36
