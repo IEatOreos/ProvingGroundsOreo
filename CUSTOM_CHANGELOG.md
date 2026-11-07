@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Demon keeps its rifle out until a hammer or sword can reach, 2026-11-07
+
+- Owner's two Powerhouse games after the weapon-run fix (logs/trace_reach_30_settlement_20261107-135726 and -140335; reach_30_settlement is Powerhouse): Demons picked up 6–7 power weapons per game and held one 5.8–10.5% of the time, against 0.7–1.4% before, but got 1 kill with one in 65. Their item trips rose to 23% of their time and the team K/D fell from 50–29 to 38–43 and 50–40. In fights, the gravity hammer (5 of 13 pickups) was out for 216 ticks at a median 6 u with no swing. Rockets were in hand for about 3 s of fighting, fired 3 times, and were put away on an empty magazine. The focus rifle fired normally (172 presses in 475 fight ticks).
+- Cause: `choose_weapon` adds +2.5 for a sword or hammer whenever the man is within 6 u (to draw it) or 8 u (to keep it), based on human sword fights. At 6 u the hammer scored about 6.1 against the DMR's 5.5, so a Demon walked around with it out at rifle range.
+- Demon only: the blade bonus applies inside 3 u (to draw) and 4.5 u (to keep), so at range the DMR fights and the hammer or sword comes out for the man nearly in reach. Legendary and the other tiers keep the old rule. The rocket, power-weapon run and pickup logic are unchanged.
+- Validation: 3 new tests (Demon hammer at 6 u switches to the DMR; the DMR at 2 u draws the hammer or sword; kept at 4 u; Legendary unchanged). All 158 regression tests pass. Gameplay is untested; it takes effect on the next match.
+
 ### More Jet Pack high-ground openings for Legendary and Demon, 2026-11-07
 
 - In `brain/equipment.py`, fixed Legendary and Demon can boost for a high-ground shot when the enemy is more than 4 world units away and aiming about 20 degrees or more off the bot. The previous thresholds were more than 6 units and about 29 degrees. The move still requires more than half shields, at least 90% Jet Pack charge, and a clear flight to a perch with sight of the target.

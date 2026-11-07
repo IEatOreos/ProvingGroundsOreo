@@ -362,5 +362,31 @@ class LosCoverTests(unittest.TestCase):
         self.assertIsNone(b.cover_from(me, [Vec(-8, 0, 0)]))
 
 
+class DemonBladeTests(unittest.TestCase):
+    """Demon fights with its rifle until a man is nearly in reach of its hammer or sword (choose_weapon)."""
+
+    def pick(self, tier, in_hand, d, blade="gravity_hammer"):
+        b = Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
+        me = PlayerState(0, 0, "bot", Vec(), weapon=in_hand, weapons=["dmr", blade], ammo=[45, 100], mag=[15, 100])
+        foe = PlayerState(1, 1, "foe", Vec(d, 0, 0), weapon="dmr", weapons=["dmr"], ammo=[45], mag=[15])
+        snap = Snapshot(50.0, [me, foe], mode="slayer")
+        b.per.beliefs[1] = Belief(foe.pos, Vec(), 50.0, True, "eyes")
+        b.notes = []                                  # (made each tick by Bot.plan)
+        slot = b.choose_weapon(50.0, me, "fight", 1, snap)
+        return me.weapons[slot] if slot >= 0 else in_hand
+
+    def test_demon_puts_the_hammer_away_at_rifle_range(self):
+        self.assertEqual(self.pick("demon", "gravity_hammer", 6.0), "dmr")
+        self.assertEqual(self.pick("demon", "dmr", 6.0), "dmr")
+
+    def test_demon_draws_it_when_he_is_nearly_in_reach(self):
+        self.assertEqual(self.pick("demon", "dmr", 2.0), "gravity_hammer")
+        self.assertEqual(self.pick("demon", "gravity_hammer", 4.0), "gravity_hammer")   # (kept inside 4.5 u)
+        self.assertEqual(self.pick("demon", "dmr", 2.0, blade="sword"), "sword")
+
+    def test_legendary_keeps_its_blade_out_as_before(self):
+        self.assertEqual(self.pick("top", "gravity_hammer", 6.0), "gravity_hammer")
+
+
 if __name__ == "__main__":
     unittest.main()

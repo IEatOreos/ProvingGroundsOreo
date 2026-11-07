@@ -156,6 +156,7 @@ LOS_COVER_KEEP = 0.5     # s a line-of-sight cover spot is kept for the same pla
 # Demon a few steps from the power weapon it was sent for (decide's fetch): grab it before a new fight
 FETCH_COMMIT_R, FETCH_COMMIT_DZ = 10.0, 2.0   # u flat and up / down from the gun
 FETCH_COMMIT_SCORE = 2.95                     # over a committed fight (2.6 + 0.3) and a mend (2.9), under 3.15+ turns
+DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 
 
 def _flat_norm(v, me):
@@ -2129,8 +2130,14 @@ class Bot:
                 if w in LUNGE and abs(b.pos.z - me.pos.z) < 2.0:
                     # the sword or hammer out before he is in reach (a switch takes ~0.5 s) and kept until he is well
                     # away; not for a man on another floor it cannot run at. The gun the rest of the time (the player:
-                    # sword users held it out at 4-15 units for 85% of their sword fights)
-                    v += 2.5 if d < (8.0 if i == cur else 6.0) else 0.0
+                    # sword users held it out at 4-15 units for 85% of their sword fights). Demon (custom): its rifle's
+                    # aim wins the range fight, so the blade comes out only for the man nearly in reach (owner's
+                    # Powerhouse games, Nov 7: Demons held the hammer out 216 fight ticks at a median 6 u, swung 0 times)
+                    if profiles.fixed_demon(s.p):
+                        draw = DEMON_LUNGE_KEEP if i == cur else DEMON_LUNGE_DRAW
+                    else:
+                        draw = 8.0 if i == cur else 6.0
+                    v += 2.5 if d < draw else 0.0
                 if w in CQ:                            # up close the automatic / shotgun / sword comes out
                     v += 2.0 if d < CLOSE else 1.0 if d < SHORT_BAND else 0.0
                 elif w in PRECISION and w not in ("pistol", "magnum") and d < CLOSE:
@@ -2154,7 +2161,11 @@ class Bot:
             return v
 
         best = max(range(n), key=score)
-        if best != cur and (cur < 0 or score(best) > score(cur) + 1.0):
+        # Ready a loaded Reach launcher when it wins the score outside the close splash penalty.
+        # The usual margin could leave it holstered for the rest of the life after one close contact.
+        ready_rockets = (s.game == "reach" and not recruit and inv[best] == "rockets" and mag[best] != 0
+                         and (d is None or BLAST["rockets"] + 2.0 <= d <= reach("rockets", s.game)))
+        if best != cur and (cur < 0 or score(best) > score(cur) + (0.0 if ready_rockets else 1.0)):
             return pick(best, "range" if d is not None else "best gun")
         return -1
 
