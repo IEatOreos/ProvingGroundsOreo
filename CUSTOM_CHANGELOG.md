@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Owner play profile tool, 2026-11-07
+
+- New tools/owner_profile.py ("play like the owner") reads the owner's recorded matches (logs/trace_*.jsonl with their carnage reports). Matches where the owner got fewer than `--min-kills` kills (default 1) are skipped as spectating, and so are matches with no carnage report, no person, or more than one person. Per map it writes maps/<map>/owner_profile.json with:
+  - spots: where he got his kills, clustered within 3.5 u, with kills, deaths, time there, visits, typical visit length, shot distance, and height over his victims
+  - engagements: distance, height advantage, what the victim was aiming at, who had whom in sights first, time to kill
+  - fights: won, lost and broken off, and the health and shield he started them at
+  - disengage: the health and shield at which he backed out of fights he was losing
+- Measures match the fight reports used in the Settlement analyses: head or chest counts as in sights, a target is held through 0.5 s gaps, kills are attributed to the enemy with the victim in sights (approximate), and K/D comes from the game's report.
+- Recordings rotate (tools/recording.py keeps the newest 5 unsaved matches by default). So each match the tool reads is also kept as a summary in logs/owner_profile/ (about 20 KB each; rotation never touches it), and profiles keep a match after its recording is deleted. The owner's 35–15 and 30–12 Settlement recordings had already rotated out before the first run. The first run kept 10 matches on 5 maps; one 0-kill Settlement match was skipped as spectating.
+- The generated owner_profile.json files and summaries come from the owner's recordings and are local, not committed. Nothing in the brain reads them yet; the anchor role will.
+- Validation: tools/test_owner_profile.py (a constructed kill from a ledge, profile fields, spot clustering) and all 143 regression tests pass.
+
 ### Demon aim turn cap, 2026-11-07
 
 - Lower Demon's general aim turn cap from 1,000 to 480 degrees per second in `brain/profiles.py` for all personalities, including Warthog gunner aim. Reach Scorpion drivers still use the dedicated 90-degree-per-second cap. Protected final DMR and sniper head-shot corrections still apply on the firing tick.
