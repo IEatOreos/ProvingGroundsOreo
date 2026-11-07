@@ -811,7 +811,7 @@ class Director:
         s.infantry_patrol_orders(now, snap, alive)
 
     def infantry_patrol_orders(s, now, snap, alive):
-        """Give one available infantry bot a short trip to a lightly visited map position."""
+        """Send one or two available infantry bots to a lightly visited map position."""
         points = s.map.get("infantry_patrols", ())
         if not points or snap.mode == "invasion":
             return
@@ -831,16 +831,18 @@ class Director:
                     and (snap.mode == "slayer" or order.point is None or dist(order.point, point) <= 25.0)
                     and getattr(bot, "goal_ban", {}).get(bot._goal_key(("patrol", point)), 0) <= now)
 
-        current = getattr(s, "infantry_patroller", None)
-        if current is not None and current.infantry_patrol is not None:
-            point, until = current.infantry_patrol
-            if now < until and now - visits.get(point, -math.inf) >= 25.0:
-                if current in alive and eligible(current, point):
-                    return
-            if now >= until:
-                visits[point] = now
-            current.infantry_patrol = None
-        s.infantry_patroller = None
+        patrollers = []
+        for bot in getattr(s, "infantry_patrollers", ()):
+            point, until = bot.infantry_patrol
+            if now < until and bot in alive and eligible(bot, point) and dist(snap.player(bot.id).pos, point) >= 4.0:
+                patrollers.append(bot)
+            else:
+                if now >= until:
+                    visits[point] = now
+                bot.infantry_patrol = None
+        s.infantry_patrollers = patrollers
+        if patrollers:
+            return
 
         for point in sorted(points, key=lambda p: visits.get(p, -math.inf)):
             if now - visits.get(point, -math.inf) < 25.0:
@@ -852,9 +854,13 @@ class Director:
                 pos = snap.player(bot.id).pos
                 terrain = s.terrain()
                 if terrain.inside(point.x, point.y) and terrain.reaches(pos, point):
-                    bot.infantry_patrol = (point, now + 25.0)
-                    s.infantry_patroller = bot
-                    return
+                    bot.infantry_patrol = (point, now + 40.0)
+                    patrollers.append(bot)
+                    # Roll once on the first reachable assignment, then look for a partner.
+                    if len(patrollers) == 2 or s.rng.random() >= 0.5:
+                        break
+            if patrollers:
+                return
 
     BACKUP_R, BACKUP_REACH, BACKUP_MAX = 12.0, 40.0, 3   # u: enemies this near a post we hold; helpers this far; at most
     BACKUP = True                                        # (False: the play before, for A/B)

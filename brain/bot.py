@@ -2263,7 +2263,8 @@ class Bot:
                     del scores[k]
         patrol = getattr(s, "infantry_patrol", None)
         if (patrol is not None and now < patrol[1] and snap.mode != "invasion" and not infected
-                and me.vehicle in (None, -1) and not me.has_flag and not seen and not hit_recent
+                and me.vehicle in (None, -1) and not me.has_flag and not hit_recent
+                and all(dist(me.pos, s.per.beliefs[k].pos) >= 18.0 for k in seen)
                 and not any(kind == "retreat" for kind, _ in scores)
                 and dist(me.pos, patrol[0]) >= 4.0):
             scores[("patrol", patrol[0])] = 1.25
@@ -2281,6 +2282,11 @@ class Bot:
                 alt = s.alt_post(now, k[1], bans)
                 if alt is not None:
                     scores[("objective", alt)] = 0.5 + 0.7 * s.p.objective
+        if seen and patrol is not None and ("patrol", patrol[0]) in scores:
+            # A distant spawn sighting can wait while a patroller crosses to the side lane.
+            for key in scores:
+                if key[0] == "fight":
+                    scores[key] *= 0.30
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         mv = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None) if me.vehicle not in (None, -1) else None
         if (mv is not None and getattr(s, "seat", None) == "driver"
