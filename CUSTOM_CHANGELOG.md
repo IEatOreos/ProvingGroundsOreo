@@ -1,32 +1,38 @@
 # Custom release history
 
-## Unreleased — Boneyard team patrol spots, 2026-11-07
+## 0.2.2-custom.6 — Reach vehicle aim and Boneyard patrols, 2026-11-07
+
+- Correct the Reach Warthog chaingun’s horizontal firing origin. For fixed Legendary and Demon, limit Scorpion turret turns to 90 degrees per second, require aim to settle before firing, and aim the main cannon at infantry chests.
+- Add two shared Boneyard infantry patrol spots and one per team outside Invasion. A new patrol has a 50% chance to request a second eligible bot. Bots can return fire at distant visible enemies while continuing toward their waypoint.
+- All 111 regression tests passed. The owner confirmed the Warthog aim and Scorpion turn changes in gameplay and reported that chest aim appeared to fix shots at infantry feet. The cannon settling check and Boneyard patrols were verified offline.
+
+### Boneyard team patrol spots, 2026-11-07
 
 - Add the two reported infantry patrol waypoints, one for Red and one for Blue. Restrictions follow team color, including when spawn sides swap. The original two Boneyard patrol spots are available to both teams. Patrols apply outside Invasion.
 - Verified routes from nearby spawns on the reported Boneyard variant. Offline checks confirmed each team selects only its own restricted spot and that the restriction follows color when sides swap. All 41 selected regression tests passed. Live testing requires a bot process restart.
 
-## Unreleased — Boneyard patrol return fire, 2026-11-07
+### Boneyard patrol return fire, 2026-11-07
 
 - Patrollers use normal aiming, weapon selection, and firing checks against visible enemies while walking toward their waypoint. Taking a hit from range can leave the patrol active when a target is visible. Close threats, incoming fire with no visible target, and retreats can still interrupt the trip.
 - Offline checks confirmed a bot could take a hit, fire at a distant target, and keep its movement pointed toward the patrol waypoint. Also checked close threats and unseen incoming fire. All 50 selected regression tests passed. Live testing requires a bot process restart.
 
-## Unreleased — Boneyard patrol pairs and combat interruptions, 2026-11-07
+### Boneyard patrol pairs and combat interruptions, 2026-11-07
 
 - Roll once per new team patrol on Boneyard. Half of assignments request a second eligible bot for the same destination. Each patroller can finish independently, so the first arrival does not cancel the second bot's trip.
 - Give each assignment up to 40 seconds. Patrollers favor moving past enemies they see at 18 world units or farther, with normal combat priority when an enemy is closer, they are hit, or they need to retreat.
 - Offline checks covered both group sizes, the single-bot fallback, independent arrivals, distant and nearby contacts, recent damage, and Invasion exclusion. All 41 selected regression tests passed. Live gameplay is pending a bot process restart.
 
-## Unreleased — Boneyard infantry patrols, 2026-11-07
+### Boneyard infantry patrols, 2026-11-07
 
 - Add the reported Banshee Building and west upper level positions as infantry patrol destinations on Boneyard outside Invasion. One available bot per team can visit a reachable spot that teammates have not visited recently. Combat, retreat, and dedicated team assignments take priority. Patrols end on arrival or after 25 seconds.
 - Verified walking routes from nearby spawns on the reported Boneyard variant and checked patrol selection, rotation, reassignment to defense, and Invasion exclusion offline. All 41 selected regression tests passed. Live gameplay testing is pending a bot process restart.
 
-## Unreleased — Reach Scorpion chest aim, 2026-11-07
+### Reach Scorpion chest aim, 2026-11-07
 
 - Fixed Legendary and Demon Scorpion drivers aim the main cannon at the chest of standing and crouched infantry instead of applying the normal splash weapon aim at the feet. Vehicle targets, other weapons, and Scaling keep their existing aim. The Scorpion's turn cap and firing alignment checks still apply.
 - Offline driver checks confirmed both chest heights and the existing aim for vehicle targets, Scaling and the Wraith. All 42 selected regression tests passed. The owner tested the change in gameplay and reported that it appeared to fix the Scorpion aiming at infantry feet.
 
-## Unreleased — Reach Warthog gunner alignment and Scorpion turning, 2026-11-07
+### Reach Warthog gunner alignment and Scorpion turning, 2026-11-07
 
 - Aim the Reach Warthog chaingun from the attached turret's horizontal position, rotated into map coordinates, with the existing calibrated firing height. Keep the chassis position for navigation and perception. Fall back to the existing origin when attachment data is unavailable or invalid.
 - Boneyard's second report requested the owner's Scorpion turning speed for Legendary and Demon. Cap Reach's fixed Legendary and Demon Scorpion drivers at 90 degrees per second, based on the recorded sustained yaw rate (90.3 degrees per second at the 90th percentile of moving samples). Require 0.10 seconds of continuous aim alignment before requesting cannon fire, including at close range. The game reader does not expose the live barrel direction, so this is a settling check on view readback and aim commands.
