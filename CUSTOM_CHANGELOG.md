@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Demon makes no thruster charge in gunfights outside Infection, 2026-11-07
+
+- Owner's request: remove the Demon's thruster charge during gunfights, in every mode except Infection. In his Warhouse game (`logs/trace_h4_ca_warhouse_20261107-195112`) Demons thrust in fights for two reasons: "dash in to close" 8 times (the charge: 3-6.5 u from the man, with a close-range gun or his shield down) and "thruster to cover" 10 times.
+- `Kit.plan`: the fight's dash-in skips the thruster for fixed Demon unless the mode is Infection. Kept: Demon's other thrusts (to cover when cracked and shot, out of a grenade, out of a lunge, across a sniper's lane, onto the capture point with the flag), Demon's evade (Reach), every other tier, Scaling, and Infection, where the infected's runs at survivors and the dash-in stay as they were.
+- Validation: `tools/test_demon_thruster.py`, 4 tests: no charge for Demon in Slayer, CTF, Oddball, King, Assault and Invasion (shield down, or a shotgun at full shield); Demon still charges in Infection; Normal, Heroic and Legendary still charge; Demon still thrusts to cover. All 239 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 Demon: real sight heights, body then head, locked view, tapped trigger, 2026-11-07
 
 - Owner's request: Halo 4 Demons are the weakest bots of all the games; make them aimbot-hard there without changing the other games. Evidence: his Warhouse game (`logs/trace_h4_ca_warhouse_20261107-195112`, "Slayer was missing to my right with a dmr") and the 1v1 on Adrift (`logs/trace_h4_wraparound_20261107-201103`, "missed me twice while I was strafing").

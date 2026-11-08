@@ -753,7 +753,10 @@ class Kit:
             if k == "hardlight_shield" and x["losing"] and len(x["seen"]) == 1 and x["hit"] and 4.0 < d < 20.0:
                 # one man in front only (EQ-HLS-02: "never hold it in a fight with enemies on two sides")
                 return (k, "self", None, 1.5, "hardlight: shot and losing")
-            if (k in ("evade", "thruster") and 3.0 < d < 6.5 and x["lunge"] is None
+            # (custom: no thruster charge for Demon outside Infection, the owner's ask Nov 7: it keeps its gunfight on
+            # the gun; its other thrusts, to cover, out of a grenade, a lunge or a sniper's lane, stay)
+            demon_no_charge = k == "thruster" and profiles.fixed_demon(bot.p) and snap.mode != "infection"
+            if (k in ("evade", "thruster") and 3.0 < d < 6.5 and x["lunge"] is None and not demon_no_charge
                     and x["target"].weapon not in LUNGERS     # (never in onto a sword: survivors with shotguns dashed
                     and (me.weapon in CQB or x["target"].shield <= 0.05)):   # into the Flood, live Blood Cavern)
                 # in to close: our close-range gun, or his shield down for the melee finish (EQ-THRUST-01's melee
