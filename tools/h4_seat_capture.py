@@ -179,50 +179,55 @@ class Capture:
         last_print = 0.0
         print(f"capturing to {s.dir} (Ctrl+C, {stop} or {minutes} min to stop)", flush=True)
         with gzip.open(os.path.join(s.dir, "samples.jsonl.gz"), "wt", encoding="utf-8", compresslevel=1) as out:
-            while time.monotonic() - start < minutes * 60 and not os.path.exists(stop):
-                tick = time.monotonic()
-                try:
-                    if s.live is None:
-                        s.live = s.Live()
-                        print(f"attached: {s.live.map_name()}", flush=True)
-                    live = s.live
-                    for h, typ, name, _ in live.objects(live.VEHICLE_TYPES):
-                        s.names[h] = name
-                    players = [p for p in live.players() if p.get("pos") is not None]
-                    if not players:
-                        time.sleep(0.2)
-                        continue
-                    people = players if s.everyone else players[:1]   # (solo: index 0 is the person)
-                    bones = s.count % BONES_EVERY == 0
-                    rows = [x for x in (s.row(live, p, bones) for p in people) if x]
-                    out.write(json.dumps(dict(t=round(tick - start, 3), map=live.map_name(), rows=rows),
-                                         separators=(",", ":")) + "\n")
-                    s.count += 1
-                    if rows:
-                        lab = s.seat_label(rows[0])
-                        s.seat_counts[lab] += 1
-                        if tick - last_print > 1.0:
-                            last_print = tick
-                            r = rows[0]
-                            hv = r.get("head_v") or r.get("head")
-                            print(f"{tick - start:6.1f}s  {lab:42s} samples {s.seat_counts[lab]:5d}  head "
-                                  f"{[round(c, 2) for c in hv] if hv else None}  reader {'ok' if r['reader_ok'] else 'refuses'}"
-                                  f"{'  fails: ' + ', '.join(r.get('fails', [])) if r.get('fails') else ''}", flush=True)
-                            with open(os.path.join(s.dir, "status.json"), "w", encoding="utf-8") as f:
-                                json.dump(dict(elapsed=round(tick - start, 1), samples=s.count, seats=dict(s.seat_counts)), f,
-                                          indent=1)
-                    if s.count % 30 == 0:
-                        out.flush()
-                except KeyboardInterrupt:
-                    break
-                except Exception as e:      # the game not up yet, a map loading, a read racing the game
-                    out.write(json.dumps(dict(t=round(time.monotonic() - start, 3), error=f"{type(e).__name__}: {e}")) + "\n")
-                    s.live = None
-                    time.sleep(1.0)
-                    continue
-                time.sleep(max(0.0, 1.0 / HZ - (time.monotonic() - tick)))
+            try:
+                s.loop(out, start, minutes, stop, last_print)
+            except KeyboardInterrupt:        # (Ctrl+C mid-sleep too: the file is closed, the summary written)
+                pass
         print(f"done: {s.count} samples; by seat {dict(s.seat_counts)}", flush=True)
         summary(s.dir)
+
+    def loop(s, out, start, minutes, stop, last_print):
+        """The capture's ticks until the time or a stop file (Ctrl+C is run's: it closes the file either way)."""
+        while time.monotonic() - start < minutes * 60 and not os.path.exists(stop):
+            tick = time.monotonic()
+            try:
+                if s.live is None:
+                    s.live = s.Live()
+                    print(f"attached: {s.live.map_name()}", flush=True)
+                live = s.live
+                for h, typ, name, _ in live.objects(live.VEHICLE_TYPES):
+                    s.names[h] = name
+                players = [p for p in live.players() if p.get("pos") is not None]
+                if not players:
+                    time.sleep(0.2)
+                    continue
+                people = players if s.everyone else players[:1]   # (solo: index 0 is the person)
+                bones = s.count % BONES_EVERY == 0
+                rows = [x for x in (s.row(live, p, bones) for p in people) if x]
+                out.write(json.dumps(dict(t=round(tick - start, 3), map=live.map_name(), rows=rows),
+                                     separators=(",", ":")) + "\n")
+                s.count += 1
+                if rows:
+                    lab = s.seat_label(rows[0])
+                    s.seat_counts[lab] += 1
+                    if tick - last_print > 1.0:
+                        last_print = tick
+                        r = rows[0]
+                        hv = r.get("head_v") or r.get("head")
+                        print(f"{tick - start:6.1f}s  {lab:42s} samples {s.seat_counts[lab]:5d}  head "
+                              f"{[round(c, 2) for c in hv] if hv else None}  reader {'ok' if r['reader_ok'] else 'refuses'}"
+                              f"{'  fails: ' + ', '.join(r.get('fails', [])) if r.get('fails') else ''}", flush=True)
+                        with open(os.path.join(s.dir, "status.json"), "w", encoding="utf-8") as f:
+                            json.dump(dict(elapsed=round(tick - start, 1), samples=s.count, seats=dict(s.seat_counts)), f,
+                                      indent=1)
+                if s.count % 30 == 0:
+                    out.flush()
+            except Exception as e:      # the game not up yet, a map loading, a read racing the game
+                out.write(json.dumps(dict(t=round(time.monotonic() - start, 3), error=f"{type(e).__name__}: {e}")) + "\n")
+                s.live = None
+                time.sleep(1.0)
+                continue
+            time.sleep(max(0.0, 1.0 / HZ - (time.monotonic() - tick)))
 
 
 def summary(path):
@@ -230,12 +235,18 @@ def summary(path):
     the on-foot reader's acceptance and which guards a seated pose fails."""
     groups = collections.defaultdict(list)
     with gzip.open(os.path.join(path, "samples.jsonl.gz"), "rt", encoding="utf-8") as f:
-        for line in f:
-            d = json.loads(line)
-            for r in d.get("rows", []):
-                key = "on foot" if r.get("parent") is None else (
-                    " on ".join(c["name"] for c in r.get("ride") or []) + f" seat {r['seat']}")
-                groups[key].append(r)
+        try:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                except ValueError:
+                    break                    # (the last line of a capture cut off mid-write)
+                for r in d.get("rows", []):
+                    key = "on foot" if r.get("parent") is None else (
+                        " on ".join(c["name"] for c in r.get("ride") or []) + f" seat {r['seat']}")
+                    groups[key].append(r)
+        except EOFError:
+            print("(the capture ended before its file was closed: read up to the cut)")
 
     def stats(vals):
         vals = sorted(vals)
