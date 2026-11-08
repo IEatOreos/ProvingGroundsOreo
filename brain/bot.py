@@ -534,16 +534,29 @@ def reach_demon_direct_fire(prof, game, me, target):
 # rounds a second, at the head 4.9-5.6 (the BR's best is about 7.5), so rifles and pistols aim at the head again; the
 # body is for automatics, the shotgun and a covered head. Halo 4's place (+0x40) sits 0.045 u ahead of and 0.054 u
 # right of the model's base in his aim frame (1,626 poses, logs/h4_bot_aim_probe_2026-11-06), so the body point is
-# moved onto the torso. A part fired at H4_DRY_S without a hit while the other is clear (a ledge lip the level data
-# lacks: 20 presses, no damage, at a man 1.3 u below, fight at 237 s) gives way to the other for H4_FLIP_S.
+# moved onto the torso. A part fired at PART_DRY_S without a hit while the other is clear (a ledge lip the level data
+# lacks: 20 presses, no damage, at a man 1.3 u below, fight at 237 s) gives way to the other for PART_FLIP_S.
+# Reach Demon's direct fire shares the lead and the dry-part switch (Nov 7, his Rasu game 20261107-191109): against a man
+# crossing its view at 1+ u/s, its applied view trailed him by a median 0.07 u (hits) to 0.105 u (misses), and 111 of
+# its 164 missed head rounds were at such a man. One tick of lead put 67% of the missed rounds' views within 0.06 u of
+# his head line (34% unled) and 83% of the hits (60%); 0.05 and 0.068 s did no better. Rounds up at a man 1+ u above
+# landed 41%, down at one below 62%.
 H4_SNAP = (PRECISION | AUTO | {"shotgun"}) - {"focus_rifle"}   # hitscan-like guns the view locks onto the part with
 H4_TAP_R = 30.0          # u: semi-automatics are tapped at the gun's own rate within this (paced past it: bloom)
 H4_HOLD_R = 20.0         # u: automatics hold the trigger within this (bursts past it, as before)
 H4_CHEST_DROP = 0.16     # u: the chest point under the live head (standing head pos + 0.25 -> chest pos + 0.09)
 H4_BODY_FWD, H4_BODY_LEFT = -0.015, 0.04   # u: the torso's middle from his place, in his aim frame (above)
-H4_LEAD_S = 0.034        # s: read-to-shot lead, one brain tick of his and our own motion
-H4_VEL_MAX = 8.0         # u/s: a velocity read past this is a teleport or respawn, not motion to lead
-H4_DRY_S, H4_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without a hit on him: the other part this long
+DEMON_LEAD_S = 0.034     # s: read-to-shot lead, one brain tick of his and our own motion (Halo 4 and Reach Demon)
+LEAD_VEL_MAX = 8.0       # u/s: a velocity read past this is a teleport or respawn, not motion to lead
+PART_DRY_S, PART_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without a hit on him: the other part this long
+
+
+def lead_ray(me, target, ray):
+    """A (origin, point) shot ray with both ends moved on by DEMON_LEAD_S of our and his read velocity."""
+    def step(v):
+        n = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+        return v * DEMON_LEAD_S if n <= LEAD_VEL_MAX else Vec()
+    return ray[0] + step(me.vel), ray[1] + step(target.vel)
 
 
 def h4_demon_fire(prof, game, me, target):
@@ -567,14 +580,9 @@ def h4_wants_head(me, target):
 
 
 def h4_ray(me, target, head, lead=False):
-    """(our view, his head or chest); lead: both moved on by H4_LEAD_S of their read velocity."""
-    origin, point = me.view_pos, (target.head_pos if head else h4_chest(target))
-    if lead:
-        def step(v):
-            n = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-            return v * H4_LEAD_S if n <= H4_VEL_MAX else Vec()
-        origin, point = origin + step(me.vel), point + step(target.vel)
-    return origin, point
+    """(our view, his head or chest); lead: both moved on by DEMON_LEAD_S of their read velocity (lead_ray)."""
+    ray = (me.view_pos, (target.head_pos if head else h4_chest(target)))
+    return lead_ray(me, target, ray) if lead else ray
 
 
 class Perception:
@@ -1624,6 +1632,8 @@ class Bot:
                 if (target is not None and target.alive
                         and (shot_part[1] or reach_demon_direct_fire(s.p, s.game, me, target))):
                     locked = head_solution(me, target) if shot_part[1] else chest_solution(me, target)
+                    if reach_demon_direct_fire(s.p, s.game, me, target):
+                        locked = lead_ray(me, target, locked)      # Reach Demon: one tick of lead (lead_ray)
             if locked is not None:
                 yaw, pitch = angles_to(*locked)
                 # Keep the intended movement direction while snapping the shot.
@@ -4545,11 +4555,11 @@ class Bot:
                 if h4:
                     # Halo 4: rifles at the head, automatics and the shotgun at the body; the clear one if one is covered
                     head = head_clear and (not chest_clear or h4_wants_head(me, target))
-                    flip = getattr(s, "h4_flip", None)
-                    if flip is not None and flip[0] == tid and now < flip[2] and (head_clear if flip[1] else chest_clear):
-                        head = flip[1]           # the other part, the one fired at went dry (h4_dry_part)
                 else:
                     head = head_clear and (not chest_only or not chest_clear)
+                flip = getattr(s, "part_flip", None)
+                if flip is not None and flip[0] == tid and now < flip[2] and (head_clear if flip[1] else chest_clear):
+                    head = flip[1]               # the other part, the one fired at went dry (dry_part)
                 can_learn_block = chest_clear and head_clear
                 glassed = s.__dict__.setdefault("glassed", {})
                 if any(parts) and not (chest_clear or head_clear):
@@ -4582,7 +4592,8 @@ class Bot:
         if h4:
             ray = h4_ray(me, target, head, lead=True)
         elif direct_fire:
-            ray = head_solution(me, target) if head else chest_solution(me, target)
+            # (Reach Demon: led one tick, lead_ray; Legendary's protected head point stays as it was)
+            ray = lead_ray(me, target, head_solution(me, target) if head else chest_solution(me, target))
         act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
                                      precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1,
                                      origin=ray[0] if ray else None, target_point=ray[1] if ray else None,
@@ -4824,8 +4835,8 @@ class Bot:
         act.zoom = s.zoom_level(now, w, d, seen_now)
         if h4 and seen_fire and w in H4_SNAP:
             s.h4_lock = (tid, head)                    # Bot.think locks the view onto this part
-        if h4 and target is not None:
-            s.h4_dry_part(now, tid, target, head, act.fire, head_clear if not head else chest_clear)
+        if direct_fire and target is not None:
+            s.dry_part(now, tid, target, head, act.fire, head_clear if not head else chest_clear)
         # he ducked behind cover close by: flush him out with a grenade where he went, once per time out of sight, the
         # aim already on the spot (no flick to throw) (the line to him gone 0.5-3 s, out of sight or seen through the
         # level, 4-16 u; until then 4-14 u, the aim within 0.3 rad)
@@ -5075,20 +5086,26 @@ class Bot:
             return False                     # two in view: hold (regroup_point and the retreat rules decide)
         return me.shield + me.health >= target.shield + target.health - 0.3
 
-    def h4_dry_part(s, now, tid, target, head, fired, other_clear):
-        """Halo 4 Demon: presses at one part of him for H4_DRY_S with no hit on him (his shield and body never dropped)
-        while the other part's line is clear: that one for H4_FLIP_S (h4_flip, fight). A new man, a new part or a hit
-        starts the clock again."""
+    PART_DRY_SHOTS = 3   # ... and at least this many presses at it (Reach's paced DMR: 2 misses in a row are common)
+
+    def dry_part(s, now, tid, target, head, fired, other_clear):
+        """Halo 4 and Reach Demon direct fire: presses at one part of him for PART_DRY_S, PART_DRY_SHOTS of them at least,
+        with no hit on him (his shield and body never dropped) while the other part's line is clear: that one for
+        PART_FLIP_S (part_flip, fight). A new man, a new part or a hit starts the count again."""
         vit = target.shield + target.health
-        st = getattr(s, "h4_dry", None)
+        st = getattr(s, "part_dry", None)
         if st is None or st["tid"] != tid or st["head"] != head or vit < st["vit"] - 0.005:
-            st = s.h4_dry = dict(tid=tid, head=head, first=None, vit=vit)
+            st = s.part_dry = dict(tid=tid, head=head, first=None, n=0, vit=vit, was=False)
         st["vit"] = vit
-        if fired and st["first"] is None:
-            st["first"] = now
-        if st["first"] is not None and now - st["first"] >= H4_DRY_S and other_clear:
-            s.h4_flip = (tid, not head, now + H4_FLIP_S)
-            s.h4_dry = None
+        if fired and not st["was"]:
+            st["n"] += 1
+            if st["first"] is None:
+                st["first"] = now
+        st["was"] = bool(fired)
+        if (st["first"] is not None and now - st["first"] >= PART_DRY_S and st["n"] >= s.PART_DRY_SHOTS
+                and other_clear):
+            s.part_flip = (tid, not head, now + PART_FLIP_S)
+            s.part_dry = None
             s.note("part dry: the " + ("chest" if head else "head"))
 
     def fire_gap(s, w, d):

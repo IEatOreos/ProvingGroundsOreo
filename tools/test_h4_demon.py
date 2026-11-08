@@ -9,8 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from brain import profiles                                          # noqa: E402
-from brain.bot import (Belief, Bot, H4_BODY_FWD, H4_BODY_LEFT, H4_CHEST_DROP, H4_DRY_S, H4_FLIP_S,   # noqa: E402
-                       H4_LEAD_S, h4_chest, h4_demon_fire, h4_ray, h4_wants_head)
+from brain.bot import (Belief, Bot, H4_BODY_FWD, H4_BODY_LEFT, H4_CHEST_DROP, PART_DRY_S, PART_FLIP_S,   # noqa: E402
+                       DEMON_LEAD_S, h4_chest, h4_demon_fire, h4_ray, h4_wants_head)
 from brain.core import Action, PlayerState, Snapshot, Vec, angles_to  # noqa: E402
 
 
@@ -101,8 +101,8 @@ class H4DemonGateTests(unittest.TestCase):
         _, me, him, _ = scene()
         me.vel = Vec(1.0, 0, 0)
         o, p = h4_ray(me, him, True, lead=True)
-        self.assertAlmostEqual(o.x, me.view_pos.x + H4_LEAD_S)
-        self.assertAlmostEqual(p.y, him.head_pos.y + 2.0 * H4_LEAD_S)
+        self.assertAlmostEqual(o.x, me.view_pos.x + DEMON_LEAD_S)
+        self.assertAlmostEqual(p.y, him.head_pos.y + 2.0 * DEMON_LEAD_S)
         him.vel = Vec(300.0, 0, 0)
         _, p = h4_ray(me, him, True, lead=True)
         self.assertEqual(p, him.head_pos)
@@ -173,23 +173,23 @@ class H4DemonFightTests(unittest.TestCase):
         self.assertTrue(out[0][0].fire)
 
     def test_dry_part_gives_way_to_the_other(self):
-        n = int((H4_DRY_S + 0.5) * 30)
+        n = int((PART_DRY_S + 0.5) * 30)
         out, *_ = self.fight_ticks(n=n)
         parts = [o[1][1] for o in out]
         k = parts.index(False)                         # the first tick on the body
         self.assertTrue(all(parts[:k]))
-        self.assertAlmostEqual(k / 30, H4_DRY_S, delta=0.1)
+        self.assertAlmostEqual(k / 30, PART_DRY_S, delta=0.1)
         self.assertTrue(any("part dry: the chest" in o[4] for o in out))
-        self.assertFalse(any(parts[k:]))               # held for H4_FLIP_S
-        self.assertGreater(H4_FLIP_S, 0.5)
+        self.assertFalse(any(parts[k:]))               # held for PART_FLIP_S
+        self.assertGreater(PART_FLIP_S, 0.5)
 
     def test_hits_keep_the_part(self):
-        out, *_ = self.fight_ticks(n=int((H4_DRY_S + 0.5) * 30), hit_every=10)
+        out, *_ = self.fight_ticks(n=int((PART_DRY_S + 0.5) * 30), hit_every=10)
         self.assertTrue(all(o[1][1] for o in out))
 
     def test_dry_part_stays_when_the_other_is_covered(self):
         _, _, _, him, _ = self.fight_ticks(n=1)
-        out, *_ = self.fight_ticks(n=int((H4_DRY_S + 0.5) * 30), blocked={round(h4_chest(him).z, 3)})
+        out, *_ = self.fight_ticks(n=int((PART_DRY_S + 0.5) * 30), blocked={round(h4_chest(him).z, 3)})
         self.assertTrue(all(o[1][1] for o in out))
 
     def test_no_line_no_shot_no_lock(self):

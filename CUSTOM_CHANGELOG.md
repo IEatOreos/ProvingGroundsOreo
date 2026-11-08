@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Reach Demon leads its shots one tick and switches a dry part, 2026-11-07
+
+- Owner's request, after a fight-by-fight review of his Reach games: the Rasu game (`logs/trace_reach_forge_halo_20261107-191109`, 8 Demons, 647 s), with Headlong and Settlement as cross-checks.
+- What the review found:
+  - Duels: 69 with Demons. He landed the first hit in 40, and a Demon died in 17. When his hits landed, the Demon was: fighting him in view, 38%; in a vehicle seat, 23%; retreating, 11%; fighting someone else, 11%; the rest hunting, fetching or boarding. Its own belief said it saw him in about 79% of those hits.
+  - Not bloom: Demon DMR rounds that left the gun (magazine drop) landed 48% on Rasu and 54% on Headlong; Legendary 56%. A first shot after 0.8 s or more of rest, with no bloom, landed 44%, against 47-49% at the normal pace.
+  - Not dropped presses: on foot, 93% of paced presses fired, 80% of first presses, and 25% of presses under 0.38 s (the DMR refires about every 0.4 s). Presses from a vehicle seat (150) never fire the DMR.
+  - Lead: against a man crossing its view at 1 u/s or more, the applied view trailed him by a median 0.07 u (hits) to 0.105 u (misses). 111 of 164 missed head rounds were at such a man. Against a still man there was no trail. Re-aiming those shots with one tick of lead put 67% of the misses' views within 0.06 u of his head line (34% without) and 83% of the hits (60%); 0.05 and 0.068 s did no better.
+  - Height: rounds up at him 1+ u above landed 41%, down at him below 62%.
+  - Sight from below: real but smaller. About 21% of his hits came while the Demon had him only as a radar dot or from his hit, including him 2 u above at 2 u (Settlement) and 7 u below. The Forge World variant's pieces are not in the offline replay, so the cause is not confirmed; the 0.6 u feet-slab rule is the suspect. Not changed.
+- Changes (Reach Demon direct fire only; `reach_demon_direct_fire`):
+  - Fight aim and the final DMR snap use `lead_ray`: both ends moved on by `DEMON_LEAD_S` (0.034 s, one brain tick) of our own and his read velocity, ignored past `LEAD_VEL_MAX` (8 u/s). Legendary's protected, unled head point is unchanged.
+  - The Halo 4 dry-part switch is now shared (`Bot.dry_part`, `part_flip`; `PART_DRY_S` 0.8 s, `PART_FLIP_S` 1.5 s). It also needs 3 presses at the part with no hit (`PART_DRY_SHOTS`), because two paced Reach misses in a row are common. In Halo 4 the taps reach 3 presses well within 0.8 s, so its behavior is unchanged.
+  - Renamed the shared constants: `H4_LEAD_S` to `DEMON_LEAD_S`, `H4_VEL_MAX` to `LEAD_VEL_MAX`, `H4_DRY_S` and `H4_FLIP_S` to `PART_DRY_S` and `PART_FLIP_S`.
+- Unchanged: Reach Demon's cadence and bloom handling, its part preference (head when clear), its sight, Legendary, the lower tiers, Scaling and Halo 4's other rules.
+- Validation: `tools/test_reach_demon_lead.py`, 5 tests (the led final DMR shot; a teleport read not led; Legendary's head point unled at the final shot while Demon's is led; a dry head gives way to the chest after 0.8 s and 3 presses; landing rounds keep the head). The existing Reach Demon fire tests still pass with still bodies. All 250 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 Demon: rifles back on the head, torso-centered body point, dry-part switch, 2026-11-07
 
 - Owner's request: review each fight of his latest Adrift 1v1 on the new Halo 4 Demon code (`logs/trace_h4_wraparound_20261107-210807`, with its bug report at 126.4 s, "Find out why I won this gunfight"). The trace carries the new part fields and no Demon thruster charges or thrusts to cover, so it ran the current code.
