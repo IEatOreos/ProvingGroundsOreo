@@ -3657,8 +3657,11 @@ class Bot:
             return                                # (no place read this tick: Spire, live, a tick failed on it)
         v = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None)
         sp = vehicles.spec(v["kind"]) if v else None
-        scorpion = (s.game == "reach" and profiles.fixed_high(s.p)
-                    and v is not None and vehicles.kind_of(v["kind"]) == "scorpion")
+        # the Scorpion's turn cap, settled shots and chest aim: Reach's fixed Legendary and Demon; Halo 4's every fixed tier
+        # (custom, Nov 8: its Blood Crash tank driver, a Heroic, swung its view 150 / 709 deg/s at p90 / p99, the turret
+        # far behind). Scaling keeps its own aim
+        scorpion = (v is not None and vehicles.kind_of(v["kind"]) == "scorpion" and s.p.extra is None
+                    and (s.game == "h4" or (s.game == "reach" and profiles.fixed_high(s.p))))
         s.scorpion_turn = scorpion and getattr(s, "seat_for", None) == me.vehicle and s.seat == "driver"
         previous_settle = getattr(s, "scorpion_settle", None)
         s.scorpion_settle = None
@@ -3953,6 +3956,12 @@ class Bot:
                 tp = h4_aim_point(foe, snap, st.get("gun"), False, me) if view is not None else None
                 if tp is not None:
                     origin, aim_at = view, tp
+            elif s.game == "h4" and chest_shot:
+                # (custom: Halo 4's tank at a man on foot: his real chest (h4_chest) from its camera; the generic chest,
+                # his place + 0.35, is over a Halo 4 Spartan's head)
+                tp = h4_aim_point(foe, snap, st.get("gun"), False, me)
+                if tp is not None:
+                    aim_at = tp
             act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=st.get("gun"),
                                             origin=origin, target_point=tp,
                                             crouched=crouched(foe), protected=profiles.fixed_high(s.p),
@@ -4076,7 +4085,8 @@ class Bot:
             if v is not None and act.forward >= 1.0 and dist(me.pos, target) > TRAVEL_BOOST_FROM:
                 s.travel_boost(now, me, v, act, air)
             s.att = ["path", None, round(w.x, 1), round(w.y, 1)]
-            if meet and armed and not s.scorpion_turn:  # travel shots have no cannon alignment check
+            # travel shots have no cannon alignment check (Easy's tank, Halo 4, keeps them: they are its only shots)
+            if meet and armed and (not s.scorpion_turn or easy):
                 head = s.heading(me, v)
                 act.fire = any(dist(me.pos, q.pos) < 35.0 and abs(wrap(math.atan2(q.pos.y - me.pos.y, q.pos.x - me.pos.x)
                                                                        - head)) < 0.25

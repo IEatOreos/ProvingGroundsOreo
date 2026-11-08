@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Halo 4 Scorpion: Reach's tank fix for every fixed tier, 2026-11-08
+
+- The owner: the Halo 4 Scorpion "has the same issue the Reach scorpion had": the driver's turn speed, and the rest of the Reach fix.
+- His Blood Crash game (`logs/trace_h4_ca_blood_crash_20261108-000424.jsonl`) is the only recent Halo 4 trace with a Scorpion, and it had one driver: Rapid62 (bot 9, Heroic, spammer), at the wheel from 26 s to 68 s. Its view swung 150 deg/s at the 90th percentile of ticks, 709 at the 99th and 1,122 at the most. It fired on 381 of its 577 aim ticks, 44 of them with its command more than 3 degrees from its view. The Reach fix only applied to fixed Legendary and Demon in Reach, so this driver had none of it.
+- `brain/bot.py` `Bot.drive`:
+  - The `scorpion` gate is Reach's fixed Legendary and Demon (as before) or, in Halo 4, every fixed tier, Easy to Demon. Scaling (extra set) is excluded in both games.
+  - As in Reach, a Halo 4 Scorpion driver's view turns at most `vehicles.SCORPION_TURN`, 90 deg/s. That rate was measured on the owner's Reach Boneyard drive; Halo 4's turret speed has not been measured. The cannon waits for 0.10 s of continuous alignment before it fires, close in too.
+  - Chest aim at a man on foot: in Halo 4, his real chest (`h4_aim_point` → `h4_chest`, his live head less 0.16 u, so a crouch lowers it) from the tank's camera view (2 u over the hull). Reach's chest point, his place + 0.35, is over a Halo 4 Spartan's head (place + 0.25). The old splash aim, place + 0.05, sat near the hips. A rider or a vehicle keeps the vehicle aim.
+  - Easy drives its trip and only shoots what is in front of it on the way. The Reach fix turned those travel shots off for a capped driver. Easy's Halo 4 tank keeps them, so it still fires.
+- Validation:
+  - `tools/test_h4_scorpion.py`, 9 tests: every fixed Halo 4 tier is capped, Scaling and a Ghost are not; Reach is unchanged (Heroic and Scaling uncapped, Legendary and Demon capped); the turn is held to 90 deg/s, the profile's own turn otherwise; the chest point at a man on foot, the vehicle aim at a rider; the cannon holds until settled, close in too; and Easy still fires while driving.
+  - All 308 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Slayer anchor priority and paired posts, 2026-11-08
 
 - The Team Director can assign up to two anchors per Slayer role pass, with each assigned to a separate nearby post. Fixed Demon bots get first pick regardless of personality, followed by Campers, Snipers, and other eligible bots. Distance and current role break ties within each priority group. The aggressive Slayer plan still sends hunters toward the fight.

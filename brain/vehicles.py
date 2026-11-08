@@ -422,6 +422,7 @@ def gun_forward(turret, kind=None):
 GUN_HEIGHT_KIND = {"warthog": 0.92}
 
 SCORPION_TURN = math.radians(90.0)  # Reach Boneyard: upper sustained driver view speed in the owner's recording.
+# (Halo 4's Scorpion drivers use it too, every fixed tier: Bot.drive. Not measured in Halo 4)
 SCORPION_SETTLE = 0.10              # s of aligned aim before requesting a shot; barrel orientation is not read.
 
 
