@@ -3036,7 +3036,12 @@ class Bot:
         s.last_flags = dict(post=round(post, 2), seen=len(seen), friends=friends, avoid=avoid, cracked=cracked,
                             recharge=now < getattr(s, "recharge_until", 0.0), hit=hit_recent)
         if not scores:
-            return ("roam", None)
+            if s.order.role not in ("ride", "board", "drive"):
+                return ("roam", None)
+            # (custom, Nov 8) nothing else scored is no reason to drop the team's call to a vehicle (below): a Legendary
+            # sent to Redoubt's Wraith 1 s after its spawn roamed the other way 7.5 s with nothing scored, and turned
+            # for it only when a hunt came up (20261108-010650, 10.8-18.5 s)
+            scores[("roam", None)] = 0.0
         if s.goal in scores and s.goal[0] != "hold":
             scores[s.goal] += 0.2           # humans commit: no flip-flopping between two close goals
                                             # (a camper still gets restless now and then)

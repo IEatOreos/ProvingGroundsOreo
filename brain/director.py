@@ -1398,6 +1398,32 @@ class Director:
 
     CREW_REACH = 45.0      # u: how far a bot is sent on foot to drive a vehicle its team wants (crew_orders)
     POWER_R = 15.0         # u: a bot on an objective job takes a free power vehicle this near it (crew_orders)
+    # (custom, Nov 8; Halo 4) a power vehicle's driver by rank (profiles.resource_priority) only among the bots within
+    # POWER_TIER_BAND u of the nearest one sent; and a bot within POWER_R of it takes the job from one POWER_HANDOVER u or
+    # more farther. Redoubt 20261108-010650: its Wraith went to a Legendary 45 u off over a Heroic at 27 u, and the job
+    # stayed with him 20 s while teammates respawned by it (first driver 23-37 s after each spawn; Ghosts 5-20 s)
+    POWER_TIER_BAND, POWER_HANDOVER = 10.0, 15.0
+
+    def power_tiers(s, pairs):
+        """The pairs [(distance, bot, vehicle)] for one power vehicle whose bot is ranked: Halo 4, those within
+        POWER_TIER_BAND of the nearest; elsewhere all, as before."""
+        if not str(s.map.get("name", "")).startswith("h4_") or not pairs:
+            return pairs
+        d0 = min(x[0] for x in pairs)
+        return [x for x in pairs if x[0] <= d0 + s.POWER_TIER_BAND]
+
+    def power_handover(s, v, bid, players, pools, skip, now, may_drive):
+        """Halo 4: whether the power vehicle v bot bid is on its way to has a teammate of the pools (free and busy bots
+        on foot) within POWER_R of it, POWER_HANDOVER u or more nearer than bid: that one takes the job (crew_orders)."""
+        from . import vehicles
+        if not str(s.map.get("name", "")).startswith("h4_") or vehicles.taxi_ok(v["kind"]) or players.get(bid) is None:
+            return False
+        vp = Vec(*v["pos"])
+        far = dist(players[bid].pos, vp)
+        return any(c != bid and players.get(c) is not None and skip.get((c, v["handle"]), 0.0) <= now
+                   and may_drive(b, v) and dist(players[c].pos, vp) <= s.POWER_R
+                   and dist(players[c].pos, vp) + s.POWER_HANDOVER <= far
+                   for pool in pools for c, b in pool.items())
 
     def crew_orders(s, now, snap, players, foot, busy=()):
         """Vehicles picked by role. Roles in the order one anti-air, one anti-vehicle, one transport (CTF and Assault: the
@@ -1427,6 +1453,10 @@ class Director:
             return snap.mode == "race" or not (profiles.fixed_demon(b.p) and vehicles.demon_no_drive(v["kind"]))
 
         for h, (bid, since) in list(crews.items()):
+            if (h in empty and (bid in free or bid in near) and now - since < 30.0
+                    and s.power_handover(empty[h], bid, players, (free, near), skip, now, may_drive)):
+                del crews[h]                     # (custom: a nearer teammate takes it, below; no wait for the far one)
+                continue
             if (h in empty and (bid in free or bid in near) and now - since < 30.0
                     and may_drive(s.bots[bid], empty[h])
                     and not (vehicles.kind_of(empty[h]["kind"]) == "mongoose"
@@ -1464,7 +1494,7 @@ class Director:
                 if d is None or d > s.CREW_REACH:
                     break
                 if not vehicles.taxi_ok(v["kind"]):
-                    d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),
+                    d, b, v = min(s.power_tiers([x for x in pairs if x[2]["handle"] == v["handle"]]),
                                   key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
                 elif vehicles.demon_no_drive(v["kind"]) and snap.mode != "race":
                     # (custom: a Warthog or a Mongoose goes to a Normal or Heroic bot in reach first, then the nearest:

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Power vehicles: a called driver goes at once; Halo 4 sends the near one, 2026-11-08
+
+- The owner, on Redoubt's "Red team Wraith spawn" report: bots do not go straight to the Wraith off spawn as they do to other vehicles, and as a power vehicle the team leader should send them to it.
+- Redoubt 20261108-010650: every Ghost and Warthog spawn drew a rider in 5-20 s, often with several bots on their way. Each of the three Wraith spawns (0.4, 312, 626 s at red's base) had one bot sent, from 43-45 u away, and its first driver 23-37 s after the spawn. Bots never take a tank for a trip of their own (`vehicles.taxi_ok`), so the director's call (`Director.crew_orders`) is its only way to get a driver.
+  - At the start the director did call one 1 s after spawn: OutlawMarine (Legendary) at 10.8 s. With nothing in sight and no objective, its `decide` had no scores and returned "roam" before reaching the order, so it walked the other way 7.5 s, until a hunt came up at 18.5 s. That is a bug in every game.
+  - At the 312 s respawn the director sent OutlawMarine again from 44.7 u, over Rapid62 (Heroic) at 27.3 u: a power vehicle's driver went by rank first (Demon, Legendary, Heroic ...) at any distance in its 45 u reach. The job then stayed his for up to 30 s.
+- Changes:
+  - `brain/bot.py` `Bot.decide` (every game): with nothing scored, a bot with a ride, board or drive order still takes the order's branch (it goes for the vehicle when it is usable and within its range, as with other goals), and roams only if not.
+  - `brain/director.py` `crew_orders` (Halo 4 only): a power vehicle's driver is ranked only among the bots within `POWER_TIER_BAND` (10 u) of the nearest one in reach (`power_tiers`); Demon and Legendary still win when about as near. A bot within `POWER_R` (15 u) of the empty power vehicle that is `POWER_HANDOVER` (15 u) or more nearer than the one on its way takes the job (`power_handover`: one who respawns by it). The far bot keeps the role order its pass gave it. Reach and the other games keep the rank-first pick and the 30 s job.
+- Validation: `tools/test_h4_power_vehicle.py`, 7 tests: a Legendary sent to a Wraith with nothing else scored goes (Halo 4 and Reach); in Halo 4 a Heroic at 27 u is sent over a Legendary at 45 u, a Legendary at 34.8 u over a Heroic at 34 u, a Demon at 19 u over a Normal at 10 u; Reach still sends the Legendary; a teammate 5 u off takes the job from one 40 u off, one at 28 u does not, and Reach keeps the job. All 342 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 Forge canvases read as canvases; Cliffside's owner spots, 2026-11-08
 
 - Ravine (the owner's report, 20261108-012136, 336.6 s: "Bots arent reading this as a wall. Or a base.", at a round UNSC base). Two causes:
