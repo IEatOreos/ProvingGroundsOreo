@@ -632,9 +632,12 @@ class Kit:
             return (k, "self", None, 2.0, "armor lock: sword or hammer within 6 units")
         # 2. Shield popped while being shot: dash out of his aim or into cover; with no cover near,
         # a heal field, bubble or regenerator.
+        # (custom: no thruster in a gunfight for Demon outside Infection, the owner's ask Nov 7: not this cover thrust,
+        # nor the fight's dash-in below; the grenade, lunge, sniper-lane and flag thrusts stay)
+        demon_gunfight = k == "thruster" and profiles.fixed_demon(bot.p) and snap.mode != "infection"
         if x["cracked"] and x["hit"]:
             close = next((e for e in x["seen"] if dist(e.pos, me.pos) < 8.0), None)
-            if k == "thruster" and not no_cover():
+            if k == "thruster" and not demon_gunfight and not no_cover():
                 return (k, "dash", cover, 0.1, "thruster to cover")
             if k == "evade" and close is not None:
                 return (k, "dash", side(close), 0.1, "dash out of his aim, shield down")
@@ -753,10 +756,8 @@ class Kit:
             if k == "hardlight_shield" and x["losing"] and len(x["seen"]) == 1 and x["hit"] and 4.0 < d < 20.0:
                 # one man in front only (EQ-HLS-02: "never hold it in a fight with enemies on two sides")
                 return (k, "self", None, 1.5, "hardlight: shot and losing")
-            # (custom: no thruster charge for Demon outside Infection, the owner's ask Nov 7: it keeps its gunfight on
-            # the gun; its other thrusts, to cover, out of a grenade, a lunge or a sniper's lane, stay)
-            demon_no_charge = k == "thruster" and profiles.fixed_demon(bot.p) and snap.mode != "infection"
-            if (k in ("evade", "thruster") and 3.0 < d < 6.5 and x["lunge"] is None and not demon_no_charge
+            # (custom: no thruster charge for Demon outside Infection, demon_gunfight above)
+            if (k in ("evade", "thruster") and 3.0 < d < 6.5 and x["lunge"] is None and not demon_gunfight
                     and x["target"].weapon not in LUNGERS     # (never in onto a sword: survivors with shotguns dashed
                     and (me.weapon in CQB or x["target"].shield <= 0.05)):   # into the Flood, live Blood Cavern)
                 # in to close: our close-range gun, or his shield down for the melee finish (EQ-THRUST-01's melee

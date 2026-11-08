@@ -1,5 +1,5 @@
-"""Demon makes no thruster charge in a gunfight outside Infection (custom, Nov 7); its other thrusts, the other tiers and
-Infection keep theirs."""
+"""Demon uses no thruster in a gunfight outside Infection (custom, Nov 7): no charge in, no thrust to cover. Its grenade,
+lunge, sniper-lane and flag thrusts, the other tiers and Infection keep theirs."""
 import random
 import sys
 import unittest
@@ -55,9 +55,22 @@ class DemonThrusterChargeTests(unittest.TestCase):
                 b, me, snap = scene(tier)
                 self.assertEqual(why(b, me, snap), CHARGE)
 
-    def test_demon_keeps_the_thrust_to_cover(self):
-        b, me, snap = scene(my_shield=0.1, hit=True, cover=Vec(1.5, 2.0, 0))
+    def test_no_thrust_to_cover_for_demon_but_in_infection(self):
+        cracked = dict(my_shield=0.1, hit=True, cover=Vec(1.5, 2.0, 0), shield=1.0)
+        for mode in ("slayer", "ctf", "king"):
+            with self.subTest(mode=mode):
+                b, me, snap = scene(mode=mode, **cracked)
+                self.assertIsNone(why(b, me, snap))
+        b, me, snap = scene(mode="infection", **cracked)
         self.assertEqual(why(b, me, snap), "thruster to cover")
+        for tier in ("strong", "top"):
+            b, me, snap = scene(tier, **cracked)
+            self.assertEqual(why(b, me, snap), "thruster to cover")
+
+    def test_demon_still_thrusts_out_of_a_grenade(self):
+        b, me, snap = scene(shield=1.0)
+        b.nade_at = (Vec(0.5, 0.0, 0.0), 99.0)
+        self.assertEqual(why(b, me, snap), "dash out of the grenade")
 
 
 if __name__ == "__main__":
