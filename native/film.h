@@ -14,6 +14,14 @@ struct film_frame {                       // the bots' input for one tick, as th
 // a film: from the match's recording, with its commands put into shared memory to run now), or null on a fault.
 const film_frame* film_tick(uint64_t key, uint32_t tick, bool playback, uint32_t cmd_bit);
 void film_end();
+// For a command runner that can take several commands in one tick (H2A / Halo 4: a match's first tick waits for the
+// bots, h4f.cpp f_prejoin), so film_tick gets cmd_bit 0 there: a live match records each command as the runner takes
+// it, at this tick
+void film_command(uint32_t tick);
+// A film: the next recorded command of this tick into shared memory once the runner took the last one (each replayed
+// command waits for the runner); false when this tick has no more. Two commands at one tick overwrote each other, so a
+// Halo 4 film would have made only the last of its first tick's bots
+bool film_more(uint32_t tick);
 // A bot moved to its spawn (reach.cpp hr_spawn_moves) at this tick: recorded in a live match; a film puts the same
 // spawn target into shared memory at that tick, before the move check
 void film_spawn(uint32_t tick, int index, const float at[4]);

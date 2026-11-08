@@ -5,9 +5,89 @@ What changed in each version. Download the newest one from the [Releases page](h
 Click a version to see what changed since the one before it.
 
 <details open>
-<summary><b>0.2.2 s181</b> (November 6, 2026): Firefight on DLC maps, one brain per match</summary>
+<summary><b>0.2.2 s181</b> (November 6, 2026): call bots into your vehicle, a smarter Spire attack and Banshee, careful grenades, Flood survivors that use their shotguns</summary>
 
-### Fixed
+s181 was updated eight times, on November 6 and 7. Everything new and fixed since 0.2.2 s180 is below, the newest first.
+
+<!-- build: 20261107-1530 -->
+#### Eighth update (November 7, afternoon)
+
+**Fixed**
+- **Banshee bombs in Halo 4**: bots switch to the bomb like a second weapon, drop it with the main trigger and switch back, the way players do it. Seen working: bots dropped five bombs in a five-minute match.
+- **Halo 3 and Halo 4 Banshees** no longer press the second trigger as if it were the bomb.
+
+<!-- build: 20261107-1400 -->
+#### Seventh update (November 7, afternoon)
+
+**Fixed**
+- **Halo 4, the Mantis's rockets**: bots fire them now, held like a player does: a short hold at a soldier for one or two rockets, a long hold at a vehicle for the lock and a full salvo, as many as the magazine has left.
+
+<!-- build: 20261107-1200 -->
+#### Sixth update (November 7, midday)
+
+**Fixed**
+- **Halo 4, the Mantis**: bots really use it now. In a match Halo 4 makes the Mantis a walker, not the kind of object other vehicles are, so no bot ever saw it; now they get in, walk it, fire its machine gun and stomp (seen in matches on Forge Island). Its rockets don't fire yet.
+- **Halo 4 Theater**: films of bot matches play with their bots instead of crashing as the bots join. A 12-minute Forge Island film matched its match's score at every point checked. Theater with bots now works in Reach and Halo 4.
+
+<!-- build: 20261107-0230 -->
+#### Fifth update (November 7, early)
+
+**Fixed**
+- **Halo: Reach Invasion, Spire**: a bot sent to a man cannon now stays on its pad until it launches, instead of turning for a grav lift the moment it got there.
+- **Aircraft landing**: a bot flying to the objective sets down where there is room near it (within about 10 units) and gets out, instead of circling over Spire's top (tested, not yet seen in a real match).
+
+<!-- build: 20261107-0100 -->
+#### Fourth update (November 7)
+
+**New**
+- **Halo 4, the Mantis**: bots get in it and use all of it: the machine gun, the rockets (held on a vehicle to lock on) and the stomp on anyone and any vehicle beside it (tested, not yet seen in a real match).
+- **Aiming at the head**: in Reach and Halo 4 bots aim where an enemy's head really is, as it moves when he strafes and crouches. Their aim is as good as before, just aimed at the right spot.
+- **LiDAR mode** records where people and bots drive and fly, and the LiDAR Viewer shows it (V).
+
+**Changed**
+- **DMR over the assault rifle** (Reach, Halo 4): a bot with a loaded DMR uses it at every range, never drops a DMR for an assault rifle, and gives up the assault rifle for a DMR.
+
+**Fixed**
+- **Halo: Reach Invasion, Spire**: the attackers spread over both grav lifts and the man cannons during their all-out pushes on the core too, and walk onto a man cannon's pad instead of past it.
+- **Vehicles during a push**: while the team pushes the objective together, bots still get into your landed aircraft and its guns, a free power vehicle (like a Banshee) still gets a driver, and empty guns still get gunners.
+- **Falcons**: a bot pilot flies onto the top of Spire from outside instead of up under it. It also no longer jumps out when you take its gun, and waits a moment when you stand next to it (tested, not yet seen in a match with a person).
+- **Snipers and reloads**: bots no longer trade a sniper rifle that still has rounds for another gun, and reload magazines they had only seen part empty.
+- **Breakpoint**: bots on the bridge see, and shoot at, players on the tower ledge.
+- **Bots joining**: all the bots you asked for join even if you open the pause menu while they do (Halo 3: ODST Firefight had one of three).
+
+<!-- build: 20261106-2300 -->
+#### Third update (November 6, night)
+
+**New**
+- **Call a bot into your vehicle**: aim at a teammate bot and press the horn (crouch) while driving, and that bot gets in (Halo 3, Reach, Halo 2 Anniversary, Halo 4). Stopping next to a bot still calls the nearest one, as before.
+- **Aircraft pick up bots**: land an aircraft next to teammate bots and they get in, both of a Falcon's gunner seats too. Bots flying one do the same for their teammates.
+- **The launcher's What's new**: when an update is out, What's new in the launcher lists everything added and fixed since the copy you have. From this build on, a same-day update of a version (like these three) shows up as an update too.
+
+**Fixed**
+- **Falcons**: bots no longer jump out of a Falcon in mid-air, and a bot pilot that lands to pick up a gunner waits for him (up to 20 seconds) instead of leaving as he walks up.
+- **Warthog gunners** aim from the gun itself, so their shots no longer drift to one side of the target.
+- **Halo: Reach Invasion, Spire**:
+  - In phase 3 the attackers spread over every way up the spire (both grav lifts and the three man cannons) instead of all queuing for one lift, and they no longer stop for guns on the core run.
+  - Bots know the man cannons only appear in phase 3 and that the spire's grav lifts only reach the top in phase 3.
+  - Banshees fly the spire closer and lower with real attack runs instead of creeping around it, stay under the map's ceiling, and make bomb runs into the phase 2 objective rooms.
+- **Grenades**: bots no longer throw a grenade where a teammate (or you) is standing or about to walk.
+- **Halo 4 Flood**: survivors no longer get stuck on Blood Cavern's upper walkway on their way to the hiding spot by the back lift.
+- **Bug reports**: a report now saves where you were when you pressed Save, and reports no longer fail to file now and then.
+
+<!-- build: 20261106-1840 -->
+#### Second update (November 6, evening)
+
+**Fixed**
+- **Halo 4 Flood**: with the shotgun out, human bots no longer sprint around a Flood coming at them (they couldn't shoot and turned their backs to him). They keep their sights on him and fire when he's in range.
+- **Halo 4 Flood and Infection**: a bot that loses sight of a Flood or zombie for a moment keeps fighting him instead of walking back to its spot.
+- **Infection and Flood**: human bots hide in places people actually play. On Blood Cavern they crowded against a wall trying to reach a floor nobody can get to.
+- **Gravity lifts**: bots no longer try to go down a lift from its top end (Blood Cavern's back lift, and the low lifts on Halo 2 Anniversary's Lockout and Reach's Ivory Tower).
+
+<!-- build: 20261106-1440 -->
+#### First release (November 6, afternoon)
+
+**Fixed**
+- **Halo 4 Flood** (and Infection against swords): human bots got caught holding the magnum when the Flood reached them. Now they shoot the magnum at a Flood on its way in, switch to the shotgun before it gets close, and hold their ground with it instead of walking into the sword. Against enemies with guns nothing changes.
 - **Firefight** ([#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12)): after a match on Unearthed or Installation 04, the bots' brain for that match kept running into the next one and gave your bots a second set of orders. It now stops when its match ends.
 
 </details>

@@ -20,7 +20,7 @@
    "off": 8,
    "mask": 8796093022208,
    "press": false,
-   "how": "decoded live 2026-10-29 02:00 (grenade=f, the owner's bind): +0x08 bit 43 while held, as Halo 4's (F threw there, HUD checked)"
+   "how": "decoded live 2026-10-29 02:00 (grenade=f, the bind in use): +0x08 bit 43 while held, as Halo 4's (F threw there, HUD checked)"
   },
   {
    "off": 48,
@@ -41,6 +41,14 @@
    "mask": 4294967296,
    "press": false,
    "how": "decoded live 2026-10-29 02:00 (reload=r): +0x30 bit 32"
+  }
+ ],
+ "cycle": [
+  {
+   "off": 64,
+   "mask": 3072,
+   "press": false,
+   "how": "decoded live 2026-11-07: key 1, 37 ticks held, idle noise excluded"
   }
  ]
 }

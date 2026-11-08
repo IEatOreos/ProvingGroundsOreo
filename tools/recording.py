@@ -149,7 +149,7 @@ def rotate(logs=LOGS, games=None, after=None):
 def register(root=ROOT, path=None):
     """This copy of the mod in the per-user list (COPIES), so the Observer of every other copy lists its games too:
     the BOTS panel's brain runs from the copy whose botcore.dll is in MCC, which need not be the copy whose Observer
-    is open (Nov 4: the owner's install listed nothing while his games went to the working repo's logs)."""
+    is open (Nov 4: an install listed nothing while its games went to the working repo's logs)."""
     path = path or COPIES
     if not path:
         return

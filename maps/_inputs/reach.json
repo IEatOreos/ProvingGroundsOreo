@@ -4,7 +4,7 @@
    "off": 8,
    "mask": 2048,
    "press": false,
-   "how": "decoded live 2026-10-23 22:12 (tools/decode_buttons.py melee=q, the owner's bind): +0x08 0x10800 while held (bit 16 rides on every key) and +0x40 0x80001000; bit 11 alone verified live the same minute on Boardwalk: 4 bot melee hits (2.0 -> 0.41 -> 0.02 -> dead, and a one-swing kill), 1 melee kill in the carnage report. Bit 12 (read from FUN_18004bc0c) never swung."
+   "how": "decoded live 2026-10-23 22:12 (tools/decode_buttons.py melee=q, the bind in use): +0x08 0x10800 while held (bit 16 rides on every key) and +0x40 0x80001000; bit 11 alone verified live the same minute on Boardwalk: 4 bot melee hits (2.0 -> 0.41 -> 0.02 -> dead, and a one-swing kill), 1 melee kill in the carnage report. Bit 12 (read from FUN_18004bc0c) never swung."
   }
  ],
  "grenade": [
@@ -20,13 +20,13 @@
    "off": 64,
    "mask": 12288,
    "press": false,
-   "how": "decoded live 2026-10-24 (tools/decode_buttons.py equipment=shift, the owner's bind; docs/HANDOFF.md: +0x40 0x3000 while held and bit 31 on the press tick); added Oct 25 when the owner saw no bot use an armor ability (the brain kept them off: no equipment entry). Live check pending"
+   "how": "decoded live 2026-10-24 (tools/decode_buttons.py equipment=shift, the bind in use; docs/HANDOFF.md: +0x40 0x3000 while held and bit 31 on the press tick); added Oct 25 after a match where no bot used an armor ability (the brain kept them off: no equipment entry). Live check pending"
   },
   {
    "off": 64,
    "mask": 2147483648,
    "press": true,
-   "how": "decoded live 2026-10-24 (tools/decode_buttons.py equipment=shift, the owner's bind; docs/HANDOFF.md: +0x40 0x3000 while held and bit 31 on the press tick); added Oct 25 when the owner saw no bot use an armor ability (the brain kept them off: no equipment entry). Live check pending"
+   "how": "decoded live 2026-10-24 (tools/decode_buttons.py equipment=shift, the bind in use; docs/HANDOFF.md: +0x40 0x3000 while held and bit 31 on the press tick); added Oct 25 after a match where no bot used an armor ability (the brain kept them off: no equipment entry). Live check pending"
   },
   {
    "off": 8,

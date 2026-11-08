@@ -169,6 +169,34 @@ CLEARANCE = {"banshee": dict(near=8.4, ttc=2.5, over=6.8, travel=14.8),
              "hornet": dict(near=4.6, ttc=1.8, over=4.7, travel=7.9),
              "sabre": dict(near=25.0, ttc=3.0, over=18.5, travel=37.8),
              "seraph": dict(near=25.0, ttc=3.0, over=18.5, travel=37.8)}
+# Where a player flew a map's aircraft, recorded for the bots to copy (a Forge run Nov 6 19:32, Island v704f87f3,
+# logs/tmp/owner_flight.py, docs/research/flags_2026-11-06_evening.md section 4): the spire's axis (x, y); the
+# highest flown ("ceiling", z); by height band (z from, z to, u) the nearest to the axis flown
+# (the closest, 5.2-7 u under the top platform, 10 u level with the top and over it; at 17.5 u out the
+# deck over the aircraft held it under z -31: the terrain's own probes keep that);
+# "run_floor": the attack runs' lowest pull-out over the floor (4-9 u); the phase's bomb targets (z of the floor),
+# Invasion phase 2's objective rooms at the spire's floor 2 lift entrances (the bomb runs aimed into those rooms).
+# Air_guard: the ceiling; as far off the spire as it was flown at its height, the decks over it are no floor to climb
+# to;
+# runs pull out at run_floor. Replayed closed loop (tools/air_replay.py, live Spire 20261106-185412's Banshees):
+# bot 14 runs 6 -> 8, cannon ticks 10 -> 147, in range 14% -> 42%; bot 7 in range 45% -> 61% (fire 119 -> 98); floor
+# touches 1-2 as before. Its own clearances here (tools/vehicle_clearance.py, logs/tmp/clearance_spire_owner.json: a
+# Banshee 4.6 u off anything, 1.64 s open ahead, 5.85 u over the floor) replayed worse (bot 14: 1 run, 0 shots): not used
+AIR_ENVELOPE = {"reach_35_island": dict(axis=(-178.24, -405.33), ceiling=-17.2, run_floor=4.0,
+                                        bands=((-80.0, -40.0, 5.5), (-40.0, -24.0, 7.0), (-24.0, -10.0, 9.4)),
+                                        bombs={2: ((-171.92, -403.20, -58.76), (-178.12, -398.81, -58.76))})}
+
+
+def envelope(map_name):
+    """AIR_ENVELOPE for a map (its base map's for a variant: "reach_35_island/variants/..."), or None."""
+    return AIR_ENVELOPE.get((map_name or "").split("/")[0].split("@")[0])
+
+
+def envelope_min_r(env, z):
+    """The nearest to the axis flown at height z (env bands), 0 outside them."""
+    return next((r for z0, z1, r in env["bands"] if z0 <= z < z1), 0.0)
+
+
 # How each takes off (his, logs/tmp/takeoffs.py): "up", straight up first, to the height given (u), then off (the
 # Falcon "take off in falcon is upward, and then I take off, this is to avoid hitting any walls": 1.7-5.6 u up,
 # moving off 4.5-11 s after getting in); "forward", it launches by itself, the nose up by the pitch given (rad) its
@@ -375,6 +403,19 @@ def variant(name, turrets=()):
 # pivot or muzzle (their models, tools/model2obj on 35_island.map). Aimed from the eye's 0.62 the chaingun shot 0.3 u
 # over its aim point: 4.8 s at 6 u into a man who lost nothing
 GUN_HEIGHT = {"warthog_chaingun": 0.92, "falcon_side_gun": 0.38}
+# ... and along the vehicle's forward axis (u, + ahead): Reach's Warthog carries its chaingun on its "turret" marker,
+# 0.536 u behind its origin, on its centre line (logs/tmp/reach_guns/warthog.obj.markers.json, model2obj on
+# 35_island.map). Aimed from the origin, a man 10 u off to its side was missed by 3 deg, 6 at 5 u: to the right of one
+# on its left (a Spire flag Nov 6, the turret aim to the right, flagged Oct 30 too)
+GUN_FORWARD = {"warthog_chaingun": -0.536}
+GUN_FORWARD_KIND = {"warthog": -0.536}   # (Halo 3's unnamed turret, as GUN_HEIGHT_KIND: INFERRED, not measured)
+
+
+def gun_forward(turret, kind=None):
+    """GUN_FORWARD for the gun a gunner sits in (its name), else by the vehicle's kind where the game does not name the
+    gun (GUN_FORWARD_KIND), 0 where not measured."""
+    f = next((f for sub, f in GUN_FORWARD.items() if sub in (turret or "")), None)
+    return f if f is not None else (GUN_FORWARD_KIND.get(kind, 0.0) if turret in (None, "", "unknown") else 0.0)
 # ... by the vehicle's kind where the game does not name the gun: Halo 3's turret reads "unknown" in every gunner row,
 # so its Warthog gunner aimed from the eye's 0.62 and shot over the man. INFERRED: Halo 3's Warthog carries its gun as
 # Reach's does (not measured on its model)

@@ -22,6 +22,8 @@ view), and the paint calls a face too steep to walk up a wall.
 Output, merged over runs: maps/<map>/lidar.json (walked cells by kind, links, deaths, jump
 heights), logs/lidar_<map>.md (written every minute too: the mapper is killed when a match
 ends), and fall edges where the level data claimed floor taught to the nav (nav_learned.json).
+Every vehicle anyone drives or flies goes into maps/<map>/rides.json (RideWatch, as in normal matches): the vehicles'
+ground and roads and the aircraft heights the bots use from the next match, drawn in the view as it is driven.
 
 usage: python -I lidar.py <map> [seconds=300] [--game h2a]   (bots already added: play.py --lidar)
        python -I lidar.py --view [map] [--open]      the 3D view of a map's stored data (newest map)
@@ -726,7 +728,7 @@ def seat_places(live, players):
     place, "riding" set): a seated unit's own is its seat's offset, read as about (0, 0, 0) (the player's Forge run: his
     bug reports from vehicles filed at the origin, his floor painted there, links of 180-200 u). A gun riding on a
     vehicle (a Warthog's turret) gives its vehicle's place, as tools/live_bots.py snapshot does."""
-    objs = live.objects((1,))
+    objs = live.objects(getattr(live, "VEHICLE_TYPES", (1,)))   # (Halo 4: its giants too, the Mantis)
     pos = {h: p for h, typ, path, p in objs}
     parent = {}
     for h, *_ in objs:
@@ -1979,7 +1981,7 @@ class Roomba:
         if s.phase == "run":                       # jump on the spot: within a tick's travel, or passing it
             d = math.dist(pos[:2], to[:2])
             # past the take-off along the run-up line (run -> to), not along the jump: a jump that turns from its run-up
-            # (the owner's Construct jump from (0.51, -3.84, 11.82): run-up north, landing south-east) read "passed" at the
+            # (a recorded Construct jump from (0.51, -3.84, 11.82): run-up north, landing south-east) read "passed" at the
             # run-up itself and the bot went run-up, run, run-up ... standing still, 290 bot-seconds live
             passed = (to[0] - pos[0]) * (to[0] - run[0]) + (to[1] - pos[1]) * (to[1] - run[1]) <= 0
             jump = d < 0.6 * (rec.phys.run if rec.phys else 2.25) / HZ or (d < 0.3 and passed)
@@ -2321,16 +2323,36 @@ class RideWatch:
     (the vehicles' ground, brain/maps.py rides_layers); aircraft their flown cells with the height over the floor
     under them, a histogram of those heights (the strafing and travelling heights), and their take-offs, landings and
     turn-backs (the heading reversed in 3 s: the edges people fly to). People and bots alike, kept apart (a person's
-    drive counts at once, the heights come from people's flying). live_bots: update each tick, save with the LiDAR
-    save."""
+    drive counts at once, the heights come from people's flying). live_bots and LiDAR mode (main): update each tick,
+    save with the LiDAR save. The LiDAR view draws every sample as it comes (feed, since)."""
     DRIVE_STEP, AIR_STEP = 0.25, 1.0    # u travelled between samples (a drive sample: a nav cell, 0.25 u)
     UP, DOWN = 1.5, 0.8                 # over the floor: airborne once above UP, landed once under DOWN
+    FEED_MAX = 300000                   # samples kept for the live view (about 2 hours of driving)
+    # the live view's sample kinds (rides_view uses the same): a person's drive, a bots-only drive, flown air
+    FEED_DRIVE, FEED_BOT_DRIVE, FEED_AIR = 0, 1, 2
 
     def __init__(s, map_name, T=None, path=None):
         s.map, s.T = map_name, T
         s.path = path or os.path.join(ROOT, "maps", map_name, "rides.json")
         s.v = {}                        # vehicle handle -> its track
         s.new = s._empty()
+        s.feed, s.feed_base = [], 0     # [x, y, z, kind] since the run began (feed_base: how many were dropped)
+        s.feed_lock = threading.Lock()
+
+    def _feed(s, x, y, z, kind):
+        with s.feed_lock:
+            s.feed.append([round(x, 2), round(y, 2), round(z, 2), kind])
+            if len(s.feed) > s.FEED_MAX:
+                drop = len(s.feed) - s.FEED_MAX
+                del s.feed[:drop]
+                s.feed_base += drop
+
+    def since(s, n, most=40000):
+        """(samples after the first n of this run, the count after them) for the live view's polling."""
+        with s.feed_lock:
+            i = max(0, n - s.feed_base)
+            out = s.feed[i:i + most]
+            return out, s.feed_base + i + len(out)
 
     @staticmethod
     def _empty():
@@ -2360,6 +2382,7 @@ class RideWatch:
                 st["last"] = (x, y, z)
                 c = s.new["drive"].setdefault((round(x * 4) / 4, round(y * 4) / 4, round(z, 1)), [0, 0])
                 c[src == "bot"] += 1
+                s._feed(x, y, z, s.FEED_BOT_DRIVE if src == "bot" else s.FEED_DRIVE)
 
     def _fly(s, now, st, x, y, z, src):
         if s.T is None:
@@ -2386,6 +2409,7 @@ class RideWatch:
         st["last"] = (x, y, z)
         c = s.new["air"].setdefault((round(x * 2), round(y * 2)), [round(z - h, 2), 0.0, 0, 9e9, -9e9])
         c[1], c[2], c[3], c[4] = c[1] + h, c[2] + 1, min(c[3], h), max(c[4], h)
+        s._feed(x, y, z, s.FEED_AIR)
         b = str(round(h * 2) / 2)
         s.new["h"][src][b] = s.new["h"][src].get(b, 0) + 1
 
@@ -2422,6 +2446,29 @@ class RideWatch:
             json.dump(out, f)
         os.replace(tmp, s.path)
         return True
+
+
+def rides_view(map_name, path=None):
+    """A map's stored drives and flights (maps/<map>/rides.json, RideWatch) for the LiDAR view: dict(drive=[[x, y, z,
+    kind]], air=[[x, y, z]], people=cells a person drove). Drive kinds as RideWatch's feed; only the cells the vehicles'
+    ground uses (brain/maps.py rides_layers: a person once or bots twice). Flown air at its mean flown height."""
+    p = path or os.path.join(ROOT, "maps", map_name, "rides.json")
+    try:
+        with open(p, encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return dict(drive=[], air=[], people=0)
+    drive, people = [], 0
+    for r in d.get("drive", []):
+        if len(r) < 5:
+            continue
+        if r[3] >= 1:
+            people += 1
+            drive.append([r[0], r[1], r[2], RideWatch.FEED_DRIVE])
+        elif r[4] >= 2:
+            drive.append([r[0], r[1], r[2], RideWatch.FEED_BOT_DRIVE])
+    air = [[r[0] / 2, r[1] / 2, round(r[2] + r[3] / max(r[4], 1), 2)] for r in d.get("air", []) if len(r) >= 5]
+    return dict(drive=drive, air=air, people=people)
 
 
 class Notices:
@@ -2467,9 +2514,10 @@ class Hub:
         return dict(map=s.rec.map, title=map_title(s.rec.map), mode=s.mode, session=s.session, cell=CELL, zstep=ZSTEP, walk=d.get("walk", []),
                     deaths=d.get("deaths", [])[-1500:], runs=d.get("runs", 0), bot_minutes=d.get("bot_minutes", 0),
                     features=load_features(s.rec.map), links=d.get("links", []), weapons=d.get("weapons", []),
-                    wall_kinds=wall_kinds_view(s.rec.map))
+                    wall_kinds=wall_kinds_view(s.rec.map), rides=rides_view(s.rec.map))
 
-    def live(s, since):
+    def live(s, since, rsince=0):
+        """rsince: drive and flight samples of this run the page already has (RideWatch.since; s.rides, LiDAR mode)."""
         if time.time() - getattr(s, "classified", 0) > 2:   # two-way / one-way for new jumps too
             s.classified = time.time()
             s.rec.classify()
@@ -2489,6 +2537,9 @@ class Hub:
         d = getattr(s.rec, "director", None)            # coverage and the open patches (tools/lidar_director.py)
         if d is not None and d.history:
             extra["coverage"] = d.view()
+        rw = getattr(s, "rides", None)                  # drives and flights recorded this run, as they come
+        if rw is not None:
+            extra["rides"], extra["rseq"] = rw.since(rsince)
         return dict(map=s.rec.map, mode=s.mode, session=s.session, note=s.note, seq=since + len(cells), cells=cells, weapons=weapons,
                     players=players, deaths=deaths, links=links, recording=s.recording, calls=s.rec.calls, t=round(time.time(), 2),
                     **extra)
@@ -2543,8 +2594,12 @@ def serve(hub, port=PORT):
                 s.send(open(os.path.join(ART, *u.path.split("/")[2:]), "rb").read(),
                        "image/png" if u.path.endswith(".png") else "image/jpeg", cache=True)
             elif u.path == "/live":
-                since = int((parse_qs(u.query).get("since") or ["0"])[0])
-                d = h.live(max(0, since))
+                try:
+                    since = int((q.get("since") or ["0"])[0])
+                    rsince = int((q.get("rsince") or ["0"])[0])
+                except ValueError:
+                    return s.send_error(400)
+                d = h.live(max(0, since), max(0, rsince))
                 ctl = getattr(hub, "control", None)  # the simulator's state for its panel (tools/lidar_sim.py)
                 if ctl is not None:
                     d["sim"] = ctl.state()
@@ -2777,6 +2832,17 @@ def main(o):
     held, seen_w, next_w = {}, set(), 0.0
     srv = serve(hub)
     people = HumanWatch(o.map, rec)
+    # every vehicle driven or flown -> the map's drive mesh and airspace (rides.json, as in normal matches: live_bots),
+    # drawn live in the view (Hub.live); the bots' vehicles use it from the next match
+    drives = hub.rides = RideWatch(o.map, T=T)       # (rides above: the map's lifts and man cannons, another thing)
+    rides_err = [False]
+
+    def save_rides():
+        try:
+            if drives.save():
+                print(f"drives and flights saved: {os.path.relpath(drives.path, ROOT)}", flush=True)
+        except Exception as e:                      # never stops the mapping (nor the LiDAR save after it)
+            print(f"rides not saved: {type(e).__name__}: {e}", flush=True)
     send = lambda title, line: botctl.notice(m, title, line)
     notices, paths = Notices(rec, send), PathRec(rec, send)
     shots = ShotRec(live, o.map, send, rec)          # F7: shots that open things (gate buttons, bridge locks)
@@ -2843,7 +2909,7 @@ def main(o):
                 vehicles = []
             if not told:
                 told = True
-                send("LIDAR MODE", "The bots are mapping this map. Play along: your jumps and routes teach them too")
+                send("LIDAR MODE", "The bots are mapping this map. Play along: your jumps, routes and drives teach them too")
             ps = {p["index"]: p for p in players}
             mine = botctl.status(m)["bots"]
             is_up = lambda p: bool(p and p["pos"] and p.get("health", 1.0) > 0)
@@ -2910,6 +2976,12 @@ def main(o):
             except Exception as e:                      # (never stops the mapping)
                 print(f"{now:6.1f}s players not read for the recordings: {type(e).__name__}: {e}", flush=True)
                 states = []
+            try:                                        # drives and flights (RideWatch): a rider's place is his vehicle's
+                drives.update(now, vehicles, states, bot_ids)
+            except Exception as e:                      # (never stops the mapping; said once)
+                if not rides_err[0]:
+                    rides_err[0] = True
+                    print(f"{now:6.1f}s drive recording failed: {type(e).__name__}: {e}", flush=True)
             if collector is not None:                   # your play, every tick (tools/collector.py): what you do with
                 try:                                    # each ability, for the bots
                     from brain.tracefmt import crosshair, seat_of
@@ -3018,6 +3090,7 @@ def main(o):
                     print(f"{now:6.1f}s nav: {len(sig)} links in use ({time.time() - t_nav:.2f} s)", flush=True)
             bot_s += len([1 for i in alive if alive[i]]) / HZ
             if tick - last_save > 60:                # the mapper is killed when the match ends
+                save_rides()
                 data = rec.save(bot_seconds=bot_s, human_seconds=people.seconds)
                 bot_s, people.seconds, last_save = 0.0, 0.0, tick
                 report(rec, data, T)
@@ -3035,6 +3108,7 @@ def main(o):
                 print("out of bounds:", oob.save(), flush=True)
         except Exception as e:
             print("out of bounds not saved:", e, flush=True)
+        save_rides()
         data = rec.save(bot_seconds=bot_s, human_seconds=people.seconds)
         taught = len(T.stuck) - stuck0 if T is not None else 0   # falls and bump walls, learned during the run
         if taught:

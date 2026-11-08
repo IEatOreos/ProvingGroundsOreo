@@ -49,6 +49,7 @@ static uint32_t g_btn_seq;
 static rec_hdr g_next;                        // replay: the record read ahead
 static uint8_t g_buf[sizeof(film_frame) + sizeof(cmd_rec) + 64];
 static bool g_have;
+static bool g_cmd_wait;                       // replay: a command put into shared memory this pass, for the runner
 
 static void close_all() {
     if (g_out) { fclose(g_out); g_out = nullptr; }
@@ -114,6 +115,43 @@ static void apply(bool commands) {
     }
 }
 
+static void put_cmd(uint32_t tick) {
+    cmd_rec c{};
+    c.cmd = g_shm->cmd; c.arg = g_shm->cmd_arg;
+    memcpy(c.name, g_shm->cmd_name, sizeof c.name);
+    c.look_game = g_shm->cmd_look_game; c.look_off = g_shm->cmd_look_off;
+    memcpy(c.look, g_shm->cmd_look, sizeof c.look); memcpy(c.look_mask, g_shm->cmd_look_mask, sizeof c.look_mask);
+    memcpy(c.clan, g_shm->cmd_clan, sizeof c.clan);
+    put(tick, R_CMD, &c, sizeof c);
+}
+
+void film_command(uint32_t tick) {
+    if (g_mode != 1 || !g_out || !g_shm || g_shm->cmd_seq == g_shm->cmd_done_seq) return;
+    __try { put_cmd(tick); } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
+// a film: this tick's records in order, up to a second command (the first waits in shared memory for the runner)
+static void replay_to(uint32_t tick) {
+    g_cmd_wait = false;
+    while (g_have && g_next.tick <= tick) {
+        if (g_next.type == R_CMD) {
+            if (g_cmd_wait) break;
+            g_cmd_wait = true;
+        }
+        apply(true);
+        read_next();
+    }
+}
+
+bool film_more(uint32_t tick) {
+    if (g_mode != 2 || !g_shm) return false;
+    __try {
+        if (!g_cmd_wait || !g_have || g_next.tick > tick) return false;
+        replay_to(tick);
+        return g_cmd_wait;
+    } __except (EXCEPTION_EXECUTE_HANDLER) { close_all(); return false; }
+}
+
 void film_spawn(uint32_t tick, int index, const float at[4]) {
     if (g_mode != 1 || !g_out) return;
     spawn_rec s{ index, { at[0], at[1], at[2], at[3] } };
@@ -134,15 +172,7 @@ const film_frame* film_tick(uint64_t key, uint32_t tick, bool playback, uint32_t
             memcpy(g_frame.index, g_shm->bot_player_index, sizeof g_frame.index);   // frozen for this tick
             memcpy(g_frame.act, g_shm->actions, sizeof g_frame.act);
             if (g_out) {
-                if (g_shm->cmd_seq != g_shm->cmd_done_seq && (g_shm->cmd_arg & cmd_bit)) {
-                    cmd_rec c{};
-                    c.cmd = g_shm->cmd; c.arg = g_shm->cmd_arg;
-                    memcpy(c.name, g_shm->cmd_name, sizeof c.name);
-                    c.look_game = g_shm->cmd_look_game; c.look_off = g_shm->cmd_look_off;
-                    memcpy(c.look, g_shm->cmd_look, sizeof c.look); memcpy(c.look_mask, g_shm->cmd_look_mask, sizeof c.look_mask);
-                    memcpy(c.clan, g_shm->cmd_clan, sizeof c.clan);
-                    put(tick, R_CMD, &c, sizeof c);
-                }
+                if (g_shm->cmd_seq != g_shm->cmd_done_seq && (g_shm->cmd_arg & cmd_bit)) put_cmd(tick);
                 if (g_shm->btn_map_seq != g_btn_seq) {
                     g_btn_seq = g_shm->btn_map_seq;
                     put(tick, R_BUTTONS, g_shm->btn_map, sizeof g_shm->btn_map);
@@ -177,7 +207,7 @@ const film_frame* film_tick(uint64_t key, uint32_t tick, bool playback, uint32_t
             for (int i = 0; i < HB_MAX_PLAYERS; i++) g_frame.index[i] = -1;
             while (read_next() && g_next.tick < tick) apply(false);
         }
-        while (g_have && g_next.tick <= tick) { apply(true); read_next(); }
+        replay_to(tick);
         g_last_tick = tick;
         return &g_frame;
     } __except (EXCEPTION_EXECUTE_HANDLER) { close_all(); return nullptr; }

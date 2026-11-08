@@ -7,7 +7,7 @@
 <style>
   :root { --bg: #0b0f14; --card: rgba(12, 19, 28, 0.9); --line: #24425a; --text: #d3dde8; --dim: #8fa3b6;
           --btn: #16263a; --btn-on: #23507a; --primary: #1d5f96; --primary-line: #3d8ad0;
-          --gold: #ffc94d; --violet: #b48cff; --orange: #ff9a3d; --magenta: #ff5bd8; --red: #ff4b4b; --green: #5fe08a; --cyan: #4fd8ff; --sky: #8fd3ff; --lime: #a8f05a; }
+          --gold: #ffc94d; --violet: #b48cff; --orange: #ff9a3d; --magenta: #ff5bd8; --red: #ff4b4b; --green: #5fe08a; --cyan: #4fd8ff; --sky: #8fd3ff; --lime: #a8f05a; --mint: #2ee6a0; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
                font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
   canvas { display: block; width: 100%; height: 100%; cursor: grab; }
@@ -203,6 +203,7 @@
       <div class="row"><span>Jumps shown: two-way / one-way</span><b id="nways">0</b></div>
       <div class="row"><span>Crouch paths you walked</span><b id="ncrawl">0</b></div>
       <div class="row"><span>Recorded paths</span><b id="nroute">0</b></div>
+      <div class="row"><span>Vehicle drives: people / bots (cells)</span><b id="ndrive">0 / 0</b></div>
     </div>
     <div class="grp"><h3>Map</h3>
       <div class="row"><span>Weapons / objectives / usable</span><b id="nfeat">0</b></div>
@@ -234,6 +235,9 @@
     <div class="key" data-when="cover"><span class="sw dia" style="background:#ffb340"></span>Floor not covered yet <span class="sw dia" style="background:var(--cyan);margin-left:6px"></span>a bot on its way <span class="sw dia" style="background:#a05050;margin-left:6px"></span>no way found</div>
     <div class="key"><span class="sw dot" style="background:var(--lime)"></span>Aircraft</div>
     <div class="key" data-layer="airsp"><span class="sw" style="background:rgba(143,211,255,.35)"></span>Air space the aircraft flew</div>
+    <div class="key" data-layer="drive"><span class="sw" style="background:var(--mint)"></span>Where a person drove a vehicle: the bots' vehicle roads</div>
+    <div class="key" data-layer="drive"><span class="sw" style="background:var(--mint);opacity:.4"></span>Where only bots drove (counts after two drives)</div>
+    <div class="key" data-layer="drive"><span class="sw dot" style="background:#9fd9ff"></span>Where someone flew (at the height flown)</div>
     <div class="key"><span class="sw dot" style="background:var(--gold);width:13px;height:13px"></span>You (and other people)</div>
     <div class="key" data-layer="link"><span class="arc" style="border-color:#fff2b8"></span>A jump you made (dot: where you landed)</div>
     <div class="key" data-layer="link"><span class="sw dot" style="background:#fff2b8"></span><span class="sw dot" style="background:#fff2b8;margin-left:-4px"></span>Dots at both ends: two-way (back and forth); one dot: one-way</div>
@@ -256,6 +260,7 @@
     <button id="b-feat" aria-pressed="true" aria-keyshortcuts="M"><span class="sw-track" aria-hidden="true"></span><span class="lname">Map features</span><kbd>M</kbd></button>
     <button id="b-kinds" aria-pressed="true" aria-keyshortcuts="K"><span class="sw-track" aria-hidden="true"></span><span class="lname">Windows and fences</span><kbd>K</kbd></button>
     <button id="b-airsp" aria-pressed="true" aria-keyshortcuts="A"><span class="sw-track" aria-hidden="true"></span><span class="lname">Air space</span><kbd>A</kbd></button>
+    <button id="b-drive" aria-pressed="true" aria-keyshortcuts="V"><span class="sw-track" aria-hidden="true"></span><span class="lname">Vehicle drives</span><kbd>V</kbd></button>
     <button id="b-trail" aria-pressed="true" aria-keyshortcuts="P"><span class="sw-track" aria-hidden="true"></span><span class="lname">Air paths</span><kbd>P</kbd></button>
     <button id="b-old" aria-pressed="true" aria-keyshortcuts="E"><span class="sw-track" aria-hidden="true"></span><span class="lname">Earlier runs</span><kbd>E</kbd></button>
     <button id="b-grid" aria-pressed="true" aria-keyshortcuts="G"><span class="sw-track" aria-hidden="true"></span><span class="lname">Grid</span><kbd>G</kbd></button>
@@ -383,7 +388,7 @@ const FEAT = {   // kind or objective role -> [buffer, colour, size, shape (1 do
   door: [new Buf(), [0.8, 0.8, 0.85, 0.9], -10, 4, false], shield: [new Buf(), [0.56, 0.83, 1, 1], -16, 3, true],
   obj_red: [new Buf(), [1, 0.3, 0.3, 1], -9, 4, false], obj_blue: [new Buf(), [0.35, 0.55, 1, 1], -9, 4, false],
   obj: [new Buf(), [1, 1, 1, 0.85], -8, 4, false],
-  // stations read live (brain/stations.py): armor abilities, spawn points, kill / safe / trait zones, the owner's notes
+  // stations read live (brain/stations.py): armor abilities, spawn points, kill / safe / trait zones, hand-placed notes
   ability: [new Buf(), [1, 0.55, 0.15, 1], -15, 4, true], spawn: [new Buf(), [0.6, 0.9, 0.6, 0.8], -7, 1, false],
   zone: [new Buf(), [1, 0.35, 0.35, 0.9], -14, 3, true], mark: [new Buf(), [1, 0.84, 0.3, 1], -17, 4, true],
   kill_edge: [new Buf(), [1, 0.35, 0.35, 0.55], -4, 1, false],   // a known kill / soft kill zone's rims (brain/oob.py)
@@ -422,12 +427,34 @@ const lands = { gold: new Buf(), green: new Buf(), red: new Buf(), violet: new B
 const beads = { gold: new Buf(), green: new Buf(), red: new Buf(), violet: new Buf(), sky: new Buf() };   // outlined dots along each arc
 const recBuf = new Buf();   // the path being recorded now (F6)
 let recording = null;
+// vehicle drives and flights (maps/<map>/rides.json and, live, tools/lidar.py RideWatch): kinds 0 a person's drive,
+// 1 bots only, 2 flown air
+const driveBufs = [new Buf(), new Buf(), new Buf()], driveSeen = new Set();
+let rseq = 0;
+function addRides(list) {
+  for (const r of list || []) {
+    const k = r[3] | 0; if (!driveBufs[k]) continue;
+    const key = k + "," + Math.round(r[0] * 4) + "," + Math.round(r[1] * 4) + "," + Math.round(r[2] * 2);
+    if (driveSeen.has(key)) continue;
+    driveSeen.add(key);
+    driveBufs[k].push(r[0], r[1], r[2] + (k === 2 ? 0 : 0.08));   // (a drive sample is the vehicle's centre: just over the floor)
+    if (k === 2) continue;      // a map driven but not scanned yet: the view still frames the drives
+    if (!bounds) bounds = [r[0], r[1], r[0], r[1]];
+    else { bounds[0] = Math.min(bounds[0], r[0]); bounds[1] = Math.min(bounds[1], r[1]); bounds[2] = Math.max(bounds[2], r[0]); bounds[3] = Math.max(bounds[3], r[1]); }
+  }
+  $("ndrive").textContent = driveBufs[0].n.toLocaleString() + " / " + driveBufs[1].n.toLocaleString();
+}
+function setRides(rd) {
+  if (!rd) return;
+  addRides(rd.drive);
+  addRides((rd.air || []).map(a => [a[0], a[1], a[2], 2]));
+}
 const zs = []; let zsDone = 0;   // floor heights, for a colour range that ignores a few odd cells
 const seen = new Set();
 let cell = 0.25, zstep = 0.1, seq = 0, mode = "", gotData = false, lastOk = 0, failed = false;
 let session = null;   // which mapper run this page shows; a new one (next match, other map) reloads the page
 let zmin = Infinity, zmax = -Infinity, bounds = null, humans = [];
-const show = { old: true, trail: true, dead: true, link: true, grid: true, follow: false, weap: true, airsp: true, feat: true, kinds: true };
+const show = { old: true, trail: true, dead: true, link: true, grid: true, follow: false, weap: true, airsp: true, feat: true, kinds: true, drive: true };
 const weapBuf = new Buf(); let weapons = [];
 
 function addCell(c, isOld) {
@@ -673,7 +700,7 @@ const legend = $("legend");       // open or closed, kept between visits
 if (localStorage.getItem("lidar.legend") === "closed") legend.open = false;
 legend.addEventListener("toggle", () => localStorage.setItem("lidar.legend", legend.open ? "open" : "closed"));
 legendRows();
-for (const k of ["old", "trail", "dead", "link", "grid", "follow", "weap", "airsp", "feat", "kinds"]) $("b-" + k).onclick = () => toggle(k);
+for (const k of ["old", "trail", "dead", "link", "grid", "follow", "weap", "airsp", "feat", "kinds", "drive"]) $("b-" + k).onclick = () => toggle(k);
 $("b-top").onclick = () => { cam.pitch = 1.55; };
 $("b-reset").onclick = () => fit();
 addEventListener("keydown", e => {
@@ -682,7 +709,7 @@ addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
   if (e.key.toLowerCase() === "l") { showMaps(!$("maps").classList.contains("on")); return; }
   if (e.key.toLowerCase() === "c" && simState && simState.current) { setCover(!coverMode); return; }
-  const m = { e: "old", p: "trail", d: "dead", j: "link", g: "grid", f: "follow", w: "weap", a: "airsp", m: "feat", k: "kinds" }[e.key.toLowerCase()];
+  const m = { e: "old", p: "trail", d: "dead", j: "link", g: "grid", f: "follow", w: "weap", a: "airsp", m: "feat", k: "kinds", v: "drive" }[e.key.toLowerCase()];
   if (m) toggle(m); else if (e.key.toLowerCase() === "t") cam.pitch = 1.55; else if (e.key.toLowerCase() === "r") fit();
   else if (e.key === "ArrowLeft") cam.yaw += 0.08; else if (e.key === "ArrowRight") cam.yaw -= 0.08;
   else if (e.key === "ArrowUp") cam.pitch = Math.min(1.55, cam.pitch + 0.06); else if (e.key === "ArrowDown") cam.pitch = Math.max(0.05, cam.pitch - 0.06);
@@ -733,6 +760,7 @@ async function loadStored() {
     for (const w of d.walk) addCell(w, true);
     setFeatures(d.features);
     setWallKinds(d.wall_kinds);
+    setRides(d.rides);
     storedDeaths = d.deaths || [];
     gotData = d.walk.length > 0;
     viewSrc = d.src === "sim" ? "sim" : "scan";
@@ -914,13 +942,14 @@ $("backlive").onclick = () => { location.search = ""; };
 if (VIEW.has("maps")) showMaps(true);
 async function poll() {
   let d = null;
-  try { d = await (await fetch("/live?since=" + seq)).json(); } catch (e) { d = null; }
+  try { d = await (await fetch("/live?since=" + seq + "&rsince=" + rseq)).json(); } catch (e) { d = null; }
   if (d && d.session !== session) { location.reload(); return; }   // a new match: start clean, never paint over
   if (d) {
     lastOk = performance.now(); failed = false; mode = d.mode;
     simState = d.sim || null; renderSim();
     for (const c of d.cells) addCell(c, false);
     seq = d.seq;
+    if (d.rides) { addRides(d.rides); rseq = d.rseq; }   // drives and flights of this run, as they are driven
     if (d.cells.length) { gotData = true; if (heightRange()) buildGrid(); if (!fitted) fit(); }
     pending.clear(); bots.clear(); trying.clear(); people.clear(); crafts.clear(); calls.clear(); callLines.clear(); humans = [];
     let nb = 0, np = 0, na = 0;
@@ -1017,6 +1046,11 @@ function frame() {
     lines(arcs.sky, SKY); points(beads.sky, -6, SKY, 1, false); points(lands.sky, -12, SKY, 1, false);
   }
   points(recBuf, -7, [1, 1, 1, 1], 1, false);
+  if (show.drive) {             // vehicle roads: where people (bright) and bots (faint) drove, where people flew
+    points(driveBufs[0], cell * 1.2, [0.18, 0.9, 0.63, 1], 0, false);
+    points(driveBufs[1], cell * 1.0, [0.18, 0.9, 0.63, 0.4], 0, false);
+    points(driveBufs[2], -4, [0.62, 0.85, 1, 0.55], 1, false);
+  }
   if (show.dead) { lines(fallLines, [1, 0.29, 0.29, 0.28]); points(falls, -13, RED, 2, false); points(otherDeaths, -9, [1, 0.55, 0.35, 0.8], 2, false); }
   points(bots, -11, [0.91, 0.94, 1, 1], 1, false);
   points(trying, -12, [0.31, 0.85, 1, 1], 1, false);

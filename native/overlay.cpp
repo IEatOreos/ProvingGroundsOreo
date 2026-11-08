@@ -673,6 +673,9 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                     g_bug_hover = be.hovered;
                 }
                 g_bug_was_open = g_bug_open;
+                // shared.h ui_up: the bug report window is open over the match (typing goes on there). (Not MCC's own
+                // menus: told by the cursor, which shows in play too while MCC has not taken the mouse)
+                if (g_shm) g_shm->ui_up = (bug && g_bug_open) ? 1u : 0u;
                 // the tile draws on the foreground layer, over every window: with the panel open it is
                 // left out (it drew over the panel's header), and takes no clicks
                 if (g_show_tile && !g_panel) draw_tile((float)ImGui::GetTime());

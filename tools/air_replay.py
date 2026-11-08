@@ -24,7 +24,7 @@ HZ = 30
 HANDLE = 0x7777
 
 
-def fly(M, start, yaw, enemies_at, seconds, kind="banshee", team=0, seed=1, tier="top"):
+def fly(M, start, yaw, enemies_at, seconds, kind="banshee", team=0, seed=1, tier="top", snap_kw=None):
     """enemies_at(t) -> [(id, team, Vec)] (t from 0). The pilot starts at `start` facing yaw. Returns the metrics."""
     T = terrain(M)
     b = Bot(1, team, make_profile(tier, "rusher", random.Random(seed)), M, random.Random(seed))
@@ -39,7 +39,7 @@ def fly(M, start, yaw, enemies_at, seconds, kind="banshee", team=0, seed=1, tier
         foes = [PlayerState(i, tm, f"e{i}", p, is_bot=True) for i, tm, p in enemies_at(t)]
         v = dict(handle=HANDLE, kind=kind, pos=(pos.x, pos.y, pos.z), occupied=True, riders=1, team=team,
                  fwd=(math.cos(yaw), math.sin(yaw), 0.0), up=(0.0, 0.0, 1.0), turrets=[], manned=[])
-        snap = Snapshot(100.0 + t, [me] + foes, vehicles=[v], mode="slayer")
+        snap = Snapshot(100.0 + t, [me] + foes, vehicles=[v], **dict(dict(mode="slayer"), **(snap_kw or {})))
         a = b.think(100.0 + t, 1 / HZ, snap, T.los, T.nav, [])
         yaw, pitch = a.yaw, a.pitch
         vtol = (vehicles.spec(kind) or {}).get("vtol") or vehicles.TAKE_OFF.get(vehicles.kind_of(kind), ("",))[0] == "up"
@@ -61,6 +61,9 @@ def fly(M, start, yaw, enemies_at, seconds, kind="banshee", team=0, seed=1, tier
             m["notes"][n[:40]] = m["notes"].get(n[:40], 0) + 1
         m["fire"] += a.fire
         att = b.att or [None]
+        m["room"] = m.get("room", 0) + (len(att) > 1 and att[1] == "room")   # (a bomb run on an objective room)
+        m["rods"] = m.get("rods", 0) + (getattr(b, "rod", None) is not None and not m.get("_rod"))
+        m["_rod"] = getattr(b, "rod", None) is not None
         if att[0] == "run":
             m["run"] += 1
             q = next((p for i, tm, p in enemies_at(t) if i == att[1]), None)

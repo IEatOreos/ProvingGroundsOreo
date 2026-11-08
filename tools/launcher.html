@@ -263,6 +263,20 @@
   dialog p { color: var(--text-2); }
   dialog .actions { justify-content: flex-end; margin-top: var(--s5); }
   dialog .msg { margin-top: var(--s3); }
+  /* what's new: everything added and fixed since the player's copy, from the release's own docs/UPDATES.md */
+  dialog.notes { width: min(680px, calc(100vw - 32px)); }
+  .notes-body { max-height: min(62vh, 560px); overflow-y: auto; margin-top: var(--s3); padding-right: var(--s3); color: var(--text-2); }
+  .notes-body h3 { margin: var(--s5) 0 var(--s1); font: 700 var(--fs-md)/1.3 var(--font); color: var(--heading); }
+  .notes-body h3:first-child { margin-top: 0; }
+  .notes-body h4 { margin: var(--s4) 0 var(--s1); padding-top: var(--s3); border-top: 1px solid var(--border);
+                   font: 600 var(--fs-sm)/1.3 var(--font); color: var(--gold); }
+  .notes-body h3 + h4 { padding-top: 0; border-top: 0; margin-top: var(--s2); }
+  .notes-body p { margin: var(--s2) 0; }
+  .notes-body ul { margin: var(--s1) 0 var(--s2); padding-left: var(--s5); }
+  .notes-body li { margin: 2px 0; }
+  .notes-body strong { color: var(--text); }
+  .notes-body a { color: var(--blue); }
+  dialog.notes .actions .grow { margin-right: auto; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before { animation: none !important; transition: none !important; }
@@ -428,6 +442,16 @@
   <div class="actions">
     <button id="uninstall-yes" class="danger">Uninstall</button>
     <button id="uninstall-no">Cancel</button>
+  </div>
+</dialog>
+<dialog id="notes" class="notes" aria-labelledby="notes-t" aria-describedby="notes-q">
+  <h2 id="notes-t">What's new</h2>
+  <p id="notes-q"></p>
+  <div class="notes-body" id="notes-body" tabindex="0"></div>
+  <div class="actions">
+    <button class="quiet grow" id="notes-web">Full notes on GitHub</button>
+    <button id="notes-close">Close</button>
+    <button class="primary-sm" id="notes-update">Update</button>
   </div>
 </dialog>
 <script>
@@ -625,7 +649,7 @@ function showUpdate(u) {
   const job = u.job || {};
   const bar = $("updbar");
   const busy = job.state === "downloading" || job.state === "installing" || job.state === "failed";
-  bar.hidden = !(busy || u.available && sessionStorage.getItem("upd-later") !== u.latest);
+  bar.hidden = !(busy || u.available && sessionStorage.getItem("upd-later") !== laterKey(u));
   $("updlater").hidden = busy;
   if (job.state === "downloading") {
     const pct = job.total ? Math.round(100 * job.done / job.total) : 0;
@@ -635,7 +659,9 @@ function showUpdate(u) {
   } else if (job.state === "failed") {
     $("updmsg").textContent = job.error;
   } else {
-    $("updmsg").textContent = `Version ${u.latest.replace(/^v/, "")} is available. You have ${u.current}.`;
+    $("updmsg").textContent = u.same_version
+      ? `An update to version ${u.current} is available. You have an earlier build of it.`
+      : `Version ${u.latest.replace(/^v/, "")} is available. You have ${u.current}.`;
   }
   $("updnow").disabled = job.state === "downloading" || job.state === "installing";
   $("updnow").hidden = u.wine || !u.can_install;
@@ -647,8 +673,64 @@ function showUpdate(u) {
 async function loadUpdate() { try { showUpdate(await (await fetch("/update")).json()); } catch (e) {} }
 $("updcheck").onclick = async () => { $("updstate").textContent = "Checking ..."; showUpdate(await post("/update/check")); };
 $("updauto").onchange = async (e) => { showUpdate(await post("/update/auto", { on: e.target.checked })); };
-$("updlater").onclick = () => { if (upd) sessionStorage.setItem("upd-later", upd.latest); $("updbar").hidden = true; };
-$("updnotes").onclick = () => { if (upd) post("/open", { url: upd.url }); };
+const laterKey = u => u.latest + " " + (u.latest_build || "");     // (Later hides this update, not the next one)
+$("updlater").onclick = () => { if (upd) sessionStorage.setItem("upd-later", laterKey(upd)); $("updbar").hidden = true; };
+// what's new: every version and in-place update since the player's copy (updater.news), from the release's docs/UPDATES.md.
+// Its little markdown: #### an update's heading, ### New / Fixed (as **New**), **bold**, - lists (two deep), [links] (out to
+// the repository only, as /open)
+const DOCS = "https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/";
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function inline(s) {
+  return esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, url) => {
+    url = /^[a-z]+:/i.test(url) ? url : DOCS + url;
+    return url.startsWith("https://github.com/AyoItzKye/") ? `<a href="${url}" data-url="${url}">${t}</a>` : t;
+  });
+}
+function mdHtml(md) {
+  let html = "", depth = 0, para = [];
+  const flush = () => { if (para.length) html += `<p>${inline(para.join(" "))}</p>`; para = []; };
+  const closeTo = d => { while (depth > d) { html += "</li></ul>"; depth--; } };
+  for (const line of md.replace(/<!--[\s\S]*?-->/g, "").split("\n")) {
+    const li = line.match(/^(\s*)[-*] (.*)/), h = line.match(/^(#{2,6})\s+(.*)/);
+    if (li) {
+      flush();
+      const d = li[1].length >= 2 ? 2 : 1;
+      if (d > depth) { while (depth < d) { html += "<ul><li>"; depth++; } } else { closeTo(d); html += "</li><li>"; }
+      html += inline(li[2]);
+    } else if (depth && /^\s+\S/.test(line)) html += " " + inline(line.trim());      // (a list item's next line)
+    else {
+      closeTo(0);
+      if (h) { flush(); html += h[1].length >= 4 ? `<h4>${inline(h[2])}</h4>` : `<p><strong>${inline(h[2])}</strong></p>`; }
+      else if (line.trim()) para.push(line.trim()); else flush();
+    }
+  }
+  closeTo(0); flush();
+  return html;
+}
+function showNotes() {
+  if (!upd) return;
+  if (!(upd.news || []).length) { post("/open", { url: upd.url }); return; }   // (the notes could not be read: GitHub's page)
+  const v = s => String(s || "").replace(/^v/, "").replace("-s", " s");     // ("0.2.2 s181", as the notes write it)
+  $("notes-t").textContent = `What's new in ${v(upd.latest)}`;
+  $("notes-q").textContent = upd.same_version
+    ? `Everything added and fixed since your copy of ${v(upd.current)} was built, newest first.`
+    : `Everything added and fixed since your version, ${v(upd.current)}, newest first.`;
+  $("notes-body").innerHTML = upd.news.map(n => `<h3>${esc(n.title)}</h3>` + mdHtml(n.text)).join("");
+  $("notes-body").scrollTop = 0;
+  $("notes-update").hidden = $("updnow").hidden;
+  $("notes-update").disabled = $("updnow").disabled;
+  $("notes").showModal();
+  $("notes-close").focus();
+}
+$("updnotes").onclick = showNotes;
+$("notes-body").onclick = (e) => {
+  const a = e.target.closest("a[data-url]");
+  if (a) { e.preventDefault(); post("/open", { url: a.dataset.url }); }
+};
+$("notes-web").onclick = () => { if (upd) post("/open", { url: upd.url }); };
+$("notes-close").onclick = () => $("notes").close();
+$("notes").addEventListener("close", () => { if (!$("updnotes").hidden && !$("updbar").hidden) $("updnotes").focus(); });  // (Esc too)
+$("notes-update").onclick = () => { $("notes").close(); $("updnow").click(); };
 $("updnow").onclick = async () => {
   const r = await post("/update/install");
   if (r.ok === false && r.message) { $("updmsg").textContent = r.message; return; }

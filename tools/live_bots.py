@@ -82,7 +82,32 @@ def think_dt(elapsed):
 BOT_CROUCH = ("ce", "h3", "h4")
 
 
-def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
+def horn_call(now, players, vehicles, person, horn):
+    """{vehicle handle: bot id or None} the person's horn calls this tick (requested Nov 6: aimed at a bot, the horn
+    calls it in): a press at the wheel (not a gun seat) picks the teammate bot on foot nearest the person's view line
+    within HORN_CONE and HORN_R (None: nobody there, director.honk_orders takes the nearest), and the call holds
+    HORN_HOLD s or until the person leaves the wheel. horn: botctl.owner_horn (None: not decoded here)."""
+    p = next((q for q in players if q.id == person and q.alive), None)
+    v = next((x for x in vehicles if p is not None and x["handle"] == p.vehicle), None)
+    at_wheel = v is not None and not p.gunner_seat
+    if at_wheel and horn and not HORN["down"]:
+        cands = []
+        for q in players:
+            if q.is_bot and q.alive and q.team == p.team and q.vehicle == -1:
+                d = math.hypot(q.pos.x - p.pos.x, q.pos.y - p.pos.y)
+                off = abs((math.atan2(q.pos.y - p.pos.y, q.pos.x - p.pos.x) - p.yaw + math.pi) % (2 * math.pi) - math.pi)
+                if 0.5 < d < HORN_R and off < HORN_CONE:
+                    cands.append((off, d, q.id))
+        HORN["call"] = (v["handle"], min(cands)[2] if cands else None, now + HORN_HOLD)
+    HORN["down"] = bool(horn)
+    c = HORN["call"]
+    if c is None or not at_wheel or c[0] != v["handle"] or now > c[2]:
+        HORN["call"] = None if c is not None and (not at_wheel or now > c[2]) else c
+        return {}
+    return {c[0]: c[1]}
+
+
+def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_horn=None):
     """crouch: the bots crouching (their last command); person_crouch: the person holds his crouch key (the games read
     no stance: crouched heads were shot over at standing height). ponytail: with more people on the machine's network
     the host's key is read for the first of them; their own stance needs the game's unit read."""
@@ -152,6 +177,8 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
                                    equipment=d.get("equipment", ""), ability_on=on,
                                    # the match's motion tracker setting for him (off in SWAT)
                                    tracker=d.get("tracker", True),
+                                   head_pos=Vec(*d["head_pos"]) if d.get("head_pos") is not None else None,
+                                   view_pos=Vec(*d["view_pos"]) if d.get("view_pos") is not None else None,
                                    camo_until=now + 0.3 if on and d.get("equipment") == "active_camo" else 0.0))
     bad = ability_misread(players, now)
     for p in players:
@@ -160,7 +187,7 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
     # a vehicle riding on another (Reach: a Warthog's gun, a Falcon's side guns are their own vehicles, positioned
     # relative to it): its riders count as the carrier's, and it is not a vehicle of its own in the list (its gunner
     # read as riding a separate "unknown" vehicle, so every manned Warthog looked gunner-less)
-    objs = live.objects((1,))
+    objs = live.objects(getattr(live, "VEHICLE_TYPES", (1,)))   # (Halo 4: its giants too, the Mantis)
     parent_of = {}
     if hasattr(live, "object") and hasattr(live, "g"):
         for h, typ, path, pos in objs:
@@ -237,8 +264,12 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False):
                                        and math.dist((q.pos.x, q.pos.y, q.pos.z), v["pos"]) < 8.0
                                        for q in players):
             honks.append(v["handle"])
+    honk_at = horn_call(now, players, vehicles, person, person_horn)
+    for hv in honk_at:
+        if hv not in honks:
+            honks.append(hv)
     snap = Snapshot(now, players, flags, mode="ctf" if flags else "slayer", vehicles=vehicles, honks=honks,
-                    ground_weapons=GROUND["list"], shieldless=now - live.shields_at > 3.0)
+                    honk_at=honk_at, ground_weapons=GROUND["list"], shieldless=now - live.shields_at > 3.0)
     if type(live).__name__ == "LiveH3":          # Halo 3's equipment out in the world (#9; Reach / H4 readers inherit
         try:                                     # LiveH3 but their object tables differ)
             snap.deployed = live.deployed(raw, now)
@@ -342,6 +373,10 @@ GROUND = {"t": -1.0, "list": []}     # loose weapons, re-read twice a second
 MATCH = {"t": -1.0, "v": None}       # live.match_state(): score, limit, time left, twice a second
 HILL = {}                            # "last": the last King hill read (centre, radius), kept through missed reads
 HONK = {}                            # person id -> (vehicle, where it stopped, since when): the honk stand-in
+# the person's horn (botctl.owner_horn) at the wheel: the bot his view is on (within HORN_CONE of his facing, HORN_R off)
+# is called aboard, HORN_HOLD s (the director re-deals roles every pass); "down": the horn held last tick
+HORN = {"down": False, "call": None}  # call: (vehicle, bot id or None, until)
+HORN_CONE, HORN_R, HORN_HOLD = 0.26, 40.0, 10.0
 RIDE_ONLY = None                     # test override (--ride-only): the empty vehicles bots may take, by kind
 TALLY = {0: 0, 1: 0}                 # deaths counted as the other team's points (no score reader)
 
@@ -866,6 +901,8 @@ def main():
             print("game variant file not read:", e, flush=True)
     inv_layout = invasion_layout(MAP["objects"], styles=inv_styles) if (o.game == "reach" and not FIREFIGHT
                                                                         and not o.forge_invasion) else None
+    if inv_layout is not None:
+        inv_layout["map"] = MAP["name"]           # (its phase rules by map: brain/invasion.py phase_link_gates)
     inv_watch, inv_check, inv_unread = [None], [-9.0], [False]
     zone_check, zone_state = [-9.0], {}           # Invasion with no setup of its own: the game's zones (zone_spawn_check)
     # a map variant's pieces that come and go (brain/forge.py PieceWatch): walls while they stand
@@ -887,7 +924,7 @@ def main():
                 st = botctl.status(m)
                 oc = botctl.owner_crouch(m)             # H2A / Halo 4: his own action's crouch bit; elsewhere his key
                 snap = snapshot(live, now, prev, set(st["bots"].values()), {i for i, c in crouch_cmd.items() if c},
-                                oc if oc is not None else crouch_now())
+                                oc if oc is not None else crouch_now(), person_horn=botctl.owner_horn(m))
                 # the game paused (the pause menu: the player's bug notes held matches still 15-35 s): botcore's tick
                 # count (its per-tick game hook) stands still. The brain's clock stops with it, so nothing reads as
                 # stuck or waited out (the critic flagged bots "pushed into something" all through his pauses)
@@ -1073,6 +1110,10 @@ def main():
                         # only where decoded (maps/_inputs); a bot plans with what it can press
                         names = {n for _, n, *_ in pressable}
                         bots[index].can_melee = o.game == "ce" or "melee" in names
+                        # a vehicle's other weapon (a Banshee's bomb) is cycled to: only where the cycle is decoded and
+                        # switches it (Halo 4: botcore's f_vehicle_cycle; Reach as before). Live Nov 7, a bot pilot: in
+                        # Halo 3 and H2A the cycle switched nothing (cannon bolts only); their bomb input is not decoded
+                        bots[index].can_cycle = "cycle" in names and o.game in ("reach", "h4")
                         bots[index].kit.pressable = "equipment" in names
                         # (Halo 4's sprint is botcore's own, s123: native/h4f.cpp f_sprint)
                         bots[index].kit.sprint_ok = "sprint" in names or o.game == "h4"
@@ -1148,8 +1189,8 @@ def main():
                     last_items = now
                     item_check(live, directors, bots, snap, now)
                 # (no loadout asks in Infection / Flood: Halo 4 Flood took them, slots 3-4 handing survivors a DMR and a
-                # magnum where everyone else spawned with the shotgun, the owner's Ragnarok game: "why did this guy have a
-                # DMR?"; the game's own loadout, as a person who picks none)
+                # magnum where everyone else spawned with the shotgun, seen in a Ragnarok game as a survivor holding a
+                # DMR; the game's own loadout, as a person who picks none)
                 if palette and snap.mode == "infection":
                     for i, st in loadout_state.items():     # (asked before the mode was read: back to the game's own)
                         if st.get("asked") not in (None, 0) and botctl.set_loadout(m, i, 0, o.game):

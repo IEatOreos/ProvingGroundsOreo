@@ -24,9 +24,10 @@ OFF_LOOK = OFF_BTN_MAP + 4 + 16 * BTN_MAP_N            # v9: cmd_look_game, cmd_
 OFF_CLAN = OFF_LOOK + 8 + 64 + 64                      # v10: the next bot's clan tag (wchar_t[8])
 OFF_EMBLEM = OFF_CLAN + 16                             # v11: its MCC emblem (u16 x 5, brain/emblems.py ids)
 OFF_SPAWN = OFF_EMBLEM + 10                            # v12: spawn_at (16 x x, y, z, yaw f32), spawn_seq, spawn_done (16 u32)
-OFF_CHAT = OFF_SPAWN + 16 * 16 + 2 * 16 * 4            # v13: chat_seq (u32), then chat (char[64]), reserved (unused): the player's chat line
+OFF_CHAT = OFF_SPAWN + 16 * 16 + 2 * 16 * 4            # v13: ui_up (u32: the bug report window open over a match), chat (char[64], unused)
+OFF_UI_UP = OFF_CHAT
 SIZE = OFF_CHAT + 4 + 64                               # = sizeof(hb_shared), native/shared.h static_assert 3622
-# (a bigger view of an older botcore's block still maps: Windows keeps it in whole 4 KB pages; its chat_seq stays 0)
+# (a bigger view of an older botcore's block still maps: Windows keeps it in whole 4 KB pages; its ui_up stays 0)
 OFF_GAME, OFF_DBG_SEQ, OFF_DBG, OFF_RAW_VALID, OFF_RAW, OFF_BIG = 804, 808, 812, 1068, 1072, 1328   # v7: 0x100-byte buffers
 OFF_STATUS = 20 + 64 + 384
 OFF_CMD = OFF_STATUS + 256          # cmd, cmd_seq, cmd_done_seq (u32), cmd_arg (i32), result (i64), fault (u32)
@@ -62,6 +63,8 @@ def add_bot(m, machine, team=0xFF, name="", game="ce", look=None, clan="", emble
     mask]): its armor drawn from the game's own Armory, the none mask's slots set to the game's "none" (Reach,
     botcore s74 / s78), or None: the player's look. clan: its clan tag; emblem: its MCC emblem (the 5 ids of
     brain/emblems.ids, None: MCC's default), both what MCC shows for it (native/report.cpp)."""
+    if not idle(m, 60.0):            # (its name and look go in buffers the last add may not have read yet)
+        return dict(timeout=True, **status(m))
     m[OFF_NAME:OFF_NAME + 32] = name[:15].encode("utf-16-le").ljust(32, b"\0")
     if len(m) >= OFF_EMBLEM:                     # (botcore v10 and later)
         m[OFF_CLAN:OFF_CLAN + 16] = clan[:7].encode("utf-16-le").ljust(16, b"\0")
@@ -178,6 +181,28 @@ def owner_crouch(m):
     return bool(flags & bit[1]) and not flags & 0x2   # Space sets 0x3 (bit 0 too): crouch is bit 0 alone
 
 
+# the horn: crouch in a vehicle, read from the player's own action (botcore's copy of the game's, as owner_crouch).
+# Halo 3: +0x08 bit 0 (decoded live Oct 25, maps/_inputs/h3.json "crouch"); H2A / Halo 4: CROUCH_BIT. Reach: INFERRED,
+# +0x08 bit 0 as Halo 3's (the same field holds its jump 0x2, melee 0x800, ability 0x100, as Halo 3's); not decoded
+# live yet (tools/decode_buttons.py crouch=ctrl confirms it)
+HORN_BIT = {**CROUCH_BIT, 3: (0x08, 0x1), 4: (0x08, 0x1)}
+
+
+def owner_horn(m):
+    """Is the player pressing the horn (crouch, read in a vehicle)? None where not decoded or the copy is stale."""
+    game, seq = struct.unpack_from("<2I", m, OFF_GAME)
+    bit = HORN_BIT.get(game)
+    if bit is None:
+        return None
+    now = time.time()
+    if _fresh.get("seq") != seq:
+        _fresh.update(seq=seq, t=now)
+    if now - _fresh["t"] > 0.5:
+        return None
+    flags = struct.unpack_from("<I", m, OFF_DBG + bit[0])[0]
+    return bool(flags & bit[1]) and not flags & 0x2
+
+
 def owner_jumping(m):
     """Is the player pressing jump? H2A / H4: +0x08 bit 1 of his copied action (Space: 0x3, Ctrl
     alone 0x1). His move keys do not show in the copy (+0x1C / +0x20 read 1.0 while he stands
@@ -202,7 +227,21 @@ def status(m):
                 cmd=cmd, seq=seq, done=done, result=res, fault=fault)
 
 
+def idle(m, timeout=5.0):
+    """Wait until botcore has taken the last command published (its done seq caught up): True, else False at the time.
+    botcore takes commands on the game's own thread, so not while the game is paused."""
+    t = time.time()
+    while struct.unpack_from("<I", m, OFF_CMD + 8)[0] != struct.unpack_from("<I", m, OFF_CMD + 4)[0]:
+        if time.time() - t >= timeout:
+            return False
+        time.sleep(0.02)
+    return True
+
+
 def command(m, cmd, arg, timeout=5.0):
+    # (never over a command not taken yet: one slot. In the pause menu the game takes none; a timed-out add was
+    # overwritten by the next, and of the three bots asked for only the last one joined: ODST Firefight Nov 7, 00:07)
+    idle(m, timeout)
     seq = struct.unpack_from("<I", m, OFF_CMD + 4)[0] + 1
     struct.pack_into("<I", m, OFF_CMD, cmd)
     struct.pack_into("<i", m, OFF_CMD + 12, arg)

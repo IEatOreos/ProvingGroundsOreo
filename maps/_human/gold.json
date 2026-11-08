@@ -53,10 +53,10 @@
     "fluidity": 56.41708011902638
    }
   },
-  "owner": "Oct 25 late, Construct Team Slayer, owner + 4 Normal vs 5 Legendary: \"overall I would say that match was the gold standard of bot gameplay, I was honestly very impressed\"",
+  "note": "Oct 25 late, Construct Team Slayer, one player + 4 Normal vs 5 Legendary: rated the gold standard of bot gameplay",
   "result": {
    "score": "48-50 (Legendary won by a kill)",
-   "owner": "31 kills 16 deaths",
+   "player_result": "31 kills 16 deaths",
    "legendary_kd": 1.04,
    "normal_kd": 0.5,
    "stalls_per_min": 0.4
@@ -116,10 +116,10 @@
     "fluidity": 59.50807397249606
    }
   },
-  "owner": "Oct 26, Epitaph (h3_salvation) Team Slayer, owner + 4 Normal vs 5 Legendary: \"I just played another gold standard match in my opinion\"",
+  "note": "Oct 26, Epitaph (h3_salvation) Team Slayer, one player + 4 Normal vs 5 Legendary: rated another gold standard match",
   "result": {
    "score": "41-50 (Legendary won)",
-   "owner": "16 kills 9 deaths",
+   "player_result": "16 kills 9 deaths",
    "legendary_kd": 1.19,
    "normal_kd": 0.61,
    "stalls_per_min": 0.2,

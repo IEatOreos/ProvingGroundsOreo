@@ -76,6 +76,8 @@ class PlayerState:
     ability_on: bool = False   # that ability is running (armor lock held, jetpack on, camo on ...)
     decoy: bool = False        # a hologram (the game's truth: bots tell it only from what it does)
     tracker: bool = True       # enemies show on this player's motion tracker (the match settings: live.tracker())
+    head_pos: object = None    # Vec: the animated head (Reach / Halo 4 on foot: live.py's head readers), None not read
+    view_pos: object = None    # Vec: Halo 4's view point that head goes with (its place is not the feet), None not read
 
 
 @dataclass
@@ -98,6 +100,7 @@ class Snapshot:
     time_left: object = None   # seconds left in the match, None = no limit or not known
     vehicles: list = field(default_factory=list)   # [{handle, kind, pos, occupied}] (live game)
     honks: list = field(default_factory=list)      # vehicle handles a teammate honked from (director.honk_orders)
+    honk_at: dict = field(default_factory=dict)    # vehicle handle -> the bot the person's horn picked (None: nearest)
     ground_weapons: list = field(default_factory=list)   # [(name, Vec)] lying on the map (live game)
     hill: object = None        # King of the Hill: the active hill's centre (Vec) and its radius
     hill_r: float = 0.0

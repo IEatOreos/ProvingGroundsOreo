@@ -1,6 +1,6 @@
 """Three kinds of wall from the maps' own collision data: solid (blocks walking, sight and shots), window (glass: blocks
 walking, lets sight through, stops shots unless it breaks) and fence (grates, chain-link, railings, mesh, bars: blocks
-walking, lets sight and shots through: the owner, Nov 4: "fences still act as walls but can be shot through").
+walking, lets sight and shots through: Nov 4, fences still act as walls but can be shot through).
 
 Where it comes from (OBSERVED in the kits' XML exports of each map's .scenario_structure_bsp, tool.exe
 export-tag-to-xml):
@@ -14,8 +14,8 @@ export-tag-to-xml):
     fence; else solid). Upright faces are walls (window, fence), flat ones decks (window_floor: a glass floor,
     fence_floor: a grate deck). A window surface breaks with the breakable flag (bit 3 / "breakable") or, outside CE,
     a breakable surface index.
-INFERRED (no field says it; the owner's rule and the game's collision): a window stops shots unless it breaks (its
-collision surface is there for projectiles too); a fence lets shots through (the owner). UNKNOWN: projectile
+INFERRED (no field says it; the Nov 4 rule and the game's collision): a window stops shots unless it breaks (its
+collision surface is there for projectiles too); a fence lets shots through (seen in play). UNKNOWN: projectile
 material responses per weapon (some rounds over-penetrate); render-only fences (no collision) were never walls.
 
 Games: CE (HCEEK), Halo 2 (H2EK), Halo 3 (H3EK, the ODST kit for maps H3EK lacks), ODST, Reach (HREK), Halo 4 (H4EK),
@@ -54,9 +54,9 @@ def bidx(v):
 
 
 def parse(xml):
-    """Collision materials, the collision sets {(owner, n): (surfaces, edges, vertices)} (owner -1: the structure, k: the
-    k-th instanced geometry definition) and the instances [(definition, scale, forward, left, up, position)], streamed
-    line by line (a map's XML is 0.4-1.4 GB). Both export styles: <block name=...> (Halo 3, H4, H2A) and
+    """Collision materials, the collision sets {(parent, n): (surfaces, edges, vertices)} (parent -1: the structure, k:
+    the k-th instanced geometry definition) and the instances [(definition, scale, forward, left, up, position)],
+    streamed line by line (a map's XML is 0.4-1.4 GB). Both export styles: <block name=...> (Halo 3, H4, H2A) and
     <field ... type="block"/> followed by its elements (Reach)."""
     block_at, path = {}, []                       # indent -> the block whose elements sit there; open elements
     mats, sets, inst = [], {}, []
@@ -80,17 +80,17 @@ def parse(xml):
             blk = block_at.get(ind, "")
             ename = a.get("name", "")
             path.append((ind, blk, int(a.get("index", -1)), ename))
-            owner = next((p[2] for p in path if p[1] == "instanced geometries definitions"), -1)
+            parent = next((p[2] for p in path if p[1] == "instanced geometries definitions"), -1)
             if ename.endswith("surfaces_block") and blk == "surfaces":
                 if int(a.get("index", -1)) == 0:
-                    count[owner] = count.get(owner, -1) + 1
-                key = (owner, count.get(owner, 0))
+                    count[parent] = count.get(parent, -1) + 1
+                key = (parent, count.get(parent, 0))
                 sets.setdefault(key, ([], [], []))[0].append(cur := {})
             elif ename.endswith("edges_block") and blk == "edges":
-                key = (owner, count.get(owner, 0))
+                key = (parent, count.get(parent, 0))
                 sets.setdefault(key, ([], [], []))[1].append(cur := {})
             elif ename.endswith("vertices_block") and blk == "vertices":
-                key = (owner, count.get(owner, 0))
+                key = (parent, count.get(parent, 0))
                 sets.setdefault(key, ([], [], []))[2].append(cur := {})
             elif blk == "collision materials":
                 mats.append(cur := {})
@@ -149,8 +149,8 @@ def parse_tabs(xml):
             elif top == "instanced geometry instances" and len(stack) == 1:
                 inst.append(cur := {})
             elif top in COLL_BLOCKS and len(stack) == 2 and names[0] in ("collision bsp", "instanced geometries definitions"):
-                owner = -1 if names[0] == "collision bsp" else stack[0][1]
-                sets.setdefault((owner, 0), ([], [], []))[COLL_BLOCKS.index(top)].append(cur := {})
+                parent = -1 if names[0] == "collision bsp" else stack[0][1]
+                sets.setdefault((parent, 0), ([], [], []))[COLL_BLOCKS.index(top)].append(cur := {})
             continue
         if cur is None:
             continue
@@ -205,7 +205,7 @@ def classify(xml):
         d = bidx(it.get("instance definition"))
         place.setdefault(d, []).append((float(it.get("scale") or 1), vec(it.get("forward")), vec(it.get("left")),
                                         vec(it.get("up")), vec(it.get("position"))))
-    for (owner, _), (S, E, V) in sets.items():
+    for (parent, _), (S, E, V) in sets.items():
         for s, ring in rings(S, E, V):
             mi = int(s.get("material", -1) or -1)
             k = kinds[mi] if 0 <= mi < len(kinds) else None
@@ -216,7 +216,7 @@ def classify(xml):
             # (CE: every surface says breakable surface 0; the tab exports' flag bit 3 says it breaks)
             brk = (not ce and int(s.get("breakable surface", -1) or -1) >= 0) or "breakable" in fl or \
                 (fl.strip().isdigit() and int(fl) & 8)
-            for sc, f, l, u, p in place.get(owner, []):
+            for sc, f, l, u, p in place.get(parent, []):
                 w = [[p[n] + sc * (q[0] * f[n] + q[1] * l[n] + q[2] * u[n]) for n in range(3)] for q in ring]
                 face_cells(w, out[k + "_floor" if is_flat(w) else k], brk and k == "window")
     return dict(shaders={n.split(",")[0].rsplit("\\", 1)[-1]: k for n, k in zip(names, kinds) if k}, **kinds_out(out),

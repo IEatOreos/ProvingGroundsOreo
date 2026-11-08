@@ -1,4 +1,4 @@
-# Known bugs (0.2.2-s178)
+# Known bugs (0.2.2-s181)
 
 What I already know is broken or buggy in this version, so you don't have to report it (but if you find something worse, or a way to make it happen every time, a [bug report](https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml) still helps).
 
@@ -21,7 +21,7 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 - **Destroyed vehicles in Halo 2 and ODST**: bots skip wrecks in Halo 2 Anniversary, Halo 3, Reach and Halo 4; in Halo 2 Classic and ODST this is not checked in a real match yet, so a bot may still try to get into a wreck.
 - **Flying vehicles need reworking**: how bots fly and fight in the air is being redone.
 - **Bots lack urgency on offense**: when the objective means attacking (taking the flag, planting the bomb, pushing in Invasion), they're too slow and cautious about it.
-- **Theater mode only works with bots in Halo: Reach.** Films of bot matches in every other game (Halo: CE, Halo 2, Halo 2 Anniversary, Halo 3, ODST and Halo 4) load, then stop with "an error occurred" as they start.
+- **Theater mode only works with bots in Halo: Reach and Halo 4.** Films of bot matches in the other games (Halo: CE, Halo 2, Halo 2 Anniversary, Halo 3 and ODST) load, then stop with "an error occurred" as they start.
 
 ## Halo: CE
 
@@ -57,8 +57,9 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 **Works, but buggy**
 
 - **Team Slayer**: Plays and scores, but bots can't pick up weapons off the map yet, and a few wander off, even into the water.
-- **Capture the Flag**: Bots scored on Zenith, but they get stuck in a few spots on Coagulation.
+- **Capture the Flag**: Bots pick up the flag and scored on Zenith, but they get stuck in a few spots on Coagulation.
 - **Ghost**: Bots drive and shoot it well, but can't boost it yet.
+- **Banshee**: Bots fly it and fire its cannons, but can't drop its bomb or boost yet.
 
 ## Halo 3
 
@@ -78,7 +79,7 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 - **Chopper**: Bots drive it hard, shoot and boost-ram, though now and then one froze in place.
 - **Scorpion**: Bots drive it, but miss a lot of shots and sometimes leave the tank behind.
 - **Wraith**: Bots drive and fire it; a fix to its mortar aim still needs a recheck.
-- **Banshee**: Bots fly it without getting stuck, but almost never shoot from it. A fix for that needs a recheck.
+- **Banshee**: Bots fly it without getting stuck and fire its cannons, but can't drop its bomb yet.
 - **Mounted turrets**: Bots man the turrets and fire; a fix to their aim still needs a recheck.
 
 ## Halo 3: ODST
@@ -91,11 +92,14 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 - **Olifaunt**: Bots can't get into vehicles in ODST yet.
 - **Mounted turrets**: Bots can't use any seat in ODST yet, turrets included.
 
+**Works, but buggy**
+
+- **Firefight**: Your 3 Firefight bots join your team, even if you open the pause menu while they join, and they fight the Covenant. They can't tell weapons or enemy types apart in ODST yet.
+
 ## Halo: Reach
 
 **Not working yet**
 
-- **Invasion**: Improving, not done: on Spire both sides now take the phases and deliver the core; on Boneyard the first attack still loses most rounds, and custom Forge Invasion maps (issue #2) aren't played yet. Being fixed first.
 - **Scorpion**: Bots get in but spend most of the time stuck or standing still. They do board enemy tanks and take out the driver.
 
 **Works, but buggy**
@@ -111,8 +115,7 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 - **Transport Warthog**: Bots drive it; only the front passenger seat is handled so far.
 - **Revenant**: Bots drive it, but get stuck on the terrain often.
 - **Wraith**: Bots drive and fire it, but wait for a crew and get stuck on the terrain. They also board enemy Wraiths and take out the driver.
-- **Banshee**: Bots fly and boost, but rarely shoot from it, and sometimes crash into buildings or just use it to get around. A fix for their attack runs needs a recheck.
-- **Falcon**: Bots fly it, but pilots leave without their gunners, hover in place, and have flown out of bounds.
+- **Falcon**: Bots fly it onto Spire's top from outside now instead of under it. A pilot should also wait for you when you're beside it and stay in when you take a gun, but I haven't checked that with a person in a match yet.
 - **Sabre**: Bots can fly it, but don't use its missiles or other moves yet.
 - **Seraph**: Bots can fly it, but don't use its weapons yet.
 - **Mounted turrets**: Bots man the turrets and fire, but miss most shots and don't carry a turret they've ripped off.
@@ -133,7 +136,7 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 - **Mongoose**: Bots ride and drive it, but sit still about a third of the time.
 - **Ghost**: Bots drive and shoot it well, but can't boost it yet.
 - **Scorpion**: Bots drive and fire it, but sit still a lot. I've only checked one match.
-- **Banshee**: Bots have flown it, but didn't shoot from it, and can't use its bomb or boost yet.
+- **Banshee**: Bots fly it and drop its bombs the way players do, but can't boost yet.
 
 ## Reported on GitHub
 
@@ -142,10 +145,11 @@ For everything that works, game by game, see the [bot status sheet](BOT_STATUS.p
 | [#2](https://github.com/AyoItzKye/project-proving-grounds/issues/2) | Invasion on custom Forge maps | Open | Bots don't play custom Forge Invasion layouts yet. |
 | [#4](https://github.com/AyoItzKye/project-proving-grounds/issues/4) | Bots stuck on Boneyard's stairs | Fixed in 0.2.2 | A floor in the map data that isn't there in the game, and how bots run the route up, both fixed. |
 | [#5](https://github.com/AyoItzKye/project-proving-grounds/issues/5) | Bots at High Ground's gate | Open | Bots can't use the gate terminal yet. |
-| [#7](https://github.com/AyoItzKye/project-proving-grounds/issues/7) | Halo 2 Anniversary Assault bomb not picked up | Fixed in 0.2.2 s177 | Bots now hold Use until the bomb is in their hands (it also sits on a stand the pickup used to skip). Tested on Lockdown Multi-Bomb: bombs taken and one armed. |
+| [#7](https://github.com/AyoItzKye/project-proving-grounds/issues/7) | Halo 2 Anniversary Assault bomb not picked up | Open | The bomb needs Use held; the fix touches the pickup the CTF flag uses, so it waits for a real-match test. |
 | [#8](https://github.com/AyoItzKye/project-proving-grounds/issues/8) | LiDAR Simulator stops early | Fixed in 0.2.2 | At Max speed a map was cut after 4 minutes; now it runs until mapped. |
-| [#9](https://github.com/AyoItzKye/project-proving-grounds/issues/9) | Halo 3 bots ignore trip mines | Fixed in 0.2.2 s179 | Bots now see Halo 3's thrown equipment and whose it is, and route around an enemy trip mine. Tested on Rat's Nest: mines, a bubble shield and a regenerator read with their owners. |
+| [#9](https://github.com/AyoItzKye/project-proving-grounds/issues/9) | Halo 3 bots ignore trip mines | Open | Bots don't see Halo 3's trip mines and other placed hazards yet. |
 | [#10](https://github.com/AyoItzKye/project-proving-grounds/issues/10) | LiDAR Simulator bots start outside Forge creations | Fixed in 0.2.2 | They started on Forge World's own spawns; now inside the creation. |
-| [#11](https://github.com/AyoItzKye/project-proving-grounds/issues/11) | No weapon pickups on Forge creations | Fixed in 0.2.2 s178 | The guns on a creation read as unknown (bots only know guns by the map's own spots, and a creation's guns are not on Forge World's), and a creation without its map file kept Forge World's power weapon spots. Now they are named from the game its| [#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12) | Firefight | Fixed in 0.2.2 s180 | Every part of the report is fixed. Up to 3 bots join your team from the BOTS tile in the Reach and ODST Firefight lobbies and stay a few steps behind you (s177). They now also join on the DLC maps (Unearthed, Installation 04), go for a dropped gun when they run dry, only melee an enemy in front of them, stay on foot with you, fight beside the Covenant on the Elite side (s179), and respawn like you on your team's shared lives (s180). Tested on Beachhead, Unearthed and Installation 04. Firefight's enemy types still get no special tactics. |
+| [#11](https://github.com/AyoItzKye/project-proving-grounds/issues/11) | No weapon pickups on Forge creations | Open | Being looked at: needs a recorded match on a creation. |
+| [#12](https://github.com/AyoItzKye/project-proving-grounds/issues/12) | Firefight | Partly fixed in 0.2.2 | The BOTS panel now shows in the Firefight lobby (3 bots at most) and teammates hold a safe spot while you're down. Still open: no respawn on DLC maps, swinging at teammates when there's nothing to fight, refilling ammo, driving, and Elite-side bots shooting allied AI. |
 
-*Last updated November 6, 2026.*
+*Last updated November 7, 2026.*
