@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Slayer anchor priority and paired posts, 2026-11-08
+
+- The Team Director can assign up to two anchors per Slayer role pass, with each assigned to a separate nearby post. Fixed Demon bots get first pick regardless of personality, followed by Campers, Snipers, and other eligible bots. Distance and current role break ties within each priority group. The aggressive Slayer plan still sends hunters toward the fight.
+- A focused director check verified the priority order, two Demon anchors, separate posts, the single-bot fallback, and the Slayer posture and mode rules. All 299 regression tests passed. Gameplay validation needs a fresh bot process.
+
 ### Teleporters by gametype; Gore Valley's stuck pad, patrol area and hot spot, 2026-11-08
 
 - The owner's two reports from the Gore Valley Slayer game (`logs/bug_reports/h4_ca_gore_valley_20261107-222718`).

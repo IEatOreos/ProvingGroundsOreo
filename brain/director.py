@@ -797,6 +797,9 @@ class Director:
                 pos = snap.player(b.id).pos
                 c = dist(pos, point) / 30.0
                 c += 0.0 if s.roles.get(b.id) == role else 0.5      # role inertia
+                if fit == "anchor":
+                    priority = 0 if profiles.fixed_demon(b.p) else {"camper": 1, "sniper": 2}.get(b.p.personality, 3)
+                    return priority, c
                 c -= 0.8 * getattr(b.p, fit, 0.5)                    # personality fit
                 return c
             b = min(free, key=cost)
@@ -834,7 +837,7 @@ class Director:
                 b.via_left = list(o.via) if o.role != b.order.role or o.via != b.order.via else b.via_left
                 b.order = o
             else:
-                b.set_order(o)
+                b.set_order(o, sure=fit == "anchor")
         for b in free:
             s.roles[b.id] = "free"
             b.set_order(Order("free"))
@@ -2309,7 +2312,7 @@ class Director:
         """Team Slayer roles and points by score posture (guide 07 Slayer, 01 sections 8 and 12):
         - hold (posture <= 0.35: protecting a lead, enemy about to win, last minute ahead): pairs hold two
           adjacent power positions and let the enemy come; nobody hunts alone.
-        - standard: an anchor holds a power position; a slayer and his support (a few units behind him)
+        - standard: up to two anchors hold nearby power positions; a slayer and his support (a few units behind him)
           go where the fight is; a floater takes the other side (a second position or a sweep).
         - push (posture >= 0.65: behind, all-in): two pairs converge on the fight from two sides.
         Every bot gets its own spot (spread()), so the team never stacks on one point."""
@@ -2333,19 +2336,26 @@ class Director:
         post = s.post
         # the score posture picks the formation: careful holds the post and the one beside it, bold pushes in pairs
         second = min((q for q in pts if q != post), key=lambda q: dist(q, post), default=post)
+        anchors = snap.mode == "slayer"
+        if anchors and n > 1 and second == post and p < 0.65:
+            second = s.spread(post, 1)
         if p <= 0.35:
             spots = [post, second]
-            return [("mid", s.spread(spots[i % len(spots)], i // len(spots)), "camping") for i in range(n)]
+            count = 2 if second != post else 1
+            return [("mid", s.spread(spots[i % len(spots)], i // len(spots)),
+                     "anchor" if anchors and i < count else "camping") for i in range(n)]
         if p >= 0.65:
             side = Vec(-(target.y - post.y), target.x - post.x, 0).norm() * 6.0
             fronts = [target + side, target - side]
             return [("hunter", s.spread(fronts[i % 2], i // 2, 3.0), "aggression") for i in range(n)]
         back = (post - target).norm() * 5.0 if dist(post, target) > 1 else Vec(5, 0, 0)
-        slots = [("mid", post, "camping"), ("hunter", target, "aggression"),
-                 ("hunter", s.spread(target + back, 1, 2.0), "teamwork")]
+        slots = [("mid", post, "anchor" if anchors else "camping")]
+        if anchors and n > 1 and second != post:
+            slots.append(("mid", second, "anchor"))
+        slots += [("hunter", target, "aggression"), ("hunter", s.spread(target + back, 1, 2.0), "teamwork")]
         far = max(pts, key=lambda q: min(dist(q, post), dist(q, target)))
         floats = [far, s.sweep]
-        slots += [("hunter", s.spread(floats[i % 2], i // 2), "aggression") for i in range(max(0, n - 3))]
+        slots += [("hunter", s.spread(floats[i % 2], i // 2), "aggression") for i in range(max(0, n - len(slots)))]
         return slots[:n] if n >= 1 else slots
 
     def is_one_flag(s, snap):
