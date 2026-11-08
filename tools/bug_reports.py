@@ -27,6 +27,17 @@ ROOT = os.path.normpath(os.path.join(HERE, ".."))
 DIR = os.path.join(ROOT, "logs", "bug_reports")
 OBSERVER = "http://localhost:8799/"
 STAMP = re.compile(r"^\d{8}-\d{6}$")     # a single report botcore saved, not filed yet
+# where everyone was at each attach_new call (wall clock): a report takes the places nearest its own save, not the
+# filing tick's (a filing retried 3.7 s later stored the player mid-flight from a man cannon, 22 u off; Forge run Nov 6)
+_SEEN = []
+
+
+def _places_at(unix, snap):
+    """{id: (x, y, z)} nearest the wall-clock second unix among the recent calls, else the snapshot's."""
+    best = min(_SEEN, key=lambda e: abs(e[0] - unix), default=None)
+    if best is not None and abs(best[0] - unix) <= 5.0:
+        return best[1]
+    return {p.id: (p.pos.x, p.pos.y, p.pos.z) for p in snap.players}
 
 
 def _load(path, default=None):
@@ -62,6 +73,8 @@ def attach_new(t0, now, snap, map_name, trace, trace_path, bots, critic_path=Non
     the report ("near") and his note becomes a mark on the map's stations. Returns the stamps filed."""
     done = []
     folder = match_dir(trace_path, t0)
+    _SEEN.append((time.time(), {p.id: (p.pos.x, p.pos.y, p.pos.z) for p in snap.players}))
+    del _SEEN[:-12]
     for rep in sorted(glob.glob(os.path.join(DIR, "*", "report.json"))):
         single = os.path.dirname(rep)
         stamp = os.path.basename(single)
@@ -71,11 +84,13 @@ def attach_new(t0, now, snap, map_name, trace, trace_path, bots, critic_path=Non
         if not r or r.get("unix", 0) < t0 - 5:
             continue                                   # an older match's report (the brain was not running then)
         t = round(max(0.0, now - (time.time() - r["unix"])), 1)   # the match second it was saved at
+        at_save = _places_at(r["unix"], snap)
         players = []
         for p in snap.players:
             b = bots.get(p.id)
+            q = at_save.get(p.id, (p.pos.x, p.pos.y, p.pos.z))
             players.append(dict(id=p.id, name=p.name, team=p.team, bot=b is not None, alive=p.alive,
-                                pos=[round(p.pos.x, 2), round(p.pos.y, 2), round(p.pos.z, 2)], vehicle=p.vehicle,
+                                pos=[round(q[0], 2), round(q[1], 2), round(q[2], 2)], vehicle=p.vehicle,
                                 weapon=p.weapon, carrying=p.has_flag,
                                 goal=(b.goal[0], str(b.goal[1])[:60]) if b is not None else None,
                                 order=(b.order.role, str(b.order.point)[:60]) if b is not None else None,
@@ -84,11 +99,11 @@ def attach_new(t0, now, snap, map_name, trace, trace_path, bots, critic_path=Non
         entry = dict(r, stamp=stamp, t=t, map=map_name, mode=mode or snap.mode, score=snap.score, players=players)
         me = next((p for p in snap.players if bots.get(p.id) is None and not getattr(p, "is_bot", False) and p.alive),
                   None)
+        at = tuple(at_save.get(me.id, (me.pos.x, me.pos.y, me.pos.z))) if me is not None else None
         if stations is not None and me is not None:
-            at = (me.pos.x, me.pos.y, me.pos.z)
             entry["near"] = stations.near(at)
             stations.mark(r.get("description", ""), at, stamp, t)
-        if oob is not None and me is not None and oob.flag(r.get("description", ""), (me.pos.x, me.pos.y, me.pos.z), t):
+        if oob is not None and me is not None and oob.flag(r.get("description", ""), at, t):
             entry["out_of_bounds"] = True             # his note names it: a soft wall where he stood (brain/oob.py)
         if trace is not None:
             trace.write(json.dumps(dict(t=t, bug=stamp, text=r.get("description", ""))) + "\n")

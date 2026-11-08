@@ -1,5 +1,19 @@
 # Custom release history
 
+## Unreleased
+
+### Upstream 0.2.2-s181 build 20261107-1530 merged, 2026-11-07
+
+- The owner ran his friend's installer over the custom.7 install. The installer reset 14 of our customized files to s181, overwrote 50 that his update changed, and deleted 26 custom-only files (`brain/anticipate.py`, `tools/owner_profile.py`, 20 custom tests, 4 docs). Before the install, a full verified backup was made: `F:\Proving Grounds Backups\Project Proving Grounds_2026-11-07_193218`.
+- New `upstream` branch: his files only, on the s181 import (6433bb3), as one commit (4a3dd32, 53 files: his 50 changes and 3 new files, `BUILD`, `maps/_inputs/h2.json`, `tools/release_notes.py`). The deletions were not recorded, because none of those files were his. A normal merge into main then applied only what he changed since s181; future updates merge the same way.
+- His update (docs/UPDATES.md, s181 updates 3 to 8): call a bot into your vehicle with the horn; aircraft pick up bots; Halo 4 Mantis (walk, machine gun, stomp, rockets); Halo 4 Banshee bombs; H4 Theater with bots; Spire man cannons and aircraft landing (`AIR_ARRIVE_R`); vehicle crews during a blitz; DMR over AR; snipers never "low" with rounds left; magazine learning; Breakpoint bridge-to-ledge sight; and more.
+- 16 files changed on both sides. 10 merged cleanly; 6 had 25 conflicting spots. Owner's rule: our changes win. Where a spot had a line we changed, ours was kept. Where his edit was to a line we left as base, or he added lines beside ours, his went in too:
+  - kept ours only (his version dropped): our head and chest aim helpers over his `head_point`, keeping the protected Legendary/Demon head and turret precision (bot.py hunks 1-4 and 14); our turret origin over his `gun_origin` (8-10); our sniper-ammo and rocket-ready rules over his equivalents (6, 13); `core.py` fields; `maps.py` and `terrain.py` `set_open_under` (the same feature on both sides); `live.py` Reach `rounds()` and `spartan_head_position`.
+  - ours plus his: his `learn_mags` call after our patrol weapon choice; his `veh_kind` beside our Scorpion settle (his Banshee bomb code reads it); his Mantis weapons call after our Scorpion fire; his aircraft `near` arrival inside our Mongoose arrival; his `nade_ok` grenade rule in our two fixed-high grenade gates; his blitz vehicle crews after our `power_runs`; his `alive + blitzing` vehicle orders with our patrols; his horn-picked bot and `HORN_CALL_R` with our `gunner_available` check.
+- Native: the launcher loads the newest `native/bin/botcore*.dll`, and his installer's `botcore.dll` (his source, without our Demon tier and panel) had become newest. `native\build.bat demon` rebuilt `botcore_demon.dll` and `inject.exe` from the merged source (his h4f/film/overlay/shared changes and ours). The build had no errors; `panel_art.py` failed after it as before (PIL missing on PATH Python), which does not affect the DLL. `ppg_window.exe` is his build (we do not change `ppg_window.cpp`).
+- Local data: the learned map files, `user/`, `tools/fixtures/` and all logs and bug reports are unchanged from the backup. Only his `maps/_shapes/*.json` and `unins000.dat` changed (his).
+- Validation: all 211 regression tests pass on the merge, and the conflicted modules compile. Gameplay is untested, including his new features with our changes. MCC must load the new DLL: restart the launcher.
+
 ## 0.2.2-custom.7 — Demon awareness and fights, vehicle wall guard, 2026-11-07
 
 - Covers the 21 commits since 0.2.2-custom.6 (989cb8d). 18 were already on GitHub without a version; 3 are new in this candidate: Codex's Reach Demon exposed-part fire (1f8e070), the ground vehicle wall guard (ed2b87f), and Legendary/Demon shooting back with the wedges body filter (1e0bd78). Each entry below gives its own behavior and validation.

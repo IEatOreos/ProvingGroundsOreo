@@ -46,7 +46,7 @@ TAG_ALIAS = {"sniper_rifle": "sniper", "rocket_launcher": "rockets", "energy_swo
              "new_flag": "flag", "skull": "ball", "oddball": "ball",   # the objectives in hand (Halo 4, H2A)
              # the infected's own swords (Halo 4 Flood's storm_flood_sword, H2A's h2a_energy_sword_infected): lunge
              # like the sword (their tags: autoaim range 2.25, angle 6, as the sword's); unnamed, a Flood played its
-             # prongs as a gun (band 5-25 u: backed off inside 5 u, swung from across the room; owner, issue #3)
+             # prongs as a gun (band 5-25 u: backed off inside 5 u, swung from across the room; issue #3)
              "flood_sword": "sword", "energy_sword_infected": "sword"}
 # the infected's own weapons by their tag names: seeing one in a hand says Infection / Flood whatever the variant's
 # name (brain/modes.py mode_of)
@@ -168,6 +168,7 @@ class Live:
     # a vehicle's body as each game keeps it on the object, the field its players' health is read from (a vehicle is a
     # unit): (offset, True when the float is damage taken, 1.0 = gone, not health left)
     VEH_VITAL = (0x9C, False)
+    VEHICLE_TYPES = (1,)        # the object types read as vehicles (objects(): Halo 4 adds its giants, LiveH4F)
     # the game's own "destroyed" bit: object damage flags byte at DEAD_AT, bit 2 (CE's _object_dead_bit). DERIVED from each
     # DLL's object_get_health script function (backups/mcc-2025.08.16, the Ghidra build), which answers 0 when it is set:
     # Halo 2 +0x10A, Halo 3 +0x110, ODST +0x104, Reach +0x138, Halo 4 / H2A +0x16C. None (CE): its MP vehicles cannot
@@ -834,7 +835,7 @@ class LiveH3(LiveH2):
     def _melee_name(s, tag):
         """Halo 3: a weapon's name by the map's own tag names (tools/reach_tag_names.py reads Halo 3's .map files too):
         "objects\\weapons\\...\\X\\X" at the tag's index, else None. Rat's Nest places no sword, so Infection's zombies
-        held "unknown" and played their swords as guns (band 5-25 u: backed off inside 5 u, swung from far; owner,
+        held "unknown" and played their swords as guns (band 5-25 u: backed off inside 5 u, swung from far;
         issue #3)."""
         names = s.__dict__.get("_h3_tag_names")
         if names is None:
@@ -1825,6 +1826,51 @@ class LiveH4F(LiveReach):
     # (Live.vehicle_dead / vehicle_left: halo4.dll 0x180683124 and groundhog.dll 0x180683e80, object_get_health)
     DEAD_AT, HEALTH_BLOCK = 0x16C, 0x1D0
     AMMO_AT = None              # (rounds not decoded here: Reach's +0x2C6 / +0x2CA are not these games')
+    # the vehicles' object types: 1, and Halo 4's giants, 13 (the Mantis: halo4.dll's own object type table at
+    # 0x180d8f410 lists biped 0, vehicle 1 ... creature 12, giant 13; logs/tmp/h4_object_types.py). Read as type 1 only,
+    # the Mantis was in no vehicle list: no bot went for it, and a player in it rode "?" (Ragnarok 20261106-234103).
+    # Halo 4 only: this class reads H2A too, whose type 13 is not known to be a giant
+    @property
+    def VEHICLE_TYPES(s):
+        return (1, 13) if str(getattr(s.g, "dll", "")).lower() == "halo4.dll" else (1,)
+
+    def h4_spartan_pose(s, address, unit, position):
+        """Halo 4's Spartan (120-node rig: bone block descriptor at unit +0x1BC, head node 54, its target_head marker):
+        (the animated head, the unit's view point +0xD50), both or (None, None). The place read here is not the feet
+        (0.38 over the floor, bot.H2A_FEET): its head goes with this view point, never with a head height added to the
+        place. Captured 2,780 standing / strafing / crouched poses on Bloodline and Adrift (the collaborator's fork,
+        524af62). Not for Reach, H2A, a vehicle or another rig."""
+        unknown = (None, None)
+        if str(getattr(s.g, "dll", "")).lower() != "halo4.dll" or unit is None or len(unit) < 0x1C0:
+            return unknown
+        size, offset = struct.unpack_from("<HH", unit, 0x1BC)
+        if size != 120 * 52 or offset % 4 or not 0x700 <= offset <= 0x8000:
+            return unknown
+        raw = s.g.read(address + offset + 54 * 52, 52)
+        view_raw = s.g.read(address + 0xD50, 12)
+        if raw is None or len(raw) != 52 or view_raw is None or len(view_raw) != 12:
+            return unknown
+        scale, *m = struct.unpack("<13f", raw)
+        view = struct.unpack("<3f", view_raw)
+        base = struct.unpack_from("<3f", unit, 0x64)
+        if not all(map(math.isfinite, (scale, *m, *view, *base, *position))) or not .95 <= scale <= 1.05:
+            return unknown
+        axes = [m[k:k + 3] for k in (0, 3, 6)]
+        if any(abs(sum(x * y for x, y in zip(a, b)) - float(i == j)) > .08
+               for i, a in enumerate(axes) for j, b in enumerate(axes)):
+            return unknown
+        cross = (axes[0][1] * axes[1][2] - axes[0][2] * axes[1][1], axes[0][2] * axes[1][0] - axes[0][0] * axes[1][2],
+                 axes[0][0] * axes[1][1] - axes[0][1] * axes[1][0])
+        if sum(x * y for x, y in zip(cross, axes[2])) < .9:
+            return unknown
+        marker = (-6.9422384e-8, .02300628, -.006868857)
+        head = tuple(m[9 + i] + scale * sum(marker[j] * m[j * 3 + i] for j in range(3)) for i in range(3))
+        if (math.hypot(head[0] - position[0], head[1] - position[1]) > .8 or not -.2 < head[2] - position[2] < 1.05
+                or math.hypot(view[0] - base[0], view[1] - base[1]) > .2 or not .3 < view[2] - base[2] < .8
+                or sum((view[k] - position[k]) ** 2 for k in range(3)) > 1.0
+                or sum((view[k] - head[k]) ** 2 for k in range(3)) > .25):
+            return unknown
+        return head, view
 
     def h4_spartan_pose(s, address, unit, position):
         """Halo 4's captured 120-node Spartan rig: (animated target_head, cached view point).
@@ -1997,27 +2043,50 @@ class LiveH4F(LiveReach):
         ents, mx, _ = s._array(0x18)
         b = s.g.read(ents, mx * 0x18)
         out = []
+        mechs = 13 in s.VEHICLE_TYPES               # Halo 4: its Mantis is a biped in a match (_mech)
         for i in range(mx):
             salt, typ = struct.unpack_from("<H", b, i * 0x18)[0], b[i * 0x18 + 4]
-            if not salt or (types is not None and typ not in types):
+            if not salt or (types is not None and typ not in types and not (typ == 0 and mechs and 13 in types)):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
             tag = struct.unpack_from("<I", head, 0x8)[0]   # +0 is the same for every object here
             pos = struct.unpack_from("<3f", head, 0x40)
             h = (salt << 16) | i
+            if typ == 0 and mechs and s._mech(tag):
+                typ = 13
+            if types is not None and typ not in types:
+                continue
             if typ == 2 and h not in getattr(s, "_held", ()) and not s._was_held(h) and tag not in s._names:
                 s._learn(tag, pos)       # +0x14 is no parent here (0x3040 on foot): skip held guns instead
-            if typ == 1 and tag not in s._names and struct.unpack_from("<I", head, s.PARENT_AT)[0] == NONE:
-                n = s._vehicle_name(tag)  # (a gun riding on a vehicle has it as its parent: left as it was)
+            if typ in s.VEHICLE_TYPES and tag not in s._names and struct.unpack_from("<I", head, s.PARENT_AT)[0] == NONE:
+                # (a gun riding on a vehicle has it as its parent: left as it was)
+                n = s._vehicle_name(tag, giant=typ == 13)
                 if n:
                     s._names[tag] = n
             out.append(((salt << 16) | i, typ, s._names.get(tag, "unknown"), pos))
         return out
 
-    def _vehicle_name(s, tag):
+    def _mech(s, tag):
+        """A biped that is a vehicle to the brain: Halo 4's Mantis (live on Forge Island, Nov 7: object type 0, a biped,
+        objects\\characters\\storm_mantis\\storm_mantis; giants, type 13, never showed). Reported as type 13 by
+        objects(), so the vehicle list has it and no bot ignores it any more."""
+        known = s.__dict__.setdefault("_mechs", {})
+        if tag not in known:
+            try:
+                from .forge import _tag_names
+                names = _tag_names(s)
+                k = tag & 0xFFFF
+                known[tag] = k < len(names) and "\\storm_mantis\\" in names[k] + "\\"
+            except Exception:
+                return False
+        return known[tag]
+
+    def _vehicle_name(s, tag, giant=False):
         """A vehicle's file name at its tag's own index (the names are exact here, and its folder can differ from it:
-        h2a_mongoose\\h2a_gungoose; every vehicle read "unknown" before, so no bot planned a ride: Bloodline)."""
+        h2a_mongoose\\h2a_gungoose; every vehicle read "unknown" before, so no bot planned a ride: Bloodline). giant: a
+        Halo 4 giant, named in any folder (the Mantis is objects\\characters\\storm_mantis\\storm_mantis on Ragnarok,
+        so it read "unknown" and no bot took it)."""
         try:
             from .forge import _tag_names
             names = _tag_names(s)
@@ -2025,7 +2094,7 @@ class LiveH4F(LiveReach):
             return None
         k = tag & 0xFFFF
         p = names[k].split("\\") if k < len(names) else []
-        return p[-1] if "vehicles" in p[:-1] else None
+        return p[-1] if p and (giant or "vehicles" in p[:-1]) else None
 
     def weapon_name(s, weapon_handle):
         o = s.object(weapon_handle)

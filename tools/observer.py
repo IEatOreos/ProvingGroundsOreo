@@ -48,7 +48,7 @@ def trace_files():
     out = []
     for logs in [LOGS] + recording.other_logs(LOGS):
         own, saved = logs == LOGS, recording.saved(logs)
-        # bug reports belong to their game (the owner, Nov 6: "bug reports should not be in the same list as games"):
+        # bug reports belong to their game (Nov 6: not in the same list as the games):
         # each game lists its reports (bugs: [{t, time, text}]); a report's own copy of the recording shows only
         # when the game's recording is gone (rotated out), as that game
         reports = {os.path.basename(os.path.dirname(p)): p for p in glob.glob(os.path.join(logs, "bug_reports", "*", "trace.jsonl"))}

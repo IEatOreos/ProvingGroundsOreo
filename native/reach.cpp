@@ -463,6 +463,7 @@ static void __fastcall h_hr_update(uint8_t* actions) {
             g_shm->game = 4;
             if (tls && fr) {
                 hr_run_command(tls);
+                while (film_more(*(uint32_t*)(gg + HR_GG_TICKS))) hr_run_command(tls);   // a film: this tick's others
                 hr_spawn_moves(tls, fr, *(uint32_t*)(gg + HR_GG_TICKS));
                 if (*(uint32_t*)(actions + 8) & 1) {        // player 0's action, for decoding
                     memcpy(g_shm->dbg_action, actions + 0x10, HR_ACTION);

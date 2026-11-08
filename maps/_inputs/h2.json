@@ -1,0 +1,10 @@
+{
+ "cycle": [
+  {
+   "off": 32,
+   "mask": 16,
+   "press": false,
+   "how": "decoded live 2026-11-07 (tools/decode_buttons.py cycle=1, Lockout): +0x20 0x10 in three decodes (the first also 0x180000: the weapon changing on that press)."
+  }
+ ]
+}

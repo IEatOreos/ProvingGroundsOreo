@@ -94,5 +94,13 @@
    "press": false,
    "how": "decoded live 2026-10-31: key rmb, 91 ticks held, idle noise excluded"
   }
+ ],
+ "cycle": [
+  {
+   "off": 64,
+   "mask": 768,
+   "press": false,
+   "how": "decoded live 2026-11-07: key 1, 37 ticks held, idle noise excluded"
+  }
  ]
 }

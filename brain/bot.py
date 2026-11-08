@@ -104,6 +104,9 @@ VEHICLE_TRIP = 35.0          # goals farther than this make a free vehicle nearb
 GROUND_RISE = 15.0           # u: a goal this far over the bot is no trip for a ground vehicle (Spire's core, 37 u up)
 GETAWAY_PARK_R = 3.0         # u: the getaway ride parks this near its spot (director.vehicle_jobs)
 RIDE_OUT_R = 10.0            # a rider this near his objective gets out (a runner at their flag: director.vehicle_jobs taxi)
+LANDED_OUT_H = 1.5           # u: ... but out of an aircraft only once it is down this low over the floor under it
+PRESS_ITEM, PRESS_ITEM_R = 0.5, 1.5   # an Invasion core runner's gun on its way more than this off: scaled (keep_role)
+NADE_TEAM_R, NADE_LOOK = 4.0, 1.0   # u, s: no grenade with a teammate this near where it goes, now or this soon (nade_clear)
 CALLED_WAIT_R = 15.0         # a driver waits (8 s at most) for a teammate called aboard while he is this near (crew_coming)
 MONGOOSE_RETRY = 30.0        # finish the objective on foot before choosing another transport trip
 
@@ -178,6 +181,10 @@ COMMIT_GAP, COMMIT_HURT_GAP = 0.8, 1.6   # s out of sight the man fought stays t
 COMMIT_THREAT_R = 10.0                 # u: a man this close aiming at us takes over from one looking away
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
+# where a DMR always goes over the assault rifle: in hand at every range while it is loaded (choose_weapon), and never
+# dropped for one, the AR given up for one first (drop_slot). Playtest, Nov 7: the bots do not play the AR's close
+# fights as people do; the DMR suits them (and a shotgun is not taken over the AR either)
+DMR_OVER_AR = {"reach", "h4"}
 UPGRADE_R, UPGRADE_ON_WAY = 14.0, 6.0  # u: a better gun this near is weighed; this near, its post does not hold it back
 EYES_KEEP = 3.0                        # s every bot keeps watching where a man it saw went (look_point)
 HIT_KEEP, HIT_WHIP = 2.0, 0.35         # a hit is turned to this long at least, with this spin at least (Normal's): Easy too
@@ -198,6 +205,7 @@ STAY_SCORE = 1.4     # staying on it: over all but a fight (a man in sight 1.5 +
 DEFEND_R, ESCORT_R = 15.0, 12.0     # how far a defender strays from its post, an escort from our flag carrier (keep_role)
 DEFEND_HOLD = 6.0                   # a CTF defender closes on a man only this near its post (fight): from cover otherwise
 CLOSE_FIGHT_R = 8.0                 # a man in sight this close is fought whatever the role (decide)
+GLIMPSE_S = 1.5                     # s: a man out of sight no longer than this is still "in sight" to its post (keep_role)
 PRESS_NEAR = 3.0                    # u: a press (press_on) walks in to here; closer, push_in and the melee take over
 POWER_NEAR = 15.0                   # u: a power weapon up this near is not held back by a post (keep_role)
 REGROUP_MATE = 8.0                  # a teammate this close is support (brain/tracefmt.py FORM_R): no pull-back (regroup_point)
@@ -304,6 +312,10 @@ PL_LOCK_S, PL_LOCK_R, PL_SLIP = 2.2, 1.5, 0.3   # s, u (the reticle on a vehicle
 # export-tag-to-xml): Reach, Halo 4, H2A swords (and Halo 4's Flood prongs, H2A's infected sword) autoaim range 2.25 u,
 # angle 6 deg; the gravity hammer (Reach, Halo 4) 1.35 u, 10 deg
 LUNGE = {"sword": 2.25, "gravity_hammer": 1.35}
+# u: a sword or hammer this near is met with the shotgun. The Flood close 3 u/s, 6 with a thruster: a swap begun here has
+# it out before they are in its reach (2.5 u). Past it the guns go by range (the magnum hits him on his way in): at 10 u
+# survivors held the shotgun from 10 u in, walked at the Flood and fired nothing (Wraparound playtest, Nov 6 16:01)
+RUSH_R = 6.0
 LUNGE_ANGLE = {"sword": math.radians(6.0), "gravity_hammer": math.radians(10.0)}
 LUNGE_BODY = 0.15     # u: half a Spartan's width, the part of him the red cone may touch (INFERRED: tags give width 0)
 # ... per game where the kit has no tags here: a skilled player's Halo 3 sword kills came from first presses at 1.2-2.0 u
@@ -315,7 +327,7 @@ LUNGE_GAME = {"h3": {"sword": 1.8}, "h2": {"sword": 2.2}}
 MELEE_TRIGGER = {"reach", "h4", "h2a"}
 SWORD_OPEN = 8.0     # u: past this a sword or hammer holder does not cross the open at a man aiming at it (sword_cover)
 CLASH_MELEE = (0.15, 0.7)   # s after its own sword press: a sword man still standing in reach is a clash (parried), and
-                            # the winner's quick melee follows (owner, issue #3); Easy never does it
+                            # the winner's quick melee follows (issue #3); Easy never does it
 # the gap between sword presses while he is in reach: the player pressed every 0.15-0.22 s as he closed until one landed
 # (a press past the red reticle whiffs, the next one lunges); one press then 0.6 s of nothing missed live (The Pit
 # 199.95 s: the one press at 1.5 u, no damage, dead at 200.19)
@@ -338,8 +350,9 @@ TRAVEL_BOOST_FROM, TRAVEL_BOOST_CONE, TRAVEL_BOOST_S = 15.0, math.radians(20.0),
 CHAINGUN_HEAT = (13.5, 3.3)   # s: Reach's Warthog chaingun, fire to overheat and all cooled again (Bot.chaingun_heat)
 # A Banshee's attack runs, a skilled player's (Spire match 232250: 169 s, 17 runs, 20 turn-arounds;
 # logs/tmp/owner_banshee.py): a run starts 15-30 u out (median 20) and closes to 1-15 u, nose on him; the plasma cannons
-# in taps from 10-28 u (median 15.6); the second weapon (a bomb, Reach's fuel rod) held about 2.4 s from 7-36 u (median
-# 21.5), about every 6 s; past him it flies on straight and climbs to 20-28 u off, then turns back hard (13 to 4 u/s)
+# in taps from 10-28 u (median 15.6); the right button (Reach's boost, not a weapon) held about 2.4 s from 7-36 u
+# (median 21.5), about every 6 s; past him it flies on straight and climbs to 20-28 u off, then turns back hard (13 to 4
+# u/s). The bomb is cycled to (FUELROD_*, Bot.fuel_rod)
 PASS_START, PASS_OVER, PASS_EXTEND, PASS_OUT_S, PASS_START_H, PASS_START_MIN = 15.0, 6.0, 22.0, 6.0, 15.0, 12.0
 CANNON_R, FIRE2_R, FIRE2_HOLD, FIRE2_EVERY = 28.0, (12.0, 36.0), 2.4, 6.0
 AIR_GUN_R = 1.5       # u: an aircraft's guns fire with its nose this near his middle (Bot.air_pass)
@@ -348,8 +361,10 @@ AIR_JINK, AIR_JINK_S = 0.4, 1.0   # rad, s: shot at in a run's way in (out of gu
 # over the floor there: pull out and end the run. (The old rule, 6.8 u over the highest floor within 6 u of four points
 # 2.5 s on, fired on 44% of a replayed Shrine Banshee's ticks and held every dive 16 u over him: tools/air_replay.py)
 AIR_PULL_S, AIR_RUN_FLOOR = 1.2, 1.5
+BOMB_ROOM_R = 4.0     # u: an enemy known this near an objective room is in it (Bot.bomb_room; Spire's two are 7.6 u apart)
 AIR_CEIL = 3.0       # u: off a run, floors this far over an aircraft still count as ones to climb over (Bot.air_guard)
 AIR_VTOL_CLIMB = 3.0  # u/s: a Falcon's / Hornet's climb on its vertical input (trace 20261105-201917: 3.0-3.2 u/s up)
+AIR_ARRIVE_R = 10.0  # u: an aircraft this near where it goes (flat, on its level) is there (drive: it sets down, gets out)
 AIR_ROOF_M = 2.5     # u: an aircraft's middle stays this far under the map's roof (Terrain.air_roof; Bot.air_roof_guard)
 # (in Reach that right button is the Banshee's boost, not a weapon: his speed held 8.8 u/s, not held 4.3, every hold of
 # 1 s or more faster; logs/tmp/owner_rmb_speed.py.) Reach's fuel rod is cycled to like a secondary: 10 shots from 10-31
@@ -952,10 +967,34 @@ class Bot:
     def objective_point(s, me):
         # a route point counts as passed when reached, or when it is behind us (we got closer to
         # the goal another way, e.g. chasing a fight); never walk back to it
-        while getattr(s, "via_left", None) and (dist(me.pos, s.via_left[0]) < 5 or
-                                                 dist(me.pos, s.order.point) < dist(s.via_left[0], s.order.point)):
+        while getattr(s, "via_left", None) and (s.climb_passed(me, s.via_left[0]) if s.is_climb(s.via_left[0]) else (
+                dist(me.pos, s.via_left[0]) < 5 or dist(me.pos, s.order.point) < dist(s.via_left[0], s.order.point))):
             s.via_left.pop(0)
         return s.via_left[0] if getattr(s, "via_left", None) else s.order.point
+
+    def is_climb(s, q):
+        """q is one of the map's ways up to a core on high (invasion.CLIMBS: a lift's or a man cannon's start)."""
+        from . import invasion
+        return any(dist(q, c) < 0.5 for c in invasion.climbs_for((s.map or {}).get("name")))
+
+    CLIMB_PAD_WAIT = 2.5   # s: on a way up's start this long without going up, it is given up (a cannon not spawned yet)
+
+    def climb_passed(s, me, q):
+        """A way up is passed once gone up it (3 u over its start), or after CLIMB_PAD_WAIT s standing on it (1 u) without
+        going up. Not 5 u short of it, nor once the bot is nearer the core than its start (the core 37 u up, the whole foot
+        of the spire is nearer): both dropped every cannon before its pad (replayed on live Spire 20261106-225937: 437 of
+        1072 picks dropped at once). Nor on reaching it: passed at 1 u, the bots turned for a lift before the cannon took
+        them (live Spire 20261107-015605: 6 bots on a pad, 1 launched)."""
+        if me.pos.z > q.z + 3.0:
+            return True
+        now = getattr(s, "now", 0.0)
+        if (me.pos - q).flat() < 1.0:
+            on = getattr(s, "climb_on", None)
+            if on is None or (on[0] - q).length() > 0.5:
+                s.climb_on = on = (q, now)
+            return now - on[1] > s.CLIMB_PAD_WAIT
+        s.climb_on = None
+        return False
 
     def lead(s, me, snap):
         """Who an escort goes with: our carrier (a person too), else the runner the director named (Order.target)."""
@@ -1154,7 +1193,11 @@ class Bot:
             kind, arg = key
             if kind == "fight":
                 b = s.per.beliefs.get(arg)
-                if b is None or (arg == att and fresh_hit) or (arg in seen and dist(me.pos, b.pos) < (4.0 if urgent else 8)):
+                # (in sight, or out of it a moment: a tick behind a pillar cut a defender's fight 3.27 -> 1.32 under its
+                # post's 1.72, and it walked to the post with the Flood 4 u off, never shooting him: a Blood Cavern
+                # Flood playtest, Nov 6 16:48)
+                here = arg in seen or snap.time - s.per.last_seen.get(arg, -9.0) < GLIMPSE_S
+                if b is None or (arg == att and fresh_hit) or (here and dist(me.pos, b.pos) < (4.0 if urgent else 8)):
                     continue          # on us, or right here: fight back wherever (the core at stake: only at arm's length)
                 q = b.pos
             elif kind in ("hunt", "item", "hold") and isinstance(arg, Vec):
@@ -1168,7 +1211,14 @@ class Bot:
             else:
                 continue
             if kind == "item" and dist(me.pos, q) < UPGRADE_ON_WAY and not core_rush and not s.out_of_held(me, snap, q):
-                continue              # a gun on its way (a step or two): taken whatever its post (an attacker too)
+                # a gun on its way (a step or two): taken whatever its post; an attacker on the Invasion core run only
+                # under the run (live Spire 20261106-185412, 456-472 s: three of seven runners detoured for guns, item
+                # 1.9-2.1 over the core's 1.8-2.1; flagged: the core was not their priority)
+                # (one at his feet is no detour: taken, test_spire_flags' gun 0.7 u off)
+                if (urgent and snap.mode == "invasion" and snap.inv_phase == 3 and not s.dry(me)
+                        and dist(me.pos, q) > PRESS_ITEM_R):
+                    scores[key] *= PRESS_ITEM
+                continue
             if kind == "item" and not urgent and dist(me.pos, q) < POWER_NEAR and s.power_spawn(q):
                 continue              # a power weapon up near by (best_item: up by arrival): worth the step off its post
                                       # (live: power spawns won 6-13% of the decisions they showed in, the post's 1 -
@@ -1710,6 +1760,7 @@ class Bot:
             s.drive(now, dt, me, snap, act, nav)
             s.ground_guard(me, act, snap)
             s.air_guard(me, act, snap)
+            s.spire_approach(me, act, snap)
             s.air_roof_guard(me, act, snap)
             s.fire_gate(now, me, act, snap)
             return act
@@ -1890,7 +1941,7 @@ class Bot:
             arr = getattr(s, "arrive", None)       # Heroic and up: a grenade onto a landing he is 0.8-2.5 s from (a lift
             if (arr is not None and s.att and s.att[1] == "landing" and s.p.tier in ("strong", "top", "demon")   # exit: INTER-LIFT-02)
                     and now >= s.grenade_ready_at and 0.8 <= arr[1] - now <= 2.5 and 6.0 < dist(me.pos, arr[0]) < 18.0
-                    and abs(wrap(angles_to(eye(me), arr[0])[0] - act.yaw)) < 0.3):
+                    and abs(wrap(angles_to(eye(me), arr[0])[0] - act.yaw)) < 0.3 and s.nade_clear(me, arr[0], snap)):
                 act.grenade, s.grenade_ready_at = True, now + s.rng.uniform(5, 10)
                 s.notes.append("grenade: onto the landing")
             # walking 60+ degrees off where it looks (a new goal behind it, the view still swinging round): slow down
@@ -1914,8 +1965,7 @@ class Bot:
                     if (isinstance(k, int) and now - b.t < 3.0 and 8.0 < dist(me.pos, b.pos) < 20.0
                             and dist(b.pos, point) < 8.0
                             and abs(wrap(angles_to(eye(me), b.pos)[0] - act.yaw)) < 0.5
-                            and not any(p.team == me.team and p.alive and p.id != me.id and dist(p.pos, b.pos) < 3.0
-                                        for p in snap.players)):
+                            and s.nade_clear(me, b.pos, snap)):
                         act.grenade, s.grenade_ready_at = True, now + s.rng.uniform(5, 10)
                         s.notes.append("grenade: into the objective")
                         break
@@ -2008,8 +2058,8 @@ class Bot:
                 and not me.has_flag and isinstance(arg, int) and arg in s.per.beliefs:
             # an attacker on the clock shoots on its way to the territory / the core, as the racer does: the aim and
             # trigger on the man, the walk to the objective. Only for a man 6 u off or more, and not inside its zone
-            # (keep_in_zone holds it there). The owner's Spire Invasion 20261105-233940 at 297.9 s ("THESE SPARTANS ARE
-            # JUST CONCERNED WITH FIGHTING NOT THE OBJECTIVE"): phase 2's attackers stood 15-30 u off their territory
+            # (keep_in_zone holds it there). A Spire Invasion playtest 20261105-233940 at 297.9 s (flagged: the
+            # attackers only fought and ignored the objective): phase 2's attackers stood 15-30 u off their territory
             # half the time, 7% in 6 u of it, and picked a fight there 27% of the time (a goal of objective never shoots)
             pt = s.order.point if s.order.point is not None else s.objective_point(me)
             zr = s.zone_at(snap, pt) if pt is not None else None
@@ -2044,11 +2094,21 @@ class Bot:
             s.last_shot_t = now
         weapon_goal = ("fight", patrol_target) if patrol_target is not None else (kind, arg)
         act.weapon = s.choose_weapon(now, me, *weapon_goal, snap)
+        s.learn_mags(me)
         if now < getattr(s, "flag_quiet_until", 0.0):
             act.weapon, act.action, act.reload = -1, False, False     # the flag just came into our hands (above)
         elif act.weapon < 0 and weapon_goal[0] not in ("fight", "retreat") and not me.has_flag:
             s.reload_check(now, me, act)
         return act
+
+    def learn_mags(s, me):
+        """Every gun's fullest magazine, learned every tick, fights too (reload_check reads it). Learned between fights
+        only, the first magazine seen after a kill (3 rounds) read as full and was never reloaded (the collaborator's
+        fork, 3f96e8e)."""
+        top = s.__dict__.setdefault("mag_max", {})
+        for w, m in zip(me.weapons, me.mag):
+            if m > 0:
+                top[w] = max(top.get(w, 0), m)
 
     def reload_check(s, now, me, act):
         """Reload between fights, never with a man in view (guide 03: "the bot reloads after every kill, never
@@ -2061,7 +2121,7 @@ class Bot:
         total = me.ammo[i] if i < len(me.ammo) else -1
         if mag < 0:
             return
-        top = s.__dict__.setdefault("mag_max", {})
+        top = s.__dict__.setdefault("mag_max", {})   # (learned every tick: plan)
         top[me.weapon] = max(top.get(me.weapon, 0), mag)
         if total > mag and mag <= 0.4 * top[me.weapon] and now >= getattr(s, "reload_at", 0.0):
             act.reload, s.reload_at = True, now + 3.0
@@ -2150,7 +2210,12 @@ class Bot:
             if prec:
                 s.combo_at = -9.0
                 return pick(prec[0], "noob combo")
-        if n < 2 or now < getattr(s, "switch_ok_at", 0.0):
+        # a sword or hammer about to reach us with no close-quarters gun out: the swap to one is not held back by the last
+        # swap's wait (Cliffside Flood: the magnum was out when 41% of the Flood arrived, swapped to 1.3 s before)
+        foe = snap.player(arg) if snap is not None and d is not None else None
+        rushed = (foe is not None and foe.weapon in LUNGE and d < RUSH_R and me.weapon not in CQ
+                  and any(inv[i] in CQ and ammo[i] != 0 for i in range(n)))
+        if n < 2 or (now < getattr(s, "switch_ok_at", 0.0) and not rushed):
             return -1
         if kind not in ("fight", "retreat") and d is None and cur >= 0 and not s.per.visible_enemies():
             # between fights (where think runs reload_check: not in a retreat either, third review B1) a gun whose
@@ -2177,6 +2242,9 @@ class Bot:
                 return -9.0                            # nor, mid-fight, one with its magazine out: "empty magazine
                                                        # mid-fight" swaps it straight back (live CE: every 1.5-2 s)
             v = s.rank(w)
+            if w == "assault_rifle" and s.game in DMR_OVER_AR and any(
+                    inv[j] == "dmr" and ammo[j] != 0 and mag[j] != 0 for j in range(n)):
+                v -= 6.0                               # the loaded DMR beside it, at every range (DMR_OVER_AR)
             if d is not None:
                 v += 3.0 * proficiency(w, d, s.game) - 1.0     # its range class at his distance (fully proficient +2, not -1)
                 if w in LUNGE and abs(b.pos.z - me.pos.z) < 2.0:
@@ -2192,6 +2260,11 @@ class Bot:
                     v += 2.5 if d < draw else 0.0
                 if w in CQ:                            # up close the automatic / shotgun / sword comes out
                     v += 2.0 if d < CLOSE else 1.0 if d < SHORT_BAND else 0.0
+                    if t is not None and t.weapon in LUNGE and d < RUSH_R:
+                        # a sword or hammer coming for us (the Flood): the gun that stops him at arm's length is out
+                        # before he gets there (Halo 4 Flood, trace 20261106-144807: 41% of the Flood that
+                        # reached a survivor found him holding the magnum, swapped to it at 5.6 u)
+                        v += 2.5
                 elif w in PRECISION and w not in ("pistol", "magnum") and d < CLOSE:
                     v -= 1.0                           # a rifle against a man strafing at arm's length
                 if (w == "plasma_pistol" and t is not None and t.shield > 0.6 and d < 10.0
@@ -2689,8 +2762,8 @@ class Bot:
             from .modes import zombie_team
             infected = zombie_team(snap) == me.team
             if infected:
-                # the infected take no guns, seats or rests: they hunt (owner, Nov 4: Halo 3's zombies "weren't
-                # aggressive enough"; his Deadlock game: their decisions went to items 49%, retreats 6%, vehicles 4%,
+                # the infected take no guns, seats or rests: they hunt (Nov 4: Halo 3's zombies were not
+                # aggressive enough; a Deadlock playtest: their decisions went to items 49%, retreats 6%, vehicles 4%,
                 # where Halo 4's Flood, with pickups off there, hunted; 1.0 conversions a zombie-minute to 1.5-2.5)
                 for k in [k for k in scores if k[0] in ("item", "vehicle", "retreat", "hold")]:
                     del scores[k]
@@ -2983,7 +3056,7 @@ class Bot:
     def return_point(me, snap):
         """Where an objective of the other side's to take lies dropped for this bot to return by standing on it: the
         Invasion core or Breakpoint's bomb off its stand (a defender's: Reach takes it home after the variant's Core
-        Return Time on it, 30 s on the owner's Tempest), our CTF flag dropped; None."""
+        Return Time on it, 30 s on the tested Tempest), our CTF flag dropped; None."""
         if snap.mode == "invasion":
             ok = (snap.inv_attackers != me.team and not snap.inv_armed and snap.inv_core is not None
                   and snap.inv_core_carrier is None and snap.inv_stand is not None
@@ -3079,6 +3152,39 @@ class Bot:
         if f[0] * (me.pos.x - b.pos.x) + f[1] * (me.pos.y - b.pos.y) >= 0:
             return b.pos                                  # in front of its beam: the hatch is out of sight
         return Vec(b.pos.x - f[0] / n * 0.8, b.pos.y - f[1] / n * 0.8, b.pos.z)
+
+    # Halo 4's Mantis (Nov 7: the machine gun on the main trigger, the rockets on the second, the melee a stomp
+    # on everyone and every vehicle in its radius). The rockets come out by the hold's length, a magazine's worth at
+    # most: live, a bot's second trigger held 0.25 s fired 1 rocket, 1.0 s 2, then the last of a 4-rocket magazine;
+    # a player's recorded holds in the Mantis ran 1.6-3.2 s, median 2.1 (Ragnarok 20261107-130445). INFERRED, not
+    # measured: the stomp's reach, the rockets' range, the salvo's reload
+    MANTIS_STOMP_R, MANTIS_STOMP_EVERY = 4.0, 1.5       # u, s
+    MANTIS_ROCKET_R, MANTIS_ROCKET_EVERY = (8.0, 40.0), 5.0
+    MANTIS_TAP, MANTIS_LOCK = 0.6, 2.1                  # s: held at a man (1-2 rockets) / at a vehicle (lock, salvo)
+
+    def mantis_weapons(s, now, me, v, snap, tid, b, aim_at, act):
+        """The Mantis pilot's other two weapons (its machine gun is drive's act.fire): the stomp (melee) when an enemy
+        on foot or an enemy vehicle is within MANTIS_STOMP_R of it; the rockets (fire2) at the man or vehicle aimed at
+        in MANTIS_ROCKET_R, a tap at a man, held MANTIS_LOCK for a vehicle's lock, one salvo every MANTIS_ROCKET_EVERY."""
+        mp = Vec(*v["pos"])
+        foes = [p.pos for p in snap.players if p.team != me.team and p.alive and p.vehicle == -1]
+        foes += [Vec(*x["pos"]) for x in snap.vehicles
+                 if x.get("team") not in (None, -1, me.team) and x.get("riders", 0) and not x.get("dead")]
+        if now >= getattr(s, "stomp_next", 0.0) and any((q - mp).flat() < s.MANTIS_STOMP_R and abs(q.z - mp.z) < 3.0
+                                                         for q in foes):
+            act.melee, s.stomp_next = True, now + s.MANTIS_STOMP_EVERY
+            s.note("mantis: stomp")
+        foe = snap.player(tid)
+        d = dist(me.pos, b.pos)
+        if now < getattr(s, "rocket_until", 0.0):
+            act.fire2 = True                          # (a press under way is held through)
+        elif (now >= getattr(s, "rocket_next", 0.0) and s.MANTIS_ROCKET_R[0] <= d <= s.MANTIS_ROCKET_R[1]
+              and s.aim.on_target(me, aim_at)):
+            lock = foe is not None and foe.vehicle not in (None, -1)
+            s.rocket_until = now + (s.MANTIS_LOCK if lock else s.MANTIS_TAP)
+            s.rocket_next = now + s.MANTIS_ROCKET_EVERY
+            act.fire2 = True
+            s.note("mantis: rockets" + (" (locking the vehicle)" if lock else ""))
 
     def crew_target(s, me, snap, v, seen, own=False):
         """Who a seat shoots, or the driver keeps the guns' arc on (guide 17 §4.5): the man in sight that our gunner's
@@ -3288,6 +3394,10 @@ class Bot:
                 return True                          # called aboard and on his way (the driver flagged him down)
             if 0.1 < d < 8.0 and ((vp.x - p.pos.x) * p.vel.x + (vp.y - p.pos.y) * p.vel.y) / d > 1.0:
                 return True                          # running to it
+            if air and not p.is_bot and d < 8.0 and t < 8.0:
+                # a person beside the aircraft it just took: a look whether they take a gun (live Spire 20261106-225937,
+                # 507 s: a bot pilot left 0.3 s after boarding, the player standing 5 u off, its guns empty)
+                return True
         return False
 
     def hold_for_crew(s, now, me, act, air):
@@ -3297,6 +3407,10 @@ class Bot:
         him as he walked under it (the floors rule climbed it off the ground by the spire's foot), and he never got in.
         Its take-off afterwards starts again from the ground (air_guard: air_held)."""
         act.forward = act.strafe = 0.0
+        # waiting is not being stuck: the stuck clock starts again when the wait ends (drive). Kept running, a pilot's 6 s
+        # of waiting read as stuck on the ground the moment its gunner got in, and it got out (live Spire 20261106-225937,
+        # 498.8 s: the player took the Falcon's gun, its bot pilot held Use and left)
+        s.drive_pos, s.drive_since = me.pos, now
         if air:
             act.pitch, act.vertical = 0.0, -1.0
             s.landing, s.air_dest, s.air_held = True, me.pos, now
@@ -3317,6 +3431,7 @@ class Bot:
         s.scorpion_turn = scorpion and getattr(s, "seat_for", None) == me.vehicle and s.seat == "driver"
         previous_settle = getattr(s, "scorpion_settle", None)
         s.scorpion_settle = None
+        s.veh_kind = vehicles.kind_of(v["kind"]) if v else None        # (air_pass: only a Banshee has its bomb)
         if now < getattr(s, "exit_until", 0.0):   # getting out: Use held (a one-tick press never left a Reach Warthog:
             act.action, act.fire = True, False    # a driver sat wedged 200 s with the throttle down, Boneyard)
             act.forward = act.strafe = 0.0
@@ -3417,7 +3532,12 @@ class Bot:
                 s.note("vehicle: home with the flag, out")
                 return
             goal = s.objective_point(me) if s.order.point is not None and not me.has_flag else None
+            # (never out of an aircraft in the air: live Spire 20261106-185412 at 965 s, a Falcon gunner by his post got
+            # out 20 u up; the pilot sets down, then he goes)
+            aloft = (v is not None and (vehicles.spec(v["kind"]) or {}).get("move") == "air"
+                     and s.T().height_over(me.pos.x, me.pos.y, me.pos.z) > LANDED_OUT_H)
             if (goal is not None and now - s.seat_since > 1.5 and (me.pos - goal).flat() < RIDE_OUT_R and snap.mode != "race"
+                    and not aloft
                     and (s.order.role == "runner" or (not gunner and s.order.role in ("escort", "mid", "hunter")))):
                 act.action, act.fire = True, False
                 s.note("vehicle: there, out")
@@ -3428,8 +3548,8 @@ class Bot:
             at = getattr(s, "still_at", None)
             if at is None or dist(me.pos, at) > 1.5:
                 s.still_at, s.still_since = me.pos, now
-            parked = now - s.still_since > 5.0 and not (gunner and tid is not None) and \
-                not any(p.vehicle == me.vehicle and not p.is_bot and p.alive for p in snap.players)
+            parked = now - s.still_since > 5.0 and not (gunner and tid is not None) and not aloft and \
+                not any(p.vehicle == me.vehicle and not p.is_bot and p.alive for p in snap.players)   # (a hover is no park)
             if v is not None and (v.get("riders", 0) <= 1 or parked) and sp and sp["move"] != "none" and now - s.seat_since > 4.0:
                 act.action, act.fire = True, False
             return
@@ -3542,6 +3662,18 @@ class Bot:
             # a light vehicle head on: a gunned Warthog runs it down too, its gunner shooting on (guide 17 H2-PUR-02 /
             # H4-PUR-01: the circle came first and it never rammed)
             gunned, seen = False, [ctid]
+        room = s.bomb_room(now, me, snap) if air and st.get("role") == "air" and not seen and not easy else None
+        if room is not None:
+            # a player's Banshee bomb runs into Invasion phase 2's objective rooms (vehicles.AIR_ENVELOPE bombs): the
+            # passes, a 3-4 s dive from ~20 u out and 10 u over the room's floor, the bomb let go ~10 u short and 4-5 u
+            # over it, out, round, again every 6-8 s (air_pass: its runs; fuel_rod: the bomb, cycled to in every game
+            # where the cycle is decoded)
+            act.yaw, act.pitch = angles_to(eye(me), room)
+            s.air_pass(now, me, "room", Belief(room, Vec(), now, True, "eyes"), room, act)
+            s.fuel_rod(now, act)
+            s.landing, s.air_dest = False, room
+            s.note("air: bomb run on the objective room")
+            return
         if seen and not gunned:                  # its own gun (or none): by the vehicle's role (vehicles.STRATEGY)
             tid = (s.vehicle_pick(me, v, "driver", seen, snap) if armed else None) or \
                 min(seen, key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
@@ -3623,6 +3755,8 @@ class Bot:
                         act.fire = now - since >= vehicles.SCORPION_SETTLE
                 else:
                     act.fire = aligned or (armed and dist(me.pos, b.pos) < 15)
+            if kind == "mantis":
+                s.mantis_weapons(now, me, v, snap, tid, b, aim_at, act)
         elif seen:                               # a gunner's vehicle: circle the fight in its range, side on
             tid = ctid                            # (the man its gun is on: guide 17 §4.5, the arc kept on him)
             b = s.per.beliefs[tid]
@@ -3754,7 +3888,11 @@ class Bot:
         # 2.5 u under gate 3 for 30 s and more, never out)
         race_out = snap.mode == "race" and s.game != "reach" and (getattr(s, "ground_end", False) or (
             target.z - me.pos.z > 1.5 and (target - me.pos).flat() < 6.0))
-        arrived = transport_done or (((dist(me.pos, target) < 6 and snap.mode != "race") or end or race_out)
+        # (an aircraft sets down where there is room: within AIR_ARRIVE_R of where it goes and on its level. Spire's core
+        # stands amid the top's structures, the Falcon landed 7-8 u off it, 6 u read as not there, and it circled the top
+        # 140 s between the roof and the structures; live 20261107-015605)
+        near = dist(me.pos, target) < 6 or (air and (me.pos - target).flat() < AIR_ARRIVE_R and abs(me.pos.z - target.z) < 4.0)
+        arrived = transport_done or (((near and snap.mode != "race") or end or race_out)
                                      and s.order.role != "ferry")
         if mongoose and trip_job == "getaway" and not transport_done and not end:
             arrived = False       # reach the parking radius before waiting for the carrier
@@ -3837,6 +3975,50 @@ class Bot:
                 # Blood Gulch Race: out under the rock's gate, its walk round to the climb 12 u off, back in a Warthog)
                 s.vehicle_retry_at = max(getattr(s, "vehicle_retry_at", 0.0), now + (60.0 if race_out else 30.0))
 
+    @staticmethod
+    def nade_clear(me, at, snap):
+        """No teammate (a bot or a person) within NADE_TEAM_R of where a grenade is thrown, now or where he will be in
+        NADE_LOOK s at his speed: a frag's blast (equipment.NADE_BLAST, 3 u) and its roll past the aim point. Live Spire
+        20261106-185412: 58 of 384 deaths had an own-team bot grenade aimed within 6 u in the 3 s before; a player died
+        1.5 s after a teammate's "into the objective" aimed 1.2 u from them (that check: 3 u off the enemy's belief; the
+        fight's throws: 1.5 u). Flagged: bots team killing with their grenades."""
+        for p in snap.players:
+            if p.team != me.team or not p.alive or p.id == me.id:
+                continue
+            soon = p.pos + p.vel * NADE_LOOK
+            if dist(p.pos, at) < NADE_TEAM_R or dist(soon, at) < NADE_TEAM_R:
+                return False
+        return True
+
+    @staticmethod
+    def gun_origin(me, v):
+        """Where a gunner's shot leaves (Aim.step's origin): over the place the game reads for him (his vehicle's) by
+        the gun's height (vehicles.gun_height), along the vehicle by its mount (vehicles.gun_forward: Reach's Warthog
+        chaingun 0.536 u behind its origin). None: neither measured (the eye, as before)."""
+        h = vehicles.gun_height(me.turret, vehicles.kind_of(v["kind"]) if v is not None else None)
+        origin = me.pos + Vec(0, 0, h) if h is not None else None
+        back = vehicles.gun_forward(me.turret, vehicles.kind_of(v["kind"]) if v is not None else None)
+        f = (v or {}).get("fwd")
+        if back and f and math.hypot(f[0], f[1]) > 0.1:
+            n = math.hypot(f[0], f[1])
+            origin = (origin or me.pos) + Vec(f[0] / n * back, f[1] / n * back, 0.0)
+        return origin
+
+    def bomb_room(s, now, me, snap):
+        """The objective room a Banshee bombs now (vehicles.AIR_ENVELOPE "bombs" for the Invasion phase), or None:
+        attacking, the room with the most enemies known in it in the last 5 s, else the nearest; defending, only a room
+        with enemies in it (a player's bomb runs into the phase 2 objective, for attackers and defenders alike)."""
+        env = vehicles.envelope(s.map.get("name"))
+        rooms = (env or {}).get("bombs", {}).get(snap.inv_phase) if snap.mode == "invasion" else None
+        if not rooms:
+            return None
+        foes = [b.pos for k, b in s.per.beliefs.items() if isinstance(k, int) and now - b.t < 5.0]
+        scored = [(sum(1 for q in foes if dist(q, Vec(*r)) < BOMB_ROOM_R), -dist(me.pos, Vec(*r)), Vec(*r)) for r in rooms]
+        best = max(scored, key=lambda x: (x[0], x[1]))
+        if best[0] == 0 and snap.inv_attackers != me.team:
+            return None
+        return best[2]
+
     def air_pass(s, now, me, tid, b, aim_at, act):
         """A Banshee's attack runs (PASS_* above, the player's flying): "in", the nose on him (it flies where it looks:
         act.yaw / act.pitch come aimed from drive), the cannons on target inside CANNON_R, the second weapon held
@@ -3898,16 +4080,23 @@ class Bot:
         r = math.atan2(AIR_GUN_R, max(d, 1.0))
         on = s.aim.on_target(me, aim_at) or (abs(wrap(ya - act.yaw)) < r and abs(pa - act.pitch) < r)
         act.fire = on and d < CANNON_R
-        lo, hi = FIRE2_R
-        if now < getattr(s, "fire2_until", 0.0):
-            act.fire2 = True
-        elif (on and lo <= d <= hi and now >= getattr(s, "fire2_next", 0.0)
-              and (s.game == "reach" or me.pos.z - b.pos.z >= 2.0)):
-            s.fire2_until, s.fire2_next = now + FIRE2_HOLD, now + FIRE2_EVERY
-            act.fire2 = True
-        if (s.game == "reach" and on and FUELROD_R[0] <= d <= FUELROD_R[1] and getattr(s, "rod", None) is None
-                and now >= getattr(s, "rod_next", 0.0)):
-            s.rod, s.rod_next = ["to", now], now + FUELROD_EVERY    # Reach's fuel rod: fuel_rod() from drive
+        # the second input is Reach's boost here (Bot.boost), nothing else: a Banshee's bomb is never on it.
+        # The bomb is cycled to like a secondary weapon and fired with the main trigger (Halo 4: key 1 is +0x40 0x400,
+        # then a tap of the trigger, then 1 again, the same as Reach's fuel rod): can_cycle, Halo 4 and Reach only.
+        # Live Nov 7 with a bot pilot, Halo 3's and H2A's cycle and second input fired nothing but the cannons: their
+        # bomb input is not decoded. Halo 4's second input is the Mantis's rockets
+        if s.game == "reach":
+            lo, hi = FIRE2_R
+            if now < getattr(s, "fire2_until", 0.0):
+                act.fire2 = True
+            elif on and lo <= d <= hi and now >= getattr(s, "fire2_next", 0.0):
+                s.fire2_until, s.fire2_next = now + FIRE2_HOLD, now + FIRE2_EVERY
+                act.fire2 = True
+        if (getattr(s, "can_cycle", s.game == "reach") and getattr(s, "veh_kind", "banshee") == "banshee" and on
+                and FUELROD_R[0] <= d <= FUELROD_R[1] and getattr(s, "rod", None) is None
+                and now >= getattr(s, "rod_next", 0.0) and (s.game == "reach" or me.pos.z - b.pos.z >= 2.0)):
+            # (the bomb from over him; Reach's fuel rod straight on) fuel_rod() from drive does the cycle, shot, cycle
+            s.rod, s.rod_next = ["to", now], now + FUELROD_EVERY
         s.boost(act)
         s.att = ["run", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
 
@@ -4004,9 +4193,12 @@ class Bot:
         s.boost(act)
 
     def fuel_rod(s, now, act):
-        """Reach's Banshee fuel rod, cycled to like a secondary: the cycle press, then one shot, then the cycle back to the
-        cannons, timed as his; no cannon fire while it is selected. Run every tick from drive until it is back on the
-        cannons, whatever the run is doing (a fight lost mid-way still cycles back)."""
+        """A Banshee's bomb (Reach's fuel rod), cycled to like a secondary (can_cycle: Halo 4, Reach): the cycle press,
+        then one shot of the main trigger, then the cycle back to the cannons, timed as a player's (Reach's key 1 pairs;
+        Halo 4's the same: the shot ~0.5 s after the press, a tap, the cycle back ~1 s on); no cannon fire while it is
+        selected. Run
+        every tick from drive until it is back on the cannons, whatever the run is doing (a fight lost mid-way still
+        cycles back)."""
         r = getattr(s, "rod", None)
         if r is None:
             return
@@ -4132,7 +4324,12 @@ class Bot:
         most (with the new gun, when known)."""
         def kept(k):
             return loadout_value([w for i, w in enumerate(inv) if i != k] + ([new] if new else []), s.rank, s.game)
-        return min(range(len(inv)), key=lambda k: (ammo[k] != 0, -kept(k)))
+
+        def dmr_rule(k):            # (DMR_OVER_AR: never the DMR for an AR; for a DMR, the AR goes first)
+            if s.game not in DMR_OVER_AR:
+                return 0
+            return 1 if inv[k] == "dmr" and new == "assault_rifle" else -1 if inv[k] == "assault_rifle" and new == "dmr" else 0
+        return min(range(len(inv)), key=lambda k: (ammo[k] != 0, dmr_rule(k), -kept(k)))
 
     def best_item(s, now, me):
         """Power weapons and powerups by map knowledge. A bot with no map knowledge only grabs
@@ -4268,8 +4465,8 @@ class Bot:
         # a CTF defender fights from its post: it does not close on a man outside the area round it, nor chase one who
         # broke sight out there. One carrying our flag is chased
         # (Infection too: survivors hold their room; not the infected: an ambush ends when the prey shows. Held, Flood at
-        # their corners stood 8 u from a survivor they fought, never closing: the owner's Ragnarok game 590.6 s, "this
-        # guy should have been dead long ago")
+        # their corners stood 8 u from a survivor they fought, never closing: a Ragnarok playtest 590.6 s, a
+        # survivor left alive far too long)
         hold = (s.order.role == "defender" and s.order.point is not None
                 and (snap.mode == "ctf" or (snap.mode == "infection" and me.weapon not in LUNGE))
                 and dist(b.pos, s.order.point) > DEFEND_HOLD and not (target is not None and target.has_flag))
@@ -4282,7 +4479,12 @@ class Bot:
         if s.keep_off(me, target, d):
             fwd = -1.0             # out of his sword's lunge or hammer's swing, shooting (guide 03 counter-sword: keep
             s.pushing = False      # away and shoot the head on his way in; audit JUG-02: hunters out of hammer reach)
-        if hold:
+        # a shotgun against a sword or hammer holds its ground and lets him come into its reach: walking in on him met his
+        # lunge first (Wraparound Flood, Nov 6: survivors closed on the Flood 44% of the time, 0 shots at 3-10 u)
+        braced = me.weapon in ("shotgun", "scattershot") and target is not None and target.weapon in LUNGE
+        if braced:
+            s.pushing = s.pressed_in = False
+        if hold or braced:
             fwd = min(fwd, 0.0)
         # seen through a window that stops rounds (Terrain.shot_los): no shot from here, so go round as for a man out
         # of sight (standing to trade aim through bullet-proof glass is no fight)
@@ -4411,6 +4613,7 @@ class Bot:
         blast = BLAST.get(w)
         mates_near = any(p.team == me.team and p.alive and p.id != me.id and dist(p.pos, b.pos) < (blast or 1.5)
                          for p in snap.players)
+        nade_ok = s.nade_clear(me, b.pos, snap)     # (a grenade's own rule: nade_clear, not the gun's blast)
         facing = on
         if blast and (d < blast or mates_near):
             on = False                 # never fire an explosive inside its own blast or onto a teammate
@@ -4429,7 +4632,7 @@ class Bot:
         if w in LUNGE:
             # the sword lunges, the hammer swings: the moment the reticle is red (red_reticle: in the weapon's autoaim
             # range and cone), then the game's lunge locks on. Not before: a press off the red cone (0.6 rad of the view
-            # before, 34 deg) swung at the air and the next swing came too late (owner, issue #3)
+            # before, 34 deg) swung at the air and the next swing came too late (issue #3)
             on = seen_now and clear and red_reticle(me, b.pos, w, s.game) and (
                 target is None or s.kit.can_shoot(now, me, target, snap))
         if (w in ("shotgun", "scattershot") and d > reach(w)
@@ -4489,24 +4692,24 @@ class Bot:
         elif 0.5 < blind_for < 3.0 and not getattr(s, "flush_rolled", False) and 4.0 < d < 16.0 and s.p.tactics > 0.3:
             s.flush_rolled = True
             ya, _ = angles_to(eye(me), b.pos)
-            if (now >= s.grenade_ready_at and not mates_near and abs(wrap(ya - act.yaw)) < 0.45
+            if (now >= s.grenade_ready_at and nade_ok and abs(wrap(ya - act.yaw)) < 0.45
                     and s.rng.random() < min(1.0, 1.3 * s.p.grenades * (0.4 + 0.6 * s.p.tactics))):
                 act.grenade = True
                 s.grenade_ready_at = now + s.rng.uniform(3, 7)
                 s.notes.append("grenade: flush him out")
         if head and on and s.rng.random() < s.p.crouchy * 0.5:
             act.crouch = True      # crouch at the kill
-        if (not fixed_high and s.grenades_allowed() and now - s.engaged_since < 0.6 and 4 < d < 25 and now >= s.grenade_ready_at and not mates_near
+        if (not fixed_high and s.grenades_allowed() and now - s.engaged_since < 0.6 and 4 < d < 25 and now >= s.grenade_ready_at and nade_ok
                 and getattr(s, "nade_open", False)):   # a Regular "forgets to throw grenades" (guide 01 s9): by tactics
             act.grenade = True     # grenade opener (from 4 u: a frag's blast is under 2 u)
             s.nade_open = False
             s.grenade_ready_at = now + s.rng.uniform(3, 7)
         elif (target is not None and target.vehicle != -1 and s.p.personality == "spammer" and 3 < d < 15
-              and now >= s.grenade_ready_at and not mates_near):
+              and now >= s.grenade_ready_at and nade_ok):
             act.grenade = True     # the Grenadier sticks the vehicle up close (vehicle_mission)
             s.grenade_ready_at = now + s.rng.uniform(3, 6)
             s.notes.append("grenade: the vehicle")
-        elif (not fixed_high and s.grenades_allowed() and seen_now and 4 < d < 22 and now >= s.grenade_ready_at and not mates_near
+        elif (not fixed_high and s.grenades_allowed() and seen_now and 4 < d < 22 and now >= s.grenade_ready_at and nade_ok
               and s.rng.random() < NADE_RATE * dt * s.p.grenades):
             # another one into a fight that goes on (a person throws through a long fight). Easy too since (the
             # player: yes to Easy toward 70%; 0.55-0.63 a minute live, the player 2.37)
@@ -4514,7 +4717,7 @@ class Bot:
             s.grenade_ready_at = now + s.rng.uniform(3, 7)
             s.notes.append("grenade: keep the pressure")
         spot = s.kit.grenade_spot(now, me, target, snap) if target is not None else None
-        if spot is not None and 1.5 < d < 20 and now >= s.grenade_ready_at and not mates_near and w not in LUNGE:
+        if spot is not None and 1.5 < d < 20 and now >= s.grenade_ready_at and s.nade_clear(me, spot, snap) and w not in LUNGE:
             # beside an armor lock (the splash lands as it ends), into the heal field he stands in,
             # at a hardlight user's feet (guide 08)
             act.yaw, act.pitch = angles_to(eye(me), spot)
@@ -4528,13 +4731,13 @@ class Bot:
             # is only a bash
             act.melee = False
             # and no grenade: one at the man it runs at kept it off its own blast's spot (own_grenade, NADE_CLEAR 4.5 u,
-            # 3 s), the "bubble" round him (owner, issue #3; Cyberdyne 20261031-014033: 191 of 909 sword-in-hand fight
+            # 3 s), the "bubble" round him (issue #3; Cyberdyne 20261031-014033: 191 of 909 sword-in-hand fight
             # rows within 4.5 u were "grenade: clear of my own", 171 of them walking away from him)
             act.grenade = False
             if act.fire and w == "sword" and now - getattr(s, "lunge_t", -9.0) > CLASH_MELEE[1]:
                 s.lunge_t = now                 # the first press of this exchange
             # a sword clash (both lunged, both parried): the one still standing follows with a quick melee, once. Not
-            # Easy (owner)
+            # Easy
             since = now - getattr(s, "lunge_t", -9.0)
             if (w == "sword" and s.p.tier != "novice" and target is not None and target.alive and target.weapon == "sword"
                     and CLASH_MELEE[0] <= since <= CLASH_MELEE[1] and getattr(s, "clash_for", None) != s.lunge_t
@@ -4674,8 +4877,8 @@ class Bot:
         return d < reach(target.weapon, s.game) + 1.5
 
     def sword_cover(s, now, me, b, target, d):
-        """A sword or hammer is a close-quarters weapon (owner, issue #3: "don't run across an open field at someone far
-        away"): Normal and up, a man past SWORD_OPEN with a gun who looks at us is waited for in cover from him (the
+        """A sword or hammer is a close-quarters weapon (issue #3: it should not run across an open field at someone far
+        away): Normal and up, a man past SWORD_OPEN with a gun who looks at us is waited for in cover from him (the
         nearest within COVER_NEAR), as an ambush; None: run at him (close, he looks away, no cover, a blitz on)."""
         # (only from a gun that reaches us there: Reach Boardwalk Infection, live, a zombie hid 4 minutes 28-33 u from
         # survivors whose shotguns watched it)
@@ -5043,7 +5246,7 @@ class Bot:
         best = None
         for p in snap.players:
             # teammates only: an enemy in the way is the fight (bent round every man within 1.3 u, a sword or melee
-            # rush turned off the man it ran at, 23-90 deg: the "bubble round the target", owner, issue #3)
+            # rush turned off the man it ran at, 23-90 deg: a bubble round the target, issue #3)
             if p.id == me.id or not p.alive or p.vehicle != -1 or abs(p.pos.z - me.pos.z) > 0.8 or p.team != me.team:
                 continue
             d = (p.pos - me.pos).flat()
@@ -5326,6 +5529,7 @@ class Bot:
         up_ok = lambda yaw: T.fly_clear(me.pos, yaw, 1.5, dzs=(1.0, 2.0, 3.0), floor=me.pos.z - 0.5, start=0.0) >= 1.5
         kind = vehicles.kind_of(v["kind"])
         cl = vehicles.clearance(kind)
+        env = vehicles.envelope(s.map.get("name"))   # (his flying on this map: vehicles.AIR_ENVELOPE)
         # (seconds since it got in, or since it last sat waiting for crew: hold_for_crew)
         t_in = now - max(getattr(s, "seat_since", now), getattr(s, "air_held", -1e9))
         style, lift = vehicles.TAKE_OFF.get(kind, ("forward", 0.5))
@@ -5444,7 +5648,8 @@ class Bot:
                 f = k * 0.2 * spd
                 p = Vec(me.pos.x + math.cos(act.yaw) * cp * f, me.pos.y + math.sin(act.yaw) * cp * f,
                         me.pos.z + math.sin(act.pitch) * f)
-                if T.height_over(p.x, p.y, p.z) < AIR_RUN_FLOOR:
+                # (where a player flew the map: those runs' lowest pull-out, vehicles.AIR_ENVELOPE run_floor)
+                if T.height_over(p.x, p.y, p.z) < max(AIR_RUN_FLOOR, (env or {}).get("run_floor", 0.0)):
                     act.pitch = max(act.pitch, 0.35)
                     run = getattr(s, "air_run", None)
                     if run is not None and run[0] == "in":
@@ -5494,9 +5699,14 @@ class Bot:
         line = T.fly_clear(me.pos, act.yaw, reach + 2.0, floor=floor, avoid=avoid)
         dest = getattr(s, "air_dest", None)
         cap = max(me.pos.z + AIR_CEIL, dest.z + 1.0 if dest is not None else -math.inf)
+        # (inside the flown envelope, as far off the spire as flown at this height: only floors it could hit flying
+        # on count, not the decks over it. The blocked line made the spire's top the floor to clear: "a structure by us,
+        # pull up" on 2818 of a Banshee's rows, 1.9 u/s, live Spire 20261106-185412)
+        kept = env is not None and math.hypot(me.pos.x - env["axis"][0], me.pos.y - env["axis"][1]) >= \
+            vehicles.envelope_min_r(env, me.pos.z)
         top = max([me.pos.z - T.height_over(me.pos.x, me.pos.y, me.pos.z)] +
                   [T.top_near(me.pos.x + math.cos(act.yaw) * reach * f, me.pos.y + math.sin(act.yaw) * reach * f, 2.0,
-                              zmax=None if line < reach * f + 2.0 else cap) for f in (1 / 3, 2 / 3, 1.0)])
+                              zmax=None if line < reach * f + 2.0 and not kept else cap) for f in (1 / 3, 2 / 3, 1.0)])
         if me.pos.z < top + (1.0 if slow else cl["over"]):   # (slow: a Falcon hovers low for its gunners)
             act.pitch = max(act.pitch, 0.35)
             if me.pos.z < top + 1.0:
@@ -5504,6 +5714,47 @@ class Bot:
             if sp.get("vtol"):
                 act.vertical = 1.0
             s.note("air: a structure by us, pull up")
+
+    SPIRE_TOP_R = 8.0     # u: a destination this near the flown envelope axis is up on the top (the core's deck)
+
+    def spire_approach(s, me, act, snap):
+        """A pilot going up onto the top of a spire a player flew (vehicles.AIR_ENVELOPE: its axis and how near it was
+        flown at each height) comes in from outside, as that flight did: under the top and nearer its axis than it was
+        flown there, straight out past the top's edge, level; just outside it, up past the top's level before going in
+        over it. Only for a destination up on the top (a runner's core); attack runs keep air_guard's. Live Spire
+        20261106-225937: a bot's Falcon to the core flew up under the deck and stayed 140 s, 3237 of 3487 rows nearer
+        the axis than that flight ever came, "a structure by us, pull up" 3262 times, never over the top."""
+        v = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None)
+        sp = vehicles.spec(v["kind"]) if v else None
+        env = vehicles.envelope(s.map.get("name")) if s.map else None
+        dest = getattr(s, "air_dest", None)
+        if (not sp or sp["move"] != "air" or env is None or dest is None or getattr(s, "seat", "driver") != "driver"
+                or not math.isfinite(me.pos.x + me.pos.y + me.pos.z)):
+            return
+        ax, ay = env["axis"]
+        if math.hypot(dest.x - ax, dest.y - ay) > s.SPIRE_TOP_R or dest.z < me.pos.z + 1.5:
+            return                                   # not going up onto the top (or above it already)
+        T = s.T()
+        if me.pos.z - T.height_over(me.pos.x, me.pos.y, me.pos.z) > dest.z - 3.0:
+            return                                   # over the top's own floor: setting down on it
+        # the top's edge: the farthest out he kept from me up to just over the top's level
+        rim = max([r for z0, z1, r in env["bands"] if z1 > me.pos.z and z0 < dest.z + 2.0] or [0.0])
+        if rim <= 0.0:
+            return
+        r = math.hypot(me.pos.x - ax, me.pos.y - ay)
+        out = math.atan2(me.pos.y - ay, me.pos.x - ax)
+        if r < rim + 1.0:
+            act.yaw, act.forward, act.strafe, act.pitch = out, 0.7, 0.0, 0.0
+            if sp.get("vtol"):
+                act.vertical = 0.0                   # (level: a climb here is into the deck over it)
+            s.note("air: under the spire's top, out past its edge first")
+        elif r < rim + 4.0:
+            if math.cos(act.yaw - out) < -0.3:       # heading in: not yet, up first
+                act.forward = 0.0
+            act.pitch = max(act.pitch, 0.45)
+            if sp.get("vtol"):
+                act.vertical = 1.0
+            s.note("air: up past the spire top's edge before going in")
 
     def air_roof_guard(s, me, act, snap):
         """The last word on an aircraft's height: never over the map's roof (Terrain.air_roof: the safe zone's top, a
@@ -5515,6 +5766,9 @@ class Bot:
         if not sp or sp["move"] != "air" or getattr(s, "seat", "driver") != "driver" or not hasattr(s.T(), "air_roof"):
             return
         lim = s.T().air_roof(me.pos.x, me.pos.y) - AIR_ROOF_M
+        env = vehicles.envelope(s.map.get("name"))
+        if env is not None:
+            lim = min(lim, env["ceiling"])   # (the highest he flew any aircraft here, his flag)
         if me.pos.z > lim:
             act.pitch = min(act.pitch, -0.3)
             if sp.get("vtol"):
@@ -5691,7 +5945,7 @@ class Bot:
             # 282 of 388 stuck episodes on scenery were mid-fight, 109 more were body blocks)
             s.fight_bumps = getattr(s, "fight_bumps", 0) + 1
             # (with a sword or hammer only a teammate: the enemy against us is the man to hit, not to step back from; a
-            # sword run pushing into him backed off 0.5 s, owner, issue #3: "pushed back by a bubble")
+            # sword run pushing into him backed off 0.5 s, issue #3: pushed back by a bubble)
             blocker = min((p for p in (snap.players if snap else []) if p.id != me.id and p.alive
                            and (p.team == me.team or me.weapon not in LUNGE)
                            and dist(p.pos, me.pos) < 1.3), key=lambda p: dist(p.pos, me.pos), default=None)
@@ -6900,7 +7154,7 @@ class Bot:
         """Where its feet are: the position less the game's height over the floor (FEET_GAMES). The level-data probes
         measure from the floor: in Halo 4 the chest ray of clearance ran 0.78 u over the floor, over a Spartan's head
         (low walls, rails and crates unseen), and flat floor read as a step down (the edge guard off on 52% of
-        Halo 4's walking ticks, the owner's ca_blood_cavern games, vs 7-17% in Halo 3 / Reach / Halo 2). s.feet_off: the
+        Halo 4's walking ticks, ca_blood_cavern playtests, vs 7-17% in Halo 3 / Reach / Halo 2). s.feet_off: the
         simulator's bodies stand on the floor (brain/sim.py sets 0)."""
         off = getattr(s, "feet_off", None)
         if off is None:

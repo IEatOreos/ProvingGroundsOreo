@@ -242,7 +242,10 @@ class Stations:
 
     def near(s, pos, r=NEAR_R, n=NEAR_N):
         """[[kind, what, pos, dist]] of the stations nearest pos, within r."""
-        found = sorted((math.dist(o["pos"], pos), o) for o in s.objects if math.dist(o["pos"], pos) <= r)
+        # (by the distance alone: two stations as far off compared their dicts, and 9 of a Forge run's reports
+        # failed to file, Nov 6, brain.txt "'<' not supported between instances of 'dict' and 'dict'")
+        found = sorted(((math.dist(o["pos"], pos), o) for o in s.objects if math.dist(o["pos"], pos) <= r),
+                       key=lambda x: x[0])
         return [[o["kind"], o["what"], o["pos"], round(d, 1)] for d, o in found[:n]]
 
     def mark(s, text, pos, stamp, t=None):

@@ -19,6 +19,9 @@ RAY_MAX = 1000.0  # u: no line of sight longer than this (_ray: its samples grow
 WAIST = 0.30     # a handrail's height over the feet (the waist ray of clearance; drops through a rail: _build_nav)
 RAIL_COST = 25.0  # a drop over a handrail: taken only when nothing else gets there (forbidding it cut off floors)
 LID_COST = 400.0  # a drop into a column whose floor goes on at the ledge's height (_build_nav): beyond any detour
+LIFT_R = 1.0      # u: a gravity lift's column round its base marker: no drop lands in it (_build_nav) ...
+LIFT_DROP = 1.0   # u: ... from more than this over its floor (a step down onto a recessed pad is the way in: Construct's
+                  # small lifts sit 0.44 u under the floor round them)
 RAIL = (0.35, 0.45)  # heights over a ledge's floor where a wall is a handrail (0.25 u wall bins: clear of the step below)
 NAV_CELL = 0.25  # path grid spacing = heightmap cell (the base ramps are 0.83 wide, doors about 1)
 ROAD_COST = 0.4  # a vehicle edge on floor a person drove costs this much of its length: their lines are the roads
@@ -79,7 +82,7 @@ def walked_under(floors, x0, y0, cell, walked):
     """People's walks ~1 u under a lone floor layer nobody walked on: the walked level wins (in place, on the
     (L, h, w) floors; returns the cells changed). The mesh merges surfaces closer than LAYER_GAP into one level at the
     higher: live Boneyard B27 / B28, a flat -9.0 slab over the -10.0 ground at the stair's foot (254.5-255.5, 54-55.5)
-    held bots standing at -10 on it and sent them up a route into the stair's side (the owner's report 161417).
+    held bots standing at -10 on it and sent them up a route into the stair's side (report 161417).
     Seeds: a walk with no layer within 0.3, the nearest layer UNDER_LO-UNDER_HI over it with no walk on it, and its
     four neighbours the same flat level (a crate's edge cell is not: its other side is the ground); from each, the flat
     patch at that level within UNDER_R. ponytail: one patch height per seed; a sloped phantom stays."""
@@ -250,7 +253,7 @@ def climb_ok(z_from, z_to):
     return -MAX_DROP <= z_to - z_from <= MAX_RISE
 
 
-# --- three kinds of wall (owner, Nov 4: "windows get enemy info, fences still act as walls but can be shot through"):
+# --- three kinds of wall (Nov 4: windows let enemies be seen, fences still act as walls but can be shot through):
 # solid stops walking, sight and shots; a window (glass) walking and shots (unless it breaks), not sight; a fence
 # (grate, chain-link, railing, mesh, bars) walking only. By a level's shader / a Forge piece's face material / a piece's
 # name (tools/lidar_walls.py reads the maps' collision; Terrain.set_wall_kinds)
@@ -342,12 +345,14 @@ def piece_wall_kinds(blocks):
 
 class Terrain:
     lid_rule = True   # drops into a column whose floor goes on at our own height cost LID_COST (_build_nav; tests: off)
+    corner_rule = True   # a diagonal drop between two cells shut at our height costs LID_COST (_build_nav)
 
     def __init__(s, npz_path, bases, extra_floor=(), blocks=(), slit_rule=False, window=None, stair_rule=False,
-                 walked=None):
+                 walked=None, lifts=()):
         # walked: cells people stood on (LiDAR walk keys, maps.terrain people_walked): a low ceiling over floor nobody
-        # walked is no floor (_low_ceiling)
+        # walked is no floor (_low_ceiling). lifts: gravity lifts' base markers (x, y, z): no drop into their columns
         s.walked_cells = walked
+        s.lift_pads = [tuple(p[:3]) for p in lifts]
         # slit_rule: no drops into slits no body fits (_build_nav). Reach only: a crack rule on Halo CE cut real drops
         # (Damnation, Lockdown); Reach's 0.25 u cells on its larger maps checked on Countdown stair_rule: stairs climb
         # STAIR_RISE a cell along their run (_stairs). Halo 4 / H2A levels (Adrift)
@@ -813,7 +818,7 @@ class Terrain:
 
     def air_levels(s):
         """(low, high): an aircraft's attack-run and travel heights over the ground under it, from the map's own shape
-        (the owner: "automatically determine low flight height and high fly height by distance from ground"). Low: over
+        (determined automatically by the distance from the ground). Low: over
         the knee-to-roof clutter near the ground (the median of how much higher the top surface gets within 3 u of a
         spot, + 1.5 u), so a strafing run clears crates, rocks and rails. High: over the buildings and hills a straight
         trip passes (the median rise within 8 u, + 3 u). Measured over open sky only (cells whose
@@ -1162,6 +1167,17 @@ class Terrain:
         # stairs (stair_rule): their risers step over MAX_RISE, so the nav walled off Adrift's flag decks (live:
         # runners stood under the flag 4-7 u off for minutes, no pull in 178 s)
         stairs = s._stairs() if s.stair_rule else None
+        # a gravity lift's column: a drop into it from over it meets what pushes up (Blood Cavern flag, Nov 6
+        # 16:50, the back lift: bots kept trying to enter its exit end; the route off its top dropped 3 u into its column)
+        in_lift = None
+        if getattr(s, "lift_pads", None):
+            in_lift = np.zeros(s.lz.shape, bool)
+            xs = s.x0 + (np.arange(s.nw) + 0.5) * NAV_CELL
+            ys = s.y0 + (np.arange(s.nh) + 0.5) * NAV_CELL
+            for px, py, pz in s.lift_pads:
+                col = (xs[None, :] - px) ** 2 + (ys[:, None] - py) ** 2 < LIFT_R * LIFT_R
+                with np.errstate(invalid="ignore"):
+                    in_lift |= col[None] & (np.abs(s.lz - pz) < 1.0)
 
         def slit(dst, za, at):
             # tested at the drops only (`at`): over the whole map for every pair of levels it took 79 s of a Forge World
@@ -1194,6 +1210,9 @@ class Terrain:
                             lim = np.where(st[ls][src] | st[ld][dst], np.maximum(lim, STAIR_RISE * dl / NAV_CELL), lim)
                         ok = both & (rise <= lim) & (rise >= -MAX_DROP)
                         drop = ok & (rise < -lim)               # off a ledge (a stair step or a ramp down is not one)
+                        if in_lift is not None:
+                            ok &= ~(drop & in_lift[ld][dst] & (rise < -LIFT_DROP))   # (into a lift's column: thrown up)
+                            drop &= ok
                         over, extra = drop, None
                         if drop.any():
                             if s.slit_rule:
@@ -1201,8 +1220,8 @@ class Terrain:
                             if s.lid_rule:
                                 # the landing column has floor between the landing and our own height: the ledge (a
                                 # bridge, a walkway) goes on over it, so a body walks onto that floor and never falls
-                                # through it (Halo 4 ca_blood_cavern, the owner's "stuck on this wall": paths dropped 2.6 u off
-                                # the ledge at (-8.1, 6.4) into the floor under it; 75% of 824 s of wall pushes in his
+                                # through it (Halo 4 ca_blood_cavern, flagged stuck on a wall: paths dropped 2.6 u off
+                                # the ledge at (-8.1, 6.4) into the floor under it; 75% of 824 s of wall pushes in the
                                 # two games). Priced LID_COST, not cut: at the 0.25 u cells a one-cell slot people drop
                                 # through reads the same (cut, Lockout lost 17-43 walked cells). A floor a little over
                                 # ours there (a rail's or a wall's top) is priced as a rail: a drop over it is a jump
@@ -1215,6 +1234,20 @@ class Terrain:
                                 extra = np.zeros(drop.shape)
                                 extra[jj[rail], ii[rail]] = RAIL_COST
                                 extra[jj[lid], ii[lid]] = LID_COST
+                                if dj and di and s.corner_rule:
+                                    # a diagonal drop between two cells both shut at our height (a wall's or rail's
+                                    # top over our floor, or our floor there walled): the corner no body fits through,
+                                    # priced as a lid (Blood Cavern, playtests Nov 6: from (-8.1, 8.9) and (-4.8,
+                                    # 2.7) routes dropped diagonally past a parapet's ends, survivors pushed 35 s and
+                                    # 1660 rows at them)
+                                    shut = np.ones(len(jj), bool)
+                                    for side in ((src[0].start + jj, dst[1].start + ii), (dst[0].start + jj, src[1].start + ii)):
+                                        sc = s.lz[:, side[0], side[1]]
+                                        with np.errstate(invalid="ignore"):
+                                            top = ((sc > za_ + MAX_RISE) & (sc < za_ + BODY[1])).any(axis=0)
+                                            own = (np.abs(sc - za_) <= MAX_RISE) & ~s.lwalk[:, side[0], side[1]]
+                                        shut &= top | own.any(axis=0)
+                                    extra[jj[shut], ii[shut]] = np.maximum(extra[jj[shut], ii[shut]], LID_COST)
                             drop &= ok
                             jj, ii = np.nonzero(drop)
                             over = np.zeros(drop.shape, bool)
@@ -1744,8 +1777,29 @@ class Terrain:
             cross &= (qx - px) * thru[0] + (qy - py) * thru[1] < 0
         return k[cross]
 
+    def set_link_gates(s, closed):
+        """People's links (hjumps indices) closed now: an Invasion phase's man cannon not spawned yet, a lift whose ride
+        goes elsewhere this phase (brain/invasion.py phase_link_gates). Each costs BARRIER_COST, as a closed gate."""
+        closed = frozenset(closed)
+        if closed != getattr(s, "link_gates", frozenset()):
+            s.link_gates = closed
+            s._refresh_barriers()
+
+    def _link_edges(s, g, closed):
+        """Data indices of reversed graph g holding the closed links' edges (row: its landing node, column: its take-off)."""
+        out = []
+        for n in closed:
+            if n >= len(getattr(s, "hjumps", ())):
+                continue
+            f, t, _, _ = s.hjumps[n]
+            src, dst = (f[0] * s.nh + f[1]) * s.nw + f[2], (t[0] * s.nh + t[1]) * s.nw + t[2]
+            lo, hi = g.indptr[dst], g.indptr[dst + 1]
+            out.extend((lo + np.nonzero(g.indices[lo:hi] == src)[0]).tolist())
+        return np.asarray(sorted(set(out)), np.int64)
+
     def _refresh_barriers(s):
         bars = getattr(s, "barriers", {})
+        gates = getattr(s, "link_gates", frozenset())
         for name in ("graph_to", "graph_jump_to", "graph_h_to"):
             g = getattr(s, name, None)
             if g is None:
@@ -1754,6 +1808,8 @@ class Terrain:
             if old is not None and old.size:
                 g.data[old] -= s.BARRIER_COST
             idx = [s._crossing(g, bar) for bar in bars.values() if bar[7]]
+            if gates and name != "graph_to":          # (the walking graph has no people's links)
+                idx.append(s._link_edges(g, gates))
             idx = np.unique(np.concatenate(idx)) if idx else np.zeros(0, np.int64)
             g.data[idx] += s.BARRIER_COST
             g._hb_applied = idx

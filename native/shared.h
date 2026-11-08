@@ -156,8 +156,9 @@ struct hb_shared {
     float    spawn_at[HB_MAX_PLAYERS][4];
     uint32_t spawn_seq[HB_MAX_PLAYERS];
     uint32_t spawn_done[HB_MAX_PLAYERS];
-    // v13: reserved (once a typed chat line; kept so the offsets after it stay put)
-    uint32_t chat_seq;
+    // v13: reserved (once a typed chat line; kept so the offsets after it stay put). ui_up (was chat_seq): 1 while
+    // the bug report window is open over a match (overlay.cpp), else 0
+    uint32_t ui_up;
     char     chat[64];
 };
 #pragma pack(pop)

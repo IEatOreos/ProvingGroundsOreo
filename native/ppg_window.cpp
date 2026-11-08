@@ -87,7 +87,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof dark);
     ShowWindow(hwnd, show);
     UpdateWindow(hwnd);
-    // in front of the window that opened it (the owner, Nov 6: "the launcher draws over any pop up windows"): a window
+    // in front of the window that opened it (Nov 6: the launcher drew over every pop-up window): a window
     // started by the launcher's helper process is not let take the foreground by Windows, and opened behind the launcher.
     // Joined to the foreground window's input for the call, as Windows allows
     {

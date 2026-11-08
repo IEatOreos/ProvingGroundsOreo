@@ -155,7 +155,7 @@ async function openMap(name) {
     if (paint[layer]) for (const [x, y, z] of cells) { const c = {x, y, z}; paint[layer].set(keyOf(x, y, c), c); }
   $("empty").hidden = !!view;
   if (!view) {
-    // made on its own the first time a map is opened (the owner, Nov 6: no button to press first); the button stays only
+    // made on its own the first time a map is opened (Nov 6: no button to press first); the button stays only
     // to try again if it failed
     $("emptytext").textContent = "Making this map's top-down view… (a few seconds, once per map)";
     $("build").hidden = true; img = null; draw(); markDirty(false);

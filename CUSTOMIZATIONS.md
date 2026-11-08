@@ -1,6 +1,6 @@
 # Custom Legendary bots
 
-This is a custom derivative of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds), now based on installed upstream version 0.2.2-s181. Original credits and licensing remain in LICENSE.md and NOTICE.md. This repository is not the upstream author's official release.
+This is a custom derivative of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds), now based on installed upstream version 0.2.2-s181 (build 20261107-1530, merged from the `upstream` branch). Original credits and licensing remain in LICENSE.md and NOTICE.md. This repository is not the upstream author's official release.
 
 The 2026-11-06 migration merges our custom behavior into the new installed source and keeps its new native binaries, Firefight lifecycle changes, pickup fixes, vehicle improvements, hazard avoidance and melee validation. See docs/UPSTREAM_MIGRATION_2026-11-06.md for provenance, validation and remaining live checks. The following initial-snapshot section is historical; later notes describe current overrides.
 

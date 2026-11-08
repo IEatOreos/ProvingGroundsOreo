@@ -95,6 +95,23 @@ def roster_plan(roster, players, teams, game):
     return out
 
 
+def add_bot(m, machine, team, name, game):
+    """botctl.add_bot with this install's look, clan and emblem for the name, waited through a paused game (botcore
+    takes commands on the game's thread: none in the pause menu). Prints the outcome; True when the game made it. A
+    timeout read as ok before, and the next add overwrote the one not yet taken: of 3 bots asked for in ODST Firefight
+    (Nov 7, 00:07, the player in the pause menu saving a bug report) only the last one joined."""
+    r = botctl.add_bot(m, machine, team, name, game, look=looks.look(name, game), clan=looks.clan_of(name),
+                       emblem=looks.emblem_of(name))
+    if r.get("timeout"):
+        print(f"bot {name}: the game is not taking commands (paused?): waiting", flush=True)
+        if botctl.idle(m, 600.0):
+            r = botctl.status(m)
+    res = r.get("result", -1)
+    ok = not r.get("timeout") and not r.get("fault") and (res & 0xFFFFFFFF != 0xFFFFFFFF and res > -100 or res < -100)
+    print(f"bot {name} on team {team}:", "ok" if ok else r, flush=True)
+    return ok
+
+
 def module_loaded(name):
     import ctypes as C
     from memread import find_pid, PROCESS
@@ -234,9 +251,7 @@ def main():
         print(f"bot list: {len(roster)} bots from {o.roster}" + (f", {max(0, room)} join (Firefight)" if ff else ""))
         for team, name in roster_plan(roster, players, teams, o.game)[:max(0, room)]:
             team = players[0]["team"] if ff else team
-            r = botctl.add_bot(m, machine, team, name, o.game, look=looks.look(name, o.game), clan=looks.clan_of(name),
-                               emblem=looks.emblem_of(name))
-            print(f"bot {name} on team {team}:", "ok" if not r.get("fault") and r.get("result", -1) & 0xFFFFFFFF != 0xFFFFFFFF and r.get("result", -1) > -100 or r.get("result", -1) < -100 else r)
+            add_bot(m, machine, team, name, o.game)
             machine += 1
     elif teams:
         count = {0: 0, 1: 0}
@@ -251,9 +266,7 @@ def main():
             while count[team] < want and machine < 16 and room > 0:
                 room -= 1
                 name = names.pop()
-                r = botctl.add_bot(m, machine, team, name, o.game, look=looks.look(name, o.game), clan=looks.clan_of(name),
-                                   emblem=looks.emblem_of(name))
-                print(f"bot {name} on {'red' if team == 0 else 'blue'}:", "ok" if not r.get("fault") and r.get("result", -1) & 0xFFFFFFFF != 0xFFFFFFFF and r.get("result", -1) > -100 or r.get("result", -1) < -100 else r)
+                add_bot(m, machine, team, name, o.game)
                 count[team] += 1
                 machine += 1
     else:                                            # every bot on its own team, up to red + blue players
@@ -265,9 +278,7 @@ def main():
             while team in used:
                 team += 1
             name = names.pop()
-            r = botctl.add_bot(m, machine, team, name, o.game, look=looks.look(name, o.game), clan=looks.clan_of(name),
-                               emblem=looks.emblem_of(name))
-            print(f"bot {name} on team {team}:", "ok" if not r.get("fault") and r.get("result", -1) & 0xFFFFFFFF != 0xFFFFFFFF and r.get("result", -1) > -100 or r.get("result", -1) < -100 else r)
+            add_bot(m, machine, team, name, o.game)
             used.add(team)
             machine += 1
     if getattr(o, "brain", "") == "none":            # test override only: bots added, Claude's probe drives them

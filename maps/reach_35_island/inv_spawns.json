@@ -3059,5 +3059,5 @@
   "att": 2,
   "def": 1
  },
- "note": "named: the spawn screen's names, read by the owner (Oct 29, match 211159: logs/bug_reports/reach_35_island_20261029-211159/reports.json); weight: the owner's honor system (Spartans prefer River and a teammate, Elites the spire's High Trails; the spire locked in phase 1); ally: spawning behind a teammate (the owner's off-zone spawns were 0.4-1.1 u from one); Oct 29 (match 221404): Spartans in phases 2-3 at Conveyor Belt to keep the pressure on, a few at River only to take a free Warthog or Falcon there (for_vehicles)"
+ "note": "named: the spawn screen's names, read by hand (Oct 29, match 211159: logs/bug_reports/reach_35_island_20261029-211159/reports.json); weight: an honor system (Spartans prefer River and a teammate, Elites the spire's High Trails; the spire locked in phase 1); ally: spawning behind a teammate (the local player's off-zone spawns were 0.4-1.1 u from one); Oct 29 (match 221404): Spartans in phases 2-3 at Conveyor Belt to keep the pressure on, a few at River only to take a free Warthog or Falcon there (for_vehicles)"
 }
