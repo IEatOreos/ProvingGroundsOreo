@@ -162,7 +162,11 @@ FETCH_COMMIT_SCORE = 2.95                     # over a committed fight (2.6 + 0.
 # (custom) Bot.shoot_back: a man in view shooting a fixed Legendary / Demon is fought over its errands
 SHOT_BACK_OVER = ("item", "vehicle", "objective", "hold", "patrol")
 SHOT_BACK_R, SHOT_BACK_AIM, SHOT_BACK_MARGIN = 40.0, 0.25, 0.4   # u; rad off his view; over the errand (its 0.2 stick + rng)
-DEMON_ENGAGE_R = 30.0   # u: (custom) a man in view this near is fought by a Demon over its errands, not shot (shoot_back)
+DEMON_ENGAGE_R = 30.0   # u: (custom) a man in view this near: a Demon fights him on its way (on_way_target) or over
+                        # the errands it cannot fight on the way to (DEMON_SIGHT_OVER, shoot_back), not shot
+ON_WAY_KINDS = ("item", "hunt")          # walked on while fighting (Bot.on_way_target)
+ON_WAY_LAST = 1.5                        # u from the gun: the pickup's last steps, no fighting
+DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
 DEMON_STAND_R, DEMON_STAND_COVER = 6.0, 2.5   # u: a man this near, no retreat to cover farther than the second (stand_ground)
@@ -1839,11 +1843,15 @@ class Bot:
             return act
         patrol_target = None
         patrol_seen = s.per.visible_enemies() if kind == "patrol" else []
+        on_way = s.on_way_target(now, me, snap, kind, arg)   # (custom: a Demon's errand with a man in view, below)
         if kind == "fight":
             s.fight(now, dt, me, snap, arg, act, nav)
-        elif patrol_seen:
-            patrol_target = s.pick_target(now, me, snap, patrol_seen)
+        elif patrol_seen or on_way is not None:
+            patrol_target = on_way if on_way is not None else s.pick_target(now, me, snap, patrol_seen)
             s.fight(now, dt, me, snap, patrol_target, act, nav)
+            if on_way is not None:
+                arg = s.detour(now, me, kind, arg)
+                s.note("on the way: fighting")
             # Keep the weapon on the threat and turn the walking input toward the patrol waypoint.
             walk = Action(yaw=act.yaw, pitch=act.pitch)
             s.move_to(me, arg, walk, nav)
@@ -2479,36 +2487,48 @@ class Bot:
             if b is None or dist(me.pos, b.pos) > DRY_FIGHT_R:
                 scores[k] *= 0.3
 
+    def on_way_target(s, now, me, snap, kind, arg):
+        """(Custom) Demon on foot on its way to a gun or on a hunt (ON_WAY_KINDS) with a man in view within
+        DEMON_ENGAGE_R: the man to fight while it walks on (act: fight's aim and trigger, the walk turned toward its
+        goal, as a patrol does); None otherwise, or in the last steps onto a gun (the pickup's own presses). The owner's
+        Rasu game, Nov 7: a Demon looked at him 6.6 s at 22 u on its way to a plasma pistol and a gun and never fired."""
+        if (kind not in ON_WAY_KINDS or not isinstance(arg, Vec) or not profiles.fixed_demon(s.p)
+                or me.vehicle not in (None, -1) or me.has_flag or s.dry(me)):
+            return None
+        if kind == "item" and (me.pos - arg).flat() < ON_WAY_LAST:
+            return None
+        seen = [k for k in s.per.visible_enemies() if k in s.per.beliefs
+                and dist(me.pos, s.per.beliefs[k].pos) <= DEMON_ENGAGE_R]
+        return s.pick_target(now, me, snap, seen) if seen else None
+
     def shoot_back(s, me, snap, scores, seen, hit_recent, regroup, avoid=False):
         """(Custom) fixed Legendary and Demon on foot, shot in the last 2 s by a man it sees (his view on it): the fight
         with him over every errand (a gun, a seat, a post, a hold; SHOT_BACK_OVER), however close the gun it was sent
         for. A retreat to cover, a regroup and a hunt keep their scores. Live Forge World Nov 7: a Demon 2 u from the
         hammer it was sent for (2.95 + 0.2) walked on while the owner took its shield to 0.11 at 6 u (fight 1.76), and
         one went for a Warthog to fetch a plasma pistol (2.4) under his fire at 10 u.
-        Demon also engages on sight, not shot: a man in view within DEMON_ENGAGE_R is fought over the same errands and
-        the anti-vehicle mission's walk or hunt (vehicle_mission), but not over the gun it was sent for a few steps off
-        (the Demon fetch commit, FETCH_COMMIT_SCORE), nor outside Slayer over its objective, nor when the team posture
-        says avoid. The owner's Rasu game, Nov 7: with a man in view within 30 u and not hit, Demons chose an item 26%
-        and a vehicle 10% of 13,187 decisions; HeadshotTV looked at him 6.6 s at 22 u (a plasma pistol for a vehicle 2.4,
-        that vehicle's hunt 2.3, a gun 1.85 + 0.2 kept, over the fight's 1.87) and fired only once he was shot.
-        Returns whether it lifted one."""
+        Demon also engages on sight, not shot: a man in view within DEMON_ENGAGE_R is fought over what it cannot fight on
+        the way to (a seat, a hold, its Slayer post: DEMON_SIGHT_OVER); a gun and a hunt (the anti-vehicle mission's
+        too) stay its goal and it fights him while it walks there (on_way_target), as the owner asked. Not when the team
+        posture says avoid. The owner's Rasu game, Nov 7: with a man in view within 30 u and not hit, Demons chose an
+        item 26% and a vehicle 10% of 13,187 decisions; HeadshotTV looked at him 6.6 s at 22 u (a plasma pistol for a
+        vehicle 2.4, that vehicle's hunt 2.3, a gun 1.85 + 0.2 kept, over the fight's 1.87) and fired only once he was
+        shot. Returns whether it lifted one."""
         if not (seen and regroup is None and not me.has_flag and me.vehicle in (None, -1) and profiles.fixed_high(s.p)):
             return False
         eyes = profiles.fixed_demon(s.p) and not avoid
         if not (hit_recent or eyes):
             return False
         mission = set(getattr(s, "mission_keys", ()) or ())
-        fetch = getattr(s, "fetch", None)
-        commit = ("item", fetch[0]) if fetch is not None else None
 
         def errand(k, v, sighted):
+            if sighted:
+                # (a gun and a hunt go on with the fight on the way, on_way_target: only what it cannot fight on the way
+                # to; the collaborator's fetch commit is a gun, so it stands)
+                return k[0] in DEMON_SIGHT_OVER and (k[0] != "objective" or snap.mode == "slayer")
             if k in mission:
                 return k[0] != "fight"   # (its crew in view is a fight already: threat() ranks them)
-            if k[0] not in SHOT_BACK_OVER:
-                return False
-            if sighted and k == commit and v >= FETCH_COMMIT_SCORE - 1e-6:
-                return False             # (the collaborator's commit: a Demon a few steps from its gun takes it first)
-            return not (sighted and k[0] == "objective" and snap.mode != "slayer")
+            return k[0] in SHOT_BACK_OVER
         att = getattr(s.per, "attacker_id", None)
         lifted = why = None
         for key in [k for k in scores if k[0] == "fight" and k[1] in seen]:

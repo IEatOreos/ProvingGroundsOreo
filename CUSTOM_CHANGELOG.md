@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Demon fights on the way to a gun, 2026-11-07
+
+- Owner's request: rather than dropping its errand, a Demon should keep going to the gun and fight on the way. A 6.6 s look at a man in view without a shot is too long.
+- New `Bot.on_way_target`. A Demon on foot going for a gun or on a hunt (including the anti-vehicle mission's walk and hunt), with a man in view within `DEMON_ENGAGE_R` (30 u), fights him while it walks on. This reuses the patrol's existing way of moving: fight's aim, trigger and weapon choice, with the walking input turned toward the goal. In the last 1.5 u onto the gun, the normal pickup takes over. No fighting on the way while dry, carrying the objective or in a vehicle.
+- `Bot.shoot_back`'s engage-on-sight (the entry below) narrowed to what cannot be fought on the way: a vehicle walk, a hold, a Slayer post (`DEMON_SIGHT_OVER`). A gun or a hunt is no longer dropped for the fight; the collaborator's fetch commit is a gun, so it stands as designed. Being shot, or a man within 8 u, still makes the fight the goal, as before.
+- Validation: `tools/test_shoot_back.py` now has 19 tests. Through `think` on a flat floor: the Demon fires at the man while walking toward the gun; a man 40 u off and a Legendary in the same scene walk on without firing; no shooting in the last steps onto the gun. Engage tests are updated for the narrowed set. All 220 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Demon engages a man in view instead of running errands; DMR accuracy findings, 2026-11-07
 
 - The owner's Rasu game (Forge World variant `forgeworld_rasu_031`, `logs/trace_reach_forge_halo_20261107-191109`, played on custom.7 before the upstream merge). He felt Demons were "slower mentally" and filed two reports:

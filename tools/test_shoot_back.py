@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))          # (test_demon_fire's Cover)
 from brain.core import PlayerState, Snapshot, Vec, angles_to, eye
 from brain.profiles import make_profile
 
@@ -113,35 +114,82 @@ class DemonEngageOnSightTests(unittest.TestCase):
         ok = b.shoot_back(me, snap, sc, [1], hurt, None, avoid)
         return ok, sc
 
-    def test_demon_fights_the_man_in_view_over_a_gun(self):
+    def test_a_gun_or_a_hunt_stays_the_goal_it_fights_on_the_way(self):
         ok, sc = self.lift()
-        self.assertTrue(ok)
-        self.assertAlmostEqual(sc[("fight", 1)], 2.8)
-
-    def test_only_within_range_and_only_demon_unshot(self):
-        self.assertFalse(self.lift(foe_d=35.0)[0])
-        self.assertFalse(self.lift(tier="top")[0])          # Legendary keeps answering only when shot
-
-    def test_avoid_posture_and_regroup_kept(self):
-        self.assertFalse(self.lift(avoid=True)[0])
-
-    def test_the_gun_it_was_sent_for_close_by_still_wins(self):
-        from brain.bot import FETCH_COMMIT_SCORE
-        ok, sc = self.lift(scores={("item", GUN): FETCH_COMMIT_SCORE, ("fight", 1): 1.87})
         self.assertFalse(ok)
         self.assertEqual(sc[("fight", 1)], 1.87)
-
-    def test_anti_vehicle_hunt_counts_objective_only_in_slayer(self):
         hunt = ("hunt", Vec(5, 5, 5))
-        ok, sc = self.lift(scores={hunt: 2.3, ("fight", 1): 1.87}, mission=[hunt])
+        self.assertFalse(self.lift(scores={hunt: 2.3, ("fight", 1): 1.87}, mission=[hunt])[0])
+
+    def test_demon_fights_the_man_in_view_over_a_seat(self):
+        ok, sc = self.lift(scores={("vehicle", 77): 2.2, ("fight", 1): 1.87})
         self.assertTrue(ok)
-        self.assertAlmostEqual(sc[("fight", 1)], 2.7)
+        self.assertAlmostEqual(sc[("fight", 1)], 2.6)
+
+    def test_only_within_range_and_only_demon_unshot(self):
+        seat = {("vehicle", 77): 2.2, ("fight", 1): 1.87}
+        self.assertFalse(self.lift(foe_d=35.0, scores=seat)[0])
+        self.assertFalse(self.lift(tier="top", scores=seat)[0])          # Legendary keeps answering only when shot
+
+    def test_avoid_posture_and_regroup_kept(self):
+        self.assertFalse(self.lift(avoid=True, scores={("vehicle", 77): 2.2, ("fight", 1): 1.87})[0])
+
+    def test_objective_only_in_slayer(self):
         obj = ("objective", Vec(5, 5, 5))
         self.assertFalse(self.lift(scores={obj: 2.0, ("fight", 1): 1.87}, mode="ctf")[0])
         self.assertTrue(self.lift(scores={obj: 2.0, ("fight", 1): 1.87})[0])
 
     def test_a_radar_hunt_is_not_an_errand(self):
         self.assertFalse(self.lift(scores={("hunt", Vec(5, 5, 5)): 3.2, ("fight", 1): 1.87})[0])
+
+
+class FightOnTheWayTests(unittest.TestCase):
+    """(Custom) Bot.on_way_target through think: a Demon walking to a gun with a man in view shoots him while it walks
+    on to the gun (the patrol's way: fight's aim and trigger, the walk turned toward the goal)."""
+
+    def scene(self, tier="demon", gun=Vec(0, -20, 0), foe=Vec(15, 0, 0)):
+        import math as m
+        from test_demon_fire import Cover
+
+        class Flat(Cover):                       # (an open floor for the walk too)
+            def ground_ok(self, *args, **kw):
+                return True
+
+            def los(self, *args, **kw):
+                return True
+        cover = Flat((True, True), (True, True), None)
+        rng = random.Random(1)
+        bot = __import__("brain.bot", fromlist=["Bot"]).Bot(0, 0, make_profile(tier, "rusher", rng), {"name": "reach_test"}, rng)
+        bot._terrain = cover
+        bot.goal, bot.next_decide = ("item", gun), 99.0
+        bot.per.recognized.add(1)
+        for name in ("no_wall_jump", "edge_guard", "obstacle_guard", "unstuck"):
+            setattr(bot, name, lambda *args: None)
+        me = PlayerState(0, 0, "bot", Vec(), weapon="dmr", weapons=["dmr"], mag=[15], ammo=[45])
+        target = PlayerState(1, 1, "enemy", foe)
+        acts = [bot.think(1.0 + i / 30, 1 / 30, Snapshot(1.0 + i / 30, [me, target]), cover.sees,
+                          lambda a, b, **kw: b, []) for i in range(12)]
+        heading = lambda a: a.yaw + m.atan2(a.strafe, a.forward)
+        return bot, me, target, acts, heading
+
+    def test_demon_shoots_the_man_while_it_walks_to_the_gun(self):
+        import math as m
+        from brain.core import wrap
+        bot, me, target, acts, heading = self.scene()
+        self.assertEqual(bot.goal[0], "item")
+        self.assertTrue(any(a.fire for a in acts))
+        last = acts[-1]
+        self.assertLess(abs(wrap(last.yaw - angles_to(eye(me), target.pos)[0])), 0.3)     # the gun on him
+        self.assertGreater(m.hypot(last.forward, last.strafe), 0.3)                            # still walking
+        self.assertLess(abs(wrap(heading(last) - (-m.pi / 2))), 0.6)                           # toward the gun (-y)
+
+    def test_far_man_and_legendary_walk_on_without_shooting(self):
+        self.assertFalse(any(a.fire for a in self.scene(foe=Vec(40, 0, 0))[3]))
+        self.assertFalse(any(a.fire for a in self.scene(tier="top")[3]))
+
+    def test_last_steps_onto_the_gun_are_the_pickup(self):
+        bot, me, target, acts, _ = self.scene(gun=Vec(0, -1.0, 0))
+        self.assertFalse(any(a.fire for a in acts))
 
 
 class EmptyMagSwitchTests(unittest.TestCase):
