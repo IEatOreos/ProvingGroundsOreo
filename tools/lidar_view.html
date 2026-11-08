@@ -97,11 +97,11 @@
   #sim .acts button { flex: 1; }
   #sim .field { margin-top: 10px; }
   #sim .flabel { display: block; color: var(--dim); font-size: 12px; margin-bottom: 4px; }
-  #sim-speeds { display: flex; }
-  #sim-speeds button { flex: 1; border-radius: 0; padding: 4px 0; margin-left: -1px; }
-  #sim-speeds button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
-  #sim-speeds button:last-child { border-radius: 0 4px 4px 0; }
-  #sim-speeds button[aria-pressed="true"] { position: relative; z-index: 1; }
+  #sim-speeds, #sim-mappers { display: flex; }
+  #sim-speeds button, #sim-mappers button { flex: 1; border-radius: 0; padding: 4px 0; margin-left: -1px; }
+  #sim-speeds button:first-child, #sim-mappers button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+  #sim-speeds button:last-child, #sim-mappers button:last-child { border-radius: 0 4px 4px 0; }
+  #sim-speeds button[aria-pressed="true"], #sim-mappers button[aria-pressed="true"] { position: relative; z-index: 1; }
   #sim .pair { display: flex; gap: 6px; }
   #sim-cover { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center; }
   #sim .dim { color: var(--dim); }
@@ -117,7 +117,8 @@
   .tsw { width: 10px; height: 10px; flex: none; border: 1px solid #000; }
   .tsw.hot { background: var(--gold); transform: rotate(45deg) scale(0.85); }
   .tsw.patrol { background: var(--mint); border-radius: 50%; }
-  .tsw.red { background: var(--red); border-radius: 2px; } .tsw.blue { background: #5a8cff; border-radius: 2px; }
+  .tsw.red, .tsw.blue { transform: rotate(45deg) scale(0.85); } .tsw.red { background: var(--red); } .tsw.blue { background: #5a8cff; }
+  .tsw.patrol.red { background: #ff7373; transform: none; } .tsw.patrol.blue { background: #73a6ff; transform: none; }
   #ed-counts { color: var(--dim); font-size: 12px !important; }
   #ed-files, #ed-sel .coords { overflow-wrap: anywhere; }
   #right { overflow-x: hidden; }
@@ -299,7 +300,9 @@
     <div id="ed-body" hidden>
       <div id="ed-tools" role="group" aria-label="Add a spot">
         <button data-tool="hot" aria-pressed="false" title="Slayer anchors hold and rotate between hot spots (owner power positions)"><span class="tsw hot" aria-hidden="true"></span>Hot spot</button>
-        <button data-tool="patrol" aria-pressed="false" title="Up to three free bots walk to a patrol point nobody of their team has visited for 25 s (not in Invasion)"><span class="tsw patrol" aria-hidden="true"></span>Patrol point</button>
+        <button data-tool="patrol" aria-pressed="false" title="Both teams patrol it: up to three free bots walk to a patrol point nobody of their team has visited for 25 s (not in Invasion)"><span class="tsw patrol" aria-hidden="true"></span>Patrol (both)</button>
+        <button data-tool="patrol_red" aria-pressed="false" title="Only the red team patrols it"><span class="tsw patrol red" aria-hidden="true"></span>Red patrol</button>
+        <button data-tool="patrol_blue" aria-pressed="false" title="Only the blue team patrols it"><span class="tsw patrol blue" aria-hidden="true"></span>Blue patrol</button>
         <button data-tool="red" aria-pressed="false" title="Red team safe spots: a CTF carrier waits at one while red&#39;s own flag is away, the Oddball carrier picks one, Firefight falls back to them"><span class="tsw red" aria-hidden="true"></span>Red hold</button>
         <button data-tool="blue" aria-pressed="false" title="Blue team safe spots: a CTF carrier waits at one while blue&#39;s own flag is away, the Oddball carrier picks one, Firefight falls back to them"><span class="tsw blue" aria-hidden="true"></span>Blue hold</button>
       </div>
@@ -316,6 +319,15 @@
     <h2 id="sim-h">Simulator</h2>
     <p id="sim-state" role="status" aria-live="polite">Pick a map to simulate.</p>
     <p id="sim-rate" class="dim"></p>
+    <div class="field">
+      <span class="flabel" id="sim-mappers-l">Who maps</span>
+      <div id="sim-mappers" role="group" aria-labelledby="sim-mappers-l">
+        <button data-mappers="ground" aria-pressed="false" title="Every bot walks: floor, jumps, walls; no aircraft">Ground</button>
+        <button data-mappers="air" aria-pressed="false" title="Every bot flies: the air over the floor bots can reach; no walkers">Air</button>
+        <button data-mappers="both" aria-pressed="true" title="Walkers map the floor and aircraft the air over it (16 and 8)">Both</button>
+      </div>
+      <p id="sim-mappers-note" class="dim"></p>
+    </div>
     <div class="acts">
       <button id="sim-pick" class="primary" title="Choose a map (or a Forge layout) and watch the bots map it">Pick a map</button>
       <button id="sim-all" title="Every map in turn">Every map</button>
@@ -649,7 +661,13 @@ function renderSim() {
       done.length + " covered" + (lost.length ? ", " + lost.length + " with no way there" : "")
     : "No spots marked: press \"Click the map\", then click where the bots should go first.");
   $("sim-clear").disabled = !marked.length;
-  $("sim-cover").disabled = !running;
+  // (custom) who maps: ground, air or both; a map running keeps what it started with
+  const MAPPER_NAME = { ground: "ground only", air: "air only", both: "ground and air" };
+  for (const b of document.querySelectorAll("#sim-mappers button")) b.setAttribute("aria-pressed", b.dataset.mappers === (s.mappers || "both"));
+  $("sim-mappers-note").textContent = running && s.run_mappers && s.run_mappers !== s.mappers
+    ? "This map keeps mapping " + MAPPER_NAME[s.run_mappers] + "; " + MAPPER_NAME[s.mappers] + " starts with the next map you pick."
+    : running && s.run_mappers === "air" ? "Aircraft only: they fly the air over the floor bots can reach. Spots to cover need walkers." : "";
+  $("sim-cover").disabled = !running || s.run_mappers === "air";
   if (!running && coverMode) setCover(false);
   const l = s.last;
   $("sim-last").textContent = l ? (l.stopped ? "Stopped " : "Finished ") + l.title + ": " + l.cells.toLocaleString() + " floor cells, " +
@@ -669,6 +687,11 @@ $("sim-pause").onclick = () => simPost({ action: simState && simState.paused ? "
 $("sim-stop").onclick = () => simPost({ action: "stop" });
 $("sim-cover").onclick = () => setCover(!coverMode);
 $("sim-clear").onclick = () => simPost({ action: "clear_spots" });
+for (const b of document.querySelectorAll("#sim-mappers button")) b.onclick = async () => {   // (custom) who maps
+  const r = await simPost({ action: "mappers", mappers: b.dataset.mappers });
+  if (!r.ok) $("sim-rate").textContent = r.data.error || "Could not change who maps.";
+  else if (simState) { simState.mappers = b.dataset.mappers; renderSim(); }
+};
 async function simulate(m) {
   const busy = simState && simState.current;
   if (busy && !confirm("Stop " + simState.title + " (what it mapped so far is saved) and simulate " + m.title + "?")) return;
@@ -1183,7 +1206,9 @@ const edBufs = { hot: new Buf(), power: new Buf(), patrol: new Buf(), patrol_red
 const TEAM_NAME = { red: "Red team", blue: "Blue team" };
 const TOOL_HINT = {
   hot: "Click the floor to add a hot spot. Slayer anchors hold and rotate between hot spots, ahead of the computed power positions.",
-  patrol: "Click the floor to add a patrol point. Up to three free bots walk to one their team has not visited for 25 s (not in Invasion).",
+  patrol: "Click the floor to add a patrol point both teams use. Up to three free bots walk to one their team has not visited for 25 s (not in Invasion).",
+  patrol_red: "Click the floor to add a red patrol point: only red bots walk to it (up to three, when no red has been near for 25 s; not in Invasion).",
+  patrol_blue: "Click the floor to add a blue patrol point: only blue bots walk to it (up to three, when no blue has been near for 25 s; not in Invasion).",
   red: "Click the floor to add a red hold, a red safe spot: a CTF carrier waits at one while red's own flag is away, the Oddball carrier picks the one farthest from enemies, Firefight falls back to them.",
   blue: "Click the floor to add a blue hold, a blue safe spot: a CTF carrier waits at one while blue's own flag is away, the Oddball carrier picks the one farthest from enemies, Firefight falls back to them."
 };
@@ -1215,7 +1240,8 @@ function edLabel(s) {
   const d = ed.data;
   if (s.kind === "hot") return "Hot spot " + (d.hot.filter(r => r.owner).indexOf(d.hot[s.i]) + 1);
   if (s.kind === "power") return "Power position (computed)";
-  if (s.kind === "patrol") { const r = d.patrol[s.i]; return r.name + (r.team ? " (" + r.team + " only)" : ""); }
+  if (s.kind === "patrol") { const r = d.patrol[s.i];
+    return r.name + (r.team && !r.name.toLowerCase().startsWith(r.team) ? " (" + r.team + " only)" : ""); }
   return (s.kind === "red" ? "Red" : "Blue") + " hold " + (s.i + 1);
 }
 function edRebuild() {
@@ -1247,7 +1273,8 @@ function spotTags() {   // each spot's name over it (the computed power position
     if (!stagEls[i]) { const t = document.createElement("div"); t.className = "stag"; document.body.appendChild(t); stagEls.push(t); }
     const el = stagEls[i], s = list[i], at = s ? project(s.pos[0], s.pos[1], s.pos[2] + 0.15) : null;
     if (!at) { el.style.display = "none"; continue; }
-    el.style.display = "block"; el.textContent = edLabel(s); el.style.color = COL[s.kind];
+    const team = s.kind === "patrol" ? ed.data.patrol[s.i].team : null;   // (a team's patrol in its team's colour)
+    el.style.display = "block"; el.textContent = edLabel(s); el.style.color = team ? COL[team] : COL[s.kind];
     el.style.left = at[0] + "px"; el.style.top = at[1] + "px";
   }
 }
@@ -1289,9 +1316,12 @@ function edAdd(tool, p) {
     const row = { pos: p, owner: true, score: 1, sees: null, height: null, duck: null };
     if (at < 0) d.hot.push(row); else d.hot.splice(at, 0, row);
     edSelect({ kind: "hot", i: at < 0 ? d.hot.length - 1 : at });
-  } else if (tool === "patrol") {
-    let n = d.patrol.length + 1; while (d.patrol.some(r => r.name.toLowerCase() === ("patrol " + n))) n++;
-    d.patrol.push({ name: "Patrol " + n, pos: p, team: null });
+  } else if (tool.startsWith("patrol")) {   // patrol (both teams), patrol_red, patrol_blue
+    const team = tool === "patrol_red" ? "red" : tool === "patrol_blue" ? "blue" : null;
+    const base = team ? (team === "red" ? "Red" : "Blue") + " patrol " : "Patrol ";
+    let n = d.patrol.filter(r => (r.team || null) === team).length + 1;
+    while (d.patrol.some(r => r.name.toLowerCase() === (base + n).toLowerCase())) n++;
+    d.patrol.push({ name: base + n, pos: p, team });
     edSelect({ kind: "patrol", i: d.patrol.length - 1 });
   } else {
     d.hold[tool].push(p);
@@ -1320,7 +1350,8 @@ function edPanel() {
   if (!d) { box.hidden = true; return; }
   const owner = d.hot.filter(r => r.owner).length;
   $("ed-counts").textContent = owner + " hot spot" + (owner === 1 ? "" : "s") + " (+" + (d.hot.length - owner) + " computed) · " +
-    d.patrol.length + " patrol point" + (d.patrol.length === 1 ? "" : "s") + " · holds " + d.hold.red.length + " red, " + d.hold.blue.length + " blue" +
+    d.patrol.length + " patrol point" + (d.patrol.length === 1 ? "" : "s") +
+    (d.patrol.some(r => r.team) ? " (" + d.patrol.filter(r => r.team === "red").length + " red, " + d.patrol.filter(r => r.team === "blue").length + " blue only)" : "") + " · holds " + d.hold.red.length + " red, " + d.hold.blue.length + " blue" +
     (dirty ? " · not saved" : "");
   const s = ed.sel, g = edGet(s);
   box.hidden = !g;

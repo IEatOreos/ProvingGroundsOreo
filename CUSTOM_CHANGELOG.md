@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Red and Blue patrol tools in Edit spots; the LiDAR Simulator maps ground, air or both, 2026-11-08
+
+The owner: "Add a functional Red patrol (red only) and a Blue patrol (blue only) Marker ... Also if possible add it to where we can choose if they bots are all mapping the ground or all mapping the air or both."
+
+- Edit spots (`tools/lidar_view.html`): new Red patrol and Blue patrol tools beside Patrol (both). They place a team-only patrol point (`{"pos", "team"}` in infantry_patrols.json, the brain's existing team patrols: only that team's free bots go), named "Red patrol N" / "Blue patrol N". Their labels take the team's colour and the count line shows how many are team-only. A point's team can still be changed after.
+- LiDAR Simulator, "Who maps" in the Simulator panel (`tools/lidar_sim.py` `crew`, `Control` action `mappers`, `--mappers`):
+  - Both: 16 walkers and 8 aircraft, as before.
+  - Ground: the 16 walkers, no aircraft.
+  - Air: no walkers, 16 aircraft. Aircraft fly the air over floor walked in the same run, so with no walkers they had nothing to fly; `Airspace.seed` now gives them the air over the nav's reachable floor at once. The LiDAR director (it sends walkers) and "Spots to cover first" are off for an air-only map.
+  - A choice applies from the next map started; a running map keeps its own and the panel says so.
+  - Live LiDAR matches are unchanged: there every LiDAR bot walks; aircraft exist only in the simulator.
+- Validation: new `tools/test_lidar_mappers.py` (crew counts, the panel command and running map, air-only has air to fly). Rat's Nest (`h3_armory`) headless: air only flew 16,271 of 16,279 air cells in 1.6 sim min with no floor marked and ended by itself; ground only marked 35,292 floor cells and flew none; both did both. In the browser: Air ran 0 walkers and 16 aircraft; a switch to Ground mid-map showed the next-map note; the Red and Blue patrol tools placed team points and saved teams in the edit. The test's files were removed. All 428 regression tests pass.
+
 ### Edit spots in the LiDAR view: hot spots, patrol points and team holds by hand, 2026-11-08
 
 The owner: "Can we also make Lidar more interactive? ... can we make a tool to where I can implement Hot zones, Patrol Areas, and other spots the bots use so I dont have to have you do it for me all the time?"

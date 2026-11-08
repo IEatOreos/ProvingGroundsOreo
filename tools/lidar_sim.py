@@ -22,7 +22,9 @@ Writes maps/<map>/lidar_sim.json (paint, airspace, deaths), merges called jumps 
 maps/<map>/lidar.json, and a line per map to logs/lidar_sim.md.
 
 usage: python -I lidar_sim.py [maps... | --all] [--game ce] [--minutes 6] [--walkers 16] [--aircraft 8]
-                              [--speed 0] [--max-real 240] [--open] [--port 8798] [--hold 0]
+                              [--mappers both|ground|air] [--speed 0] [--max-real 240] [--open] [--port 8798] [--hold 0]
+  --mappers who maps (custom; also the Simulator panel's Mappers): walkers and aircraft; walkers only; or aircraft only,
+            as many as the larger count, flying the air over the nav's reachable floor (no walkers mark floor for them)
   maps      names to run in turn (none: wait for a pick in the view); --all: every map with level data
   --speed   simulated seconds per real second (0: as fast as it runs)
   --max-real  real seconds at most per map (a huge campaign map would take hours)
@@ -171,13 +173,34 @@ class Airspace:
 
     def update(s, rec):
         """The air to fly: free air in columns near walked floor, connected to the air just over it."""
-        from scipy import ndimage
         foot = np.zeros((s.ny, s.nx), bool)
         low = np.full((s.ny, s.nx), s.nz, int)
         for kx, ky, kz in rec.floor_keys:
             k, j, i = s.vox((kx / 2, ky / 2, kz))
             foot[j, i] = True
             low[j, i] = min(low[j, i], k)
+        s._want(foot, low)
+
+    def seed(s, T):
+        """(custom) The air to fly with no walkers (mappers "air"): over the nav's reachable floor, the floor walkers would
+        mark, at once (update() needs floor walked this run)."""
+        from brain.terrain import NAV_CELL
+        l, j, i = np.nonzero(T.lwalk & T.reach)
+        if not len(l):
+            return
+        x = T.x0 + (i + 0.5) * NAV_CELL * T.nstep
+        y = T.y0 + (j + 0.5) * NAV_CELL * T.nstep
+        k = np.clip(((T.lz[l, j, i] - s.z0) / s.v).astype(int), 0, s.nz - 1)
+        vj = np.clip(((y - T.y0) / s.v).astype(int), 0, s.ny - 1)
+        vi = np.clip(((x - T.x0) / s.v).astype(int), 0, s.nx - 1)
+        foot = np.zeros((s.ny, s.nx), bool)
+        low = np.full((s.ny, s.nx), s.nz, int)
+        foot[vj, vi] = True
+        np.minimum.at(low, (vj, vi), k)
+        s._want(foot, low)
+
+    def _want(s, foot, low):
+        from scipy import ndimage
         if not foot.any():
             return
         r = max(1, int(round(AIR_NEAR / s.v)))
@@ -277,6 +300,19 @@ def ceiling_of(name, T):
     return float(top.max()) + 2.0, "highest surface + 2"
 
 
+MAPPERS = ("both", "ground", "air")   # (custom) who maps: walkers and aircraft, walkers only, aircraft only
+
+
+def crew(mappers, walkers, aircraft):
+    """(walkers, aircraft) for a run: "both" as asked; "ground" the walkers, no aircraft; "air" no walkers and as many
+    aircraft as the larger of the two (every mapper in the air)."""
+    if mappers == "ground":
+        return walkers, 0
+    if mappers == "air":
+        return 0, max(walkers, aircraft)
+    return walkers, aircraft
+
+
 def merge_links(name, links):
     """Called jumps the simulator found, and its results on known links, into maps/<map>/lidar.json
     (only "links" is touched). Returns how many new links went in."""
@@ -343,24 +379,28 @@ def run_map(name, o, switch, k, n, log, ctl=None):
         picks = cells[np.argsort(np.abs(cells[:, 1:] - mid).sum(axis=1))[:16]]
         spawns = [(c.x, c.y, c.z) for c in (T._center(*map(int, k)) for k in picks)]
     rng = random.Random(sum(map(ord, name)))
-    walkers = [(Roomba(i, rng), Body(spawns[i % len(spawns)])) for i in range(o.walkers)]
+    mappers = ctl.mappers if ctl is not None else getattr(o, "mappers", "both")
+    n_walk, n_air = crew(mappers, o.walkers, o.aircraft)
+    walkers = [(Roomba(i, rng), Body(spawns[i % len(spawns)])) for i in range(n_walk)]
     from brain import oob                            # the map's kill zones: bots keep out as in a match, the director
     vols = oob.volumes(name)                         # leaves them out of the floor to cover (brain/oob.py)
     if vols:
         T.set_oob([], 0, vols)
-    if not getattr(o, "no_director", False):         # the LiDAR director (tools/lidar_director.py)
+    if not getattr(o, "no_director", False) and walkers:   # the LiDAR director (tools/lidar_director.py; it sends walkers)
         from lidar_director import LidarDirector
         rec.director = LidarDirector(T, rec, [Vec(*p) for p in spawns])
         rec.objectives = lidar.Objectives(name, T)   # every gametype objective place, visited afresh each run
         rec.objectives.seed(rec.director)
     ceiling, why = ceiling_of(name, T)
     air = Airspace(T, ceiling)
-    crafts = [Craft(c, (sp[0], sp[1], sp[2] + 2.5)) for c, sp in enumerate(rng.sample(spawns * o.aircraft, o.aircraft))]
+    crafts = [Craft(c, (sp[0], sp[1], sp[2] + 2.5)) for c, sp in enumerate(rng.sample(spawns * n_air, n_air))]
+    if crafts and not walkers:                       # (custom) air only: the air over the reachable floor, at once
+        air.seed(T)
     sig = [id(l) for l in usable_links(rec.links)]
     t, dt, last_new, floor_n, t0 = 0.0, 1.0 / HZ, 0.0, 0, time.time()
     deaths = falls = 0
     if ctl is not None:
-        ctl.started(name, T, getattr(rec, "director", None))
+        ctl.started(name, T, getattr(rec, "director", None), mappers)
     speed, anchor, ran = None, (0.0, time.time()), 0.0       # pacing from the last speed change; real s run
     # (--max-real bounds a command-line batch only: in the Simulator window a map at Max speed was cut at 240 real s
     # before its coverage target, GitHub issue #8 "LiDAR Sim cuts off prematurely"; the window's maps end by coverage
@@ -485,6 +525,7 @@ class Control:
         s.speed, s.paused, s.stop_now = 4.0, False, False
         s.pending, s.clear = [], False
         s.last = None                   # the last map finished: (name, floor cells, new jumps, sim minutes, stopped)
+        s.mappers, s.run_mappers = "both", None   # (custom) who maps the next map started / the one running
 
     def command(s, d):
         """One request from the view: (HTTP status, answer)."""
@@ -519,6 +560,11 @@ class Control:
                 return 200, dict(spot=[round(v, 2) for v in pos])
             elif act == "clear_spots":
                 s.clear, s.pending = True, []
+            elif act == "mappers":                  # (custom) ground, air or both, from the next map started
+                v = d.get("mappers")
+                if v not in MAPPERS:
+                    return 400, dict(error="mappers must be one of " + ", ".join(MAPPERS))
+                s.mappers = v
             else:
                 return 400, dict(error="unknown action")
         return 200, dict(ok=True)
@@ -539,9 +585,10 @@ class Control:
             s.stop_now = False
             return s.queue.pop(0) if s.queue else None
 
-    def started(s, name, T, director):
+    def started(s, name, T, director, mappers="both"):
         with s.lock:
             s.current, s.T, s.director, s.t, s._rate, s.actual = name, T, director, 0.0, None, 0.0
+            s.run_mappers = mappers
             s.pending, s.clear = [], False
 
     def feed(s, rec):
@@ -557,7 +604,7 @@ class Control:
 
     def finished(s, name, cells, links, t, stopped):
         with s.lock:
-            s.current, s.T, s.director, s.paused = None, None, None, False
+            s.current, s.T, s.director, s.paused, s.run_mappers = None, None, None, False, None
             s.last = dict(name=name, title=map_title(name), cells=cells, links=links, minutes=round(t / 60, 1),
                           stopped=bool(stopped))
 
@@ -575,7 +622,8 @@ class Control:
         return dict(current=s.current, title=map_title(s.current) if s.current else None, minutes=round(s.t / 60, 1),
                     speed=s.speed, actual=round(getattr(s, "actual", 0.0), 1) if s.current else 0.0,
                     speeds=list(s.SPEEDS), paused=s.paused, queue=len(s.queue), last=s.last,
-                    spots=d.spot_view() if d is not None else [], painted=round(getattr(d, "painted_share", 0.0), 3))
+                    spots=d.spot_view() if d is not None else [], painted=round(getattr(d, "painted_share", 0.0), 3),
+                    mappers=s.mappers, run_mappers=s.run_mappers)
 
 
 def main():
@@ -587,6 +635,8 @@ def main():
                     "director has nothing left to send bots to and no new floor came for 45 s)")
     ap.add_argument("--walkers", type=int, default=16)
     ap.add_argument("--aircraft", type=int, default=8)
+    ap.add_argument("--mappers", choices=MAPPERS, default="both", help="who maps: walkers and aircraft, walkers only, "
+                    "or aircraft only (as many as the larger count); the window's Simulator panel sets it there")
     ap.add_argument("--speed", type=float, default=0.0)
     ap.add_argument("--max-real", type=float, default=240.0, help="real seconds at most per map (huge maps)")
     ap.add_argument("--port", type=int, default=PORT)
@@ -601,6 +651,7 @@ def main():
     switch = Switch()
     switch.control = ctl = Control(every)
     ctl.queue = list(names)
+    ctl.mappers = o.mappers
     idle = os.path.join(ROOT, "logs", "lidar_sim_idle.json")       # (waiting: an empty view, no old scan behind it)
     switch.current = Hub(Recorder((names or every)[0], count_run=False, path=idle if not names else None), "sim")
     switch.current.note = "Pick a map to simulate (Simulator panel)"
