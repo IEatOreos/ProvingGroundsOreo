@@ -222,6 +222,11 @@
 - Local data: the learned map files, `user/`, `tools/fixtures/` and all logs and bug reports are unchanged from the backup. Only his `maps/_shapes/*.json` and `unins000.dat` changed (his).
 - Validation: all 211 regression tests pass on the merge, and the conflicted modules compile. Gameplay is untested, including his new features with our changes. MCC must load the new DLL: restart the launcher.
 
+## 0.2.2-custom.8 — Slayer anchors, 2026-11-08
+
+- The Team Director can assign up to two Slayer anchors to separate nearby posts. It picks fixed Demon bots first, then Campers, then Snipers, then other eligible bots. Distance and current role break ties within each group.
+- Verified the assignment logic offline. The isolated source suite passed 205 tests and skipped six that need local map data. The change needs a fresh bot process and a live match for gameplay validation.
+
 ## 0.2.2-custom.7 — Demon awareness and fights, vehicle wall guard, 2026-11-07
 
 - Covers the 21 commits since 0.2.2-custom.6 (989cb8d). 18 were already on GitHub without a version; 3 are new in this candidate: Codex's Reach Demon exposed-part fire (1f8e070), the ground vehicle wall guard (ed2b87f), and Legendary/Demon shooting back with the wedges body filter (1e0bd78). Each entry below gives its own behavior and validation.
