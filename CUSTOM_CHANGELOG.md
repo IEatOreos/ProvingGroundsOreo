@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Teleporters by gametype; Gore Valley's stuck pad, patrol area and hot spot, 2026-11-08
+
+- The owner's two reports from the Gore Valley Slayer game (`logs/bug_reports/h4_ca_gore_valley_20261107-222718`).
+- "Bots get stuck here" (34.8 s):
+  - Sword117 and Havoc94 (Easy, roaming) stood at about (-1.0, -6.1), by red's spawns, from 17 s to past 80 s. Lord117 (Normal) was caught there twice.
+  - Cause: the nav's next step for 7 of the map's 11 zones was the bots' own cell. `maps/h4_ca_gore_valley/features.json` (`tools/map_features.py`) pairs a two-way teleporter there with one at the other base (-1.09, 43.53). The pad's objects are Dominion's: `fw_teleporter_2_way` under a netgame flag labelled "dominion". In Slayer and CTF there is no pad. `Terrain.nav` said "on a teleporter that is the way: step onto its centre", and nothing teleported them.
+  - The same labels elsewhere: Canyon has a Dominion pair beside its other modes' one-way pads ("no_dom"); H2A Warlock's four and Ascension's one are removed in CTF ("ctf_delete").
+- Fix in `brain/maps.py`:
+  - `teleporter_tag` reads the label of the nearest netgame flag on each teleporter end. Canyon's Dominion pads stand 0.1 u from its receivers.
+  - `tele_in_mode` applies the labels: "dominion" only in Dominion (brain/modes.py names it territories); "no_dom" in all modes but Dominion; "ctf_delete" in all but CTF.
+  - `set_mode(m, mode)` keeps only the pairs a mode has in `m["teleporters"]`, the list the nav links and the bots' pad logic read, with the whole set in `m["teleporters_all"]`. A terrain built before is dropped when the list changes.
+  - `tools/live_bots.py` reads the starting mode (`start_mode`: CTF by the engine, as the snapshot reads it, else `mode_of` with its aliases) and calls `set_mode` before each nav build, the variant one included. It prints any pads left out.
+- "Make this a patrol area and a hot spot" (71.8 s): he was dead when he filed it. From 61.6 s he stood 9 s still at (9.28, 18.75, 2.43), the "Red rockets" spot, until he was killed at 70.4 s. That spot:
+  - New `maps/h4_ca_gore_valley/infantry_patrols.json`: one patrol point, shared by both teams (the existing patrol rules: Invasion excluded).
+  - `maps/h4_ca_gore_valley/positions.json`: an owner power position, via `tools/power_positions.py --add`, score 1.0, above every computed spot. It sees 4 spots, height 15.5, with a duck spot. The 8 computed rows are kept.
+  - Every Slayer (230 per team) and CTF (70 and 78) spawn reaches it.
+- Validation:
+  - `tools/test_mode_teleporters.py`, 6 tests: the label rules; the nearest label; Gore Valley's pads only in Dominion; Canyon's one-way pads kept outside Dominion and its Dominion pair only in it; the patrol and hot spot load; and on the real terrain no zone's next step from the stuck cell is the cell itself in Slayer.
+  - All 299 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4, every tier: shots at Warthogs and their riders go to the real point, 2026-11-07
 
 - Owner's request: make every difficulty shoot the Warthog, and its drivers and passengers, properly.

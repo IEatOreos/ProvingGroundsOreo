@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from brain.core import Vec, PlayerState, Snapshot, FlagState  # noqa: E402
 from brain.tracefmt import (Everyone, blitz_rows, call_lines, crosshair, meta_line, seat_of,  # noqa: E402
                             think_line)
-from brain.maps import get_map, terrain as map_terrain, save_learned, grow as map_grow, swap as map_swap  # noqa: E402
+from brain.maps import get_map, terrain as map_terrain, save_learned, grow as map_grow, swap as map_swap, set_mode  # noqa: E402
 from brain.bot import Bot  # noqa: E402
 from brain import vehicles as V  # noqa: E402
 from brain.director import Director  # noqa: E402
@@ -46,6 +46,29 @@ MAP = None   # set in main() from --map
 def place_ok(p):
     """A place some map has: three finite numbers, none 100,000 u out or more."""
     return p is not None and len(p) == 3 and all(isinstance(c, (int, float)) and math.isfinite(c) and abs(c) < 1e5 for c in p)
+
+
+def start_mode(game, live):
+    """The match's mode as the start can read it, for its teleporters (brain/maps.py set_mode): CTF by the engine (as the
+    snapshot reads it), the other objective modes by brain/modes.py mode_of (its aliases: Dominion is territories), else
+    None (Slayer and the rest)."""
+    from brain.modes import ALIAS
+    try:
+        if hasattr(live, "engine") and live.engine() == 1:
+            return "ctf"
+    except Exception:
+        pass
+    mode = mode_of(game, live)
+    return ALIAS.get(mode, mode)
+
+
+def mode_teleporters(m, game, live):
+    """(custom, Nov 7) only the teleporters this mode has, before the nav is built (Gore Valley's Dominion pads held three
+    bots 60 s in Slayer)."""
+    mode = start_mode(game, live)
+    left = set_mode(m, mode)
+    if left:
+        print(f"teleporters: {len(left)} not in {mode or 'this mode'} (gametype labels), left out of the nav", flush=True)
 
 
 def think_order(bots, n):
@@ -804,6 +827,7 @@ def main():
                     print(f"map variant {name}: making its callouts and power positions (once per layout) ...", flush=True)
                     print(f"  done in {variant_strategy.build(name):.0f} s", flush=True)
                 MAP = get_map(name)
+                mode_teleporters(MAP, o.game, live)
                 T = map_terrain(MAP)
                 from brain import variants as _variants
                 if o.game == "reach" and not os.path.exists(os.path.join(_variants.ROOT, name, "mvar_objects.json")):
@@ -819,6 +843,7 @@ def main():
         except Exception as e:
             print("could not read the game's Forge pieces:", e, flush=True)
     if T is None:
+        mode_teleporters(MAP, o.game, live)
         T = map_terrain(MAP)
     palette = Palette() if getattr(live, "LOADOUT", 0) else None   # Reach, Halo 4, H2A
     loadout_state = {}

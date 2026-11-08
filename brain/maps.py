@@ -25,6 +25,52 @@ SPOT_KINDS = {"koth_hill": "hills", "oddball_ball": "balls", "terr_object": "ter
 H3_TYPES = {"oddball_ball_spawn_point": "oddball_ball", "koth_hill_static": "koth_hill", "territory_static": "terr_object"}
 
 
+# (custom, Nov 7) the gametype labels Halo 4 and H2A give a placed teleporter (the netgame flag on its spot, objects.json):
+# the modes it stands in. The owner's Gore Valley Slayer report, "Bots get stuck here": its two-way pads are Dominion's
+# ("dominion", fw_teleporter_2_way), not there in Slayer or CTF, and three bots stood on the one by red's spawn 60 s
+# (Terrain.nav: on a teleporter that is the way, step onto its centre). Canyon's Dominion pair likewise; Warlock's and
+# Ascension's (H2A) are removed in CTF. Modes as brain/modes.py names them (Dominion: territories)
+TELE_ONLY = {"dominion": {"territories"}}              # only in these modes
+TELE_NOT = {"no_dom": {"territories"}, "ctf_delete": {"ctf"}}   # in every mode but these
+
+
+def teleporter_tag(objs, p, near=0.15):
+    """The gametype label (TELE_ONLY / TELE_NOT) of the netgame flag on teleporter end p (the nearest within near: Canyon's
+    Dominion two-way pads stand 0.1 u from its other modes' one-way receivers), or None."""
+    best, label = near, None
+    for f in (objs or {}).get("netgame_flags", ()):
+        t = f.get("type")
+        q = f.get("pos")
+        if (t in TELE_ONLY or t in TELE_NOT) and q and abs(q[2] - p.z) < 0.5:
+            d = math.hypot(q[0] - p.x, q[1] - p.y)
+            if d < best:
+                best, label = d, t
+    return label
+
+
+def tele_in_mode(tags, mode):
+    """A teleporter whose ends carry these labels stands in this mode (None: Slayer or a mode not read)."""
+    for t in tags:
+        if t in TELE_ONLY and mode not in TELE_ONLY[t]:
+            return False
+        if t in TELE_NOT and mode in TELE_NOT[t]:
+            return False
+    return True
+
+
+def set_mode(m, mode):
+    """Keep only the teleporters that stand in this mode (m["teleporters"], what the nav links and the bots know), the
+    whole set kept in m["teleporters_all"]; a terrain built before is dropped when that changes. Returns the pairs left
+    out."""
+    allp = m.setdefault("teleporters_all", list(m.get("teleporters", ())))
+    keep = [(a, b) for a, b in allp
+            if tele_in_mode({teleporter_tag(m.get("objects"), a), teleporter_tag(m.get("objects"), b)} - {None}, mode)]
+    if len(keep) != len(m.get("teleporters", ())):
+        _TERRAIN.pop(m["name"], None)
+    m["teleporters"], m["mode"] = keep, mode
+    return [p for p in allp if p not in keep]
+
+
 def load_map(name):
     """A map by name; a map variant ("<base>/variants/<id>", brain/variants.py) has its base map's level and scenario
     with its own navmesh data (its folder: lidar.json, learned spots, paint), its nav window, and its own callouts and
