@@ -521,6 +521,50 @@ def reach_demon_direct_fire(prof, game, me, target):
             and me.vehicle == -1 and target is not None and target.vehicle == -1)
 
 
+# Halo 4 Demon (custom, Nov 7): the owner's Warhouse and Adrift games. Halo 4 reports a body 0.38 u over its floor
+# (H2A_FEET), so the generic eye (pos + 0.62) sat 0.38 u over the real view and the generic chest at the real head:
+# Demons "saw" him over cover no real line crossed (369 of 1,183 seen rifle fight ticks on Adrift) and stood holding
+# fire. Rounds land a tick after the press (hitscan); the view was on his head within 0.05-0.1 u at hits and misses
+# alike, yet 40% of presses did no damage: a round past a head misses the whole body. A shield takes the same damage
+# anywhere, so the body first and the head once it is down. The view locks onto the part every tick (lead: one tick of
+# both bodies' motion), and the trigger is pressed as fast as the gun takes it (Reach's 0.4 s DMR pace left a 5-shot
+# kill near 1.9 s). Halo 4 Demon on foot only; Reach, H2A and every other tier keep their own paths.
+H4_SNAP = (PRECISION | AUTO | {"shotgun"}) - {"focus_rifle"}   # hitscan-like guns the view locks onto the part with
+H4_TAP_R = 30.0          # u: semi-automatics are tapped at the gun's own rate within this (paced past it: bloom)
+H4_HOLD_R = 20.0         # u: automatics hold the trigger within this (bursts past it, as before)
+H4_CHEST_DROP = 0.16     # u: the chest point under the live head (standing head pos + 0.25 -> chest pos + 0.09)
+H4_HEAD_SHIELD = 0.05    # his shield at or under this: the head (the kill shot), else the body
+H4_LEAD_S = 0.034        # s: read-to-shot lead, one brain tick of his and our own motion
+H4_VEL_MAX = 8.0         # u/s: a velocity read past this is a teleport or respawn, not motion to lead
+
+
+def h4_demon_fire(prof, game, me, target):
+    """Halo 4 Demon on foot at a man on foot whose live head / view pair is read (brain/live.py h4_spartan_pose)."""
+    return (game == "h4" and profiles.fixed_demon(prof) and me.weapon in H4_SNAP
+            and live_head_ray(me, target) is not None)
+
+
+def h4_chest(target):
+    """His chest under his live head: the body's middle (his place) at the head's height less H4_CHEST_DROP."""
+    return Vec(target.pos.x, target.pos.y, target.head_pos.z - H4_CHEST_DROP)
+
+
+def h4_wants_head(me, target):
+    """The head for the kill shot (his shield down) and for the one-shot head weapons; the body while shielded."""
+    return me.weapon in SNIPERS or target.shield <= H4_HEAD_SHIELD
+
+
+def h4_ray(me, target, head, lead=False):
+    """(our view, his head or chest); lead: both moved on by H4_LEAD_S of their read velocity."""
+    origin, point = me.view_pos, (target.head_pos if head else h4_chest(target))
+    if lead:
+        def step(v):
+            n = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+            return v * H4_LEAD_S if n <= H4_VEL_MAX else Vec()
+        origin, point = origin + step(me.vel), point + step(target.vel)
+    return origin, point
+
+
 class Perception:
     def __init__(s, prof, rng):
         s.p, s.rng = prof, rng
@@ -714,7 +758,10 @@ class Perception:
                 if e.head_pos is not None and reach_demon_direct_fire(s.p, game, me, e):
                     ray = head_solution(me, e)
                 if ray is not None and getattr(terrain, "point_los", None) is not None:
-                    parts = (parts[0], terrain.point_los(*ray, mode=vision_mode))
+                    # (Halo 4 Demon: the chest from the real view too, not the generic pair 0.38 u over both bodies)
+                    chest = (terrain.point_los(*h4_ray(me, e, False), mode=vision_mode)
+                             if h4_demon_fire(s.p, game, me, e) else parts[0])
+                    parts = (chest, terrain.point_los(*ray, mode=vision_mode))
                 s.target_parts[e.id] = parts
                 line = any(parts)
             else:
@@ -1551,21 +1598,29 @@ class Bot:
         if me and me.alive:
             s.turn_cap(me, act, dt)
             shot_part = getattr(s, "shot_part", None)
-            if (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
+            lock = getattr(s, "h4_lock", None)
+            locked = None
+            if lock is not None and me.vehicle == -1 and not act.grenade:
+                # Halo 4 Demon: the view on the chosen part every tick the line holds, past the turn cap, led
+                target = snap.player(lock[0])
+                if target is not None and target.alive and h4_demon_fire(s.p, s.game, me, target):
+                    locked = h4_ray(me, target, lock[1], lead=True)
+            if locked is None and (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
                     and ((profiles.fixed_high(s.p)) or percentage_sniper(s.p, me))
                     and shot_part is not None):
                 target = snap.player(shot_part[0])
                 if (target is not None and target.alive
                         and (shot_part[1] or reach_demon_direct_fire(s.p, s.game, me, target))):
-                    origin, point = head_solution(me, target) if shot_part[1] else chest_solution(me, target)
-                    yaw, pitch = angles_to(origin, point)
-                    # Keep the intended movement direction while snapping the shot.
-                    turn = wrap(act.yaw - yaw)
-                    c, sn = math.cos(turn), math.sin(turn)
-                    f, st = act.forward, act.strafe
-                    act.forward = max(-1.0, min(1.0, f * c - st * sn))
-                    act.strafe = max(-1.0, min(1.0, f * sn + st * c))
-                    act.yaw, act.pitch = yaw, pitch
+                    locked = head_solution(me, target) if shot_part[1] else chest_solution(me, target)
+            if locked is not None:
+                yaw, pitch = angles_to(*locked)
+                # Keep the intended movement direction while snapping the shot.
+                turn = wrap(act.yaw - yaw)
+                c, sn = math.cos(turn), math.sin(turn)
+                f, st = act.forward, act.strafe
+                act.forward = max(-1.0, min(1.0, f * c - st * sn))
+                act.strafe = max(-1.0, min(1.0, f * sn + st * c))
+                act.yaw, act.pitch = yaw, pitch
             if act.grenade and me.vehicle == -1 and me.weapon not in CHARGE and me.weapon not in LUNGE:
                 s.nade_retry = dict(until=now + POST_GRENADE_RETRY, weapon=me.weapon,
                                     mag=s.current_mag(me), pressed=False, attempted=False)
@@ -1576,6 +1631,7 @@ class Bot:
         else:
             s.nade_retry = None
         s.percentage_sniper_shot(now, me, snap, act)
+        s.h4_pressed = bool(act.fire)   # (Halo 4 Demon's tap: a release between presses, fight)
         return act
 
     def grenades_allowed(s):
@@ -1707,6 +1763,7 @@ class Bot:
         s.att = None                # what it looks at and why, [kind, what, x, y] (brain/tracefmt.py)
         s.fx = None
         s.shot_part = None
+        s.h4_lock = None            # Halo 4 Demon: (target, head) the view locks onto this tick (fight; think)
         s.nav_cmd = None
         s.shot_now = False          # a round left the gun this tick (a held charge is not a shot: dry_fire_check)
         if not me.alive:
@@ -4454,7 +4511,8 @@ class Bot:
         parts = getattr(s.per, "target_parts", {}).get(tid)
         fixed_high = profiles.fixed_high(s.p)
         chest_only = fixed_high and me.weapon == "assault_rifle"
-        direct_fire = parts is not None and reach_demon_direct_fire(s.p, s.game, me, target)
+        h4 = parts is not None and h4_demon_fire(s.p, s.game, me, target)   # (Halo 4 Demon: h4_demon_fire)
+        direct_fire = h4 or (parts is not None and reach_demon_direct_fire(s.p, s.game, me, target))
         head_only = ((fixed_high or percentage_sniper(s.p, me)) and not chest_only and target is not None
                      and me.vehicle == -1 and target.vehicle == -1
                      and me.weapon not in SPLASH and me.weapon not in CHARGE and me.weapon not in LUNGE)
@@ -4463,7 +4521,11 @@ class Bot:
                 # A covered preferred part must not veto a clear shot at the other part.
                 chest_clear = s.line_clear(now, me, tid, snap, head=False)
                 head_clear = s.line_clear(now, me, tid, snap, head=True)
-                head = head_clear and (not chest_only or not chest_clear)
+                if h4:
+                    # Halo 4: the body while he is shielded (a bigger mark, the same shield damage), the head to finish
+                    head = head_clear and (not chest_clear or (h4_wants_head(me, target) and me.weapon not in AUTO))
+                else:
+                    head = head_clear and (not chest_only or not chest_clear)
                 can_learn_block = chest_clear and head_clear
                 glassed = s.__dict__.setdefault("glassed", {})
                 if any(parts) and not (chest_clear or head_clear):
@@ -4493,7 +4555,9 @@ class Bot:
         aim_at = (s.weak_point(me, tid, b, snap, me.weapon)
                   if target is not None and target.vehicle != -1 and me.weapon in VEHICLE_KILLERS else b.pos)
         ray = live_head_ray(me, target) if head else None
-        if direct_fire:
+        if h4:
+            ray = h4_ray(me, target, head, lead=True)
+        elif direct_fire:
             ray = head_solution(me, target) if head else chest_solution(me, target)
         act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
                                      precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1,
@@ -4639,8 +4703,9 @@ class Bot:
         slack = (2.5 if w in AUTO else 1.6) if d < SHORT_BAND and s.p.tactics > 0.15 else 1.0
         on = (s.aim.on_target(me, b.pos, act.yaw, act.pitch, slack)
               or (loose is not None and s.aim.landing(now, loose["early"], tid))) and seen_fire
-        if (head_only or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me)):
-            # The final shot command snaps to the selected part after the turn cap.
+        if (head_only or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me) or h4):
+            # The final shot command snaps to the selected part after the turn cap (Halo 4 Demon: every gun it locks,
+            # Bot.think h4_lock).
             on = seen_fire
         if not on and seen_now and clear and d < 1.6:
             # point blank: he fills the view. A man circling us at arm's length is hit by shooting while
@@ -4709,6 +4774,11 @@ class Bot:
         elif w in CHARGE:
             how = ("release", 0.05) if trade else CHARGE[w]      # a trade is a tap: one bomb now
             s.charge_fire(now, me, target, tid, d, on, seen_now and clear and not blocked, act, how)
+        elif h4 and w in AUTO and d <= H4_HOLD_R:
+            act.fire = s.shot_now = bool(on)          # Halo 4 Demon: held while the locked view has him
+        elif h4 and w not in AUTO and d <= H4_TAP_R:
+            # Halo 4 Demon: a fresh press every other tick while the line holds; the gun fires the moment it can
+            act.fire = s.shot_now = bool(on) and not getattr(s, "h4_pressed", False)
         elif w in AUTO and (d < SHORT_BAND or s.p.tactics <= 0.15 or w in BEAM):
             # up close an automatic keeps the trigger down: it stays down through a wobble off him, not just while
             # dead on. A beam at any range
@@ -4728,6 +4798,8 @@ class Bot:
             if s.rng.random() < s.p.jumpy * JUMP_SHOT * s.p.jump:
                 act.jump = True    # jump shot (never for bots with jump skill 0)
         act.zoom = s.zoom_level(now, w, d, seen_now)
+        if h4 and seen_fire and w in H4_SNAP:
+            s.h4_lock = (tid, head)                    # Bot.think locks the view onto this part
         # he ducked behind cover close by: flush him out with a grenade where he went, once per time out of sight, the
         # aim already on the spot (no flick to throw) (the line to him gone 0.5-3 s, out of sight or seen through the
         # level, 4-16 u; until then 4-14 u, the aim within 0.3 rad)
@@ -4742,8 +4814,8 @@ class Bot:
                 act.grenade = True
                 s.grenade_ready_at = now + s.rng.uniform(3, 7)
                 s.notes.append("grenade: flush him out")
-        if head and on and s.rng.random() < s.p.crouchy * 0.5:
-            act.crouch = True      # crouch at the kill
+        if head and on and not h4 and s.rng.random() < s.p.crouchy * 0.5:
+            act.crouch = True      # crouch at the kill (not Halo 4 Demon: the view drops 0.18 u under its locked shot)
         if (not fixed_high and s.grenades_allowed() and now - s.engaged_since < 0.6 and 4 < d < 25 and now >= s.grenade_ready_at and nade_ok
                 and getattr(s, "nade_open", False)):   # a Regular "forgets to throw grenades" (guide 01 s9): by tactics
             act.grenade = True     # grenade opener (from 4 u: a frag's blast is under 2 u)
@@ -5838,9 +5910,12 @@ class Bot:
         selected = getattr(s, "shot_part", None)
         if head is None and selected is not None and selected[0] == tid:
             head = selected[1]
-        direct_fire = head is not None and reach_demon_direct_fire(s.p, s.game, me, e)
+        h4 = head is not None and h4_demon_fire(s.p, s.game, me, e)
+        direct_fire = h4 or (head is not None and reach_demon_direct_fire(s.p, s.game, me, e))
         ray = live_head_ray(me, e) if head else None
-        if direct_fire and head and e.head_pos is not None:
+        if h4:
+            ray = h4_ray(me, e, head)       # (Halo 4 Demon: the real view to the part, the chest too)
+        elif direct_fire and head and e.head_pos is not None:
             ray = head_solution(me, e)
         # sight passes windows and fences, a round only fences and glass that breaks (Terrain.sees / shot_los,
         # maps/<map>/wall_kinds.json): a man seen behind bullet-proof glass gets no shot (s.glassed: since when). Only a
@@ -5897,14 +5972,15 @@ class Bot:
             return
         selected = getattr(s, "shot_part", None)
         target = snap.player(selected[0]) if selected is not None else None
-        direct_fire = reach_demon_direct_fire(s.p, s.game, me, target)
+        h4 = h4_demon_fire(s.p, s.game, me, target)
+        direct_fire = h4 or reach_demon_direct_fire(s.p, s.game, me, target)
         for e in (target,) if direct_fire else snap.players:
             if e.team == me.team or not e.alive or e.id == me.id:
                 continue
             d = dist(me.pos, e.pos)
             off = abs(wrap(math.atan2(e.pos.y - me.pos.y, e.pos.x - me.pos.x) - act.yaw))
-            # A Demon DMR command snaps to its checked point after the view turn cap.
-            aligned = (direct_fire and me.weapon == "dmr") or d < 2.0 or off < max(0.15, math.atan2(1.2, d))
+            # A Demon DMR command snaps to its checked point after the view turn cap (Halo 4 Demon: every gun, think).
+            aligned = (direct_fire and (me.weapon == "dmr" or h4)) or d < 2.0 or off < max(0.15, math.atan2(1.2, d))
             if aligned and s.line_clear(now, me, e.id, snap):
                 return
         act.fire = s.shot_now = False

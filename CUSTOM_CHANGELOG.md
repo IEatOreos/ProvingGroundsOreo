@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Halo 4 Demon: real sight heights, body then head, locked view, tapped trigger, 2026-11-07
+
+- Owner's request: Halo 4 Demons are the weakest bots of all the games; make them aimbot-hard there without changing the other games. Evidence: his Warhouse game (`logs/trace_h4_ca_warhouse_20261107-195112`, "Slayer was missing to my right with a dmr") and the 1v1 on Adrift (`logs/trace_h4_wraparound_20261107-201103`, "missed me twice while I was strafing").
+- Findings, from the traces and the collector's 30 Hz positions:
+  - Halo 4 reports a body 0.38 u over its floor (`H2A_FEET`). The generic sight pair (eye pos + 0.62, chest pos + 0.35) sat 0.38 u over both bodies. Replayed on the maps' terrain, 369 of the Adrift Demon's 1,183 seen rifle fight ticks (873 of 8,751 on Warhouse) were "seen" over cover that every real line (view to head, chest, belly) crossed. It held fire and stood in the standoff instead of going round.
+  - Rounds land one tick after the press (hitscan). At hits and misses alike the applied view was within 0.05-0.1 u of his head, and misses did not depend on his speed, yet about 40% of presses did no damage (26 of 57 in the 1v1). A round that passes a head misses the whole body, and misses leaned high.
+  - Cadence: Reach's DMR pace (0.4 s, x1.1-1.35 past 10 u). With perfect aim, a 5-shot kill took about 1.9 s.
+- Halo 4 Demon on foot only (`h4_demon_fire`: game h4, fixed Demon, live head/view pair on both bodies, a hitscan-like gun):
+  - Perception's chest line runs from the live view to the chest under the live head (head z - 0.16); the head line was already live.
+  - Part choice: the body while he is shielded (same shield damage, bigger mark), the head once his shield is at or below 0.05 and for snipers; the clear part if only one is clear; automatics stay on the body. `line_clear` and `fire_gate` use the same live rays. A seen man with no clear part counts as glassed, so the Demon goes round instead of standing.
+  - `Bot.think` locks the view onto the chosen part every tick its line is clear: past the 480°/s turn cap, led by one brain tick (0.034 s) of both bodies' read motion (ignored past 8 u/s), with the walk direction kept. Not during a grenade throw.
+  - Trigger: semi-automatics get a fresh press every other tick within 30 u, so the gun fires as soon as it can; past 30 u the old pacing stays. Automatics hold within 20 u. No crouch at the kill shot (it drops the view 0.18 u under the locked shot).
+- Unchanged: Reach Demon's exposed-part fire, Halo 4 Legendary and the lower tiers, Scaling, H2A, vehicles and the protected Legendary/Demon head and turret precision outside this Halo 4 path.
+- Validation: `tools/test_h4_demon.py`, 15 new tests: the gate; part choice and lead; no sight over cover with the generic pair open; the real chest line; Legendary's generic chest; tapping on alternate ticks on the body; head at no shield; head when the body is covered; no line, no shot and no lock; an automatic held; pacing past 30 u; the led lock keeping the walk; the grenade's own aim; and no lock for Reach Demon or H4 Legendary. All 235 regression tests pass. Gameplay is untested. Not verified: Halo 4's true refire times (no H4 ammo reader, so tapped presses the gun cannot take yet are not measured), whether the read-to-shot lead is one tick, and the chest offset on every pose. The bot process must be restarted.
+
 ### Demon fights on the way to a gun, 2026-11-07
 
 - Owner's request: rather than dropping its errand, a Demon should keep going to the gun and fight on the way. A 6.6 s look at a man in view without a shot is too long.
