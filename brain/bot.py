@@ -2005,6 +2005,9 @@ class Bot:
                 act.jump = True    # a jump for nothing while it waits about
             s.aim.whip = 0.0
             look = s.look_point(me, point, nav, post)
+            glance = s.dot_glance(now, me)          # (custom: Demon, a radar dot close behind it: a look its way)
+            if glance is not None:
+                look = glance
             # a person's eyes go up and down as he moves: a ledge, the floor above, a doorway, the ground ahead. Bots
             # held one height (look pitch spread 4.7 degrees to the player's 9.5, live Spire): a new height every
             # 1.2-3.5 s, -9 to +11 degrees, carried by the aim's own smoothing
@@ -2017,7 +2020,7 @@ class Bot:
             # enemy in front before it could see him, tools/test_focus.py)
             walking = math.hypot(act.forward, act.strafe) > 0.5
             if (walking and s.att and s.att[0] in ("watch", "post", "flank") and not str(s.att[1]).endswith("hit")
-                    and gate is None):     # (off a teleporter's exit it backs away already turned to it)
+                    and gate is None and glance is None):   # (off a teleporter's exit it backs away already turned to it)
                 # walking, a person looks about where he goes and glances, he does not walk on looking 60+ degrees away
                 # (live Spire: 43k walking ticks slowed to 0.3 by the turn rule below while watching a man, a radar
                 # dot, a post's sightline or a flank; speed varying 0.36 to the player's 0.23). Shot at: the whole turn
@@ -2039,7 +2042,8 @@ class Bot:
             # at 0.3, 200 s on the top; the attackers' last steps onto the core's stand ring were too slow to hop it)
             off = abs(math.atan2(act.strafe, act.forward)) if abs(act.forward) + abs(act.strafe) > 0.1 else 0.0
             # (75 degrees before: walking 60+ degrees off the view 16% of the time to the player's 9%, live Spire)
-            if off > math.radians(60) and not s.notes and now >= getattr(s, "exact_until", 0.0) and gate is None:
+            if (off > math.radians(60) and not s.notes and now >= getattr(s, "exact_until", 0.0) and gate is None
+                    and glance is None):   # (a Demon's glance at a dot: it runs on at full speed, dot_glance)
                 act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
             if kind == "hold":
                 act.crouch = s.p.crouchy > 0.5 and dist(me.pos, point) < 1.5
@@ -7149,6 +7153,46 @@ class Bot:
         want = math.atan2(d.y, d.x)
         rel = wrap(want - act.yaw)
         act.forward, act.strafe = math.cos(rel), math.sin(rel)
+
+    DOT_GLANCE_R = 20.0          # u: a fresh radar dot this near ...
+    DOT_GLANCE_OFF = math.radians(80)   # ... this far off the view (Demon sees 90 degrees each side) is glanced at
+    DOT_GLANCE_FRESH = 0.7       # s: a dot at most this old
+    DOT_GLANCE_S, DOT_GLANCE_EVERY = 0.7, 2.0   # s: a glance lasts this long, once this often for one man
+
+    def dot_glance(s, now, me):
+        """(Custom) Demon on foot, not carrying: a radar dot within DOT_GLANCE_R that its eyes do not have, outside its
+        view: a quick look his way (DOT_GLANCE_S, at its whole turn speed, not held to the walk's cone; the walk goes on
+        at full speed), so a man lining it up from behind comes into view and the fight on the way takes him
+        (on_way_target). The owner's Gore Valley CTF, Nov 7: 11% of his hits on Demons came on their objective runs
+        while they had him only as a radar dot. Where to look, or None."""
+        if not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle not in (None, -1):
+            return None
+        g = getattr(s, "glance", None)
+        if g is not None and now < g[1]:
+            b = s.per.beliefs.get(g[0])
+            if b is not None and not b.seen:
+                s.att = ["glance", f"#{g[0]} {b.source}", round(b.pos.x, 1), round(b.pos.y, 1)]
+                s.aim.whip = 1.0
+                return b.pos + Vec(0, 0, 0.35)
+            s.glance = None
+        nxt = s.__dict__.setdefault("glance_next", {})
+        best = None
+        for k, b in s.per.beliefs.items():
+            if (not isinstance(k, int) or b.seen or b.source != "radar" or now - b.t > s.DOT_GLANCE_FRESH
+                    or now < nxt.get(k, 0.0)):
+                continue
+            d = dist(me.pos, b.pos)
+            off = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - me.yaw))
+            if d <= s.DOT_GLANCE_R and off > s.DOT_GLANCE_OFF and (best is None or d < best[0]):
+                best = (d, k, b)
+        if best is None:
+            return None
+        _, k, b = best
+        s.glance, nxt[k] = (k, now + s.DOT_GLANCE_S), now + s.DOT_GLANCE_EVERY
+        s.note(f"radar: glance at #{k}")
+        s.att = ["glance", f"#{k} radar", round(b.pos.x, 1), round(b.pos.y, 1)]
+        s.aim.whip = 1.0
+        return b.pos + Vec(0, 0, 0.35)
 
     def look_point(s, me, point, nav=None, post=None):
         # look at the most recent threat it knows of: what it saw or what hit it, and a radar dot or a callout

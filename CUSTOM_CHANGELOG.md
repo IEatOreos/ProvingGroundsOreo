@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Demon glances at a close radar dot behind it; Halo 4 vehicle seat capture tool, 2026-11-07
+
+- Owner's requests, after his Gore Valley CTF review (`logs/trace_h4_ca_gore_valley_20261107-223617`).
+- Demon radar glance:
+  - The problem: 11% of his hits on Demons came on their objective runs while they had him only as a radar dot. Walking, a bot's look at a dot is held within 50° of the walk (`walk_cone`). A dot behind cover more than 6 u away was not looked at at all (`look_point` fell back to the path). Demon sees 90° each side, so a man behind it stayed unseen.
+  - New `Bot.dot_glance`: a fixed Demon on foot and not carrying, with a fresh (0.7 s) radar dot within 20 u more than 80° off its view and not in its eyes, looks his way. The glance lasts 0.7 s at its whole turn speed (`whip`), is not held to the walk's cone, and does not slow the walk. It is at most once every 2 s per man, nearest dot first; the note is "radar: glance at #k" (att "glance"). If he is really there with a line, perception sees him and the fight on the way takes him (`on_way_target`).
+  - Replay on that match: 9 of the 10 radar-only hits on Demon objective runs met the glance's conditions. All 9 were OutlawMarine at 48.9-50.7 s, with him 4.8-5 u behind at 128-180°; it died there.
+  - Not covered: 5 hits on hunts where he was in front within 15° at 11-19 u and the Demon still did not see him (a sight-model question, open).
+- `tools/h4_seat_capture.py`, a read-only Halo 4 capture for seated Spartans:
+  - Why: `h4_spartan_pose` reads the animated head and view only on foot, so Halo 4 Demon's aim cannot target a rider.
+  - What it records at 30 Hz for the person (`--everyone` for all players): place, model base, view point (+0xD50), target_head (node 54, unguarded), seat (+0x2C), the parent chain (a Warthog's chaingun rides the Warthog) with its forward and up, the head and view in the vehicle's frame, the on-foot reader's verdict, and which of its guards a seated pose fails. The full 120-node bone block is kept every 6th tick.
+  - `--summary <dir>` gives per vehicle and seat the medians and p10-p90 in the vehicle frame and the guard failure shares. Output goes to `logs/h4_seat_capture_<stamp>/` (gitignored).
+  - It sends no input, writes no game memory, and can run beside the brain.
+- Validation:
+  - `tools/test_demon_dot_glance.py`, 6 tests: a dot behind is glanced at; the glance holds, then waits 2 s; it ends once its eyes have him; none for a dot in view, past 20 u or stale; none for callouts, Legendary, a carrier or a rider; the nearest dot first.
+  - `tools/test_h4_seat_capture.py`, 3 tests on a stand-in Halo 4 memory: the on-foot row matches the reader; a seated row in the vehicle frame at three yaws; the summary groups by seat.
+  - An end-to-end run of the capture loop on the stand-in memory took 36 samples in 1.2 s.
+  - All 270 regression tests pass. Gameplay is untested; the capture tool has not met a live game yet. The bot process must be restarted for the glance.
+
 ### Demons do not drive Warthogs or Mongooses; Normal and Heroic are the drivers, 2026-11-07
 
 - Owner's request, after his Halo 4 Gore Valley CTF (`logs/trace_h4_ca_gore_valley_20261107-223617`; his team won 2-0, he went 25-8, the 3 Demons 16-25 together):
