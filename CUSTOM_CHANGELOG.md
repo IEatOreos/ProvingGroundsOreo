@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Edit spots in the LiDAR view: hot spots, patrol points and team holds by hand, 2026-11-08
+
+The owner: "Can we also make Lidar more interactive? ... can we make a tool to where I can implement Hot zones, Patrol Areas, and other spots the bots use so I dont have to have you do it for me all the time?"
+
+- LiDAR Viewer, new "Spots bots use" panel (`tools/lidar_view.html`, button Edit spots or key S):
+  - Add: pick Hot spot, Patrol point, Red hold or Blue hold, then click the floor. Click a spot to select it, drag it to move it, Delete or Remove to take it out, Esc to stop adding.
+  - A patrol point gets a name and who patrols it (both teams, red only, blue only). A computed power position can be made a hot spot.
+  - Spots are placed on the floor drawn under the cursor, the one nearest the camera: the LiDAR scan, or "Show the floor bots can reach" (the nav's reachable floor, as `power_positions.py` picks from; on by default where a map has no scan). The level data's every upward face was tried first and put a dragged spot on a roof 20 u up.
+  - Save and Undo changes; leaving with unsaved changes asks first.
+- `tools/spots.py` (new) reads and writes the files the brain reads (`brain/maps.py load_map`):
+  - Hot spots: positions.json rows marked `owner`, score 1.0, first. A kept one keeps its measures; a new or moved one is measured by `power_positions.describe` (what it sees, height, cover), as `--add` does. Computed rows stay; one within 1 u of a hot spot gives way, as with `--add`.
+  - Patrol points: infantry_patrols.json in the hand-made layout (`{name: [x, y, z]}` or `{name: {pos, team}}`).
+  - Team holds: callouts.json `holds`, the rest of the file kept. Each team keeps at least one (the brain picks from them: CTF carriers waiting for their own flag, the Oddball carrier, Firefight, and power positions on a map without any).
+  - A Forge layout edits its own positions/callouts where it has them, else the base map's; patrols are always the base map's (the panel says which files are shared).
+  - Writes are whole-file replaces, only for files whose data changed, each old file copied to `backups/spots/` first. A malformed edit (no place, duplicate patrol names, a team with no hold) writes nothing.
+- `tools/lidar.py serve`: `GET /spots`, `GET /spots/floor`, `POST /spots` (needs the `X-LiDAR: spots` header, like the view's other writes).
+- Validation: `tools/spots.py --selftest` and new `tools/test_spots.py` (owner rows, patrol layout, refused edits, unchanged saves, backups, file choice); `tools/lidar.py --selftest` passes. In the browser on Headlong: added a red hold and a blue-only patrol point, dragged a hot spot, saved; the brain's `load_map` read all three (the moved hot spot measured: sees 23, 1.5 u up, cover), then the map files were restored from Git. All 420 regression tests pass. Bots using the edited spots in a match is untested. Edits apply from the next match; restart the LiDAR Viewer to get the panel.
+
 ### Banshee strafe runs dive like the owner's: slower in gun range, lower before they end, 2026-11-08
 
 The owner flew the Banshee in Halo 4 Blood Crash `20261108-144947` to show the way (his F9s "This is how you should use the banshee" and "This is how to use the banshee bomb and cannons"): "they make their shooting floor too high, so they can never actually do a strafe run". His 63 rows with the crosshair on a man: 10-19 u off (median 13.5), 4.6-9.6 u over the floor (median 7.1, lowest 2.6), nose 23-46° down (median 34°), 4.6-10 u/s (median 5.8). Every tier, `brain/bot.py` `air_pass`:

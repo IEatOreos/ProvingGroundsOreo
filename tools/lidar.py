@@ -2563,6 +2563,15 @@ def serve(hub, port=PORT):
             s.end_headers()
             s.wfile.write(body)
 
+        def answer(s, code, data):                   # (custom) a JSON answer with its status: Edit spots
+            body = json.dumps(data).encode()
+            s.send_response(code)
+            s.send_header("Content-Type", "application/json")
+            s.send_header("Cache-Control", "no-store")
+            s.send_header("Content-Length", str(len(body)))
+            s.end_headers()
+            s.wfile.write(body)
+
         def do_GET(s):
             u = urlparse(s.path)
             h = getattr(hub, "current", hub)         # the simulator swaps hubs map by map
@@ -2605,6 +2614,9 @@ def serve(hub, port=PORT):
                     d["sim"] = ctl.state()
                     hub.last_seen = time.time()
                 s.send(json.dumps(d).encode(), "application/json")
+            elif u.path in ("/spots", "/spots/floor"):   # (custom) Edit spots: the spots bots use (tools/spots.py)
+                import spots
+                s.answer(*spots.handle("GET", u.path, (q.get("name") or [""])[0]))
             else:
                 s.send_error(404)
 
@@ -2619,6 +2631,13 @@ def serve(hub, port=PORT):
                 hub.yielded = True
                 threading.Thread(target=lambda: (box["srv"].shutdown(), box["srv"].server_close()), daemon=True).start()
                 return
+            if u.path == "/spots":                   # (custom) Edit spots' Save (tools/spots.py)
+                import spots
+                n = int(s.headers.get("Content-Length") or 0)
+                if not 0 < n < 1 << 20:
+                    return s.answer(413 if n else 400, dict(error="no edit" if not n else "too big"))
+                return s.answer(*spots.handle("POST", u.path, (q.get("name") or [""])[0], s.rfile.read(n),
+                                              s.headers.get("X-LiDAR")))
             ctl = getattr(hub, "control", None)
             if u.path == "/sim" and ctl is not None:     # the simulator's panel: pick, all, speed, pause, stop, spots
                 if s.headers.get("X-LiDAR") != "sim":    # (a page from another site cannot send it without asking)
