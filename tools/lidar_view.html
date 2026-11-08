@@ -317,7 +317,7 @@
   </section>
   <section id="sim" class="card" aria-labelledby="sim-h" hidden>
     <h2 id="sim-h">Simulator</h2>
-    <p id="sim-state" role="status" aria-live="polite">Pick a map to simulate.</p>
+    <p id="sim-state" role="status" aria-live="polite">Open a map to simulate.</p>
     <p id="sim-rate" class="dim"></p>
     <div class="field">
       <span class="flabel" id="sim-mappers-l">Who maps</span>
@@ -328,8 +328,11 @@
       </div>
       <p id="sim-mappers-note" class="dim"></p>
     </div>
+    <div class="acts" id="sim-this-row" hidden>
+      <button id="sim-this" class="primary"></button>
+    </div>
     <div class="acts">
-      <button id="sim-pick" class="primary" title="Choose a map (or a Forge layout) and watch the bots map it">Pick a map</button>
+      <button id="sim-pick" class="primary" title="Open a map (or a Forge layout) to look at it and edit its spots; simulate it from here or from the list">Open a map</button>
       <button id="sim-all" title="Every map in turn">Every map</button>
     </div>
     <div class="acts">
@@ -631,6 +634,7 @@ function renderSim() {
   card.hidden = !s;
   if (!s) return;
   $("app").textContent = "LiDAR Simulator";
+  if (browsing && browseTitle) document.title = "LiDAR Simulator · " + browseTitle;   // (custom) a map opened in it
   const box = $("sim-speeds");
   if (box.children.length !== s.speeds.length) {
     box.innerHTML = "";
@@ -646,7 +650,12 @@ function renderSim() {
   const running = !!s.current;
   $("sim-state").textContent = running
     ? (s.paused ? "Paused: " : "Simulating ") + s.title + " · " + s.minutes.toFixed(1) + " sim min" + (s.queue ? " · " + s.queue + " more queued" : "")
-    : "Pick a map to simulate.";
+    : browsing ? browseTitle + " is open: simulate it, or open another map." : "Open a map to simulate.";
+  // (custom) the map open in the view, when it is not the one simulating: simulate it from here
+  const other = browsing && browseName && s.current !== browseName;
+  $("sim-this-row").hidden = !other;
+  if (other) $("sim-this").textContent = (running ? "Simulate " + browseTitle + " instead" : "Simulate " + browseTitle);
+  $("sim-pick").classList.toggle("primary", !other);
   $("sim-pause").textContent = s.paused ? "Resume" : "Pause";
   $("sim-pause").disabled = $("sim-stop").disabled = !running;
   $("sim-rate").textContent = running && !s.paused && s.actual
@@ -667,7 +676,7 @@ function renderSim() {
   $("sim-mappers-note").textContent = running && s.run_mappers && s.run_mappers !== s.mappers
     ? "This map keeps mapping " + MAPPER_NAME[s.run_mappers] + "; " + MAPPER_NAME[s.mappers] + " starts with the next map you pick."
     : running && s.run_mappers === "air" ? "Aircraft only: they fly the air over the floor bots can reach. Spots to cover need walkers." : "";
-  $("sim-cover").disabled = !running || s.run_mappers === "air";
+  $("sim-cover").disabled = !running || s.run_mappers === "air" || browsing;   // (spots go on the map simulating)
   if (!running && coverMode) setCover(false);
   const l = s.last;
   $("sim-last").textContent = l ? (l.stopped ? "Stopped " : "Finished ") + l.title + ": " + l.cells.toLocaleString() + " floor cells, " +
@@ -678,7 +687,8 @@ function renderSim() {
 function setCover(on) {
   coverMode = on; $("sim-cover").setAttribute("aria-pressed", on); document.body.classList.toggle("cover", on); renderSim();
 }
-$("sim-pick").onclick = () => { pickMode = true; showMaps(true); };
+$("sim-pick").onclick = () => { pickMode = false; showMaps(true); };   // (custom) open first, simulate by choice
+$("sim-this").onclick = () => simulate({ name: browseName, title: browseTitle });
 $("sim-all").onclick = async () => {
   if (!confirm("Simulate every map in turn? It takes a few minutes a map; each map is saved when it finishes.")) return;
   const r = await simPost({ action: "all" }); if (!r.ok) $("sim-state").textContent = r.data.error || "Could not start.";
@@ -698,6 +708,7 @@ async function simulate(m) {
   const r = await simPost({ action: "pick", name: m.name });
   if (!r.ok) { $("maps-note").textContent = r.data.error || "Could not start " + m.title + "."; return; }
   pickMode = false; showMaps(false);
+  if (browsing) location.search = "";     // (custom) from a map opened in the view: watch the simulation
 }
 function inv4(m) {   // the inverse of a 4x4 matrix (column-major, as mvp)
   const a = m, o = new Array(16);
@@ -814,7 +825,18 @@ function setWeapons(list) {   // weapons lying together share one label ("assaul
 // --- which map: ?map=<name>[&src=sim] shows that map's stored scan; none = the one being mapped now
 const VIEW = new URLSearchParams(location.search);
 const browseName = VIEW.get("map") || "", browseSrc = VIEW.get("src") || "scan";
-let browsing = false;
+let browsing = false, browseTitle = "";
+async function simPoll() {   // (custom) browsing a map in the simulator's window: its panel stays (its state alone,
+  let r = null;              // not the running map's cells), and the simulator knows its window is open
+  try { r = await fetch("/sim"); } catch (e) { r = null; }
+  if (r && r.status === 404) { simState = null; renderSim(); return; }     // (the LiDAR Viewer: no simulator)
+  if (r && r.ok) {
+    const was = simState && simState.current;
+    simState = await r.json(); renderSim();
+    if (mapsData && (simState.current || null) !== (was || null)) renderMaps();   // (its LIVE badge follows)
+  } else if (simState) $("sim-state").textContent = "The LiDAR Simulator has stopped. Open it again from the launcher.";
+  setTimeout(simPoll, 1000);
+}
 const GAMES = [["ce", "Halo CE"], ["h2", "Halo 2"], ["h2a", "Halo 2 Anniversary"], ["h3", "Halo 3"], ["odst", "ODST"],
                ["reach", "Reach"], ["h4", "Halo 4"]];
 const gameOf = n => (n.match(/^(h2a|h2|h3|h4|odst|reach)_/) || [0, "ce"])[1];
@@ -825,6 +847,7 @@ async function loadStored() {
     const d = await (await fetch(url)).json();
     cell = d.cell; zstep = d.zstep; mode = d.mode; session = d.session; browsing = !!d.browse;
     ed.map = d.map;               // (custom) the map Edit spots reads and writes
+    browseTitle = d.title;
     document.title = (mode === "sim" ? "LiDAR Simulator · " : mode === "live" ? "LiDAR live · " : "LiDAR Viewer · ") + d.title;
     if (mode === "sim") $("app").textContent = "LiDAR Simulator";
     $("mapname").textContent = d.title; $("b-maps").title = d.title + ": choose another map (L)";
@@ -846,7 +869,7 @@ async function loadStored() {
   } catch (e) { failed = true; }
   heightRange(); counts(); buildGrid(); if (!fitted) fit();
   if (mapsData) renderMaps();   // the list may have loaded first: it shows "back to live" only when browsing
-  if (!browsing) poll();
+  if (!browsing) poll(); else simPoll();
 }
 // --- the maps list: maps sorted by game, scan status, open one
 let mapsData = null, mapsGame = null, mapsTimer = null, mapsKey = "", expanded = null;
@@ -864,7 +887,8 @@ function renderMaps() {
   const focused = document.activeElement && document.activeElement.dataset.key, scroll = box.scrollTop;
   box.innerHTML = ""; tabs.innerHTML = "";
   if (!mapsData) { box.innerHTML = '<li class="empty">Cannot reach the mapper for the map list.</li>'; return; }
-  const liveMode = mapsData.mode !== "stored";
+  // (custom) a simulator with no map running has no live map: the last one stopped is a map like any other
+  const liveMode = mapsData.mode !== "stored" && !(simState && !simState.current);
   const cur = browseName || mapsData.live;
   if (!mapsGame) mapsGame = gameOf(cur);
   for (const [k, label] of GAMES) {      // MCC's own game logos (tools/map_art.py)
@@ -917,7 +941,7 @@ function renderMaps() {
     b.title = m.title;
     b.dataset.key = "m:" + m.name;
     if (m.name === cur) b.setAttribute("aria-current", "true");
-    b.onclick = () => pickMode && simState ? simulate(m) : openMap(m, isLive(m));
+    b.onclick = () => openMap(m, isLive(m));   // (custom) open it; its Simulate button (or the panel's) starts it
     const acts = document.createElement("span");
     acts.className = "macts";
     if (simState) {               // the simulator serves this view: simulate any map from here
@@ -970,6 +994,7 @@ function renderMaps() {
   box.scrollTop = scroll;
   if (focused) { const f = document.querySelector('[data-key="' + focused + '"]'); if (f) f.focus(); }
   $("backlive").hidden = !(browsing && liveMode);
+  $("backlive").textContent = simState ? "Back to the simulation" : "Back to the live scan";
 }
 async function removeScan(m) {     // the scan from matches first; a map with only a simulator scan: that one
   const src = m.scan ? "scan" : "sim", s = m[src];
@@ -1001,7 +1026,7 @@ function openMap(m, live) {
 }
 function showMaps(on) {
   if (!on) pickMode = false;
-  $("maps-pick").textContent = on && pickMode ? "Pick a map to simulate: click it. A map with Forge layouts lists its base map and each layout." : "";
+  $("maps-pick").textContent = on && simState ? "Click a map to open it: look at it and edit its spots, then simulate it from the Simulator panel. Simulate starts one at once. A map with Forge layouts lists its base map and each layout." : "";
   $("maps").classList.toggle("on", on); $("b-maps").setAttribute("aria-expanded", on);
   clearInterval(mapsTimer);
   if (on) { loadMaps(); mapsTimer = setInterval(loadMaps, 5000); $("maps-close").focus(); }
@@ -1058,7 +1083,7 @@ async function poll() {
   else if (offline && simState) msg("The LiDAR Simulator has stopped. Open it again from the launcher.");
   else if (offline) msg("Cannot reach the mapper. It runs during a LiDAR match (BOTS panel &gt; LiDAR mode); after a match, open the <b>LiDAR Viewer</b> from the launcher to see the stored map.");
   else if (!gotData && mode === "stored") msg(ed.on ? "" : "No LiDAR data for this map yet.");
-  else if (simState && !simState.current && !simState.last) msg("Pick a map to simulate: <b>Pick a map</b> in the Simulator panel.");
+  else if (simState && !simState.current && !simState.last) msg("Open a map to simulate: <b>Open a map</b> in the Simulator panel.");
   else if (!gotData) msg("Waiting for the bots. They start mapping a few seconds after the match begins.");
   else msg("");
   $("help").textContent = offline && gotData ? "Mapper stopped (match over?): showing what it recorded. Drag to turn · right-drag to move · wheel to zoom"

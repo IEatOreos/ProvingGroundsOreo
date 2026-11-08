@@ -2614,6 +2614,11 @@ def serve(hub, port=PORT):
                     d["sim"] = ctl.state()
                     hub.last_seen = time.time()
                 s.send(json.dumps(d).encode(), "application/json")
+            elif u.path == "/sim" and getattr(hub, "control", None) is not None:
+                # (custom) the simulator's state alone, for a view browsing another map: its panel stays, and the
+                # simulator, which closes 90 s after its window stops asking, knows the window is still open
+                hub.last_seen = time.time()
+                s.answer(200, hub.control.state())
             elif u.path in ("/spots", "/spots/floor"):   # (custom) Edit spots: the spots bots use (tools/spots.py)
                 import spots
                 s.answer(*spots.handle("GET", u.path, (q.get("name") or [""])[0]))

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### LiDAR Simulator: open a map, edit it, then choose to simulate it; no more stuck panel after Stop and save, 2026-11-08
+
+The owner: "when pressing save and stop. I cannot select another map to simulate. Itll just let me pull up the heatmap for it, but itll be stuck saying the other map is still live. Allow me to open a map without simulating it, with ability to still edit it. Then choose if I want to simulate or not."
+
+- Cause (`tools/lidar_view.html`): a map opened from the list is shown as a stored map, and that page stopped asking the simulator anything (`poll` ran only for the live view). So on it:
+  - the Simulator panel and the list's Simulate buttons were gone;
+  - the list still called the stopped map LIVE (its hub stays the window's live one);
+  - the simulator, which closes 90 s after its window stops asking (`lidar_sim.main` `last_seen`), shut down while the map was open.
+- Fix:
+  - `tools/lidar.py serve`: new `GET /sim`, the simulator's state alone, which also refreshes `last_seen`. The LiDAR Viewer has no simulator: 404.
+  - The page polls `/sim` every second while a map is open in the simulator's window. Its panel stays and says "<map> is open: simulate it, or open another map", with a **Simulate <map>** button ("... instead" while another map runs, after the existing confirm). Starting it switches the page to the live simulation.
+  - "Pick a map" is now **Open a map**: clicking a map opens it, to look at and edit its spots. The list's Simulate button still starts one at once.
+  - With no map running, no map is LIVE in the list, and the last one stopped opens like any other. "Back to the live scan" reads "Back to the simulation" in the simulator. "Click the map" (spots for the running map) is off on a map opened beside it.
+- Validation: in the browser with the simulator: Rat's Nest simulated, Stop and save, Open a map > Construct opened with the panel and Simulate Construct; Edit spots loaded its spots; the simulator was still up after 100 s on that page; Simulate Construct started it and switched to the live view; opening Rat's Nest while Construct ran offered "Simulate Rat's Nest instead", "Back to the simulation" and Construct alone LIVE. Test files removed. New test in `tools/test_lidar_mappers.py` (`/sim` answers and refreshes `last_seen`; 404 in the Viewer). All 429 regression tests pass; `lidar.py --selftest` passes.
+
 ### Red and Blue patrol tools in Edit spots; the LiDAR Simulator maps ground, air or both, 2026-11-08
 
 The owner: "Add a functional Red patrol (red only) and a Blue patrol (blue only) Marker ... Also if possible add it to where we can choose if they bots are all mapping the ground or all mapping the air or both."

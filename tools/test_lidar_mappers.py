@@ -26,6 +26,43 @@ class CrewTests(unittest.TestCase):
         self.assertEqual((c.state()["mappers"], c.state()["run_mappers"]), ("ground", "air"))
 
 
+class SimStateTests(unittest.TestCase):
+    """A map opened in the simulator's window asks GET /sim: the panel's state, and the simulator (which closes 90 s
+    after its window stops asking) sees the window is open. The LiDAR Viewer has no simulator: 404."""
+
+    def test_sim_state_keeps_the_simulator_open(self):
+        import json
+        import tempfile
+        import time
+        import urllib.error
+        import urllib.request
+        from lidar import Hub, Recorder, serve
+        tmp = tempfile.mkdtemp(prefix="simstate_")
+        sw = lidar_sim.Switch()
+        sw.control = lidar_sim.Control(["h3_armory"])
+        sw.current = Hub(Recorder("h3_armory", count_run=False, path=os.path.join(tmp, "idle.json")), "sim")
+        sw.last_seen = 0.0
+        srv = serve(sw, 8873)
+        self.assertIsNotNone(srv)
+        try:
+            d = json.loads(urllib.request.urlopen("http://127.0.0.1:8873/sim", timeout=5).read())
+            self.assertIsNone(d["current"])
+            self.assertEqual(d["mappers"], "both")
+            self.assertGreater(sw.last_seen, time.time() - 5)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        view = Hub(Recorder("h3_armory", count_run=False, path=os.path.join(tmp, "idle2.json")), "stored")
+        srv = serve(view, 8874)
+        try:
+            with self.assertRaises(urllib.error.HTTPError) as e:
+                urllib.request.urlopen("http://127.0.0.1:8874/sim", timeout=5)
+            self.assertEqual(e.exception.code, 404)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+
+
 @unittest.skipUnless(os.path.exists(os.path.join(lidar_sim.ROOT, "maps", "h3_armory", "heightmap.npz")), "map data not here")
 class SeedTests(unittest.TestCase):
     def test_air_only_has_air_to_fly(self):
