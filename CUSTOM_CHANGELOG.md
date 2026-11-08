@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Halo 4 Demon: rifles back on the head, torso-centered body point, dry-part switch, 2026-11-07
+
+- Owner's request: review each fight of his latest Adrift 1v1 on the new Halo 4 Demon code (`logs/trace_h4_wraparound_20261107-210807`, with its bug report at 126.4 s, "Find out why I won this gunfight"). The trace carries the new part fields and no Demon thruster charges or thrusts to cover, so it ran the current code.
+- 18 fights: he died 8 times and the Demon 9. Both fired the BR at its full rate (bursts 0.33-0.4 s apart; a kill in 1.2 s when every round lands). The fights turned on rounds landed:
+  - Body versus head, both Adrift games on this code (also 20261107-205747): firing at the body landed 1.44 and 1.52 BR rounds a second over 68 s and 53 s of firing, and only 0.40/s at close range on level ground. Firing at the head landed 5.64 and 4.93/s, against a BR best of about 7.5. The body-first rule of the previous entry was wrong for rifles.
+  - Body point: Halo 4's place (+0x40) sits a fixed 0.045 u ahead and 0.054 u right of the model's base in the player's aim frame, across all 1,626 poses of `logs/h4_bot_aim_probe_2026-11-06`. The body point was aimed at the place, not at the torso.
+  - Fight 8 (the bug report, 118.2-120.0 s): he dropped off a ledge to 4.4 u and nearly stood still. The Demon's view stayed within about 1° of his body and fired a burst every 0.4 s, but only 1-2 of each burst's 3 rounds landed; all 3 of his landed every time.
+  - Fight 17 (236.8-239.3 s): from a ledge 1.3 u above him at 4.3 u, the head burst landed 3 of 3. Then 20 presses at the body over 1.4 s did no damage while he stood almost still. The level data called the body line clear; the ledge lip took the rounds.
+  - Slow starts (fights 1, 3, 9, 16): see-through cover, ledge lips and his own out-of-sight hits. These are geometry, not aim.
+- Halo 4 Demon only:
+  - Rifles, pistols and snipers (`PRECISION`) aim at the head again; automatics and the shotgun aim at the body; a covered part still yields to the clear one.
+  - The body point is his place moved -0.015 u forward and 0.04 u left in his aim frame (`H4_BODY_FWD`, `H4_BODY_LEFT`), onto the torso between the model base and the head.
+  - New `Bot.h4_dry_part`: after 0.8 s of presses at one part with no drop in his shield or body (`H4_DRY_S`), while the other part's line is clear, it fires at the other part for 1.5 s (`H4_FLIP_S`; note "part dry: the chest / head"). A hit, a new target or a new part restarts the clock.
+- Unchanged: the real-height sight, the view lock and lead, the tapped trigger, the thruster rules, Reach Demon, Halo 4 Legendary and the other tiers.
+- Validation: `tools/test_h4_demon.py`, 18 tests (part by weapon at any shield; the torso point in his aim frame at four facings; head taps; a covered head takes the body; the dry switch at 0.8 s holding the body afterwards; hits keep the part; no switch onto a covered part; and the earlier sight, lock and cadence tests). All 245 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Demon uses no thruster in gunfights outside Infection, 2026-11-07
 
 - Owner's requests: remove the Demon's thruster charge during gunfights in every mode except Infection, then its thrust to cover as well. In his Warhouse game (`logs/trace_h4_ca_warhouse_20261107-195112`) Demons thrust in fights for two reasons: "dash in to close" 8 times (the charge: 3-6.5 u from the man, with a close-range gun or his shield down) and "thruster to cover" 10 times (shield under 0.3 and shot in the last 0.8 s; once more on a retreat).
