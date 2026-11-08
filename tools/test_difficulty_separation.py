@@ -115,8 +115,10 @@ class DifficultySeparationTests(unittest.TestCase):
             if any(k.arg=='origin' for k in n.keywords):
                 self.assertTrue(any(k.arg=='protected' for k in n.keywords))
         head=[n for n in calls if any(k.arg=='target_point' for k in n.keywords)]
-        self.assertEqual(len(head),1)
-        self.assertTrue(any(k.arg=='protected' for k in head[0].keywords))
+        # the fight's, and (custom, Nov 7) Halo 4's real points from a gun seat and an armed driver's seat
+        self.assertEqual(len(head),3)
+        for n in head:
+            self.assertTrue(any(k.arg=='protected' for k in n.keywords))
 
 
 if __name__=='__main__':unittest.main()

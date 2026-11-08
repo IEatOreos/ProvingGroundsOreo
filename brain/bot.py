@@ -553,8 +553,13 @@ PART_DRY_S, PART_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without
 # Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
 # our live view, led like a man on foot, both parts his head (his body sits in the vehicle), and no shot where the round
 # would go through the vehicle first (vehicles.hull_blocks). His Gore Valley CTF: Demons spent 44% of their on-foot fight
-# time at riders and did a quarter of their on-foot damage rate there; Halo 4's place for a seated man is 0.17 u over his
-# head, so the generic aim (place + 0.35-0.62) went half a unit over every rider
+# time at riders and did a quarter of their on-foot damage rate there. The snapshot gives a rider his vehicle's place
+# (tools/live_bots.py), so the generic aim (that place + 0.35 / 0.62, from an eye 0.4 u over the real view) put a chest
+# shot into the vehicle's body and a head shot 0.22 u over its origin: under a passenger's head (0.43) or a gunner's
+# (0.49-0.68). Every tier: h4_aim_point / h4_origin
+H4_RIDER_HEAD = 0.24     # u: a rider's head over his vehicle's origin when his seated head is not read (the Warthog driver)
+H4_RIDER_CHEST = 0.12    # u: a rider's upper chest under his head (over the Warthog's sill, 0.06)
+H4_VIEW_OVER_PLACE = 0.22   # u: on foot, the live view point over the place (its base + 0.60, the place base + 0.38)
 
 
 def lead_ray(me, target, ray):
@@ -594,6 +599,53 @@ def h4_wants_head(me, target):
     """The head for rifles, pistols and snipers (it landed 3-4 times the rounds the body did); the body for automatics
     and the shotgun. A rider: his head with any gun."""
     return me.weapon in PRECISION or target.vehicle not in (None, -1)
+
+
+# the guns that go at a rider's vehicle, not at him: those that kill vehicles, splash, and the gun Warthogs' (seat_gun)
+H4_BODY_GUNS = VEHICLE_KILLERS | SPLASH | {"gauss", "rocket_hog"}
+
+
+def h4_vehicle_of(snap, p):
+    return next((x for x in getattr(snap, "vehicles", ()) or () if x.get("handle") == p.vehicle), None) \
+        if p is not None and p.vehicle not in (None, -1) else None
+
+
+def h4_aim_point(target, snap, gun, head, me=None):
+    """Halo 4, every tier: the real point a shot at this man goes to, no height to add (Aim.step target_point), or
+    None. A rider: his seated head (brain/live.py h4_seated_head; else his vehicle's origin + H4_RIDER_HEAD) or the upper
+    chest under it; a gun that kills vehicles or splashes (H4_BODY_GUNS): his vehicle's body, its origin (a tank's rear
+    from behind its beam, as weak_point). A man on foot: his live head or torso (h4_chest), else his place's own
+    heights (the view's)."""
+    if target is None:
+        return None
+    if target.vehicle not in (None, -1):
+        v = h4_vehicle_of(snap, target)
+        if gun in H4_BODY_GUNS:
+            if v is None:
+                return None
+            p, f = vpos(v), v.get("fwd")
+            if (me is not None and f and math.hypot(f[0], f[1]) > 0.1 and vehicles.kind_of(v["kind"]) in vehicles.TANKS
+                    and f[0] * (me.pos.x - p.x) + f[1] * (me.pos.y - p.y) < 0):
+                n = math.hypot(f[0], f[1])
+                return Vec(p.x - f[0] / n * 0.8, p.y - f[1] / n * 0.8, p.z)     # (behind its beam: the hatch)
+            return p
+        if target.head_pos is not None and getattr(target, "view_pos", None) is None:
+            hp = target.head_pos
+        else:
+            hp = (vpos(v) if v is not None else target.pos) + Vec(0, 0, H4_RIDER_HEAD)
+        return hp if head else hp - Vec(0, 0, H4_RIDER_CHEST)
+    if head:
+        return target.head_pos if target.head_pos is not None else target.pos + Vec(0, 0, H4_VIEW_OVER_PLACE)
+    return h4_chest(target) if target.head_pos is not None else target.pos + Vec(0, 0, H4_VIEW_OVER_PLACE - H4_CHEST_DROP)
+
+
+def h4_origin(me, snap, seat=None):
+    """Halo 4: where our own shot leaves, the real point: on foot our live view (else our place + H4_VIEW_OVER_PLACE);
+    seated, the seat's view (vehicles.h4_seat_view); None where unknown (the gunner's pivot is its own)."""
+    if me.vehicle in (None, -1):
+        return me.view_pos if getattr(me, "view_pos", None) is not None else me.pos + Vec(0, 0, H4_VIEW_OVER_PLACE)
+    v = h4_vehicle_of(snap, me)
+    return vehicles.h4_seat_view(v, seat) if v is not None and seat else None
 
 
 def rider_hull_clear(snap, target, ray):
@@ -3687,8 +3739,24 @@ class Bot:
                 origin = me.turret_origin if gunner else None
                 if origin is None and h is not None:
                     origin = me.pos + Vec(0, 0, h)
+                tp = None
+                if s.game == "h4" and v is not None:
+                    # (custom: Halo 4, every tier on a gun or a passenger seat: the real point on him, a rider's head or
+                    # chest or his vehicle's body for a gun Warthog's cannon, and the passenger's own eye; the gunner's
+                    # pivot as before. h4_aim_point / h4_origin)
+                    seat_gun = vehicles.seat_gun(vehicles.kind_of(v["kind"]), "gunner") if gunner else me.weapon
+                    tp = h4_aim_point(snap.player(tid), snap, seat_gun if seat_gun in H4_BODY_GUNS else (gun or me.weapon),
+                                      False, me)
+                    if not gunner:
+                        origin = h4_origin(me, snap, "passenger")
+                        if origin is None:
+                            tp = None        # (a seat not captured, the Mongoose's: the generic pair, not one real end)
+                    elif origin is None:
+                        tp = None
+                    if tp is not None:
+                        aim_at = tp
                 act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=gun,
-                                                origin=origin,
+                                                origin=origin, target_point=tp,
                                                 crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
                 # a mounted gun is held down while it tracks, as people spray a turret: 2.5 times the hand gun's window,
                 # 4 times once firing (live: a Falcon gunner 0.4 deg off a man 16 u away fired on 34% of its ticks by
@@ -3877,8 +3945,16 @@ class Bot:
             aim_at = aim_at + Vec(0.0, 0.0, (b.pos - me.pos).flat() * math.tan(arc))
             foe = snap.player(tid)
             chest_shot = scorpion and foe is not None and foe.vehicle in (None, -1)
+            origin, tp = (me.pos + Vec(0.0, 0.0, cam) if cam else None), None
+            if s.game == "h4" and not cam and v is not None:
+                # (custom: Halo 4, every tier at the wheel of a gun (a Ghost): from the seat's view, the vehicle's camera
+                # point, to the real point on him (h4_aim_point); a tank keeps its camera view (vehicles.DRIVER_VIEW))
+                view = h4_origin(me, snap, "driver")
+                tp = h4_aim_point(foe, snap, st.get("gun"), False, me) if view is not None else None
+                if tp is not None:
+                    origin, aim_at = view, tp
             act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=st.get("gun"),
-                                            origin=me.pos + Vec(0.0, 0.0, cam) if cam else None,
+                                            origin=origin, target_point=tp,
                                             crouched=crouched(foe), protected=profiles.fixed_high(s.p),
                                             splash_at_feet=not chest_shot)
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
@@ -4652,6 +4728,13 @@ class Bot:
         elif direct_fire:
             # (Reach Demon: led one tick, lead_ray; Legendary's protected head point stays as it was)
             ray = lead_ray(me, target, head_solution(me, target) if head else chest_solution(me, target))
+        if (ray is None and s.game == "h4" and target is not None and target.vehicle not in (None, -1)
+                and me.vehicle in (None, -1)):
+            # (custom: Halo 4, every tier on foot at a rider: from our real view to his real head or chest, or to his
+            # vehicle's body with a gun that kills vehicles; the tier's own error, lead and pace stay. h4_aim_point)
+            tp = h4_aim_point(target, snap, me.weapon, head, me)
+            if tp is not None:
+                ray = (h4_origin(me, snap), tp)
         act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, head, crouched=crouched(target),
                                      precise=percentage_sniper(s.p, me) and target is not None and target.vehicle == -1,
                                      origin=ray[0] if ray else None, target_point=ray[1] if ray else None,

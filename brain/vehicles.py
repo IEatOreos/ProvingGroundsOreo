@@ -506,6 +506,34 @@ HULL_KIND = {"warthog": "warthog", "rwarthog": "warthog", "gauss": "warthog", "t
              "mongoose": "mongoose", "gungoose": "mongoose", "ghost": "ghost"}
 
 
+# Halo 4: a seated man's own view point (+0xD50, the seat capture's medians) in the vehicle's frame, where his shots are
+# aimed from: a driver's is the vehicle's camera point at its origin, the Warthog passenger's his first-person eye. The
+# gunner's is the chaingun's pivot (h4_warthog_gun_origin)
+H4_SEAT_VIEW = {("warthog", "driver"): (0.017, -0.015, 0.007), ("warthog", "passenger"): (0.128, -0.247, 0.428),
+                ("mongoose", "driver"): (0.055, 0.002, -0.012), ("ghost", "driver"): (-0.003, -0.001, 0.003)}
+
+
+def frame_point(v, p):
+    """The world point of p (forward, left, up) in vehicle v's frame, or None without a sane orientation read."""
+    f, u = v.get("fwd"), v.get("up")
+    if not f or not u:
+        return None
+    left = (u[1] * f[2] - u[2] * f[1], u[2] * f[0] - u[0] * f[2], u[0] * f[1] - u[1] * f[0])
+    n = math.sqrt(sum(c * c for c in left))
+    if not 0.5 < n < 1.5:
+        return None
+    left = tuple(c / n for c in left)
+    o = v["pos"]
+    o = (o.x, o.y, o.z) if hasattr(o, "x") else o
+    return Vec(*(o[i] + p[0] * f[i] + p[1] * left[i] + p[2] * u[i] for i in range(3)))
+
+
+def h4_seat_view(v, seat):
+    """Halo 4: where a man in this seat of v aims from (H4_SEAT_VIEW), or None (a seat not captured, the gunner's)."""
+    p = H4_SEAT_VIEW.get((HULL_KIND.get(kind_of(v.get("kind")), ""), seat))
+    return frame_point(v, p) if p is not None else None
+
+
 def hull_blocks(v, a, b, spare=0.06):
     """Whether the segment a -> b (a shot from our view to a rider's head) passes through vehicle v's body (HULLS), its
     last spare u (the head itself) left out. False for a vehicle with no hull here or no orientation read."""
