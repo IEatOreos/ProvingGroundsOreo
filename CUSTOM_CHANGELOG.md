@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.2.2-custom.9 — Halo 4 Demon and vehicle aim, Demon driving, Halo 4 Scorpion, 2026-11-08
+
+- Covers the 16 commits since 0.2.2-custom.8 (fe2dd9f), none of them on GitHub yet, and the merge of custom.8 (ef4486d). Also carried: e7d0a39, the local original of custom.8's Slayer anchor change. GitHub has it as the cherry-pick fe2dd9f, so the code is the same; it keeps the commit's identity. Each entry below gives its own behavior and validation.
+- Halo 4 Demon on foot: real sight heights from its live view, rifles at the head and automatics at the torso, the view locked on the part and led one tick, a tapped trigger and a dry-part switch. No thruster charge or thrust to cover in gunfights outside Infection. It engages a man in view over errands, and fights on the way to a gun and along an objective run. Reach Demon gets the one-tick lead and the dry-part switch. A Demon glances at a close radar dot behind it.
+- Vehicles: Demons do not drive Warthogs or Mongooses, and Normal and Heroic are sent to drive them first. In Halo 4, every tier's shots at Warthogs and riders go to the real point (seated head, upper chest or the vehicle's body), from the Warthog gunner's pivot (8baecbe), the passenger's eye or the Ghost's camera. Halo 4 Demon aims at riders' heads when the shot clears the vehicle's hull. The Halo 4 Scorpion gets Reach's tank fix for every fixed tier.
+- Maps and tools: teleporters only in the gametypes their labels name (Gore Valley's stuck pad; also Canyon, H2A Warlock and Ascension); Gore Valley's "Red rockets" patrol spot and owner power position; `tools/h4_seat_capture.py`, the seat capture the rider aim is built on.
+- Validation at the candidate: all 308 regression tests pass. In game, the owner reported Halo 4 Demons playing much better in his 1v1s after the Halo 4 Demon aim and thruster changes (through 909c67d). Everything else here is untested in a game, including all the vehicle, rider, Scorpion, teleporter and fight-on-the-way changes. The bot process must be restarted to pick them up.
+
 ### Halo 4 Scorpion: Reach's tank fix for every fixed tier, 2026-11-08
 
 - The owner: the Halo 4 Scorpion "has the same issue the Reach scorpion had": the driver's turn speed, and the rest of the Reach fix.
@@ -14,11 +22,6 @@
 - Validation:
   - `tools/test_h4_scorpion.py`, 9 tests: every fixed Halo 4 tier is capped, Scaling and a Ghost are not; Reach is unchanged (Heroic and Scaling uncapped, Legendary and Demon capped); the turn is held to 90 deg/s, the profile's own turn otherwise; the chest point at a man on foot, the vehicle aim at a rider; the cannon holds until settled, close in too; and Easy still fires while driving.
   - All 308 regression tests pass. Gameplay is untested. The bot process must be restarted.
-
-### Slayer anchor priority and paired posts, 2026-11-08
-
-- The Team Director can assign up to two anchors per Slayer role pass, with each assigned to a separate nearby post. Fixed Demon bots get first pick regardless of personality, followed by Campers, Snipers, and other eligible bots. Distance and current role break ties within each priority group. The aggressive Slayer plan still sends hunters toward the fight.
-- A focused director check verified the priority order, two Demon anchors, separate posts, the single-bot fallback, and the Slayer posture and mode rules. All 299 regression tests passed. Gameplay validation needs a fresh bot process.
 
 ### Teleporters by gametype; Gore Valley's stuck pad, patrol area and hot spot, 2026-11-08
 
@@ -210,6 +213,16 @@
 - Not changed: DMR accuracy. Demon DMR shots landed less often than Legendary's on every Reach trace checked, before and after Codex's exposed-part fire commit. Demon: Headlong 68%, Settlement 60%, Boneyard 57%, Forge World 59% / 55% / 48% (Rasu). Legendary: 61-70%; Heroic and Normal 49-65%. The trace explains none of the gap: not view turn on the shot tick (under 1°: 48.5% in Rasu), not zoom, not the target's speed or jumping, not bloom (first shots miss most, for both tiers). The final DMR head snap is the protected Legendary/Demon precision path, so it was left alone. A controlled check in game is the next step: the owner standing still at 20 u from one Demon and one Legendary, counting hits. Hit detection here is the shooter's own read of the target's shield and body within 0.35 s, so other shooters and regen add noise.
 - Validation: 6 new tests in `tools/test_shoot_back.py` (fights over a gun on sight; range and Demon-only; avoid; the fetch commit wins; anti-vehicle hunt counts and objective only in Slayer; a radar hunt is not an errand). All 217 regression tests pass. Gameplay is untested. The bot process must be restarted.
 
+## 0.2.2-custom.8 — Slayer anchors, 2026-11-08
+
+- The Team Director can assign up to two Slayer anchors to separate nearby posts. It picks fixed Demon bots first, then Campers, then Snipers, then other eligible bots. Distance and current role break ties within each group.
+- Verified the assignment logic offline. The isolated source suite passed 205 tests and skipped six that need local map data. The change needs a fresh bot process and a live match for gameplay validation.
+
+### Slayer anchor priority and paired posts, 2026-11-08
+
+- The Team Director can assign up to two anchors per Slayer role pass, with each assigned to a separate nearby post. Fixed Demon bots get first pick regardless of personality, followed by Campers, Snipers, and other eligible bots. Distance and current role break ties within each priority group. The aggressive Slayer plan still sends hunters toward the fight.
+- A focused director check verified the priority order, two Demon anchors, separate posts, the single-bot fallback, and the Slayer posture and mode rules. All 299 regression tests passed. Gameplay validation needs a fresh bot process.
+
 ### Upstream 0.2.2-s181 build 20261107-1530 merged, 2026-11-07
 
 - The owner ran his friend's installer over the custom.7 install. The installer reset 14 of our customized files to s181, overwrote 50 that his update changed, and deleted 26 custom-only files (`brain/anticipate.py`, `tools/owner_profile.py`, 20 custom tests, 4 docs). Before the install, a full verified backup was made: `F:\Proving Grounds Backups\Project Proving Grounds_2026-11-07_193218`.
@@ -221,11 +234,6 @@
 - Native: the launcher loads the newest `native/bin/botcore*.dll`, and his installer's `botcore.dll` (his source, without our Demon tier and panel) had become newest. `native\build.bat demon` rebuilt `botcore_demon.dll` and `inject.exe` from the merged source (his h4f/film/overlay/shared changes and ours). The build had no errors; `panel_art.py` failed after it as before (PIL missing on PATH Python), which does not affect the DLL. `ppg_window.exe` is his build (we do not change `ppg_window.cpp`).
 - Local data: the learned map files, `user/`, `tools/fixtures/` and all logs and bug reports are unchanged from the backup. Only his `maps/_shapes/*.json` and `unins000.dat` changed (his).
 - Validation: all 211 regression tests pass on the merge, and the conflicted modules compile. Gameplay is untested, including his new features with our changes. MCC must load the new DLL: restart the launcher.
-
-## 0.2.2-custom.8 — Slayer anchors, 2026-11-08
-
-- The Team Director can assign up to two Slayer anchors to separate nearby posts. It picks fixed Demon bots first, then Campers, then Snipers, then other eligible bots. Distance and current role break ties within each group.
-- Verified the assignment logic offline. The isolated source suite passed 205 tests and skipped six that need local map data. The change needs a fresh bot process and a live match for gameplay validation.
 
 ## 0.2.2-custom.7 — Demon awareness and fights, vehicle wall guard, 2026-11-07
 
