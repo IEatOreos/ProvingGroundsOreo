@@ -44,6 +44,11 @@ TAG_ALIAS = {"sniper_rifle": "sniper", "rocket_launcher": "rockets", "energy_swo
              "storm_rifle": "plasma_rifle",          # ponytail: the Elite plasma rifle's successor, same role
              # (custom, Nov 8: Halo 4's live tags, Redoubt's tag names; the map exports call them as the brain does)
              "forerunner_incineration_launcher": "incineration_cannon", "forerunner_sniper_rifle": "binary_rifle",
+             # ... and its loadout guns by the names the brain's tables use (bot.py PRECISION, AUTO, CHARGE, ranks):
+             # they read storm_forerunner_rifle, storm_stasis_pistol, storm_forerunner_smg and storm_assault_carbine,
+             # so the Light Rifle was no precision rifle to anyone (no Demon head lock) and the Boltshot no charge
+             "forerunner_rifle": "lightrifle", "stasis_pistol": "boltshot", "forerunner_smg": "suppressor",
+             "assault_carbine": "storm_rifle",
              "suppressor": "smg",                    # ponytail: Promethean full-auto, the SMG's role
              "new_flag": "flag", "skull": "ball", "oddball": "ball",   # the objectives in hand (Halo 4, H2A)
              # the infected's own swords (Halo 4 Flood's storm_flood_sword, H2A's h2a_energy_sword_infected): lunge
