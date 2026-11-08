@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Legendary and Demon go for power vehicles, over power weapons and gun seats, 2026-11-08
+
+- The owner, on the entry below: "No make Legendary or Demon go for power vehicles and prioritize a power vehicle over power weapons, and gunner seats."
+- Withdrawn: the Halo 4 band from 2074058 (`power_tiers`: rank only among bots within 10 u of the nearest). A power vehicle's driver is again picked by rank first in every game (`profiles.resource_priority`: Demon, Legendary, Heroic and Scaling, Normal), then by distance, within the director's 45 u reach (`CREW_REACH`). The decide fix from that entry stays: a called bot goes even with nothing else scored.
+- `brain/director.py` `crew_orders`, every game, for a power vehicle a Demon may drive (`power_kind`: taken for a job, `vehicles.taxi_ok`, and not a gun Warthog, which Normal and Heroic drive):
+  - A fixed Legendary or Demon on a power-weapon run is called to it. Before, a fetching Demon was left out of every vehicle job. Once it has the job, its run is dropped (`Bot.fetch`), and `power_runs` sends no fixed Legendary or Demon holding a power vehicle's job on another run.
+  - A fixed Legendary or Demon riding a gun or a passenger seat of another vehicle is called to it too (`vehicle_orders` passes them in: alive, not carrying, not a ferry or escort, not urgent). `Bot.drive`: a seated bot whose drive order is for another, empty vehicle gets out (Use held, as every get-out) and walks to it.
+  - Bot calls were already ordered vehicle jobs before gun calls in each role pass (`crew_orders` before the honk and gunner calls). The gunner calls skip a bot with a drive order (`gunner_available`).
+- Halo 4 handover (`power_handover`): only a teammate ranked as high takes the job from the one on its way, when within 15 u of the vehicle and 15 u or more nearer. A Legendary who respawns by it takes it from a Legendary 40 u off; a Heroic does not.
+- Validation: `tools/test_h4_power_vehicle.py`, now 11 tests. A called driver goes with nothing scored (Halo 4, Reach). A Legendary at 44.7 u is sent over a Heroic at 27.3 u (Halo 4, Reach), and a Demon at 40 u over a Normal at 10 u. A Legendary and a Demon on a rockets run are sent to a Wraith and their runs dropped; not for a gauss Warthog. A Legendary and a Demon in a Warthog's gun are called out to the Wraith; a Heroic is not. The handover goes to a Legendary or Demon by it, not to a Heroic, not to one hardly nearer, and not in Reach. `power_runs` gives the rockets to the Heroic, not the Legendary driving. A called gunner gets out with Use held. All 346 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Power vehicles: a called driver goes at once; Halo 4 sends the near one, 2026-11-08
 
 - The owner, on Redoubt's "Red team Wraith spawn" report: bots do not go straight to the Wraith off spawn as they do to other vehicles, and as a power vehicle the team leader should send them to it.

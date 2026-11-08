@@ -672,13 +672,18 @@ class Director:
             if (it["kind"] == "weapon" and it["value"] >= 0.8 and back > 0.0 and back - POWER_EARLY <= now < back + POWER_WAIT
                     and not any(dist(q, it["pos"]) < 1.5 for _, q in lying)):
                 due[i] = (it["name"], it["pos"], back + POWER_WAIT)
+        # (custom, Nov 8) a fixed Legendary or Demon with a power vehicle's job (crew_orders) is sent on no weapon run: the
+        # vehicle comes first
+        kinds = {v["handle"]: v["kind"] for v in snap.vehicles}
+        driving = {cb for h, (cb, _t) in getattr(s, "crews", {}).items()
+                   if h in kinds and s.power_kind(kinds[h]) and cb in s.bots and profiles.fixed_high(s.bots[cb].p)}
         for b in s.bots.values():
             f = getattr(b, "fetch", None)
             if f is None:
                 continue
             spawn = len(f) > 3 and f[3] is not None
             p = snap.player(b.id)
-            if now >= f[2] or (spawn and f[3] not in due) or (not spawn and not any(
+            if b.id in driving or now >= f[2] or (spawn and f[3] not in due) or (not spawn and not any(
                     n == f[1] and dist(q, f[0]) < 1.5 for n, q in lying)) or (
                     p is not None and b.pressing(p, snap) and not s.press_fetch_ok(p, f[0], snap)):
                 b.fetch = None
@@ -691,7 +696,7 @@ class Director:
             for b in s.bots.values():
                 p = snap.player(b.id)
                 if (p is None or not p.alive or p.has_flag or p.vehicle not in (None, -1) or b.p.teamwork <= 0
-                        or getattr(b, "fetch", None) is not None
+                        or getattr(b, "fetch", None) is not None or b.id in driving
                         or any(w in power for w in p.weapons) or p.weapon in power or b.urgent(p, snap)
                         or (timed and b.p.map_iq < 0.6)):
                     continue
@@ -982,8 +987,13 @@ class Director:
         # (Firefight: the person's escorts stay with him, no vehicle of their own; his empty gun still calls one, below.
         # Live Beachhead s172: 3175 of their order rows "drive", to Mongooses 20-40 u off, 724 escort)
         ff = snap.mode == "firefight"
+        # (custom, Nov 8) fixed Legendary and Demon riding a gun or a passenger seat: a power vehicle calls them out
+        seated = [b for b in alive if players[b.id] is not None and players[b.id].alive
+                  and players[b.id].vehicle not in (None, -1) and not players[b.id].has_flag
+                  and profiles.fixed_high(b.p) and getattr(b, "seat", None) in ("gunner", "passenger")
+                  and s.roles.get(b.id) not in ("ferry", "escort") and not b.urgent(players[b.id], snap)]
         s.crew_orders(now, snap, players, [b for b in foot if not ff or s.roles.get(b.id) != "escort"],
-                      [] if ff else busy)
+                      [] if ff else busy, [] if ff else seated)
         # A Demon takes an eligible power-vehicle job before an empty gun calls it.
         s.honk_orders(now, snap, alive, players)
         foot = [b for b in foot if s.roles.get(b.id) not in ("drive", "ride", "board") and s.gunner_available(b)]
@@ -1398,34 +1408,33 @@ class Director:
 
     CREW_REACH = 45.0      # u: how far a bot is sent on foot to drive a vehicle its team wants (crew_orders)
     POWER_R = 15.0         # u: a bot on an objective job takes a free power vehicle this near it (crew_orders)
-    # (custom, Nov 8; Halo 4) a power vehicle's driver by rank (profiles.resource_priority) only among the bots within
-    # POWER_TIER_BAND u of the nearest one sent; and a bot within POWER_R of it takes the job from one POWER_HANDOVER u or
-    # more farther. Redoubt 20261108-010650: its Wraith went to a Legendary 45 u off over a Heroic at 27 u, and the job
-    # stayed with him 20 s while teammates respawned by it (first driver 23-37 s after each spawn; Ghosts 5-20 s)
-    POWER_TIER_BAND, POWER_HANDOVER = 10.0, 15.0
-
-    def power_tiers(s, pairs):
-        """The pairs [(distance, bot, vehicle)] for one power vehicle whose bot is ranked: Halo 4, those within
-        POWER_TIER_BAND of the nearest; elsewhere all, as before."""
-        if not str(s.map.get("name", "")).startswith("h4_") or not pairs:
-            return pairs
-        d0 = min(x[0] for x in pairs)
-        return [x for x in pairs if x[0] <= d0 + s.POWER_TIER_BAND]
+    # (custom, Nov 8; Halo 4) a bot within POWER_R of an empty power vehicle, ranked as high as the one on its way
+    # (profiles.resource_priority), takes the job from it when POWER_HANDOVER u or more nearer: a Legendary who respawns by
+    # Redoubt's Wraith, while the one sent runs from 45 u (the job stayed his 20 s; first driver 23-37 s after each spawn)
+    POWER_HANDOVER = 15.0
 
     def power_handover(s, v, bid, players, pools, skip, now, may_drive):
-        """Halo 4: whether the power vehicle v bot bid is on its way to has a teammate of the pools (free and busy bots
-        on foot) within POWER_R of it, POWER_HANDOVER u or more nearer than bid: that one takes the job (crew_orders)."""
+        """Halo 4: whether the power vehicle v bot bid is on its way to has a teammate of the pools ranked as high, within
+        POWER_R of it and POWER_HANDOVER u or more nearer than bid: that one takes the job (crew_orders)."""
         from . import vehicles
-        if not str(s.map.get("name", "")).startswith("h4_") or vehicles.taxi_ok(v["kind"]) or players.get(bid) is None:
+        if (not str(s.map.get("name", "")).startswith("h4_") or vehicles.taxi_ok(v["kind"]) or players.get(bid) is None
+                or bid not in s.bots):
             return False
         vp = Vec(*v["pos"])
-        far = dist(players[bid].pos, vp)
+        far, rank = dist(players[bid].pos, vp), profiles.resource_priority(s.bots[bid].p)
         return any(c != bid and players.get(c) is not None and skip.get((c, v["handle"]), 0.0) <= now
-                   and may_drive(b, v) and dist(players[c].pos, vp) <= s.POWER_R
-                   and dist(players[c].pos, vp) + s.POWER_HANDOVER <= far
+                   and may_drive(b, v) and profiles.resource_priority(b.p) <= rank
+                   and dist(players[c].pos, vp) <= s.POWER_R and dist(players[c].pos, vp) + s.POWER_HANDOVER <= far
                    for pool in pools for c, b in pool.items())
 
-    def crew_orders(s, now, snap, players, foot, busy=()):
+    @staticmethod
+    def power_kind(kind):
+        """A power vehicle fixed Legendary and Demon are called to over weapon runs and gun seats (custom, Nov 8): one
+        taken for a job (vehicles.taxi_ok), a Demon may drive (no gun Warthog: Normal and Heroic drive those)."""
+        from . import vehicles
+        return not vehicles.taxi_ok(kind) and not vehicles.demon_no_drive(kind)
+
+    def crew_orders(s, now, snap, players, foot, busy=(), seated=()):
         """Vehicles picked by role. Roles in the order one anti-air, one anti-vehicle, one transport (CTF and Assault: the
         transport first; King and Territories: the anti-vehicle gun first), then every harasser: a role none of ours
         fills gets the empty vehicle of that role nearest a bot of ours on foot with no objective job (foot), within
@@ -1446,23 +1455,49 @@ class Director:
                  and vehicles.usable(v, now, duds)}
         free = {b.id: b for b in foot if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
         near = {b.id: b for b in busy if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
+        # (custom, Nov 8: the owner) a power vehicle comes before a power weapon and a gun seat for fixed Legendary and
+        # Demon: one on a weapon run (its run is dropped once it has the job), or riding a gun or a passenger seat (it
+        # gets out: Bot.drive), is called to one too, from CREW_REACH. They go first by rank (resource_priority)
+        power_pool = dict(free)
+        power_pool.update({b.id: b for b in foot if profiles.fixed_high(b.p)})
+        power_pool.update({b.id: b for b in seated if profiles.fixed_high(b.p) and players.get(b.id) is not None})
         mongoose_goals = {bid: (getattr(b, "drive_to", None) if b.order.role == "drive" else b.order.point)
                           for bid, b in free.items()}
         def may_drive(b, v):
             # (custom: no Demon at the wheel of a Warthog or a Mongoose, vehicles.DEMON_NO_DRIVE; Race laps excepted)
             return snap.mode == "race" or not (profiles.fixed_demon(b.p) and vehicles.demon_no_drive(v["kind"]))
 
+        def pool_for(v):
+            # who may be sent to v: a transport or a Ghost the free bots; a power vehicle the busy ones near it too, and
+            # (power_kind) fixed Legendary and Demon on a weapon run or in a seat of another vehicle
+            if vehicles.taxi_ok(v["kind"]):
+                return free
+            extra = power_pool if s.power_kind(v["kind"]) else free
+            return {**near, **{bid: b for bid, b in extra.items() if players[bid].vehicle != v["handle"]}}
+
+        def reach_of(bid, v):
+            return s.CREW_REACH if bid in free or (bid in power_pool and s.power_kind(v["kind"])) else s.POWER_R
+
+        def leave(b):
+            for pool in (free, near, power_pool):      # (the bot called this pass leaves every pool)
+                pool.pop(b.id, None)
+
+        def drop_run(b, v):
+            if s.power_kind(v["kind"]) and profiles.fixed_high(b.p):
+                b.fetch = None                         # (custom: its job is the power vehicle now, not the weapon run)
+
         for h, (bid, since) in list(crews.items()):
-            if (h in empty and (bid in free or bid in near) and now - since < 30.0
-                    and s.power_handover(empty[h], bid, players, (free, near), skip, now, may_drive)):
+            mine = h in empty and bid in pool_for(empty[h])
+            if mine and now - since < 30.0 and s.power_handover(empty[h], bid, players, (free, near), skip, now, may_drive):
                 del crews[h]                     # (custom: a nearer teammate takes it, below; no wait for the far one)
                 continue
-            if (h in empty and (bid in free or bid in near) and now - since < 30.0
+            if (mine and now - since < 30.0
                     and may_drive(s.bots[bid], empty[h])
                     and not (vehicles.kind_of(empty[h]["kind"]) == "mongoose"
                              and now < getattr(s.bots[bid], "vehicle_retry_at", 0.0))):
-                b, v = (free.pop(bid, None) or near.pop(bid)), empty.pop(h)
-                near.pop(bid, None)
+                b, v = pool_for(empty[h])[bid], empty.pop(h)
+                leave(b)
+                drop_run(b, v)
                 b.set_order(Order("drive", Vec(*v["pos"]), target=h), sure=True)   # (it took the job)
                 s.roles[bid] = "drive"
                 r = vehicles.roles_of(v["kind"])
@@ -1483,30 +1518,30 @@ class Director:
             while role == "harasser" or role not in filled:
                 pairs = [(dist(players[bid].pos, Vec(*v["pos"])), b, v) for v in empty.values()
                          if role in vehicles.roles_of(v["kind"])
-                         for bid, b in (free if vehicles.taxi_ok(v["kind"]) else {**near, **free}).items()
+                         for bid, b in pool_for(v).items()
                          if skip.get((bid, v["handle"]), 0.0) <= now and may_drive(b, v)
                          and (vehicles.kind_of(v["kind"]) != "mongoose" or (
                              now >= getattr(b, "vehicle_retry_at", 0.0) and mongoose_goals.get(bid) is not None
                              and Bot.trip_ok(v, players[bid], mongoose_goals[bid])
                              and (snap.mode == "race" or dist(players[bid].pos, mongoose_goals[bid]) > VEHICLE_TRIP)))
-                         and dist(players[bid].pos, Vec(*v["pos"])) <= (s.CREW_REACH if bid in free else s.POWER_R)]
+                         and dist(players[bid].pos, Vec(*v["pos"])) <= reach_of(bid, v)]
                 d, b, v = min(pairs, key=lambda x: x[0], default=(None, None, None))
                 if d is None or d > s.CREW_REACH:
                     break
                 if not vehicles.taxi_ok(v["kind"]):
-                    d, b, v = min(s.power_tiers([x for x in pairs if x[2]["handle"] == v["handle"]]),
+                    d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),
                                   key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
                 elif vehicles.demon_no_drive(v["kind"]) and snap.mode != "race":
                     # (custom: a Warthog or a Mongoose goes to a Normal or Heroic bot in reach first, then the nearest:
                     # profiles.driver_priority; the owner's ask Nov 7)
                     d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),
                                   key=lambda x: (profiles.driver_priority(x[1].p), x[0]))
-                free.pop(b.id, None)
-                near.pop(b.id, None)
+                leave(b)
                 b.set_order(Order("drive", Vec(*v["pos"]), target=v["handle"]))
                 if b.order.role != "drive":      # a rogue moment: it plays on its own this round
                     skip[(b.id, v["handle"])] = now + 10.0
                     continue
+                drop_run(b, v)
                 if vehicles.kind_of(v["kind"]) == "mongoose":
                     b.drive_to = mongoose_goals[b.id]
                 del empty[v["handle"]]
@@ -1531,11 +1566,12 @@ class Director:
                        key=lambda x: (order(x[1].p), x[0]), default=(None, None))
             if d is None or d > s.POWER_R:
                 continue
-            del near[b.id]
+            leave(b)
             b.set_order(Order("drive", vp, target=h))
             if b.order.role != "drive":
                 skip[(b.id, h)] = now + 10.0
                 continue
+            drop_run(b, v)
             del empty[h]
             crews[h] = (b.id, now)
             s.roles[b.id] = "drive"

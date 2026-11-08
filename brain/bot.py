@@ -3746,6 +3746,15 @@ class Bot:
                 act.action, act.fire = int(now * 6) % 2 == 0, False
                 act.forward = act.strafe = 0.0
                 return
+            if (s.order.role == "drive" and s.order.target not in (None, -1, me.vehicle)
+                    and any(x["handle"] == s.order.target and not x.get("occupied") for x in snap.vehicles)):
+                # (custom, Nov 8) a fixed Legendary or Demon on a gun or in a passenger seat called to drive an empty power
+                # vehicle (director.crew_orders): out, Use held as every get-out, then on foot to it (decide)
+                act.action, act.fire = True, False
+                act.forward = act.strafe = 0.0
+                s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
+                s.note("vehicle: out for the power vehicle")
+                return
             gunner, fire, aimed = s.seat == "gunner", False, False
             tid = s.crew_target(me, snap, v, seen, own=gunner)
             if tid is not None and (gunner or not me.has_flag):
