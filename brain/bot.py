@@ -162,6 +162,7 @@ FETCH_COMMIT_SCORE = 2.95                     # over a committed fight (2.6 + 0.
 # (custom) Bot.shoot_back: a man in view shooting a fixed Legendary / Demon is fought over its errands
 SHOT_BACK_OVER = ("item", "vehicle", "objective", "hold", "patrol")
 SHOT_BACK_R, SHOT_BACK_AIM, SHOT_BACK_MARGIN = 40.0, 0.25, 0.4   # u; rad off his view; over the errand (its 0.2 stick + rng)
+DEMON_ENGAGE_R = 30.0   # u: (custom) a man in view this near is fought by a Demon over its errands, not shot (shoot_back)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
 DEMON_STAND_R, DEMON_STAND_COVER = 6.0, 2.5   # u: a man this near, no retreat to cover farther than the second (stand_ground)
@@ -2478,30 +2479,54 @@ class Bot:
             if b is None or dist(me.pos, b.pos) > DRY_FIGHT_R:
                 scores[k] *= 0.3
 
-    def shoot_back(s, me, snap, scores, seen, hit_recent, regroup):
+    def shoot_back(s, me, snap, scores, seen, hit_recent, regroup, avoid=False):
         """(Custom) fixed Legendary and Demon on foot, shot in the last 2 s by a man it sees (his view on it): the fight
         with him over every errand (a gun, a seat, a post, a hold; SHOT_BACK_OVER), however close the gun it was sent
         for. A retreat to cover, a regroup and a hunt keep their scores. Live Forge World Nov 7: a Demon 2 u from the
         hammer it was sent for (2.95 + 0.2) walked on while the owner took its shield to 0.11 at 6 u (fight 1.76), and
-        one went for a Warthog to fetch a plasma pistol (2.4) under his fire at 10 u. Returns whether it lifted one."""
-        if not (hit_recent and seen and regroup is None and not me.has_flag and me.vehicle in (None, -1)
-                and profiles.fixed_high(s.p)):
+        one went for a Warthog to fetch a plasma pistol (2.4) under his fire at 10 u.
+        Demon also engages on sight, not shot: a man in view within DEMON_ENGAGE_R is fought over the same errands and
+        the anti-vehicle mission's walk or hunt (vehicle_mission), but not over the gun it was sent for a few steps off
+        (the Demon fetch commit, FETCH_COMMIT_SCORE), nor outside Slayer over its objective, nor when the team posture
+        says avoid. The owner's Rasu game, Nov 7: with a man in view within 30 u and not hit, Demons chose an item 26%
+        and a vehicle 10% of 13,187 decisions; HeadshotTV looked at him 6.6 s at 22 u (a plasma pistol for a vehicle 2.4,
+        that vehicle's hunt 2.3, a gun 1.85 + 0.2 kept, over the fight's 1.87) and fired only once he was shot.
+        Returns whether it lifted one."""
+        if not (seen and regroup is None and not me.has_flag and me.vehicle in (None, -1) and profiles.fixed_high(s.p)):
             return False
-        errands = [v for k, v in scores.items() if k[0] in SHOT_BACK_OVER]
-        if not errands:
+        eyes = profiles.fixed_demon(s.p) and not avoid
+        if not (hit_recent or eyes):
             return False
+        mission = set(getattr(s, "mission_keys", ()) or ())
+        fetch = getattr(s, "fetch", None)
+        commit = ("item", fetch[0]) if fetch is not None else None
+
+        def errand(k, v, sighted):
+            if k in mission:
+                return k[0] != "fight"   # (its crew in view is a fight already: threat() ranks them)
+            if k[0] not in SHOT_BACK_OVER:
+                return False
+            if sighted and k == commit and v >= FETCH_COMMIT_SCORE - 1e-6:
+                return False             # (the collaborator's commit: a Demon a few steps from its gun takes it first)
+            return not (sighted and k[0] == "objective" and snap.mode != "slayer")
         att = getattr(s.per, "attacker_id", None)
-        lifted = False
+        lifted = why = None
         for key in [k for k in scores if k[0] == "fight" and k[1] in seen]:
             e, b = snap.player(key[1]), s.per.beliefs.get(key[1])
-            if e is None or b is None or dist(me.pos, b.pos) > SHOT_BACK_R:
+            if e is None or b is None:
                 continue
-            if e.id == att or aims_at(e, me, SHOT_BACK_AIM):
-                scores[key] = max(scores[key], max(errands) + SHOT_BACK_MARGIN)
-                lifted = True
+            d = dist(me.pos, b.pos)
+            shot = hit_recent and d <= SHOT_BACK_R and (e.id == att or aims_at(e, me, SHOT_BACK_AIM))
+            sighted = not shot and eyes and d <= DEMON_ENGAGE_R
+            if not (shot or sighted):
+                continue
+            errands = [v for k, v in scores.items() if errand(k, v, sighted)]
+            if errands and max(errands) + SHOT_BACK_MARGIN > scores[key]:
+                scores[key] = max(errands) + SHOT_BACK_MARGIN
+                lifted, why = True, why or ("shot at: answering him" if shot else "in sight: engaging")
         if lifted:
-            s.note("shot at: answering him")
-        return lifted
+            s.note(why)
+        return bool(lifted)
 
     def decide(s, now, me, snap):
         seen = s.per.visible_enemies()
@@ -2742,7 +2767,7 @@ class Bot:
             for k in scores:
                 if k[0] in ("fight", "hunt", "item", "hold"):
                     scores[k] *= 0.3
-        shot_back = s.shoot_back(me, snap, scores, seen, hit_recent, regroup)
+        shot_back = s.shoot_back(me, snap, scores, seen, hit_recent, regroup, avoid)
         if not me.has_flag and scores:
             # a man in sight within CLOSE_FIGHT_R is fought whatever the post (live Spire Invasion: an attacker and a
             # defender walked 14 s side by side at 0.4 u to the same territory, each scoring its post 2.0 / 1.8 over

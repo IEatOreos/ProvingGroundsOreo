@@ -94,6 +94,56 @@ class ShootBackTests(unittest.TestCase):
         self.assertTrue(b.last_flags["hit"])
 
 
+class DemonEngageOnSightTests(unittest.TestCase):
+    """(Custom) the owner's Rasu reports, Nov 7 (logs/bug_reports/reach_forge_halo_20261107-191109): a Demon fights a
+    man in view within DEMON_ENGAGE_R over its errands without waiting to be shot (Bot.shoot_back)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from brain.maps import load_map
+        cls.map = load_map("reach_cex_headlong")
+
+    def lift(self, tier="demon", foe_d=22.0, scores=None, avoid=False, mode="slayer", hurt=False, mission=()):
+        t = ShootBackTests()
+        t.map = self.map
+        b, me, snap = t.scene(tier, gun_off=40.0, foe_d=foe_d, aiming=False, hurt=hurt)
+        snap.mode = mode
+        b.mission_keys = tuple(mission)
+        sc = dict(scores or {("item", Vec(1, 2, 3)): 2.4, ("fight", 1): 1.87})
+        ok = b.shoot_back(me, snap, sc, [1], hurt, None, avoid)
+        return ok, sc
+
+    def test_demon_fights_the_man_in_view_over_a_gun(self):
+        ok, sc = self.lift()
+        self.assertTrue(ok)
+        self.assertAlmostEqual(sc[("fight", 1)], 2.8)
+
+    def test_only_within_range_and_only_demon_unshot(self):
+        self.assertFalse(self.lift(foe_d=35.0)[0])
+        self.assertFalse(self.lift(tier="top")[0])          # Legendary keeps answering only when shot
+
+    def test_avoid_posture_and_regroup_kept(self):
+        self.assertFalse(self.lift(avoid=True)[0])
+
+    def test_the_gun_it_was_sent_for_close_by_still_wins(self):
+        from brain.bot import FETCH_COMMIT_SCORE
+        ok, sc = self.lift(scores={("item", GUN): FETCH_COMMIT_SCORE, ("fight", 1): 1.87})
+        self.assertFalse(ok)
+        self.assertEqual(sc[("fight", 1)], 1.87)
+
+    def test_anti_vehicle_hunt_counts_objective_only_in_slayer(self):
+        hunt = ("hunt", Vec(5, 5, 5))
+        ok, sc = self.lift(scores={hunt: 2.3, ("fight", 1): 1.87}, mission=[hunt])
+        self.assertTrue(ok)
+        self.assertAlmostEqual(sc[("fight", 1)], 2.7)
+        obj = ("objective", Vec(5, 5, 5))
+        self.assertFalse(self.lift(scores={obj: 2.0, ("fight", 1): 1.87}, mode="ctf")[0])
+        self.assertTrue(self.lift(scores={obj: 2.0, ("fight", 1): 1.87})[0])
+
+    def test_a_radar_hunt_is_not_an_errand(self):
+        self.assertFalse(self.lift(scores={("hunt", Vec(5, 5, 5)): 3.2, ("fight", 1): 1.87})[0])
+
+
 class EmptyMagSwitchTests(unittest.TestCase):
     """Bot.choose_weapon: the DMR's magazine out mid-fight goes to the rifle only where the rifle fires."""
 
