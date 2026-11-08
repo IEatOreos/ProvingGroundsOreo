@@ -166,6 +166,7 @@ DEMON_ENGAGE_R = 30.0   # u: (custom) a man in view this near: a Demon fights hi
                         # the errands it cannot fight on the way to (DEMON_SIGHT_OVER, shoot_back), not shot
 ON_WAY_KINDS = ("item", "hunt")          # walked on while fighting (Bot.on_way_target)
 ON_WAY_LAST = 1.5                        # u from the gun: the pickup's last steps, no fighting
+ON_WAY_OBJ_LAST = 3.0                    # u from an objective run's point (outside Slayer, Race): its own last steps
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -2545,15 +2546,24 @@ class Bot:
                 scores[k] *= 0.3
 
     def on_way_target(s, now, me, snap, kind, arg):
-        """(Custom) Demon on foot on its way to a gun or on a hunt (ON_WAY_KINDS) with a man in view within
+        """(Custom) Demon on foot on its way to a gun, on a hunt (ON_WAY_KINDS) or on an objective run outside Slayer
+        and Race (not carrying, not its last ON_WAY_OBJ_LAST onto the point) with a man in view within
         DEMON_ENGAGE_R: the man to fight while it walks on (act: fight's aim and trigger, the walk turned toward its
         goal, as a patrol does); None otherwise, or in the last steps onto a gun (the pickup's own presses). The owner's
         Rasu game, Nov 7: a Demon looked at him 6.6 s at 22 u on its way to a plasma pistol and a gun and never fired."""
-        if (kind not in ON_WAY_KINDS or not isinstance(arg, Vec) or not profiles.fixed_demon(s.p)
+        run = kind == "objective" and snap.mode not in ("slayer", "race")   # (owner: objective runs too, Nov 7)
+        if ((kind not in ON_WAY_KINDS and not run) or not isinstance(arg, Vec) or not profiles.fixed_demon(s.p)
                 or me.vehicle not in (None, -1) or me.has_flag or s.dry(me)):
             return None
         if kind == "item" and (me.pos - arg).flat() < ON_WAY_LAST:
             return None
+        if run:
+            # the last steps onto it are the objective's own (a stand, a zone, the ball's pickup, staying on a loose
+            # core; the flag and core takes run after any goal): fight's footwork there, not a walk to its middle
+            wo = getattr(s, "walk_onto", None)
+            if ((me.pos - arg).flat() < ON_WAY_OBJ_LAST or getattr(s, "stay_at", None) is not None
+                    or (wo is not None and dist(arg, wo) < 1.0)):
+                return None
         seen = [k for k in s.per.visible_enemies() if k in s.per.beliefs
                 and dist(me.pos, s.per.beliefs[k].pos) <= DEMON_ENGAGE_R]
         return s.pick_target(now, me, snap, seen) if seen else None

@@ -147,7 +147,7 @@ class FightOnTheWayTests(unittest.TestCase):
     """(Custom) Bot.on_way_target through think: a Demon walking to a gun with a man in view shoots him while it walks
     on to the gun (the patrol's way: fight's aim and trigger, the walk turned toward the goal)."""
 
-    def scene(self, tier="demon", gun=Vec(0, -20, 0), foe=Vec(15, 0, 0)):
+    def scene(self, tier="demon", gun=Vec(0, -20, 0), foe=Vec(15, 0, 0), kind="item", mode="slayer"):
         import math as m
         from test_demon_fire import Cover
 
@@ -161,13 +161,15 @@ class FightOnTheWayTests(unittest.TestCase):
         rng = random.Random(1)
         bot = __import__("brain.bot", fromlist=["Bot"]).Bot(0, 0, make_profile(tier, "rusher", rng), {"name": "reach_test"}, rng)
         bot._terrain = cover
-        bot.goal, bot.next_decide = ("item", gun), 99.0
+        bot.goal, bot.next_decide = (kind, gun), 99.0
         bot.per.recognized.add(1)
         for name in ("no_wall_jump", "edge_guard", "obstacle_guard", "unstuck"):
             setattr(bot, name, lambda *args: None)
+        bot.detour = lambda now, me, kind, p: p          # (no map zones or floor grid in this lane)
+        bot.no_floor_at = lambda *args, **kw: False
         me = PlayerState(0, 0, "bot", Vec(), weapon="dmr", weapons=["dmr"], mag=[15], ammo=[45])
         target = PlayerState(1, 1, "enemy", foe)
-        acts = [bot.think(1.0 + i / 30, 1 / 30, Snapshot(1.0 + i / 30, [me, target]), cover.sees,
+        acts = [bot.think(1.0 + i / 30, 1 / 30, Snapshot(1.0 + i / 30, [me, target], mode=mode), cover.sees,
                           lambda a, b, **kw: b, []) for i in range(12)]
         heading = lambda a: a.yaw + m.atan2(a.strafe, a.forward)
         return bot, me, target, acts, heading
@@ -186,6 +188,22 @@ class FightOnTheWayTests(unittest.TestCase):
     def test_far_man_and_legendary_walk_on_without_shooting(self):
         self.assertFalse(any(a.fire for a in self.scene(foe=Vec(40, 0, 0))[3]))
         self.assertFalse(any(a.fire for a in self.scene(tier="top")[3]))
+
+    def test_objective_run_outside_slayer_shoots_on_the_way(self):
+        import math as m
+        from brain.core import wrap
+        for mode in ("ctf", "invasion", "koth"):
+            with self.subTest(mode=mode):
+                bot, me, target, acts, heading = self.scene(kind="objective", mode=mode)
+                self.assertTrue(any(a.fire for a in acts))
+                self.assertLess(abs(wrap(heading(acts[-1]) - (-m.pi / 2))), 0.6)      # still running the objective
+                self.assertEqual(bot.goal[0], "objective")
+
+    def test_objective_last_steps_slayer_and_race_unchanged(self):
+        self.assertFalse(any(a.fire for a in self.scene(kind="objective", mode="ctf", gun=Vec(0, -2.0, 0))[3]))
+        self.assertFalse(any(a.fire for a in self.scene(kind="objective", mode="slayer")[3]))
+        self.assertFalse(any(a.fire for a in self.scene(kind="objective", mode="race")[3]))
+        self.assertFalse(any(a.fire for a in self.scene(kind="objective", mode="ctf", tier="top")[3]))
 
     def test_last_steps_onto_the_gun_are_the_pickup(self):
         bot, me, target, acts, _ = self.scene(gun=Vec(0, -1.0, 0))

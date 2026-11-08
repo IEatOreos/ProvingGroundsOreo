@@ -23,6 +23,12 @@
 - Unchanged: Reach Demon's exposed-part fire, Halo 4 Legendary and the lower tiers, Scaling, H2A, vehicles and the protected Legendary/Demon head and turret precision outside this Halo 4 path.
 - Validation: `tools/test_h4_demon.py`, 15 new tests: the gate; part choice and lead; no sight over cover with the generic pair open; the real chest line; Legendary's generic chest; tapping on alternate ticks on the body; head at no shield; head when the body is covered; no line, no shot and no lock; an automatic held; pacing past 30 u; the led lock keeping the walk; the grenade's own aim; and no lock for Reach Demon or H4 Legendary. All 235 regression tests pass. Gameplay is untested. Not verified: Halo 4's true refire times (no H4 ammo reader, so tapped presses the gun cannot take yet are not measured), whether the read-to-shot lead is one tick, and the chest offset on every pose. The bot process must be restarted.
 
+### Demon fights on the way on objective runs too, 2026-11-07
+
+- Owner's request: extend fight-on-the-way to objective runs. `Bot.on_way_target` now also covers an "objective" goal outside Slayer (Slayer posts still turn into a full fight) and Race (laps). Covered: CTF runs, Invasion pushes, Oddball, King of the Hill, Territories, Assault and so on. A Demon on foot running the objective with a man in view within 30 u shoots him and keeps running.
+- The objective's own last steps are left alone: no fighting on the way within 3 u of the point (`ON_WAY_OBJ_LAST`), while standing on a loose core or flag (`stay_at`), or on its exact steps onto an objective (`walk_onto`). Carriers are excluded as before. Flag, core and bomb pickups run after any goal, so they are unaffected; the ball pickup is within the 3 u.
+- Validation: 2 new tests in `tools/test_shoot_back.py`, 21 there in all. Through `think`: CTF, Invasion and KOTH runs fire on the way and keep heading to the point. Within 3 u, in Slayer, in Race and for a Legendary: no fire. All 242 regression tests pass, including the collaborator's 3 Demon commits (4d23bac, f8b68b7, 12f28c2) that landed in the meantime. Gameplay is untested. The bot process must be restarted.
+
 ### Demon fights on the way to a gun, 2026-11-07
 
 - Owner's request: rather than dropping its errand, a Demon should keep going to the gun and fight on the way. A 6.6 s look at a man in view without a shot is too long.
