@@ -2954,13 +2954,15 @@ class Bot:
             # (drive: the team's pick for a role, director.crew_orders, from up to its CREW_REACH)
             v = next((v for v in snap.vehicles if v["handle"] == s.order.target), None)
             if v is not None and dist(me.pos, Vec(*v["pos"])) < (50 if s.order.role == "drive" else 30) \
-                    and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now):
+                    and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now) \
+                    and (s.order.role != "drive" or s.may_drive(v, snap)):
                 s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
                 return ("vehicle", v["handle"])
         if s.goal[0] == "vehicle" and best[0] != "fight" and not urgent:
             v = next((v for v in snap.vehicles if v["handle"] == s.goal[1]), None)
             if (v and (not v["occupied"] or s.order.role in ("ride", "board")) and now < getattr(s, "vehicle_until", 0.0)
-                    and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)):
+                    and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)
+                    and (s.order.role in ("ride", "board") or s.may_drive(v, snap))):
                 return s.goal                  # committed to this vehicle run
             if now >= getattr(s, "vehicle_until", 0.0):
                 s.vehicle_retry_at = now + 20.0   # could not get in: walk for a while
@@ -2971,7 +2973,7 @@ class Bot:
             v = next((v for v in snap.vehicles if v["handle"] == errand[0]), None)
             if (now < errand[1] and v is not None and not v["occupied"] and me.vehicle in (None, -1) and not urgent
                     and vehicles.usable(v, now, s.duds())
-                    and not me.has_flag and not s.veh_banned(v, now)):
+                    and not me.has_flag and not s.veh_banned(v, now) and s.may_drive(v, snap)):
                 s.drive_to = far or s.objective_point(me)
                 s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
                 return ("vehicle", v["handle"])
@@ -2989,7 +2991,7 @@ class Bot:
             # (not on wheels to a goal far over it: live Spire 20261105-060020 phase 3, five attackers took turns in
             # the Warthog at the spire's foot for the core 37 u up, 300-1,200 rows each "waiting for crew", no pickup)
             pick = max((v for v in snap.vehicles if vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)
-                        and s.trip_ok(v, me, far)),
+                        and s.trip_ok(v, me, far) and s.may_drive(v, snap)),
                        key=lambda v: vehicles.ride_score(v, me, far, trip), default=None)
             if (pick and vehicles.ride_score(pick, me, far, trip) > 0.15
                     and (snap.mode == "race" or s.rng.random() < 0.3 + 0.6 * s.p.map_iq)):
@@ -2997,6 +2999,12 @@ class Bot:
                 s.vehicle_until = now + 8.0
                 return ("vehicle", pick["handle"])
         return best
+
+    def may_drive(s, v, snap):
+        """This bot may take vehicle v's wheel: not a Demon at a Warthog's or a Mongoose's (vehicles.DEMON_NO_DRIVE: it rides
+        their guns and seats; the owner's ask Nov 7). Race laps excepted: every racer drives."""
+        return (getattr(snap, "mode", None) == "race" or not profiles.fixed_demon(s.p)
+                or not vehicles.demon_no_drive(v["kind"]))
 
     @staticmethod
     def trip_ok(v, me, goal):
@@ -3611,6 +3619,16 @@ class Bot:
             if now - s.seat_since > 1.0 and getattr(s, "board_nade", None) != me.vehicle and s.game != "reach":
                 act.grenade, s.board_nade = True, me.vehicle
             s.note("vehicle: aboard theirs, beating it")
+            return
+        if s.seat == "driver" and v is not None and not s.may_drive(v, snap):
+            # (custom: a Demon at a Warthog's or a Mongoose's wheel, a hijack's or a seat it was put in: out, it rides
+            # their guns; may_drive)
+            act.action, act.fire = True, False
+            act.forward = act.strafe = 0.0
+            # (Use held, as every get-out: a one-tick press did not leave a Reach Warthog)
+            s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
+            s.vehicle_retry_at = now + 20.0
+            s.note("vehicle: Demon does not drive this, out")
             return
         if s.seat != "driver":
             if s.order.role == "give_seat":      # our objective holder needs this seat (director): out

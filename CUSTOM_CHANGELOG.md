@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Demons do not drive Warthogs or Mongooses; Normal and Heroic are the drivers, 2026-11-07
+
+- Owner's request, after his Halo 4 Gore Valley CTF (`logs/trace_h4_ca_gore_valley_20261107-223617`; his team won 2-0, he went 25-8, the 3 Demons 16-25 together):
+  - OutlawMarine and Slayer7 drove about a minute each, and a Warthog's driver has no gun.
+  - 28% of his hits on Demons came while they rode vehicles.
+  - 44% of their on-foot fight time went at riders, at about a quarter of the damage per second they did to men on foot (0.09/s against 0.36/s).
+- New `vehicles.DEMON_NO_DRIVE`: every Warthog (chaingun, rocket, gauss, troop) and the Mongoose and Gungoose. A fixed Demon does not take their wheel in any game, outside Race (every racer drives). It can still take their gun or a passenger seat. Ghosts, tanks, aircraft and the other vehicles are unchanged.
+- How it is enforced:
+  - `Director.crew_orders` sends no Demon to drive them, drops a kept drive job a Demon held, and skips Demons for the rocket and gauss Warthogs (power vehicles) too.
+  - `Bot.may_drive` guards the bot's own trip pick, a committed vehicle run, the Invasion spawn errand and a drive order.
+  - A Demon that ends up at such a wheel anyway (a hijack, or a seat it was put in) gets out with Use held (`exit_until`, as every get-out).
+- Driver priority (new `profiles.driver_priority`): for a Warthog or a Mongoose the director sends a Normal or Heroic bot within reach first, then Scaling and Legendary, then the nearest. Before, it sent the nearest, and for the gun Warthogs Demon came first. Gunner calls are unchanged; Demons still come first for the gun.
+- `tools/test_mongoose_transport.py` (the collaborator's 1b59ccd) used a Demon as its test driver. It now uses a Legendary, which may still drive and whose juke always answers a threat (Heroic's 0.6 juke failed the evade test). The trip, wait, evade and dismount checks are unchanged.
+- Validation: `tools/test_demon_no_drive.py`, 11 tests (which vehicles; driver priority; may_drive with Race excepted; a Heroic drives the Warthog though the Demon is nearer; Normal before Legendary; a Demon alone is never sent; a Demon still drives a Ghost; a kept job dropped; a seated Demon gets out of a Warthog's or a Mongoose's wheel but stays on the gun; a Heroic at the wheel drives). All 261 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 Warthog chaingun aim origin, 2026-11-07
 
 - Recognize the attached `storm_warthogchaingun` on Halo 4 Warthogs and aim it from its pivot. The Harvest model markers put the pivot 0.616 world units behind the chassis origin and 0.924 above it. Rotate that offset with the Warthog's forward and up vectors. If orientation is unavailable or invalid, use the existing aim fallback.

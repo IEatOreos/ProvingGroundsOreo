@@ -482,6 +482,18 @@ def needs_gunner(v, snap):
     return not v["gunner"] if "gunner" in v else v.get("riders", 0) == 1   # (Reach reads who is in the gun)
 
 
+# (custom, the owner's ask Nov 7) the ground transports a Demon never drives, in any game: every Warthog (chaingun, rocket,
+# gauss, troop) and the Mongooses. It rides their guns and seats; Normal and Heroic are the team's drivers
+# (profiles.driver_priority, director.crew_orders). His Gore Valley CTF (20261107-223617): two Demons drove about a minute
+# each, a Warthog driver has no gun, and 28% of his hits on Demons came while they were in vehicles
+DEMON_NO_DRIVE = {"warthog", "rwarthog", "gauss", "thog", "mongoose", "gungoose"}
+
+
+def demon_no_drive(name):
+    """A vehicle a Demon does not drive (DEMON_NO_DRIVE)."""
+    return kind_of(name) in DEMON_NO_DRIVE
+
+
 def taxi_ok(name):
     """A vehicle a bot may ride somewhere and leave there: a transport (Falcon, Warthog, Mongoose ...) or a light harasser
     (Ghost). A power vehicle (Banshee, Hornet, tank, Chopper, gun Warthogs) is taken for a job, never as a taxi."""

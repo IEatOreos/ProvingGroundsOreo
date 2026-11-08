@@ -16,7 +16,9 @@ from brain import vehicles
 def scene(kind='mongoose', mode='slayer'):
     mapdata = dict(name='reach_test', flags={0: Vec(100, 0, 0), 1: Vec(200, 0, 0)},
                    points={'mid': Vec(80, 0, 0)})
-    bot = Bot(0, 0, make_profile('demon', 'rusher', random.Random(3)), mapdata)
+    # (Legendary drives, its juke always answers a threat: a Demon no longer takes a Mongoose's or a Warthog's wheel,
+    # vehicles.DEMON_NO_DRIVE, Nov 7)
+    bot = Bot(0, 0, make_profile('top', 'rusher', random.Random(3)), mapdata)
     bot.order = Order('mid', Vec(80, 0, 0))
     bot.seat = 'driver'
     bot.drive_to = bot.order.point

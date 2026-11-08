@@ -106,6 +106,16 @@ def resource_priority(prof):
     return {DEMON: 0, "top": 1, "strong": 2, "average": 3}.get(prof.tier, 5)
 
 
+def driver_priority(prof):
+    """Who the director sends to drive a Warthog or a Mongoose (vehicles.DEMON_NO_DRIVE): Normal and Heroic first, then
+    Scaling and Legendary, then Easy; Demon never (None)."""
+    if fixed_demon(prof):
+        return None
+    if prof.extra is not None:
+        return 1
+    return {"average": 0, "strong": 0, "top": 1}.get(prof.tier, 2)
+
+
 def gunner_priority(prof):
     """Legendary, Heroic and Scaling share the same gunner-call weight."""
     priority = resource_priority(prof)

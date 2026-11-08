@@ -1418,8 +1418,13 @@ class Director:
         near = {b.id: b for b in busy if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
         mongoose_goals = {bid: (getattr(b, "drive_to", None) if b.order.role == "drive" else b.order.point)
                           for bid, b in free.items()}
+        def may_drive(b, v):
+            # (custom: no Demon at the wheel of a Warthog or a Mongoose, vehicles.DEMON_NO_DRIVE; Race laps excepted)
+            return snap.mode == "race" or not (profiles.fixed_demon(b.p) and vehicles.demon_no_drive(v["kind"]))
+
         for h, (bid, since) in list(crews.items()):
             if (h in empty and (bid in free or bid in near) and now - since < 30.0
+                    and may_drive(s.bots[bid], empty[h])
                     and not (vehicles.kind_of(empty[h]["kind"]) == "mongoose"
                              and now < getattr(s.bots[bid], "vehicle_retry_at", 0.0))):
                 b, v = (free.pop(bid, None) or near.pop(bid)), empty.pop(h)
@@ -1445,7 +1450,7 @@ class Director:
                 pairs = [(dist(players[bid].pos, Vec(*v["pos"])), b, v) for v in empty.values()
                          if role in vehicles.roles_of(v["kind"])
                          for bid, b in (free if vehicles.taxi_ok(v["kind"]) else {**near, **free}).items()
-                         if skip.get((bid, v["handle"]), 0.0) <= now
+                         if skip.get((bid, v["handle"]), 0.0) <= now and may_drive(b, v)
                          and (vehicles.kind_of(v["kind"]) != "mongoose" or (
                              now >= getattr(b, "vehicle_retry_at", 0.0) and mongoose_goals.get(bid) is not None
                              and Bot.trip_ok(v, players[bid], mongoose_goals[bid])
@@ -1457,6 +1462,11 @@ class Director:
                 if not vehicles.taxi_ok(v["kind"]):
                     d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),
                                   key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
+                elif vehicles.demon_no_drive(v["kind"]) and snap.mode != "race":
+                    # (custom: a Warthog or a Mongoose goes to a Normal or Heroic bot in reach first, then the nearest:
+                    # profiles.driver_priority; the owner's ask Nov 7)
+                    d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),
+                                  key=lambda x: (profiles.driver_priority(x[1].p), x[0]))
                 free.pop(b.id, None)
                 near.pop(b.id, None)
                 b.set_order(Order("drive", Vec(*v["pos"]), target=v["handle"]))
@@ -1479,9 +1489,12 @@ class Director:
             if vehicles.taxi_ok(v["kind"]):
                 continue
             vp = Vec(*v["pos"])
+            # (a rocket or gauss Warthog: Normal and Heroic first, never a Demon, profiles.driver_priority)
+            order = (profiles.driver_priority if vehicles.demon_no_drive(v["kind"]) and snap.mode != "race"
+                     else profiles.resource_priority)
             d, b = min(((dist(players[bid].pos, vp), b) for bid, b in near.items()
-                        if skip.get((bid, h), 0.0) <= now and dist(players[bid].pos, vp) <= s.POWER_R),
-                       key=lambda x: (profiles.resource_priority(x[1].p), x[0]), default=(None, None))
+                        if skip.get((bid, h), 0.0) <= now and dist(players[bid].pos, vp) <= s.POWER_R and may_drive(b, v)),
+                       key=lambda x: (order(x[1].p), x[0]), default=(None, None))
             if d is None or d > s.POWER_R:
                 continue
             del near[b.id]
