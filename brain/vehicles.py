@@ -489,6 +489,60 @@ def needs_gunner(v, snap):
 DEMON_NO_DRIVE = {"warthog", "rwarthog", "gauss", "thog", "mongoose", "gungoose"}
 
 
+# (custom, Nov 7) a light vehicle's body as boxes in its own frame (forward, left, up from its origin; u), for whether a
+# round at a rider's head goes through the vehicle first (hull_blocks). INFERRED around the owner's seat capture
+# (logs/h4_seat_capture_20261107-233231, Halo 4): heads (fwd, left, up) Warthog driver (0.01, 0.13, 0.24), passenger
+# (0.06, -0.19, 0.43), gunner (-0.55, 0.0, 0.49-0.68), Ghost (-0.25, 0.01, 0.17), Mongoose (0.03, 0.0, 0.31); the
+# driver's pelvis 0.03 up and feet 0.3 ahead at -0.03. The level data has no vehicles in it; not the tag's collision
+# model: a round the hull really takes is caught by Bot.dry_part (a rider gone dry is held off)
+HULLS = {
+    "warthog": (((-0.9, 0.9), (-0.42, 0.42), (-0.45, 0.06)),      # chassis, the cab's sides to the riders' waists
+                ((0.3, 0.9), (-0.42, 0.42), (0.06, 0.14))),        # the hood ahead of the cab
+    "mongoose": (((-0.6, 0.55), (-0.25, 0.25), (-0.35, 0.05)),),
+    "ghost": (((-0.6, 0.7), (-0.5, 0.5), (-0.4, 0.0)),             # the hull
+              ((-0.12, 0.6), (-0.3, 0.3), (0.0, 0.2))),            # its nose and canopy ahead of the driver
+}
+HULL_KIND = {"warthog": "warthog", "rwarthog": "warthog", "gauss": "warthog", "thog": "warthog",
+             "mongoose": "mongoose", "gungoose": "mongoose", "ghost": "ghost"}
+
+
+def hull_blocks(v, a, b, spare=0.06):
+    """Whether the segment a -> b (a shot from our view to a rider's head) passes through vehicle v's body (HULLS), its
+    last spare u (the head itself) left out. False for a vehicle with no hull here or no orientation read."""
+    boxes = HULLS.get(HULL_KIND.get(kind_of(v.get("kind")), ""))
+    f, u = v.get("fwd"), v.get("up")
+    if not boxes or not f or not u:
+        return False
+    left = (u[1] * f[2] - u[2] * f[1], u[2] * f[0] - u[0] * f[2], u[0] * f[1] - u[1] * f[0])
+    n = math.sqrt(sum(c * c for c in left))
+    if not 0.5 < n < 1.5:
+        return False
+    axes = (f, tuple(c / n for c in left), u)
+    o = v["pos"]
+    a, b = [(p.x, p.y, p.z) if hasattr(p, "x") else tuple(p) for p in (a, b)]
+    pa = [sum((a[i] - o[i]) * ax[i] for i in range(3)) for ax in axes]
+    pb = [sum((b[i] - o[i]) * ax[i] for i in range(3)) for ax in axes]
+    seg = math.sqrt(sum((pb[i] - pa[i]) ** 2 for i in range(3)))
+    if seg < 1e-6:
+        return False
+    t_end = max(0.0, 1.0 - spare / seg)
+    for box in boxes:
+        lo, hi = 0.0, t_end
+        for k in range(3):
+            d = pb[k] - pa[k]
+            if abs(d) < 1e-9:
+                if not box[k][0] <= pa[k] <= box[k][1]:
+                    break
+                continue
+            t0, t1 = (box[k][0] - pa[k]) / d, (box[k][1] - pa[k]) / d
+            lo, hi = max(lo, min(t0, t1)), min(hi, max(t0, t1))
+            if lo > hi:
+                break
+        else:
+            return True
+    return False
+
+
 def demon_no_drive(name):
     """A vehicle a Demon does not drive (DEMON_NO_DRIVE)."""
     return kind_of(name) in DEMON_NO_DRIVE

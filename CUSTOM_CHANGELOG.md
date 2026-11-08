@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Halo 4 Demon aims at riders' heads; seated head reader; vehicle hulls, 2026-11-07
+
+- Owner's request, after his seat capture: `logs/h4_seat_capture_20261107-233231`, Grind, solo. He sat as Warthog driver, passenger and gunner (aiming all round and up), then in a Ghost and as Mongoose driver; 3,714 seated poses.
+- What the capture showed:
+  - The animated target_head is sane in every seat: the bone checks passed on all poses, and the head stood within 0.45 u of the unit's place and within 1.6 u of its parent. The gunner's parent is the chaingun, which rides the Warthog.
+  - The view point (+0xD50) is the vehicle camera's for drivers and the gunner, and the first-person eye for the passenger. That is why every seated pose failed `h4_spartan_pose`'s view and base guards.
+  - Halo 4's place for a seated man sits about 0.17 u over his head. The generic aim (place + 0.35-0.62) therefore went half a unit over every rider, for every tier. In his Gore Valley CTF, Demons spent 44% of their on-foot fight time at riders and did a quarter of their on-foot damage rate there.
+- New `LiveH4F.h4_seated_head` (halo4.dll, the 120-node rig): the seated head, guarded by the rig layout, a sane head transform, within 0.6 u of the place (`SEATED_HEAD_PLACE`) and 2.0 u of the parent (`SEATED_HEAD_PARENT`). `players()` publishes it as `head_pos` with `view_pos` None. Replayed, all 3,714 captured seated poses pass. On foot nothing changed.
+- New `vehicles.HULLS` / `hull_blocks`: rough bodies as boxes in each vehicle's frame. INFERRED around the captured heads and bones, not from the tags' collision models.
+  - Warthog (every kind): a chassis up to the riders' waists, plus the hood ahead of the cab.
+  - Mongoose: a low body.
+  - Ghost: a hull, plus the nose and canopy ahead of the driver.
+  - `hull_blocks` tests our shot line against them, leaving the head's own last 0.06 u out.
+- Halo 4 Demon at a rider (`h4_rider`: we on foot with our live view, he seated with his seated head read):
+  - `h4_demon_fire` covers him. Both parts are his head; his body is in the vehicle.
+  - Perception: a shot needs a clear line to his head over the level and past his vehicle's body (`rider_hull_clear`). Seeing him is as before, the vehicle he rides, so a Ghost head-on is seen though its canopy covers him.
+  - `line_clear` adds the hull test.
+  - The view lock and the lead apply as on foot, with the rider's lead cap at 25 u/s (`RIDER_VEL_MAX`) so a Warthog's 11 u/s is led.
+  - `dry_part`: a rider 0.8 s and 3 presses dry is held off for 1.5 s (`rider_dry`, note "rider dry: hold, go round"). This catches rounds the real hull takes where the model has none.
+- Unchanged: on-foot targets, the other tiers (they still aim over riders' heads in Halo 4: a known issue, not fixed here), Reach, and vehicle killers (rockets and the like).
+- Validation: `tools/test_h4_rider_aim.py`, 13 tests:
+  - The seated head read and its guards: place, vehicle, scale, dll.
+  - Hulls: the Warthog driver open from the side and above and the gunner from behind; low rounds through the hood and the far side, and a turned Warthog; the Ghost canopy from the front, open from behind; no hull, no block.
+  - The rider gate; lead at vehicle speed.
+  - Perception: shoot the head, see the vehicle; with the hull in the way, seen but not shot.
+  - The fight: taps on an exposed rider's head; no shot through the hull; a dry rider held off.
+  - All 283 regression tests pass. Gameplay is untested; the hull sizes need live checking. The bot process must be restarted.
+
 ### Demon glances at a close radar dot behind it; Halo 4 vehicle seat capture tool, 2026-11-07
 
 - Owner's requests, after his Gore Valley CTF review (`logs/trace_h4_ca_gore_valley_20261107-223617`).

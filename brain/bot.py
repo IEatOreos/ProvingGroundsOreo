@@ -548,26 +548,43 @@ H4_CHEST_DROP = 0.16     # u: the chest point under the live head (standing head
 H4_BODY_FWD, H4_BODY_LEFT = -0.015, 0.04   # u: the torso's middle from his place, in his aim frame (above)
 DEMON_LEAD_S = 0.034     # s: read-to-shot lead, one brain tick of his and our own motion (Halo 4 and Reach Demon)
 LEAD_VEL_MAX = 8.0       # u/s: a velocity read past this is a teleport or respawn, not motion to lead
+RIDER_VEL_MAX = 25.0     # u/s: ... for a man riding a vehicle (a Warthog runs about 11 u/s, a boosted Ghost more)
 PART_DRY_S, PART_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without a hit on him: the other part this long
+# Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
+# our live view, led like a man on foot, both parts his head (his body sits in the vehicle), and no shot where the round
+# would go through the vehicle first (vehicles.hull_blocks). His Gore Valley CTF: Demons spent 44% of their on-foot fight
+# time at riders and did a quarter of their on-foot damage rate there; Halo 4's place for a seated man is 0.17 u over his
+# head, so the generic aim (place + 0.35-0.62) went half a unit over every rider
 
 
 def lead_ray(me, target, ray):
     """A (origin, point) shot ray with both ends moved on by DEMON_LEAD_S of our and his read velocity."""
-    def step(v):
+    def step(v, vmax):
         n = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-        return v * DEMON_LEAD_S if n <= LEAD_VEL_MAX else Vec()
-    return ray[0] + step(me.vel), ray[1] + step(target.vel)
+        return v * DEMON_LEAD_S if n <= vmax else Vec()
+    riding = getattr(target, "vehicle", -1) not in (None, -1)
+    return ray[0] + step(me.vel, LEAD_VEL_MAX), ray[1] + step(target.vel, RIDER_VEL_MAX if riding else LEAD_VEL_MAX)
+
+
+def h4_rider(me, target):
+    """We on foot with our live view, he seated with his seated head read (no view point: h4_seated_head)."""
+    return (target is not None and me.vehicle == -1 and getattr(me, "view_pos", None) is not None
+            and target.vehicle not in (None, -1) and target.head_pos is not None
+            and getattr(target, "view_pos", None) is None)
 
 
 def h4_demon_fire(prof, game, me, target):
-    """Halo 4 Demon on foot at a man on foot whose live head / view pair is read (brain/live.py h4_spartan_pose)."""
+    """Halo 4 Demon on foot at a man on foot whose live head / view pair is read (brain/live.py h4_spartan_pose), or at a
+    rider whose seated head is (h4_rider)."""
     return (game == "h4" and profiles.fixed_demon(prof) and me.weapon in H4_SNAP
-            and live_head_ray(me, target) is not None)
+            and (live_head_ray(me, target) is not None or h4_rider(me, target)))
 
 
 def h4_chest(target):
     """His chest under his live head: the torso's middle (his place moved by H4_BODY_FWD / H4_BODY_LEFT in his aim frame)
-    at the head's height less H4_CHEST_DROP."""
+    at the head's height less H4_CHEST_DROP. A rider's: his head (his body is in the vehicle)."""
+    if target.vehicle not in (None, -1):
+        return target.head_pos
     c, sn = math.cos(target.yaw), math.sin(target.yaw)
     return Vec(target.pos.x + c * H4_BODY_FWD - sn * H4_BODY_LEFT, target.pos.y + sn * H4_BODY_FWD + c * H4_BODY_LEFT,
                target.head_pos.z - H4_CHEST_DROP)
@@ -575,8 +592,16 @@ def h4_chest(target):
 
 def h4_wants_head(me, target):
     """The head for rifles, pistols and snipers (it landed 3-4 times the rounds the body did); the body for automatics
-    and the shotgun."""
-    return me.weapon in PRECISION
+    and the shotgun. A rider: his head with any gun."""
+    return me.weapon in PRECISION or target.vehicle not in (None, -1)
+
+
+def rider_hull_clear(snap, target, ray):
+    """No vehicle body between our view and a rider's head (vehicles.hull_blocks); True for a man on foot."""
+    if target is None or target.vehicle in (None, -1):
+        return True
+    v = next((x for x in getattr(snap, "vehicles", ()) or () if x.get("handle") == target.vehicle), None)
+    return v is None or not vehicles.hull_blocks(v, ray[0], ray[1])
 
 
 def h4_ray(me, target, head, lead=False):
@@ -784,6 +809,15 @@ class Perception:
                     parts = (chest, terrain.point_los(*ray, mode=vision_mode))
                 s.target_parts[e.id] = parts
                 line = any(parts)
+            elif (in_view and getattr(terrain, "point_los", None) is not None
+                  and h4_demon_fire(s.p, game, me, e) and h4_rider(me, e)):
+                # (custom: Halo 4 Demon at a rider: what it can shoot is his seated head from our view, past the level
+                # and his vehicle's body, both parts his head (rider_hull_clear); what it sees is the vehicle he rides,
+                # as before: a Ghost head on is seen though its canopy covers him)
+                ray = h4_ray(me, e, True)
+                head = terrain.point_los(*ray, mode=vision_mode) and rider_hull_clear(snap, e, ray)
+                s.target_parts[e.id] = (head, head)
+                line = head or los(me.pos, e.pos)
             else:
                 line = in_view and los(me.pos, e.pos)
             if line:
@@ -4574,6 +4608,8 @@ class Bot:
                 # A covered preferred part must not veto a clear shot at the other part.
                 chest_clear = s.line_clear(now, me, tid, snap, head=False)
                 head_clear = s.line_clear(now, me, tid, snap, head=True)
+                if h4 and now < getattr(s, "rider_dry", {}).get(tid, 0.0):
+                    chest_clear = head_clear = False     # (a rider our rounds did not reach: held off, dry_part)
                 if h4:
                     # Halo 4: rifles at the head, automatics and the shotgun at the body; the clear one if one is covered
                     head = head_clear and (not chest_clear or h4_wants_head(me, target))
@@ -5124,8 +5160,14 @@ class Bot:
             if st["first"] is None:
                 st["first"] = now
         st["was"] = bool(fired)
-        if (st["first"] is not None and now - st["first"] >= PART_DRY_S and st["n"] >= s.PART_DRY_SHOTS
-                and other_clear):
+        dry = st["first"] is not None and now - st["first"] >= PART_DRY_S and st["n"] >= s.PART_DRY_SHOTS
+        if dry and target.vehicle not in (None, -1):
+            # (a rider: both parts are his head; his vehicle took the rounds where the hull model has none. Held off
+            # him PART_FLIP_S: his glassed mark sends us round, or another man is fought)
+            s.__dict__.setdefault("rider_dry", {})[tid] = now + PART_FLIP_S
+            s.part_dry = None
+            s.note("rider dry: hold, go round")
+        elif dry and other_clear:
             s.part_flip = (tid, not head, now + PART_FLIP_S)
             s.part_dry = None
             s.note("part dry: the " + ("chest" if head else "head"))
@@ -6021,6 +6063,8 @@ class Bot:
             if ray is not None and getattr(T, "point_los", None) is not None:
                 if not T.point_los(*ray, mode="shot"):
                     return False
+                if h4 and not rider_hull_clear(snap, e, ray):
+                    return False                     # (a rider's vehicle between: its body takes the round)
             elif getattr(T, "target_parts", None) is not None:
                 shot_parts = T.target_parts(me.pos, e.pos, eye(me).z - me.pos.z,
                                             aim_height(False, crouched(e)), aim_height(True, crouched(e)), mode="shot")

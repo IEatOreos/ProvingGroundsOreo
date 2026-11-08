@@ -1916,6 +1916,38 @@ class LiveH4F(LiveReach):
             return unknown
         return head, view
 
+    # (custom, Nov 7) a seated Spartan's animated head: the owner's seat capture on Grind (logs/h4_seat_capture_
+    # 20261107-233231: Warthog driver, passenger and gunner, Ghost, Mongoose; 3,714 seated poses, the bone checks passed
+    # on all). Seated, the view point (+0xD50) is the vehicle camera's for drivers and the gunner, so it is not paired;
+    # the head stood within 0.45 u of the unit's place and 1.6 u of its parent (the gunner's: the chaingun) throughout
+    SEATED_HEAD_PLACE, SEATED_HEAD_PARENT = 0.6, 2.0
+
+    def h4_seated_head(s, address, unit, position, parent_pos):
+        """Halo 4's seated Spartan (the 120-node rig): its animated target_head, or None. No view point: seated it is the
+        vehicle camera's. Guards: the rig's layout, a sane head transform, the head within SEATED_HEAD_PLACE of the
+        unit's place and SEATED_HEAD_PARENT of the vehicle it rides."""
+        if s.g.dll.lower() != "halo4.dll" or unit is None or len(unit) < 0x1C0 or parent_pos is None:
+            return None
+        size, offset = struct.unpack_from("<HH", unit, 0x1BC)
+        if size != 120 * 52 or offset % 4 or not 0x700 <= offset <= 0x8000:
+            return None
+        raw = s.g.read(address + offset + 54 * 52, 52)
+        if raw is None or len(raw) != 52:
+            return None
+        scale, *m = struct.unpack("<13f", raw)
+        if not all(map(math.isfinite, (scale, *m, *position, *parent_pos))) or not .95 <= scale <= 1.05:
+            return None
+        axes = [m[k:k + 3] for k in (0, 3, 6)]
+        if any(abs(sum(x * y for x, y in zip(a, b)) - float(i == j)) > .08
+               for i, a in enumerate(axes) for j, b in enumerate(axes)):
+            return None
+        marker = (-6.9422384e-8, .02300628, -.006868857)
+        head = tuple(m[9 + i] + scale * sum(marker[j] * m[j * 3 + i] for j in range(3)) for i in range(3))
+        if (sum((head[k] - position[k]) ** 2 for k in range(3)) > s.SEATED_HEAD_PLACE ** 2
+                or sum((head[k] - parent_pos[k]) ** 2 for k in range(3)) > s.SEATED_HEAD_PARENT ** 2):
+            return None
+        return head
+
     # objects for LiveH3.flags / balls / objective_items (Adrift): TLS +0x18, entry +4 type (2 weapon), object +8 tag,
     # +0x24 parent (a held gun's: the unit; a map gun's: the weapon pad it rests on), +0x40 position, absolute
     # attached or not; unit +0x640 the 4 weapon handles
@@ -2157,6 +2189,12 @@ class LiveH4F(LiveReach):
                 d.update(pos=struct.unpack_from("<3f", u, 0x40), aim=struct.unpack_from("<3f", u, 0x4E0), shield=sh, health=hp)
                 if d["vehicle"] == -1:
                     d["head_pos"], d["view_pos"] = s.h4_spartan_pose(o, u, d["pos"])
+                else:                    # (custom: seated, the head alone, h4_seated_head)
+                    po = s.object(parent)
+                    pp = s.g.read(po + 0x40, 12) if po else None
+                    d["head_pos"] = s.h4_seated_head(o, u, d["pos"], struct.unpack("<3f", pp) if pp and len(pp) == 12
+                                                     else None)
+                    d["view_pos"] = None
                 d["equipment"], d["ability_on"] = s.ability(struct.unpack_from("<I", u, s.ABILITY_AT)[0])
             out.append(d)
         s._held = held
