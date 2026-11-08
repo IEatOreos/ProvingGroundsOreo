@@ -104,7 +104,9 @@ class MapTests(unittest.TestCase):
         m = maps.get_map("h4_ca_redoubt")
         self.assertEqual(sorted(it["name"] for it in m["items"]),
                          ["sniper", "sniper", "sticky_detonator", "sticky_detonator"])
-        self.assertEqual(m["ordnance_power"], ["incineration_cannon", "railgun", "rockets", "sniper", "spartan_laser"])
+        # (the SAW a power drop: the owner's call, Nov 8)
+        self.assertEqual(m["ordnance_power"],
+                         ["incineration_cannon", "lmg", "railgun", "rockets", "sniper", "spartan_laser"])
 
 
 class DirectorTests(unittest.TestCase):

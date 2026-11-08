@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Halo 4 weapon ranks, second pass: the SAW a power weapon, 2026-11-08
+
+- `brain/bot.py` `RANK_GAME["h4"]`: SAW (`lmg`) 4.0, Light Rifle 3.6, Shotgun and Scattershot 3.4 (Halo 4 only).
+- `brain/maps.py` `H4_ORDNANCE`: the SAW is a power drop at 0.8 (the Railgun's), so a teammate now goes for it like the other power drops (`director.power_runs`) instead of taking it only when it passes by.
+- Validation: the ranks resolve as set, and Reach's shotgun stays at 3.0. `tools/test_h4_ordnance.py`'s Redoubt power-drop list now includes the SAW. All 359 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 weapon ranks: the owner's power-weapon order, Storm Rifle and Suppressor ranked, 2026-11-08
 
 - `brain/bot.py` `RANK_GAME["h4"]` (Halo 4 only; other games unchanged): Incineration Cannon, Sniper Rifle and Beam Rifle 5.0, Rocket Launcher 4.9, Binary Rifle 4.8, Spartan Laser 4.5, Railgun and Fuel Rod Cannon 4.2, Energy Sword and Gravity Hammer 3.8.

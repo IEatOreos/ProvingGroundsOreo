@@ -459,7 +459,8 @@ EMP_GAMES = {"h3", "odst", "reach", "h4"}
 RANK_GAME = {"reach": {"dmr": 3.5, "focus_rifle": 3.6, "magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6,
              # (custom, the owner's Halo 4 power-weapon order, 2026-11-08)
              "incineration_cannon": 5.0, "sniper": 5.0, "beam_rifle": 5.0, "rockets": 4.9, "binary_rifle": 4.8,
-             "spartan_laser": 4.5, "railgun": 4.2, "fuelrod": 4.2, "sword": 3.8, "gravity_hammer": 3.8},
+             "spartan_laser": 4.5, "railgun": 4.2, "fuelrod": 4.2, "sword": 3.8, "gravity_hammer": 3.8,
+             "lmg": 4.0, "lightrifle": 3.6, "shotgun": 3.4, "scattershot": 3.4},
              "h3": {"magnum": 1.2}}
 
 

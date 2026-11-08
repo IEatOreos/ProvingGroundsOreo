@@ -208,10 +208,11 @@ POWER = {"rocket launcher": ("rockets", "weapon", 1.0), "sniper rifle": ("sniper
 
 
 # Halo 4's ordnance guns (custom, Nov 8), beside POWER's, by the exports' item names (the brain's): power 0.8 and up
-# gets the team's runs (director.power_runs). Its needler, SAW and grenade drops are no trip: a bot takes them by the way
-# (Bot.upgrade_point)
+# gets the team's runs (director.power_runs). Its needler and grenade drops are no trip: a bot takes them by the way
+# (Bot.upgrade_point). (custom, Nov 8: the SAW is a power weapon, the owner's call: the Railgun's 0.8)
 H4_ORDNANCE = {"incineration_cannon": ("incineration_cannon", "weapon", 0.9),
                "binary_rifle": ("binary_rifle", "weapon", 0.85), "railgun": ("railgun", "weapon", 0.8),
+               "lmg": ("lmg", "weapon", 0.8),
                "scattershot": ("scattershot", "weapon", 0.6), "concussion_rifle": ("concussion_rifle", "weapon", 0.5),
                "sticky_detonator": ("sticky_detonator", "weapon", 0.5), "shotgun": ("shotgun", "weapon", 0.5)}
 # A Halo 4 initial drop, once seen gone, is not timed back: Infinity Slayer drops it once at the start, and later
