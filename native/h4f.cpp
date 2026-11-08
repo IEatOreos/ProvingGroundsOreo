@@ -535,6 +535,10 @@ static void f_sprint(uint8_t* tls, uint8_t* act, uint8_t* unit, bool want) {
 // player's template slots (his own pickup prompt), so Use on the flag took nothing (Lockdown and Zenith CTF: a runner
 // held Use 474 ticks on it). A bot gets its own: the nearest loose weapon within 1 u while it holds Use on foot with no
 // seat asked. (Calling the host's pickup directly, FUN_18008f6e4, crashed MCC: the equipment path)
+// Halo 4 too (custom, Nov 8; H2A's multiplayer is Halo 4's engine): with the player's slots in every bot's action, a bot
+// holding Use took what HE was prompted for, from anywhere. Blood Crash 20261108-021511: bot 8 held Use 2.1 s on a pod's
+// sniper with nothing, and had a sniper at 72.25 s, the moment the owner came within reach of the other sniper pod 38 u
+// away; his reports: "Ordanance drops are disapperaing", "I went to pick it up and the display left"
 static uint32_t g_offer_at[HB_MAX_PLAYERS * 2];   // H2A: the tick a bot took a pickup (the quiet after it, f_update)
 static uint32_t g_hold_obj[HB_MAX_PLAYERS * 2];   // H2A: the object a bot is holding Use on (0: none), and until when
 static uint32_t g_hold_until[HB_MAX_PLAYERS * 2], g_hold_from[HB_MAX_PLAYERS * 2];
@@ -591,7 +595,7 @@ static void f_interaction(uint8_t* tls, uint8_t* act, uint8_t* unit, uint32_t b,
         }
         bool took = o && holder != 0xFFFFFFFFu && holder == mine;
         if (took) g_offer_at[index] = now - 1;                    // taken: the quiet from now
-        logf("h2a pickup: bot %d %s %08x (tag %08x) after %u ticks%s", index, took ? "took" : "let go of",
+        logf("pickup: bot %d %s %08x (tag %08x) after %u ticks%s", index, took ? "took" : "let go of",
              g_hold_obj[index], o ? *(uint32_t*)(o + 8) : 0u,
              now - g_hold_from[index], took ? "" : !o ? " (gone)" : holder != 0xFFFFFFFFu ? " (someone else's)" :
              !reach ? " (walked off)" : want >= 0 ? " (a seat asked)" : " (3 s up)");
@@ -668,7 +672,7 @@ static void f_fill(h4f_game& G, uint8_t* tls, uint8_t* act, int index, const hb_
     // 4's sprint press, toggled every bot's sprint whenever he pressed Shift)
     *(uint64_t*)(act + 0x40) = (b & HB_BTN_ACTION) ? 0x400000u : 0u;
     if (G.id == 7 && unit) f_sprint(tls, act, unit, (b & HB_BTN_SPRINT) != 0);
-    if (G.id == 6) f_interaction(tls, act, unit, b, index);
+    if (G.id == 6 || G.id == 7) f_interaction(tls, act, unit, b, index);   // (Halo 4: custom, Nov 8, above)
     // the red reticle's target (shared.h hb_target), as the player's own action carries it: Halo 4 (live, Adrift Flood,
     // logs/tmp/aa_watch.py, his reticle red on a man) +0x88 1, +0x8C node, +0x90 the man's unit, +0x98 weight (to 1.0),
     // +0xAC flags 4: Reach's block 0x10 on. And the melee target in interaction slot 1 (+0x70 type 0xE, +0x78 the unit),
@@ -792,9 +796,9 @@ static void f_update(h4f_game& G, uint8_t* actions) {
             if (mask & 1) memcpy(act, actions + 0x10, F_ACTION);    // the player's as the template
             f_fill(G, tls, act, index, a);
             hb_apply_buttons(g_shm, (uint32_t)G.id, act, F_ACTION, a.buttons, G.map_prev[i]);   // v8 (shared.h)
-            if (G.id == 6 && index < HB_MAX_PLAYERS * 2 && g_hold_obj[index])
+            if ((G.id == 6 || G.id == 7) && index < HB_MAX_PLAYERS * 2 && g_hold_obj[index])
                 *(uint64_t*)(act + 0x40) |= H2A_USE;      // a held pickup (f_interaction): Use stays down till it is in hand
-            if (G.id == 6 && index < HB_MAX_PLAYERS * 2 && g_offer_at[index] &&
+            if ((G.id == 6 || G.id == 7) && index < HB_MAX_PLAYERS * 2 && g_offer_at[index] &&
                 g_shm->game_tick > g_offer_at[index] && g_shm->game_tick < g_offer_at[index] + 45) {
                 // a pickup just offered: no Use and no weapon switch while it happens. The flag is in no weapon slot, so
                 // the brain hears of the carry a few ticks late, and its held Use dropped the flag again after 0.2 s

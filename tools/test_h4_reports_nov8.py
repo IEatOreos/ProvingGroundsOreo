@@ -71,6 +71,12 @@ class CliffsideTests(unittest.TestCase):
             self.assertIn(p, owner)
         self.assertEqual(len(rows) - len(owner), 8)            # (the scored rows kept)
 
+    @unittest.skipUnless(os.path.exists(os.path.join(maps.ROOT, "h4_ca_blood_cavern", "positions.json")), "no map data")
+    def test_blood_cavern_hot_spot(self):
+        rows = json.load(open(os.path.join(maps.ROOT, "h4_ca_blood_cavern", "positions.json"), encoding="utf-8"))
+        self.assertEqual(rows[0]["pos"], [8.36, 1.47, 4.27])
+        self.assertTrue(rows[0].get("owner"))
+
 
 if __name__ == "__main__":
     unittest.main()

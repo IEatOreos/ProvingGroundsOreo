@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Halo 4 bots no longer take what the player is prompted to pick up; Blood Cavern hot spot, 2026-11-08
+
+- The owner's reports from Blood Crash (20261108-021511, the first match with the hold-Use pickups and the boarding DLL): "Ordanance drops are disapperaing. I dont know if the bots are using them but not obtaining the weapon" (100.8 s), and "Medic went to pick up rockets, left the pad and I went to pick it up and the display left" (187.1 s).
+- Findings:
+  - Bots held Use on the pods and got nothing: bot 9 2 s at 0.4 u from the Rockets, bot 4 1.5 s at a Sniper, bot 8 2.1 s at the other Sniper (70.1-72.2 s).
+  - Bot 8 got a sniper at 72.25 s, the moment the owner came within reach of the other sniper pod 38 u away (2.05 u at 70.2 s, 1.58 at 71.8, 0.41 at 72.6).
+  - Cause: botcore copies the player's own action as every bot's template each tick (`native/h4f.cpp` `f_update`, "the player's as the template"), his interaction slots with it, his pickup prompt. A bot holding Use took what he was prompted for, from wherever it stood; a drop he walked up to emptied in front of him. A bot already holding that gun takes it as ammo, which fits the rockets gone with nobody new holding them. H2A replaces those slots (`f_interaction`); Halo 4 did not.
+- `native/h4f.cpp`: `f_interaction`, its held Use and its quiet after a pickup now run for Halo 4 too (H2A's multiplayer is Halo 4's engine). Every bot's interaction slots are cleared each tick, and while it holds Use on foot with no seat asked it is offered its own nearest loose gun within 1 u (a pod's gun counts as loose: `f_holder`, parent not a unit), the same one until taken, up to 3 s. Its log line now reads "pickup:" in both games. Built as `native/bin/botcore_pickup.dll` (`native\build.bat pickup`; no new warnings; `panel_art.py` failed after it as before).
+- Blood Cavern (20261108-015141, 130.5 s, "Mark this as a hotspot"): an owner power position at (8.36, 1.47, 4.27), score 1.0, reached from all 292 spawns.
+- The boarding DLL in that match: 27 bots were seated on boarding spots ("in"), none refused, no fault. A board with Use pressed got the bot into the enemy's vehicle 20 of 22 times (4 of 100 before). But the enemy driver mostly stayed: out within 4 s in about 6 of 25 boards, while the boarder rode the spot meleeing for up to 15 s. Seating a bot on the spot does not run the game's hijack. No change here.
+- Validation: a source check in `tools/test_h4_pickup_board.py` (Halo 4 calls `f_interaction` and gets its held Use and quiet), and the Blood Cavern row in `tools/test_h4_reports_nov8.py`. All 359 regression tests pass. Not verified in game: whether Halo 4 takes a gun offered this way (H2A does, with the same slot type) and that bots now leave the player's pickups alone. MCC must be restarted to load the new DLL.
+
 ### Halo 4 Forge pieces' shapes read from MCC's own map files, 2026-11-08
 
 - Follows the Ravine report below ("Bots arent reading this as a wall. Or a base."): 23 of the 39 piece kinds in the owner's Ravine layout had no shape in `maps/_shapes/h4.json`, so the nav had no wall or floor for the round base he stood by, the 3-story tower, the window wall, platforms, bridges and ramps (`forge.block`: no shape, no block).

@@ -123,6 +123,13 @@ class NativeTests(unittest.TestCase):
         src = (HERE / "native" / "h4f.cpp").read_text(encoding="utf-8", errors="replace")
         self.assertIn("want == HB_SEAT_BOARD", src)
 
+    def test_halo4_bots_get_their_own_pickup_slots(self):
+        # (botcore copies the player's action as every bot's template: his pickup prompt with it. f_interaction clears
+        # the slots and offers the bot its own nearest loose gun; Halo 4 too since Nov 8)
+        src = (HERE / "native" / "h4f.cpp").read_text(encoding="utf-8", errors="replace")
+        self.assertIn("if (G.id == 6 || G.id == 7) f_interaction(tls, act, unit, b, index);", src)
+        self.assertEqual(src.count("(G.id == 6 || G.id == 7) && index < HB_MAX_PLAYERS * 2"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
