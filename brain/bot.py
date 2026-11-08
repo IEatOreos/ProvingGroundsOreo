@@ -264,7 +264,10 @@ WEAPON_RANK = {"rockets": 5.0, "sniper": 4.0, "fuelrod": 4.0, "shotgun": 3.0, "p
                # Halo 4: the DMR / BR / light rifle trade the all-round crown; the binary rifle and
                # incineration cannon are the power weapons
                "lightrifle": 3.5, "binary_rifle": 4.4, "railgun": 4.0, "incineration_cannon": 4.6,
-               "scattershot": 3.0, "lmg": 2.4, "sticky_detonator": 2.8, "boltshot": 1.8}
+               "scattershot": 3.0, "lmg": 2.4, "sticky_detonator": 2.8, "boltshot": 1.8,
+               # (custom: Halo 4's storm_assault_carbine / storm_forerunner_smg read as these names, live.py TAG_ALIAS,
+               # one lookup: unranked they fell to 1.0, below every gun; the Plasma Rifle's and a little over the SMG's)
+               "storm_rifle": 2.2, "suppressor": 1.8}
 FIRE_GAP = {"pistol": 0.19, "assault_rifle": 0.07, "sniper": 0.9, "rockets": 1.1, "fuelrod": 0.6,  # human cadence floor
             "plasma_pistol": 0.15, "plasma_rifle": 0.1, "needler": 0.12, "shotgun": 0.75, "flamethrower": 0.05,
             # Halo 2 (fire is a press: each pulse is one shot or one burst)
@@ -453,7 +456,10 @@ EMP_GAMES = {"h3", "odst", "reach", "h4"}
 # games where the magnum is a real gun (guide 03: Reach's 5-shot kill, Halo 4's 6), the AR a fair one (Reach: the
 # plasma repeater is the Elites' assault rifle; the plasma pistol is the weakest gun in the game, kept for its
 # overcharge: the repeater had no rank or band row, read as a 2 u gun, and the pistol won every fight past 4 u)
-RANK_GAME = {"reach": {"dmr": 3.5, "focus_rifle": 3.6, "magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6},
+RANK_GAME = {"reach": {"dmr": 3.5, "focus_rifle": 3.6, "magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6,
+             # (custom, the owner's Halo 4 power-weapon order, 2026-11-08)
+             "incineration_cannon": 5.0, "sniper": 5.0, "beam_rifle": 5.0, "rockets": 4.9, "binary_rifle": 4.8,
+             "spartan_laser": 4.5, "railgun": 4.2, "fuelrod": 4.2, "sword": 3.8, "gravity_hammer": 3.8},
              "h3": {"magnum": 1.2}}
 
 

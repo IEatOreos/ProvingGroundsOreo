@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Halo 4 weapon ranks: the owner's power-weapon order, Storm Rifle and Suppressor ranked, 2026-11-08
+
+- `brain/bot.py` `RANK_GAME["h4"]` (Halo 4 only; other games unchanged): Incineration Cannon, Sniper Rifle and Beam Rifle 5.0, Rocket Launcher 4.9, Binary Rifle 4.8, Spartan Laser 4.5, Railgun and Fuel Rod Cannon 4.2, Energy Sword and Gravity Hammer 3.8.
+- `WEAPON_RANK`: `storm_rifle` 2.2 and `suppressor` 1.8. Halo 4's live tags `storm_assault_carbine` and `storm_forerunner_smg` read as those names (`live.py` `TAG_ALIAS`, a single lookup), and neither had a rank, so both fell to the 1.0 default and were dropped for almost any gun.
+- These ranks decide which gun a bot picks up and which one it drops. The power-weapon threat and regroup checks still read `WEAPON_RANK` directly (4.0 or more), so a Halo 4 Sword or Hammer at 3.8 still counts there as a power weapon.
+- Validation: each Halo 4 tag resolved to its new rank through `TAG_ALIAS` and `RANK_GAME`, and Reach's rockets stay at 5.0. All 359 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ## 0.2.2-custom.10 — Halo 4 ordnance pickups, hijack boarding, power vehicles, Forge shapes, 2026-11-08
 
 - Covers the 8 commits since 0.2.2-custom.9 (d9ced49), none on GitHub before: 7 from this Claude session, and the Forge piece shapes (8e9f848) from a second session the owner started. Each entry below gives its own behavior and validation.
