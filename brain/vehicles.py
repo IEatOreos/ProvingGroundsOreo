@@ -310,6 +310,11 @@ REACH_BOARD = {"warthog": (2, 3), "rwarthog": (2, 3), "gauss": (2, 3), "mongoose
                "ghost": (1, 2, 3), "wraith": (1, 2, 3), "revenant": (2, 3), "banshee": (1, 2), "falcon": (6, 7)}
 
 
+# (custom, Nov 8) Halo 4: the seat number a bot asks for at an enemy's vehicle to board it: botcore puts it on one of the
+# vehicle's boarding / hijack spots (native/shared.h HB_SEAT_BOARD, h4f.cpp f_board), not in a seat
+H4_BOARD_SEAT = 14
+
+
 def reach_seat(kind, want, tries=0):
     """(seat index, turret) a bot asks for to get into a Reach vehicle as want ("driver", "gunner", "passenger"), or
     None when it has no such seat. tries: the next passenger seat each time (the first may be taken)."""

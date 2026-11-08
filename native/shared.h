@@ -68,6 +68,9 @@ static inline int hb_pick_loose(const float (*pos)[3], int n, const float feet[3
 // The seat a bot asks for (HB_SEAT_SHIFT bits, -1 none), and whether its Use picks up a loose weapon (Reach): never
 // while it asks for a seat
 static inline int hb_seat(uint32_t buttons) { return (int)((buttons >> HB_SEAT_SHIFT) & 15) - 1; }
+// (custom, Nov 8) Halo 4: this seat number asks for one of an enemy vehicle's boarding / hijack spots, not a seat
+// (h4f.cpp f_board; the brain's vehicles.H4_BOARD_SEAT)
+static const int HB_SEAT_BOARD = 14;
 static inline bool hb_use_picks_up(uint32_t buttons) { return (buttons & HB_BTN_ACTION) && hb_seat(buttons) < 0; }
 
 // A weapon a bot's Use may take by what it rides on (its parent's object type, -1 none): never one in someone's hands

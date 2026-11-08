@@ -324,8 +324,40 @@ static void f_board(h4f_game& G, uint8_t* tls, int index, uint32_t buttons) {
     // for a passenger's (vehicles.reach_seat); seat 0 was a Hornet's side seat
     int pick = -1;
     bool turret = (buttons & HB_BTN_TURRET) != 0;
+    // (custom, Nov 8) a hijack: Halo 4's brain asks HB_SEAT_BOARD at an enemy's vehicle (Bot board, vehicles.H4_BOARD_SEAT).
+    // Its boarding / hijack spots (bit 27: the Ghost's 3, the Warthog's 3 and its gun's 1, the Mongoose's 2, as logged
+    // above) are the seats then: free ones the game's own test lets this unit take, the vehicle's before its gun's, a
+    // different one each try, as Reach's bots go through its boarding seats (vehicles.REACH_BOARD). Before, the asked
+    // seat was the driver's, taken, and the spots were skipped: 4 of 100 Halo 4 boards got in, 37 of 51 in Reach
+    bool board = G.id == 7 && want == HB_SEAT_BOARD && !turret;
+    if (board) {
+        static uint32_t turn[HB_MAX_PLAYERS * 2];
+        static uint32_t told[HB_MAX_PLAYERS * 2];
+        int cand[64], m = 0, spots = 0, taken = 0;
+        for (int pass = 0; pass < 2; pass++)
+            for (int k = 0; k < n; k++) {
+                uint32_t fl = seats[k].def ? *(uint32_t*)seats[k].def : 0;
+                if (!(fl & 0x08000000u) || (seats[k].obj != veh) != (pass == 1)) continue;
+                spots++;
+                if (((f_occupant_fn)(G.mod + B->occupant))((uint16_t)seats[k].obj, seats[k].seat) != 0xFFFFFFFFu) {
+                    taken++;
+                    continue;
+                }
+                if (!((f_can_fn)(G.mod + B->can))(uh, (uint16_t)seats[k].obj, seats[k].seat)) continue;
+                cand[m++] = k;
+            }
+        if (m == 0) {
+            if (g_shm->game_tick >= told[index]) {
+                told[index] = g_shm->game_tick + 90;
+                logf("%s bot %d board %08x: no spot it may take (%d spots, %d taken, %d refused)", G.tag, index, veh,
+                     spots, taken, spots - taken);
+            }
+            return;
+        }
+        pick = cand[turn[index]++ % (uint32_t)m];
+    }
     uint32_t role = turret ? 0x8u : want == 0 ? 0x4u : 0u;
-    for (int k = 0; k < n && pick < 0; k++) {
+    for (int k = 0; k < n && pick < 0 && !board; k++) {
         uint32_t fl = seats[k].def ? *(uint32_t*)seats[k].def : 0;
         if (fl & 0x08000000u) continue;                               // a boarding / hijack spot, not a seat
         if (role ? !(fl & role) : (fl & 0xCu) != 0) continue;
@@ -334,9 +366,24 @@ static void f_board(h4f_game& G, uint8_t* tls, int index, uint32_t buttons) {
         pick = k;
     }
     if (pick < 0) return;
-    char in = ((f_enter_fn)(*(void***)unit)[0x38 / 8])(unit, seats[pick].obj, seats[pick].seat, 0, 7);
-    logf("%s bot %d boards %08x seat %d%s: %s", G.tag, index, seats[pick].obj, seats[pick].seat, turret ? " (gun)" : "",
-         in ? "in" : "refused");
+    static bool board_faulted = false;
+    if (board && board_faulted) return;
+    char in = 0;
+    if (board) {
+        // (an untested call into the game with a boarding spot: a fault turns boarding off for this run, logged)
+        __try {
+            in = ((f_enter_fn)(*(void***)unit)[0x38 / 8])(unit, seats[pick].obj, seats[pick].seat, 0, 7);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            board_faulted = true;
+            logf("%s bot %d board %08x seat %d faulted: boarding off for this run", G.tag, index, seats[pick].obj,
+                 seats[pick].seat);
+            return;
+        }
+    } else {
+        in = ((f_enter_fn)(*(void***)unit)[0x38 / 8])(unit, seats[pick].obj, seats[pick].seat, 0, 7);
+    }
+    logf("%s bot %d boards %08x seat %d%s: %s", G.tag, index, seats[pick].obj, seats[pick].seat,
+         turret ? " (gun)" : board ? " (boarding spot)" : "", in ? "in" : "refused");
 }
 
 // leaving (supervisor: "bot vehicle exits in H2A and Halo 4 (botcore exit call)"). A bot's Use in a seat got it out of

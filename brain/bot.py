@@ -383,6 +383,7 @@ FLEE_D, FLEE_PROGRESS, FLEE_REST = 8.0, 0.6, 5.0   # a boarder fled by open grou
                                                    # in a flee: none for FLEE_REST s (Bot.drive, open_way)
 BOARD_GIVE_UP, BOARD_BAN = 4.0, 20.0   # s pressing Use beside an enemy vehicle before it is left alone, and for how long
 BOARD_TRY_R, BOARD_SPEED = 6.0, 3.0   # u, u/s: an enemy vehicle this near, not running at us faster, is boarded (board_check)
+BOARD_UPRIGHT = 0.6   # (custom) its up vector's z at least this to be chosen (vehicles.upright is 0.5: a margin, board_check)
 # the player's Scorpion board (Boneyard 20261102-192517, 544-557 s, logs/tmp/board_detail.py): its driver fought a man
 # 36 u off the other way (its view 110-170 deg off the line to him), the tank under 1.5 u/s; he walked in from 11 u,
 # waited 1.8-2.6 u off its front 3 s, got on from 2.3 u, and its driver was dead 1.6 s later (hits 0.55 s apart, melee
@@ -1996,8 +1997,10 @@ class Bot:
                 t = getattr(s, "board_try", None)
                 if t is None or t[0] != arg:
                     t = s.board_try = (arg, now)
-                # (Reach: its boarding seats, a second each; the other games' seat numbers are not Reach's)
-                seat = vehicles.reach_seat(v["kind"], "board" if s.game == "reach" else "driver", int(now - t[1]))
+                # (Reach: its boarding seats, a second each; the other games' seat numbers are not Reach's. Halo 4,
+                # custom Nov 8: one of its boarding / hijack spots, botcore's pick, vehicles.H4_BOARD_SEAT)
+                seat = (vehicles.H4_BOARD_SEAT, False) if s.game == "h4" else \
+                    vehicles.reach_seat(v["kind"], "board" if s.game == "reach" else "driver", int(now - t[1]))
                 if seat:
                     act.seat, act.turret = seat
                 if now - t[1] > BOARD_GIVE_UP:
@@ -2169,8 +2172,12 @@ class Bot:
                         s.took_at = (key, tuple(me.weapons))
                     drop = s.gun_to_drop(me, kind, point)
                     ready = drop is None or [w for w in me.weapons if w != "none"][drop] == me.weapon
-                    act.action = ready and int(now * 6) % 2 == 0   # tap: a press counts once the weapon is in reach
-                                                                    # (holding the gun to swap out: gun_to_drop)
+                    # (custom, Nov 8) Halo 4 takes a gun on a held Use, as its prompt says: bots tapping it 0.45 u from a
+                    # drop pod's rockets for 3 s, the gun to swap out in hand, took nothing (Blood Crash 20261108-013418,
+                    # 109-112 s and 228-231 s; the owner: "bots struggling to pick up the ordnance drop")
+                    held = s.game == "h4"
+                    act.action = ready and (held or int(now * 6) % 2 == 0)   # tap: a press counts once the weapon is in
+                                                                    # reach (holding the gun to swap out: gun_to_drop)
             if kind == "item" and (me.pos - point).flat() < 1.5:
                 s.item_wait = getattr(s, "item_wait", None) or now
                 if now - s.item_wait > 4.0:         # here, nothing to take (or out of reach): move on
@@ -3112,6 +3119,12 @@ class Bot:
         for v in snap.vehicles:
             if (vehicles.kind_of(v["kind"]) not in vehicles.BOARDABLE or not v.get("occupied")
                     or v.get("team") in (me.team, -1, None) or getattr(s, "board_ban", {}).get(v["handle"], 0.0) > snap.time):
+                continue
+            # (custom, Nov 8) only one the board itself goes for (plan's board: usable, upright), with a margin: a Ghost
+            # tilted on a ledge (up 0.43-0.57) was chosen every tick and refused every tick, and its boarders stood
+            # still beside it (Canyon 20261108-002354, 228-246 s: "Im not sure why they were frozen")
+            up = v.get("up")
+            if not vehicles.usable(v) or (up is not None and up[2] < BOARD_UPRIGHT):
                 continue
             vp = Vec(*v["pos"])
             d = dist(me.pos, vp)
