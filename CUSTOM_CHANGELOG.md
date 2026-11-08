@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Banshee strafe runs dive like the owner's: slower in gun range, lower before they end, 2026-11-08
+
+The owner flew the Banshee in Halo 4 Blood Crash `20261108-144947` to show the way (his F9s "This is how you should use the banshee" and "This is how to use the banshee bomb and cannons"): "they make their shooting floor too high, so they can never actually do a strafe run". His 63 rows with the crosshair on a man: 10-19 u off (median 13.5), 4.6-9.6 u over the floor (median 7.1, lowest 2.6), nose 23-46° down (median 34°), 4.6-10 u/s (median 5.8). Every tier, `brain/bot.py` `air_pass`:
+
+- In gun range (`CANNON_R`), the dive is governed to `AIR_RUN_SPEED` 6 u/s: throttle `1 - (speed - 6) * 0.25`, down to `AIR_RUN_THROTTLE_MIN` 0.15. At full throttle, about 12 u/s, `air_guard`'s run check (the path 1.2 s down the nose under 1.5 u of the floor) would have pulled him out on 44 of his 63 shooting rows, ending the run before a shot. At 6 u/s it is 8. The check itself is unchanged. It is a governor, not a set throttle, so Reach's Banshee (4.3 u/s unboosted) keeps its throttle.
+- A run ends by height only under `AIR_RUN_LOW` 2.5 u within 12 u of the man (was 5 u: it would have cut 7 of his shooting rows).
+- Not changed: the bomb. His second report shows the bomb with the cannons, but the trace records no buttons for a person, so his bomb timing could not be read. The existing Halo 4 bomb cycle stays (`FUELROD_R` 10-31 u, from 2 u or more over the man).
+- Validation: replayed over his 63 shooting rows, the run check passes 55 at the governed speed against 19 at full throttle. `tools/test_demon_vehicles.py` adds 3 tests: a fast dive in range throttles down, one at his speed keeps the throttle, and a dive 3.5 u up 10 u off goes on while one under 2.5 u ends. All 389 regression tests pass. No bot flew in that match, so live gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 gun ammo read: empty guns are switched off, reloads work, 2026-11-08
 
 - `brain/live.py` `LiveH4F.H4_AMMO`: a Halo 4 gun's reserve at +0x5AA and loaded rounds at +0x5AE (int16), Halo 4 only (`AMMO_AT` / `MAG_AT` properties by the dll; H2A stays unread). `players()` now fills each player's `ammo` (reserve + loaded) and `mag`.

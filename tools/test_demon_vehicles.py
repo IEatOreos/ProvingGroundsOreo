@@ -79,6 +79,34 @@ class AirRoofTests(unittest.TestCase):
         self.assertGreater(act.pitch, 0.0)
 
 
+class DiveTests(unittest.TestCase):
+    """The owner's Halo 4 strafe runs (20261108-144947): from 10-19 u, 4.6-9.6 u up, about 6 u/s."""
+
+    def dive(self, speed, at=Vec(12.0, 0, 7.0)):
+        b, me = pilot(at=at, yaw=math.pi)            # nosed at him
+        me.vel = Vec(-speed, 0, 0)
+        foe = PlayerState(1, 1, "foe", Vec(0, 0, 0))
+        b.air_run = ["in", 1, 10.0, math.pi]
+        act = Act(math.pi, -0.5)
+        b.air_pass(12.0, me, 1, Belief(foe.pos, Vec(), 12.0, True, "eyes"), foe.pos, act)
+        return b, act
+
+    def test_a_fast_dive_in_gun_range_throttles_down(self):
+        b, act = self.dive(12.0)
+        self.assertEqual(b.air_run[0], "in")
+        self.assertLessEqual(act.forward, 0.2)
+
+    def test_at_his_speed_it_keeps_the_throttle(self):
+        b, act = self.dive(5.0)
+        self.assertEqual(act.forward, 1.0)
+
+    def test_low_in_the_dive_the_run_goes_on(self):
+        b, act = self.dive(6.0, at=Vec(10.0, 0, 3.5))   # 3.5 u up, 10 u off: one of his shots (the old end: 5 u)
+        self.assertEqual(b.air_run[0], "in")
+        b, act = self.dive(6.0, at=Vec(10.0, 0, 2.0))   # under 2.5 u: out
+        self.assertEqual(b.air_run[0], "out")
+
+
 class SnapFireTests(unittest.TestCase):
     def setup(self, tier="demon", foe_at=Vec(15.0, 0.0, 0.0), clear=True, seat="driver"):
         b, me = pilot(tier, at=Vec(0, 0, 6.0))

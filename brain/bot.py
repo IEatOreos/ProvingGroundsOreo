@@ -378,6 +378,9 @@ AIR_GUN_R = 1.5       # u: an aircraft's guns fire with its nose this near his m
 # (custom) Bot.air_pass under a low roof: a run's start height at most the room under it (air_ceiling) less AIR_ROOM_SPARE,
 # never under AIR_ROOM_MIN over the floor
 AIR_ROOM_SPARE, AIR_ROOM_MIN = 1.0, 4.0
+# (custom, Nov 8) Bot.air_pass's dive in gun range: held near AIR_RUN_SPEED u/s (throttle down to AIR_RUN_THROTTLE_MIN
+# when faster), and ended by height only under AIR_RUN_LOW u over the floor within 12 u of him (the owner's Halo 4 runs)
+AIR_RUN_SPEED, AIR_RUN_THROTTLE_MIN, AIR_RUN_LOW = 6.0, 0.15, 2.5
 AIR_JINK, AIR_JINK_S = 0.4, 1.0   # rad, s: shot at in a run's way in (out of gun range) or way out, a swerve that long
 # an attack run's ground check (Bot.air_guard): its path along the nose AIR_PULL_S ahead at its speed, under AIR_RUN_FLOOR
 # over the floor there: pull out and end the run. (The old rule, 6.8 u over the highest floor within 6 u of four points
@@ -4394,7 +4397,9 @@ class Bot:
         if run is None or run[1] != tid:
             run = s.air_run = ["in" if flat >= PASS_START else "out", tid, now, me.yaw]
         behind = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - me.yaw)) > math.pi / 2
-        if run[0] == "in" and (flat < PASS_OVER or (behind and flat < PASS_START) or (h < 5.0 and flat < 12.0)):
+        # (custom, Nov 8: the low end AIR_RUN_LOW, was 5 u: the owner's Halo 4 dives fired from 2.6 u up, 7 of his 63
+        # shooting rows under 5 u within 12 u of the man; air_guard's look along the dive still pulls out of the ground)
+        if run[0] == "in" and (flat < PASS_OVER or (behind and flat < PASS_START) or (h < AIR_RUN_LOW and flat < 12.0)):
             run[:] = ["out", tid, now, me.yaw]                 # past him: on, straight, climbing
         # (the next run starts from the player's run height: 10-35 u up; flown in a harness the old 0.3 climb to 22 u
         # off left it 3-8 u over the floor, his median was 26)
@@ -4430,6 +4435,15 @@ class Bot:
             s.att = ["pass", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             return
         act.forward = 0.5 if now - run[2] < 1.0 else 1.0
+        if dist(me.pos, b.pos) <= CANNON_R:
+            # (custom, Nov 8) in gun range the dive slows to the owner's AIR_RUN_SPEED (his Halo 4 Blood Crash dives,
+            # 20261108-144947, his F9s "This is how you should use the banshee": 63 rows with his crosshair on a man,
+            # 10-19 u off, 4.6-9.6 u up, nose 23-46 deg down, 4.6-10 u/s, median 5.8). At full throttle, about 12 u/s,
+            # air_guard's look 1.2 s down the nose reached the ground on 44 of those 63 rows and ended the run before a
+            # shot; at 6 u/s on 8. A governor, not a set throttle: Reach's Banshee flies 4.3 u/s unboosted and keeps its
+            # throttle
+            spd = me.vel.length()
+            act.forward = max(AIR_RUN_THROTTLE_MIN, min(act.forward, 1.0 - (spd - AIR_RUN_SPEED) * 0.25))
         # (the ground on the way in: air_guard's look along the dive pulls out of it and ends the run; the flat 4 u floor
         # that held the nose up here kept every dive off him). Out of gun range it holds the run's height and dives
         # once in range: nosed straight at him from 60 u it glided down into the rising ground between and the pull-out
