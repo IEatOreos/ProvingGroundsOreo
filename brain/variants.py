@@ -44,8 +44,12 @@ def base_placed(objs):
 
 def base_area(objs):
     """Where the base map's own layout is (its placed objects and weapons, objects.json): a variant's window takes it
-    in, so a few pieces added to Settlement do not cut the nav down to them. A Forge canvas (Forge World) has none."""
-    return [tuple(it["pos"]) for k in ("placed", "equipment") for it in objs.get(k, [])]
+    in, so a few pieces added to Settlement do not cut the nav down to them. A Forge canvas (Forge World) has none. A
+    camera is no layout (custom, Nov 8): Halo 4's Erosion, Ravine and Forge Island place only mp_cinematic_fallback_camera,
+    so each read as a built-in map and a layout on it kept the empty canvas's callouts and no power positions (Ravine
+    20261108-012136: "Bots arent reading this as a wall. Or a base.")."""
+    return [tuple(it["pos"]) for k in ("placed", "equipment") for it in objs.get(k, [])
+            if "camera" not in (it.get("name") or it.get("item") or "")]
 
 
 def own(objs, placed):

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Halo 4 Forge canvases read as canvases; Cliffside's owner spots, 2026-11-08
+
+- Ravine (the owner's report, 20261108-012136, 336.6 s: "Bots arent reading this as a wall. Or a base.", at a round UNSC base). Two causes:
+  - Halo 4's Erosion, Ravine and Forge Island place one object of their own, `mp_cinematic_fallback_camera`. `variants.base_area` counted it as the map's layout, so a Forge layout on them was taken for a built-in map's variant: no layout callouts or power positions were made (`tools/live_bots.py` makes them only for an empty canvas), and `load_map` gave it the empty canvas's callouts (5 zones) and no power positions. `base_area` now leaves cameras out. Ravine's layout (`maps/h4_ca_forge_ravine/variants/vc736941c`, local data) then got its own: 8 scored power positions and its callouts (`tools/variant_strategy.py`, built offline in 6 s).
+  - Not fixed here: 23 of the 39 piece kinds in that layout have no collision shape in `maps/_shapes/h4.json`, so the nav has no wall or floor for them. Among them: `fw_unsc_c_base_round` (the base he stood by), the 3-story tower, the 2x2 window wall, platforms, bridges and ramps. The shapes came from the Halo 4 editing kit's collision models through a tool this installation does not have, and the kit is not on this PC.
+  - His hot spot on it (34.6 s, (1.15, -11.18, 3.21)) is an owner power position of that layout (`tools/power_positions.py --add`; local data, the variant folders are not in Git). `tools/variant_strategy.py` now keeps owner rows when a layout's positions are scored again (`power_positions.merge_owner`); it wrote over them before.
+- Cliffside (report 20261108-001811), where he stood at each:
+  - Hot spots, owner power positions (score 1.0; the 8 scored rows kept): (13.46, 0.05, 3.36), (45.42, 15.24, 2.39), (40.84, -6.51, 3.36), (40.71, -7.63, 6.56), (30.34, 9.71, 5.72).
+  - Patrol areas, shared infantry patrol points (new `maps/h4_z05_cliffside/infantry_patrols.json`): (13.46, 0.05, 3.36), (53.28, -12.25, 3.27), (4.54, 0.2, 2.0).
+  - All eight are reached from each of the 400 spawns checked, by the nav with people's jumps and rides.
+  - "Go up these gravity lifts" (28 s, by the two lifts at y 13.34): his rides up them in that match were learned as two nav links (take-off y 14.5, z 0.8, to the ledge at z 3.37; `lidar.json`, local data). After the report, bots rode up 4 of their 16 trips past the lifts. The nav now routes up them toward the high spots above. No code change for this one.
+- Redoubt (20261108-010650, 334.7 s, "Red team Wraith spawn"): no change. Red's Wraith spawns at (25.76, -15.69) at 0, 312 and 626 s; a red bot drove it each time (OutlawMarine, Legendary, ran 45 u across the map from 314 s and got in at 334 s, beside him). The report's intent is not clear from the data; asked.
+- Validation: `tools/test_h4_reports_nov8.py`, 6 tests: a camera is no layout and Halo 4's three canvases have none; Ravine's layout loads its own positions (local data); a Ghost at up 0.43 / 0.5 / 0.57 is not boarded and an upright one is; Cliffside's patrols and owner rows load and the scored rows are kept. All 335 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 hijacks, held-Use pickups, and no frozen boarders by a tilted vehicle, 2026-11-08
 
 - Hijacking (the owner: make Reach's boarding work in Halo 4). Reach's bots board an enemy's vehicle by its boarding seats (`vehicles.REACH_BOARD`, botcore's interaction) and the game runs the hijack. In Halo 4 the brain asked botcore for the driver's seat, and botcore's Halo 4 seat picker (`native/h4f.cpp` `f_board`) skips occupied seats and every boarding / hijack spot (seat flag bit 27). In his last four Halo 4 games 4 of 100 board attempts with Use pressed got in, all apparently after the driver had left; Reach 37 of 51, mostly on the first press. botcore's log lists the Halo 4 spots: the Ghost 3, the Warthog 3 and its gun 1, the Mongoose 2, a tank's more.

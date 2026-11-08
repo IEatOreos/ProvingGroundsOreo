@@ -104,7 +104,10 @@ def build(name):
                     holds={"red": holds, "blue": holds}, lanes=[p["pos"] for p in pos] or holds, sneak={}, zones=zones)
     d = os.path.join(variants.ROOT, name)
     json.dump(callouts, open(os.path.join(d, "callouts.json"), "w"), indent=1)
-    json.dump(pos, open(os.path.join(d, "positions.json"), "w"), indent=1)
+    # (custom, Nov 8) the owner's marked spots (tools/power_positions.py --add) stay through a layout's new scoring
+    old = os.path.join(d, "positions.json")
+    pos = power_positions.merge_owner(pos, read_json(old) if os.path.exists(old) else [])
+    json.dump(pos, open(old, "w"), indent=1)
     data["strategy_of"] = layout_hash(data)
     variants.save(name, data)
     return time.time() - t0
