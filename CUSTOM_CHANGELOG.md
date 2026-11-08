@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.2.2-custom.10 — Halo 4 ordnance pickups, hijack boarding, power vehicles, Forge shapes, 2026-11-08
+
+- Covers the 8 commits since 0.2.2-custom.9 (d9ced49), none on GitHub before: 7 from this Claude session, and the Forge piece shapes (8e9f848) from a second session the owner started. Each entry below gives its own behavior and validation.
+- Halo 4 ordnance: bots see a gun in its drop pod as lying loose, know the map's initial drops (gone once seen taken) and send a runner to a random drop's power gun. They hold Use on a gun, and botcore gives each bot its own pickup slot, so it no longer takes what the player is prompted for. The Light Rifle, Boltshot, Suppressor and Storm Rifle, plus the Incineration Cannon and Binary Rifle, read under the brain's names.
+- Halo 4 vehicles: botcore seats a boarder on an enemy vehicle's boarding spot, and bots no longer freeze by a tilted vehicle. A bot the director calls to a vehicle goes even with nothing else scored. Fixed Legendary and Demon go first for power vehicles, over power-weapon runs and gun seats.
+- Maps: Halo 4's Forge canvases are read as canvases, and Forge pieces get shapes from MCC's own map files (local data; run `tools/h4_forge_shapes.py` once per PC). Owner hot spots and patrol areas on Cliffside, a hot spot on Blood Cavern.
+- Native: `native/h4f.cpp` and `shared.h`; the owner's DLL is built locally as `native/bin/botcore_pickup.dll` (not in Git). Other PCs build it with `native\build.bat <tag>`.
+- Validation at the candidate: all 359 regression tests pass.
+  - In game, Blood Crash 20261108-024522, on `botcore_pickup.dll`: the owner reported that it all seems to work. botcore's log shows 14 guns handed to bots on the first tick of the hold, 29 offers let go after 3 s and no fault. Bots gained 4 snipers, 5 rockets and 2 SAWs where they stood, the two sniper pods and the rockets pod among them.
+  - The previous match (20261108-021511, the boarding DLL): 20 of 22 boards with Use pressed got the bot into the enemy's vehicle, but Halo 4's hijack does not run that way, so the driver mostly stays (left as is, the owner's choice).
+  - Not separately checked in game: the power-vehicle priorities, the Forge shapes, and the Cliffside and Blood Cavern spots.
+
 ### Halo 4 bots no longer take what the player is prompted to pick up; Blood Cavern hot spot, 2026-11-08
 
 - The owner's reports from Blood Crash (20261108-021511, the first match with the hold-Use pickups and the boarding DLL): "Ordanance drops are disapperaing. I dont know if the bots are using them but not obtaining the weapon" (100.8 s), and "Medic went to pick up rockets, left the pad and I went to pick it up and the display left" (187.1 s).
