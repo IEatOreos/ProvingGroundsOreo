@@ -437,6 +437,16 @@ def warthog_gun_origin(v, mount):
     return frame[1](mount[0], mount[1], GUN_HEIGHT["warthog_chaingun"])
 
 
+def h4_warthog_gun_origin(v):
+    """Halo 4's turret marker plus the chaingun's aiming pivot, measured on Harvest's models."""
+    forward, up = v.get("fwd"), v.get("up")
+    if (not forward or not up or not all(math.isfinite(c) for c in (*forward, *up))
+            or not all(0.9 < math.hypot(*axis) < 1.1 for axis in (forward, up))
+            or abs(sum(f * u for f, u in zip(forward, up))) >= 0.1):
+        return None
+    return Vec(*v["pos"]) - Vec(*forward).norm() * 0.616 + Vec(*up).norm() * 0.924
+
+
 def gun_height(turret, kind=None):
     """GUN_HEIGHT for the gun a gunner sits in (its name, the snapshot's turret), else by the vehicle's kind
     (GUN_HEIGHT_KIND), None where not measured."""

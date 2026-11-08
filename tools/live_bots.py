@@ -237,6 +237,12 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
         for p in players:
             if p.turret == "warthog_chaingun":
                 p.turret_origin = origins.get(p.vehicle)
+    elif getattr(live, "TAG_GAME", None) == "h4":
+        origins = {v["handle"]: V.h4_warthog_gun_origin(v) for v in vehicles
+                   if V.kind_of(v["kind"]) == "warthog" and "warthog_chaingun" in v["manned"]}
+        for p in players:
+            if p.turret == "warthog_chaingun":
+                p.turret_origin = origins.get(p.vehicle)
     vpos = {v["handle"]: v["pos"] for v in vehicles}
     for p in players:                          # a rider's biped position does not follow the vehicle
         if p.vehicle in vpos:

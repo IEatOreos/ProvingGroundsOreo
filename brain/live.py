@@ -2060,10 +2060,13 @@ class LiveH4F(LiveReach):
             if typ == 2 and h not in getattr(s, "_held", ()) and not s._was_held(h) and tag not in s._names:
                 s._learn(tag, pos)       # +0x14 is no parent here (0x3040 on foot): skip held guns instead
             if typ in s.VEHICLE_TYPES and tag not in s._names and struct.unpack_from("<I", head, s.PARENT_AT)[0] == NONE:
-                # (a gun riding on a vehicle has it as its parent: left as it was)
                 n = s._vehicle_name(tag, giant=typ == 13)
                 if n:
                     s._names[tag] = n
+            elif typ == 1 and mechs and tag not in s._names:
+                # The attached Halo 4 chaingun has its own vehicle tag.
+                if s._vehicle_name(tag) == "storm_warthogchaingun":
+                    s._names[tag] = "warthog_chaingun"
             out.append(((salt << 16) | i, typ, s._names.get(tag, "unknown"), pos))
         return out
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Halo 4 Warthog chaingun aim origin, 2026-11-07
+
+- Recognize the attached `storm_warthogchaingun` on Halo 4 Warthogs and aim it from its pivot. The Harvest model markers put the pivot 0.616 world units behind the chassis origin and 0.924 above it. Rotate that offset with the Warthog's forward and up vectors. If orientation is unavailable or invalid, use the existing aim fallback.
+- The owner's stationary Harvest recording showed the aim turning to both sides of the vehicle. Verified the model offsets and checked the reader and snapshot together with Harvest tag names, a rotated chassis, targets on both sides, and invalid orientation. All 250 regression tests passed. Bullet impacts still need a live test after the bot process starts again.
+
 ### Reach Demon leads its shots one tick and switches a dry part, 2026-11-07
 
 - Owner's request, after a fight-by-fight review of his Reach games: the Rasu game (`logs/trace_reach_forge_halo_20261107-191109`, 8 Demons, 647 s), with Headlong and Settlement as cross-checks.
