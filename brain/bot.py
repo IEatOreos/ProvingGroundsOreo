@@ -173,6 +173,16 @@ DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this ne
 DEMON_STAND_R, DEMON_STAND_COVER = 6.0, 2.5   # u: a man this near, no retreat to cover farther than the second (stand_ground)
 DEMON_STAND_FRESH = 0.6            # s: a tracker dot this fresh counts as a man on us
 DEMON_STAND_SCORE = 3.2            # the turn on a man on us only on the tracker (as decide's close-dot hunt)
+# (custom, Nov 8) Demon leaves a Ghost with this much of its body left or less (may_drive): the owner's 12-20%, the top of
+# it for the 0.8 s the Use hold takes (live Blood Crash 20261108-024522: Camper25's Ghost 100% to 6% in 1.5 s, dead in it)
+DEMON_GHOST_BAIL = 0.20
+# (custom, Nov 8) Bot.reload_check, every tier: out of a fight a magazine at this share of the most it has held or less is
+# topped off (was 0.4), not within RELOAD_QUIET s of being hit (a man unseen shooting us)
+RELOAD_TOP_OFF, RELOAD_QUIET = 0.8, 1.5
+# (custom, Nov 8) Demon holding nothing but sidearms with a man in sight past DEMON_STAND_R: off to cover this near at
+# DEMON_SIDEARM_SCORE (over the committed fight; Havoc94 out of a dying Ghost with a Boltshot and a Magnum lost 3 on 1)
+DEMON_SIDEARMS = frozenset(("magnum", "boltshot", "plasma_pistol", "pistol"))
+DEMON_SIDEARM_COVER, DEMON_SIDEARM_SCORE = 12.0, 3.0
 
 
 def _flat_norm(v, me):
@@ -365,6 +375,9 @@ CHAINGUN_HEAT = (13.5, 3.3)   # s: Reach's Warthog chaingun, fire to overheat an
 PASS_START, PASS_OVER, PASS_EXTEND, PASS_OUT_S, PASS_START_H, PASS_START_MIN = 15.0, 6.0, 22.0, 6.0, 15.0, 12.0
 CANNON_R, FIRE2_R, FIRE2_HOLD, FIRE2_EVERY = 28.0, (12.0, 36.0), 2.4, 6.0
 AIR_GUN_R = 1.5       # u: an aircraft's guns fire with its nose this near his middle (Bot.air_pass)
+# (custom) Bot.air_pass under a low roof: a run's start height at most the room under it (air_ceiling) less AIR_ROOM_SPARE,
+# never under AIR_ROOM_MIN over the floor
+AIR_ROOM_SPARE, AIR_ROOM_MIN = 1.0, 4.0
 AIR_JINK, AIR_JINK_S = 0.4, 1.0   # rad, s: shot at in a run's way in (out of gun range) or way out, a swerve that long
 # an attack run's ground check (Bot.air_guard): its path along the nose AIR_PULL_S ahead at its speed, under AIR_RUN_FLOOR
 # over the floor there: pull out and end the run. (The old rule, 6.8 u over the highest floor within 6 u of four points
@@ -1604,6 +1617,25 @@ class Bot:
             scores[("hunt", b.pos)] = max(scores.get(("hunt", b.pos), 0.0), DEMON_STAND_SCORE)
         s.note("he is on me: no turning my back")
 
+    def sidearm_cover(s, me, snap, seen):
+        """Demon (custom) holding only sidearms (DEMON_SIDEARMS: out of a vehicle, its rifle dry) with an enemy in sight
+        and none within DEMON_STAND_R: cover from them within DEMON_SIDEARM_COVER, a person's break to find a gun
+        rather than a pistol's trade with a rifle. A man right on it is still fought (stand_ground, decide's
+        close-fight rule). None: armed, nobody in sight, or no cover near."""
+        if not profiles.fixed_demon(s.p) or me.vehicle != -1 or me.has_flag or not seen or snap.mode == "race":
+            return None
+        guns = [w for w in getattr(me, "weapons", ()) or () if w not in ("none", "unknown")]
+        if not guns or any(w not in DEMON_SIDEARMS for w in guns):
+            return None
+        threats = [s.per.beliefs[k].pos for k in seen if k in s.per.beliefs]
+        if not threats or min(dist(me.pos, q) for q in threats) < DEMON_STAND_R:
+            return None
+        cover = s.cover_from(me, threats)
+        if cover is None or dist(me.pos, cover) > DEMON_SIDEARM_COVER:
+            return None
+        s.note("only a sidearm: off to cover")
+        return cover
+
     def mend_point(s, now, me, snap, seen):
         """Demon after winning a fight (the man it fought died within a second of its last shot) with any shield or
         body lost: into cover until both are back, wherever it is going (MEND_SCORE: over its objective, guns and
@@ -1940,6 +1972,7 @@ class Bot:
             s.air_guard(me, act, snap)
             s.spire_approach(me, act, snap)
             s.air_roof_guard(me, act, snap)
+            s.air_snap_fire(now, me, act, snap)
             s.fire_gate(now, me, act, snap)
             return act
         # on foot: the next seat is a new one, in the same vehicle too (H2A Bloodline s133: out of a Warthog's gun with
@@ -2289,7 +2322,10 @@ class Bot:
         s.learn_mags(me)
         if now < getattr(s, "flag_quiet_until", 0.0):
             act.weapon, act.action, act.reload = -1, False, False     # the flag just came into our hands (above)
-        elif act.weapon < 0 and weapon_goal[0] not in ("fight", "retreat") and not me.has_flag:
+        elif act.weapon < 0 and weapon_goal[0] != "fight" and not me.has_flag:
+            # (custom, Nov 8: in a retreat too, nobody in view: the owner's "reload when they have the time, like
+            # retreating, or patrolling, whenever they arent fighting"; reload_check holds it while a man is in view or
+            # rounds are coming in)
             s.reload_check(now, me, act)
         return act
 
@@ -2304,9 +2340,13 @@ class Bot:
 
     def reload_check(s, now, me, act):
         """Reload between fights, never with a man in view (guide 03: "the bot reloads after every kill, never
-        with an enemy in view"), once the magazine is down to 40% of the most it has held and rounds are left
-        in reserve. Halo reloads an empty magazine by itself on the next trigger pull."""
+        with an enemy in view"), once the magazine is down to RELOAD_TOP_OFF of the most it has held and rounds are
+        left in reserve. Halo reloads an empty magazine by itself on the next trigger pull. (Custom, Nov 8: topped off
+        at 80%, not 40%, and not while rounds are coming in from a man unseen (RELOAD_QUIET): the owner met "too many
+        bots that reload mid fight", each starting the next fight on a part-spent magazine.)"""
         if me.weapon not in me.weapons or s.per.visible_enemies():
+            return
+        if now - getattr(s.per, "hurt_at", -99.0) < RELOAD_QUIET:
             return
         i = me.weapons.index(me.weapon)
         mag = me.mag[i] if i < len(me.mag) else -1
@@ -2315,7 +2355,7 @@ class Bot:
             return
         top = s.__dict__.setdefault("mag_max", {})   # (learned every tick: plan)
         top[me.weapon] = max(top.get(me.weapon, 0), mag)
-        if total > mag and mag <= 0.4 * top[me.weapon] and now >= getattr(s, "reload_at", 0.0):
+        if total > mag and mag <= RELOAD_TOP_OFF * top[me.weapon] and now >= getattr(s, "reload_at", 0.0):
             act.reload, s.reload_at = True, now + 3.0
             s.notes.append("reload between fights")
 
@@ -2409,7 +2449,7 @@ class Bot:
                   and any(inv[i] in CQ and ammo[i] != 0 for i in range(n)))
         if n < 2 or (now < getattr(s, "switch_ok_at", 0.0) and not rushed):
             return -1
-        if kind not in ("fight", "retreat") and d is None and cur >= 0 and not s.per.visible_enemies():
+        if kind != "fight" and d is None and cur >= 0 and not s.per.visible_enemies():   # (custom: a retreat too)
             # between fights (where think runs reload_check: not in a retreat either, third review B1) a gun whose
             # magazine ran out comes back out to be reloaded (reload_check reloads the gun in hand only; live CE: an
             # AR with 491 in reserve stayed empty in the pocket). Not one named like the gun in hand: a switch by
@@ -2853,6 +2893,9 @@ class Bot:
         mend = s.mend_point(now, me, snap, seen)
         if mend is not None:
             scores[("retreat", mend)] = max(scores.get(("retreat", mend), 0.0), MEND_SCORE)
+        outgunned = s.sidearm_cover(me, snap, seen)
+        if outgunned is not None:
+            scores[("retreat", outgunned)] = max(scores.get(("retreat", outgunned), 0.0), DEMON_SIDEARM_SCORE)
         if avoid:
             away = s.cover_from(me, threats) or s.away_from(me, threats)
             scores[("retreat", away)] = 1.0
@@ -3113,7 +3156,15 @@ class Bot:
         """This bot may take vehicle v's wheel: not a Demon at a Warthog's or a Mongoose's (vehicles.DEMON_NO_DRIVE: it rides
         their guns and seats; the owner's ask Nov 7). Race laps excepted: every racer drives."""
         return (getattr(snap, "mode", None) == "race" or not profiles.fixed_demon(s.p)
-                or not vehicles.demon_no_drive(v["kind"]))
+                or not (vehicles.demon_no_drive(v["kind"]) or s.ghost_spent(v)))
+
+    @staticmethod
+    def ghost_spent(v):
+        """(custom) A Ghost with DEMON_GHOST_BAIL of its body left or less (the snapshot's "left"): a Demon gets out of
+        it and does not take it (may_drive). Other vehicles go down with their driver, the owner's ask (a tank too)."""
+        left = v.get("left")
+        return (vehicles.kind_of(v["kind"]) == "ghost" and isinstance(left, (int, float)) and not isinstance(left, bool)
+                and left <= DEMON_GHOST_BAIL)
 
     @staticmethod
     def trip_ok(v, me, goal):
@@ -3746,7 +3797,7 @@ class Bot:
             # (Use held, as every get-out: a one-tick press did not leave a Reach Warthog)
             s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
             s.vehicle_retry_at = now + 20.0
-            s.note("vehicle: Demon does not drive this, out")
+            s.note("vehicle: Ghost nearly gone, out" if s.ghost_spent(v) else "vehicle: Demon does not drive this, out")
             return
         if s.seat != "driver":
             if s.order.role == "give_seat":      # our objective holder needs this seat (director): out
@@ -4348,6 +4399,13 @@ class Bot:
         # (the next run starts from the player's run height: 10-35 u up; flown in a harness the old 0.3 climb to 22 u
         # off left it 3-8 u over the floor, his median was 26)
         start_h = max(PASS_START_MIN, min(travel, PASS_START_H))   # (a map with no flying learned: travel 9 u)
+        # (custom) never over the room the map's roof leaves (air_ceiling): Halo 4 Blood Crash's soft kill from 12.2 z
+        # holds a pilot under 9.7 z over floors at 0, and a run start 11 u up was never reached, so every way out ran
+        # its whole PASS_OUT_S with the guns off and the pull up fought the roof guard (live 20261108-024522: 567 of
+        # 1778 Demon pilot rows on the way out, 92 shots in all)
+        room = s.air_ceiling(me.pos.x, me.pos.y, Ta) - (me.pos.z - h)
+        if math.isfinite(room):
+            start_h = max(AIR_ROOM_MIN, min(start_h, room - AIR_ROOM_SPARE))
         far = flat >= PASS_EXTEND and h >= start_h - 1.0
         if run[0] == "out" and (far or now - run[2] > PASS_OUT_S):
             run[:] = ["in", tid, now, me.yaw]                  # far and high enough: the turn back into the next run
@@ -6132,10 +6190,7 @@ class Bot:
         sp = vehicles.spec(v["kind"]) if v else None
         if not sp or sp["move"] != "air" or getattr(s, "seat", "driver") != "driver" or not hasattr(s.T(), "air_roof"):
             return
-        lim = s.T().air_roof(me.pos.x, me.pos.y) - AIR_ROOF_M
-        env = vehicles.envelope(s.map.get("name"))
-        if env is not None:
-            lim = min(lim, env["ceiling"])   # (the highest he flew any aircraft here, his flag)
+        lim = s.air_ceiling(me.pos.x, me.pos.y, s.T())
         if me.pos.z > lim:
             act.pitch = min(act.pitch, -0.3)
             if sp.get("vtol"):
@@ -6145,6 +6200,43 @@ class Bot:
             act.pitch = min(act.pitch, 0.0)
             if sp.get("vtol"):
                 act.vertical = min(getattr(act, "vertical", 0.5), 0.5)
+
+    def air_ceiling(s, x, y, T):
+        """(custom) The highest an aircraft's middle goes at (x, y): the map's roof (Terrain.air_roof) less AIR_ROOF_M,
+        and no higher than he flew any aircraft here (vehicles.AIR_ENVELOPE ceiling); +inf where neither says
+        (air_roof_guard's limit, shared with air_pass's run heights)."""
+        roof = getattr(T, "air_roof", None)
+        lim = roof(x, y) - AIR_ROOF_M if roof is not None else math.inf
+        env = vehicles.envelope(s.map.get("name")) if s.map else None
+        if env is not None:
+            lim = min(lim, env["ceiling"])   # (the highest he flew any aircraft here, his flag)
+        return lim
+
+    def air_snap_fire(s, now, me, act, snap):
+        """(custom) An aircraft's pilot fires whenever its nose, after every guard has steered it, is on an enemy inside
+        CANNON_R: within AIR_GUN_R of his middle, as air_pass's run aims (fire_gate still wants the clear line). A
+        player taps the cannons on anyone who crosses his nose, on the way out and round a wall too. Live Blood Crash
+        20261108-024522: the wall guards turned the nose on 337 of the 461 in-range run rows, which fired 10% of the
+        time to the 47% of the others; the way out never fired; two Demon pilots fired 7 shots in 10 s and died."""
+        if act.fire or getattr(s, "seat", "driver") != "driver" or getattr(s, "rod", None) is not None:
+            return
+        v = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None)
+        sp = vehicles.spec(v["kind"]) if v else None
+        if not sp or sp["move"] != "air" or now < getattr(s, "exit_until", 0.0):
+            return
+        o = eye(me)
+        for e in snap.players:
+            if e.team == me.team or not e.alive or e.id == me.id:
+                continue
+            d = dist(me.pos, e.pos)
+            if d > CANNON_R or not s.line_clear(now, me, e.id, snap):
+                continue
+            ya, pa = angles_to(o, e.pos + Vec(0, 0, CROUCH_CHEST if crouched(e) else CHEST))
+            r = math.atan2(AIR_GUN_R, max(d, 1.0))
+            if abs(wrap(ya - act.yaw)) < r and abs(pa - act.pitch) < r:
+                act.fire = True
+                s.note("air: on him, snap shot")
+                return
 
     LINE_FRESH = 0.0         # s: only this tick's line counts (Perception looks at every enemy in view every tick)
 

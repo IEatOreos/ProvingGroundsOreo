@@ -856,6 +856,61 @@ class Director:
         # (blitz_team: not while on its way to a seat)
         s.vehicle_orders(now, snap, alive + blitzing)
         s.infantry_patrol_orders(now, snap, alive)
+        s.pair_orders(now, snap, alive)
+
+    PAIR_ROLES = ("mid", "hunter", "free")   # (custom) the Slayer jobs a Demon's partner shares (pair_orders)
+    PAIR_GAP = 3.0                           # u: the partner's spot off the lead's point (spread's ring)
+
+    def demon_pairs(s, alive):
+        """(custom) Team Slayer: each fixed Demon with a partner, (lead, mate): another Demon first, else a fixed
+        Legendary; the pairs kept while both live (the lower id of two Demons leads). The owner's ask, Nov 8: a Demon
+        and a Legendary, or two Demons, in a party of two, on the same routes and patrols (live Blood Crash
+        20261108-024522: its two Demons within 8 u of each other 18% of the match, median 17.6 u apart)."""
+        ids = {b.id: b for b in alive}
+        kept = [(a, m) for a, m in getattr(s, "pairs", ()) if a in ids and m in ids
+                and profiles.fixed_demon(ids[a].p) and profiles.fixed_high(ids[m].p)]
+        used = {k for pair in kept for k in pair}
+        free = lambda b: b.id not in used
+        demons = sorted((b for b in alive if profiles.fixed_demon(b.p) and free(b)), key=lambda b: b.id)
+        legends = sorted((b for b in alive if profiles.fixed_high(b.p) and not profiles.fixed_demon(b.p) and free(b)),
+                         key=lambda b: b.id)
+        while demons:
+            lead = demons.pop(0)
+            mate = demons.pop(0) if demons else legends.pop(0) if legends else None
+            if mate is not None:
+                kept.append((lead.id, mate.id))
+        s.pairs = kept
+        return [(ids[a], ids[m]) for a, m in kept]
+
+    def pair_orders(s, now, snap, alive):
+        """(custom) Team Slayer pairs (demon_pairs): the mate takes its lead's job, its point PAIR_GAP off the lead's
+        (spread) by the same way (via), and the lead's patrol (infantry_patrol_orders), sure (set_order: no rogue moment).
+        Not while either rides, carries, is on a power run, or the lead's job is another (a vehicle's, an objective's);
+        a mate with a patrol its lead has not leaves it (it walked off alone)."""
+        if snap.mode != "slayer":
+            return
+        for lead, mate in s.demon_pairs(alive):
+            lp, mp = snap.player(lead.id), snap.player(mate.id)
+            if (lp is None or mp is None or lp.vehicle not in (None, -1) or mp.vehicle not in (None, -1)
+                    or lp.has_flag or mp.has_flag or getattr(lead, "fetch", None) is not None
+                    or getattr(mate, "fetch", None) is not None or lead.order.role not in s.PAIR_ROLES
+                    or s.roles.get(mate.id, "free") not in s.PAIR_ROLES or lead.id in snap.vips or mate.id in snap.vips):
+                continue
+            o = lead.order
+            point = s.spread(o.point, 1, s.PAIR_GAP) if o.point is not None else None
+            mine = mate.order
+            if not (mine.role == o.role and mine.via == o.via and mine.point is not None and point is not None
+                    and dist(mine.point, point) < 1.0):
+                mate.set_order(Order(o.role, point, via=o.via, target=o.target), sure=True)
+            s.roles[mate.id] = s.roles.get(lead.id, o.role)
+            patrol = getattr(lead, "infantry_patrol", None)
+            if patrol is not None:
+                mate.infantry_patrol = patrol
+                if mate not in getattr(s, "infantry_patrollers", []):
+                    s.infantry_patrollers = list(getattr(s, "infantry_patrollers", [])) + [mate]
+            elif getattr(mate, "infantry_patrol", None) is not None:
+                mate.infantry_patrol = None
+                s.infantry_patrollers = [b for b in getattr(s, "infantry_patrollers", []) if b is not mate]
 
     def infantry_patrol_orders(s, now, snap, alive):
         """Send up to three available infantry bots to a lightly visited map position."""
@@ -895,7 +950,9 @@ class Director:
         for point in sorted(points, key=lambda p: visits.get(p, -math.inf)):
             if now - visits.get(point, -math.inf) < 25.0:
                 continue
-            nearby = [(dist(snap.player(b.id).pos, point), b) for b in alive if eligible(b, point)]
+            # (custom) a Demon's Slayer partner takes its lead's patrol, never one of its own (pair_orders)
+            mates = {m for _, m in getattr(s, "pairs", ())} if snap.mode == "slayer" else set()
+            nearby = [(dist(snap.player(b.id).pos, point), b) for b in alive if eligible(b, point) and b.id not in mates]
             for distance, bot in sorted(nearby, key=lambda pair: pair[0]):
                 if distance > 35.0:
                     break

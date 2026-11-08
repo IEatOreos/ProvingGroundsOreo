@@ -2,6 +2,45 @@
 
 ## Unreleased
 
+### Halo 4 gun ammo read: empty guns are switched off, reloads work, 2026-11-08
+
+- `brain/live.py` `LiveH4F.H4_AMMO`: a Halo 4 gun's reserve at +0x5AA and loaded rounds at +0x5AE (int16), Halo 4 only (`AMMO_AT` / `MAG_AT` properties by the dll; H2A stays unread). `players()` now fills each player's `ammo` (reserve + loaded) and `mag`.
+- Before, every Halo 4 gun read unknown, so no Halo 4 bot ever knew a gun was empty. The owner's F9 "Bot didnt switch weapons after out of ammo" (Blood Crash `20261108-141550`, about 104-115 s): a Legendary pressed an empty rocket launcher 9 times at 5-7 u while his shield never moved. Now the existing rules apply in Halo 4: "dry: switch to a loaded gun", "empty magazine mid-fight: switch", reloads between fights, and rearming at a loose gun.
+- Found live with two read-only scans of every held gun in a running Blood Crash match. In 11 of 11 reloads, +0x5AE gained exactly what +0x5AA lost (BR 0 -> 36, carbine 0 -> 18, sniper 0 -> 4, DMR 5 -> 14), and +0x5AE fell one per DMR shot. Spawn guns read BR 36 + 72, Light Rifle 36 + 72, Boltshot 10 + 20, Magnum 8, and an emptied BR 0 + 0. Read back through the patched reader in the same match, every living player's guns gave plausible counts.
+- A gun kind never seen with a round (the sword) stays unknown, as before. Battery weapons (Plasma Pistol, Storm Rifle) were not held during the scans, so how they read is unchecked.
+- Validation: new `tools/test_h4_ammo.py`, 4 tests: the offsets on fake memory, an emptied gun reads dry, a never-loaded kind reads unknown, H2A stays unread, and an empty rocket launcher is switched off for the rifle. All 386 regression tests pass. Gameplay with the bots is untested. The bot process must be restarted.
+
+### Reloads out of a fight: topped off at 80%, in a retreat too, 2026-11-08
+
+The owner met "too many bots that reload mid fight" and asked that they reload "when they have the appropriate time, like retreating, or patrolling, whenever they arent fighting". Every tier, `brain/bot.py`:
+
+- `reload_check` tops off a magazine at `RELOAD_TOP_OFF` 0.8 of the most it has held or less (was 0.4), so the next fight starts on a near-full magazine. It still never reloads with a man in view, and now also not within `RELOAD_QUIET` 1.5 s of being hit (a man unseen shooting it), nor with no reserve.
+- `plan` runs `reload_check` in a retreat too, not only on patrols, hunts, objectives and roaming. A fight goal still never reloads.
+- `choose_weapon`'s "reload the empty one" (the pocket gun with an empty magazine comes out to be reloaded) runs in a retreat too, nobody in view.
+- Halo 4 is covered once its ammo is read (the entry above).
+- Validation: new `tools/test_reload_timing.py`, 5 tests: top-off for every tier, a near-full magazine waits, none with a man in view or within 0.75 s of a hit, none without reserve, the empty pocket gun out in a retreat. All 382 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
+### Banshee pilots shoot under a low roof; Demon leaves a dying Ghost, backs off with only a sidearm, and plays Slayer in pairs, 2026-11-08
+
+Taken from the owner's Blood Crash match `20261108-024522`, where his teammates got about 8–9 of the 15 Demon deaths. Two Demon pilots fired 7 shots in 10 s in a Banshee and were shot down. Camper25 died in a Ghost at 6% health. Havoc94 left a Ghost holding only a Boltshot and a Magnum and lost a 3 on 1. The two Demons were within 8 u of each other 18% of the match.
+
+- Banshee, every tier (`brain/bot.py`):
+  - `air_ceiling` gives the highest an aircraft may fly: the map's roof less `AIR_ROOF_M`, capped by the owner's flight envelope. `air_roof_guard` now uses it too.
+  - `air_pass` caps the next run's start height at the room under that ceiling less `AIR_ROOM_SPARE` 1.0, and never under `AIR_ROOM_MIN` 4.0 u over the floor. Blood Crash's soft kill from z 12.18 held pilots under 9.7 z. The 11 u start height was never reached, so every way out ran its full `PASS_OUT_S` 6 s with the guns off. That was 567 of 1778 Demon pilot rows, while the pull-up fought the roof guard.
+  - `air_snap_fire` (new) runs after the guards and before `fire_gate`. A pilot fires when its nose, after every guard has steered it, is within `AIR_GUN_R` of an enemy inside `CANNON_R` with a clear line. It skips gunners and bomb or fuel-rod cycles. In range, the wall guards had turned the nose on 337 of 461 run rows, which fired 10% of the time against 47% for the others.
+- Demon only:
+  - `may_drive` refuses a Ghost at `DEMON_GHOST_BAIL` 0.20 of its body left or less (`ghost_spent`), using the snapshot's `left`. A Demon at its wheel gets out with Use held, notes "vehicle: Ghost nearly gone, out", and isn't allowed back for 20 s. Other vehicles, a tank too, go down with their driver: the owner's choice.
+  - `sidearm_cover` (new): holding nothing but sidearms (`DEMON_SIDEARMS`: Magnum, Boltshot, Plasma Pistol) with an enemy in sight and none within `DEMON_STAND_R`, it retreats to cover within 12 u at `DEMON_SIDEARM_SCORE` 3.0. A man right on it is still fought.
+- Team Slayer, Demon (`brain/director.py`):
+  - `demon_pairs` pairs each fixed Demon with another Demon first, else a fixed Legendary. The lower id of two Demons leads.
+  - `pair_orders` runs after the infantry patrols and gives the mate its lead's job (`mid`, `hunter` or `free`), a point `PAIR_GAP` 3 u off the lead's (`spread`), the same route, and the lead's patrol. It passes `sure=True`, so the mate has no rogue moment.
+  - It is skipped while either one rides, carries, is on a power run, or the lead's job is another.
+  - `infantry_patrol_orders` gives mates no patrol of their own.
+- Validation:
+  - New `tools/test_demon_vehicles.py`, 18 tests: the low-roof way out turns back and still climbs where there is room; snap shots for every tier, none off the nose, out of range, without a line, as a gunner or mid-bomb; the Ghost bail for Demon only (a tank and Legendary unchanged); the sidearm retreat; pairs, patrol sharing, no pair in a vehicle, outside Slayer or without a partner. All 377 regression tests pass.
+  - Replayed over the match's 1778 pilot rows, the snap shot adds about 55 firing rows to the 92 fired, before the clear-line check. The ceiling fix changes the flight path, so it can't be replayed.
+  - Gameplay is untested. The bot process must be restarted.
+
 ### Halo 4 weapon ranks, second pass: the SAW a power weapon, 2026-11-08
 
 - `brain/bot.py` `RANK_GAME["h4"]`: SAW (`lmg`) 4.0, Light Rifle 3.6, Shotgun and Scattershot 3.4 (Halo 4 only).

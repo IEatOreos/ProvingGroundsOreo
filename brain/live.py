@@ -1832,7 +1832,21 @@ class LiveH4F(LiveReach):
     TRACKER_AT = 0x758         # (LiveH3.tracker; both games: Unchanged 3, Off 1 seen live)
     # (Live.vehicle_dead / vehicle_left: halo4.dll 0x180683124 and groundhog.dll 0x180683e80, object_get_health)
     DEAD_AT, HEALTH_BLOCK = 0x16C, 0x1D0
-    AMMO_AT = None              # (rounds not decoded here: Reach's +0x2C6 / +0x2CA are not these games')
+    # (custom, Nov 8) a Halo 4 gun's reserve +0x5AA and loaded rounds +0x5AE (int16), found live (Blood Crash, every
+    # bot's guns 10 times a second for 60 s): 11 of 11 reloads moved what +0x5AE gained out of +0x5AA (BR 0 -> 36,
+    # carbine 0 -> 18, sniper 0 -> 4, DMR 5 -> 14), +0x5AE fell one a DMR shot, the spawn loadouts read BR 36 + 72, Light
+    # Rifle 36 + 72, Boltshot 10 + 20, Magnum 8, an emptied BR 0 + 0; a sword 0 + 0 (never a round: unknown, Live.rounds).
+    # Unread before, every Halo 4 gun was unknown: none was ever dry, and a Legendary pressed an empty rocket launcher 9
+    # times at 5-7 u (live 20261108-141550). H2A (groundhog.dll) not decoded: unknown, as before
+    H4_AMMO = (0x5AA, 0x5AE)
+
+    @property
+    def AMMO_AT(s):
+        return s.H4_AMMO[0] if str(getattr(s.g, "dll", "")).lower() == "halo4.dll" else None
+
+    @property
+    def MAG_AT(s):
+        return s.H4_AMMO[1] if str(getattr(s.g, "dll", "")).lower() == "halo4.dll" else None
     # the vehicles' object types: 1, and Halo 4's giants, 13 (the Mantis: halo4.dll's own object type table at
     # 0x180d8f410 lists biped 0, vehicle 1 ... creature 12, giant 13; logs/tmp/h4_object_types.py). Read as type 1 only,
     # the Mantis was in no vehicle list: no bot went for it, and a player in it rode "?" (Ragnarok 20261106-234103).
@@ -2213,6 +2227,11 @@ class LiveH4F(LiveReach):
                 cur = u[0x63A] if u[0x63A] < 4 else 0
                 d["weapons"] = [s.weapon_name(w) for w in slots if w != NONE]
                 d["weapon"] = s.weapon_name(slots[cur]) if slots[cur] != NONE else "none"
+                # (custom) each gun's rounds (reserve + loaded, loaded), the weapons' order; -1 unknown (H4_AMMO).
+                # Halo 4 only: H2A's are not decoded, and its snapshot stays as before (no ammo lists)
+                if s.AMMO_AT:
+                    rounds = [s.rounds(w) for w in slots if w != NONE]
+                    d["ammo"], d["mag"] = [a for a, _ in rounds], [g for _, g in rounds]
                 # what it rides: +0x24 (the parent, as for a held gun), its seat at +0x2C (-1 on foot). +0x14 is flags
                 # (0x3040 on foot, 0x2040 seated): read as the parent, nobody ever rode here (Bloodline: a bot in a
                 # Ghost read on foot, kept pressing Use and got out again, 210 boardings in two minutes)
