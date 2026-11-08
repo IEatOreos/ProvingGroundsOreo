@@ -661,6 +661,7 @@ class Director:
         not Easy (no plans), not a defender while the core is at stake (Bot.urgent). Bot.fetch = (where, name, until);
         dropped once it is gone from there or the time is up."""
         power = {it["name"] for it in s.map.get("items", []) if it["kind"] == "weapon" and it["value"] >= 0.8}
+        power |= set(s.map.get("ordnance_power", ()))   # (custom: Halo 4's random drops, maps.ordnance_power)
         lying = [(n, q) for n, q in (snap.ground_weapons or ()) if n in power]
         # ... and its spawn when the team's timer has it coming back within POWER_EARLY s. Only a known timer: item_up 0
         # is "never seen taken", not "up" (it sent the bot whose sniper had just been taken straight back to its spawn,

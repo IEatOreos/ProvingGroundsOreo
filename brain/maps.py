@@ -160,7 +160,9 @@ def load_map(name):
     for f in objs["netgame_flags"]:
         if f["type"] in SPOT_KINDS:
             m["spots"].setdefault(SPOT_KINDS[f["type"]], []).append(_v(f["pos"]))
-    m["items"] = power_items(objs, base_of(name).startswith("h3_"))
+    h4 = base_of(name).startswith("h4_")
+    m["items"] = power_items(objs, base_of(name).startswith("h3_"), h4)
+    m["ordnance_power"] = ordnance_power(objs) if h4 else []
     pos = own("positions.json")                    # power positions (tools/power_positions.py)
     rows = read_json(pos) if os.path.exists(pos) else []
     m["positions"] = [_v(p["pos"]) for p in rows]
@@ -205,18 +207,47 @@ POWER = {"rocket launcher": ("rockets", "weapon", 1.0), "sniper rifle": ("sniper
          "speedboost": ("speed_boost", "powerup", 0.6)}
 
 
-def power_items(objs, h3=False):
+# Halo 4's ordnance guns (custom, Nov 8), beside POWER's, by the exports' item names (the brain's): power 0.8 and up
+# gets the team's runs (director.power_runs). Its needler, SAW and grenade drops are no trip: a bot takes them by the way
+# (Bot.upgrade_point)
+H4_ORDNANCE = {"incineration_cannon": ("incineration_cannon", "weapon", 0.9),
+               "binary_rifle": ("binary_rifle", "weapon", 0.85), "railgun": ("railgun", "weapon", 0.8),
+               "scattershot": ("scattershot", "weapon", 0.6), "concussion_rifle": ("concussion_rifle", "weapon", 0.5),
+               "sticky_detonator": ("sticky_detonator", "weapon", 0.5), "shotgun": ("shotgun", "weapon", 0.5)}
+# A Halo 4 initial drop, once seen gone, is not timed back: Infinity Slayer drops it once at the start, and later
+# ordnance falls on the random points. A gun seen on its spot again brings it back (tools/live_bots.py item_check)
+ORDNANCE_GONE = 1e6
+
+
+def power_items(objs, h3=False, h4=False):
     """h3: MCC Halo 3, where a weapon's timer starts 2 s after it is disturbed (map brain MAP-12; guide 21 Part 2 from
-    the Steam Halo 3 spawn guide): its respawn is 2 s longer from the pickup."""
+    the Steam Halo 3 spawn guide): its respawn is 2 s longer from the pickup. h4: Halo 4's ordnance (custom, Nov 8): the
+    export marks each placement "initial" (lying there at the start) or "random" (a point a random drop may land on);
+    the initial ones are items (ORDNANCE_GONE once seen taken), the random ones none (ordnance_power)."""
+    table = {**POWER, **H4_ORDNANCE} if h4 else POWER
     out = []
     for e in objs["equipment"]:
         key = e["item"].split("\\")[-1]
-        if key in POWER:
-            name, kind, value = POWER[key]
+        if key in table:
+            name, kind, value = table[key]
+            ordnance = e.get("ordnance") if h4 else None
+            if ordnance == "random":
+                continue
             default = 60 if kind == "powerup" else 45
-            out.append({"name": name, "kind": kind, "value": value, "pos": _v(e["pos"]),
-                        "respawn": (e["spawn_time"] or default) + (2 if h3 and kind == "weapon" else 0)})
+            it = {"name": name, "kind": kind, "value": value, "pos": _v(e["pos"]),
+                  "respawn": (e["spawn_time"] or default) + (2 if h3 and kind == "weapon" else 0)}
+            if ordnance:
+                it["ordnance"], it["respawn"] = ordnance, ORDNANCE_GONE
+            out.append(it)
     return out
+
+
+def ordnance_power(objs):
+    """Halo 4: the power guns (value 0.8 and up) a random drop point may bring, by the brain's names."""
+    table = {**POWER, **H4_ORDNANCE}
+    return sorted({table[k][0] for k in (e["item"].split("\\")[-1] for e in objs["equipment"]
+                                         if e.get("ordnance") == "random")
+                   if k in table and table[k][1] == "weapon" and table[k][2] >= 0.8})
 
 
 _MAPS = {}

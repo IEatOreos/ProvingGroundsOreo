@@ -409,6 +409,7 @@ def vehicle_left(live, handle):
 
 
 GROUND = {"t": -1.0, "list": []}     # loose weapons, re-read twice a second
+PICKUP_GAMES = ("ce", "h2", "h3", "reach", "h4")   # games where a bot's Use takes a gun (Bot.can_pickup, main)
 MATCH = {"t": -1.0, "v": None}       # live.match_state(): score, limit, time left, twice a second
 HILL = {}                            # "last": the last King hill read (centre, radius), kept through missed reads
 HONK = {}                            # person id -> (vehicle, where it stopped, since when): the honk stand-in
@@ -485,13 +486,20 @@ def item_name(path):
 def item_check(live, directors, bots, snap, now):
     """Power items: a team learns one is gone (taken, or not in this game type) when one of its
     bots is near the spawn and nothing of that kind lies there; its timer starts then, as for a
-    player who walks up to an empty spawn."""
+    player who walks up to an empty spawn. Halo 4's ordnance (custom, Nov 8; brain/maps.py ORDNANCE_GONE) is not timed
+    back: a gun lying loose on its spot again (GROUND, no unit holds it) brings it back for both teams, as the game
+    marks a drop for everyone."""
     loose = [(item_name(path), pos) for h, t, path, pos in live.objects((2, 3))]
     for i, it in enumerate(MAP["items"]):
         p = it["pos"]
         there = any(n == it["name"] and abs(q[0] - p.x) < 1.2 and abs(q[1] - p.y) < 1.2 and abs(q[2] - p.z) < 1.5
                     for n, q in loose)
         if there:
+            if it.get("ordnance") and any(n == it["name"] and (q - p).flat() < 1.2 and abs(q.z - p.z) < 1.5
+                                          for n, q in GROUND.get("list") or ()):
+                for d in directors.values():
+                    if d.item_up.get(i, 0.0) > now:
+                        d.item_up[i] = 0.0
             continue
         for d in directors.values():
             if d.item_up.get(i, 0.0) > now:
@@ -1145,8 +1153,10 @@ def main():
                         bots[index].game_team = me.team     # its director: the game's team
                         bots[index].liked = liked_guns(me.name)   # its favourite loadout guns (brain/loadouts.py)
                         # Reach: botcore s67 fills the pickup itself (native/reach.cpp hr_loose_weapon); Halo 3 the
-                        # same way as Halo 2. H2A / H4 pickups not decoded yet
-                        bots[index].can_pickup = o.game in ("ce", "h2", "h3", "reach")
+                        # same way as Halo 2. Halo 4 (custom, Nov 8): the game takes the gun at a bot's feet on its own
+                        # decoded Use (live: Blood Crash 42.4 s, rockets one Use tick after the press; Canyon 281.1 s,
+                        # an Incineration Cannon), as its runners take the flag. H2A pickups not decoded yet
+                        bots[index].can_pickup = o.game in PICKUP_GAMES
                         # what reaches the game: botcore sends melee natively only in CE; the rest
                         # only where decoded (maps/_inputs); a bot plans with what it can press
                         names = {n for _, n, *_ in pressable}

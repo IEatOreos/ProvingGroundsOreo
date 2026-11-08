@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Halo 4 bots pick up ordnance, 2026-11-08
+
+- The owner: Halo 4 has no weapon pickups like Reach or the other Halos; bots must find a way to take ordnance drops, most of which land like a weapon on the ground at fixed spots, and some randomly during the game.
+- Findings:
+  - Halo 4 bots never planned a trip to any gun. `Bot.decide`'s item goals, rearming, upgrades, the team's power runs and the anti-vehicle search are all gated on `can_pickup`, which `tools/live_bots.py` set only for CE, Halo 2, Halo 3 and Reach ("H2A / H4 pickups not decoded yet"). In his last three Halo 4 games (Canyon, Cliffside, Blood Crash): no item goal at all, and apart from loadout guns, power weapons held for 31 ticks in total.
+  - Halo 4's Use does take a gun: both of those holds came from a Use press by a bot walking to board a Warthog, standing on a loose gun (Blood Crash 42.4 s, Rockets one tick after the press; Canyon 281.1 s, an Incineration Cannon). No native pickup code is needed, as the runners already take the flag with the same decoded Use.
+  - The reader saw no ordnance. Live, read-only, on his Redoubt match (01:10): every ordnance gun (2 needlers, 2 snipers, a sticky detonator, Rockets) was attached to its drop pod, `unsc_weapons_pod_scenery`, an object of type 6. The loose-gun test (`LiveH2.ground_weapons`, parent must be none) counted each one as held. Each pod gun lay 0.2-0.4 u from one of the map's placements. The export already labels each placement `"ordnance": "initial"` or `"random"`: 5 of the 6 were initial drops and the Rockets a random one that fell in the first 3 minutes (an Incineration Cannon followed on the random point at (31.0, 9.9)).
+  - Two ordnance guns read under names the brain does not know: `storm_forerunner_incineration_launcher` and `storm_forerunner_sniper_rifle` (Redoubt's tag names).
+- Changes:
+  - `brain/live.py` `LiveH4F.ground_weapons` (Halo 4 only): a gun is held only when its parent is a unit, a biped or a vehicle (type 0 or 1), as `native/h4f.cpp` `f_holder` counts it; a gun in its pod lies loose. H2A keeps the inherited reader. Live on Redoubt: 37 loose guns, where the old reader found 31 and none of the ordnance.
+  - `brain/live.py` `TAG_ALIAS`: `forerunner_incineration_launcher` → `incineration_cannon`, `forerunner_sniper_rifle` → `binary_rifle`.
+  - `brain/maps.py`: `H4_ORDNANCE` values for Halo 4's ordnance guns beside `POWER` (Incineration Cannon 0.9, Binary Rifle 0.85, Railgun 0.8, Scattershot 0.6, Concussion Rifle, Sticky Detonator and Shotgun 0.5; needlers, SAWs and grenade drops make no trip). On a Halo 4 map, `power_items` keeps the initial drops as items with `ordnance: "initial"` and `ORDNANCE_GONE` (no timed respawn: Infinity Slayer drops them once); random points are no items. `ordnance_power` lists the power guns (0.8 and up) the random points may bring, as `m["ordnance_power"]`.
+  - `brain/director.py` `power_runs`: those names count as power, so a random drop of one gets the team's run. Its usual limits apply: Normal and up, one fetcher, 40 u (80 for fixed Legendary and Demon).
+  - `tools/live_bots.py`: `PICKUP_GAMES` adds Halo 4 (`Bot.can_pickup`). `item_check`: an initial drop seen gone is gone; a gun lying loose on its spot again (the snapshot's loose list, not one in someone's hands) brings it back for both teams, as the game marks drops for everyone.
+- Unchanged: H2A (no pickups), the other games' items and timers, and personal ordnance (no bot calls one in; one lying loose is a loose gun like any other).
+- Validation:
+  - `tools/test_h4_ordnance.py`, 11 tests: on a stand-in reader, a pod gun is loose and a held, mounted or empty one is not, H2A unchanged; the two names; the initial/random split, values and no-respawn on a stand-in map, other games unchanged, and Redoubt's real items (2 snipers, 2 sticky detonators) and random power names; a random drop's Railgun gets a fetcher only with the ordnance names; `item_check` marks a drop gone, does not bring it back for a gun in someone's hands, and brings it back once it lies loose; Halo 4 in `PICKUP_GAMES` and H2A not; a Heroic with a BR and a magnum walks 6 u for a pod's Incineration Cannon, Binary Rifle, Railgun or Rockets.
+  - All 319 regression tests pass; 113 sources compile. The new reader was checked live on the running Redoubt match (read-only).
+  - Gameplay is untested: a bot taking a gun out of a pod (whether the pod lets it close enough, and whether a tap of Use is enough) has not been seen. The bot process must be restarted, after the current match.
+
 ## 0.2.2-custom.9 — Halo 4 Demon and vehicle aim, Demon driving, Halo 4 Scorpion, 2026-11-08
 
 - Covers the 16 commits since 0.2.2-custom.8 (fe2dd9f), none of them on GitHub yet, and the merge of custom.8 (ef4486d). Also carried: e7d0a39, the local original of custom.8's Slayer anchor change. GitHub has it as the cherry-pick fe2dd9f, so the code is the same; it keeps the commit's identity. Each entry below gives its own behavior and validation.

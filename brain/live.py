@@ -42,6 +42,8 @@ TAG_ALIAS = {"sniper_rifle": "sniper", "rocket_launcher": "rockets", "energy_swo
              "spread_gun": "scattershot",            # (Halo 4's live tag: storm_spread_gun, Adrift)
              "overshield": "powerup_super_shield", "activecamo": "powerup_invisibility",   # brain/maps.py POWER's H2 names
              "storm_rifle": "plasma_rifle",          # ponytail: the Elite plasma rifle's successor, same role
+             # (custom, Nov 8: Halo 4's live tags, Redoubt's tag names; the map exports call them as the brain does)
+             "forerunner_incineration_launcher": "incineration_cannon", "forerunner_sniper_rifle": "binary_rifle",
              "suppressor": "smg",                    # ponytail: Promethean full-auto, the SMG's role
              "new_flag": "flag", "skull": "ball", "oddball": "ball",   # the objectives in hand (Halo 4, H2A)
              # the infected's own swords (Halo 4 Flood's storm_flood_sword, H2A's h2a_energy_sword_infected): lunge
@@ -2141,6 +2143,32 @@ class LiveH4F(LiveReach):
             s._learn(tag, None)
         name = s._names.get(tag, "unknown")
         return WEAPON_ALIAS.get(name, name)
+
+    def ground_weapons(s):
+        """Halo 4 (custom, Nov 8): the guns lying loose, ordnance included. An ordnance drop's gun stays attached to its
+        drop pod (unsc_weapons_pod_scenery, an object of type 6: live Redoubt, every initial and random drop), so the
+        parent test (LiveH2.ground_weapons) took it for held and no bot ever saw one. Held is a unit's: a biped's or a
+        vehicle's (type 0 or 1), as botcore counts it (native/h4f.cpp f_holder). H2A as before."""
+        if s.TAG_GAME != "h4":
+            return LiveReach.ground_weapons(s)
+        ents, mx, _ = s._array(0x18)
+        table = s.g.read(ents, mx * 0x18)
+
+        def unit(handle):
+            i = handle & 0xFFFF
+            return (i < mx and struct.unpack_from("<H", table, i * 0x18)[0] == handle >> 16
+                    and table[i * 0x18 + 4] <= 1)
+        out = []
+        for h, typ, path, pos in s.objects((2,)):
+            o = s.object(h)
+            if not o or s.rounds(h)[0] == 0:
+                continue
+            parent = struct.unpack("<I", s.g.read(o + s.PARENT_AT, 4))[0]
+            if parent != NONE and unit(parent):
+                continue
+            n = path.rsplit("\\", 1)[-1].replace(" ", "_")
+            out.append((WEAPON_ALIAS.get(n, n), pos))
+        return out
 
     def _learn(s, tag, pos):
         """A gun's name from the map's own tag names (exact here: tools/reach_tag_names.py), as the export names the
