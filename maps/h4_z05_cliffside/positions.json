@@ -25,13 +25,13 @@
  },
  {
   "pos": [
-   40.84,
-   -6.51,
-   3.36
+   38.25,
+   -7.25,
+   3.4
   ],
   "score": 1.0,
-  "sees": 1,
-  "height": 2.4,
+  "sees": 4,
+  "height": 2.7,
   "duck": true,
   "owner": true
  },
@@ -56,6 +56,42 @@
   "score": 1.0,
   "sees": 3,
   "height": 1.3,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   19.0,
+   0.25,
+   3.4
+  ],
+  "score": 1.0,
+  "sees": 3,
+  "height": 1.4,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   32.44,
+   -31.94,
+   2.48
+  ],
+  "score": 1.0,
+  "sees": 11,
+  "height": 1.4,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   23.0,
+   8.75,
+   3.4
+  ],
+  "score": 1.0,
+  "sees": 11,
+  "height": 2.6,
   "duck": true,
   "owner": true
  },

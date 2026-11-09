@@ -62,11 +62,13 @@ class CliffsideTests(unittest.TestCase):
     @unittest.skipUnless(os.path.exists(os.path.join(maps.ROOT, "h4_z05_cliffside", "objects.json")), "no map data")
     def test_owner_spots(self):
         m = maps.get_map("h4_z05_cliffside")
-        self.assertEqual([p for p, _team in m["infantry_patrols"]],
+        # (the reports' three first; points the owner adds in Edit spots follow them: Nov 8, Patrol 4-9)
+        self.assertEqual([p for p, _team in m["infantry_patrols"]][:3],
                          [Vec(13.46, 0.05, 3.36), Vec(53.28, -12.25, 3.27), Vec(4.54, 0.2, 2.0)])
         rows = json.load(open(os.path.join(maps.ROOT, "h4_z05_cliffside", "positions.json"), encoding="utf-8"))
         owner = [r["pos"] for r in rows if r.get("owner")]
-        for p in ([13.46, 0.05, 3.36], [45.42, 15.24, 2.39], [40.84, -6.51, 3.36], [40.71, -7.63, 6.56],
+        # (report 5's spot, 40.84 -6.51, moved by the owner in Edit spots to 38.25 -7.25 on Nov 8)
+        for p in ([13.46, 0.05, 3.36], [45.42, 15.24, 2.39], [38.25, -7.25, 3.4], [40.71, -7.63, 6.56],
                   [30.34, 9.71, 5.72]):
             self.assertIn(p, owner)
         self.assertEqual(len(rows) - len(owner), 8)            # (the scored rows kept)

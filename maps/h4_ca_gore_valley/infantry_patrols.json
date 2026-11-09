@@ -1,3 +1,9 @@
 {
-  "Red rockets (report 2, 20261107-222718)": [9.28, 18.75, 2.43]
+  "Red rockets (report 2, 20261107-222718)": [9.28, 18.75, 2.43],
+  "Red patrol 1": {"pos": [20.73, 31.15, -1.05], "team": "red"},
+  "Blue patrol 1": {"pos": [18.98, 7.15, -0.72], "team": "blue"},
+  "Patrol 2": [19.23, 18.15, 1.55],
+  "Patrol 3": [-36.52, 19.15, -4.64],
+  "Red patrol 2": {"pos": [-21.77, 22.9, -1.52], "team": "red"},
+  "Blue patrol 2": {"pos": [-21.02, 14.65, -1.51], "team": "blue"}
 }
