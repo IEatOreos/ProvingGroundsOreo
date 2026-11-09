@@ -48,6 +48,103 @@ The owner: "Can we also make Lidar more interactive? ... can we make a tool to w
 - `tools/lidar.py serve`: `GET /spots`, `GET /spots/floor`, `POST /spots` (needs the `X-LiDAR: spots` header, like the view's other writes).
 - Validation: `tools/spots.py --selftest` and new `tools/test_spots.py` (owner rows, patrol layout, refused edits, unchanged saves, backups, file choice); `tools/lidar.py --selftest` passes. In the browser on Headlong: added a red hold and a blue-only patrol point, dragged a hot spot, saved; the brain's `load_map` read all three (the moved hot spot measured: sees 23, 1.5 u up, cover), then the map files were restored from Git. All 420 regression tests pass. Bots using the edited spots in a match is untested. Edits apply from the next match; restart the LiDAR Viewer to get the panel.
 
+### Halo 4 Demon keeps a loaded rifle over a slower gun up close, 2026-11-08
+
+- The owner's Haven 1v1 against one Demon (h4_wraparound 20261108-185123, 7-5 to the Demon on the scoreboard). With its 3 sniper kills and the owner's 2 sniper openers set aside (one hit from full to 11% body, and to about half), the 7 straight fights went Demon 4, owner 3.
+  - The Demon's 4: it hit first and kept firing, about 13 presses a second, dealing 0.83-1.06 of shield plus body a second to the owner's 0.41-0.51.
+  - The owner's 3: a BR fight at 17.6 u (0.62 a second to his 1.24), and two Boltshot swaps up close.
+  - 167.3 s: at 2.5 u, with his shield at 36% and its own at 61%, it stopped a loaded BR (30 rounds; about 0.7 s from the kill), swapped to the Boltshot and held its charge 0.75 s. The magazine stayed at 10, and it died after about 1.2 s with no damage dealt.
+  - 125.3 s: stuck 4 s in a pocket on the lower level (-2.8, -3.9; "unstuck wiggle, try 5 at this spot"), then the Boltshot at 1.9 u, dead 0.4 s on.
+- Cause: `choose_weapon`'s range score lifts close-quarters guns inside `CLOSE` 2.5 u (+2) and drops a rifle there (-1). Its "finish him" hold keeps the gun in hand only at his shield 25% or under.
+- `brain/bot.py` `keeps_gun`: for a Halo 4 fixed Demon mid-fight with the gun in hand loaded, a range or best-gun swap goes through only if the other gun kills him sooner as he is now (`odds.kill_time`), counting `H4_SWAP_S` 0.5 s and its `CHARGE` time. Example: BR at 2 u on a full man 1.35 s against the Boltshot 1.2 + 0.5 + 1.0; a shotgun 0.25 + 0.5 still comes out. Dry and empty-magazine swaps, other tiers and other games are unchanged.
+- Not changed: the lower-level stuck pocket on Haven, and the BR fight lost at 17.6 u.
+- Validation: `tools/test_demon_odds.py` `KeepGunTests`, 4 new tests (the BR kept over the Boltshot at 2 u, his shield 36% or full; a shotgun still comes out; an empty magazine still swaps; Legendary and Reach Demon swap as before); 37 in the file.
+  - 440 of 441 regression tests pass. The failure is the same `test_h4_reports_nov8.py` `test_owner_spots` on the uncommitted Gore Valley patrol points.
+  - Gameplay is untested. The bot process must be restarted.
+
+### Halo 4 Demon's fight odds count its teammates, 2026-11-08
+
+The owner, Nov 8: "The demon bots can beat me in a 1v1 but in a team enviroment they struggle".
+
+- Haven 20261108-182020, 64 Demon deaths:
+  - At its death the nearest Demon teammate was a median 4.7 u off (none within 15 u in 6%). But a teammate fired on one of its shooters in the 3 s before in only 33%, and a shooter died within 3 s after in 23%. The teammates within 15 u were mostly hunting (38) or on an objective (28); 12 were fighting a shooter.
+  - The odds judged each Demon alone. Another Demon was within 15 u in 94% of its 203 dropped hunts into a group, 91% of its 92 break-offs and 92% of its 49 men not taken on. The Demons were as many as the enemies or more within 20 u in 90%, 74% and 86% of those.
+- `brain/odds.py` `with_help`: the time to kill a man with teammates on him too; the paces add up.
+- `brain/bot.py`:
+  - `TEAM_EYES`: every bot posts the enemies in its view each tick (`share_sightings`), with its accuracy share: a fixed Demon `DEMON_ACC`, another bot `ACC[False]`.
+  - `mate_kill_times`: in `odds_threats`, each enemy's kill time counts the teammates on foot whose post is under `TEAM_FRESH` 0.3 s old and has him in it, at their gun's time over their accuracy. This covers all of `demon_odds_rules` (break-off, men not taken on, hunts into a group) and `chase_ok`.
+  - `ODDS_BREAK` 0.5 to 0.6 (0.85 while breaking).
+- Replay (scratchpad `odds_replay_team.py`; teammates' eyes from their think rows; Haven 182020, Haven 183706, Blood Crash 013418 and 141550, Redoubt, Canyon: 243 Demon deaths, 375 Demon kills):
+
+  | odds | deaths flagged 0.75-4 s before | wins it would have left |
+  |---|---|---|
+  | alone, line 0.5 (before) | 60% | 20.9% |
+  | with teammates who see him, 0.5 | 55% | 16.6% |
+  | with teammates who see him, 0.6 (now) | 64% | 20.5% |
+
+  Every Demon teammate within 8 u counted as on him flagged too few: 20% of Haven 182020's deaths.
+- Haven 20261108-183706, the first match with the run-to-cover fix below: 33% of the 36 break-offs died within 5 s (46% before). Retreat rows aiming at a man had a walk under 0.8 in 14% (34% before), mean 0.93 (0.84). The walk to cover still averaged 1.44 u/s. The rows not aiming include 33% standing in cover; the rest are mostly slowed by the 60-degree turn rule (upstream; not changed).
+- Validation: `tools/test_demon_odds.py` `TeamOddsTests`, 5 new tests (a mate with both enemies in view lifts two on one over the line; a stale, riding, dead or not-looking mate does not count; no break-off while a mate fights them, one without; `with_help`; every bot posts its eyes); 33 in the file.
+  - 436 of 437 regression tests pass. The failure is the same `test_h4_reports_nov8.py` `test_owner_spots` on the uncommitted Gore Valley patrol points.
+  - Gameplay is untested. The bot process must be restarted.
+
+### Halo 4 Demon's break-offs run to cover at full speed, 2026-11-08
+
+- First live matches with the fight odds below:
+  - Gore Valley 20261108-181229 does not count: the LiDAR Simulator mapped Gore Valley in the background through the whole match (its log: 634 s, done 18:19). Every bot thought 7.4 times a second (21-25 in today's other 15-bot matches, 12-15 on Gore Valley Nov 7), and the owner, 34-4, saw Demons miss his strafes.
+  - Haven (h4_wraparound) 20261108-182020, the owner and three bots against four Demons, at the full 24.7 a second. The owner went 50-40 and the Demons 90-64. One on one, Demons beat him in 10 of 14 (14 of 36 before), and he lost 0.40 of his shield and body per second of Demon fire (0.29 in Blood Crash 20261108-152614).
+  - Break-offs: odds under the line came in the 4 s before 61% of Demon deaths (the replay's 60%). But 43 of 94 break-offs died within 5 s: a median 1.2 u moved in 1.65 s, against 3.2 u for the 51 that lived. Once at its cover an enemy's sights were on it in 7% of rows, and it lost 0.06 of its vitals a second there.
+- Cause: on a retreat with a man in view, upstream mixes the walk's strafe 0.6 with a juke's 0.4. A walk to the side against the juke came out at 0.2 (a (-0.36, -0.93) walk sent as (-0.36, -0.16)), and the walk to cover averaged 1.39 u/s.
+- `brain/bot.py` `retreat_juke`: for Halo 4 fixed Demon the juke (`RETREAT_JUKE` 0.4) goes at right angles to the walk, and the walk stays at full speed (0.93 of it toward the cover). Every other tier and game keeps upstream's mix.
+- Validation: `tools/test_demon_odds.py` `RetreatJukeTests`, 3 new tests (full speed to the side with either juke, the juke still swings the walk, other tiers and games keep the mix); 28 in the file.
+  - 431 of 432 regression tests pass. `test_h4_reports_nov8.py` `test_owner_spots` fails on the uncommitted `maps/h4_ca_gore_valley/infantry_patrols.json`, which has 6 more patrol points than the 3 it expects (Edit spots data, not this change).
+  - Gameplay is untested. The bot process must be restarted.
+
+### Halo 4 Demon picks its fights by the odds: breaks off losing fights, no peeking while one shot, no chasing hurt; the team's sightings, 2026-11-08
+
+The owner, Nov 8: Demons "die in silly ways, they play recklessly they pursue losing fights, they challenge another player even when one shot. Make this next line of code incredibly hard to beat." His answers: radar plus teammates' sightings (no wallhack), Halo 4 Demon only.
+
+- What killed them: 398 Halo 4 Demon deaths over 16 matches (K/D 1.48; the owner made 133 of the kills).
+  - 55% outnumbered (two or more firing). 96 of 217 walked in with two or more in view; 121 were collapsed on. After the second shooter opened up it had a median 2.0 s, and chose a fight 55%, a hunt 24%, a retreat 11%; one was scored in 105.
+  - 17% fought on with its shield gone and body under 70%; 12% chased a man out of sight while hurt; 34% died within 1.5 s of full.
+  - Against the owner one on one (36 fights) it won 14. With him in view its aim was on him 73-81% of rows (off rows were mostly a blocked line, 1.4-1.7° off), and it pressed the trigger 15 times a second. But he killed it in a median 1.08 s from his first hit, against its 1.58 s on him.
+- `brain/odds.py` (new), the model, judged by the SHIELD (the owner, Nov 8: "In Halo you break their shields and then they become one shot to the head. So I think we should make them judge fights based on shield pools instead of a health pool"):
+  - How each gun kills (`H4_GUNS`, Halo 4 times from full with every shot landing, three times as long past the gun's reach):
+    - A precision gun (BR, DMR, Light Rifle, Carbine, Magnum): his shield's share of the strip time plus one finishing headshot (`FINISH`, 0.25-0.45 s). His body does not count, and with no shields it is the headshot alone.
+    - An automatic or a spray (AR, Storm Rifle, Suppressor, Needler, SAW, Plasma Pistol, Boltshot uncharged): the pool's share (shield 70, body 45).
+    - A power gun or blade: its fixed time.
+    - A rider: a vehicle gun on the pool.
+  - Each man's time is over his accuracy (`ACC`: a person 0.8, a bot 0.15). A man not aware of it (not aiming within 0.35 rad, not the one who hit it) starts 0.45 s late, and one not in sight 0.6 s later still.
+  - It kills them one at a time, quickest first, at its own pace (`DEMON_ACC` 1.0). Each one alive adds his time's share of a kill on it, and the odds are 1 over the share taken before the last falls.
+  - Readings against the owner aware with a BR at 10 u: full against full 1.25. Its shield gone, body full: 0.28 (the pool model read about 0.7), and 0.42 with him not looking. Full against him with his shield down: 5.6.
+- Calibration (scratchpad `odds_replay.py`, 5 matches, 135 Demon deaths, 215 Demon kills): with the shield model, odds under 0.5 came in the 0.75-4 s before 60% of its deaths and in 15% of the fights it went on to win. With a 0.25 s hold it was 53% and 10%; the pool model's best was 59% and 16%; the first guess (bots 0.5, line 0.85) was 81% and 50%.
+- `brain/bot.py` `demon_odds_rules` (after `stand_ground` in `decide`; Halo 4 fixed Demon on foot, not carrying, not in Race or Infection):
+  - Losing (under `ODDS_BREAK` 0.5, no hold, `ODDS_PERSIST` 0; under 0.75 while breaking, `ODDS_BREAK_HOLD` 1.5 s) against a man aware of it: it goes to cover it can reach (`ODDS_RUN` 2.25 u/s) within `ODDS_REACH_SHARE` 1.25 of the time it has under the aware men's fire (`time_left`, by its shield). That retreat scores `ODDS_BREAK_SCORE` 3.6, over the committed fight, the close-fight lift and the 3.2 turns; hunts are dropped and the recharge hold set. With no such cover, it fights it out as before.
+  - A man in sight not aware of it that it would not beat (under `ODDS_ENGAGE` 1.25) gets no fight; it goes to cover within `ODDS_HIDE_R` 10 u from him (2.4).
+  - A hunt toward two or more known enemies it would lose to all at once, judged from where the hunt goes, is dropped.
+- `chase_ok`: a man out of sight is chased (`demon_commit`'s gap, the carried target, `decide`'s commit score) only with `CHASE_MIN` 60% of its shield (its body without shields), odds over him alone (round the corner, aware) of 1.3 or better, and no other enemy known within 12 u of where he went.
+- `share_sightings` (`TEAM_SIGHTINGS`): every bot posts the enemies in its view each tick. A Halo 4 Demon takes its teammates' under 0.3 s old as exact "team" beliefs, where its own are older and he is not in its view. Bot teammates only: a person's view is not read.
+- Not changed: its aim and trigger (the measured on-target share and press rate above). Its slower kills on the owner remain open; the trace cannot show where each round lands.
+- Validation: new `tools/test_demon_odds.py`, 25 tests:
+  - Model: full against a full person aware is a slight edge; a man not looking is taken; one shot is not; two people on it lose; two bots on a full Demon is taken; a cracked man is finished; a shotgun out of reach.
+  - Shields: the kill times (a BR on a bare shield is the finishing shot; an AR still needs the body; a sniper is fixed; SWAT is the headshot); shields down with a full body is one shot, not peeked and broken off; his shield down is a kill to take; an automatic weighs the body; the chase goes by the shield.
+  - Rules: a break to cover in reach after the hold, the hunt dropped; no way out fights on; cover out of reach in time is no way out; one shot does not peek; full takes a man not looking; a hunt into a group dropped; Legendary and Reach Demon unchanged.
+  - Chase: healthy alone chases; hurt or into his friend does not; others unchanged. Team sightings: a Demon takes them; stale ones and other tiers do not.
+  - All 425 regression tests pass. Gameplay is untested. The bot process must be restarted.
+
+### Banshee runs last through a target switch and pilots do not leave a dive for a tracker dot; Halo 4 Banshee aims at the chest from its camera, 2026-11-08
+
+The owner, after testing the dive fix: "The banshee doesnt do its strafe run long enough, also it shoots just above the head, so its shooting too high, and also the ghost shoots too high against infatry."
+
+- Run length (`brain/bot.py` `air_pass`, every tier):
+  - A new target in the middle of a dive, or a fresh run, now dives at once when the man is ahead and `AIR_RUN_FROM` 8 u or more off. Only a man behind, or closer than that, starts on the way out. A target switch mid-dive keeps the dive's clock.
+  - Before, every new target under `PASS_START` 15 u began with the way out, `PASS_OUT_S` 6 s with the guns off. Live Blood Crash `20261108-151434`: 9 of a Demon pilot's 16 runs ended on a target switch, median run 0.13 s, 90th percentile 1.25 s. 4 more ended on the fight being dropped (to a path), which is not changed here.
+- Pilots and tracker dots (`brain/bot.py` `decide`, `piloting`, every tier from Heroic up): the radar-dot check (a 3.2 hunt for Demon out to `DEMON_RADAR_TURN_R` 12 u, 3.5 u for the others) no longer runs at an aircraft's controls. From the air the men under it are tracker dots all the time, and that hunt beat the fight (1.78) mid-dive. Live Blood Crash `20261108-152614`, the first match with the run fix: runs now lasted 1-2.4 s and mostly ended passing over the man, but a Demon pilot's runs turned into a "path" to a dot 4 times in its first 30 s.
+- Banshee aim height (`brain/vehicles.py` `H4_DRIVER_AIM`, `h4_driver_aim`; `brain/bot.py` `h4_origin`; Halo 4, every tier):
+  - The Banshee had no seat view at all, so it fell back to the generic chest, his place + 0.35, which is over a Halo 4 Spartan's head. It now aims at his real chest (`h4_aim_point`) from its camera anchor, `banshee_d_camera` (-0.104, 0, 0.595) in the vehicle's frame. That comes from `tools/map_tools/model2obj --skin` on `ca_blood_crash.map` (`storm_banshee`), the marker through its bone's bind pose; the conventions were checked against the Warthog's turret marker that `h4_warthog_gun_origin` uses.
+- The Ghost keeps its captured seat view (`H4_SEAT_VIEW`, at the origin). Its own `ghost_d_camera` (0.496 u up) was tried and taken back the same day. Aimed from it in `20261108-152614`, Ghost drivers made 0.6 kills a minute at the controls, against 1.3-2.2 in the four Blood Crash matches before. A man 10-20 u off took damage after 5% of their fire rows (25% before). The owner's "the ghost shoots too high against infantry" is still open.
+- Validation: `tools/test_demon_vehicles.py` adds 8 tests: a new man ahead mid-dive keeps the dive and its clock, a fresh run on a man ahead dives, a man behind or under 8 u starts on the way out, the Banshee driver aims from its camera anchor while the Ghost and a Mongoose keep their seat views, `piloting`, and a Demon's radar hunt on foot but not in the air. `tools/test_h4_vehicle_aim.py` is unchanged. All 397 regression tests pass. The aim was confirmed live (the pitch follows the new line within about 1°); its effect on the Banshee's hits is not measured (0 kills either way, small samples). The bot process must be restarted.
+
 ### Banshee strafe runs dive like the owner's: slower in gun range, lower before they end, 2026-11-08
 
 The owner flew the Banshee in Halo 4 Blood Crash `20261108-144947` to show the way (his F9s "This is how you should use the banshee" and "This is how to use the banshee bomb and cannons"): "they make their shooting floor too high, so they can never actually do a strafe run". His 63 rows with the crosshair on a man: 10-19 u off (median 13.5), 4.6-9.6 u over the floor (median 7.1, lowest 2.6), nose 23-46° down (median 34°), 4.6-10 u/s (median 5.8). Every tier, `brain/bot.py` `air_pass`:

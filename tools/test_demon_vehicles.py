@@ -107,6 +107,87 @@ class DiveTests(unittest.TestCase):
         self.assertEqual(b.air_run[0], "out")
 
 
+class RunStartTests(unittest.TestCase):
+    """A new man mid-dive, or a fresh run on a man ahead, is dived on, not flown away from (20261108-151434)."""
+
+    def start(self, foe_at, run=None, yaw=math.pi):
+        b, me = pilot(at=Vec(12.0, 0, 7.0), yaw=yaw)
+        foe = PlayerState(2, 1, "foe", foe_at)
+        b.air_run = run
+        act = Act(yaw, -0.5)
+        b.air_pass(12.0, me, 2, Belief(foe.pos, Vec(), 12.0, True, "eyes"), foe.pos, act)
+        return b
+
+    def test_a_new_man_ahead_mid_dive_keeps_the_dive(self):
+        b = self.start(Vec(1.0, 2.0, 0.0), run=["in", 1, 10.0, math.pi])    # 11 u ahead, under PASS_START
+        self.assertEqual(b.air_run[:2], ["in", 2])
+        self.assertEqual(b.air_run[2], 10.0)                                 # (the dive's own clock kept)
+
+    def test_a_fresh_run_on_a_man_ahead_dives(self):
+        self.assertEqual(self.start(Vec(2.0, 0.0, 0.0)).air_run[0], "in")    # 10 u ahead
+
+    def test_behind_or_too_close_starts_on_the_way_out(self):
+        self.assertEqual(self.start(Vec(22.0, 0.0, 0.0)).air_run[0], "out")  # 10 u behind
+        self.assertEqual(self.start(Vec(6.0, 0.0, 0.0)).air_run[0], "out")   # 6 u: under AIR_RUN_FROM
+
+
+class DriverAimTests(unittest.TestCase):
+    """Halo 4 Ghost and Banshee drivers aim from their camera anchor (vehicles.H4_DRIVER_AIM)."""
+
+    def origin(self, kind):
+        from brain.bot import h4_origin
+        me = PlayerState(0, 0, "bot", Vec(5.0, 5.0, 1.0), vehicle=9)
+        v = dict(handle=9, kind=kind, pos=[5.0, 5.0, 1.0], fwd=[1.0, 0.0, 0.0], up=[0.0, 0.0, 1.0], occupied=True)
+        return h4_origin(me, Snapshot(1.0, [me], vehicles=[v]), "driver")
+
+    def test_banshee_from_the_camera(self):
+        b = self.origin("storm_banshee_mp")
+        self.assertAlmostEqual(b.z, 1.0 + 0.595, places=3)
+        self.assertAlmostEqual(b.x, 5.0 - 0.104, places=3)
+
+    def test_ghost_and_others_keep_their_seat_view(self):
+        for kind in ("storm_ghost", "storm_mongoose"):
+            with self.subTest(kind=kind):
+                self.assertLess(abs(self.origin(kind).z - 1.0), 0.05)
+
+
+class PilotRadarTests(unittest.TestCase):
+    """A Demon pilot does not leave its dive to check a tracker dot under it (the 3.2 hunt, 20261108-152614)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from brain.maps import load_map
+        cls.map = load_map("reach_cex_headlong")
+
+    def hunts(self, flying):
+        b = Bot(0, 0, make_profile("demon", "rusher", random.Random(3)), self.map, random.Random(5))
+        b.seat = "driver"
+        me = PlayerState(0, 0, "bot", Vec(-27.3, 14.6, 7.6), weapon="dmr", weapons=["dmr"], ammo=[45], mag=[15],
+                         vehicle=BANSHEE if flying else -1)
+        dot = PlayerState(1, 1, "foe", Vec(-27.3 + 9.0, 14.6, 7.6))
+        vs = [dict(handle=BANSHEE, kind="storm_banshee_mp", pos=[me.pos.x, me.pos.y, me.pos.z], occupied=True)]
+        snap = Snapshot(100.0, [me, dot], mode="slayer", vehicles=vs if flying else [])
+        b.per.beliefs[1] = Belief(dot.pos, Vec(), 100.0, False, "radar")
+        b.notes = []
+        b.decide(100.0, me, snap)
+        return [k for k, v in b.last_scores.items() if k[0] == "hunt" and v >= 3.0]
+
+    def test_piloting(self):
+        b, me = pilot()
+        snap = Snapshot(1.0, [me], vehicles=[dict(handle=BANSHEE, kind="storm_banshee_mp", pos=[0, 0, 9], occupied=True)])
+        self.assertTrue(b.piloting(me, snap))
+        b.seat = "gunner"
+        self.assertFalse(b.piloting(me, snap))
+        me.vehicle = -1
+        self.assertFalse(b.piloting(me, snap))
+
+    def test_on_foot_it_still_turns_on_the_dot(self):
+        self.assertTrue(self.hunts(False))
+
+    def test_in_the_air_it_does_not(self):
+        self.assertFalse(self.hunts(True))
+
+
 class SnapFireTests(unittest.TestCase):
     def setup(self, tier="demon", foe_at=Vec(15.0, 0.0, 0.0), clear=True, seat="driver"):
         b, me = pilot(tier, at=Vec(0, 0, 6.0))

@@ -534,6 +534,23 @@ def frame_point(v, p):
     return Vec(*(o[i] + p[0] * f[i] + p[1] * left[i] + p[2] * u[i] for i in range(3)))
 
 
+# (custom, Nov 8) Halo 4: the Banshee driver's aim line runs from his camera's anchor, the model's "banshee_d_camera"
+# marker, (-0.104, 0, 0.595) in the vehicle's frame (forward, left, up), through its bone's bind pose (tools/model2obj
+# --skin on ca_blood_crash.map, storm_banshee; the conventions checked on the Warthog's turret marker,
+# h4_warthog_gun_origin). It had no seat view at all: the generic chest, his place + 0.35, over a Spartan's head.
+# The Ghost's own "ghost_d_camera" (-0.019, 0, 0.496) was tried and taken back the same day: aimed from it, live Blood
+# Crash 20261108-152614, Ghost drivers made 0.6 kills a minute at the controls (1.3-2.2 in the four matches before) and
+# a man 10-20 u off took damage after 5% of their fire rows (25% before): the captured seat view (H4_SEAT_VIEW, at the
+# origin) stays the Ghost's
+H4_DRIVER_AIM = {"banshee": (-0.104, 0.0, 0.595)}
+
+
+def h4_driver_aim(v):
+    """Halo 4: where a Ghost's or Banshee's driver aims from (H4_DRIVER_AIM), or None (another kind, no orientation)."""
+    p = H4_DRIVER_AIM.get(kind_of(v.get("kind")) or "")
+    return frame_point(v, p) if p is not None else None
+
+
 def h4_seat_view(v, seat):
     """Halo 4: where a man in this seat of v aims from (H4_SEAT_VIEW), or None (a seat not captured, the gunner's)."""
     p = H4_SEAT_VIEW.get((HULL_KIND.get(kind_of(v.get("kind")), ""), seat))
