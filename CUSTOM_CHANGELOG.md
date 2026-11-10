@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### CTF: one defender, only two captures ahead, the lowest difficulty bot, 2026-11-09
+
+The owner: "Remove that team size logic for defending ... If the match is tied, no one on either team defends. You can keep the hunters, but no one should defend when tied. If the team is losing everyone should continue to attack. Only have a defender if the winning team is up by 2 or more flag captures, and defender count should never be higher than 1. If there is a defender, always make it the lower difficulty player, Excluding easy."
+
+- `brain/director.py` `role_slots` (CTF): the capture lead alone decides defending (`CTF_DEFEND_LEAD` = 2). The lead is counted in captures: the posture's lead divided by the learned `score_unit`.
+  - Tied, behind, or one capture ahead: no defender, and the whole team attacks.
+  - Two or more captures ahead, with our flag home: one defender at the first `defend_posts` post. Never more than one, and never the team's last bot.
+- Removed for CTF: the count by team size (1 / 2 / 3 by 4 / 7 / 8+ bots, at most half their team), the team plan's `defenders`, the extra defender for 15 s after a death at our flag (`defend_until` is still set, now unused here), lead +1 keeping more home, and the turtle at +2 that sent no runners. Up two, the rest still pull their flag (that turtle was a defence too, so it went with the rest; easy to restore if wanted). The defender with our flag out at 6+ bots is also gone: the hunters bring it back.
+- Kept: hunters on a taken flag, the cut-off, the collapse on their carrier, the standoff, the all-in carry, and One Flag's defending side (its sides come from the round, not the score).
+- Who defends: the defender slot is filled first, with fit "low_tier" (`assign_roles`), so it goes to the lowest difficulty bot by `profiles.defend_priority`: Normal, then Heroic and Scaling (Scaling counted as Heroic, as `resource_priority` does), then Legendary, then Demon. Ties go to the nearest. Easy never gets team roles, so it is never picked; a team of Easy bots and people has no defender.
+- Validation: new `tools/test_ctf_defender.py` (8 tests): no defender when tied, behind or +1, at any team size; exactly one at +2 / +3 / +5 with 2, 4, 8 and 15 bots, runners still sent; captures, not points (10 a capture); none while our flag is carried or dropped, with hunters still sent; a lone bot attacks; the priority order; through `assign_roles`, the Normal 80 u away defends over a Legendary on the flag, Easy never does, and the nearer of two Heroics does. All 496 regression tests pass. Untested in a live match; restart the bot process to load it.
+
 ### Edit spots: CTF lanes and sneak routes drawn by hand, 2026-11-09
 
 The owner, after finding that Halo 4's CTF routes come from fixed generated points (no Halo 4 map has a sneak route; Warhouse, Abandon, Gore Valley, Shatter, Impact and Forge Island have one lane): "Add a 'lane / sneak route' mode to tools/spots.py ... and add it to the edit part of lidar simulator so I can manually add lanes or sneak routes".

@@ -106,6 +106,17 @@ def resource_priority(prof):
     return {DEMON: 0, "top": 1, "strong": 2, "average": 3}.get(prof.tier, 5)
 
 
+def defend_priority(prof):
+    """(custom, Nov 9) Who the director makes CTF's one defender, the lowest difficulty first, never Easy: Normal,
+    Heroic and Scaling (Scaling counted as Heroic, as resource_priority does), Legendary, Demon; Easy last (it plays
+    for itself and is never given a team role anyway: assign_roles)."""
+    if prof.tier == "novice":
+        return 9
+    if prof.extra is not None:
+        return 1
+    return {"average": 0, "strong": 1, "top": 2, DEMON: 3}.get(prof.tier, 9)
+
+
 def driver_priority(prof):
     """Who the director sends to drive a Warthog or a Mongoose (vehicles.DEMON_NO_DRIVE): Normal and Heroic first, then
     Scaling and Legendary, then Easy; Demon never (None)."""

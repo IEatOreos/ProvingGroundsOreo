@@ -32,6 +32,7 @@ INV_COMMIT = 30.0           # an Invasion attack keeps its territory at least th
 # SCREEN_AHEAD u ahead of him on his way home (role_slots); CUTOFF: with three or more hunters on their carrier, one
 # goes CUTOFF_AHEAD u ahead of him on his way home (cutoff_point). False: the play before (A/B)
 CARRY_PLAY, CUTOFF = True, True
+CTF_DEFEND_LEAD = 2         # (custom, Nov 9) CTF: one defender only this many captures ahead or more (role_slots)
 # the getaway ride: one transport driver parks GETAWAY_D u from their stand on our side while our runners go in, then
 # fetches our carrier at any distance
 GETAWAY, GETAWAY_D = True, 16.0
@@ -806,6 +807,8 @@ class Director:
                 if fit == "anchor":
                     priority = 0 if profiles.fixed_demon(b.p) else {"camper": 1, "sniper": 2}.get(b.p.personality, 3)
                     return priority, c
+                if fit == "low_tier":   # (custom) CTF's one defender: the lowest difficulty, not Easy; then the nearest
+                    return profiles.defend_priority(b.p), c
                 c -= 0.8 * getattr(b.p, fit, 0.5)                    # personality fit
                 return c
             b = min(free, key=cost)
@@ -1905,32 +1908,28 @@ class Director:
                 slots.append(("hunter", cut, "aggression"))
                 k -= 1
             slots += [("hunter", own.pos, "aggression")] * k
-        # CTF lead management: +1 keeps an escort home, +2 stops pulling and defends with three until they pull
-        lead = s.posture.lead
+        # (custom, Nov 9, the owner: "Only have a defender if the winning team is up by 2 or more flag captures, and
+        # defender count should never be higher than 1 ... always make it the lower difficulty player, Excluding easy")
+        # The lead in captures (the score's step: score_unit) is the only thing that decides defending: tied or behind,
+        # nobody defends and everyone attacks; up by one, nobody; up by two or more, one defender, the team's lowest
+        # difficulty bot that is not Easy (assign_roles, fit "low_tier"), while our flag is home. The team-size count,
+        # the plan's "defenders", the extra one after a death at the flag and the turtle at +2 (no runners) are gone.
+        # Hunters for a taken flag, the standoff and the collapse on their carrier are unchanged.
+        unit = getattr(s, "score_unit", 0) or 1
+        lead = s.posture.lead // unit
         # One Flag (one flag in the match, sides swap each round; research 12 O3.13): attacking, there is no flag of
-        # ours to defend, so nobody defends; defending, everyone but a forward pair holds it ("push the offense back")
-        # (our flag out with five of us or fewer: no defender guards the empty stand, its hunters bring it back)
-        if own is not None and (own.state == "home" or n >= 6 or s.is_one_flag(snap)) and not all_in_carry:
-            # the lobby shows team sizes: no point in more defenders than half their team; one returner always. A real
-            # attack every time: one defender up to four of us, two up to seven, three past, and room for a runner with
-            # an escort while we are not two ahead (Boardwalk sims: three bots kept two defenders and sent a lone
-            # runner, one flag run in 560 s)
-            n_enemy = sum(p.team != s.team for p in snap.players)
-            base = 1 if n <= 4 else 2 if n <= 7 else 3
-            want = min(base, int(s.plan.get("defenders", 2)))
-            defenders = max(1, min(want, n - 1, (n_enemy + 1) // 2))
-            keep = n - 2 if n >= 3 else n - 1
-            if now < s.defend_until:
-                defenders = max(defenders, min(keep, defenders + 1))
-            if lead >= 1:
-                defenders = min(n - 1 if lead >= 2 else max(defenders, keep), defenders + (1 if lead == 1 else 2))
-            if s.is_one_flag(snap):
-                defenders = max(defenders, n - min(2, n // 2))
-            # the area round the flag, from cover, never the stand
+        # ours to defend, so nobody defends; defending, everyone but a forward pair holds it ("push the offense back").
+        # Its sides are the round's, not the score's: unchanged
+        if s.is_one_flag(snap) and own is not None and not all_in_carry:
             for q in s.defend_posts(own.home if getattr(own, "home", None) is not None else s.map["flags"][s.side],
-                                    defenders):
+                                    n - min(2, n // 2)):
                 slots.append(("defender", q, "camping"))
-        if theirs is not None and not carrier and (lead < 2 or s.posture.state == "all_in"):
+        elif own is not None and own.state == "home" and lead >= CTF_DEFEND_LEAD and n >= 2 and not all_in_carry:
+            # the area round the flag, from cover, never the stand; first in the list, so no escort or hunter slot
+            # takes the lowest tier bot before it (slots are filled in order)
+            q = s.defend_posts(own.home if getattr(own, "home", None) is not None else s.map["flags"][s.side], 1)[0]
+            slots.insert(0, ("defender", q, "low_tier"))
+        if theirs is not None and not carrier:
             rest = n - len(slots)
             nr = 2 if rest >= 5 or (split and rest >= 4) else 1
             slots += [("runner", theirs.pos, "objective")] * nr
