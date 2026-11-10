@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Edit spots: CTF lanes and sneak routes drawn by hand, 2026-11-09
+
+The owner, after finding that Halo 4's CTF routes come from fixed generated points (no Halo 4 map has a sneak route; Warhouse, Abandon, Gore Valley, Shatter, Impact and Forge Island have one lane): "Add a 'lane / sneak route' mode to tools/spots.py ... and add it to the edit part of lidar simulator so I can manually add lanes or sneak routes".
+
+- Where they were from: `callouts.json` `lanes` and `sneak`, written by the upstream exporter's `tools/gen_zones.py` (not in this install) from the map's geometry (Adrift: its middle and 10.7 u either side), not from LiDAR or the game. `brain/maps.py` loads them; `director.pick_route` makes each lane a one-stop route and each sneak route a waypoint list (a carrier's backwards), skilled bots preferring sneak routes and the lane with the least recent threat.
+- `tools/spots.py`: new kinds "lane" (`lanes` [[x, y, z]], at most 12) and "sneak" (`sneak` {red, blue}: routes of 2-32 waypoints, at most 8 a team), saved into the same callouts.json as the holds, the rest of the file kept. An edit with neither key (a viewer page from before) keeps the file's lanes and sneak routes rather than wiping them.
+- `tools/lidar_view.html` Edit spots (LiDAR Viewer and Simulator): **Lane point** (cyan ring) and **Red / Blue sneak route** tools.
+  - A sneak route is drawn by clicking its waypoints in order from the team's base to the enemy flag, with lines joining them. Enter, Esc or another tool finishes it. A one-waypoint route is dropped, and Save refuses one.
+  - A picked waypoint can be dragged, removed (Delete), its whole route removed, or "Add waypoints after this" inserts more after it.
+  - The counts line shows lanes and sneak routes per team. A viewer started before this change hides the new tools (its server cannot save them).
+- Validation: `tools/spots.py --selftest` (lanes and routes round-trip into callouts.json as `load_map` reads them; malformed lanes, one-point and non-list routes refused; an edit without them keeps them) and `tools/test_spots.py`, `tools/test_owner_rides.py` pass. In the browser on Exile, nothing saved: a 3-waypoint red route (2 legs drawn), Enter finishing it, a one-point route dropped with its message, a waypoint inserted after the first and removed again with Delete, a lane added, a 2-point blue route finished by switching tool; the page's payload passed `spots.check` and reads as `load_map` reads it. No map's lanes or routes were authored: bots running drawn routes in a match is untested. The LiDAR Viewer must be restarted to load the new `spots.py`.
+
 ### LiDAR view: a Match / Simulator / Both scan switch, reopen the last map viewed, and lifts and man cannons drawn by hand, 2026-11-09
 
 The owner: "Why is it when I load a lidar map, it doesnt load the fully simulated one? ... Im not sure what version is being loaded when viewing", then: the scan switch with the date and run count, reopening the last map viewed, and "a way to manually add the ability for me to make it able for a bot to use a man cannon or grav lift ... make it simple for me to do it in lidar".

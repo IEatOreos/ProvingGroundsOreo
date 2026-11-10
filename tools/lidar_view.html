@@ -127,6 +127,9 @@
   .tsw.patrol.red { background: #ff7373; transform: none; } .tsw.patrol.blue { background: #73a6ff; transform: none; }
   .tsw.lift { border: 2px solid var(--lime); border-radius: 50%; background: none; width: 8px; height: 8px; }
   .tsw.cannon { background: var(--lime); transform: rotate(45deg) scale(0.85); }
+  .tsw.lane { border: 2px solid #5ee6f0; border-radius: 50%; background: none; width: 8px; height: 8px; }
+  .tsw.sneak { width: 12px; height: 4px; border: none; border-radius: 2px; }
+  .tsw.sneak.red { background: #ff7373; } .tsw.sneak.blue { background: #73a6ff; }
   #ed-counts { color: var(--dim); font-size: 12px !important; }
   #ed-files, #ed-sel .coords { overflow-wrap: anywhere; }
   #right { overflow-x: hidden; }
@@ -309,7 +312,7 @@
   </section>
   <section id="edit" class="card" aria-labelledby="edit-h">
     <h2 id="edit-h">Spots bots use</h2>
-    <button id="ed-on" aria-pressed="false" aria-keyshortcuts="S" title="Add, move and remove hot spots, patrol points and team holds (S)">Edit spots <kbd>S</kbd></button>
+    <button id="ed-on" aria-pressed="false" aria-keyshortcuts="S" title="Add, move and remove hot spots, patrol points, team holds, lifts, lanes and sneak routes (S)">Edit spots <kbd>S</kbd></button>
     <div id="ed-body" hidden>
       <div id="ed-tools" role="group" aria-label="Add a spot">
         <button data-tool="hot" aria-pressed="false" title="Slayer anchors hold and rotate between hot spots (owner power positions)"><span class="tsw hot" aria-hidden="true"></span>Hot spot</button>
@@ -320,6 +323,9 @@
         <button data-tool="blue" aria-pressed="false" title="Blue team safe spots: a CTF carrier waits at one while blue&#39;s own flag is away, the Oddball carrier picks one, Firefight falls back to them"><span class="tsw blue" aria-hidden="true"></span>Blue hold</button>
         <button data-tool="lift" aria-pressed="false" title="A gravity lift bots ride: click where you step in, then where it puts you down"><span class="tsw lift" aria-hidden="true"></span>Gravity lift</button>
         <button data-tool="cannon" aria-pressed="false" title="A man cannon bots ride: click where you step on, then where it puts you down"><span class="tsw cannon" aria-hidden="true"></span>Man cannon</button>
+        <button data-tool="lane" aria-pressed="false" title="A CTF lane: a waypoint attackers pass through on the way to the enemy flag, and carriers on the way home (the lane with the least recent danger is picked)"><span class="tsw lane" aria-hidden="true"></span>Lane point</button>
+        <button data-tool="sneak_red" aria-pressed="false" title="A red sneak route: click its waypoints in order, from red's base to the blue flag. Red carriers run it backwards home. Skilled bots prefer sneak routes"><span class="tsw sneak red" aria-hidden="true"></span>Red sneak route</button>
+        <button data-tool="sneak_blue" aria-pressed="false" title="A blue sneak route: click its waypoints in order, from blue's base to the red flag. Blue carriers run it backwards home. Skilled bots prefer sneak routes"><span class="tsw sneak blue" aria-hidden="true"></span>Blue sneak route</button>
       </div>
       <p id="ed-hint" class="dim"></p>
       <p id="ed-counts"></p>
@@ -1309,11 +1315,16 @@ function tags() {   // a name over each person (projected to the screen)
 }
 // --- (custom) Edit spots: hot spots, patrol points and team holds, in the files the bots read (tools/spots.py)
 const ed = { on: false, tool: null, map: null, data: null, saved: "", sel: null, grab: null, press: null, floorOn: false,
-             floorLoaded: null, busy: false, rideStart: null };   // rideStart: a lift / cannon's first click (its pad)
+             floorLoaded: null, busy: false, rideStart: null,   // rideStart: a lift / cannon's first click (its pad)
+             route: null, routesOk: true };   // route: the sneak route being drawn {team, i, at: where the next waypoint goes}
 const levelBuf = new Buf(); let levelCell = 0.5;
 const edBufs = { hot: new Buf(), power: new Buf(), patrol: new Buf(), patrol_red: new Buf(), patrol_blue: new Buf(),
                  red: new Buf(), blue: new Buf(), sel: new Buf(),
-                 ride_lift: new Buf(), ride_cannon: new Buf(), ride_land: new Buf(), ride_line: new Buf(), ride_start: new Buf() };
+                 ride_lift: new Buf(), ride_cannon: new Buf(), ride_land: new Buf(), ride_line: new Buf(), ride_start: new Buf(),
+                 lane: new Buf(), sneak_red: new Buf(), sneak_blue: new Buf(), sneak_red_line: new Buf(), sneak_blue_line: new Buf() };
+const CYAN = [0.37, 0.9, 0.94, 1];
+const isSneak = s => !!s && (s.kind === "sneak_red" || s.kind === "sneak_blue");
+const sneakTeam = k => k === "sneak_red" ? "red" : "blue";
 const LIME = [0.66, 1, 0.35, 1];
 const RIDE_NAME = { lift: "Gravity lift", cannon: "Man cannon" };
 const TEAM_NAME = { red: "Red team", blue: "Blue team" };
@@ -1325,28 +1336,37 @@ const TOOL_HINT = {
   red: "Click the floor to add a red hold, a red safe spot: a CTF carrier waits at one while red's own flag is away, the Oddball carrier picks the one farthest from enemies, Firefight falls back to them.",
   blue: "Click the floor to add a blue hold, a blue safe spot: a CTF carrier waits at one while blue's own flag is away, the Oddball carrier picks the one farthest from enemies, Firefight falls back to them.",
   lift: "Gravity lift: click where you step into it (its pad), then where it puts you down. Bots step in and ride it up, one way.",
-  cannon: "Man cannon: click where you step onto it, then where it puts you down. Bots run onto it and ride it, one way."
+  cannon: "Man cannon: click where you step onto it, then where it puts you down. Bots run onto it and ride it, one way.",
+  lane: "Click the floor to add a CTF lane point. Attackers pass through one on the way to the enemy flag and carriers on the way home, each picking the lane with the least recent danger. Usually one left, one middle, one right.",
+  sneak_red: "Red sneak route: click its waypoints in order, from red's base to the blue flag (corners, cover, the long way round). Red carriers run it backwards home. Enter finishes the route.",
+  sneak_blue: "Blue sneak route: click its waypoints in order, from blue's base to the red flag (corners, cover, the long way round). Blue carriers run it backwards home. Enter finishes the route."
 };
 const edDirty = () => !!ed.data && JSON.stringify(edPayload()) !== ed.saved;
 function edPayload() {
   const d = ed.data;
-  return { hot: d.hot.filter(r => r.owner).map(r => ({ pos: r.pos })),
+  const out = { hot: d.hot.filter(r => r.owner).map(r => ({ pos: r.pos })),
            patrol: d.patrol.map(r => ({ name: r.name, pos: r.pos, team: r.team || null })),
            hold: { red: d.hold.red, blue: d.hold.blue },
            ride: (d.ride || []).map(r => ({ name: r.name, kind: r.kind, take_off: r.take_off, land: r.land })) };
+  if (ed.routesOk) { out.lane = d.lane; out.sneak = { red: d.sneak.red, blue: d.sneak.blue }; }   // (an old viewer: left out, kept)
+  return out;
 }
 function edItems() {   // every spot on screen: {kind, i, pos}; kind hot (yours), power (computed), patrol, red, blue,
-  const out = [], d = ed.data; if (!d) return out;   // ride_a (a lift / cannon's pad), ride_b (where it puts you down)
-  d.hot.forEach((r, i) => out.push({ kind: r.owner ? "hot" : "power", i, pos: r.pos }));
-  d.patrol.forEach((r, i) => out.push({ kind: "patrol", i, pos: r.pos }));
+  const out = [], d = ed.data; if (!d) return out;   // ride_a (a lift / cannon's pad), ride_b (where it puts you down),
+  d.hot.forEach((r, i) => out.push({ kind: r.owner ? "hot" : "power", i, pos: r.pos }));   // lane, sneak_red / sneak_blue
+  d.patrol.forEach((r, i) => out.push({ kind: "patrol", i, pos: r.pos }));                // (i the route, j its waypoint)
   for (const t of ["red", "blue"]) d.hold[t].forEach((p, i) => out.push({ kind: t, i, pos: p }));
   (d.ride || []).forEach((r, i) => { out.push({ kind: "ride_a", i, pos: r.take_off }); out.push({ kind: "ride_b", i, pos: r.land }); });
+  (d.lane || []).forEach((p, i) => out.push({ kind: "lane", i, pos: p }));
+  for (const t of ["red", "blue"]) ((d.sneak || {})[t] || []).forEach((r, i) => r.forEach((p, j) => out.push({ kind: "sneak_" + t, i, j, pos: p })));
   return out;
 }
 const isRide = s => !!s && (s.kind === "ride_a" || s.kind === "ride_b");
 function edGet(s) {
   const d = ed.data; if (!s || !d) return null;
   if (isRide(s)) { const r = d.ride[s.i]; return r ? { pos: s.kind === "ride_a" ? r.take_off : r.land, ride: r } : null; }
+  if (s.kind === "lane") return d.lane[s.i] ? { pos: d.lane[s.i] } : null;
+  if (isSneak(s)) { const r = d.sneak[sneakTeam(s.kind)][s.i]; return r && r[s.j] ? { pos: r[s.j], route: r, team: sneakTeam(s.kind) } : null; }
   return s.kind === "hot" || s.kind === "power" ? d.hot[s.i] : s.kind === "patrol" ? d.patrol[s.i] : { pos: d.hold[s.kind][s.i] };
 }
 function edSetPos(s, p) {
@@ -1356,10 +1376,16 @@ function edSetPos(s, p) {
   else if (s.kind === "red" || s.kind === "blue") d.hold[s.kind][s.i] = p;
   else if (s.kind === "ride_a") d.ride[s.i].take_off = p;
   else if (s.kind === "ride_b") d.ride[s.i].land = p;
+  else if (s.kind === "lane") d.lane[s.i] = p;
+  else if (isSneak(s)) d.sneak[sneakTeam(s.kind)][s.i][s.j] = p;
 }
 function edLabel(s) {
   const d = ed.data;
   if (isRide(s)) { const r = d.ride[s.i]; return (r.name || RIDE_NAME[r.kind]) + (s.kind === "ride_b" ? ": lands here" : ""); }
+  if (s.kind === "lane") return "Lane " + (s.i + 1);
+  if (isSneak(s)) { const r = d.sneak[sneakTeam(s.kind)][s.i];
+    return (s.kind === "sneak_red" ? "Red" : "Blue") + " sneak " + (s.i + 1) +
+      (s.j === 0 ? (r.length > 1 ? ": start" : "") : s.j === r.length - 1 ? ": end" : " · " + (s.j + 1)); }
   if (s.kind === "hot") return "Hot spot " + (d.hot.filter(r => r.owner).indexOf(d.hot[s.i]) + 1);
   if (s.kind === "power") return "Power position (computed)";
   if (s.kind === "patrol") { const r = d.patrol[s.i];
@@ -1376,6 +1402,11 @@ function edRebuild() {
   for (const r of (ed.data && ed.data.ride) || []) {          // a line from the pad to where it puts you down
     edBufs.ride_line.push(r.take_off[0], r.take_off[1], r.take_off[2] + 0.15); edBufs.ride_line.push(r.land[0], r.land[1], r.land[2] + 0.15);
   }
+  for (const t of ["red", "blue"]) for (const r of ((ed.data && ed.data.sneak) || {})[t] || [])   // a sneak route's legs
+    for (let k = 1; k < r.length; k++) {
+      edBufs["sneak_" + t + "_line"].push(r[k - 1][0], r[k - 1][1], r[k - 1][2] + 0.15);
+      edBufs["sneak_" + t + "_line"].push(r[k][0], r[k][1], r[k][2] + 0.15);
+    }
   if (ed.rideStart) edBufs.ride_start.push(ed.rideStart.pos[0], ed.rideStart.pos[1], ed.rideStart.pos[2] + 0.15);
   const g = edGet(ed.sel);
   if (g) edBufs.sel.push(g.pos[0], g.pos[1], g.pos[2] + 0.15);
@@ -1392,15 +1423,19 @@ function drawSpots() {
   lines(edBufs.ride_line, [0.66, 1, 0.35, 0.8]);
   points(edBufs.ride_lift, -21, LIME, 3, false); points(edBufs.ride_cannon, -19, LIME, 4, false);
   points(edBufs.ride_land, -12, LIME, 1, false); points(edBufs.ride_start, -26, [1, 1, 1, 1], 3, false);
+  lines(edBufs.sneak_red_line, [1, 0.45, 0.45, 0.85]); lines(edBufs.sneak_blue_line, [0.45, 0.65, 1, 0.85]);
+  points(edBufs.sneak_red, -14, [1, 0.45, 0.45, 1], 1, false); points(edBufs.sneak_blue, -14, [0.45, 0.65, 1, 1], 1, false);
+  points(edBufs.lane, -22, CYAN, 3, false);
   points(edBufs.sel, -34, [1, 1, 1, 1], 3, false);
   gl.enable(gl.DEPTH_TEST);
 }
 const stagEls = [];
 function spotTags() {   // each spot's name over it (the computed power positions only when picked)
-  const picked = s => ed.sel && ed.sel.kind === s.kind && ed.sel.i === s.i;   // (computed positions, landings: when picked)
-  const list = ed.on && ed.data ? edItems().filter(s => (s.kind !== "power" && s.kind !== "ride_b") || picked(s)) : [];
+  const picked = s => ed.sel && ed.sel.kind === s.kind && ed.sel.i === s.i && ed.sel.j === s.j;   // (computed positions,
+  const list = ed.on && ed.data ? edItems().filter(s => (s.kind !== "power" && s.kind !== "ride_b"   // landings, a sneak
+    && !(isSneak(s) && s.j > 0)) || picked(s)) : [];                    // route's later waypoints: when picked)
   const COL = { hot: "var(--gold)", power: "var(--gold)", patrol: "var(--mint)", red: "#ff8a8a", blue: "#9dbaff",
-                ride_a: "var(--lime)", ride_b: "var(--lime)" };
+                ride_a: "var(--lime)", ride_b: "var(--lime)", lane: "#5ee6f0", sneak_red: "#ff8a8a", sneak_blue: "#9dbaff" };
   for (let i = 0; i < Math.max(stagEls.length, list.length); i++) {
     if (!stagEls[i]) { const t = document.createElement("div"); t.className = "stag"; document.body.appendChild(t); stagEls.push(t); }
     const el = stagEls[i], s = list[i], at = s ? project(s.pos[0], s.pos[1], s.pos[2] + 0.15) : null;
@@ -1441,7 +1476,17 @@ function pickSpot(cx, cy) {   // the spot marker under the cursor (within 14 px)
   }
   return best;
 }
-function edSelect(s) { ed.sel = s ? { kind: s.kind, i: s.i } : null; edRebuild(); }
+function edSelect(s) { ed.sel = s ? { kind: s.kind, i: s.i, j: s.j } : null; edRebuild(); }
+function edEndRoute() {   // the sneak route being drawn is finished: one of a single waypoint is dropped (it needs two)
+  const rt = ed.route; ed.route = null; if (!rt || !ed.data) return;
+  const routes = ed.data.sneak[rt.team];
+  if (routes[rt.i] && routes[rt.i].length < 2) {
+    routes.splice(rt.i, 1);
+    if (isSneak(ed.sel) && sneakTeam(ed.sel.kind) === rt.team && ed.sel.i === rt.i) ed.sel = null;
+    edSay("A sneak route needs at least two waypoints: the one-point route was dropped.", true);
+  }
+  edRebuild();
+}
 function edAdd(tool, p) {
   const d = ed.data;
   if (tool === "hot") {
@@ -1471,6 +1516,17 @@ function edAdd(tool, p) {
     d.ride.push({ name: RIDE_NAME[tool] + " " + n, kind: tool, take_off: a, land: p });
     edSay("");
     edSelect({ kind: "ride_a", i: d.ride.length - 1 });
+  } else if (tool === "lane") {
+    d.lane.push(p);
+    edSelect({ kind: "lane", i: d.lane.length - 1 });
+  } else if (tool === "sneak_red" || tool === "sneak_blue") {   // each click the next waypoint of the route being drawn
+    const team = sneakTeam(tool), routes = d.sneak[team];
+    if (!ed.route || ed.route.team !== team || !routes[ed.route.i]) {
+      routes.push([]); ed.route = { team, i: routes.length - 1, at: 0 };
+    }
+    const r = routes[ed.route.i], j = ed.route.at;
+    r.splice(j, 0, p); ed.route.at = j + 1;
+    edSelect({ kind: tool, i: ed.route.i, j });
   } else {
     d.hold[tool].push(p);
     edSelect({ kind: tool, i: d.hold[tool].length - 1 });
@@ -1484,8 +1540,21 @@ function edDelete() {
     if (d.hold[s.kind].length <= 1) { edSay("Each team keeps at least one hold: add another " + s.kind + " hold first, then remove this one.", true); return; }
     d.hold[s.kind].splice(s.i, 1);
   } else if (isRide(s)) d.ride.splice(s.i, 1);   // (either end picked: the whole ride)
+  else if (s.kind === "lane") d.lane.splice(s.i, 1);
+  else if (isSneak(s)) {                          // one waypoint; the route with it once it has none left
+    const team = sneakTeam(s.kind), r = d.sneak[team][s.i];
+    r.splice(s.j, 1);
+    const rt = ed.route && ed.route.team === team && ed.route.i === s.i ? ed.route : null;
+    if (rt && rt.at > s.j) rt.at--;
+    if (!r.length) { d.sneak[team].splice(s.i, 1); if (rt) ed.route = null;
+      else if (ed.route && ed.route.team === team && ed.route.i > s.i) ed.route.i--; }
+  }
   else return;
   edSelect(null);
+}
+function edDeleteRoute(team, i) {
+  if (ed.route && ed.route.team === team) { if (ed.route.i === i) ed.route = null; else if (ed.route.i > i) ed.route.i--; }
+  ed.data.sneak[team].splice(i, 1); edSelect(null);
 }
 function edSay(text, err) { $("ed-state").textContent = text; $("ed-state").classList.toggle("err", !!err); }
 const fmt = p => "(" + p.map(v => v.toFixed(2)).join(", ") + ")";
@@ -1495,6 +1564,8 @@ function edPanel() {
   for (const b of document.querySelectorAll("#ed-tools button")) b.setAttribute("aria-pressed", b.dataset.tool === ed.tool);
   document.body.classList.toggle("adding", ed.on && !!ed.tool);
   $("ed-hint").textContent = !d ? "" : ed.rideStart ? "Pad placed: now click where it puts you down. Esc starts again."
+    : ed.route && ed.tool === "sneak_" + ed.route.team ? (ed.route.team === "red" ? "Red" : "Blue") + " sneak route " + (ed.route.i + 1) +
+      ": click the next waypoint toward the " + (ed.route.team === "red" ? "blue" : "red") + " flag. Enter (or Esc) finishes the route; click the tool again for a new one."
     : ed.tool ? TOOL_HINT[ed.tool] + " Press it again (or Esc) to stop adding."
     : "Pick what to add, then click the floor. Click a spot to change it, drag it to move it, Delete to remove it.";
   if (!d) { box.hidden = true; return; }
@@ -1503,11 +1574,12 @@ function edPanel() {
     d.patrol.length + " patrol point" + (d.patrol.length === 1 ? "" : "s") +
     (d.patrol.some(r => r.team) ? " (" + d.patrol.filter(r => r.team === "red").length + " red, " + d.patrol.filter(r => r.team === "blue").length + " blue only)" : "") + " · holds " + d.hold.red.length + " red, " + d.hold.blue.length + " blue" +
     ((d.ride || []).length ? " · " + d.ride.length + " lift" + (d.ride.length === 1 ? "" : "s") + " / man cannon" + (d.ride.length === 1 ? "" : "s") : "") +
+    (ed.routesOk ? " · " + d.lane.length + " lane" + (d.lane.length === 1 ? "" : "s") + " · sneak routes " + d.sneak.red.length + " red, " + d.sneak.blue.length + " blue" : "") +
     (dirty ? " · not saved" : "");
   const s = ed.sel, g = edGet(s);
   box.hidden = !g;
   if (!g) { box.innerHTML = ""; return; }
-  const key = s.kind + ":" + s.i;
+  const key = s.kind + ":" + s.i + ":" + (s.j == null ? "" : s.j);
   if (box.dataset.key === key && box.contains(document.activeElement) && document.activeElement.tagName === "INPUT") {
     box.querySelector(".coords").textContent = isRide(s) ? "Step in " + fmt(g.ride.take_off) + " → down at " + fmt(g.ride.land)
       : fmt(g.pos); return;     // (typing a name: leave the field alone)
@@ -1527,6 +1599,13 @@ function edPanel() {
     box.querySelector(".coords").textContent = "Step in " + fmt(r.take_off) + " → down at " + fmt(r.land);
     info.textContent = (r.kind === "lift" ? "Bots step into the lift here and ride it up" : "Bots run onto the man cannon here and fly") +
       " to where it puts them down, one way, from the next match. Drag either end to move it. Save warns if an end is off the floor bots can walk.";
+  }
+  else if (s.kind === "lane") info.textContent = "Lane " + (s.i + 1) + " of " + d.lane.length + ": in CTF, attackers pass through it on the way to the enemy flag and carriers on the way home, then take the shortest way. Each picks the lane where the team has met the least danger lately; split attacks post pushers on lanes.";
+  else if (isSneak(s)) {
+    const enemy = g.team === "red" ? "blue" : "red";
+    info.textContent = "Waypoint " + (s.j + 1) + " of " + g.route.length + ". " + (g.team === "red" ? "Red" : "Blue") + " bots run this route in order to the " +
+      enemy + " flag, and their carrier runs it backwards home. Skilled bots prefer sneak routes; novices run straight." +
+      (g.route.length < 2 ? " Add at least one more waypoint." : "");
   }
   else info.textContent = "Hold " + (s.i + 1) + " of " + d.hold[s.kind].length + " for the " + s.kind + " team: a safe spot (CTF carriers wait at holds 2 and on, Oddball and Firefight use them all; a map with no power positions holds these instead).";
   if (s.kind === "patrol") {
@@ -1556,6 +1635,16 @@ function edPanel() {
     mk.onclick = () => { const row = d.hot.splice(s.i, 1)[0]; row.owner = true; row.sees = null;
       const at = d.hot.findIndex(o => !o.owner), i = at < 0 ? d.hot.length : at; d.hot.splice(i, 0, row); edSelect({ kind: "hot", i }); };
     acts.appendChild(mk);
+  } else if (isSneak(s)) {      // (custom) a sneak route's waypoint: it alone, the whole route, or more after it
+    const team = g.team, tool = s.kind;
+    const del = document.createElement("button"); del.textContent = "Remove waypoint"; del.title = "Remove this waypoint (Delete)";
+    del.onclick = edDelete; acts.appendChild(del);
+    const all = document.createElement("button"); all.textContent = "Remove route";
+    all.onclick = () => edDeleteRoute(team, s.i); acts.appendChild(all);
+    const more = document.createElement("button"); more.textContent = "Add waypoints after this";
+    more.title = "Each click on the floor puts the next waypoint after this one";
+    more.onclick = () => { ed.tool = tool; ed.route = { team, i: s.i, at: s.j + 1 }; edPanel(); };
+    acts.appendChild(more);
   } else {
     const del = document.createElement("button"); del.textContent = "Remove"; del.title = "Remove this spot (Delete)";
     if ((s.kind === "red" || s.kind === "blue") && d.hold[s.kind].length <= 1) { del.disabled = true; del.title = "Each team keeps at least one hold"; }
@@ -1570,7 +1659,11 @@ async function edLoad() {
     const r = await fetch("/spots?name=" + encodeURIComponent(ed.map));
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || r.status);
-    d.ride = d.ride || []; ed.rideStart = null;
+    d.ride = d.ride || []; ed.rideStart = null; ed.route = null;
+    ed.routesOk = Array.isArray(d.lane) && !!d.sneak;   // (a viewer started before lanes could be edited: they stay as they are)
+    d.lane = d.lane || []; d.sneak = { red: (d.sneak && d.sneak.red) || [], blue: (d.sneak && d.sneak.blue) || [] };
+    for (const b of document.querySelectorAll('#ed-tools button[data-tool="lane"], #ed-tools button[data-tool^="sneak"]'))
+      b.hidden = !ed.routesOk;
     ed.data = d; ed.saved = JSON.stringify(edPayload()); ed.sel = null;
     const sh = Object.keys(d.shared || {}).filter(k => d.shared[k]);
     $("ed-files").textContent = "Saves to " + [...new Set(Object.values(d.files))].join(", ") +
@@ -1607,12 +1700,13 @@ function edToggle(on) {
     if (!gotData && !ed.floorOn) { ed.floorOn = true; $("ed-floor").checked = true; }
   }
   if (on && ed.floorOn) edLevel();
-  if (!on) { ed.tool = null; ed.grab = null; }
+  if (!on) { ed.tool = null; ed.grab = null; if (ed.route) edEndRoute(); }
   edRebuild();
 }
 $("ed-on").onclick = () => edToggle(!ed.on);
 for (const b of document.querySelectorAll("#ed-tools button")) b.onclick = () => {
   ed.tool = ed.tool === b.dataset.tool ? null : b.dataset.tool;
+  if (ed.route) { edEndRoute(); return; }      // (a sneak route being drawn: finished; the tool again starts a new one)
   if (ed.rideStart) { ed.rideStart = null; edRebuild(); } else edPanel();   // (a lift's pad half placed: dropped)
 };
 $("ed-floor").onchange = () => { ed.floorOn = $("ed-floor").checked; if (ed.floorOn) edLevel(); };
@@ -1621,6 +1715,11 @@ $("ed-save").onclick = async () => {
   if (!ed.data || ed.busy) return;
   const bad = ed.data.patrol.find((r, k) => !r.name || ed.data.patrol.some((o, j) => j !== k && o.name.toLowerCase() === r.name.toLowerCase()));
   if (bad) { edSay("Two patrol points have the same name: rename one first.", true); return; }
+  if (ed.route) edEndRoute();
+  for (const t of ["red", "blue"]) {
+    const k = ed.data.sneak[t].findIndex(r => r.length < 2);
+    if (k >= 0) { edSay((t === "red" ? "Red" : "Blue") + " sneak route " + (k + 1) + " has one waypoint: add another or remove it.", true); return; }
+  }
   const measuring = ed.data.hot.some(r => r.owner && r.sees === null);
   ed.busy = true; edPanel(); edSay(measuring ? "Saving and measuring the new hot spots (a few seconds the first time)..." : "Saving...");
   let r = null, d = {};
@@ -1644,7 +1743,7 @@ canvas.addEventListener("mousedown", e => {   // (after the camera's own: a spot
   if (!ed.on || !ed.data || e.button !== 0 || e.shiftKey) { ed.press = null; return; }
   const r0 = canvas.getBoundingClientRect(), cx = e.clientX - r0.left, cy = e.clientY - r0.top, s = pickSpot(cx, cy);
   ed.press = [e.clientX, e.clientY];
-  if (s && s.kind !== "power") { ed.grab = { kind: s.kind, i: s.i, moved: false }; drag = null; edSelect(s); }
+  if (s && s.kind !== "power" && !ed.route) { ed.grab = { kind: s.kind, i: s.i, j: s.j, moved: false }; drag = null; edSelect(s); }
 });
 addEventListener("mousemove", e => {
   if (!ed.grab || !ed.press) return;
@@ -1657,7 +1756,8 @@ addEventListener("mouseup", e => {
   const grab = ed.grab, press = ed.press; ed.grab = null; ed.press = null;
   if (!ed.on || !ed.data || grab || !press || Math.hypot(e.clientX - press[0], e.clientY - press[1]) > 5) return;   // (a drag turned the view)
   const r0 = canvas.getBoundingClientRect(), cx = e.clientX - r0.left, cy = e.clientY - r0.top, s = pickSpot(cx, cy);
-  if (s && !ed.rideStart) { edSelect(s); return; }   // (placing a ride's landing: the click is its landing)
+  if (s && !ed.rideStart && !ed.route) { edSelect(s); return; }   // (placing a ride's landing or a route's next
+                                                                  // waypoint: the click is that)
   if (!ed.tool) { edSelect(null); return; }
   const p = pickFloor(cx, cy);
   if (!p) { edSay(ed.floorOn ? "Click on the floor." : "Click on the floor (tick \"Show the floor bots can reach\" where the scan has none).", true); return; }
@@ -1668,8 +1768,10 @@ addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "s" && !e.repeat) { edToggle(!ed.on); return; }
   if (!ed.on) return;
   if ((e.key === "Delete" || e.key === "Backspace") && ed.sel) { e.preventDefault(); edDelete(); }
+  else if (e.key === "Enter" && ed.route) { e.preventDefault(); edEndRoute(); }    // (a sneak route: finished)
   else if (e.key === "Escape" && !$("maps").classList.contains("on")) {
     if (ed.rideStart) { ed.rideStart = null; edSay(""); edRebuild(); return; }   // (a half-placed ride: start again)
+    if (ed.route) { edEndRoute(); return; }
     if (ed.tool) ed.tool = null; else edSelect(null); edPanel();
   }
 });

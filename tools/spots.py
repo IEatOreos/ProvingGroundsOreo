@@ -17,6 +17,14 @@ from (brain/maps.py load_map), so an edit is what the next match loads:
           land}]} in the folder of the map or layout shown (brain/maps.py owner_rides): a one-way people's ride link
           from where you step in to where it puts you down, and a lift / launcher marker at the pad the map lacks, so bots
           ride it as they ride the ones people recorded. Save warns of an end the nav cannot use (the nav skips it).
+  lane    CTF attack lanes (custom, Nov 9): callouts.json "lanes" [[x, y, z]], waypoints both teams pass through on
+          their way to the enemy flag and a carrier on its way home (director.pick_route: each lane is a one-stop
+          route, the one with the least recent threat), and split attacks' pushers stand on them. None at all is
+          allowed: bots then run the shortest way.
+  sneak   sneak routes (custom, Nov 9): callouts.json "sneak" {red: [[[x, y, z], ...]], blue: [...]}, each a route of
+          waypoints in order from the team's own base to the enemy flag; the carrier runs it backwards home. Skilled
+          bots prefer them (director.pick_route: routes skill squared). Each needs at least two points.
+          A Forge layout's lanes and sneak routes are made again with its callouts, as its holds are.
 Every save keeps the files it replaces in backups/spots/ and writes each one whole (a match may read it any time).
 
 usage: python -I spots.py --selftest
@@ -40,6 +48,7 @@ for _p in (ROOT, HERE):
 MAP_NAME = re.compile(r"[a-z0-9_]+(/variants/v[0-9a-f]{8})?")   # tools/lidar.py MAP_NAME: a map or a layout of one
 TEAMS = ("red", "blue")
 MAX_HOT, MAX_PATROL, MAX_HOLD, MAX_RIDE = 32, 32, 16, 32
+MAX_LANE, MAX_SNEAK, MAX_SNEAK_POINTS = 12, 8, 32   # lanes; sneak routes a team; waypoints a route
 RIDE_KINDS = ("lift", "cannon")
 NEAR = 1.0                        # a computed power position this close to an owner spot gives way (power_positions --add)
 LIMIT = 20000.0                   # no map reaches this far from its origin
@@ -94,7 +103,8 @@ def _xyz(p):
 
 def load(name):
     """What the view shows: {hot: [{pos, owner, score, sees, height, duck}], patrol: [{name, pos, team}],
-    hold: {red: [pos], blue: [pos]}, files: {kind: path from the install}, shared: {kind: bool}}."""
+    hold: {red: [pos], blue: [pos]}, lane: [pos], sneak: {red: [[pos]], blue: [[pos]]}, files: {kind: path from the
+    install}, shared: {kind: bool}} (lanes and sneak routes: in the holds' callouts.json, files["hold"])."""
     f = files(name)
     rows = _read(f["hot"], [])
     hot = [dict(pos=r["pos"], owner=bool(r.get("owner")), score=r.get("score", 0.0), sees=r.get("sees", 0),
@@ -105,14 +115,19 @@ def load(name):
         pos = _xyz(v.get("pos") if isinstance(v, dict) else v)
         if pos:
             patrol.append(dict(name=k, pos=pos, team=v.get("team") if isinstance(v, dict) and v.get("team") in TEAMS else None))
-    holds = (_read(f["hold"], {}).get("holds") or {})
+    cfg = _read(f["hold"], {})
+    holds = cfg.get("holds") or {}
     hold = {t: [p for p in map(_xyz, holds.get(t, [])) if p] for t in TEAMS}
+    lane = [p for p in map(_xyz, cfg.get("lanes") or []) if p]
+    sneaks = cfg.get("sneak") if isinstance(cfg.get("sneak"), dict) else {}
+    sneak = {t: [pts for pts in ([p for p in map(_xyz, r) if p] for r in sneaks.get(t, []) if isinstance(r, list))
+                 if len(pts) >= 2] for t in TEAMS}
     ride = [dict(name=r.get("name") or "", kind=r["kind"], take_off=_xyz(r.get("take_off")), land=_xyz(r.get("land")))
             for r in _read(f["ride"], {}).get("rides", []) if isinstance(r, dict) and r.get("kind") in RIDE_KINDS
             and _xyz(r.get("take_off")) and _xyz(r.get("land"))]
     rel = {k: _rel(p) for k, p in f.items()}
     shared = {k: "/variants/" in name and "/variants/" not in rel[k] for k in rel}
-    return dict(map=name, hot=hot, patrol=patrol, hold=hold, ride=ride, files=rel, shared=shared)
+    return dict(map=name, hot=hot, patrol=patrol, hold=hold, ride=ride, lane=lane, sneak=sneak, files=rel, shared=shared)
 
 
 def check(sent):
@@ -163,7 +178,34 @@ def check(sent):
         ride.append((nm or ("Gravity lift" if kind == "lift" else "Man cannon"), kind, a, b))
     if len(ride) > MAX_RIDE:
         raise ValueError(f"at most {MAX_RIDE} lifts and man cannons")
-    return hot, patrol, hold, ride
+    # (an edit without "lane" / "sneak", a view from before they could be edited: None, the file's kept as they are)
+    if "lane" not in sent and "sneak" not in sent:
+        return hot, patrol, hold, ride, None, None
+    lane = []
+    for p in sent.get("lane", []):
+        pos = _xyz(p)
+        if pos is None:
+            raise ValueError("a lane point without a place")
+        lane.append(pos)
+    if len(lane) > MAX_LANE:
+        raise ValueError(f"at most {MAX_LANE} lane points")
+    sneaks = sent.get("sneak") if isinstance(sent.get("sneak"), dict) else {}
+    sneak = {}
+    for t in TEAMS:
+        routes = sneaks.get(t, [])
+        if not isinstance(routes, list) or len(routes) > MAX_SNEAK:
+            raise ValueError(f"at most {MAX_SNEAK} {t} sneak routes")
+        sneak[t] = []
+        for k, r in enumerate(routes, 1):
+            pts = [_xyz(p) for p in r] if isinstance(r, list) else [None]
+            if None in pts:
+                raise ValueError(f"{t} sneak route {k}: a waypoint without a place")
+            if len(pts) < 2:
+                raise ValueError(f"{t} sneak route {k} needs at least two waypoints (from your base to their flag)")
+            if len(pts) > MAX_SNEAK_POINTS:
+                raise ValueError(f"{t} sneak route {k}: at most {MAX_SNEAK_POINTS} waypoints")
+            sneak[t].append(pts)
+    return hot, patrol, hold, ride, lane, sneak
 
 
 def hot_rows(old, hot, describe=None):
@@ -216,7 +258,7 @@ def save(name, sent, describe=None, root=None):
     whose contents change are written; each is copied to backups/spots/ first."""
     if not map_ok(name):
         raise ValueError(f"no map {name!r}")
-    hot, patrol, hold, ride = check(sent)
+    hot, patrol, hold, ride, lane, sneak = check(sent)
     f = files(name)
     with _LOCK:
         old_rows = _read(f["hot"], [])
@@ -226,6 +268,10 @@ def save(name, sent, describe=None, root=None):
         if cfg is None:
             raise ValueError(f"{_rel(f['hold'])} cannot be read")
         cfg = dict(cfg, holds={t: hold[t] for t in TEAMS})
+        if lane is not None:
+            cfg.update(lanes=lane, sneak={t: sneak[t] for t in TEAMS})
+        else:
+            lane, sneak = cfg.get("lanes") or [], {t: (cfg.get("sneak") or {}).get(t, []) for t in TEAMS}
         out = {"hot": json.dumps(rows, indent=1) + "\n", "patrol": patrol_text(patrol),
                "hold": json.dumps(cfg, indent=1) + "\n"}
         if not patrol and not os.path.exists(f["patrol"]):
@@ -250,7 +296,8 @@ def save(name, sent, describe=None, root=None):
                 kept.append(_rel(to, root or ROOT))
             _write(path, text)
             changed.append(_rel(path))
-    return dict(hot=len(hot), patrol=len(patrol), hold={t: len(hold[t]) for t in TEAMS}, ride=len(ride), backups=kept,
+    return dict(hot=len(hot), patrol=len(patrol), hold={t: len(hold[t]) for t in TEAMS}, ride=len(ride), lane=len(lane),
+                sneak={t: len(sneak[t]) for t in TEAMS}, backups=kept,
                 changed=changed, warnings=ride_problems(name, ride) if ride else [])
 
 
@@ -362,7 +409,11 @@ def selftest():
                     {"patrol": [{"name": "a", "pos": [0, 0, 0]}, {"name": "A", "pos": [1, 1, 1]}],
                      "hold": {"red": [[0, 0, 0]], "blue": [[0, 0, 0]]}},
                     {"patrol": [{"name": "a", "pos": [0, 0, 0], "team": "green"}], "hold": {"red": [[0, 0, 0]], "blue": [[0, 0, 0]]}},
-                    {"hold": {"red": [[float("nan"), 0, 0]], "blue": [[0, 0, 0]]}}):
+                    {"hold": {"red": [[float("nan"), 0, 0]], "blue": [[0, 0, 0]]}},
+                    {"hold": {"red": [[0, 0, 0]], "blue": [[0, 0, 0]]}, "lane": [[0, 0]]},
+                    {"hold": {"red": [[0, 0, 0]], "blue": [[0, 0, 0]]}, "sneak": {"red": [[[0, 0, 0]]]}},       # one point
+                    {"hold": {"red": [[0, 0, 0]], "blue": [[0, 0, 0]]}, "sneak": {"blue": [[[0, 0, 0], "x"]]}},
+                    {"hold": {"red": [[0, 0, 0]], "blue": [[0, 0, 0]]}, "sneak": {"red": "route"}}):
             try:
                 check(bad)
             except ValueError:
@@ -386,6 +437,9 @@ def selftest():
                 fl = level_floor(name)["points"]           # a ride between two nav floor points, and one off the map
                 good = dict(name="Lift 1", kind="lift", take_off=fl[0:3], land=fl[3000:3003])
                 edit["ride"] = [good, dict(name="", kind="cannon", take_off=[9000.0, 9000.0, 0.0], land=fl[0:3])]
+                edit["lane"] = cur["lane"] + [[7.0, 8.0, 9.0]]
+                route = [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]]
+                edit["sneak"] = dict(red=cur["sneak"]["red"] + [route], blue=cur["sneak"]["blue"])
                 r = save(name, edit, describe=lambda p: dict(pos=p, score=1.0, sees=1, height=0.0, duck=False), root=tmp)
                 assert len(r["changed"]) == 4 and len(r["backups"]) == 3, r          # (owner_rides.json is new)
                 assert len(r["warnings"]) == 1 and r["warnings"][0].startswith("Man cannon: where you step in is outside"), r
@@ -397,9 +451,15 @@ def selftest():
                 assert after["hold"]["red"][-1] == [3.0, 3.0, 3.0]
                 cfg = _read(fake["hold"], {})
                 assert cfg["zones"] == _read(real["hold"], {})["zones"]          # the rest of callouts.json kept
-                r = save(name, dict(hot=[{"pos": p["pos"]} for p in after["hot"] if p["owner"]], patrol=after["patrol"],
-                                    hold=after["hold"], ride=after["ride"]), root=tmp)
+                assert after["lane"][-1] == [7.0, 8.0, 9.0] and after["sneak"]["red"][-1] == route
+                assert cfg["lanes"][-1] == [7.0, 8.0, 9.0] and cfg["sneak"]["red"][-1] == route   # as maps.load_map reads them
+                same = dict(hot=[{"pos": p["pos"]} for p in after["hot"] if p["owner"]], patrol=after["patrol"],
+                            hold=after["hold"], ride=after["ride"])
+                r = save(name, dict(same, lane=after["lane"], sneak=after["sneak"]), root=tmp)
                 assert r["changed"] == [] and r["backups"] == [], r
+                r = save(name, same, root=tmp)              # a view without lanes / sneak: they are kept, not wiped
+                assert r["changed"] == [] and r["lane"] == len(after["lane"]), r
+                assert load(name)["sneak"]["red"][-1] == route
                 try:
                     save(name, dict(hot=[], patrol=[], hold=dict(red=[], blue=[[0, 0, 0]])), root=tmp)
                     raise AssertionError("saved a team with no hold")
