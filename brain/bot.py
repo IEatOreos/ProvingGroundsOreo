@@ -168,6 +168,10 @@ DEMON_ENGAGE_R = 30.0   # u: (custom) a man in view this near: a Demon fights hi
                         # the errands it cannot fight on the way to (DEMON_SIGHT_OVER, shoot_back), not shot
 ON_WAY_KINDS = ("item", "hunt")          # walked on while fighting (Bot.on_way_target)
 ON_WAY_LAST = 1.5                        # u from the gun: the pickup's last steps, no fighting
+# (custom, Nov 10) Halo 4 CTF: the flag carrier holds a magnum (the only Halo that gives him a gun; its read is
+# "unknown", 8 rounds a magazine). The owner: "they currently do not shoot the magnum at all when carrying the flag in
+# halo 4". A man in view this near: shot on the way home (Bot.carrier_shot), every tier
+CARRIER_SHOOT_R = 25.0
 ON_WAY_OBJ_LAST = 3.0                    # u from an objective run's point (outside Slayer, Race): its own last steps
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
@@ -2189,10 +2193,12 @@ class Bot:
         patrol_target = None
         patrol_seen = s.per.visible_enemies() if kind == "patrol" else []
         on_way = s.on_way_target(now, me, snap, kind, arg)   # (custom: a Demon's errand with a man in view, below)
+        carry_shot = s.carrier_shot(now, me, snap, kind, arg) if on_way is None and kind != "fight" else None
         if kind == "fight":
             s.fight(now, dt, me, snap, arg, act, nav)
-        elif patrol_seen or on_way is not None:
-            patrol_target = on_way if on_way is not None else s.pick_target(now, me, snap, patrol_seen)
+        elif patrol_seen or on_way is not None or carry_shot is not None:
+            patrol_target = (on_way if on_way is not None else carry_shot if carry_shot is not None
+                             else s.pick_target(now, me, snap, patrol_seen))
             s.fight(now, dt, me, snap, patrol_target, act, nav)
             if on_way is not None:
                 arg = s.detour(now, me, kind, arg)
@@ -2205,6 +2211,14 @@ class Bot:
             act.forward = walk.forward * c - walk.strafe * sn
             act.strafe = walk.forward * sn + walk.strafe * c
             act.jump, act.crouch, act.sprint = walk.jump, act.crouch or walk.crouch, False
+            if carry_shot is not None:
+                # (custom, Halo 4 carrier) the run home as it was (its own crouch and sprint); of fight's presses only the
+                # aim, the trigger and a melee (the flag's swing): no grenade, ability, Use, reload or switch, any of
+                # which could drop the flag. An empty magazine reloads itself on the next pull
+                act.crouch, act.sprint = walk.crouch, walk.sprint
+                act.grenade = act.equipment = act.ability = act.action = act.reload = False
+                act.weapon = -1
+                s.note("carrying: shooting on the way home")
         elif kind == "retreat" and s.per.visible_enemies():
             # back off toward safety (a wall between us and them if LiDAR found one) while still
             # shooting at the closest threat; by the nav, a straight line can run into a wall
@@ -2901,6 +2915,18 @@ class Bot:
                 return None
         seen = [k for k in s.per.visible_enemies() if k in s.per.beliefs
                 and dist(me.pos, s.per.beliefs[k].pos) <= DEMON_ENGAGE_R]
+        return s.pick_target(now, me, snap, seen) if seen else None
+
+    def carrier_shot(s, now, me, snap, kind, arg):
+        """(custom, Nov 10) Halo 4 CTF, carrying the flag on foot on its way home: the man in view within
+        CARRIER_SHOOT_R to shoot with the carrier's magnum while it runs on (fight's aim and trigger, the walk home as
+        before, as on_way_target does); None otherwise. Live Adrift, Nov 10: bot carriers ran home 5,600 ticks with
+        men listed and never fired (a carrier never got a fight goal: no other Halo gives him a gun)."""
+        if (s.game != "h4" or snap.mode != "ctf" or not me.has_flag or me.vehicle not in (None, -1)
+                or kind != "objective" or not isinstance(arg, Vec)):
+            return None
+        seen = [k for k in s.per.visible_enemies() if k in s.per.beliefs
+                and dist(me.pos, s.per.beliefs[k].pos) <= CARRIER_SHOOT_R]
         return s.pick_target(now, me, snap, seen) if seen else None
 
     def shoot_back(s, me, snap, scores, seen, hit_recent, regroup, avoid=False):

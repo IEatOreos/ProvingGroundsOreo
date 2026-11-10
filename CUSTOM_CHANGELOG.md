@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Halo 4 CTF: the flag carrier shoots its magnum on the way home, 2026-11-10
+
+The owner: "Halo 4 is the only halo where you have a weapon wielded while carrying flag, but they currently do not shoot the magnum at all when carrying the flag in halo 4".
+
+- Cause: a bot only pulls the trigger while it fights, and a carrier never got a fight goal (`decide`: fights only `if seen and not me.has_flag`). That rule is right for CE, Reach and Halo 3, where the flag is the carrier's only weapon. Today's Adrift traces: bot carriers ran home for 5,600 ticks with enemies listed, always "objective", never a shot. Their weapon read showed `unknown` 99% of the time, the inventory slot with 8 rounds a magazine and 24 total: the carrier's magnum.
+- `brain/bot.py` `carrier_shot` (`CARRIER_SHOOT_R` = 25 u): in Halo 4 CTF, carrying on foot on its run home, the bot picks an enemy in view (`pick_target`) within 25 u. That enemy goes through the same branch as a Demon's "on the way" fight (`on_way_target`): fight's aim and trigger, the walk home steered as before.
+  - Kept from the run as before: its own crouch and sprint.
+  - Cleared: fight's grenade, ability, Use, reload and weapon switch. Any of those presses could drop the flag, so they are not sent. An empty magazine reloads itself on the next pull.
+  - The flag melee at arm's length is unchanged.
+  - Every tier. Radar dots and the emblem are not shot at: eyes only, as always.
+- Not changed: other games and modes (Reach, Halo 3, CE, Oddball, Invasion's core), riders, and the carrier's route home.
+- Validation:
+  - New `tools/test_h4_carrier_shot.py` (3 tests): a Halo 4 carrier shoots a man in view at every tier; not out of range or out of view; only carrying, only Halo 4 CTF, on foot, on its run home.
+  - A scratch replay of the full think loop on Adrift's real nav, a carrier on its way home with an enemy 12 u off in view, 5 s:
+    - before, 0 trigger presses at every tier;
+    - now 6 (Normal), 6 (Heroic), 7 (Legendary), 9 (Demon), with the same progress home (7.6-7.8 u).
+  - All 513 regression tests pass.
+- Untested in a live match: that the `unknown` weapon in a Halo 4 carrier's hands is the magnum and fires on the trigger, and that a pull on an empty magazine reloads without dropping the flag. Restart the bot process to load it.
+
 ### CTF: hunters cut the carrier off instead of chasing him, and every bot knows where he is under his emblem, 2026-11-10
 
 The owner: "how would we add the ability to bots hunt the flag carrier, but without back tracking. Like cutting them off." Live on Adrift, he was on the top lane of their base, they were below him, and they went back through their base to reach where he was, which left their flag open. Also: "once you pick up the flag it shows an emblem above your head showing that im carrying their flag. So maybe make it to where they always know where the flag carrier is?"
