@@ -265,6 +265,377 @@ class TeamOddsTests(unittest.TestCase):
         self.assertEqual((t, eyes, acc), (50.0, frozenset({1}), odds.ACC[False]))
 
 
+class SpreadTests(unittest.TestCase):
+    """No piling onto a teammate's kill (Bot.mate_has_him, threat, demon_commit): live Haven, another Demon was on the
+    man in 63% of Demon kills (the owner's 36%)."""
+
+    def setup(self, tier="demon", game_map="h4_test", mate_demon=True, mate_t=50.0, my_gun="assault_rifle"):
+        b, me = demon(tier, game_map, wall=None)
+        me.weapon = me.weapons[0] = my_gun       # (an AR at 10 u: the mate's BR is the quicker kill)
+        e1, e2 = man(1, -10.0), man(2, 6.0, 8.0)
+        e1.yaw = math.atan2(6.0, 0.0)                       # (he faces the mate, not us)
+        mate = PlayerState(5, 0, "mate", Vec(-10.0, 6.0, 0.0), weapon="battle_rifle", weapons=["battle_rifle"],
+                           ammo=[108], mag=[36])
+        snap = Snapshot(50.0, [me, mate, e1, e2], mode="slayer")
+        see(b, e1, e2)
+        key = (game_map, 0)
+        botmod.TEAM_TARGETS.clear()
+        botmod.TEAM_TARGETS[key] = {5: (mate_t, 1)}
+        botmod.TEAM_EYES[key] = {5: (mate_t, frozenset({1}), odds.DEMON_ACC if mate_demon else odds.ACC[False])}
+        return b, me, snap
+
+    def test_a_mates_winning_kill_scores_half_and_no_team_shot(self):
+        b, me, snap = self.setup()
+        b.team_focus = {1: 1}
+        piled = b.threat(50.0, me, snap, 1)
+        botmod.TEAM_TARGETS.clear()
+        alone = b.threat(50.0, me, snap, 1)
+        self.assertAlmostEqual(piled, alone * botmod.SPREAD_K - 60.0 * b.p.teamwork * botmod.SPREAD_K)
+
+    def test_a_committed_demon_turns_to_the_man_nobody_has(self):
+        b, me, snap = self.setup()
+        b.goal, b.target_at = ("fight", 1), 40.0
+        scored = {1: 100.0, 2: 60.0}
+        self.assertEqual(b.demon_commit(50.0, me, snap, [1, 2], scored, 2, 1), 2)
+        self.assertTrue(any(n.startswith("spread") for n in b.notes))
+
+    def test_two_alike_on_one_man_only_one_leaves(self):
+        b, me, snap = self.setup(my_gun="battle_rifle")          # (both BRs: a tie)
+        self.assertFalse(b.mate_has_him(50.0, me, snap, snap.player(1)))   # (it is bot 0: the lower id keeps him)
+        b9 = Bot(9, 0, make_profile("demon", "rusher", random.Random(3)), {"name": "h4_test"}, random.Random(5))
+        b9.notes = []
+        me9 = PlayerState(9, 0, "me9", Vec(0.0, 0.0, 0.0), weapon="battle_rifle", weapons=["battle_rifle"],
+                          ammo=[108], mag=[36])
+        snap9 = Snapshot(50.0, [me9] + [p for p in snap.players if p.id != 0], mode="slayer")
+        self.assertTrue(b9.mate_has_him(50.0, me9, snap9, snap9.player(1)))   # (bot 9 leaves him to bot 5)
+
+    def test_the_man_it_left_stays_left_a_moment(self):
+        b, me, snap = self.setup()
+        b.goal, b.target_at = ("fight", 1), 40.0
+        b.demon_commit(50.0, me, snap, [1, 2], {1: 100.0, 2: 60.0}, 2, 1)
+        botmod.TEAM_TARGETS.clear()                               # (the mate's post gone: the hold alone)
+        held = b.threat(50.5, me, snap, 1)
+        after = b.threat(50.0 + botmod.SPREAD_HOLD + 0.1, me, snap, 1)
+        self.assertAlmostEqual(held, after * botmod.SPREAD_K)
+
+    def test_a_losing_or_stale_mate_still_gets_help(self):
+        for kw in (dict(mate_demon=False), dict(mate_t=49.0)):
+            with self.subTest(**kw):
+                b, me, snap = self.setup(**kw)
+                self.assertFalse(b.mate_has_him(50.0, me, snap, snap.player(1)))
+
+    def test_other_tiers_and_games_unchanged(self):
+        for tier, game_map in (("top", "h4_test"), ("demon", "reach_test")):
+            with self.subTest(tier=tier, game=game_map):
+                b, me, snap = self.setup(tier, game_map)
+                self.assertFalse(b.mate_has_him(50.0, me, snap, snap.player(1)))
+
+
+class PressTests(unittest.TestCase):
+    """Halo 4 Demon walks in with two or more in view when ahead and winning (Bot.press_on, DEMON_PRESS_LEAD); alone
+    with one man, upstream's rule (even on the vitals) as before."""
+
+    def press(self, tier="demon", game_map="h4_test", my_shield=1.0, his_shield=1.0, odds_now=1.5, two=False):
+        b, me = demon(tier, game_map, shield=my_shield, wall=None)
+        him = man(1, -8.0, shield=his_shield, human=True)
+        men = [him] + ([man(2, -8.0, 5.0)] if two else [])
+        see(b, *men)
+        b.press_fight, b.last_odds = True, odds_now
+        snap = Snapshot(50.0, [me] + men, mode="slayer")
+        b.per.visible_enemies = lambda: [m.id for m in men]
+        return b.press_on(me, b.per.beliefs[1], him, snap, 8.0, 0.0)
+
+    def test_two_in_view_ahead_and_winning_it_walks_in(self):
+        self.assertTrue(self.press(two=True))
+
+    def test_two_in_view_behind_or_losing_it_holds(self):
+        self.assertFalse(self.press(two=True, my_shield=0.7, his_shield=1.0))
+        self.assertFalse(self.press(two=True, odds_now=1.0))
+
+    def test_one_man_in_view_as_before(self):
+        self.assertTrue(self.press(odds_now=0.3))       # (even on the vitals: upstream presses, odds or not)
+        self.assertFalse(self.press(my_shield=0.5))
+
+    def test_legendary_and_reach_demon_keep_the_hold(self):
+        for tier, game_map in (("top", "h4_test"), ("demon", "reach_test")):
+            with self.subTest(tier=tier, game=game_map):
+                self.assertFalse(self.press(tier, game_map, two=True))
+
+
+class SixTests(unittest.TestCase):
+    """The owner's six (Nov 8): trade rule, re-peek with a full shield, one-shot callouts, instant trades, third party,
+    regroup."""
+
+    def setUp(self):
+        for d in (botmod.TEAM_TARGETS, botmod.TEAM_CRACKED, botmod.TEAM_ATTACKERS):
+            d.clear()
+
+    # 1 trade rule
+    def test_kills_first(self):
+        self.assertEqual(odds.kills_first([(1.0, 0.5, 0.0)]), 0)                      # he drops us first
+        self.assertEqual(odds.kills_first([(0.5, 1.0, 0.0)]), 1)
+        self.assertEqual(odds.kills_first([(0.3, 1.0, 0.0), (1.0, 1.0, 0.0)]), 1)     # one, then down
+        self.assertEqual(odds.kills_first([]), 0)
+
+    def trade_case(self, mode):
+        b, me = demon(shield=0.5, wall=0.2)
+        men = [man(1, -6.0, shield=0.0, human=True), man(2, -12.0, 4.0, human=True)]
+        snap = Snapshot(50.0, [me] + men, mode=mode)
+        see(b, *men)
+        self.assertLess(b.fight_odds(50.0, me, snap, [1, 2])[0], ODDS_BREAK)          # (losing on the odds)
+        b.demon_odds_rules(50.0, me, snap, {("fight", 1): 2.9}, [1, 2])
+        scores = {("fight", 1): 2.9}
+        b.demon_odds_rules(50.3, me, snap, scores, [1, 2])
+        return b, scores
+
+    def test_slayer_losing_but_a_kill_first_stays(self):
+        b, scores = self.trade_case("slayer")
+        self.assertFalse([k for k in scores if k[0] == "retreat"])
+        self.assertTrue(any("trade" in n for n in b.notes))
+
+    def test_objective_modes_no_trade_rule(self):
+        b, _ = self.trade_case("ctf")
+        self.assertFalse(any("trade" in n for n in b.notes))      # (as before: its cover out of reach, it fights on)
+
+    def test_a_man_on_it_close_is_fought_out_not_run_from(self):
+        b, me = demon(shield=0.4, wall=0.2)
+        men = [man(1, -5.0, human=True), man(2, -9.0, 4.0, human=True)]
+        snap = Snapshot(50.0, [me] + men, mode="ctf")                 # (no trade rule: the range alone)
+        see(b, *men)
+        b.demon_odds_rules(50.0, me, snap, {("fight", 1): 2.9}, [1, 2])
+        scores = {("fight", 1): 2.9}
+        b.demon_odds_rules(50.3, me, snap, scores, [1, 2])
+        self.assertFalse([k for k in scores if k[0] == "retreat"])
+        self.assertTrue(any("fight it out" in n for n in b.notes))
+
+    def test_no_kill_first_still_breaks_off(self):
+        b, me = demon(shield=0.6, wall=0.2)
+        men = [man(1, -10.0, human=True), man(2, -9.0, 4.0, human=True)]
+        snap = Snapshot(50.0, [me] + men, mode="slayer")
+        see(b, *men)
+        b.demon_odds_rules(50.0, me, snap, {("fight", 1): 2.9}, [1, 2])
+        scores = {("fight", 1): 2.9}
+        b.demon_odds_rules(50.3, me, snap, scores, [1, 2])
+        self.assertTrue([k for k in scores if k[0] == "retreat"])
+        self.assertGreater(b.repeek_until, 50.3)                                      # (the re-peek hold armed)
+
+    # 6 re-peek with a full shield
+    def repeek(self, **kw):
+        b, me = demon(shield=0.5, wall=None)
+        him = man(1, -10.0, human=True, **kw)
+        snap = Snapshot(50.0, [me, him], mode="slayer")
+        see(b, him)
+        b.repeek_until, b.goal = 55.0, ("retreat", Vec(1.0, 0.0, 0.0))
+        scores = {("fight", 1): 2.9, ("hunt", Vec(-5.0, 0.0, 0.0)): 3.2}
+        return b, me, snap, scores
+
+    def test_half_shield_no_re_peek(self):
+        b, me, snap, scores = self.repeek(facing_me=False)
+        b.repeek_rule(50.0, me, snap, scores)
+        self.assertEqual(set(k[0] for k in scores), {"retreat"})
+        self.assertEqual(scores[b.goal], botmod.REPEEK_HOLD_SCORE)
+
+    def test_fights_back_a_man_hurting_it_or_one_shot(self):
+        b, me, snap, scores = self.repeek()
+        b.per.attacker_id, b.per.attacker_t = 1, 49.8
+        b.repeek_rule(50.0, me, snap, scores)
+        self.assertIn(("fight", 1), scores)
+        b, me, snap, scores = self.repeek(shield=0.0)
+        b.repeek_rule(50.0, me, snap, scores)
+        self.assertIn(("fight", 1), scores)
+
+    def test_full_shield_or_hold_over_peeks_again(self):
+        b, me, snap, scores = self.repeek()
+        me.shield = 0.97
+        b.repeek_rule(50.0, me, snap, scores)
+        self.assertIn(("fight", 1), scores)
+        b, me, snap, scores = self.repeek()
+        b.repeek_rule(56.0, me, snap, scores)
+        self.assertIn(("fight", 1), scores)
+
+    # 3 one-shot callouts
+    def test_a_called_one_shot_out_of_sight_is_hunted_when_healthy(self):
+        for shield, hunted in ((1.0, True), (0.3, False)):
+            with self.subTest(shield=shield):
+                b, me = demon(shield=shield, wall=None)
+                him = man(1, -10.0, shield=0.0, human=True)
+                b.per.beliefs[1] = Belief(him.pos, Vec(), 49.8, False, "team")
+                botmod.TEAM_CRACKED[("h4_test", 0)] = {1: (49.5, him.pos)}
+                scores = {}
+                b.team_play(50.0, me, Snapshot(50.0, [me, him], mode="slayer"), scores, [])
+                self.assertEqual(scores.get(("hunt", him.pos)) == botmod.CALLOUT_SCORE, hunted)
+
+    def test_one_shot_in_sight_first(self):
+        b, me = demon(wall=None)
+        cracked, full = man(1, -10.0, shield=0.0), man(2, -10.0, 1.0)
+        snap = Snapshot(50.0, [me, cracked, full], mode="slayer")
+        see(b, cracked, full)
+        self.assertGreater(b.threat(50.0, me, snap, 1), 1.4 * b.threat(50.0, me, snap, 2))
+
+    def test_every_bot_posts_cracked_men_and_its_attacker(self):
+        b, me = demon("top", wall=None)
+        him = man(1, -10.0, shield=0.0)
+        b.per.beliefs[1] = Belief(him.pos, Vec(), 50.0, True, "eyes")
+        b.per.visible_enemies = lambda: [1]
+        b.per.attacker_id, b.per.attacker_t = 1, 49.9
+        b.share_sightings(50.0, me, Snapshot(50.0, [me, him], mode="slayer"))
+        self.assertIn(1, botmod.TEAM_CRACKED[("h4_test", 0)])
+        self.assertEqual(botmod.TEAM_ATTACKERS[("h4_test", 0)][0][:2], (1, 49.9))
+
+    # 4 instant trades
+    def test_a_teammates_killer_is_pushed(self):
+        b, me = demon(wall=None)
+        mate = PlayerState(5, 0, "mate", Vec(-4.0, 2.0, 0.0), weapon="battle_rifle", weapons=["battle_rifle"])
+        killer = man(1, -12.0, shield=0.1, human=True)
+        see(b, killer)
+        b.team_play(49.9, me, Snapshot(49.9, [me, mate, killer], mode="slayer"), {}, [1])   # (the mate alive)
+        botmod.TEAM_ATTACKERS[("h4_test", 0)] = {5: (1, 49.8, mate.pos)}
+        mate.alive = False
+        scores = {}
+        b.team_play(50.0, me, Snapshot(50.0, [me, mate, killer], mode="slayer"), scores, [1])
+        self.assertEqual(scores.get(("fight", 1)), botmod.TRADE_SCORE)
+        self.assertTrue(any(n.startswith("trade: #5") for n in b.notes))
+
+    # 2 third party
+    def test_a_teammates_even_fight_is_taken_from_an_angle(self):
+        b, me = demon(wall=None)
+        mate = PlayerState(5, 0, "mate", Vec(-14.0, 10.0, 0.0), weapon="battle_rifle", weapons=["battle_rifle"])
+        him = man(1, -14.0, 0.0, human=True)
+        b.per.beliefs[1] = Belief(him.pos, Vec(), 49.9, False, "team")
+        botmod.TEAM_TARGETS[("h4_test", 0)] = {5: (50.0, 1)}
+        botmod.TEAM_EYES[("h4_test", 0)] = {5: (50.0, frozenset({1}), odds.ACC[False])}   # (a bot losing to him)
+        scores = {}
+        b.team_play(50.0, me, Snapshot(50.0, [me, mate, him], mode="slayer"), scores, [])
+        hunts = [k[1] for k in scores if k[0] == "hunt"]
+        self.assertEqual(len(hunts), 1)
+        p = hunts[0]
+        self.assertGreater(abs(p.x - him.pos.x), 3.0)                 # (off the mate's line, which runs along y)
+        self.assertEqual(scores[("hunt", p)], botmod.THIRD_SCORE)
+
+    def test_a_teammate_winning_his_fight_gets_no_third_man(self):
+        b, me = demon(wall=None)
+        mate = PlayerState(5, 0, "mate", Vec(-14.0, 10.0, 0.0), weapon="battle_rifle", weapons=["battle_rifle"])
+        him = man(1, -14.0, 0.0)                                      # (a bot: the Demon mate beats him)
+        b.per.beliefs[1] = Belief(him.pos, Vec(), 49.9, False, "team")
+        botmod.TEAM_TARGETS[("h4_test", 0)] = {5: (50.0, 1)}
+        botmod.TEAM_EYES[("h4_test", 0)] = {5: (50.0, frozenset({1}), odds.DEMON_ACC)}
+        scores = {}
+        b.team_play(50.0, me, Snapshot(50.0, [me, mate, him], mode="slayer"), scores, [])
+        self.assertEqual(scores, {})
+
+    # 5 regroup
+    def test_break_off_cover_nearest_a_teammate(self):
+        import numpy as np
+        b, me = demon(wall=None)
+        T = b._terrain
+        T.los = lambda a, c: False                                    # (both spots hide from him)
+        T.cover_spots = np.array([[1.0, 0.0, 0.0, -1.0, 0.0], [2.5, 2.5, 0.0, -1.0, 0.0]])
+        him = man(1, -10.0, human=True)
+        mate = PlayerState(5, 0, "mate", Vec(4.0, 4.0, 0.0), weapon="battle_rifle", weapons=["battle_rifle"])
+        snap = Snapshot(50.0, [me, mate, him], mode="slayer")
+        self.assertEqual(b.regroup_cover(me, [him.pos], snap, 5.0), Vec(2.5, 2.5, 0.0))
+        self.assertEqual(b.regroup_cover(me, [him.pos], snap, 0.6), Vec(1.0, 0.0, 0.0))   # (the far one out of time)
+        alone = Snapshot(50.0, [me, him], mode="slayer")
+        self.assertEqual(b.regroup_cover(me, [him.pos], alone, 5.0), Vec(1.0, 0.0, 0.0))
+
+
+class PickupTests(unittest.TestCase):
+    """Nov 9: the odds by the best loaded gun carried (a pickup's swap held the Boltshot: odds 0.01, break-offs 1.3 u
+    from the owner's SAW), a power gun lying close first (Bot.power_grab), and an empty main gun refilled
+    (Bot.main_dry, rearm_point)."""
+
+    def setUp(self):
+        botmod.TEAM_EYES.clear()
+
+    def holding_boltshot(self, carbine_rounds):
+        b, me = demon(wall=None)
+        me.weapon, me.weapons, me.ammo, me.mag = "boltshot", ["covenant_carbine", "boltshot"], [carbine_rounds, 30], [0, 10]
+        owner = man(1, -17.0, human=True)
+        snap = Snapshot(50.0, [me, owner], mode="slayer")
+        see(b, owner)
+        return b.fight_odds(50.0, me, snap, [1])[0]
+
+    def test_odds_by_the_loaded_rifle_it_carries(self):
+        self.assertGreater(self.holding_boltshot(58), 0.5)        # (its Carbine, the swap counted: not unarmed)
+        self.assertLess(self.holding_boltshot(0), 0.1)           # (the Carbine empty: the Boltshot is all it has)
+
+    def grab(self, gun="lmg", d=8.0, tier="demon", game_map="h4_test", near_man=None, demon_mate_at=None):
+        b, me = demon(tier, game_map, wall=None)
+        q = Vec(-d, 0.0, 0.0)
+        men = [man(1, near_man, 0.0)] if near_man is not None else []
+        players = [me] + men
+        if demon_mate_at is not None:
+            mate = PlayerState(5, 0, "mate", demon_mate_at, weapon="battle_rifle", weapons=["battle_rifle"])
+            players.append(mate)
+            botmod.TEAM_EYES[(game_map, 0)] = {5: (50.0, frozenset(), odds.DEMON_ACC)}
+        see(b, *men)
+        snap = Snapshot(50.0, players, mode="slayer", ground_weapons=[(gun, q)])
+        scores = {}
+        b.power_grab(50.0, me, snap, scores, [m.id for m in men])
+        return scores.get(("item", q))
+
+    def test_a_power_gun_lying_close_comes_first(self):
+        self.assertEqual(self.grab(), botmod.POWER_GRAB_SCORE)
+        self.assertEqual(self.grab("rockets", 14.0), botmod.POWER_GRAB_SCORE)
+
+    def test_not_a_rifle_not_far_not_with_a_man_on_it_not_for_a_nearer_demon(self):
+        self.assertIsNone(self.grab("battle_rifle"))
+        self.assertIsNone(self.grab(d=20.0))
+        self.assertIsNone(self.grab(near_man=-4.0))
+        self.assertIsNone(self.grab(demon_mate_at=Vec(-7.5, 0.5, 0.0)))
+
+    def banned_grab(self, gun_at, reaches=True):
+        b, me = demon(wall=None)
+        b._terrain.reaches = lambda a, c, **kw: reaches
+        b.goal_ban = {b._goal_key(("item", gun_at)): 70.0}                 # (headway gave up on it)
+        scores = {}
+        b.power_grab(50.0, me, Snapshot(50.0, [me], mode="slayer", ground_weapons=[("lmg", gun_at)]), scores, [])
+        return scores.get(("item", gun_at)), b
+
+    def test_a_ban_lifts_beside_the_gun_on_its_floor(self):
+        got, b = self.banned_grab(Vec(-2.0, 0.0, 0.0))
+        self.assertEqual(got, botmod.POWER_GRAB_SCORE)
+        self.assertEqual(b.goal_ban, {})
+
+    def test_a_ban_holds_from_the_walkway_over_it_and_an_unreachable_gun_is_passed(self):
+        got, b = self.banned_grab(Vec(-2.0, 0.0, -3.6))
+        self.assertIsNone(got)
+        self.assertTrue(b.goal_ban)
+        b, me = demon(wall=None)
+        b._terrain.reaches = lambda a, c, **kw: False
+        scores = {}
+        b.power_grab(50.0, me, Snapshot(50.0, [me], mode="slayer", ground_weapons=[("lmg", Vec(-6.0, 0.0, 0.0))]),
+                     scores, [])
+        self.assertEqual(scores, {})
+
+    def rearm(self, game_map="h4_test", br_rounds=0, tier="demon"):
+        b, me = demon(tier, game_map, wall=None)
+        me.weapon, me.weapons, me.ammo, me.mag = "boltshot", ["battle_rifle", "boltshot"], [br_rounds, 30], [0, 10]
+        q = Vec(-25.0, 0.0, 0.0)
+        return b.rearm_point(me, Snapshot(50.0, [me], mode="slayer", ground_weapons=[("battle_rifle", q)])), q
+
+    def test_an_empty_main_gun_is_refilled_from_its_own_kind(self):
+        for tier in ("demon", "novice"):
+            with self.subTest(tier=tier):
+                got, q = self.rearm(tier=tier)
+                self.assertEqual(got, q)
+
+    def test_a_loaded_main_gun_or_another_game_as_before(self):
+        self.assertIsNone(self.rearm(br_rounds=40)[0])
+        self.assertIsNone(self.rearm(game_map="reach_test")[0])
+
+    def test_main_dry(self):
+        b, me = demon()
+        me.weapons, me.ammo = ["battle_rifle", "boltshot"], [0, 30]
+        self.assertTrue(b.main_dry(me))
+        me.ammo = [0, 0]
+        self.assertTrue(b.main_dry(me))
+        me.ammo = [-1, 30]
+        self.assertFalse(b.main_dry(me))                          # (not known: not empty)
+        me.weapons, me.ammo = ["boltshot", "magnum"], [0, 0]
+        self.assertFalse(b.main_dry(me))                          # (sidearms only: dry(), not this)
+
+
 class KeepGunTests(unittest.TestCase):
     """No swap mid-fight to a gun slower to the kill counting the swap and its charge (Bot.keeps_gun): live Haven
     1v1, a loaded BR swapped for the Boltshot at 2.5 u, its charge never fired."""

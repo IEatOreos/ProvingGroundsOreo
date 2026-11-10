@@ -13,6 +13,8 @@ from .callouts import ZoneMap, read_json
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps")
 # the games whose nav has no drops into seams no body fits (Terrain slit_rule): Reach's 0.25 u cells (Countdown)
 SLIT_GAMES = ("reach_",)
+# (custom, Nov 8) floor people walked crouched makes bots crouch (Bot.crouch_spots) only under a low ceiling (terrain)
+CROUCH_LOW_ONLY = True
 
 
 def _v(p):
@@ -505,7 +507,13 @@ def _build(m, window):
     links = []
     if any(data.values()):
         from .terrain import crouch_key  # and floor people walked crouched: every bot crouches there
-        T.crouch_cells = {crouch_key(x * 0.25, y * 0.25, z * 0.1) for x, y, z, k, n in data.get("walk", []) if k == 3}
+        # (custom, Nov 8: only under a ceiling a standing body does not fit under, Terrain.low_overhead. The live LiDAR
+        # paints every place a person held crouch, his fight crouches too: Haven had 535 such cells, 11 of them under a
+        # low ceiling, and 57-76% of every tier's crouched rows stood on them, Demons crouched 19-21% of the time on foot
+        # to 1.7-6% before; the owner, Nov 8: "why do the demons crouch so much now". CROUCH_LOW_ONLY False: every cell)
+        pts = [(x * 0.25, y * 0.25, z * 0.1) for x, y, z, k, n in data.get("walk", []) if k == 3]
+        keep = T.low_overhead(pts) if CROUCH_LOW_ONLY else [True] * len(pts)
+        T.crouch_cells = {crouch_key(*p) for p, ok in zip(pts, keep) if ok}
         if data.get("cover"):                # floor in front of upright walls LiDAR painted (glass excluded)
             import numpy as np
             T.cover_spots = np.array(data["cover"], dtype=float)

@@ -129,6 +129,28 @@ def simulate(threats):
     return min(ODDS_CAP, 1.0 / taken)
 
 
+def kills_first(threats):
+    """(custom, Nov 8) How many of them we kill before their fire kills us, in simulate()'s order and shares: 0 when we
+    drop before the first. The trade rule (bot.Bot.demon_odds_rules): in Slayer a fight it trades in is worth staying in."""
+    jobs = sorted(threats, key=lambda j: j[0])
+    t = taken = 0.0
+    alive = list(jobs)
+    n = 0
+    for kill_t, _, _ in jobs:
+        if not math.isfinite(kill_t):
+            return n
+        end = t + kill_t
+        add = sum((max(0.0, end - max(t, late)) / his) if his > 1e-6 else (1e9 if end > late else 0.0)
+                  for _, his, late in alive if math.isfinite(his))
+        if taken + add >= 1.0:
+            return n
+        taken += add
+        t = end
+        alive.pop(0)
+        n += 1
+    return n
+
+
 def with_help(ours, helpers):
     """s to kill a man with teammates on him too: our pace and each teammate's (helpers: their s on him alone) add up.
     (Custom, Nov 8: the owner, "The demon bots can beat me in a 1v1 but in a team enviroment they struggle".)"""

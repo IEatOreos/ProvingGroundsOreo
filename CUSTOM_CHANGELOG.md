@@ -48,6 +48,174 @@ The owner: "Can we also make Lidar more interactive? ... can we make a tool to w
 - `tools/lidar.py serve`: `GET /spots`, `GET /spots/floor`, `POST /spots` (needs the `X-LiDAR: spots` header, like the view's other writes).
 - Validation: `tools/spots.py --selftest` and new `tools/test_spots.py` (owner rows, patrol layout, refused edits, unchanged saves, backups, file choice); `tools/lidar.py --selftest` passes. In the browser on Headlong: added a red hold and a blue-only patrol point, dragged a hot spot, saved; the brain's `load_map` read all three (the moved hot spot measured: sees 23, 1.5 u up, cover), then the map files were restored from Git. All 420 regression tests pass. Bots using the edited spots in a match is untested. Edits apply from the next match; restart the LiDAR Viewer to get the panel.
 
+### Easy and Normal walk the jumps people take on their way, 2026-11-08
+
+- The owner, Nov 8: "make easy bots jump, they get stuck alot without jumping".
+- Six Halo 4 matches (scratchpad `traverse.py`, walking between fights on foot):
+
+  | | Speed | Pushing on but under 0.5 u/s | Path straightness over 5 s | Unstuck wiggles |
+  |---|---|---|---|---|
+  | Easy | 1.44 u/s | 18% | 0.46 | 10% |
+  | Normal | 1.93 u/s | 4% | 0.73 | 2% |
+  | Heroic to Demon | 1.84-1.97 u/s | 3-5% | 0.76-0.77 | 1-2% |
+
+  On Haven, Normal was stuck 11% of the time, straightness 0.56. In Reach, Easy went 1.71 u/s, 8%, 0.96.
+- Cause: the nav plans people's jump routes (`ROUTE_JUMP`) and jumps onto ledges only for a jump skill of 0.5 and up. Easy's is 0. Normal's 0.5 is jittered per bot (`make_profile`), so roughly half the Normal bots had none either (one at 0.497).
+- `brain/bot.py` `nav_jumps` (`EASY_NAV_JUMP`): Easy and Normal take those jumps on their way. The four checks are in the jump onto a landing, the path to a point, `move_to`'s ways and `route_view`; the walk-or-jump field is the fifth. Their hops, fight jumps and jump shots stay by their jump skill, so Easy still makes none.
+- Validation: new `tools/test_easy_nav_jump.py`, 4 tests (every tier takes the routes; Easy keeps jump skill 0; a Normal jittered under 0.5 still takes them; with the switch off, Easy and that Normal walk round as before). All 457 regression tests pass. Gameplay is untested.
+
+### Halo 4 Demon fights it out with a man on it within 8 u instead of breaking off, 2026-11-09
+
+The owner's bug report, Warhouse FFA 20261109-185804 at 202.1 s: "Camper delayed heavily to kill me".
+
+- Camper25 (Demon) had the SAW. At 186.5 s, the owner 5 u off with his sights on it and its shield down to 0.46, it broke off ("odds 0.54"). It backed off for 3 s at 3-5 u from him, firing on 2 of its samples ("full first, no re-peek"), then turned at 189.5 s and killed him at 190.56 s.
+- Today's four Halo 4 matches (scratchpad `break_range.py`; Haven 181312, Blood Cavern 183113, Warhouse 184005 and 185804): Demon break-offs by the nearest man aiming at it.
+
+  | nearest man aiming at it | break-offs | died within 5 s |
+  |---|---|---|
+  | under 6 u | 35 | 74% |
+  | 6-12 u | 13 | 69% |
+  | 12 u+ | 6 | 0% |
+  | nobody | 87 | 36% |
+
+  Retreating while aiming at a man, Demons fired on 23% of rows, about a fight's pace: the gun's cadence, not a retreat rule.
+- `brain/bot.py` `demon_odds_rules` (`BREAK_CLOSE_R` 8 u): with a man aiming at it in sight within it, no break-off; it fights on (note "he is on me at N u: fight it out"). The trade rule still comes first.
+- Power guns in the same match: the SAW was taken four times, by Demons each time (64.5, 71.1, 170.3, 275.0 s; never in Warhouse 184005).
+- Validation: `SixTests` +1 (a man on it at 5 u is fought out, not run from), 70 in the file. All 480 regression tests pass. Gameplay is untested.
+
+### Halo 4 Demon: a power gun banned as out of reach is taken again beside it; one the nav cannot reach is passed over, 2026-11-09
+
+The owner, after two matches with the power-gun rule below: "I died with a saw also".
+
+- Blood Cavern 20261109-183113: he died with the SAW at 239.1 s and 341.4 s. Demons took it 8.1 s and 8.2 s later; the normal pickup rules got there first (no "power weapon" notes).
+- Warhouse FFA 20261109-184005 (he won 25-9): the SAW lay on the lower floor at (1.2, -1.4). Four Demons noted it for 115-157 s, and none took it.
+  - Demon 1 stood on the walkway 3.6 u over it for 6 s, then `headway` banned the item for 30 s.
+  - When it got down 1.8-3 u from it, its think rows had no item at all: the ban struck it each tick (`goal_ban`, `decide`). The "power weapon" note was written before that, so the notes overstated it.
+- `brain/bot.py` `power_grab`: a banned power gun within `POWER_UNBAN_R` 3 u flat on its floor (1 u) has the ban lifted. A ban farther off holds (no score, no note). A gun the nav has no way to (`Terrain.reaches`) is passed over for the next.
+- Rearm check:
+  - Haven 20261109-181312, before the fix: 3,055 Demon and bot rows with the main gun at 0 rounds, 6 of them going for a gun; 275 rows of sidearm fire past 6 u came with the main gun empty.
+  - Blood Cavern and Warhouse after: no rows with the main gun empty, and none of the 18 rows of sidearm fire past 6 u came with an empty main gun.
+- Validation: `PickupTests` +2 (the ban lifts beside the gun on its floor; it holds from the walkway 3.6 u over it; an unreachable gun is passed over), 69 in the file. All 479 regression tests pass. Gameplay is untested.
+
+### Halo 4: Demons take a dropped power gun first, judge fights by their loaded rifle, and every bot refills an empty main gun, 2026-11-09
+
+The owner, Nov 9, after Haven 20261109-181312: "why they take so long to pick up a power weapon after killing someone holding one. I died with the saw twice before they picked it up. Also a bot was shooting at me with a boltshot from distance, Was it out of ammo in the primary? Can bots pick up default weapons off dead bodies?"
+
+- That match: the four Demons went 60-32 (K/D 1.88; 1.28 before the six rules below), and the owner 27-21.
+- **SAW:** he died with it at 447.3 s and 481.7 s; Demon 1 took it at 488.0 s.
+  - Over the first 7 s other goals scored over it: an objective, a radar hunt, a one-shot hunt (3.0-3.4 to the item's 1.2-1.9).
+  - Then a loop, twice. Coming up to it, `gun_to_drop` switched Demon 4 to its Boltshot (the gun the pickup would swap out). The odds, by the gun in hand, read a Boltshot at the owner 17 u off: 0.01-0.03. It broke off 1.26-1.4 u from the gun (the pickup takes 1.2 u), switched back and came again.
+- **Boltshot at range:** 267 of 326 rows of Boltshot fire past 6 u came with the BR or Carbine at 0 rounds, reserve and magazine. `rearm_point` went for a loose gun only when every gun was empty or the one in hand was low. `upgrade_point` skips a gun named like one carried, so a BR on a body was walked past by a bot with an empty BR.
+- Of the match's 57 Demon break-offs, 5 came holding a sidearm with the main gun loaded and 12 with it empty.
+- `brain/bot.py`:
+  1. `odds_threats`: our kill time is the best of the loaded guns carried (`loaded_guns`), a gun not in hand plus `H4_SWAP_S` 0.5 s.
+  2. `power_grab` (in `demon_odds_rules`, Halo 4 fixed Demon): a power gun lying within `POWER_GRAB_R` 15 u (rank `POWER_GRAB_RANK` 4.0 and up: the SAW, rockets, sniper, laser ...) that it does not carry loaded is its goal at `POWER_GRAB_SCORE` 3.3. That is over its hunts 3.2 and the callout and third-party pushes, under a trade 3.4 and a break-off 3.6. It sets `pickup_gun` so the swap gives up the right slot. Not with a man in sight within `POWER_GRAB_CLOSE` 6 u, nor when a Demon teammate on foot is nearer the gun by 2 u. Note "power weapon: the lmg, 8.0 u".
+  3. `rearm_point` / `main_dry` (Halo 4, every tier): every gun but a sidearm (`DEMON_SIDEARMS`) empty sends it for the nearest loose gun within `MAIN_DRY_R` 40 u, its own kind too (walking over one refills it; `drop_slot` gives up the empty gun first), at `MAIN_DRY_SCORE` 3.25. Every gun empty scores the same in Halo 4 (3.0 before).
+  - The empty-gun score itself was already there: `choose_weapon` never picks a gun at 0 rounds (-9) and switches off one at once ("dry").
+- Validation: `tools/test_demon_odds.py` `PickupTests`, 6 tests, 67 in the file:
+  - the odds by the loaded Carbine while the Boltshot is in hand, and by the Boltshot when the Carbine is empty;
+  - a SAW 8 u off and rockets 14 u off come first; not a BR, not 20 u off, not with a man 4 u off, not for a nearer Demon;
+  - an empty BR is refilled from a BR 25 u off, Demon and Easy; a loaded BR, or Reach, as before;
+  - `main_dry` (an unknown count is not empty; sidearms alone are `dry`'s).
+  - All 477 regression tests pass. Gameplay is untested.
+
+### Halo 4 Demon: trades, full-shield re-peeks, one-shot callouts, instant trades, third parties, regroups, 2026-11-08
+
+The owner, Nov 8: "Go ahead and try to build these 6 for demon difficulty". All six are Halo 4 fixed Demon only (`h4_demon`), in `brain/bot.py`; constants `TRADE_*`, `THIRD_*`, `CALLOUT_*`, `TEAM_CRACKED`, `TEAM_ATTACKERS`, `REGROUP_MATE_R`, `REPEEK_*`.
+
+1. **Trade rule** (`TRADE_MODES` Slayer; `trades`, `odds.kills_first`): a losing fight is broken off only when it would not kill one of them before it drops, counted with its kill times x `TRADE_MARGIN` 1.6. A man not looking it would not beat, and a hunt into a group, the same. Note "losing, but a kill first: trade".
+   - Replay (scratchpad `odds_replay_trade2.py`; Haven 182020, 183706, 203750, Blood Crash 141550, Redoubt 010650): 206 Demon deaths, 176 with no kill in its last 4 s; 285 Demon kills.
+
+     | rule (line 0.6, teammates counted) | no-kill deaths warned | won fights it would leave |
+     |---|---|---|
+     | before | 60% | 21% |
+     | trade x1.0 | 36% | 7% |
+     | trade x1.3 | 47% | 11% |
+     | **trade x1.6** | **50%** | **12%** |
+     | trade x2.0 | 55% | 14% |
+2. **Third party** (`team_play`, `push_on`): a teammate on foot fights a man (`TEAM_TARGETS`) and is not clearly winning (his kill time on him over `THIRD_EVEN` 0.7 of the man's on him). The man is out of a free Demon's sight (no man in its own), within `THIRD_R` 20 u, and it is healthy (`CHASE_MIN`). It hunts a point `THIRD_ANGLE_R` 6 u off the teammate's line on its side (`THIRD_SCORE` 3.0), when it would kill him first with him busy (not aware: the odds' late start). A teammate winning it gets the spreading rule instead.
+3. **One-shot callouts** (`TEAM_CRACKED`): every bot posts the men in its view with their shield gone.
+   - A man in sight with his shield gone: threat x `ONE_SHOT_K` 1.5.
+   - One called out of its sight within `CALLOUT_R` 15 u for `CALLOUT_S` 2 s: hunted (`CALLOUT_SCORE` 3.1), when healthy and it would kill him first (aware).
+4. **Instant trades** (`TEAM_ATTACKERS`): every bot posts who is hurting it. A teammate dead within `TRADE_R` 20 u with his attacker posted in his last `TRADE_FRESH` 2 s: that man is fought in sight or hunted for `TRADE_S` 4 s (`TRADE_SCORE` 3.4), when healthy and it would kill him first (his real shield; aware). Note "trade: #N is down, after #M".
+5. **Regroup** (`regroup_cover`; `lidar_cover(every=True)`): a break-off's cover is, of the LiDAR cover from them it reaches in time, the one nearest a teammate on foot within `REGROUP_MATE_R` 25 u. With none, the nearest cover as before.
+6. **Re-peek with a full shield** (`repeek_rule`, armed by a break-off for `REPEEK_S` 10 s): while its shield is under `REPEEK_SHIELD` 0.95 it hunts no one and fights only a man hurting it, one within `REPEEK_CLOSE` 5 u, one with his shield gone, or one a teammate fights. It holds its cover (`REPEEK_HOLD_SCORE` 3.0; upstream's 2.3 hold lost to the 2.9 fight and 3.2 hunts). Note "shield N: full first, no re-peek".
+
+- Not done: the opening grenade stays off (the owner: during its throw "I already have two bursts shot into them").
+- The rules cost about 0.06 ms a call with 4 enemies and 3 teammates (the test terrain).
+- Validation: `tools/test_demon_odds.py` `SixTests`, 14 tests, 61 in the file:
+  - kills_first counts; Slayer losing with a kill first stays; CTF has no trade rule; no kill first still breaks off and arms the re-peek hold;
+  - half shield no re-peek, a man hurting it or one shot is fought, a full shield or the hold's end peeks again;
+  - a called one shot is hunted when healthy, not when hurt; one shot in sight first; every bot posts cracked men and its attacker;
+  - a teammate's killer is pushed;
+  - a teammate's even fight is taken from an angle off his line; a teammate winning gets no third man;
+  - cover nearest a teammate, the far one out of time, alone the nearest.
+  - All 471 regression tests pass. Gameplay is untested.
+
+### Bots crouch on people's crouch floor only under a low ceiling, 2026-11-08
+
+- The owner, Nov 8: "why do the demons crouch so much now? it only started happening earlier after your super in depth update on them".
+- Demon rows on foot with crouch held:
+
+  | Match | Crouched |
+  |---|---|
+  | Blood Crash 01:34 | 1.7% |
+  | Blood Crash 14:15 | 6.3% |
+  | Haven 18:20 | 11.2% |
+  | Haven 20:37 | 20.7% |
+  | Haven 21:18 | 18.6% |
+
+  It was in fights, hunts, objectives and pickups alike, in spells of a median 0.24-0.27 s.
+- Cause, not the Demon changes: the live LiDAR records a person's walk with crouch held as crouch floor (`tools/lidar.py` `KIND_CROUCH`). `maps.terrain` made every such cell crouch floor, and `Bot.crouch_spots` crouches every tier on and just before it. The owner's fight crouches over his Haven matches today (78 human-minutes) had painted 535 cells.
+  - 57-76% of every tier's crouched rows in the two last Haven matches stood on them.
+  - 11 of them have a ceiling over them (a face at head height, open at the knee); Blood Crash 4 of 207, Cliffside 0 of 51.
+- `brain/terrain.py` `low_overhead`: `_low_ceiling`'s test for given points, walked or not.
+- `brain/maps.py` (`CROUCH_LOW_ONLY` True): crouch floor is the painted cells under such a ceiling. The recording is unchanged: `lidar.json`, its crouch routes and the bots' `ROUTE_CROUCH` routes as before.
+- Validation: new `tools/test_crouch_floor.py` (Haven's crouch floor is exactly its painted cells under a low ceiling, under a fifth of them; an empty query). All 457 regression tests pass. Gameplay is untested.
+
+### Experiment removed: Demons that always know where every enemy is, 2026-11-08
+
+- The owner tried it for an evening ("make it to where the demon bots always know where their enemy is at all times ... and see how that works"; Haven 20261108-211827, Demons knew 100% of living enemies' places to the 0.1 s, 12% by their own eyes), then: "remove the all seeing switch".
+- Removed: `DEMON_ALL_SEEING`, its flag check in `tools/live_bots.py` (back to the committed file), its loop in `Bot.share_sightings`, `AllSeeingTests`, and `logs/demon_all_seeing.on`.
+
+### Halo 4 Demons' target spreading: one of two alike keeps the man, and a man left stays left 1.5 s, 2026-11-08
+
+- First live match with the teammate odds, the rifle rule, spreading and the press with two in view: Haven 20261108-203750, the owner and three bots against four Demons, 25.2 bot rows a second.
+  - Scoreboard: the owner 36-26, the Demons 60-47 (K/D 1.28, 15.0 kills each). The closest match before, 18:37, was owner 46-27 and Demons 60-56 (1.07); at 18:20, 50-40 and 90-64.
+  - Break-offs: 96, about as many as before (92 at 18:20). 29% died within 5 s (46% and 33% before); a break-off came within 4 s before 46% of Demon deaths.
+  - The rules fired: "spread" 46 notes a minute, "keep the battle_rifle" 22 a minute.
+  - Against 18:37:
+    - A teammate was also on the man in 70% of Demon kills (66% before).
+    - Time from first on him to dead was 1.62 s (1.52); kill range 9.1 u (9.8).
+    - The owner lost 0.30 a second of Demon fire on him (0.43).
+  - Teammates rarely saw the same men: with another Demon within 15 u at 96% of the break-offs, only 26% had those enemies in view (the teammate odds count only those).
+- Cause: target switches within 3 s of the last went up to 13.6 a minute per Demon (4.8 at 18:37), and back to the same man within 2 s to 5.9 (0.8). Two Demons alike on one man (the same gun, equal kill times) each read him as the other's under "no slower than us": both left, nobody had him, both came back.
+- `brain/bot.py`:
+  - `mate_has_him`: a teammate has him only when more than `SPREAD_TIE` 10% quicker, or within it with the lower bot id.
+  - `demon_commit` records the man left (`spread_from`); `threat` keeps him at x `SPREAD_K` for `SPREAD_HOLD` 1.5 s after.
+- Validation: `tools/test_demon_odds.py` `SpreadTests` +2 (two alike on one man: only bot 9 leaves him to bot 5, bot 0 keeps him; the man left stays left through the hold). The spread tests now arm the test Demon with an AR at 10 u, so the teammate's BR is the quicker kill. 47 in the file.
+  - 450 of 451 regression tests pass. The failure is the same `test_h4_reports_nov8.py` `test_owner_spots` on the uncommitted Gore Valley patrol points.
+  - Gameplay is untested; the next match's bot process loads it.
+
+### Halo 4 Demons spread their targets and walk in on two when winning; melee checked, unchanged, 2026-11-08
+
+The owner, Nov 8: "even in 4v4 I get alot more kills even though I die more". Haven 20261108-182020 and -183706:
+- He got about 50 kills a match, about 22 per Demon. Another Demon was firing on the man in 63% of the Demons' kills (his: 36%).
+- Their median kill was 9.1 u off and took 1.31 s from first on him (his: 7.6 u, 1.08 s).
+- 13-23% of their fight decisions had two or more men in view, where upstream's press holds.
+
+Changes in `brain/bot.py`:
+- **Spread** (`TEAM_TARGETS`, `mate_has_him`, `SPREAD_K` 0.5): every bot posts the man it fights (`share_sightings`). For a Halo 4 Demon, a man a teammate on foot fights (post under 0.3 s old) counts as the teammate's kill when the teammate kills him no slower than it would and is winning (his time under the man's on him alone). Such a man's threat goes x0.5 with no team-shot lift. A committed Demon (`demon_commit`) turns to a man in view nobody has, unless it is finishing its own (note "spread: ..."). A teammate losing to him still gets help (the team-shot lift and the third-party rule as before).
+- **Press with two in view** (`press_on`, `DEMON_PRESS_LEAD` 0.0): Demons press every fight already (`profiles.PRESS[DEMON]` 1.0), but upstream's press holds with two or more men in view. A Halo 4 Demon now walks in on its man there too when even on the vitals, its shield at his or over, and its fight odds (teammates counted) 1.25 or better. With one man in view the rule is as before.
+
+Melee checked, not changed: within `MELEE_R` 1.25 u it pressed melee on 5-6% of rows, one per 0.6-0.9 s swing at about 25 rows a second. `push_in` already walks it in on a man whose shield is down within 8 u.
+
+Validation: `tools/test_demon_odds.py` adds 8 tests, 45 in the file:
+- `SpreadTests`: a teammate's winning kill scores half with no team-shot lift; a committed Demon turns to the man nobody has; a losing or stale teammate still gets help; other tiers and games unchanged.
+- `PressTests`: two in view, ahead and winning, it walks in; behind or losing it holds; one man as before; Legendary and Reach Demon keep the hold.
+- 448 of 449 regression tests pass. The failure is the same `test_h4_reports_nov8.py` `test_owner_spots` on the uncommitted Gore Valley patrol points.
+- Gameplay is untested; the next match's bot process loads it.
+
 ### Halo 4 Demon keeps a loaded rifle over a slower gun up close, 2026-11-08
 
 - The owner's Haven 1v1 against one Demon (h4_wraparound 20261108-185123, 7-5 to the Demon on the scoreboard). With its 3 sniper kills and the owner's 2 sniper openers set aside (one hit from full to 11% body, and to about half), the 7 straight fights went Demon 4, owner 3.

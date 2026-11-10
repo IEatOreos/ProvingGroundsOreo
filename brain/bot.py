@@ -211,6 +211,74 @@ TEAM_FRESH = 0.3
 # enviroment they struggle" (live Haven 20261108-182020: 91-94% of the odds rules' break-offs, skipped men and dropped
 # hunts came with another Demon within 15 u, the Demons as many as the enemies or more 74-90% of the time)
 TEAM_EYES = {}
+# (custom, Nov 8) the team's fight targets (Bot.share_sightings): {(map, team): {bot id: (t, the man it fights or None)}}.
+# A Halo 4 Demon does not pile onto a man a teammate fights and is beating sooner than it would (Bot.mate_has_him): his
+# threat score goes x SPREAD_K and no team-shot lift, and a committed Demon turns to another man in view. Live Haven
+# 20261108-182020 and -183706: another Demon was firing on the man in 63% of the Demons' kills (the owner's: 36%), about
+# 22 kills a match each to his 50
+# (custom, Nov 8) the owner's six for Halo 4 Demon ("Go ahead and try to build these 6 for demon difficulty"),
+# Bot.demon_odds_rules / threat / share_sightings / regroup_cover:
+# 1 trade rule: in TRADE_MODES a losing fight is broken off only when it would not kill one of them first
+#   (odds.kills_first 0); a hunt into a group, and a man not looking it would not beat, the same
+TRADE_MODES = ("slayer",)
+# (custom, Nov 9) no break-off with a man aiming at it (aware, in sight) within this many u: it fights it out. Today's
+# four Halo 4 matches (scratchpad break_range.py): Demon break-offs with the nearest man aiming at it under 6 u died
+# within 5 s 74% of the time (35), 6-12 u 69% (13), 12 u+ 0% (6), nobody aiming 36% (87). The owner's report, Warhouse
+# 20261109-185804, "Camper delayed heavily to kill me": a Demon with the SAW broke off at 5 u, backed off 3 s firing at
+# him twice, then killed him
+BREAK_CLOSE_R = 8.0
+# x its kill times in the trade rule's count. Replayed (scratchpad odds_replay_trade2.py; Haven 182020, 183706, 203750,
+# Blood Crash 141550, Redoubt 010650: 206 Demon deaths, 176 with no kill in its last 4 s; 285 Demon kills), the odds
+# line 0.6 with teammates: today's rule warned before 60% of those deaths and in 21% of its won fights; the trade rule
+# x1.0 36% and 7%, x1.3 47% and 11%, x1.6 50% and 12%, x2.0 55% and 14%
+TRADE_MARGIN = 1.6
+# 2 third party: a teammate on foot fighting a man (TEAM_TARGETS) not clearly winning (his time on him over THIRD_EVEN
+#   of the man's on him) within THIRD_R of it, the man out of its sight: a hunt to an angle THIRD_ANGLE_R off the
+#   teammate's line (THIRD_SCORE), when healthy (CHASE_MIN) and it would kill him first
+THIRD_R, THIRD_EVEN, THIRD_ANGLE_R, THIRD_SCORE = 20.0, 0.7, 6.0, 3.0
+# 3 one-shot callouts: any bot that sees a man's shield gone posts him (TEAM_CRACKED); a Demon puts a man in sight with
+#   his shield gone first (threat x ONE_SHOT_K) and hunts one called out of its sight within CALLOUT_R for CALLOUT_S
+#   (CALLOUT_SCORE), when healthy and it would kill him first
+TEAM_CRACKED = {}
+ONE_SHOT_K, CALLOUT_R, CALLOUT_S, CALLOUT_SCORE = 1.5, 15.0, 2.0, 3.1
+# 4 instant trades: every bot posts who is hurting it (TEAM_ATTACKERS); a teammate dead within TRADE_R of it with his
+#   attacker posted in his last TRADE_FRESH s: that man is fought or hunted TRADE_S s (TRADE_SCORE), when healthy and
+#   it would kill him first (his shield is the fight's, read live). Live Haven: 23% of Demon deaths were traded
+TEAM_ATTACKERS = {}
+TRADE_R, TRADE_FRESH, TRADE_S, TRADE_SCORE = 20.0, 2.0, 4.0, 3.4
+# 5 regroup: a break-off's cover is the reachable one nearest a teammate on foot within REGROUP_MATE_R (regroup_cover)
+REGROUP_MATE_R = 25.0
+# (custom, Nov 9) Bot.power_grab, Halo 4 Demon: a power gun (rank POWER_GRAB_RANK+, Halo 4's: the SAW 4.0, rockets,
+# sniper, laser ...) lying within POWER_GRAB_R is its goal at POWER_GRAB_SCORE (over its hunts 3.2 and the callout
+# and third-party pushes, under a trade 3.4 and a break-off 3.6), not with a man in sight within POWER_GRAB_CLOSE
+POWER_GRAB_RANK, POWER_GRAB_R, POWER_GRAB_CLOSE, POWER_GRAB_SCORE = 4.0, 15.0, 6.0, 3.3
+POWER_UNBAN_R = 3.0      # u flat, its floor (1 u): a power gun banned as out of reach is taken again this close
+# (custom, Nov 9) Bot.rearm_point, Halo 4, every tier: every gun but a sidearm empty (main_dry) sends it for a loose gun
+# within MAIN_DRY_R, its own kind too (walking over one refills it), at MAIN_DRY_SCORE. Live Haven 20261109-181312:
+# 267 of 326 rows of Boltshot fire past 6 u came with the BR or Carbine at 0 rounds, reserve and magazine; rearm went
+# only when every gun was empty or the one in hand was low
+MAIN_DRY_R, MAIN_DRY_SCORE = 40.0, 3.25
+# 6 re-peek with a full shield: REPEEK_S s after a break-off, while its shield is under REPEEK_SHIELD, no hunt and no
+#   fight with a man in sight but one hurting it (ODDS_FRESH), one within REPEEK_CLOSE, one with his shield gone, or
+#   one a teammate fights; it holds its cover (REPEEK_HOLD_SCORE). The upstream hold (2.3) lost to the 2.9 fight and the
+#   3.2 hunts
+REPEEK_S, REPEEK_SHIELD, REPEEK_CLOSE, REPEEK_HOLD_SCORE = 10.0, 0.95, 5.0, 3.0
+TEAM_TARGETS = {}
+SPREAD_K = 0.5
+SPREAD_TIE = 0.1     # share: a teammate this much quicker on him has him; within it, the lower bot id keeps him
+SPREAD_HOLD = 1.5    # s: a man left to a teammate (demon_commit) scores x SPREAD_K this long after
+# (custom, Nov 8) Bot.press_on, Halo 4 Demon (profiles.PRESS 1.0: every fight): with two or more men in view it walks in
+# on the one it fights too (upstream holds), while even on the vitals, its shield at his + DEMON_PRESS_LEAD or over, and
+# its fight odds, teammates counted, ODDS_ENGAGE or better. Live Haven: 13-23% of its fight decisions had two or more in
+# view; its median kill 9.1 u to the owner's 7.6, 1.31 s from first on him to his 1.08
+DEMON_PRESS_LEAD = 0.0
+# (custom, Nov 8) Bot.nav_jumps: Easy and Normal walk the jumps people take on their way (the nav's jump routes, a jump
+# onto a ledge); their hops, fight jumps and jump shots stay by their jump skill (Easy 0: none). The owner: "make easy
+# bots jump, they get stuck alot without jumping". Easy's jump skill is 0, and Normal's 0.5 is jittered per bot
+# (make_profile): one at 0.497 had no jump routes either. Six Halo 4 matches (scratchpad traverse.py): Easy walking
+# between fights went 1.44 u/s, pushed on but under 0.5 u/s 18% of the time, path straightness 0.46, unstuck wiggles 10%
+# of it; Normal 1.93 u/s, 4%, 0.73, 2% (on Haven 11%, 0.56, 7%). (Reach: Easy 1.71 u/s, 8%, 0.96)
+EASY_NAV_JUMP = True
 # (custom, Nov 8) Bot.keeps_gun, Halo 4 Demon: s a weapon swap takes (no shot from either gun meanwhile)
 H4_SWAP_S = 0.5
 # (custom, Nov 8) Bot.retreat_juke, Halo 4 Demon: the juke across a retreat's walk to cover, its share (the walk keeps
@@ -2626,7 +2694,13 @@ class Bot:
                 v *= 1.0 + 0.6 * t       # busy shooting a teammate: third-party him (two on one)
             if e.has_flag or k in snap.vips:     # (the enemy VIP: killing him scores, guide 07 VIP)
                 v += 40.0
-        if getattr(s, "team_focus", {}).get(k, 0) - (1 if s.goal == ("fight", k) else 0) > 0:
+        if e is not None and s.h4_demon() and not snap.shieldless and e.shield <= odds_model.ONE_SHOT:
+            v *= ONE_SHOT_K                           # (custom, Nov 8: one shot from dead, him first)
+        left = getattr(s, "spread_from", None)        # (custom: the man it just left to a teammate, SPREAD_HOLD)
+        spread = s.mate_has_him(now, me, snap, e) or (left is not None and left[0] == k and now < left[1])
+        if spread:
+            v *= SPREAD_K
+        elif getattr(s, "team_focus", {}).get(k, 0) - (1 if s.goal == ("fight", k) else 0) > 0:
             # team shot (section 10 +30, a Regular's): in full from Veteran up, a Recruit "fights whatever it sees"
             v += 60.0 * s.p.teamwork
         if k == s.last_killer:
@@ -2706,6 +2780,11 @@ class Bot:
         if (e is not None and d_best < COMMIT_THREAT_R and aims_at(e, me, 0.2)
                 and not (cur in seen and aims_at(tgt, me, 0.2))):
             return best                      # a man close in with us in his sights, the one we fight looking away
+        if (cur in seen and best in seen and not s.finishing(snap, seen) and s.mate_has_him(now, me, snap, tgt)
+                and not s.mate_has_him(now, me, snap, e)):
+            s.note(f"spread: #{cur} is a teammate's kill, on #{best}")
+            s.spread_from = (cur, now + SPREAD_HOLD)
+            return best                      # (custom, Nov 8: Halo 4, TEAM_TARGETS)
         est = s.per.est_shield(cur, now, snap.shieldless)
         hurt = est is not None and est <= 0.5
         if cur not in seen:
@@ -3058,7 +3137,11 @@ class Bot:
                 scores[("item", it[0])] = it[1]
             rearm = s.rearm_point(me, snap)
             if rearm is not None:     # out of ammo: nothing matters more than a loaded gun
-                scores[("item", rearm)] = 3.0 if s.dry(me) else 0.9
+                # (custom, Nov 9: Halo 4, every gun empty or every gun but a sidearm: MAIN_DRY_SCORE)
+                if s.game == "h4" and (s.dry(me) or s.main_dry(me)):
+                    scores[("item", rearm)] = MAIN_DRY_SCORE
+                else:
+                    scores[("item", rearm)] = 3.0 if s.dry(me) else 0.9
             up = s.upgrade_point(me, snap, reach=UPGRADE_R)
             # a better gun lying close (a dead man's sniper): a player takes it unless a man is on him
             close_foe = any(k in s.per.beliefs and dist(me.pos, s.per.beliefs[k].pos) < 12.0 for k in seen)
@@ -4708,10 +4791,11 @@ class Bot:
         # replacement just because it is low; an empty sniper still rearms normally.
         if me.weapon == "sniper" and held > 0:
             return None
-        low = s.dry(me) or (0 <= held < 6 and held < 0.5 * top.get(me.weapon, 0))
+        main_dry = s.game == "h4" and s.main_dry(me)          # (custom, Nov 9: MAIN_DRY_R)
+        low = s.dry(me) or main_dry or (0 <= held < 6 and held < 0.5 * top.get(me.weapon, 0))
         if not low:
             return None
-        reach = 60.0 if s.dry(me) else 12.0
+        reach = 60.0 if s.dry(me) else MAIN_DRY_R if main_dry else 12.0
         # a spot tried without getting anything (someone took it, or it gives nothing) waits
         skip = getattr(s, "rearm_skip", {})
         now = snap.time
@@ -5419,9 +5503,13 @@ class Bot:
             return False
         if target.shield <= 0.25:
             return True                      # his shield is down: commit to the kill
+        even = me.shield + me.health >= target.shield + target.health - 0.3
         if len(s.per.visible_enemies()) > 1:
-            return False                     # two in view: hold (regroup_point and the retreat rules decide)
-        return me.shield + me.health >= target.shield + target.health - 0.3
+            # two in view: hold (regroup_point and the retreat rules decide). (Custom, Nov 8) Halo 4 Demon walks in
+            # still when its shield is at his or over and the odds, teammates counted, are ODDS_ENGAGE or better
+            return (s.h4_demon() and even and me.shield >= target.shield + DEMON_PRESS_LEAD
+                    and getattr(s, "last_odds", 0.0) >= ODDS_ENGAGE)
+        return even
 
     PART_DRY_SHOTS = 3   # ... and at least this many presses at it (Reach's paced DMR: 2 misses in a row are common)
 
@@ -5698,7 +5786,7 @@ class Bot:
             q = Vec(*k["land"][:3])
             if (q - target).flat() < 3.0 and q.z > me.pos.z + 0.4:
                 near += 1
-                if T.reaches(me.pos, q, jump=s.p.jump >= 0.5, human=True):
+                if T.reaches(me.pos, q, jump=s.nav_jumps(), human=True):
                     ok += 1
                     if best is None or dist(me.pos, q) < dist(me.pos, best):
                         best = q
@@ -6317,11 +6405,111 @@ class Bot:
             late = 0.0 if in_sight or all_aware else ODDS_UNSEEN_LATE
             riding = e.vehicle not in (None, -1)
             ours, his, late_t = odds_model.threat(me, me.weapon, e, aware, snap.shieldless, riding, late)
+            for w in s.loaded_guns(me):
+                # (custom, Nov 9: the best loaded gun it carries, the swap counted. Holding the Boltshot to give it up
+                # for the owner's SAW (gun_to_drop), a Demon read itself unarmed at 17 u, odds 0.01-0.03, broke off
+                # 1.3 u from the gun, swapped back, came again: twice, live Haven 20261109-181312)
+                if w != me.weapon:
+                    ours = min(ours, odds_model.threat(me, w, e, aware, snap.shieldless, riding, late)[0] + H4_SWAP_S)
             helpers = s.mate_kill_times(now, me, snap, e)
             if helpers:
                 ours = odds_model.with_help(ours, helpers)    # (teammates with him in view: the kill is shared)
             out.append((k, (ours, his, late_t)))
         return out
+
+    @staticmethod
+    def loaded_guns(me):
+        """(custom) The guns it carries with rounds in them or not known (ammo -1), in its inventory's order."""
+        ammo = me.ammo or []
+        return [w for i, w in enumerate(me.weapons or []) if w not in ("none", None) and (i >= len(ammo) or ammo[i] != 0)]
+
+    @staticmethod
+    def main_dry(me):
+        """(custom) Every gun it carries but a sidearm (DEMON_SIDEARMS) is known empty, reserve and magazine, and it has
+        such a gun: a BR at 0 with a loaded Boltshot."""
+        ammo = me.ammo or []
+        mains = [ammo[i] if i < len(ammo) else -1 for i, w in enumerate(me.weapons or [])
+                 if w not in ("none", None) and w not in DEMON_SIDEARMS]
+        return bool(mains) and all(a == 0 for a in mains)
+
+    def power_grab(s, now, me, snap, scores, seen):
+        """(custom, Nov 9) Halo 4 Demon: a power gun lying within POWER_GRAB_R (rank POWER_GRAB_RANK and up: the SAW,
+        rockets, the sniper ...) that it does not carry loaded is its goal (POWER_GRAB_SCORE, over hunts and pushes),
+        unless a man in sight is within POWER_GRAB_CLOSE or a Demon teammate on foot is nearer it by 2 u. The owner, Nov
+        9: "why they take so long to pick up a power weapon after killing someone holding one. I died with the saw twice
+        before they picked it up" (live Haven 20261109-181312: 7 s of a radar hunt, an objective and a one-shot hunt
+        before the item scored, 1.2-1.9 against 3.0-3.4)."""
+        if any(k in s.per.beliefs and dist(me.pos, s.per.beliefs[k].pos) < POWER_GRAB_CLOSE for k in seen):
+            return
+        key = ((s.map or {}).get("name"), me.team)
+        demons = [snap.player(j) for j, v in TEAM_EYES.get(key, {}).items()
+                  if j != me.id and v[2] == odds_model.DEMON_ACC and 0.0 <= now - v[0] <= TEAM_FRESH]
+        demons = [p for p in demons if p is not None and p.alive and p.vehicle in (None, -1)]
+        have = set(s.loaded_guns(me))
+        skip = getattr(s, "rearm_skip", {})
+        rest = s.swap_rested(me, snap)
+        found = []
+        for n, q in getattr(snap, "ground_weapons", None) or ():
+            if (s.rank(n) < POWER_GRAB_RANK or n in have or skip.get((round(q.x), round(q.y)), 0.0) > now
+                    or any(dist(q, p) < 2.5 for p in rest)):
+                continue
+            d = dist(me.pos, q)
+            if d > POWER_GRAB_R or any(dist(p.pos, q) < d - 2.0 for p in demons):
+                continue
+            found.append((d, q, n))
+        best = None
+        bans = s.__dict__.setdefault("goal_ban", {})
+        for d, q, n in sorted(found, key=lambda x: x[0]):
+            # (Nov 9: a gun it gave up on as out of reach, headway's 30 s ban, while it stands beside it on its floor:
+            # live Warhouse 20261109-184005, a Demon stuck on the walkway over the owner's SAW had it banned, then got
+            # down 1.8-3 u from it and hunted on, the SAW struck from its scores each tick. A ban farther off holds,
+            # and one the nav has no way to is passed over)
+            key = s._goal_key(("item", q))
+            if bans.get(key, 0.0) > now:
+                if (q - me.pos).flat() <= POWER_UNBAN_R and abs(q.z - me.pos.z) < 1.0:
+                    del bans[key]
+                else:
+                    continue
+            try:
+                ok = s.T().reaches(me.pos, q, jump=s.nav_jumps(), human=True)
+            except Exception:
+                ok = True
+            if ok:
+                best = (d, q, n)
+                break
+        if best is None:
+            return
+        _, q, n = best
+        s.pickup_gun = (q, n)                            # (what lies there: gun_to_drop's slot to give up)
+        scores[("item", q)] = max(scores.get(("item", q), 0.0), POWER_GRAB_SCORE)
+        s.note(f"power weapon: the {n}, {best[0]:.1f} u")
+
+    def mate_has_him(s, now, me, snap, e):
+        """(custom) Halo 4 Demon: a teammate on foot fights e (TEAM_TARGETS, under TEAM_FRESH s old), kills him sooner
+        than we would, and is winning that fight (his time on e under e's on him alone): e is his kill, not ours."""
+        if e is None or not e.alive or not s.h4_demon():
+            return False
+        key = ((s.map or {}).get("name"), me.team)
+        eyes = TEAM_EYES.get(key, {})
+        shieldless = getattr(snap, "shieldless", False)
+        ours = odds_model.kill_time(me.weapon, dist(me.pos, e.pos), e, shieldless) / odds_model.DEMON_ACC
+        for j, (t, k) in TEAM_TARGETS.get(key, {}).items():
+            if j == me.id or k != e.id or not 0.0 <= now - t <= TEAM_FRESH:
+                continue
+            m = snap.player(j)
+            if m is None or not m.alive or m.team != me.team or m.vehicle not in (None, -1):
+                continue
+            acc = eyes.get(j, (0.0, frozenset(), odds_model.ACC[False]))[2]
+            d = dist(m.pos, e.pos)
+            theirs = odds_model.kill_time(m.weapon, d, e, shieldless) / acc
+            his = odds_model.kill_time(e.weapon, d, m, shieldless) / odds_model.ACC[not getattr(e, "is_bot", True)]
+            # (his kill only when he is quicker by SPREAD_TIE, or about as quick with the lower id: two Demons alike on
+            # one man each read him as the other's, both left and came back, live Haven 20261108-203750: target
+            # switches within 3 s 13.6 a minute a Demon, 4.8 before, back to the same man within 2 s 5.9, 0.8 before)
+            quicker = theirs < ours * (1.0 - SPREAD_TIE) or (theirs <= ours * (1.0 + SPREAD_TIE) and j < me.id)
+            if quicker and theirs < his:
+                return True
+        return False
 
     def mate_kill_times(s, now, me, snap, e):
         """(custom) s each teammate with enemy e in his view (TEAM_EYES, under TEAM_FRESH s old) needs on e alone: his
@@ -6386,17 +6574,28 @@ class Bot:
         # (under the line ODDS_PERSIST s, or already breaking: a man stepping into view a moment is no reason to leave a
         # fight it is winning; replayed, a single low sample left 20% of its won fights)
         losing = under and (breaking or now - s.odds_low_since >= ODDS_PERSIST)
+        slayer = snap.mode in TRADE_MODES                     # (custom, Nov 8: the trade rule, TRADE_MODES)
+        close = min((dist(me.pos, s.per.beliefs[k].pos) for k in aware if k in s.per.beliefs), default=99.0)
         if losing and (aware or getattr(s.per, "attacker_id", None) in dict(th)):
-            left = odds_model.time_left([t for _, t in th])    # (by its shield against precision guns)
-            cover = s.cover_from(me, threats) if threats else None
-            if cover is not None and dist(me.pos, cover) / ODDS_RUN < ODDS_REACH_SHARE * left:
-                for k in [k for k in scores if k[0] == "hunt"]:
-                    del scores[k]
-                scores[("retreat", cover)] = max(scores.get(("retreat", cover), 0.0), ODDS_BREAK_SCORE)
-                s.odds_break_t = now
-                s.recharge_until = max(getattr(s, "recharge_until", 0.0), now + 5.0)
-                s.note(f"odds {o:.2f}: losing this one, break off")
-                return
+            if slayer and s.trades([t for _, t in th]):
+                s.note(f"odds {o:.2f}: losing, but a kill first: trade")
+            elif close <= BREAK_CLOSE_R:
+                # (custom, Nov 9: a man on it this close follows it to any cover: it fights it out. BREAK_CLOSE_R)
+                s.note(f"odds {o:.2f}: he is on me at {close:.1f} u: fight it out")
+            else:
+                left = odds_model.time_left([t for _, t in th])    # (by its shield against precision guns)
+                # (custom, Nov 8: of the cover it reaches in time, the one nearest a teammate: regroup_cover)
+                cover = s.regroup_cover(me, threats, snap, ODDS_REACH_SHARE * left) if threats else None
+                if cover is not None and dist(me.pos, cover) / ODDS_RUN < ODDS_REACH_SHARE * left:
+                    for k in [k for k in scores if k[0] == "hunt"]:
+                        del scores[k]
+                    scores[("retreat", cover)] = max(scores.get(("retreat", cover), 0.0), ODDS_BREAK_SCORE)
+                    s.odds_break_t = now
+                    s.recharge_until = max(getattr(s, "recharge_until", 0.0), now + 5.0)
+                    s.repeek_until = now + REPEEK_S             # (custom, Nov 8: re-peek with a full shield)
+                    s.note(f"odds {o:.2f}: losing this one, break off")
+                    return
+        s.repeek_rule(now, me, snap, scores)
         for key in [k for k in scores if k[0] == "fight" and k[1] in seen]:
             k = key[1]
             e = snap.player(k)
@@ -6405,7 +6604,7 @@ class Bot:
                 continue
             if s.goal == ("fight", k) and now - getattr(s, "target_at", -9.0) > 0.0 and o >= ODDS_BREAK:
                 continue                              # (in this fight already, not losing: finish it)
-            if o < ODDS_ENGAGE:
+            if o < ODDS_ENGAGE and not (slayer and s.trades([t for _, t in th])):
                 del scores[key]
                 cover = s.cover_from(me, threats) if threats else None
                 if cover is not None and dist(me.pos, cover) <= ODDS_HIDE_R:
@@ -6417,9 +6616,120 @@ class Bot:
             if len(group) >= 2:
                 there = dataclasses.replace(me, pos=key[1])     # (the fight is where the hunt goes)
                 th2 = [t for j in group for _, t in s.odds_threats(now, there, snap, [], only=j, all_aware=True)]
-                if odds_model.simulate(th2) < ODDS_BREAK:
+                if odds_model.simulate(th2) < ODDS_BREAK and not (slayer and s.trades(th2)):
                     del scores[key]
                     s.note("a hunt into a group: dropped")
+        s.team_play(now, me, snap, scores, seen)          # (custom, Nov 8: trades, callouts, third party)
+        s.power_grab(now, me, snap, scores, seen)         # (custom, Nov 9: a power gun lying close first)
+
+    def trades(s, threats):
+        """(custom) The trade rule: it kills one of them before it drops (odds.kills_first) with its kill times x
+        TRADE_MARGIN (the model's pace is its best)."""
+        return odds_model.kills_first([(a * TRADE_MARGIN, b, c) for a, b, c in threats]) >= 1
+
+    def repeek_rule(s, now, me, snap, scores):
+        """(custom) Re-peek with a full shield (REPEEK_*): REPEEK_S s after a break-off, its shield under REPEEK_SHIELD,
+        no hunt and no fight but with a man hurting it, one within REPEEK_CLOSE, one with his shield gone or one a
+        teammate fights; it holds its cover. The owner: "Re-peek only with a full shield, never half-recharged"."""
+        if now >= getattr(s, "repeek_until", 0.0) or snap.shieldless or me.shield >= REPEEK_SHIELD:
+            return
+        att, att_t = getattr(s.per, "attacker_id", None), getattr(s.per, "attacker_t", -9.0)
+        key = ((s.map or {}).get("name"), me.team)
+        mates_on = {k for j, (t, k) in TEAM_TARGETS.get(key, {}).items()
+                    if j != me.id and k is not None and 0.0 <= now - t <= TEAM_FRESH}
+        dropped = False
+        for sk in [k for k in scores if k[0] in ("fight", "hunt")]:
+            if sk[0] == "fight":
+                k, e, b = sk[1], snap.player(sk[1]) if isinstance(sk[1], int) else None, s.per.beliefs.get(sk[1])
+                if e is None or (k == att and now - att_t < ODDS_FRESH) or e.shield <= odds_model.ONE_SHOT \
+                        or k in mates_on or (b is not None and dist(me.pos, b.pos) < REPEEK_CLOSE):
+                    continue
+            del scores[sk]
+            dropped = True
+        if s.goal[0] == "retreat":
+            scores[s.goal] = max(scores.get(s.goal, 0.0), REPEEK_HOLD_SCORE)
+        elif dropped:
+            recent = [b.pos for k, b in s.per.beliefs.items() if isinstance(k, int) and now - b.t < 10.0]
+            cover = s.cover_from(me, recent) if recent else None
+            if cover is not None:
+                scores[("retreat", cover)] = max(scores.get(("retreat", cover), 0.0), REPEEK_HOLD_SCORE)
+        if dropped:
+            s.note(f"shield {me.shield:.2f}: full first, no re-peek")
+
+    def team_play(s, now, me, snap, scores, seen):
+        """(custom) Halo 4 Demon, healthy (CHASE_MIN), after the odds rules: a teammate's killer pushed (TRADE_*), a man
+        called one shot out of its sight hunted (CALLOUT_*), and a teammate's even or losing fight taken from an angle
+        (THIRD_*); each only when it would kill him first (trades)."""
+        guard = me.health if snap.shieldless else odds_model.shield_left(me)
+        key = ((s.map or {}).get("name"), me.team)
+        book = TEAM_ATTACKERS.get(key, {})
+        prev = getattr(s, "_mates_alive", {})
+        mates = {p.id: p for p in snap.players if p.team == me.team and p.id != me.id}
+        for j, p in mates.items():
+            was = prev.get(j)
+            if was is not None and was[0] and not p.alive:
+                a = book.get(j)
+                if a is not None and a[0] is not None and now - a[1] <= TRADE_FRESH and dist(me.pos, was[1]) <= TRADE_R:
+                    s.trade = (a[0], now + TRADE_S)
+                    s.note(f"trade: #{j} is down, after #{a[0]}")
+        s._mates_alive = {j: (p.alive, p.pos) for j, p in mates.items()}
+        if guard < CHASE_MIN:
+            return
+        tr = getattr(s, "trade", None)
+        if tr is not None and now < tr[1]:
+            s.push_on(now, me, snap, scores, seen, tr[0], TRADE_SCORE, "trade")
+        for k, (t, pos) in list(TEAM_CRACKED.get(key, {}).items()):
+            if 0.0 <= now - t <= CALLOUT_S and k not in seen and dist(me.pos, pos) <= CALLOUT_R:
+                s.push_on(now, me, snap, scores, seen, k, CALLOUT_SCORE, "one shot", pos)
+        if seen:
+            return                                     # (its own fight first: the third party is for a free Demon)
+        eyes = TEAM_EYES.get(key, {})
+        for j, (t, k) in TEAM_TARGETS.get(key, {}).items():
+            m, e = snap.player(j), snap.player(k) if isinstance(k, int) else None
+            b = s.per.beliefs.get(k)
+            if (j == me.id or k is None or not 0.0 <= now - t <= TEAM_FRESH or m is None or not m.alive
+                    or m.vehicle not in (None, -1) or e is None or not e.alive or b is None or now - b.t > 1.0
+                    or dist(me.pos, b.pos) > THIRD_R):
+                continue
+            d = dist(m.pos, e.pos)
+            theirs = odds_model.kill_time(m.weapon, d, e, snap.shieldless) / eyes.get(j, (0, (), odds_model.ACC[False]))[2]
+            his = odds_model.kill_time(e.weapon, d, m, snap.shieldless) / odds_model.ACC[not getattr(e, "is_bot", True)]
+            if theirs < THIRD_EVEN * his:
+                continue                               # (he is winning it: spread, not a third man)
+            ux, uy = m.pos.x - b.pos.x, m.pos.y - b.pos.y
+            n = math.hypot(ux, uy) or 1.0
+            px, py = -uy / n, ux / n                    # (off the teammate's line, on our side of it)
+            if px * (me.pos.x - b.pos.x) + py * (me.pos.y - b.pos.y) < 0:
+                px, py = -px, -py
+            r = min(THIRD_ANGLE_R, dist(me.pos, b.pos))
+            # (he is busy with the teammate: judged not aware of us, odds_threats' late start)
+            s.push_on(now, me, snap, scores, seen, k, THIRD_SCORE, "third party", b.pos + Vec(px * r, py * r, 0.0),
+                      aware=False)
+
+    def push_on(s, now, me, snap, scores, seen, k, score, why, point=None, aware=True):
+        """(custom) team_play's push on enemy k: a fight if in sight, else a hunt to point (his place by default), when
+        it would kill him first (trades; aware: round the corner he is on us, else his late start)."""
+        e = snap.player(k) if isinstance(k, int) else None
+        if e is None or not e.alive or e.team == me.team:
+            return
+        th = [t for _, t in s.odds_threats(now, me, snap, [], only=k, all_aware=aware)]
+        if not th or not s.trades(th):
+            return
+        if k in seen:
+            scores[("fight", k)] = max(scores.get(("fight", k), 0.0), score)
+        else:
+            b = s.per.beliefs.get(k)
+            p = point if point is not None else (b.pos if b is not None and now - b.t <= 2.0 else None)
+            if p is None:
+                return
+            scores[("hunt", p)] = max(scores.get(("hunt", p), 0.0), score)
+        s.note(f"{why}: on #{k}")
+
+    def nav_jumps(s):
+        """Does its walk take the jumps people take along the way (the nav's jump routes, a jump onto a ledge)? Jump skill
+        0.5 and up; (custom, Nov 8) Easy and Normal too (EASY_NAV_JUMP), their other jumps (hops, fight jumps, jump
+        shots) by their jump skill as before."""
+        return s.p.jump >= 0.5 or (EASY_NAV_JUMP and s.p.tier in ("novice", "average"))
 
     def h4_demon(s):
         """(custom) Fixed Demon in Halo 4: the fight odds (brain/odds.py) and the team's sightings are its."""
@@ -6453,6 +6763,16 @@ class Bot:
                 book[k] = (now, b.pos, b.vel, me.id)
         TEAM_EYES.setdefault(key, {})[me.id] = (now, frozenset(k for k in in_view if isinstance(k, int)),
                                                 odds_model.DEMON_ACC if profiles.fixed_demon(s.p) else odds_model.ACC[False])
+        g = getattr(s, "goal", None)
+        TEAM_TARGETS.setdefault(key, {})[me.id] = (now, g[1] if g and g[0] == "fight" and isinstance(g[1], int) else None)
+        # (custom, Nov 8: one-shot callouts and who is hurting us, TEAM_CRACKED / TEAM_ATTACKERS)
+        cracked = TEAM_CRACKED.setdefault(key, {})
+        for k in in_view:
+            e = snap.player(k) if isinstance(k, int) else None
+            if e is not None and e.alive and not snap.shieldless and e.shield <= odds_model.ONE_SHOT:
+                cracked[k] = (now, e.pos)
+        TEAM_ATTACKERS.setdefault(key, {})[me.id] = (getattr(s.per, "attacker_id", None),
+                                                     getattr(s.per, "attacker_t", -9.0), me.pos)
         if not s.h4_demon():
             return
         alive = {p.id for p in snap.players if p.alive and p.team != me.team}
@@ -7134,7 +7454,7 @@ class Bot:
             T = s._terrain = terrain(s.map)
         n = T._node(me.pos)
         walk = float(T._field(point, False, False, me.has_flag)[n])
-        way = float(T._field(point, s.p.jump >= 0.5, True, me.has_flag)[n])
+        way = float(T._field(point, s.nav_jumps(), True, me.has_flag)[n])
         if math.isfinite(walk) and walk <= 2.5 * way + 15.0:
             s.round_until, s.round_goal = now + 10.0, point
             s.note("exit held: the way round")
@@ -7447,7 +7767,7 @@ class Bot:
         near = (point - me.pos).flat()
         if (s.goal[0] == "objective" and near < 4.0 and abs(point.z - me.pos.z) < 1.5
                 and (s.no_floor_at(point) or (grab is not None and (grab - point).flat() < 1.0))
-                and (near < 1.6 and abs(point.z - me.pos.z) < 1.0 or not s.T().reaches(me.pos, point, jump=s.p.jump >= 0.5,
+                and (near < 1.6 and abs(point.z - me.pos.z) < 1.0 or not s.T().reaches(me.pos, point, jump=s.nav_jumps(),
                                                                                        human=True))):
             # (only the last 1.6 u on its level, or when the nav has no way: Spire's core plateau has a walked ramp in
             # the nav since, and straight in from its north-east side was the 0.7 u edge bots jumped at 365 times) the
@@ -7524,7 +7844,7 @@ class Bot:
             return
         rg = getattr(s, "round_goal", None)                 # (walking round a held exit to here: no people's jumps)
         people = rg is None or getattr(s, "now", 0.0) >= s.round_until or (point - rg).flat() > 3.0
-        way = dict(jump=s.p.jump >= 0.5 and people, human=people, safe=me.has_flag)   # (a carrier: round big drops)
+        way = dict(jump=s.nav_jumps() and people, human=people, safe=me.has_flag)   # (a carrier: round big drops)
         now_ = getattr(s, "now", 0.0)
         if people and any(f[0] >= 2 and now_ < f[1] and math.hypot(k[0] - me.pos.x, k[1] - me.pos.y) < 6.0
                           for k, f in getattr(s, "jump_fails", {}).items()):
@@ -7882,7 +8202,7 @@ class Bot:
         c = getattr(s, "_lead", None)
         if c and now < c[0] and (me.pos - c[1]).flat() < 0.75 and (c[2] - point).flat() < 1.0:
             return c[3]
-        lead = s.route_view(me, point, 20.0, jump=s.p.jump >= 0.5, human=True, safe=me.has_flag)
+        lead = s.route_view(me, point, 20.0, jump=s.nav_jumps(), human=True, safe=me.has_flag)
         out = Vec(lead.x, lead.y, lead.z + 0.27) if lead is not None else None
         s._lead = (now + 0.4, me.pos, point, out)
         return out
@@ -7975,27 +8295,44 @@ class Bot:
         s._los_cover = (key, now + LOS_COVER_KEEP, spot)
         return spot
 
-    def lidar_cover(s, me, threats):
+    def lidar_cover(s, me, threats, every=False):
         """The nearest wall LiDAR painted (maps/<map>/lidar.json "cover": the floor in front of an
         upright wall, glass excluded) within 10 units that stands between us and every threat:
-        the wall faces each of them and their line of sight to the spot is blocked. None if none."""
+        the wall faces each of them and their line of sight to the spot is blocked. None if none.
+        (Custom, Nov 8) every: all such spots of the nearest 30, nearest first (regroup_cover)."""
         if getattr(s, "_terrain", None) is None:
             from .maps import terrain
             s._terrain = terrain(s.map)
         T = s._terrain
         cs = getattr(T, "cover_spots", None)
         if cs is None or not len(cs):
-            return None
+            return [] if every else None
         import numpy as np
         d = np.hypot(cs[:, 0] - me.pos.x, cs[:, 1] - me.pos.y)
         near = np.nonzero((d < 10.0) & (np.abs(cs[:, 2] - me.pos.z) < 1.5))[0]
+        found = []
         for k in near[np.argsort(d[near])][:30]:
             x, y, z, dx, dy = (float(v) for v in cs[k])
             spot = Vec(x, y, z)
             if all(((t.x - x) * dx + (t.y - y) * dy) > 0.3 * math.hypot(t.x - x, t.y - y) and not T.los(t, spot)
                    for t in threats):
-                return spot
-        return None
+                if not every:
+                    return spot
+                found.append(spot)
+        return found if every else None
+
+    def regroup_cover(s, me, threats, snap, reach_s):
+        """(custom, Nov 8) A break-off's cover (Halo 4 Demon): of the LiDAR cover from them it reaches in reach_s s
+        (ODDS_RUN), the one nearest a teammate on foot within REGROUP_MATE_R; none of those, or no teammate near, the
+        nearest cover as before (cover_from). The owner's "Retreat toward teammates rather than to the nearest lone
+        cover"."""
+        mates = [p.pos for p in snap.players if p.alive and p.team == me.team and p.id != me.id
+                 and p.vehicle in (None, -1) and dist(p.pos, me.pos) < REGROUP_MATE_R]
+        if mates:
+            spots = [c for c in s.lidar_cover(me, threats, every=True) if dist(me.pos, c) / ODDS_RUN < reach_s]
+            if spots:
+                return min(spots, key=lambda c: (min(dist(c, m) for m in mates), dist(me.pos, c)))
+        return s.cover_from(me, threats)
 
     def away_from(s, me, threats):
         c = Vec(sum(t.x for t in threats) / len(threats), sum(t.y for t in threats) / len(threats), me.pos.z)

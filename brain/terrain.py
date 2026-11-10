@@ -1322,6 +1322,16 @@ class Terrain:
                 low[l, j, i] = True
         return low
 
+    def low_overhead(s, pts):
+        """(custom, Nov 8) For each floor point (x, y, z): a face at head height over it (EYE or HEAD_TOP) and open at
+        the knee, a ceiling a standing body does not fit under (_low_ceiling's test, for points, walked or not)."""
+        p = np.asarray(pts, float).reshape(-1, 3)
+        if not len(p):
+            return np.zeros(0, bool)
+        j, i = s._ij(p[:, 0], p[:, 1])
+        w, z = s.walls[j, i], p[:, 2]
+        return (s._wall_bit(w, z + EYE) | s._wall_bit(w, z + HEAD_TOP)) & ~s._wall_bit(w, z + KNEE)
+
     def _near_wall(s, step):
         """Per node: does a neighbour cell rise into a wall (no surface you could step onto, and
         solid above head-ish height)? Drop-offs are not walls."""
