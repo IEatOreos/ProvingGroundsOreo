@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+### CTF: hunters cut the carrier off instead of chasing him, and every bot knows where he is under his emblem, 2026-11-10
+
+The owner: "how would we add the ability to bots hunt the flag carrier, but without back tracking. Like cutting them off." Live on Adrift, he was on the top lane of their base, they were below him, and they went back through their base to reach where he was, which left their flag open. Also: "once you pick up the flag it shows an emblem above your head showing that im carrying their flag. So maybe make it to where they always know where the flag carrier is?"
+
+- Cut-offs, `brain/director.py` `intercepts` (`CUT_*` constants). Every role pass (2 s) while an enemy carries our flag:
+  - His likely ways home (`carrier_routes`), each as the distance he runs:
+    - the shortest from where he is to their stand or flag return;
+    - kept per match: the next shortest from our stand (the shortest with its own floor priced 3x, `alt_routes` / `penalised_way`);
+    - the enemy's hand-drawn sneak routes, reversed.
+    - A way is kept if he is within 6 u of it, it is no more than 1.6x the shortest, and it is not 60% the same as one already kept.
+  - For the 6 nearest bots, a forward Dijkstra over the nav gives each its walk cost to every cell (about 2-4 ms a bot on Adrift).
+  - On each way, the bot that cuts him off soonest gets a cut-off (`cut_on`): the first point, checked every 3 u from 4 u ahead of him, that the bot gets within 5 u of, on that point's floor, 1 s before he gets there. Both are taken at 2.25 u/s; his pace relative to ours, `CARRIER_PACE`, is 1.0, ASSUMED, since a Halo 4 carrier's speed is unmeasured. The bot waits at the spot nearest it in that range.
+    - His time is the distance he runs; ours is the nav's cost. The nav prices drops for bots (Adrift: a 1.8 u drop off the top lane costs 28.8), and a person just drops. So a cut-off is only taken where the bot surely makes it.
+  - More hunters than ways: further cut-offs at spots 8 u or more from those already taken. If one of us is within 15 u of him and not cutting off, one hunter slot stays a chase. Within 8 u of his goal, or with nowhere the bot is in time, the hunters chase as before.
+  - A bot keeps its spot while a point of his way within 5 u of it is still one it is in time for.
+  - The slot goes to that bot (fit `("bot", id)` in `assign_roles`, the nearest if it is taken). It now works with the usual 2 hunters; before, it needed 3 or more.
+- Replaced: upstream's `cutoff_point`, one straight-line point 10 u ahead with 3+ hunters. The bot then swapped that point for the flag's position (`Bot.live_point` for "hunter"), so every hunter chased. `CUTOFF = False` still switches back to all chasing.
+- `brain/bot.py`, the "cutoff" role:
+  - Its objective is the point (scored as a hunter's: 1.3 + 0.6 teamwork), and it loiters 2.5 u round it.
+  - `keep_role` keeps it within `CUT_R` = 10 u, and fights and hunts beyond that lose weight by teamwork.
+  - It never hunts the carrier's emblem: that was the walk back after him.
+  - It doesn't make the camper hold detour.
+- The emblem, `Perception.update`: while an enemy holds our flag (CTF), each bot has an exact "marker" belief of him if he is within `MARKER_R` = 30 u, or anywhere if its job is him (hunter or cutoff, `marker_far`).
+  - It is never a sighting: `seen` stays False, so there is no shot, recognition or reaction time through walls, and it is not posted to the team's sightings.
+  - It feeds hunting, pre-aiming and target priority like an exact radar dot that doesn't fade. Easy gets it too (it's on everyone's screen).
+- Adrift check (a scratch script on the real nav; not in the suite, since the level data isn't in Git): the carrier on the upper floor (z 6.2-7.6) by our base, two bots below (z 2.4). Six placements:
+  - A bot whose old chase spent its first 10 u getting 13 u farther from his goal now gets its cut-off at the spot it is on, in range of where he comes down.
+  - Bots that can be in time nowhere chase.
+  - The second bot's spread cut-off was 18-51 u off on his way, the far ones by their stand.
+  - Re-plan cost: about 10 ms for the cut-offs plus about 5 ms for the routes, once the stand's alternate routes (about 20 ms) are cached.
+- Validation: new `tools/test_ctf_cutoff.py` (14 tests, on a small grid):
+  - cut off ahead, never behind; nothing for a bot behind him;
+  - the top-lane case (the cut-off is by where he comes down, not over the bot);
+  - one bot per way; spread when there are more bots than ways;
+  - a bot right by him keeps chasing; all chase near his goal;
+  - the kept spot; role slots give the cut-off to that bot; the switch off;
+  - the marker is exact and not seen within range, only for hunters when far, and absent when our flag isn't carried.
+  - `tools/test_ctf_defender.py`'s stub now stubs `intercepts`.
+  - All 510 regression tests pass.
+- Untested in a live match: how well the predicted route matches a person's, the carrier's real speed, and whether the bot holds its spot facing his approach well enough. Restart the bot process to load it.
+
 ### CTF: one defender, only two captures ahead, the lowest difficulty bot, 2026-11-09
 
 The owner: "Remove that team size logic for defending ... If the match is tied, no one on either team defends. You can keep the hunters, but no one should defend when tied. If the team is losing everyone should continue to attack. Only have a defender if the winning team is up by 2 or more flag captures, and defender count should never be higher than 1. If there is a defender, always make it the lower difficulty player, Excluding easy."

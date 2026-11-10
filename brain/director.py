@@ -29,10 +29,23 @@ PUSH_AFTER = 0.0
 INV_STALL = 25.0            # ... and kept while one of the team was within 8 u of it in the last this many s (director)
 INV_COMMIT = 30.0           # an Invasion attack keeps its territory at least this long after picking it (director)
 # a CTF carry as the team's play: three escorts from six of us, one screen SCREEN_BACK u toward their base, the pushers
-# SCREEN_AHEAD u ahead of him on his way home (role_slots); CUTOFF: with three or more hunters on their carrier, one
-# goes CUTOFF_AHEAD u ahead of him on his way home (cutoff_point). False: the play before (A/B)
+# SCREEN_AHEAD u ahead of him on his way home (role_slots); CUTOFF: hunters on their carrier cut him off on his way
+# home (custom, Nov 10: intercepts, CUT_* below; upstream sent one CUTOFF_AHEAD u ahead with three or more). False:
+# the play before (A/B)
 CARRY_PLAY, CUTOFF = True, True
 CTF_DEFEND_LEAD = 2         # (custom, Nov 9) CTF: one defender only this many captures ahead or more (role_slots)
+# (custom, Nov 10) CTF cut-offs (Director.intercepts): a hunter goes to the first point on the enemy carrier's way home
+# it reaches CUT_MARGIN_S s before him (both at CUT_RUN u/s, his pace CARRIER_PACE of ours: ASSUMED equal, a Halo 4
+# carrier's speed is unmeasured), points every CUT_STEP u from CUT_MIN_AHEAD u ahead of him; never one behind him. His
+# ways: the shortest from where he is, the next shortest from our stand (CUT_ALT_COST times the cost within CUT_ALT_R u
+# of the first) and the enemy's hand-drawn sneak routes reversed, each one he is within CUT_ON_ROUTE u of and at most
+# CUT_DETOUR times the shortest, not CUT_OVERLAP the same as one already taken. One bot a way; a bot within CUT_CHASE_R
+# u of him keeps one hunter chasing; within CUT_NEAR_GOAL u of his goal, all chase. CUT_CANDIDATES nearest bots weighed
+# A point is made when the bot is within CUT_NEAR u of it on its floor (CUT_LEVEL_DZ) first: it waits there, in range
+CUT_RUN, CARRIER_PACE, CUT_MARGIN_S, CUT_NEAR, CUT_LEVEL_DZ = 2.25, 1.0, 1.0, 5.0, 2.0
+CUT_STEP, CUT_MIN_AHEAD, CUT_SPREAD = 3.0, 4.0, 8.0
+CUT_ON_ROUTE, CUT_DETOUR, CUT_OVERLAP, CUT_ALT_R, CUT_ALT_COST = 6.0, 1.6, 0.6, 3.0, 3.0
+CUT_CHASE_R, CUT_NEAR_GOAL, CUT_CANDIDATES, CUT_MAX_STEPS = 15.0, 8.0, 6, 1600
 # the getaway ride: one transport driver parks GETAWAY_D u from their stand on our side while our runners go in, then
 # fetches our carrier at any distance
 GETAWAY, GETAWAY_D = True, 16.0
@@ -809,6 +822,8 @@ class Director:
                     return priority, c
                 if fit == "low_tier":   # (custom) CTF's one defender: the lowest difficulty, not Easy; then the nearest
                     return profiles.defend_priority(b.p), c
+                if isinstance(fit, tuple):   # (custom) a CTF cut-off worked out for one bot (intercepts): it, else the nearest
+                    return (0 if b.id == fit[1] else 1), c
                 c -= 0.8 * getattr(b.p, fit, 0.5)                    # personality fit
                 return c
             b = min(free, key=cost)
@@ -847,6 +862,8 @@ class Director:
                 b.order = o
             else:
                 b.set_order(o, sure=fit == "anchor")
+            if role == "cutoff":
+                s.__dict__.setdefault("_cuts", {})[b.id] = point   # (kept while it still beats him there: intercepts)
         for b in free:
             s.roles[b.id] = "free"
             b.set_order(Order("free"))
@@ -1902,12 +1919,17 @@ class Director:
             # going the other way
             collapse = own.state == "carried" and not carrier and (theirs is None or theirs.state == "home")
             k = n - 1 if standoff or collapse else 2
-            cut = s.cutoff_point(snap, own) if CUTOFF and own.state == "carried" and k >= 3 else None
-            if cut is not None:
-                # one cuts him off on his way home (guide 19 CTF-MULTI-11: the hunters went where he was, behind him)
-                slots.append(("hunter", cut, "aggression"))
-                k -= 1
-            slots += [("hunter", own.pos, "aggression")] * k
+            # (custom, Nov 10, the owner: "hunt the flag carrier, but without back tracking. Like cutting them off";
+            # live Adrift, the hunters went back through their base to reach him on the top lane) the cut-offs go to
+            # the first point on his way home each beats him to, one per way (intercepts, a slot for that bot); the rest
+            # chase him. Before: one straight-line point 10 u ahead with three or more hunters, its point then swapped
+            # for the flag's by the bot (Bot.live_point), so every hunter chased
+            cuts = s.intercepts(snap, own, k) if CUTOFF and own.state == "carried" else []
+            for q, bid in cuts:
+                slots.append(("cutoff", q, ("bot", bid)))
+            slots += [("hunter", own.pos, "aggression")] * (k - len(cuts))
+        else:
+            s._cuts = {}
         # (custom, Nov 9, the owner: "Only have a defender if the winning team is up by 2 or more flag captures, and
         # defender count should never be higher than 1 ... always make it the lower difficulty player, Excluding easy")
         # The lead in captures (the score's step: score_unit) is the only thing that decides defending: tied or behind,
@@ -1983,17 +2005,215 @@ class Director:
             return None
         return Vec(sum(q.x for q in mine) / len(mine), sum(q.y for q in mine) / len(mine), sum(q.z for q in mine) / len(mine))
 
-    def cutoff_point(s, snap, own):
-        """Where an enemy carrying our flag will be: CUTOFF_AHEAD u on from him toward where he scores (their stand or
-        flag return), or None when he is nearly there."""
+    def intercepts(s, snap, own, k):
+        """(custom, Nov 10) Cut-offs on the enemy carrying our flag: [(point, bot id)], at most k (one fewer while one of
+        us is within CUT_CHASE_R of him: that one chases). Each of his likely ways home (carrier_routes) gets the bot
+        that cuts him off soonest on it: the first point CUT_STEP apart from CUT_MIN_AHEAD on that it reaches CUT_MARGIN_S
+        before him (cut_on), by its own walk (a Dijkstra from it, the nav's forward edges, so one-way drops count);
+        then other bots on points CUT_SPREAD from those. A bot keeps its point while it still beats him there. Points
+        behind him are never on his way, so no cut-off walks back after him. []: nobody can beat him anywhere, he is
+        nearly home, or no way is known (all chase, as before)."""
         c = snap.player(own.carrier) if own.carrier not in (None, -1) else None
-        if c is None:
-            return None
         side = 1 - s.side
-        goal = s.map.get("returns", {}).get(side) or s.map["flags"].get(side)
-        if goal is None or dist(c.pos, goal) < CUTOFF_AHEAD + 4.0:
+        goal = (s.map.get("returns") or {}).get(side) or s.map["flags"].get(side)
+        if c is None or not c.alive or goal is None or dist(c.pos, goal) < CUT_NEAR_GOAL or k <= 0:
+            return []
+        T = s.terrain()
+        routes = s.carrier_routes(c, goal)
+        if not routes:
+            return []
+        blitz = set((getattr(s, "blitz", None) or {}).get("ids", ()))
+        mates = []
+        for b in s.bots.values():
+            p = snap.player(b.id)
+            if (p is not None and p.alive and not p.has_flag and b.p.teamwork > 0 and b.id not in blitz
+                    and b.id not in snap.vips):
+                mates.append((dist(p.pos, c.pos), b.id, p.pos))
+        mates.sort(key=lambda m: m[0])
+        want = k
+        far = max(r[-1][1] for r in routes) + 10.0
+        from scipy.sparse.csgraph import dijkstra
+        reach = {}
+        for d, bid, pos in mates[:CUT_CANDIDATES]:      # (the one by him too: the chaser is whoever is left)
+            l, j, i = T._node(pos)
+            reach[bid] = dijkstra(T.graph, directed=True, indices=(l * T.nh + j) * T.nw + i, limit=far)
+        old = getattr(s, "_cuts", {}) or {}
+        out, taken = [], []
+        for r in routes:
+            best = None
+            for bid, rc in reach.items():
+                if any(bid == o[1] for o in out):
+                    continue
+                hit = s.cut_on(T, r, rc, old.get(bid))
+                if hit is not None and (best is None or (hit[1], -hit[2]) < (best[1], -best[2])):
+                    best = (hit[0], hit[1], hit[2], bid)
+            if best is not None:
+                out.append((best[0], best[3]))
+                taken.append(best[0])
+            if len(out) >= want:
+                break
+        for bid, rc in reach.items():            # more of us than ways: further cut-offs, apart from those
+            if len(out) >= want:
+                break
+            if any(bid == o[1] for o in out):
+                continue
+            for r in routes:
+                hit = s.cut_on(T, r, rc, old.get(bid), avoid=taken)
+                if hit is not None:
+                    out.append((hit[0], bid))
+                    taken.append(hit[0])
+                    break
+        cut_ids = {bid for _, bid in out}
+        if len(out) >= k and any(d < CUT_CHASE_R and bid not in cut_ids for d, bid, _ in mates):
+            out = out[:k - 1]      # one of us right by him and not cutting: a hunter slot left for it to chase
+        return out
+
+    def cut_on(s, T, route, reach, prev=None, avoid=()):
+        """Where a bot whose walk costs are reach waits for him on route (carrier_routes: (point, how far he runs to
+        it)): the spot nearest it within CUT_NEAR (on that point's floor) of the first point every CUT_STEP that it gets
+        in range of CUT_MARGIN_S before him, as (spot, his run there, the bot's time to spare); prev, its spot from
+        before, while it still is in time there; none within CUT_SPREAD of avoid. None: it is in time nowhere on it."""
+        import numpy as np
+        margin = CUT_MARGIN_S * CUT_RUN
+        nxt = CUT_MIN_AHEAD
+        last = len(route) - 1
+        cost = reach.reshape(T.L, T.nh, T.nw)
+        if prev is not None and not any(dist(prev, a) < CUT_SPREAD for a in avoid):
+            # its spot from before, while a point of his way ahead within CUT_NEAR of it (its floor) is still one it is
+            # in range of first: kept (a new pick every re-plan turned bots round mid-way)
+            dp = float(cost[T._node(prev)])
+            for q, dc in route:
+                if (dc >= CUT_MIN_AHEAD and dist(q, prev) <= CUT_NEAR and abs(q.z - prev.z) < CUT_LEVEL_DZ
+                        and math.isfinite(dp) and dp + margin <= dc / CARRIER_PACE):
+                    return (prev, dc, (dc / CARRIER_PACE - dp) / CUT_RUN)
+        from .terrain import NAV_CELL
+        r = int(round(CUT_NEAR / getattr(T, "CELL", NAV_CELL)))     # (in cells; a test's grid has its own size)
+        for k, (q, dc) in enumerate(route):
+            if dc < nxt and k != last:
+                continue
+            nxt = dc + CUT_STEP
+            if dc < CUT_MIN_AHEAD:
+                continue
+            # the nearest spot to the bot within CUT_NEAR of q on q's floor: where it waits for him in range
+            _, j, i = T._node(q)
+            j0, j1, i0, i1 = max(0, j - r), min(T.nh, j + r + 1), max(0, i - r), min(T.nw, i + r + 1)
+            with np.errstate(invalid="ignore"):
+                ok = T.lwalk[:, j0:j1, i0:i1] & (np.abs(T.lz[:, j0:j1, i0:i1] - q.z) < CUT_LEVEL_DZ)
+            jj, ii = np.mgrid[j0:j1, i0:i1]
+            ok &= ((jj - j) ** 2 + (ii - i) ** 2 <= r * r)[None]
+            sub = np.where(ok, cost[:, j0:j1, i0:i1], np.inf)
+            m = int(np.argmin(sub))
+            db = float(sub.ravel()[m])
+            if not math.isfinite(db) or db + margin > dc / CARRIER_PACE:
+                continue
+            ml, mj, mi = np.unravel_index(m, sub.shape)
+            spot = T._center(int(ml), int(mj) + j0, int(mi) + i0)
+            if any(dist(spot, a) < CUT_SPREAD for a in avoid):
+                continue
+            return (spot, dc, (dc / CARRIER_PACE - db) / CUT_RUN)
+        return None
+
+    def carrier_routes(s, c, goal):
+        """The ways an enemy carrying our flag (c) may take to goal, each [(point, how far he runs to it)]: the shortest
+        from where he is (the nav's field to goal), then, kept per goal for the match, the next shortest from our stand
+        (alt_routes) and the enemy's sneak routes reversed (theirs run from their base to our flag), each one he is on
+        (CUT_ON_ROUTE), at most CUT_DETOUR the shortest, not CUT_OVERLAP the same as one already in. His is the length
+        run, not the nav's cost: the nav prices a drop for us (Adrift, a 1.8 u drop off the top lane costs 28.8) and a
+        person just drops; ours stays the cost, so a cut-off it takes is one it surely makes"""
+        T = s.terrain()
+        if not math.isfinite(float(T._field(goal)[T._node(c.pos)])):
+            return []
+        pts = [c.pos] + T.path_ahead(c.pos, goal, n=CUT_MAX_STEPS)
+        if len(pts) < 2:
+            return []
+        live = s.line_costs(pts)
+        routes = [live]
+        for way in s.alt_routes(goal):
+            rest = s.route_from(way, c.pos)
+            if rest is None or rest[-1][1] > CUT_DETOUR * live[-1][1] + 4.0:
+                continue
+            if any(s.route_overlap(rest, r) > CUT_OVERLAP for r in routes):
+                continue
+            routes.append(rest)
+        return routes
+
+    @staticmethod
+    def line_costs(pts, start=0.0):
+        """[(point, the length run to it along pts)], from start."""
+        out, d = [], start
+        for k, q in enumerate(pts):
+            if k:
+                d += dist(pts[k - 1], q)
+            out.append((q, d))
+        return out
+
+    def route_from(s, way, pos):
+        """The rest of way (points) from its point nearest pos (height weighs double), as line_costs; None: pos is more
+        than CUT_ON_ROUTE off it."""
+        best = min(range(len(way)), key=lambda k: (way[k] - pos).flat() + 2.0 * abs(way[k].z - pos.z))
+        off = (way[best] - pos).flat() + 2.0 * abs(way[best].z - pos.z)
+        if off > CUT_ON_ROUTE or best >= len(way) - 1:
             return None
-        return c.pos + (goal - c.pos) * (CUTOFF_AHEAD / max(dist(c.pos, goal), 0.1))
+        return s.line_costs(way[best:], start=dist(way[best], pos))
+
+    @staticmethod
+    def route_overlap(a, b):
+        """The share of a's points (every CUT_STEP u) within CUT_ALT_R of one of b's (height weighs double)."""
+        samp = [q for k, (q, _) in enumerate(a) if k % max(1, int(CUT_STEP / 0.25)) == 0]
+        bq = [q for q, _ in b]
+        near = sum(1 for q in samp if any((q - o).flat() + 2.0 * abs(q.z - o.z) < CUT_ALT_R for o in bq[::4]))
+        return near / max(1, len(samp))
+
+    def alt_routes(s, goal):
+        """Other ways from our stand to goal, worked out once per goal: the shortest with every edge within CUT_ALT_R
+        of the shortest's own floor costing CUT_ALT_COST times (a second way: Adrift's other level), and the enemy's
+        hand-drawn sneak routes reversed, a point a unit."""
+        key = (round(goal.x, 1), round(goal.y, 1), round(goal.z, 1))
+        cache = s.__dict__.setdefault("_alt_routes", {})
+        if key in cache:
+            return cache[key]
+        ways = []
+        stand = s.map["flags"].get(s.side)
+        T = s.terrain()
+        try:
+            first = T.path_ahead(stand, goal, n=CUT_MAX_STEPS) if stand is not None else []
+            if len(first) > 8:
+                ways.append(s.penalised_way(T, stand, goal, first))
+        except Exception:            # (a map with no nav, a test's bare director: no second way)
+            pass
+        for r in (s.map.get("sneak") or {}).get(1 - s.side, []):
+            r = list(reversed(r))
+            pts = [r[0]]
+            for a, b in zip(r, r[1:]):
+                n = max(1, int(dist(a, b)))
+                pts += [a + (b - a) * (t / n) for t in range(1, n + 1)]
+            if len(pts) >= 2:
+                ways.append(pts)
+        cache[key] = [w for w in ways if w]
+        return cache[key]
+
+    @staticmethod
+    def penalised_way(T, stand, goal, first):
+        import numpy as np
+        from scipy.sparse.csgraph import dijkstra
+        mask = np.zeros((T.L, T.nh, T.nw), dtype=bool)
+        r = int(CUT_ALT_R / 0.25)
+        for q in first[::4]:
+            j, i = T._cell(q)
+            j0, j1, i0, i1 = max(0, j - r), min(T.nh, j + r + 1), max(0, i - r), min(T.nw, i + r + 1)
+            with np.errstate(invalid="ignore"):
+                mask[:, j0:j1, i0:i1] |= np.abs(T.lz[:, j0:j1, i0:i1] - q.z) < 1.5
+        flat = mask.ravel()
+        g = T.graph_to.copy()
+        rows = np.repeat(np.arange(g.shape[0]), np.diff(g.indptr))
+        g.data = np.where(flat[rows] | flat[g.indices], g.data * CUT_ALT_COST, g.data)
+        l, j, i = T._node(goal)
+        l, j, i = T._reachable_node(l, j, i, goal.z)
+        cost = dijkstra(g, directed=True, indices=(l * T.nh + j) * T.nw + i).reshape(T.L, T.nh, T.nw)
+        n = T._node(stand)
+        if not np.isfinite(cost[n]):
+            return []
+        return [T._center(*q) for q in T._down(*n, cost, CUT_MAX_STEPS)]
 
     def defend_posts(s, home, n):
         """n posts round our flag stand: LiDAR cover spots (the floor in front of a wall) 3-11 u off it on its floor that

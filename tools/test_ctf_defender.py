@@ -30,7 +30,7 @@ def director(lead=0, unit=1, n_bots=6):
     d.split_until, d.split = 1e9, False
     d.home_rule, d.defend_until = True, 1e9          # (a death at the flag just now: no extra defender any more)
     d.defend_posts = lambda home, k: [home + Vec(6, 0, 0)] * k
-    d.cutoff_point = lambda snap, own: None
+    d.intercepts = lambda snap, own, k: []
     d.bots = {}
     return d
 

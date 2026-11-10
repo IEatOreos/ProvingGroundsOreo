@@ -334,6 +334,11 @@ PRESS_NEAR = 3.0                    # u: a press (press_on) walks in to here; cl
 POWER_NEAR = 15.0                   # u: a power weapon up this near is not held back by a post (keep_role)
 REGROUP_MATE = 8.0                  # a teammate this close is support (brain/tracefmt.py FORM_R): no pull-back (regroup_point)
 HUNT_R = 12.0                       # an Invasion defender sent at the carrier / a territory being taken strays no farther
+# (custom, Nov 10) CTF: the emblem over the man carrying our flag (Halo 4 shows it to everyone): every bot knows where
+# he is, as an exact "marker" belief, never a sighting (no shot or recognition through walls), when he is within
+# MARKER_R u or its job is him (hunter, cutoff; Perception.update). A cut-off (director.intercepts) keeps within CUT_R
+# u of its point and never hunts him off it (that was the walk back after him)
+MARKER_R, CUT_R = 30.0, 10.0
 LOOK_CONE = math.radians(50)        # walking out of a fight, a deliberate look stays this close to the way it goes
 H2A_FEET = 0.38                     # H2A reports a body this far above its floor (tools/ground_offset.py: Lockout 0.38,
                                     # Zenith median 0.41); the nav's points lie on the floor
@@ -595,13 +600,13 @@ class Belief:
     vel: Vec
     t: float           # when last confirmed
     seen: bool         # in view right now
-    source: str        # eyes | radar | callout
+    source: str        # eyes | radar | callout | marker (custom: the CTF carrier's emblem)
     weak: bool = False  # a teammate called him cracked / one shot
 
 
 @dataclass
 class Order:
-    role: str          # runner | escort | defender | hunter | mid | free
+    role: str          # runner | escort | defender | hunter | cutoff (custom) | mid | free
     point: Vec = None
     target: int = -1
     via: tuple = ()    # waypoints to pass first (attack lane)
@@ -966,6 +971,10 @@ class Perception:
         s.hurt_by(now, me, snap, los)
         if demon:
             s.learn_regen(now, me)
+        # (custom, Nov 10) the man carrying our flag, under his emblem: MARKER_R, or anywhere for its hunters (marker_far)
+        own = (snap.flags or {}).get(me.team) if snap.mode == "ctf" else None
+        marker = own.carrier if own is not None and own.state == "carried" and own.carrier not in (None, -1) else None
+        marker_far = getattr(s, "marker_far", False)
         for e in snap.players:
             if e.team == me.team or not e.alive:
                 s.beliefs.pop(e.id, None) if not e.alive else None
@@ -1035,6 +1044,8 @@ class Perception:
                     s.last_seen[e.id] = now
                     s.seen_vitals(e, now)
                     new_sightings.append(e)
+                if e.id == marker and e.id not in s.recognized and (marker_far or d < MARKER_R):
+                    s.beliefs[e.id] = Belief(e.pos, e.vel, now, False, "marker")   # (not noticed yet: still his emblem)
                 continue
             # not visible: lose recognition after a short grace, keep the memory
             s.pending.pop(e.id, None)
@@ -1046,6 +1057,9 @@ class Perception:
             b = s.beliefs.get(e.id)
             if b:
                 b.seen = False
+            if e.id == marker and (marker_far or d < MARKER_R):
+                s.beliefs[e.id] = Belief(e.pos, e.vel, now, False, "marker")
+                continue        # (exact: no rougher radar dot or gunfire guess over it)
             # motion tracker (if the match settings show him enemies): moving, not crouched, in range; skill decides
             # whether it is noticed
             moving = e.vel.flat() > 0.6 and not e.crouching
@@ -1398,6 +1412,11 @@ class Bot:
             c = snap.player(snap.inv_core_carrier) if snap.inv_core_carrier is not None else None
             goal_pt = c.pos if c is not None and c.alive and c.team != me.team else o.point
             strays, away = (lambda q: dist(q, goal_pt) > HUNT_R), dist(me.pos, goal_pt) > 0.5 * HUNT_R
+        elif o.role == "cutoff" and o.point is not None:
+            # (custom, Nov 10) a cut-off on the enemy carrier's way home (director.intercepts): it gets there and
+            # holds there, fights near it, nothing far off it
+            goal_pt = o.point
+            strays, away = (lambda q: dist(q, goal_pt) > CUT_R), dist(me.pos, goal_pt) > 0.5 * CUT_R
         elif o.role == "screen" and o.point is not None:
             # a carry's screen (director.role_slots): it holds its spot between our carrier and their base, the chase
             # fought there, nothing far off it
@@ -2063,6 +2082,7 @@ class Bot:
         if s.goal[0] == "fight" and s.goal[1] in allies:
             s.goal, s.next_decide = ("roam", None), now
         busy = s.goal[0] in ("fight", "retreat")
+        s.per.marker_far = s.order.role in ("hunter", "cutoff")     # (custom: the carrier's emblem, MARKER_R)
         for e in s.per.update(now, me, snap, los, callouts, game=s.game):
             s.reports.append(("seen", e.id, e.pos, now, busy))
             if e.has_flag:
@@ -3061,7 +3081,7 @@ class Bot:
                 and s.goal[0] == "retreat" and not snap.shieldless):
             scores[s.goal] = max(scores.get(s.goal, 0.0), 2.3)
         o = s.order
-        if o.role in ("runner", "escort", "defender", "hunter", "mid", "screen") and o.point:
+        if o.role in ("runner", "escort", "defender", "hunter", "cutoff", "mid", "screen") and o.point:
             live = s.live_point(me, snap)
             pt = live or s.objective_point(me)
             scores[("objective", pt)] = 0.5 + 0.7 * s.p.objective
@@ -3075,13 +3095,17 @@ class Bot:
                     scores[("objective", pt)] = max(scores[("objective", pt)], GRAB_SCORE)
             if me.has_flag:
                 scores[("objective", pt)] = 3.0  # carrying: go home, do not stop to fight
-            elif o.role == "hunter" and live is not None:
-                # our flag is out: get it back (its carrier, or stand on it the 15 s Reach's return takes)
+            elif (o.role == "hunter" and live is not None) or o.role == "cutoff":
+                # our flag is out: get it back (its carrier, or stand on it the 15 s Reach's return takes); a cut-off
+                # (custom) gets to its point on his way home first, as much the job
                 scores[("objective", pt)] = 1.3 + 0.6 * s.p.teamwork
             elif getattr(s, "blitz_until", 0.0) > now:
                 # the team's blitz (director.blitz_tick): its rally, then the objective, ahead of side trips
                 scores[("objective", pt)] = max(scores[("objective", pt)], 1.3 + 0.6 * s.p.teamwork)
         unseen = {k: b for k, b in s.per.beliefs.items() if not (isinstance(k, int) and b.seen)}
+        if o.role == "cutoff":
+            # (custom) a cut-off waits on his way home: hunting his emblem was the walk back after him (live Adrift)
+            unseen = {k: b for k, b in unseen.items() if b.source != "marker"}
         known = list(unseen.values())
         if known and not me.has_flag:
             rank = lambda k: unseen[k].t + (3.0 if unseen[k].weak else 0.0)
@@ -3128,7 +3152,7 @@ class Bot:
         # CTF map checked the first hold IS the flag stand, so camper defenders scored it 0.74 over their cover post
         # 0.71 and crouched on the flag
         if (s.p.camping > 0.5 and s.p.map_iq > 0.15 and not me.has_flag
-                and s.order.role not in ("runner", "escort", "defender", "hunter")):
+                and s.order.role not in ("runner", "escort", "defender", "hunter", "cutoff")):
             spot = min(s.map["holds"][s.team], key=lambda h: dist(h, me.pos))
             scores[("hold", spot)] = 0.2 + 0.6 * s.p.camping
         if not me.has_flag and getattr(s, "can_pickup", True):   # H2A / H4: pickups not decoded: no trips
