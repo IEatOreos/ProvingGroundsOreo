@@ -14,7 +14,8 @@ struct ImFont;
 #define HB_STYLE_ANY 7          // the brain deals a play style
 #define HB_TIER_SCALING 4       // hb_bot.tier: Scaling (brain/scaling.py)
 #define HB_TIER_DEMON 5         // hb_bot.tier: Demon (custom: fixed Legendary under its own name)
-#define HB_TIERS 6
+#define HB_TIER_BLIND 6         // hb_bot.tier: Blind (custom, Nov 10: Legendary, its aim and hands drawn per bot)
+#define HB_TIERS 7
 
 struct hb_bot {
     char name[16];              // up to 15 characters, the game's name field
@@ -33,7 +34,7 @@ struct hb_roster {
 struct bots_panel_env {
     hb_roster* roster;
     uint32_t* enabled;          // bots join at all
-    uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling, 6 demon
+    uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling, 6 demon, 7 blind
     uint32_t* lidar_mode;       // mapping bots instead of fighters
     uint32_t* lidar_players;    // players in all in LiDAR mode (2..16)
     uint32_t* collector;        // records the player each match for the Observer (tools/collector.py); may be null

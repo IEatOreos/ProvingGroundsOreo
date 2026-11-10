@@ -3,6 +3,7 @@ import ast
 import dataclasses
 import hashlib
 import json
+import math
 import random
 import sys
 import unittest
@@ -31,6 +32,8 @@ class DifficultySeparationTests(unittest.TestCase):
                 stock = {**profiles.TIERS['top'], **profiles.CRAFT['top'], **profiles.PERSONALITIES[style]}
                 original = {k:v*rng.uniform(.9,1.1) for k,v in stock.items()}
                 numeric['overshoot'] = original['overshoot']
+                self.assertAlmostEqual(math.degrees(numeric['turn']), 650)   # (Nov 10, owner)
+                numeric['turn'] = math.radians(1000)     # the stock turn speed, for the stock fingerprint
                 values.append(numeric)
                 self.assertGreater(p.reaction,.1385)
                 self.assertLess(p.reaction,.1695)

@@ -1,7 +1,7 @@
 """Run the brain on a live MCC game: every bot botcore.dll drives gets a Bot + its team's Director.
 
 usage: python -I live_bots.py [seconds] [--tier T[,T..]] [--personality P[,P..]] [--quiet] [--trace FILE]
-Tiers: novice average strong top demon (or scaling). Lists are dealt out to bots in order (cycling).
+Tiers: novice average strong top demon blind (or scaling). Lists are dealt out to bots in order (cycling).
 Needs botcore.dll injected and bots made with `botctl.py add_bot` (or adopted). Ctrl+C or the time
 limit stops it; bots are left standing still.
 """

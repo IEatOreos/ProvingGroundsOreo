@@ -320,6 +320,10 @@ HEARD_KEEP = 1.5                       # a shot heard is looked toward this long
 # a melee press within this (a skilled player's Reach game: 19 close melees at 0.37-1.91 u, median 0.80, 18 within
 # 1.18; bots pressing from 1.55 u, raised from 1.3 for the rate, swung at people well out of reach)
 MELEE_R = 1.25
+# (custom, Nov 10) Halo 4 Demon swings only this near (Bot.melee_r): 8 live Halo 4 matches (Nov 9-10), 246 Demon presses,
+# a melee-sized hit (0.4+ of shield and body, or the kill) within 0.6 s: 48% under 0.9 u, 34% at 0.9-1.1, 28% at
+# 1.1-1.25, 20% at 1.25-1.5; its walk in on every man (PRESS 1.0) put most of its presses at the old edge
+H4_DEMON_MELEE_R = 1.0
 DRY_FIGHT_R = 2.5      # u: with every gun empty, a man nearer than this is still fought (a melee), Bot.choose
 SWING_R, SWING_COS = 3.0, 0.7   # a melee press needs an enemy this near (a sword lunge 2.25 u) within 45 deg (melee_check)
 HEAR_RANGE = 30.0                      # gunfire this close is heard: about where it came from (Perception.update)
@@ -1127,7 +1131,7 @@ class Aim:
         if p is not s.active_profile:
             s.next_sample, s.flick = 0.0, None
         s.active_profile = p
-        unerring = profiles.fixed_demon(s.p) or (protected and profiles.fixed_high(s.p))
+        unerring = profiles.fixed_demon(s.p) or (protected and profiles.protected_aim(s.p))   # (Blind: its own hands)
         if precise and target_id is not None:
             # The percentage roll, rather than human aim error, controls these shots.
             point = target_point if target_point is not None else tpos + Vec(0, 0, aim_height(True, crouched))
@@ -1876,8 +1880,6 @@ class Bot:
         act = s.plan(now, dt, snap, los, nav, callouts, items)
         s.sniper_missed_last = False
         me = snap.player(s.id)
-        if act.melee and me is not None and me.alive and me.vehicle in (None, -1):
-            s.melee_check(me, snap, act)
         if not s.grenades_allowed():
             act.grenade = False   # final safeguard for every grenade path, including boarding
         if me and me.alive:
@@ -1891,7 +1893,7 @@ class Bot:
                 if target is not None and target.alive and h4_demon_fire(s.p, s.game, me, target):
                     locked = h4_ray(me, target, lock[1], lead=True)
             if locked is None and (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
-                    and ((profiles.fixed_high(s.p)) or percentage_sniper(s.p, me))
+                    and ((profiles.protected_aim(s.p)) or percentage_sniper(s.p, me))   # (Blind: no head snap)
                     and shot_part is not None):
                 target = snap.player(shot_part[0])
                 if (target is not None and target.alive
@@ -1917,6 +1919,10 @@ class Bot:
                 s.last_shot_t, s.next_fire = previous_shot, now
         else:
             s.nade_retry = None
+        if act.melee and me is not None and me.alive and me.vehicle in (None, -1):
+            # (custom, Nov 10) judged on the view the swing really goes out on, after the turn cap and the lock: before
+            # them a man the capped view had not reached yet passed the check, and the press went into the air
+            s.melee_check(me, snap, act)
         s.percentage_sniper_shot(now, me, snap, act)
         s.h4_pressed = bool(act.fire)   # (Halo 4 Demon's tap: a release between presses, fight)
         return act
@@ -5209,7 +5215,8 @@ class Bot:
         slack = (2.5 if w in AUTO else 1.6) if d < SHORT_BAND and s.p.tactics > 0.15 else 1.0
         on = (s.aim.on_target(me, b.pos, act.yaw, act.pitch, slack)
               or (loose is not None and s.aim.landing(now, loose["early"], tid))) and seen_fire
-        if (head_only or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me) or h4):
+        if ((head_only and not profiles.fixed_blind(s.p)) or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me) or h4):
+            # (Blind: no head snap, its trigger waits on its own aim)
             # The final shot command snaps to the selected part after the turn cap (Halo 4 Demon: every gun it locks,
             # Bot.think h4_lock).
             on = seen_fire
@@ -5224,7 +5231,7 @@ class Bot:
                 seen_fire = False      # stop an automatic burst when the target becomes protected
         if s.dry(me):                  # nothing to shoot with: punch if close, else go rearm
             on = False
-            if d < MELEE_R:
+            if d < s.melee_r():
                 act.melee = True
         blast = BLAST.get(w)
         mates_near = any(p.team == me.team and p.alive and p.id != me.id and dist(p.pos, b.pos) < (blast or 1.5)
@@ -5349,7 +5356,7 @@ class Bot:
             act.grenade, s.grenade_ready_at = True, now + s.rng.uniform(4, 9)
             s.notes.append("grenade: counter his ability")
             s.att = ["grenade", tid, round(spot.x, 1), round(spot.y, 1)]
-        if (b.pos - me.pos).flat() < MELEE_R and abs(b.pos.z - me.pos.z) < 1.3 and w not in LUNGE:
+        if (b.pos - me.pos).flat() < s.melee_r() and abs(b.pos.z - me.pos.z) < 1.3 and w not in LUNGE:
             act.melee = True
         if w in LUNGE:
             # the sword and the hammer attack with the trigger (the hammer's swing, the sword's lunge); the melee button
@@ -5531,7 +5538,7 @@ class Bot:
             return False
         if target is not None and target.weapon in LUNGE:
             return False                                  # never into a sword or a hammer (keep_off)
-        if d <= MELEE_R * 0.8:
+        if d <= s.melee_r() * 0.8:
             return False
         weak = (target is not None and target.alive and target.shield <= 0.25
                 and (not snap.shieldless or target.health <= 0.5))
@@ -6784,6 +6791,10 @@ class Bot:
     def h4_demon(s):
         """(custom) Fixed Demon in Halo 4: the fight odds (brain/odds.py) and the team's sightings are its."""
         return s.game == "h4" and profiles.fixed_demon(s.p)
+
+    def melee_r(s):
+        """(custom, Nov 10) The floor distance a melee press goes from: H4_DEMON_MELEE_R for Halo 4 Demon, else MELEE_R."""
+        return H4_DEMON_MELEE_R if s.h4_demon() else MELEE_R
 
     def retreat_juke(s, act):
         """The strafe juke on a retreat with a man in view, after the walk to cover (act: the walk in the view's frame).

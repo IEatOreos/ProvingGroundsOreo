@@ -118,7 +118,7 @@ def summary(trace):
                 for r in d["world"]:
                     seen.setdefault(r[0], dict(team=r[1], bot=bool(r[8])))
                     seen[r[0]]["bot"] = seen[r[0]]["bot"] or bool(r[8])
-    tier = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary", "demon": "Demon"}
+    tier = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary", "demon": "Demon", "blind": "Blind"}
     players, people = [], 0
     for pid in sorted(set(seen) | set(bots)):
         b = bots.get(pid)

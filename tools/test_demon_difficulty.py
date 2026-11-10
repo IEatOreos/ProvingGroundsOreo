@@ -24,7 +24,7 @@ class DemonProfileTests(unittest.TestCase):
         for style in sorted(PERSONALITIES):
             for seed in range(5):
                 demon=make_profile('demon',style,random.Random(seed))
-                self.assertEqual(demon.turn, math.radians(480))
+                self.assertEqual(demon.turn, math.radians(700))   # (Nov 10, owner; was 480)
                 # Use the original turn cap when comparing the rest to the pre-split profile.
                 values = dict(vars(demon), turn=math.radians(1000))
                 numbers.append({k:v for k,v in values.items() if isinstance(v,(float,int))})
@@ -71,15 +71,19 @@ class NativeTableTests(unittest.TestCase):
         self.assertEqual(tuple(self.strings(panel, "TIER_KEY")), botctl.TIER_KEYS)
         self.assertEqual(self.strings(panel, "TIER_NAME")[5], "Demon")
         header = (ROOT / "native" / "bots_panel.h").read_text(encoding="utf-8")
+        self.assertEqual(self.strings(panel, "TIER_NAME")[6], "Blind")
         self.assertIn("#define HB_TIER_DEMON 5", header)
-        self.assertIn("#define HB_TIERS 6", header)
+        self.assertIn("#define HB_TIER_BLIND 6", header)
+        self.assertIn("#define HB_TIERS 7", header)
 
     def test_difficulty_launches_demon(self):
         core = (ROOT / "native" / "botcore.cpp").read_text(encoding="utf-8")
         tiers = self.strings(core, "TIERS")
-        self.assertEqual(len(tiers), 7)
+        self.assertEqual(len(tiers), 8)
         self.assertEqual(tiers[6], "demon")
-        self.assertIn("difficulty % 7", core)
+        self.assertEqual(tiers[7], "blind")
+        self.assertEqual(botctl.DIFFICULTY_TIERS, tiers)
+        self.assertIn("difficulty % 8", core)
 
 
 if __name__ == "__main__":

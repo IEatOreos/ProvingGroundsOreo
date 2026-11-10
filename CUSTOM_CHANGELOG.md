@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Turn speeds, Halo 4 Demon melee reach, and the new Blind difficulty, 2026-11-10
+
+The owner, from the tier chart: turn speed "435 · 650 · 650 · 700 ... Normal Hard legendary Demon"; "Demon bots seem to have an issue meleeing they miss quite a bit of melee ... Investigate"; and "another difficulty called Blind. And its just legendary but all the Aim and Hands Stats, are a random value between their current base stats and the celing being a little under the demons stats".
+
+- **Turn speeds** (`brain/profiles.py` `TURN`): Normal 435, Heroic 650 (unchanged), Legendary 650 (was 1000), Demon 700 (was 480) deg/s. `LEGENDARY_AIM` no longer carries its own 1000 deg/s, so Legendary's protected head/turret aim plans its flicks at Legendary's real turn speed. Before this, `turn_cap` already held the view to the profile's speed, which it does for every tier. The protected aim's other values are unchanged.
+- **Halo 4 Demon melee** (`brain/bot.py`):
+  - Measured in 8 live Halo 4 matches (Nov 9 and 10, scratchpad `melee_audit.py`). A hit means the nearest enemy lost 0.4 or more of shield and health, or died, within 0.6 s of the press.
+  - Demon's presses hit 48% under 0.9 u, 34% at 0.9 to 1.1 u, 28% at 1.1 to 1.25 u and 20% at 1.25 to 1.5 u (246 presses).
+  - Demon walks in on every man (`PRESS` 1.0), so most of its presses came at the old 1.25 u edge (`MELEE_R`, measured in Reach). Its view was on the man in most misses (median 6 degrees), so aim was not the cause.
+  - Change: `H4_DEMON_MELEE_R` = 1.0 u via `Bot.melee_r`, for the press, the empty-gun punch and `push_in`'s stop (now 0.8 u). Reach and the other tiers keep 1.25 u.
+  - Every tier: `melee_check` now runs after `turn_cap` and the Halo 4 lock, so the "enemy in the swing" check uses the view the swing really goes out on.
+  - Heroic and Legendary showed the same falloff with distance, at 17 to 23% overall. They are not changed here.
+- **Blind** (`profiles.BLIND`, `blind_profile`, `blind_ranges`, `fixed_blind`, `protected_aim`):
+  - Blind is fixed Legendary (tier `top`, extra None, label `blind`): all of Legendary's game sense, rules, priorities and calls, jittered as before.
+  - Each bot draws reaction, aim error, aim lag, tracking, flick, overshoot, decision interval and turn speed on its own, uniformly between Legendary's base and 85% of the way to Demon's (`BLIND_TOWARD`). Examples: reaction 0.154 to 0.023 s, turn 650 to 692.5 deg/s, decision interval 0.10 to 0.0235 s. Lead stays Legendary's.
+  - Its own hands aim everywhere: no protected head/turret precision (`precision_profile`), no unerring lead (`Aim.step`), no DMR/sniper head snap (`think`), and its trigger waits on its own aim. Legendary and Demon keep all of these (`protected_aim`).
+  - Trace/report name "blind"/"Blind" (`tracefmt` label, `match_export`, `observer`, `player_stats`).
+- **Native BOTS panel** (`native/bots_panel.h`/`.cpp`, `overlay.cpp`, `botcore.cpp`, `shared.h`):
+  - Tier 6 "Blind" (key `blind`, violet, Legendary's four chevrons), with "for everyone" difficulty 7.
+  - The pickers show Easy, Normal, Heroic, Legendary, Blind, Demon, Mixed, Scaling. The inspector's second row shows Blind, Demon, Scaling. botcore launches difficulty 7 as `--tier blind`.
+  - `tools/botctl.py` `TIER_KEYS` / `DIFFICULTY_TIERS` match.
+- Validation:
+  - `tools/test_blind_difficulty.py` is new. `tools/test_demon_difficulty.py` now expects Demon at 700 deg/s and checks the native tables (8 difficulties, `HB_TIERS` 7). `tools/test_difficulty_separation.py` checks Legendary at 650 and keeps the rest of its stock fingerprint. All 50 `tools/test_*.py` files pass (the project's `python\python.exe`).
+  - `native\build.bat blind` built `native/bin/botcore_blind.dll` (not in Git). The only warnings were the existing `_wfopen` ones; the `panel_art.py` step failed as before (PIL missing).
+- Not tested in game: the Blind menu entries need MCC restarted onto `botcore_blind.dll` (the launcher loads the newest `botcore*.dll`). The turn speeds, melee reach and Blind brain need a bot-process restart. Whether 1.0 u lifts Demon's Halo 4 melee hit rate is unconfirmed. The hit measure is approximate: a teammate's burst can count as a hit.
+
 ### Halo 4 CTF: the flag carrier shoots its magnum on the way home, 2026-11-10
 
 The owner: "Halo 4 is the only halo where you have a weapon wielded while carrying flag, but they currently do not shoot the magnum at all when carrying the flag in halo 4".

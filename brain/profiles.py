@@ -32,9 +32,10 @@ LOOSE_AIM = True
 LOOSE = {"novice": dict(follow=0.35, early=0.4), "average": dict(follow=0.3, early=0.35),
          "strong": dict(follow=0.25, early=0.3)}
 # Turn speed, rad/s: the most the view turns, like a player's look sensitivity. Normal at a skilled player's flicks
-# onto a man (435 deg/s, p95 of his Cyberdyne acquisitions, Aim.step); Legendary 1000 deg/s, a 180 in about 0.27 s.
+# onto a man (435 deg/s, p95 of his Cyberdyne acquisitions, Aim.step); (custom, Nov 10, owner) Heroic and Legendary
+# 650 deg/s (Legendary was 1000), Demon 700 (was 480).
 # Not jittered (make_profile): one more random draw would shift every seeded bot's other values
-TURN = {k: math.radians(v) for k, v in dict(novice=270, average=435, strong=650, top=1000).items()}
+TURN = {k: math.radians(v) for k, v in dict(novice=270, average=435, strong=650, top=650).items()}
 # Intent to kill (bot.Bot.press_on): the share of fights a bot walks in on the man it fights inside its gun's band rather
 # than holding its ground to strafe. A skilled player's Halo 3 matches against Legendary (tools/intent.py, game memory
 # only): he walked toward the man in view 47% of the in-view time and held 39%, Legendary 33% and 63%; he came inside
@@ -77,7 +78,7 @@ CRAFT = {
 # Explicit Demon settings: later edits to Legendary's rows must not change Demon.
 REACTION[DEMON] = 0.70
 SHARP[DEMON] = dict(lag=0.045, flick=0.7, aim_err=0.006, track=0.08)
-TURN[DEMON] = math.radians(480)
+TURN[DEMON] = math.radians(700)
 PRESS[DEMON] = 1.0
 TIERS[DEMON] = dict(HANDS, lag=0.045, flick=0.7, aim_err=0.006, track=0.08,
                     reaction=0.154, memory=10, radar=1.0, teamwork=0.95)
@@ -87,7 +88,24 @@ DEMON_AIM = dict(aim_err=0.0, lag=0.001, track=0.001, overshoot=0.0,
                  lead=0.0, flick=0.05)
 # An independent protected exception: future Demon tuning must not alter Legendary's retained aim.
 LEGENDARY_AIM = dict(aim_err=0.0, lag=0.001, track=0.001, overshoot=0.0,
-                     lead=0.0, flick=0.05, turn=math.radians(1000))
+                     lead=0.0, flick=0.05)   # (Nov 10) turn: Legendary's own TURN (was 1000 deg/s here)
+
+
+# (custom, Nov 10, owner) Blind: Legendary (tier "top", extra None, label "blind": every Legendary rule) whose aim and
+# hands are each drawn per bot between Legendary's base and BLIND_TOWARD of the way on to Demon's, a real player's
+# uneven strengths. Its own hands aim everywhere: no protected head/turret precision, no DMR/sniper head snap (aim_own)
+BLIND = "blind"
+BLIND_TOWARD = 0.85
+BLIND_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "decide")   # and turn (TURN)
+
+
+def fixed_blind(prof):
+    return prof.label == BLIND and prof.extra is None
+
+
+def protected_aim(prof):
+    """Fixed Legendary's protected precision, DMR/sniper head snap and unerring lead; Demon's own, not Blind's."""
+    return fixed_high(prof) and not fixed_blind(prof)
 
 
 def fixed_high(prof):
@@ -135,7 +153,7 @@ def gunner_priority(prof):
 
 def precision_profile(prof):
     """Keep Legendary's established head/turret aim without changing its base attributes."""
-    return replace(prof, **LEGENDARY_AIM) if fixed_high(prof) and not fixed_demon(prof) else prof
+    return replace(prof, **LEGENDARY_AIM) if protected_aim(prof) and not fixed_demon(prof) else prof
 
 # Traits are 0..1. Personalities only change *what* a bot prefers, never how well it aims.
 PERSONALITIES = {
@@ -189,7 +207,9 @@ class Profile:
 
 def make_profile(tier, personality, rng=random):
     """Build stock tier attributes; Demon retains our former fixed Legendary overrides."""
-    vals = {**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
+    if tier == BLIND:
+        return blind_profile(personality, rng)
+    vals ={**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     if tier == "top":
         jit["overshoot"] = 0.0
@@ -204,4 +224,19 @@ def make_profile(tier, personality, rng=random):
         label=DEMON if tier == DEMON else None,
         **jit,
     )
+
+
+def blind_ranges():
+    """{stat: (Legendary's base, the ceiling BLIND_TOWARD of the way to Demon's)} for Blind's drawn hands."""
+    leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"])
+    dem = dict(TIERS[DEMON], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN[DEMON])
+    return {k: (leg[k], leg[k] + BLIND_TOWARD * (dem[k] - leg[k])) for k in BLIND_HANDS + ("turn",)}
+
+
+def blind_profile(personality, rng=random):
+    """Legendary's profile (its game sense, jittered as ever), its aim and hands each drawn on its own between
+    Legendary's base and the ceiling (blind_ranges): one Blind is quick but loose, the next slow and dead on."""
+    prof = make_profile("top", personality, rng)
+    drawn = {k: rng.uniform(min(a, b), max(a, b)) for k, (a, b) in blind_ranges().items()}
+    return replace(prof, label=BLIND, **drawn)
 
