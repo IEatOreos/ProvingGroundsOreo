@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### LiDAR view: a Match / Simulator / Both scan switch, reopen the last map viewed, and lifts and man cannons drawn by hand, 2026-11-09
+
+The owner: "Why is it when I load a lidar map, it doesnt load the fully simulated one? ... Im not sure what version is being loaded when viewing", then: the scan switch with the date and run count, reopening the last map viewed, and "a way to manually add the ability for me to make it able for a bot to use a man cannon or grav lift ... make it simple for me to do it in lidar".
+
+- Why the simulated scan did not show: the Viewer opened the newest scan of any map, and a map with both scans always opened the match scan. Normal matches write one too (where people walk, their jumps), so 17 maps and layouts showed their played scan over the simulator's (Longbow: 41,852 floor cells against the simulator's 109,458).
+- Scan switch (`tools/lidar_view.html`; `tools/lidar.py` `scans_of`, `/map` "scans"):
+  - Match / Simulator / Both in the header of a stored map. Both draws the simulator's floor and walls in violet over the match scan. A scan the map lacks is greyed out.
+  - The header line (and each button's tooltip) says what each scan is: LiDAR runs or "from your matches", floor cells or "no floor, only jumps", and when it was updated.
+  - The scan picked is remembered: opening a map from the list shows that scan where the map has it.
+- Reopen the last map: the page records the map and scan it shows (`POST /last`, `logs/lidar_view_last.json`). `lidar.py --view` with no map opens that one (the scan it still has), else the newest as before.
+- Lifts and man cannons (Edit spots, Gravity lift / Man cannon tools):
+  - Two clicks: where you step in (the pad), then where it puts you down. A line joins them; either end can be dragged. Name and kind can be changed; Remove takes both ends.
+  - Saved to `owner_rides.json` in the folder of the map or layout shown (`tools/spots.py` "ride").
+  - `brain/maps.py`: `owner_ride_links` adds each as a one-way people's ride link (ride 1, human 1, found_by "owner"), after `anchor_launches`, so its pad stays where it was drawn. `owner_ride_pads` adds a "lift" (or "launcher") marker at a pad no marker of the map is within 1.5 u of, so `Bot.lift_near` / `lift_base` steps into the lift and waits, and the nav keeps drops out of its column. Built-in maps read their layout's and base's (`data_names`).
+  - Save warns when an end is off floor the nav can walk (more than 0.7 u off it, outside the nav, or both ends on one node): `Terrain.add_human_links` skips such a link, so bots would not use it.
+- Validation: new `tools/test_owner_rides.py` (marker added only where the map has none, one-way ride links, malformed rides left out, and on Headlong's real nav a drawn lift is one hjump from pad to landing node, one way); `tools/spots.py --selftest` (rides saved, named, warned off the nav); `tools/test_spots.py` updated. In the browser on Headlong: the switch showed Match (jumps only), Simulator and Both (violet overlay, "MATCH + SIMULATOR"); a Viewer started with no map reopened Headlong in Both; a gravity lift drawn and saved was read by `load_map` (lift marker at the pad) and `_build` (its ride link); a landing moved off the floor saved with the warning. The test ride, its backup and the last-view file were removed. All 488 regression tests pass; `lidar.py --selftest` passes. Bots riding a drawn lift or cannon in a match is untested.
+
 ### LiDAR Simulator: open a map, edit it, then choose to simulate it; no more stuck panel after Stop and save, 2026-11-08
 
 The owner: "when pressing save and stop. I cannot select another map to simulate. Itll just let me pull up the heatmap for it, but itll be stuck saying the other map is still live. Allow me to open a map without simulating it, with ability to still edit it. Then choose if I want to simulate or not."

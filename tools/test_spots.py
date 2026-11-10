@@ -17,7 +17,8 @@ class SpotsTests(unittest.TestCase):
         f = spots.load("reach_cex_headlong")["files"]
         self.assertEqual(f, {"hot": "maps/reach_cex_headlong/positions.json",
                              "patrol": "maps/reach_cex_headlong/infantry_patrols.json",
-                             "hold": "maps/reach_cex_headlong/callouts.json"})
+                             "hold": "maps/reach_cex_headlong/callouts.json",
+                             "ride": "maps/reach_cex_headlong/owner_rides.json"})
 
     def test_refuses_other_paths_and_sites(self):
         self.assertEqual(spots.handle("GET", "/spots", "..\\brain")[0], 404)

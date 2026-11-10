@@ -175,6 +175,7 @@ def load_map(name):
     v = info(name)
     if v is not None:
         m["variant"], m["window"] = v, tuple(v["window"]) if v.get("window") else None
+    m["features"] = owner_ride_pads(m["features"], data_names(m))   # (custom) the owner's lift / man cannon pads
     return m
 
 
@@ -321,6 +322,42 @@ def anchor_launches(links, features):
               and any(flat(p, to) < LIFT_COLUMN and abs(p[2] - to[2]) < 3.0 for p in lifts)):
             k = dict(k, ride=1)             # a low lift's ride: one way (jump_ways), from where it was taken
         out.append(k)
+    return out
+
+
+OWNER_RIDES = "owner_rides.json"   # (custom) gravity lifts and man cannons the owner drew in the LiDAR view (tools/spots.py)
+OWNER_PAD_SAME = 1.5               # u: a lift or launcher marker this near an owner ride's pad is that pad's (no second one)
+
+
+def owner_rides(name):
+    """The rides the owner drew for map folder `name` (maps/<name>/owner_rides.json): [{name, kind "lift" | "cannon",
+    take_off [x, y, z] (where you step in), land [x, y, z] (where it puts you down)}], the malformed ones left out."""
+    path = os.path.join(ROOT, name, OWNER_RIDES)
+    if not os.path.exists(path):
+        return []
+    ok = lambda p: isinstance(p, list) and len(p) == 3 and all(isinstance(v, (int, float)) for v in p)
+    return [r for r in (read_json(path) or {}).get("rides", [])
+            if isinstance(r, dict) and r.get("kind") in ("lift", "cannon") and ok(r.get("take_off")) and ok(r.get("land"))]
+
+
+def owner_ride_links(names):
+    """The owner's rides as people's ride links (one way; bots ride them as the rides people recorded: Bot.lift_base, the
+    nav's launch cost), not moved to a marker's trigger (anchor_launches): his pad is where he put it."""
+    return [dict(kind="jump", ride=1, painted=1, human=1, found_by="owner", name=r.get("name", ""),
+                 take_off=list(r["take_off"]), land=list(r["land"]))
+            for nm in names for r in owner_rides(nm)]
+
+
+def owner_ride_pads(features, names):
+    """features plus a "lift" (a gravity lift) or "launcher" (a man cannon) marker at each owner ride's pad no marker of
+    the map is near: what makes a bot step into a lift and wait (Bot.lift_near) and keeps drops out of its column."""
+    out = list(features)
+    for r in (r for nm in names for r in owner_rides(nm)):
+        p = r["take_off"]
+        if not any(f.get("kind") in ("lift", "launcher") and math.hypot(f["pos"][0] - p[0], f["pos"][1] - p[1]) < OWNER_PAD_SAME
+                   and abs(f["pos"][2] - p[2]) < 3.0 for f in out):
+            out.append(dict(kind="lift" if r["kind"] == "lift" else "launcher", name=r.get("name") or "owner ride",
+                            pos=list(p), owner=True))
     return out
 
 
@@ -521,6 +558,7 @@ def _build(m, window):
         T.jump_apex = jumps[len(jumps) // 2] if len(jumps) >= 20 else 0.8
         links = usable_links(data.get("links", []))
     links = anchor_launches(links + painted, m.get("features", []))
+    links += owner_ride_links(names)     # (custom) the owner's lifts and man cannons (LiDAR view, Edit spots)
     if links:
         T.add_human_links(links)
     if paint:

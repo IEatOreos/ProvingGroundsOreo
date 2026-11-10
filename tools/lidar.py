@@ -798,28 +798,35 @@ def map_list():
     import jumpphys
     out = []
     for name in map_list_names():
-        d = os.path.join(ROOT, "maps", name)
         item = dict(name=name, title=map_title(name), mcc=name.partition("/")[0] in map_titles(),
                     game=jumpphys.game_of(name.partition("/")[0]))
-        for key, fn in (("scan", "lidar.json"), ("sim", "lidar_sim.json")):
-            p = os.path.join(d, fn)
-            if os.path.exists(p):
-                stamp = os.path.getmtime(p)
-                if _SCAN_INFO.get(p, (None,))[0] != stamp:   # read once per change
-                    data = load(p)
-                    walk = data.get("walk", [])
-                    _SCAN_INFO[p] = (stamp, dict(runs=data.get("runs", 0), bot_minutes=data.get("bot_minutes", 0),
-                                                 human_minutes=data.get("human_minutes", 0), links=len(data.get("links", [])),
-                                                 human_links=sum(1 for l in data.get("links", []) if l.get("human")),
-                                                 cells=sum(1 for w in walk if len(w) == 5 and w[3] not in (KIND_AIR, KIND_AIRSPACE)),
-                                                 updated=round(stamp)))
-                info = _SCAN_INFO[p][1]
-                # (the simulator also writes its jumps into lidar.json: a lidar.json with no floor and only bots'
-                # links is the simulator's, not a scan from matches; the view opens the simulator's scan for it)
-                if info["cells"] or (info["human_links"] if key == "scan" else info["links"]):
-                    item[key] = info
+        item.update(scans_of(name))
         out.append(item)
     return out
+
+
+def scans_of(name):
+    """{"scan": info, "sim": info} of a map's LiDAR scans that have something in them (map_list; the view's scan switch,
+    custom): runs, minutes, floor cells, links, when updated."""
+    d, item = os.path.join(ROOT, "maps", name), {}
+    for key, fn in (("scan", "lidar.json"), ("sim", "lidar_sim.json")):
+        p = os.path.join(d, fn)
+        if os.path.exists(p):
+            stamp = os.path.getmtime(p)
+            if _SCAN_INFO.get(p, (None,))[0] != stamp:   # read once per change
+                data = load(p)
+                walk = data.get("walk", [])
+                _SCAN_INFO[p] = (stamp, dict(runs=data.get("runs", 0), bot_minutes=data.get("bot_minutes", 0),
+                                             human_minutes=data.get("human_minutes", 0), links=len(data.get("links", [])),
+                                             human_links=sum(1 for l in data.get("links", []) if l.get("human")),
+                                             cells=sum(1 for w in walk if len(w) == 5 and w[3] not in (KIND_AIR, KIND_AIRSPACE)),
+                                             updated=round(stamp)))
+            info = _SCAN_INFO[p][1]
+            # (the simulator also writes its jumps into lidar.json: a lidar.json with no floor and only bots'
+            # links is the simulator's, not a scan from matches; the view opens the simulator's scan for it)
+            if info["cells"] or (info["human_links"] if key == "scan" else info["links"]):
+                item[key] = info
+    return item
 
 
 def remove_refused(h, name, src, header):
@@ -2586,6 +2593,9 @@ def serve(hub, port=PORT):
                     view = h.stored_view()
                     if getattr(h, "view_src", "scan") == "sim":
                         view.update(src="sim")
+                    if h.mode == "stored":           # (custom) the scan switch: which scan, and the map's scans
+                        view.setdefault("src", getattr(h, "view_src", "scan"))
+                    view["scans"] = scans_of(h.rec.map)
                     s.send(json.dumps(view).encode(), "application/json")
                 elif map_ok(name):
                     if src == "scan":                # no scan from matches, a simulator one: show that
@@ -2595,6 +2605,7 @@ def serve(hub, port=PORT):
                     path = os.path.join(ROOT, "maps", name, "lidar_sim.json" if src == "sim" else "lidar.json")
                     view = Hub(Recorder(name, count_run=False, path=path), "stored").stored_view()
                     view.update(browse=True, src=src)  # another map than the one being mapped: stored data only
+                    view["scans"] = scans_of(name)     # (custom) the scan switch
                     s.send(json.dumps(view).encode(), "application/json")
                 else:
                     s.send_error(404)
@@ -2636,6 +2647,14 @@ def serve(hub, port=PORT):
                 hub.yielded = True
                 threading.Thread(target=lambda: (box["srv"].shutdown(), box["srv"].server_close()), daemon=True).start()
                 return
+            if u.path == "/last":                    # (custom) the map the view opened: the Viewer reopens it
+                if s.headers.get("X-LiDAR") != "last":
+                    return s.answer(403, dict(error="refused"))
+                name, src = (q.get("name") or [""])[0], (q.get("src") or ["scan"])[0]
+                if not map_ok(name) or src not in SCAN_SRCS:
+                    return s.answer(400, dict(error="no such map or scan"))
+                save_last_view(name, src)
+                return s.answer(200, dict(ok=True))
             if u.path == "/spots":                   # (custom) Edit spots' Save (tools/spots.py)
                 import spots
                 n = int(s.headers.get("Content-Length") or 0)
@@ -3143,12 +3162,44 @@ def main(o):
             srv.shutdown()
 
 
+LAST_VIEW = os.path.join(ROOT, "logs", "lidar_view_last.json")   # (custom) the map the view opened last
+SCAN_SRCS = ("scan", "sim", "both")              # match scan, simulator scan, both overlaid (the view's scan switch)
+
+
+def save_last_view(name, src, path=None):
+    """Keep the map and scan the view opened (POST /last): the LiDAR Viewer reopens them (view())."""
+    path = path or LAST_VIEW
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(dict(name=name, src=src, t=round(time.time())), f)
+    os.replace(tmp, path)
+
+
+def last_view(path=None):
+    """(map, scan) the view opened last, the scan one it still has (both: both still there), or None (none kept, or
+    the map is gone)."""
+    d = load(path or LAST_VIEW)
+    name, src = d.get("name"), d.get("src")
+    if not isinstance(name, str) or not map_ok(name) or src not in SCAN_SRCS:
+        return None
+    have = scans_of(name)
+    if src == "both" and not ("scan" in have and "sim" in have):
+        src = "sim" if "sim" in have else "scan"
+    elif src == "sim" and "sim" not in have:
+        src = "scan"
+    return name, src
+
+
 def view(o):
-    """The stored data of a map in the 3D view (no game needed); the newest map by default. If
-    the live view already runs (a LiDAR match), just open it."""
+    """The stored data of a map in the 3D view (no game needed): the map it opened last (custom), else the newest map.
+    If the live view already runs (a LiDAR match), just open it."""
     import appwindow
     name, src = o.map, "scan"
-    if not name:
+    last = None if name else last_view()
+    if last:                                         # (custom) the map (and scan) the view showed last
+        name, src = last
+    elif not name:
         # the newest scan with floor in it, from matches or from the simulator (a simmed map has a lidar.json with
         # only the simulator's jumps: map_list leaves that out)
         found = []

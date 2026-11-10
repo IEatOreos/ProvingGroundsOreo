@@ -13,6 +13,10 @@ from (brain/maps.py load_map), so an edit is what the next match loads:
           from the enemies, Firefight falls back to them, and a map with no power positions holds them instead
           (director.positions). Each team keeps at least one. A Forge layout's own callouts are made again when its
           layout changes (tools/variant_strategy.py), and its holds with them.
+  ride    gravity lifts and man cannons (custom, Nov 9): owner_rides.json {rides: [{name, kind lift | cannon, take_off,
+          land}]} in the folder of the map or layout shown (brain/maps.py owner_rides): a one-way people's ride link
+          from where you step in to where it puts you down, and a lift / launcher marker at the pad the map lacks, so bots
+          ride it as they ride the ones people recorded. Save warns of an end the nav cannot use (the nav skips it).
 Every save keeps the files it replaces in backups/spots/ and writes each one whole (a match may read it any time).
 
 usage: python -I spots.py --selftest
@@ -35,7 +39,8 @@ for _p in (ROOT, HERE):
 
 MAP_NAME = re.compile(r"[a-z0-9_]+(/variants/v[0-9a-f]{8})?")   # tools/lidar.py MAP_NAME: a map or a layout of one
 TEAMS = ("red", "blue")
-MAX_HOT, MAX_PATROL, MAX_HOLD = 32, 32, 16
+MAX_HOT, MAX_PATROL, MAX_HOLD, MAX_RIDE = 32, 32, 16, 32
+RIDE_KINDS = ("lift", "cannon")
 NEAR = 1.0                        # a computed power position this close to an owner spot gives way (power_positions --add)
 LIMIT = 20000.0                   # no map reaches this far from its origin
 LEVEL_POINTS = 200000             # the level floor sent to the view at most (its cells thinned to fit)
@@ -66,7 +71,8 @@ def files(name):
     builtin = vd != d and bool(variants.base_area(_read(os.path.join(d, "objects.json"), {})))
     own = lambda fn: (os.path.join(vd, fn) if os.path.exists(os.path.join(vd, fn)) and not builtin
                       else os.path.join(d, fn))
-    return dict(hot=own("positions.json"), patrol=os.path.join(d, "infantry_patrols.json"), hold=own("callouts.json"))
+    return dict(hot=own("positions.json"), patrol=os.path.join(d, "infantry_patrols.json"), hold=own("callouts.json"),
+                ride=os.path.join(vd, "owner_rides.json"))   # (its own folder: the brain reads each of data_names)
 
 
 def _rel(path, start=ROOT):
@@ -101,9 +107,12 @@ def load(name):
             patrol.append(dict(name=k, pos=pos, team=v.get("team") if isinstance(v, dict) and v.get("team") in TEAMS else None))
     holds = (_read(f["hold"], {}).get("holds") or {})
     hold = {t: [p for p in map(_xyz, holds.get(t, [])) if p] for t in TEAMS}
+    ride = [dict(name=r.get("name") or "", kind=r["kind"], take_off=_xyz(r.get("take_off")), land=_xyz(r.get("land")))
+            for r in _read(f["ride"], {}).get("rides", []) if isinstance(r, dict) and r.get("kind") in RIDE_KINDS
+            and _xyz(r.get("take_off")) and _xyz(r.get("land"))]
     rel = {k: _rel(p) for k, p in f.items()}
     shared = {k: "/variants/" in name and "/variants/" not in rel[k] for k in rel}
-    return dict(map=name, hot=hot, patrol=patrol, hold=hold, files=rel, shared=shared)
+    return dict(map=name, hot=hot, patrol=patrol, hold=hold, ride=ride, files=rel, shared=shared)
 
 
 def check(sent):
@@ -142,7 +151,19 @@ def check(sent):
             raise ValueError(f"a {t} hold without a place")
     if len(hot) > MAX_HOT or len(patrol) > MAX_PATROL or any(len(v) > MAX_HOLD for v in hold.values()):
         raise ValueError(f"at most {MAX_HOT} hot spots, {MAX_PATROL} patrol points and {MAX_HOLD} holds a team")
-    return hot, patrol, hold
+    ride = []
+    for r in sent.get("ride", []):
+        r = r if isinstance(r, dict) else {}
+        a, b, kind = _xyz(r.get("take_off")), _xyz(r.get("land")), r.get("kind")
+        nm = " ".join(r["name"].split())[:60] if isinstance(r.get("name"), str) else ""
+        if a is None or b is None or kind not in RIDE_KINDS:
+            raise ValueError("a lift or man cannon needs where you step in, where it puts you down and its kind")
+        if math.dist(a, b) < 0.5:
+            raise ValueError(f"{nm or 'a ride'}: where you step in and where it puts you down are the same spot")
+        ride.append((nm or ("Gravity lift" if kind == "lift" else "Man cannon"), kind, a, b))
+    if len(ride) > MAX_RIDE:
+        raise ValueError(f"at most {MAX_RIDE} lifts and man cannons")
+    return hot, patrol, hold, ride
 
 
 def hot_rows(old, hot, describe=None):
@@ -195,7 +216,7 @@ def save(name, sent, describe=None, root=None):
     whose contents change are written; each is copied to backups/spots/ first."""
     if not map_ok(name):
         raise ValueError(f"no map {name!r}")
-    hot, patrol, hold = check(sent)
+    hot, patrol, hold, ride = check(sent)
     f = files(name)
     with _LOCK:
         old_rows = _read(f["hot"], [])
@@ -209,6 +230,9 @@ def save(name, sent, describe=None, root=None):
                "hold": json.dumps(cfg, indent=1) + "\n"}
         if not patrol and not os.path.exists(f["patrol"]):
             out.pop("patrol")                   # no patrols and no file: none made
+        out["ride"] = json.dumps(dict(rides=[dict(name=nm, kind=k, take_off=a, land=b) for nm, k, a, b in ride]), indent=1) + "\n"
+        if not ride and not os.path.exists(f["ride"]):
+            out.pop("ride")
         bak = os.path.join(root or ROOT, "backups", "spots")
         stamp, kept, changed = time.strftime("%Y%m%d-%H%M%S"), [], []
         for k, text in out.items():
@@ -226,7 +250,36 @@ def save(name, sent, describe=None, root=None):
                 kept.append(_rel(to, root or ROOT))
             _write(path, text)
             changed.append(_rel(path))
-    return dict(hot=len(hot), patrol=len(patrol), hold={t: len(hold[t]) for t in TEAMS}, backups=kept, changed=changed)
+    return dict(hot=len(hot), patrol=len(patrol), hold={t: len(hold[t]) for t in TEAMS}, ride=len(ride), backups=kept,
+                changed=changed, warnings=ride_problems(name, ride) if ride else [])
+
+
+def ride_problems(name, ride):
+    """Why the nav would skip a ride (Terrain.add_human_links: each end on a walkable node, within 0.7 u of its floor
+    height, the two ends on different nodes): [text], one a ride with a problem. [] when the nav cannot be loaded."""
+    try:
+        from brain.core import Vec
+        from brain.maps import get_map, terrain
+        T = terrain(get_map(name))
+    except Exception as e:
+        print(f"spots: no nav to check the rides of {name}: {type(e).__name__}: {e}", flush=True)
+        return []
+    out = []
+    for nm, _kind, a, b in ride:
+        why, nodes = [], []
+        for label, p in (("where you step in", a), ("where it puts you down", b)):
+            if not T.inside(p[0], p[1]):
+                why.append(f"{label} is outside the map's nav")
+                continue
+            n = T._node(Vec(*p))
+            nodes.append(n)
+            if not T.lwalk[n] or abs(float(T.lz[n]) - p[2]) > 0.7:
+                why.append(f"{label} is not on floor bots can walk")
+        if not why and nodes[0] == nodes[1]:
+            why.append("both ends are on the same spot of the nav")
+        if why:
+            out.append(f"{nm}: " + "; ".join(why) + ". Bots will not use it until it is moved.")
+    return out
 
 
 def level_floor(name):
@@ -330,16 +383,22 @@ def selftest():
                 edit = dict(hot=[{"pos": [1.0, 2.0, 3.0]}] + [r for r in cur["hot"] if r["owner"]],
                             patrol=cur["patrol"] + [dict(name="Test point", pos=[1.5, 2.5, 3.5], team="blue")],
                             hold=dict(cur["hold"], red=cur["hold"]["red"] + [[3.0, 3.0, 3.0]]))
+                fl = level_floor(name)["points"]           # a ride between two nav floor points, and one off the map
+                good = dict(name="Lift 1", kind="lift", take_off=fl[0:3], land=fl[3000:3003])
+                edit["ride"] = [good, dict(name="", kind="cannon", take_off=[9000.0, 9000.0, 0.0], land=fl[0:3])]
                 r = save(name, edit, describe=lambda p: dict(pos=p, score=1.0, sees=1, height=0.0, duck=False), root=tmp)
-                assert len(r["changed"]) == 3 and len(r["backups"]) == 3, r
+                assert len(r["changed"]) == 4 and len(r["backups"]) == 3, r          # (owner_rides.json is new)
+                assert len(r["warnings"]) == 1 and r["warnings"][0].startswith("Man cannon: where you step in is outside"), r
                 after = load(name)
+                assert [x["name"] for x in after["ride"]] == ["Lift 1", "Man cannon"]
+                assert after["ride"][0]["take_off"] == [round(v, 2) for v in good["take_off"]]
                 assert after["hot"][0]["pos"] == [1.0, 2.0, 3.0] and after["hot"][0]["owner"]
                 assert dict(name="Test point", pos=[1.5, 2.5, 3.5], team="blue") in after["patrol"]
                 assert after["hold"]["red"][-1] == [3.0, 3.0, 3.0]
                 cfg = _read(fake["hold"], {})
                 assert cfg["zones"] == _read(real["hold"], {})["zones"]          # the rest of callouts.json kept
                 r = save(name, dict(hot=[{"pos": p["pos"]} for p in after["hot"] if p["owner"]], patrol=after["patrol"],
-                                    hold=after["hold"]), root=tmp)
+                                    hold=after["hold"], ride=after["ride"]), root=tmp)
                 assert r["changed"] == [] and r["backups"] == [], r
                 try:
                     save(name, dict(hot=[], patrol=[], hold=dict(red=[], blue=[[0, 0, 0]])), root=tmp)
