@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Halo 4: bots stop retrying racked guns they cannot take (the spawn-room Boltshot stops), 2026-11-10
+
+The owner's bug reports, Warhouse 17:35 "The bots pulling out their bolt shots almost every spawn?" and 18:56 "My team sometimes just stops in base switches to bolt shot and then leaves. I think both teams do it."
+
+- **Cause**, live Warhouse 20261110-184913 (scratchpad `bolt_switch.py`, `bolt_items.py`, `bolt_reach.py`):
+  - 191 switches onto the Boltshot. 98 came within 6 s of a spawn, 174 had the goal `item`, 8 had an enemy within 8 u, and 9 fired.
+  - The items are the spawn rooms' racked rifles. `LiveH4F.ground_weapons` lists a gun as loose unless a biped or vehicle holds it, and reads them as `assault_rifle`.
+  - With the Boltshot's Short at 0.6 (the owner's Nov 9 call, still uncommitted in the shared tree), an AR adds 0.09 to a BR + Boltshot loadout, over `UPGRADE_GAIN` 0.08, so `upgrade_point` sends the bot there and `gun_to_drop` puts the Boltshot in hand for the swap.
+  - The bots stood 0.2 u from the gun holding Use about 90% of the time. The busiest spawn-room spots took nothing in 0 of 26 holds, while loose guns elsewhere took 7 of 7.
+  - After the 4 s item wait, each bot skipped the spot for 30 s, only for itself, so it was back after its next spawn.
+- **Fix** (`brain/bot.py`): Halo 4 counts each loose-gun spot whose 4 s wait came to nothing in `DEAD_SPOTS`, shared by every bot on both teams. At `DEAD_SPOT_FAILS` (2) the spot is skipped by all of them for the match (`Bot.skip_dead_spots`, run each live tick, sets their `rearm_skip` to forever). A swap that goes through clears the spot's count. A gun dropped later on a dead spot's 1 u cell is also passed over.
+- The Boltshot value and the rest of the pickup logic are unchanged.
+- Validation: new `tools/test_h4_dead_spots.py`, 2 tests (the racked AR stays an upgrade after one failed wait, is skipped by another bot after two, and another map's count does not apply). All 51 `tools/test_*.py` files pass. The counting step inside `plan` is not unit-tested, and gameplay is untested.
+
 ### Turn speeds, Halo 4 Demon melee reach, and the new Blind difficulty, 2026-11-10
 
 The owner, from the tier chart: turn speed "435 · 650 · 650 · 700 ... Normal Hard legendary Demon"; "Demon bots seem to have an issue meleeing they miss quite a bit of melee ... Investigate"; and "another difficulty called Blind. And its just legendary but all the Aim and Hands Stats, are a random value between their current base stats and the celing being a little under the demons stats".

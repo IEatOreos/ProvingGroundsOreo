@@ -76,6 +76,7 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
   - Halo 4 Demon presses melee from 1.0 u (was 1.25). Every tier's swing check is judged after the turn cap.
   - Blind is fixed Legendary (tier `top`, label `blind`). Its aim and hands are drawn per bot between Legendary's base and 85% of the way to Demon's, and its own hands aim everywhere: no protected precision or head snap.
   - Needs `native/bin/botcore_blind.dll` (MCC restart) for the menu entries, and a bot-process restart. tools/test_blind_difficulty.py covers it; gameplay is untested.
+- Halo 4 dead pickup spots (2026-11-10, `DEAD_SPOTS`, `DEAD_SPOT_FAILS`, `Bot.skip_dead_spots`): a loose gun's spot where bots waited out the 4 s item wait twice with nothing taken is skipped by every bot, both teams, for the match. A swap that goes through clears the count. For the spawn rooms' racked rifles, which the ground-weapon read lists but nobody can take. tools/test_h4_dead_spots.py covers it.
 - Halo 4 CTF carriers shoot their magnum (2026-11-10, `Bot.carrier_shot`, `CARRIER_SHOOT_R`): carrying on foot on the run home, a man in view within 25 u gets fight's aim and trigger while the walk home goes on; no grenade, ability, Use, reload or switch press (they could drop the flag). Other games keep "a carrier does not fight" (the flag is their carrier's only weapon). tools/test_h4_carrier_shot.py covers it.
 
 - Visible-target firing hesitation near a balcony: head line of sight is suspected, not confirmed.

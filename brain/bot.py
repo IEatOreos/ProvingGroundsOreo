@@ -324,6 +324,14 @@ MELEE_R = 1.25
 # a melee-sized hit (0.4+ of shield and body, or the kill) within 0.6 s: 48% under 0.9 u, 34% at 0.9-1.1, 28% at
 # 1.1-1.25, 20% at 1.25-1.5; its walk in on every man (PRESS 1.0) put most of its presses at the old edge
 H4_DEMON_MELEE_R = 1.0
+# (custom, Nov 10) Halo 4: a loose gun's spot where a bot waited out item_wait's 4 s with nothing taken, counted for
+# every bot on both teams; at DEAD_SPOT_FAILS it is skipped by all of them for the match (skip_dead_spots). Halo 4's
+# ground_weapons reads the spawn rooms' racked Storm Rifles as loose, and they cannot be taken: live Warhouse
+# 20261110-184913, 0 of 26 holds took one, each bot back after every spawn (its own 30 s skip), the Boltshot in hand
+# for the swap (gun_to_drop) 3-4 s each time. The owner: "stops in base switches to bolt shot and then leaves".
+# A swap that goes through clears the spot's count.
+DEAD_SPOT_FAILS = 2
+DEAD_SPOTS = {}         # (map name, (round x, round y)) -> waits with nothing taken
 DRY_FIGHT_R = 2.5      # u: with every gun empty, a man nearer than this is still fought (a melee), Bot.choose
 SWING_R, SWING_COS = 3.0, 0.7   # a melee press needs an enemy this near (a sword lunge 2.25 u) within 45 deg (melee_check)
 HEAR_RANGE = 30.0                      # gunfire this close is heard: about where it came from (Perception.update)
@@ -2062,6 +2070,8 @@ class Bot:
         if not me.alive:
             s.charge_since = s.on_since = None
             return act
+        if DEAD_SPOTS:
+            s.skip_dead_spots()
         if snap.mode == "race" and me.id in snap.race_next:
             # Race (brain/modes.py Race): always this racer's own next gate, read every tick, at the wheel too (the
             # director's role pass is every 2 s: a gate just touched would be driven back to)
@@ -2360,6 +2370,7 @@ class Bot:
                     # Warthog_2's rifle and the gun he took swapped 10 times in 0.7 s)
                     s.rearm_skip = getattr(s, "rearm_skip", {})
                     s.rearm_skip[key] = now + 30.0
+                    DEAD_SPOTS.pop(((s.map or {}).get("name"), key), None)   # (a gun that can be taken: not dead)
                     k = next((k for k, it in enumerate(s.map.get("items", [])) if it["pos"] == point), None)
                     if k is not None:
                         s.item_skip[k] = now + 30.0
@@ -2383,7 +2394,11 @@ class Bot:
                         s.item_skip[k] = now + 30.0
                     else:                           # a dropped gun (upgrade_point, rearm_point): not again soon
                         s.rearm_skip = getattr(s, "rearm_skip", {})
-                        s.rearm_skip[(round(point.x), round(point.y))] = now + 30.0
+                        spot = (round(point.x), round(point.y))
+                        s.rearm_skip[spot] = now + 30.0
+                        if s.game == "h4":          # (custom, Nov 10: DEAD_SPOTS, for every bot)
+                            dk = ((s.map or {}).get("name"), spot)
+                            DEAD_SPOTS[dk] = DEAD_SPOTS.get(dk, 0) + 1
                     s.next_decide, s.item_wait = now, None
             else:
                 s.item_wait = None
@@ -4906,6 +4921,14 @@ class Bot:
         if dist(me.pos, best[1]) < 1.5:
             s.upgrade_at = (best[1], tuple(me.weapons))     # standing on it: a swap here rests the spot (swap_rested)
         return best[1]
+
+    def skip_dead_spots(s):
+        """(custom, Nov 10) Spots DEAD_SPOT_FAILS waits came to nothing at, any bot's: skipped by this bot for the match."""
+        name = (s.map or {}).get("name")
+        skip = s.__dict__.setdefault("rearm_skip", {})
+        for (m, spot), n in DEAD_SPOTS.items():
+            if m == name and n >= DEAD_SPOT_FAILS:
+                skip[spot] = math.inf
 
     def swap_rested(s, me, snap):
         """Spots where this bot swapped guns in the last 20 s (the gun it dropped lies there now): no upgrade from them.
