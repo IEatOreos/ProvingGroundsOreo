@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### The session list's bots can be picked: their menu and a Player Details card, 2026-11-11
+
+The owner, on MCC's own list: "they can become inspectable, seeing their armor rank etc"; clicking his name gave MCC's player menu (Player Details, Find Player, ...) and Player Details his career screen.
+
+- **Picking a bot** (`native/overlay.cpp` `draw_session`): a bot row under the mouse lights up as MCC focuses a player (a lighter box, a white frame), and a click opens its menu. Mouse only: MCC's own pad and keys move through its list, which does not hold the bots.
+- **Its menu** (`draw_bot_menu`): MCC's player menu, a panel down the right side (measured from his screenshot with his own name picked).
+  - It shows the bot's name and clan tag, "<difficulty> bot - <team>", and PLAYER DETAILS, SWAP FOR NEXT BOT (with Bot Matchmaking on, not in Firefight) and BACK.
+  - A click off it, Esc or the pad's B closes it. The click that opened it is not taken as a pick in it.
+- **SWAP FOR NEXT BOT** (`native/bots_panel.cpp` `bot_pool_swap`): that seat takes the next pool bot, never itself or a seated one. It brings its saved settings, else the difficulty the other unsaved seats share (else the "for everyone" deal) and any play style. Nothing free keeps the seat. It is written at once.
+- **Its card** (`bot_card`, `overlay.cpp` `draw_card`): full screen, laid out as MCC's Player Details screen.
+  - PLAYER DETAILS over the bot's name and clan tag, and its emblem large.
+  - DIFFICULTY, PLAY STYLE, TEAM and BOT MATCHMAKING (whether it keeps its settings).
+  - The difficulty as a rank in the top right, a ring in the tier's colour with its chevrons.
+  - The bot itself in 3D in the lobby's game, the bot editor's model, turning (drag to turn it). "Getting its look ready..." shows while its look is exported, and a bot with no profile gets one (`profile_ensure`, its look unchanged).
+  - Back, Esc or the pad's B closes it and its menu.
+- **Input**: while a bot's menu or card is open, MCC gets no keys, clicks, raw input or pad, and its cursor is held where it was (like the BOTS panel). Esc closes the card and menu without reaching MCC (its release eaten too). A click on a bot row never reaches MCC. The BOTS tile is not drawn under an open menu, and the B key does not open the panel then. Opening the panel or leaving the lobby closes them.
+- Validation: `native/pool_test.cpp` adds the swap's checks (the next bot, a saved bot's settings, the table's difficulty otherwise, wrapping past a seated one, nothing free keeping the seat): all pass. `tools/test_bot_matchmaking.py` adds the wiring test (9 pass). All 54 `tools/test_*.py` files pass. Mock-ups of the menu (on his recording's frame) and the card were drawn at the code's coordinates (scratchpad). `native\build.bat botcard` built `native/bin/botcore_botcard.dll` (not in Git). Untested in game: the clicks and input capture in MCC, the 3D view on the card, and the menu's fit over MCC's slide-out.
+
 ### Bot Matchmaking keeps a name's repeats in the queue; the owner's Call of Duty bot list added, 2026-11-11
 
 The owner: "This is the bot.txt file I want to use integrate it in with the names we already have ... Leave all of the duplicates. And all of these names I posted I want to be Legendary, or Blind. Excluding the first Row ... these bots will all be demons."

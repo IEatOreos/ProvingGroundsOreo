@@ -930,6 +930,33 @@ int bot_pool_rotate(hb_roster& r, uint32_t difficulty) {
     return filled;
 }
 
+// (custom, Nov 11) one seat's bot out, the next pool bot in (the lobby's bot menu, "Swap for next bot"): its saved
+// settings, else the difficulty the other unsaved seats share (else the "for everyone" one's) and any play style.
+// False when no pool bot is free
+bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty) {
+    if (i < 0 || i >= r.n || g_pool.empty()) return false;
+    int shared = -1;
+    bool one = true;
+    for (int k = 0; k < r.n; k++) {
+        if (k == i || pool_find_saved(r.bot[k].name)) continue;
+        if (shared < 0) shared = r.bot[k].tier;
+        else if (shared != r.bot[k].tier) one = false;
+    }
+    hb_bot keep = r.bot[i];
+    uint8_t tier = (uint8_t)(one && shared >= 0 ? shared : roster_difficulty_tier(difficulty, i));
+    int start = g_pool_next;
+    for (int tries = 0; tries < 2; tries++) {                // (its own name next in the queue: the one after it)
+        r.bot[i].name[0] = 0;
+        r.bot[i].tier = tier;
+        r.bot[i].style = HB_STYLE_ANY;
+        if (!pool_take(r, i)) break;
+        if (_stricmp(r.bot[i].name, keep.name) != 0) { bot_pool_save(); return true; }
+    }
+    r.bot[i] = keep;
+    g_pool_next = start;
+    return false;
+}
+
 void roster_name(hb_roster& r, int i, uint32_t seed) {
     if (hb_matchmaking && !hb_panel_firefight && pool_take(r, i)) return;
     roster_name_own(r, i, seed);
@@ -3005,6 +3032,133 @@ void bots_panel_debug_yaw(float yaw) { g_yaw = yaw; }
 void bots_panel_debug_looks() { looks_refresh(true); g_look_check = g_look_mtime = 0; looks_load(); }   // (waits)
 void bots_panel_debug_edit(int i, int game) { if (i >= 0 && i < g_nprof) { g_edit = i; g_edit_game = game;
     strcpy_s(g_edit_name, g_prof[i]); strcpy_s(g_edit_clan, g_prof_clan[i]); } }   // native/panel_preview.cpp
+
+// ------------------------------------------------------------------ the lobby's bot card (custom, Nov 11)
+// A bot picked in MY GAME SESSION (overlay.cpp: its row, then PLAYER DETAILS), shown as MCC's Player Details screen
+// shows a player: PLAYER DETAILS over its name and clan tag, its emblem, what it plays as (difficulty, play style,
+// team, whether Bot Matchmaking keeps that), its difficulty as the rank in the top right, and the bot itself in 3D in
+// the lobby's game (the bot editor's model, turning; drag to turn it). Back, Esc or the pad's B closes it. The owner:
+// "they can become inspectable, seeing their armor rank etc". Laid out on MCC's 1920x1080 page from his Player Details
+// screenshot. A bot with no profile gets one (profile_ensure: its look as it is) so its look can be read.
+static char g_card_name[16];
+static int g_card_prof = -1;
+static float g_card_yaw = 0.6f;
+static bool g_card_drag = false;
+bool bot_card(bots_panel_env& e, const hb_bot& b) {
+    using namespace ui;
+    s = e.scale; font = e.f_body;
+    g_make_texture = e.make_texture;
+    g_env = &e;
+    if (_stricmp(g_card_name, b.name) != 0) {
+        strcpy_s(g_card_name, b.name);
+        g_card_prof = profile_ensure(b.name);
+        g_card_yaw = 0.6f;
+    }
+    looks_load();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.02f, 0.05f, 0.08f, 0.97f));
+    ImGui::Begin("##bot_card", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                 ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ui_page P = mcc_content(io.DisplaySize.x, io.DisplaySize.y);
+    auto at = [&](float x, float y) { return ImVec2(P.x0 + x * P.s, P.y0 + y * P.s); };
+    auto text = [&](float x, float y, float size, ImU32 col, const char* t) {
+        dl->AddText(font, size * P.s, at(x, y), col, t);
+    };
+    auto text_r = [&](float x1, float y, float size, ImU32 col, const char* t) {       // right-aligned at x1
+        ImVec2 ts = font->CalcTextSizeA(size * P.s, 1e9f, 0, t);
+        dl->AddText(font, size * P.s, ImVec2(at(x1, y).x - ts.x, at(x1, y).y), col, t);
+    };
+    const ImU32 CAP = IM_COL32(110, 182, 226, 255), VAL = IM_COL32(236, 242, 247, 255);
+    // a soft light from the upper left over the dark, as MCC's menus sit on their backdrop
+    dl->AddRectFilledMultiColor(at(0, 0), at(1920, 1080), IM_COL32(18, 40, 58, 180), IM_COL32(6, 16, 26, 120),
+                                IM_COL32(2, 6, 10, 200), IM_COL32(8, 20, 32, 160));
+    int tier = b.tier < HB_TIERS ? b.tier : 3;
+    // the name, its clan tag before it as MCC writes one
+    const char* clan = profile_clan_of(b.name);
+    char title[32];
+    sprintf_s(title, clan[0] ? "[%s] %s" : "%s%s", clan, b.name);
+    text(88, 44, 21, CAP, "PLAYER DETAILS");
+    text(86, 70, 52, VAL, title);
+    // its emblem (the one MCC shows for it), large
+    if (unsigned long long em = bot_emblem(b.name, e.make_texture))
+        dl->AddImage((ImTextureID)em, at(140, 158), at(250, 268));
+    else {
+        dl->AddRectFilled(at(140, 158), at(250, 268), IM_COL32(16, 26, 36, 230));
+        dl->AddRect(at(140, 158), at(250, 268), LINE, 0, 0, 1.5f);
+    }
+    // what it plays as
+    int st_tier = -1, st_style = -1;
+    bool saved = bot_pool_saved_of(b.name, &st_tier, &st_style);
+    float y = 152;
+    auto field = [&](const char* cap, const char* val, ImU32 col) {
+        text(315, y, 19, CAP, cap);
+        dl->AddLine(at(315, y + 25), at(560, y + 25), alpha(CAP, 0.6f), 1.0f);
+        text(315, y + 30, 23, col, val);
+        y += 70;
+    };
+    field("DIFFICULTY", TIER_NAME[tier], TIER_COL[tier]);
+    field("PLAY STYLE", STYLE_NAME[b.style < 8 ? b.style : HB_STYLE_ANY], VAL);
+    char team[24];
+    sprintf_s(team, hb_panel_firefight ? "Your team" : "%s Team", TEAM_NAME[b.team < HB_TEAMS_MAX ? b.team : 0]);
+    field("TEAM", team, hb_panel_firefight ? VAL : TEAM_COL[b.team < HB_TEAMS_MAX ? b.team : 0]);
+    field("BOT MATCHMAKING", saved ? "Keeps this difficulty and style" : "Takes the lobby's difficulty", TEXT2);
+    // the difficulty as its rank, top right: a ring in the tier's colour with its chevrons
+    text_r(1730, 52, 21, CAP, "DIFFICULTY RANK");
+    text_r(1730, 80, 27, VAL, TIER_NAME[tier]);
+    ImVec2 rc = at(1774, 80);
+    dl->AddCircle(rc, 30 * P.s, TIER_COL[tier], 48, 3.0f * P.s);
+    dl->AddCircleFilled(rc, 27 * P.s, IM_COL32(8, 16, 26, 230), 48);
+    chevrons(dl, rc, tier, P.s / s * 1.2f);
+    // the bot in 3D in the lobby's game, turning (drag to turn it)
+    static const int G_OF_TITLE[9] = { 5, 0, 1, 2, 5, 3, 4, 5, 2 };     // (title: 1 CE .. 7 Halo 4, 8 ODST)
+    int G = G_OF_TITLE[e.title >= 0 && e.title < 9 ? e.title : 7];
+    ImVec2 m0 = at(960, 150), m1 = at(1840, 1010);
+    ImGui::SetCursorScreenPos(m0);
+    ImGui::InvisibleButton("##turn", ImVec2(m1.x - m0.x, m1.y - m0.y));
+    if (ImGui::IsItemActive()) { g_card_yaw += io.MouseDelta.x * 0.012f; g_card_drag = true; }
+    else { g_card_yaw += io.DeltaTime * 0.35f; g_card_drag = false; }
+    if (ImGui::IsItemHovered()) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+    unsigned long long mv = 0;
+    int keep_edit = g_edit, keep_view = g_edit_view;
+    bool have_look = g_card_prof >= 0 && look_field(g_prof[g_card_prof], ED_GAMES[G].key, false, G >= 2 ? "pieces" : "primary");
+    if (have_look) {
+        g_edit = g_card_prof;
+        g_edit_view = -1;
+        if (e.model_zoom) e.model_zoom(0.0f);                // (the whole figure)
+        if (e.model_headroom) e.model_headroom(0.0f);
+        int sp = ED_GAMES[G].species ? ed_species(G) : 0;
+        mv = ed_model(&e, G, sp, g_card_yaw, (int)(m1.x - m0.x), (int)(m1.y - m0.y));
+    }
+    g_edit = keep_edit;
+    g_edit_view = keep_view;
+    if (mv) dl->AddImage((ImTextureID)mv, m0, m1);
+    else {
+        const char* msg = g_card_prof < 0 ? "No room for another profile"
+                        : have_look ? "No 3D view of this look in this game yet" : "Getting its look ready...";
+        ImVec2 ts = font->CalcTextSizeA(22 * P.s, 1e9f, 0, msg);
+        dl->AddText(font, 22 * P.s, ImVec2((m0.x + m1.x - ts.x) * 0.5f, (m0.y + m1.y) * 0.5f), TEXT3, msg);
+    }
+    text(102, 930, 18, TEXT3, "Its armor, colours and clan tag: the BOTS panel, Settings.");
+    // Back, as MCC's footer buttons
+    ImVec2 b0 = at(102, 984), b1 = at(190, 1024);
+    ImGui::SetCursorScreenPos(b0);
+    bool back = ImGui::InvisibleButton("##back", ImVec2(b1.x - b0.x, b1.y - b0.y));
+    bool hov = ImGui::IsItemHovered();
+    dl->AddRectFilled(b0, b1, hov ? IM_COL32(60, 96, 120, 240) : IM_COL32(28, 46, 60, 230));
+    dl->AddRect(b0, b1, hov ? IM_COL32(200, 230, 245, 255) : IM_COL32(120, 150, 170, 220), 0, 0, 1.5f);
+    ImVec2 bs = font->CalcTextSizeA(22 * P.s, 1e9f, 0, "Back");
+    dl->AddText(font, 22 * P.s, ImVec2((b0.x + b1.x - bs.x) * 0.5f, (b0.y + b1.y - bs.y) * 0.5f), VAL, "Back");
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
+    if (back || esc_pressed()) { g_card_name[0] = 0; return false; }
+    return true;
+}
 
 // the tab's page: the 15 bots, how they suit up, the re-roll ---- the Advanced tab: Scaling difficulty.
 // native\bin\scaling.ini, read by brain/scaling.py settings: lock=, rating= (percent, while locked), use= (0 Standard,

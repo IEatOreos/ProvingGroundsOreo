@@ -407,10 +407,25 @@ static unsigned long long make_texture(int w, int h, const unsigned char* rgba);
 static ImU32 faded(ImU32 c, float a) {
     return (c & 0x00FFFFFFu) | ((ImU32)(((c >> 24) & 255) * (a < 0 ? 0 : a > 1 ? 1 : a)) << 24);
 }
+static void play_sound(int kind, uint32_t volume);
+extern uint32_t g_sounds;
+// (custom, Nov 11) the bots' rows can be picked, as MCC's players can: a click opens the bot's menu (draw_bot_menu, MCC's
+// right-hand player menu: PLAYER DETAILS, SWAP FOR NEXT BOT, BACK), PLAYER DETAILS its card (bots_panel.cpp bot_card).
+// The mouse's: MCC's own pad and keys move through its list, which does not hold the bots. While a menu or card is open
+// MCC gets no input and its cursor stays put (wndproc, h_present), Esc closes it
+static int g_sess_hover = -1;          // the bot row under the mouse this frame (its clicks are ours: wndproc)
+static volatile bool g_sess_drawn;     // rows drawn last frame: the mouse goes to our frame (wndproc)
+static int g_bot_menu = -1;            // the bot whose menu is open (its seat), -1 none
+static bool g_bot_card;                // its Player Details card is open
+static hb_bot g_menu_bot;              // that bot as it was picked (the list may change under it)
+static int g_menu_frame = -1;          // the frame it opened on: that click is not the menu's too
+static bool bot_ui() { return g_bot_menu >= 0 || g_bot_card; }
 static void draw_session(float t) {
     if (!g_shm || !g_shm->bots_enabled || g_shm->lidar_mode || g_sess_x1 <= 0) return;
     const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;
     if (!R.n) return;
+    g_sess_hover = -1;
+    ImVec2 mouse = ImGui::GetIO().MousePos;
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     ImVec2 bb = bb_size();
     static uint32_t sig_was = 0;
@@ -442,10 +457,17 @@ static void draw_session(float t) {
         ImU32 fill_l = IM_COL32(tr * 55 / 100, tg * 55 / 100, tb * 55 / 100, 235);
         ImU32 fill_r = IM_COL32(tr * 30 / 100, tg * 30 / 100, tb * 30 / 100, 225);
         ImU32 edge = IM_COL32(tr * 85 / 100 + 30, tg * 85 / 100 + 30, tb * 85 / 100 + 30, 200);
+        bool hov = !bot_ui() && a >= 1.0f && mouse.x >= bar.x && mouse.x <= r.z && mouse.y >= r.y && mouse.y <= r.w;
+        if (hov) {                                             // (MCC's focus: a lighter box, a white frame)
+            g_sess_hover = k;
+            fill_l = IM_COL32(tr * 75 / 100 + 20, tg * 75 / 100 + 20, tb * 75 / 100 + 20, 245);
+            fill_r = IM_COL32(tr * 45 / 100 + 10, tg * 45 / 100 + 10, tb * 45 / 100 + 10, 240);
+            edge = IM_COL32(235, 245, 250, 255);
+        }
         dl->AddRectFilled(ImVec2(bar.x, r.y), ImVec2(bar.z, r.w), faded(tc, a));
         dl->AddRectFilledMultiColor(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(fill_l, a), faded(fill_r, a), faded(fill_r, a),
                                     faded(fill_l, a));
-        dl->AddRect(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(edge, a), 0, 0, 1.0f);
+        dl->AddRect(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(edge, a), 0, 0, hov ? 2.0f * u : 1.0f);
         // the emblem (brain/emblems.py: the one MCC shows for it in the games), else a plain badge
         ImVec2 e0(r.x + 9 * u, r.y + 6 * u), e1(r.x + 41 * u, r.y + 38 * u);
         unsigned long long em = bot_emblem(b.name, make_texture);
@@ -460,6 +482,71 @@ static void draw_session(float t) {
         float x = r.x + 55 * u;
         dl->AddText(g_font_label, 15 * u, ImVec2(x, r.y + 4 * u), faded(IM_COL32(222, 228, 234, 235), a), tag);
         dl->AddText(g_font_label, 21 * u, ImVec2(x, r.y + 19 * u), faded(IM_COL32(255, 255, 255, 255), a), b.name);
+    }
+    if (g_sess_hover >= 0 && ImGui::IsMouseClicked(0)) {       // a bot picked: its menu
+        g_bot_menu = g_sess_hover;
+        g_menu_bot = R.bot[g_sess_hover];
+        g_menu_frame = ImGui::GetFrameCount();
+        play_sound(PS_SELECT, g_sounds);
+    }
+}
+
+// (custom, Nov 11) the bot's menu: MCC's player menu, a panel down the right side (measured from the owner's screenshot
+// with his own name picked: its edge 588 units in from the frame's right, his name at 545 in, the options' bars 545-82
+// in, 55 high, 60 apart from y 115), the bot's name, what it plays as, and its options. A click off it, Esc or the
+// pad's B closes it
+static void draw_bot_menu() {
+    ImVec2 bb = bb_size();
+    ui_page f = mcc_frame(bb.x, bb.y);
+    float right = f.x0 + f.w;
+    auto P = [&](float in, float y) {                          // units in from the frame's right, down from the top
+        ImVec4 v = to_ui(ui_rect{ right - in * f.s, y * f.s, right - in * f.s, y * f.s });
+        return ImVec2(v.x, v.y);
+    };
+    ImVec2 d = ImGui::GetIO().DisplaySize, m = ImGui::GetIO().MousePos;
+    float u = P(0, 1).y - P(0, 0).y;                           // px per unit
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImVec2 p0 = P(588, 0);
+    dl->AddRectFilled(p0, ImVec2(d.x, d.y), IM_COL32(10, 22, 33, 240));
+    dl->AddRectFilledMultiColor(p0, ImVec2(d.x, d.y), IM_COL32(26, 48, 66, 120), IM_COL32(10, 22, 33, 0),
+                                IM_COL32(10, 22, 33, 0), IM_COL32(26, 48, 66, 120));
+    dl->AddRectFilled(p0, ImVec2(p0.x + 2.5f * u, d.y), IM_COL32(96, 170, 220, 230));   // its lit left edge
+    const hb_bot& b = g_menu_bot;
+    const char* clan = profile_clan_of(b.name);
+    char title[32];
+    sprintf_s(title, clan[0] ? "[%s] %s" : "%s%s", clan, b.name);
+    dl->AddText(g_font_label, 27 * u, P(545, 38), IM_COL32(245, 248, 250, 255), title);
+    char sub[48];
+    sprintf_s(sub, "%s bot  -  %s", tier_name(b.tier), g_ff_lobby ? "your team" : team_name(b.team));
+    dl->AddText(g_font_label, 17 * u, P(545, 74), IM_COL32(150, 190, 215, 230), sub);
+    const char* items[3];
+    int n = 0, act[3];
+    items[n] = "PLAYER DETAILS"; act[n++] = 0;
+    if (hb_matchmaking && !g_ff_lobby) { items[n] = "SWAP FOR NEXT BOT"; act[n++] = 1; }
+    items[n] = "BACK"; act[n++] = 2;
+    int hit = -1;
+    for (int k = 0; k < n; k++) {
+        ImVec2 a = P(545, 115 + 60.0f * k), z = P(82, 170 + 60.0f * k);
+        bool hov = m.x >= a.x && m.x <= z.x && m.y >= a.y && m.y <= z.y;
+        if (hov) hit = act[k];
+        dl->AddRectFilled(a, z, hov ? IM_COL32(44, 86, 120, 240) : IM_COL32(22, 40, 57, 215));
+        if (hov) dl->AddRectFilled(a, ImVec2(a.x + 3 * u, z.y), IM_COL32(150, 215, 250, 255));
+        dl->AddText(g_font_label, 19 * u, ImVec2(a.x + 15 * u, (a.y + z.y) * 0.5f - 10 * u),
+                    hov ? IM_COL32(220, 240, 252, 255) : IM_COL32(140, 196, 232, 255), items[k]);
+    }
+    bool click = ImGui::IsMouseClicked(0) && ImGui::GetFrameCount() != g_menu_frame;
+    if (click && hit == 0) { g_bot_card = true; play_sound(PS_SELECT, g_sounds); }
+    else if (click && hit == 1) {                              // (Bot Matchmaking: the next pool bot takes this seat)
+        for (int i = 0; i < g_roster.n; i++)
+            if (!_stricmp(g_roster.bot[i].name, b.name)) {
+                if (bot_pool_swap(g_roster, i, g_shm->difficulty)) { g_shm->settings_seq++; save_settings(); }
+                break;
+            }
+        g_bot_menu = -1;
+        play_sound(PS_SELECT, g_sounds);
+    } else if ((click && (hit == 2 || m.x < p0.x)) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)) {
+        g_bot_menu = -1;
+        play_sound(PS_BACK, g_sounds);
     }
 }
 
@@ -499,9 +586,7 @@ static void play_sound(int kind, uint32_t volume) {
     PlaySoundW((LPCWSTR)wav[kind], nullptr, SND_MEMORY | SND_ASYNC | SND_NODEFAULT);
 }
 
-static void draw_panel() {
-    // the BOTS panel (bots_panel.cpp): the exact bots of the next match, saved in botcore.ini
-    bots_panel_env e{};
+static void panel_env(bots_panel_env& e) {
     e.make_texture = make_texture;
     e.render_model = render_model; e.model_has = model_has; e.model_zoom = mv_set_zoom; e.model_head = mv_head; e.model_headroom = mv_set_headroom;
     e.roster = g_ff_lobby ? &g_ff_roster : &g_roster;     // (Firefight: its own list of 3; the 16-player list is kept)
@@ -514,7 +599,18 @@ static void draw_panel() {
     e.title = (int)g_session; e.scale = ui_scale();
     e.f_title = e.f_head = e.f_body = e.f_small = g_font_small;
     e.open = &g_panel;
+}
+static void draw_panel() {
+    // the BOTS panel (bots_panel.cpp): the exact bots of the next match, saved in botcore.ini
+    bots_panel_env e{};
+    panel_env(e);
     if (bots_panel(e)) { g_shm->settings_seq++; save_settings(); }
+}
+// (custom, Nov 11) a picked bot's Player Details card (bots_panel.cpp bot_card): closed, the menu goes with it
+static void draw_card() {
+    bots_panel_env e{};
+    panel_env(e);
+    if (!bot_card(e, g_menu_bot)) { g_bot_card = false; g_bot_menu = -1; play_sound(PS_BACK, g_sounds); }
 }
 
 // (custom, Nov 10) Bot Matchmaking: after a match with bots (botcore.cpp g_pool_due), the next pool bots take the main
@@ -637,7 +733,7 @@ static void pad_frame() {
             play_sound(PS_BACK, g_sounds);
         }
     }
-    g_pad_held = (g_show_tile && g_panel) || (g_pad_held && any);
+    g_pad_held = (g_show_tile && g_panel) || bot_ui() || (g_pad_held && any);   // (a bot's menu or card too)
 }
 
 static DWORD g_esc_eat;              // Esc closed the panel at this tick: its release (and repeats) stay ours
@@ -649,18 +745,31 @@ static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         if (msg == WM_KEYUP) g_esc_eat = 0;
         return 0;
     }
-    if (g_ready && g_show_tile) {
-        bool typing = g_panel && ImGui::GetIO().WantTextInput;   // a bot's name being typed: B and Esc are its
-        if (!typing && msg == WM_KEYDOWN && wp == 'B' && !(lp & (1 << 30))) { g_panel = !g_panel; return 0; }
-        if (!typing && msg == WM_KEYDOWN && wp == VK_ESCAPE && g_panel && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId)) {
-            g_panel = false; play_sound(PS_BACK, g_sounds);   // (a confirmation open: Esc closes just that)
+    // (custom, Nov 11) the session list's bots in a lobby (the slide-out too, where the tile row is out of sight): the
+    // mouse goes to our frame, a click on a bot row is ours; a bot's menu or card open takes every key and click, and Esc
+    // closes it (the card first) without reaching MCC (its release too: g_esc_eat)
+    bool bots_ui = g_ready && bot_ui();
+    if (g_ready && (g_show_tile || g_sess_drawn || bots_ui)) {
+        if (bots_ui && msg == WM_KEYDOWN && wp == VK_ESCAPE) {
+            if (g_bot_card) g_bot_card = false;
+            g_bot_menu = -1;
+            play_sound(PS_BACK, g_sounds);
             g_esc_eat = GetTickCount() | 1; return 0;
+        }
+        bool typing = g_panel && ImGui::GetIO().WantTextInput;   // a bot's name being typed: B and Esc are its
+        if (g_show_tile && !bots_ui) {
+            if (!typing && msg == WM_KEYDOWN && wp == 'B' && !(lp & (1 << 30))) { g_panel = !g_panel; return 0; }
+            if (!typing && msg == WM_KEYDOWN && wp == VK_ESCAPE && g_panel && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId)) {
+                g_panel = false; play_sound(PS_BACK, g_sounds);   // (a confirmation open: Esc closes just that)
+                g_esc_eat = GetTickCount() | 1; return 0;
+            }
         }
         ImGui_ImplWin32_WndProcHandler(h, msg, wp, lp);
         bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
         bool keys = msg >= WM_KEYFIRST && msg <= WM_KEYLAST;
-        if (g_panel && msg == WM_INPUT) return DefWindowProcW(h, msg, wp, lp);   // (raw input: cleaned up, not passed on)
-        if ((g_panel && (mouse || keys)) || (g_hover_tile && mouse && msg != WM_MOUSEMOVE)) return 0;   // ours
+        if ((g_panel || bots_ui) && msg == WM_INPUT) return DefWindowProcW(h, msg, wp, lp);   // (raw input: not passed on)
+        if (((g_panel || bots_ui) && (mouse || keys)) ||
+            ((g_hover_tile || g_sess_hover >= 0) && mouse && msg != WM_MOUSEMOVE)) return 0;   // ours
     } else if (g_ready && in_match()) {                         // the bug report over a match
         bool typing = g_bug_open && ImGui::GetIO().WantTextInput;
         if (!typing && msg == WM_KEYDOWN && wp == VK_F9 && !(lp & (1 << 30))) { g_bug_open = !g_bug_open; return 0; }
@@ -777,8 +886,10 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             else if (sframe++ % 4 == 0) probe_session(sc);
             g_show_tile = in_ce_menus();
             if (!g_show_tile) g_panel = false;
-            if (g_show_tile && g_panel && !g_parked && o_getcursorpos) { o_getcursorpos(&g_park_at); g_parked = true; }
-            else if (!(g_show_tile && g_panel)) g_parked = false;    // (closed: the lobby sees the cursor again)
+            if (!lobby || g_panel) { g_bot_menu = -1; g_bot_card = false; }   // (a bot's menu, card: the lobby's only)
+            bool ours = (g_show_tile && g_panel) || bot_ui();     // (MCC's cursor held where it was under our UI)
+            if (ours && !g_parked && o_getcursorpos) { o_getcursorpos(&g_park_at); g_parked = true; }
+            else if (!ours) g_parked = false;                     // (closed: the lobby sees the cursor again)
             bool notice = notice_active();
             bool match = !g_show_tile && in_match();
             if (!match) g_bug_open = false;
@@ -786,8 +897,10 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             bool bug = match && (pause || g_bug_open);
             g_bug_ui = bug;
             if (!bug) g_bug_hover = false;
-            bool sess = lobby && !g_panel && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode;
-            if (g_show_tile || notice || bug || sess) {
+            bool sess = lobby && !g_panel && !g_bot_card && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode;
+            g_sess_drawn = sess;
+            if (!sess) g_sess_hover = -1;
+            if (g_show_tile || notice || bug || sess || bot_ui()) {
                 ImGuiIO& gio = ImGui::GetIO();
                 if (bug && g_bug_open && !g_bug_was_open) {          // F9 opened the window: nothing typed before is its text
                     gio.ClearEventsQueue();
@@ -795,7 +908,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 }
                 // the OS cursor is ours to change only under our own UI (the lobby's panel, the report window, the pause
                 // menu's button): over play a notice's frame set the arrow on the game's hidden cursor
-                if (g_show_tile || bug) gio.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+                if (g_show_tile || bug || bot_ui()) gio.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
                 else gio.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
                 ImGui_ImplDX11_NewFrame();
                 t_ours = true;                                       // (our frame reads the real cursor)
@@ -830,9 +943,11 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 if (g_shm) g_shm->ui_up = (bug && g_bug_open) ? 1u : 0u;
                 // the tile draws on the foreground layer, over every window: with the panel open it is
                 // left out (it drew over the panel's header), and takes no clicks
-                if (g_show_tile && !g_panel) draw_tile((float)ImGui::GetTime());
+                if (g_show_tile && !g_panel && !bot_ui()) draw_tile((float)ImGui::GetTime());   // (a bot's menu: over it)
                 else g_hover_tile = false;
                 if (sess) draw_session((float)ImGui::GetTime());     // (the bots in MY GAME SESSION, where it stands)
+                if (g_bot_card) draw_card();                         // (a picked bot: its card, else its menu)
+                else if (g_bot_menu >= 0) draw_bot_menu();
                 bot_emblems_frame();
                 if (g_show_tile && g_panel) draw_panel();
                 g_popup_before = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);

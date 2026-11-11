@@ -173,6 +173,27 @@ int main(int argc, char** argv) {
         CHECK(!strcmp(all, "# my bots\r\nAlpha\r\nBravoTwo\r\nCharlie\r\n"), "file: [%s]", all);
     }
 
+    // 15. (Nov 11) the lobby's bot menu, "Swap for next bot": one seat gets the next pool bot (never itself or a seated
+    // one), its saved settings, else the other unsaved seats' shared difficulty; nothing free: the seat kept
+    write(pool, "S1\nS2\nS3\nS4\nS5\n");
+    DeleteFileW(saved);
+    bot_pool_load(dir);
+    hb_roster r6 = seats(3);
+    bot_pool_rotate(r6, 2);                          // S1 S2 S3, Heroic
+    hb_bot s5{}; strcpy_s(s5.name, "S5"); s5.tier = HB_TIER_BLIND; s5.style = 3;
+    bot_pool_remember(s5);
+    CHECK(bot_pool_swap(r6, 1, 4) && !strcmp(r6.bot[1].name, "S4"), "swap 1: %s", r6.bot[1].name);
+    CHECK(r6.bot[1].tier == 2 && r6.bot[1].style == HB_STYLE_ANY, "S4 takes the table's Heroic: %d", r6.bot[1].tier);
+    CHECK(bot_pool_swap(r6, 1, 4) && !strcmp(r6.bot[1].name, "S5"), "swap 2: %s", r6.bot[1].name);
+    CHECK(r6.bot[1].tier == HB_TIER_BLIND && r6.bot[1].style == 3, "S5 saved: %d %d", r6.bot[1].tier, r6.bot[1].style);
+    CHECK(bot_pool_swap(r6, 1, 4) && !strcmp(r6.bot[1].name, "S2"), "swap 3 wraps past the seated S1: %s", r6.bot[1].name);
+    write(pool, "S1\nS2\nS3\n");
+    bot_pool_load(dir);
+    hb_roster r7 = seats(3);
+    bot_pool_rotate(r7, 2);
+    char was0[16]; strcpy_s(was0, r7.bot[0].name);
+    CHECK(!bot_pool_swap(r7, 0, 2) && !strcmp(r7.bot[0].name, was0), "nothing free: kept %s (was %s)", r7.bot[0].name, was0);
+
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);
     return fails ? 1 : 0;
 }

@@ -95,6 +95,20 @@ class LobbyProfileTests(unittest.TestCase):
         self.assertIn("if (best >= 120 * s && best_end > 600 * s) found = (float)best_end + 1;", overlay)
         self.assertIn("inline ui_rect mcc_session_row(float H, float x1, int k)", layout)
 
+    def test_bots_can_be_picked(self):
+        """(Nov 11) a bot row's click opens its menu (MCC's player menu), PLAYER DETAILS its card; while either is open
+        MCC gets no input and Esc closes it."""
+        overlay, panel = src("overlay.cpp"), src("bots_panel.cpp")
+        self.assertIn("if (g_sess_hover >= 0 && ImGui::IsMouseClicked(0)) {", overlay)
+        self.assertIn('items[n] = "PLAYER DETAILS"; act[n++] = 0;', overlay)
+        self.assertIn("if (bot_pool_swap(g_roster, i, g_shm->difficulty))", overlay)
+        self.assertIn("if (g_bot_card) draw_card();", overlay)
+        self.assertIn("if (((g_panel || bots_ui) && (mouse || keys)) ||", overlay)
+        self.assertIn("bool ours = (g_show_tile && g_panel) || bot_ui();", overlay)
+        self.assertIn("bool ImGui::GetFrameCount() != g_menu_frame".split(" ", 1)[1], overlay)   # (its opening click)
+        self.assertIn("bool bot_card(bots_panel_env& e, const hb_bot& b) {", panel)
+        self.assertIn("mv = ed_model(&e, G, sp, g_card_yaw,", panel)
+
     def test_session_geometry_from_the_video(self):
         """ui_layout.h's numbers, as the owner's 2556x1436 recording and the probe on its frames gave them (scratchpad
         probe_sim.py): the player's box 82-126, 332 wide; rows 50 apart; the bar 346-334 left of the box's right edge."""

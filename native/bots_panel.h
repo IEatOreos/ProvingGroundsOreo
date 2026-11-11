@@ -133,6 +133,10 @@ void bot_pool_forget(const char* name);                 // back to the defaults 
 // else the seats' shared difficulty (or the "for everyone" one) and any play style. Returns the seats filled
 int  bot_pool_rotate(hb_roster& r, uint32_t difficulty);
 bool bot_pool_has(const char* name);
+bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty);   // seat i: the next pool bot in (the lobby's bot menu)
+// (custom, Nov 11) the lobby's bot card, full screen: MCC's Player Details for a bot (its name, emblem, difficulty, play
+// style, team, its armor in 3D in the lobby's game). False once closed (Back, Esc, the pad's B)
+bool bot_card(bots_panel_env& e, const hb_bot& b);
 void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt line and saved settings follow (the editor)
 
 // (custom, Nov 11) every bot can be dressed: the Settings tab's profiles are the lobby's bots, any of them opened in the
