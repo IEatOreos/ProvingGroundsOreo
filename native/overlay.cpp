@@ -335,6 +335,73 @@ static void draw_tile(float t) {
     if (g_hover_tile && ImGui::IsMouseClicked(0)) g_panel = true;
 }
 
+static unsigned long long make_texture(int w, int h, const unsigned char* rgba);
+
+// (custom, Nov 11) the lobby's bots as players in MCC's "MY GAME SESSION" list, under the player's own row (always the
+// first: the host's), as MCC draws a player: the team's colour bar, a box in the team's colour, the emblem, the clan tag
+// ("[ ]" with none, as MCC shows it) over the name; and the session's count in the header (8/16). The owner: "I would
+// like them to show as a 'real player' In my lobbys game session under my name which is always the top one". Drawn by
+// the mod (ui_layout.h mcc_session_row): MCC's own session holds only the player, the bots join as the match loads.
+// While the lobby's tile row is on screen and the panel is shut; the rows fade in one after another when the lineup
+// changes (Bot Matchmaking seating the next bots), a lobby filling
+static ImU32 faded(ImU32 c, float a) {
+    return (c & 0x00FFFFFFu) | ((ImU32)(((c >> 24) & 255) * (a < 0 ? 0 : a > 1 ? 1 : a)) << 24);
+}
+static void draw_session(float t) {
+    if (!g_shm || !g_shm->bots_enabled || g_shm->lidar_mode) return;
+    const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;
+    if (!R.n) return;
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImVec2 bb = bb_size();
+    static uint32_t sig_was = 0;
+    static float joined_at = -10.0f;
+    uint32_t sig = 2166136261u;                                // the lineup: names and teams
+    for (int i = 0; i < R.n; i++) {
+        for (const char* c = R.bot[i].name; *c; c++) sig = (sig ^ (uint8_t)*c) * 16777619u;
+        sig = (sig ^ R.bot[i].team) * 16777619u;
+    }
+    if (sig != sig_was) { sig_was = sig; joined_at = t; }
+    ImVec4 hr = to_ui(mcc_session_header(bb.x, bb.y));
+    float s = (hr.w - hr.y) / 37.0f;                           // px per 1080 unit (the header bar: 37 units)
+    char cnt[16];
+    sprintf_s(cnt, "%d/%d", R.n + 1, g_ff_lobby ? 4 : 16);
+    float cs = 19.0f * s;
+    ImVec2 ct = g_font_label->CalcTextSizeA(cs, 1e9f, 0, cnt);
+    dl->AddText(g_font_label, cs, ImVec2(hr.z - ct.x - 12 * s, (hr.y + hr.w - ct.y) * 0.5f), IM_COL32(205, 222, 235, 235), cnt);
+    for (int k = 0; k < R.n; k++) {
+        const hb_bot& b = R.bot[k];
+        float a = (t - joined_at) * 3.0f - k * 0.12f;          // (one after another, a third of a second each)
+        if (a <= 0) continue;
+        ImVec4 r = to_ui(mcc_session_row(bb.x, bb.y, k + 1));
+        float bx = mcc_session_bar_x(bb.x, bb.y);
+        ImVec4 bar = to_ui(ui_rect{ bx, 0, bx + 12 * mcc_frame(bb.x, bb.y).s, 0 });
+        float u = (r.w - r.y) / 45.0f;                         // px per unit in this row
+        ImU32 tc = team_colour(b.team);
+        int tr = tc & 255, tg = (tc >> 8) & 255, tb = (tc >> 16) & 255;
+        ImU32 fill_l = IM_COL32(tr * 55 / 100, tg * 55 / 100, tb * 55 / 100, 235);
+        ImU32 fill_r = IM_COL32(tr * 30 / 100, tg * 30 / 100, tb * 30 / 100, 225);
+        ImU32 edge = IM_COL32(tr * 85 / 100 + 30, tg * 85 / 100 + 30, tb * 85 / 100 + 30, 200);
+        dl->AddRectFilled(ImVec2(bar.x, r.y), ImVec2(bar.z, r.w), faded(tc, a));
+        dl->AddRectFilledMultiColor(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(fill_l, a), faded(fill_r, a), faded(fill_r, a),
+                                    faded(fill_l, a));
+        dl->AddRect(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(edge, a), 0, 0, 1.0f);
+        // the emblem (brain/emblems.py: the one MCC shows for it in the games), else a plain badge
+        ImVec2 e0(r.x + 9 * u, r.y + 7 * u), e1(r.x + 41 * u, r.y + 39 * u);
+        unsigned long long em = bot_emblem(b.name, make_texture);
+        if (em) dl->AddImage((ImTextureID)em, e0, e1, ImVec2(0, 0), ImVec2(1, 1), faded(IM_COL32(255, 255, 255, 255), a));
+        else {
+            dl->AddRectFilled(e0, e1, faded(IM_COL32(20, 28, 36, 220), a));
+            dl->AddRect(e0, e1, faded(edge, a), 0, 0, 1.0f);
+        }
+        const char* clan = profile_clan_of(b.name);
+        char tag[12];
+        sprintf_s(tag, clan[0] ? "[%s]" : "[ ]", clan);
+        float x = r.x + 55 * u;
+        dl->AddText(g_font_label, 15 * u, ImVec2(x, r.y + 4 * u), faded(IM_COL32(222, 228, 234, 235), a), tag);
+        dl->AddText(g_font_label, 21 * u, ImVec2(x, r.y + 19 * u), faded(IM_COL32(255, 255, 255, 255), a), b.name);
+    }
+}
+
 // a texture from RGBA pixels for the profile view's pictures (game logos, bot looks), on MCC's own device
 static unsigned long long make_texture(int w, int h, const unsigned char* rgba) {
     if (!g_dev) return 0;
@@ -698,6 +765,8 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 // left out (it drew over the panel's header), and takes no clicks
                 if (g_show_tile && !g_panel) draw_tile((float)ImGui::GetTime());
                 else g_hover_tile = false;
+                if (g_show_tile && !g_panel) draw_session((float)ImGui::GetTime());   // (the bots in MY GAME SESSION)
+                bot_emblems_frame();
                 if (g_show_tile && g_panel) draw_panel();
                 g_popup_before = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
                 if (notice) draw_notice();

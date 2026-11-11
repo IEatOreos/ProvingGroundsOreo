@@ -103,6 +103,7 @@ int  roster_on_team(const hb_roster& r, int team);
 int  roster_mixed_tier(int k);                          // "Mixed": Normal, Easy, Heroic, Legendary, Demon, Blind in turn
 int  roster_difficulty_tier(uint32_t difficulty, int k); // a "for everyone" difficulty as the k-th bot's tier
 const char* team_name(int team);
+uint32_t team_colour(int team);                         // the panel's team colour (IM_COL32)
 const char* tier_name(int tier);
 const char* tier_key(int tier);                         // novice average strong top (brain/profiles.py), scaling, demon
 const char* style_name(int style);                      // rusher .. sniper, any (brain/profiles.py)
@@ -131,6 +132,19 @@ void bot_pool_forget(const char* name);                 // back to the defaults 
 // the next bots in the seats, teams kept: the pool re-read, each seat the next free name; a bot's saved settings,
 // else the seats' shared difficulty (or the "for everyone" one) and any play style. Returns the seats filled
 int  bot_pool_rotate(hb_roster& r, uint32_t difficulty);
+bool bot_pool_has(const char* name);
+void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt line and saved settings follow (the editor)
+
+// (custom, Nov 11) every bot can be dressed: the Settings tab's profiles are the lobby's bots, any of them opened in the
+// bot editor gets a profile (bot_profiles.ini, after the install's 15; up to 1024; the re-roll keeps them)
+int  profile_index(const char* name);                   // its profile, or -1
+int  profile_ensure(const char* name);                  // its profile, made (and written) with the look it has now
+uint32_t name_look_seed(const char* name);              // brain/looks.py seed_of for a bot with no profile (CRC-32)
+
+// (custom, Nov 11) the lobby's bot rows (overlay.cpp draw_session): a bot's MCC emblem picture as a texture (0: not
+// there yet: drawn in the background, tools/looks_export.py --emblems); bot_emblems_frame once a frame
+unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w, int h, const unsigned char* rgba));
+void bot_emblems_frame();
 
 // The bug report over a match: with MCC's pause menu up, a "Report bot bug" button; it (or F9) opens the report window.
 // overlay.cpp saves what was typed (logs/bug_reports/<time>/report.json); the brain adds the match recording.

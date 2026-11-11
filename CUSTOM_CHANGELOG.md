@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Every lobby bot can be dressed and saved; the bots listed under the player in MY GAME SESSION, 2026-11-11
+
+The owner: "Can we make it to where the bots that are in the 'lobby' that are loaded in will show on the bot profile page? I want every bot I edit to save their difficulty playstyle armor everything. If I edit them. But I want them to be viewable at the time of them being in my lobby. ... I would like them to show as a 'real player' In my lobbys game session under my name which is always the top one."
+
+- **Settings > Bot profiles shows the lobby** (`native/bots_panel.cpp` `mod_settings`):
+  - The page lists the bots in the next match (the lineup, up to 15), not the install's 15. Each bot shows its team colour, clan tag, name, difficulty and play style.
+  - Picking one opens the bot editor. The Bots tab inspector has "Edit look and clan tag", which opens the same editor for the selected bot.
+- **Any bot gets a profile** (`profile_ensure`, `name_look_seed`, `profile_index`):
+  - A bot with no profile (a pool bot) gets one when its editor opens. It is written to `bot_profiles.ini` after the install's 15, with the look seed the brain already gives it (`brain/looks.py` seed_of: zlib CRC-32 of the lower-case name) and no clan tag, so its armor and emblem do not change until something is changed.
+  - Its armor, clan tag and name are saved like the 15's. Its difficulty and play style are saved by Bot Matchmaking (`bot_pool_saved.ini`).
+  - Profiles go up to 1024 (`PROF_MAX`, was 32). The profile view's look cache is a vector (was 192 lines), and the texture cache holds 256 (was 64).
+  - The Re-roll draws the install's 15 again and keeps every bot dressed beyond them, hand-set looks included. A new name equal to a kept bot's yields to the kept bot.
+- **Renaming in the editor** (`bot_pool_rename`, `bot_pool_has`): a pool bot's line in `bot_pool.txt` (the first of that name; every other line, note and the order as written) and its saved settings follow the new name. A name already in the pool is refused, like a name already in the profiles.
+- **MY GAME SESSION** (`native/overlay.cpp` `draw_session`, `native/ui_layout.h` `mcc_session_header` / `mcc_session_row` / `mcc_session_bar_x`):
+  - The lobby's bots are drawn under the player's own row (MCC's, always first) as MCC draws a player: the team's colour bar, a box in the team's colour, the bot's MCC emblem, its clan tag (`[ ]` with none, as MCC shows it) over its name. The header shows the session's count (8/16; Firefight /4).
+  - Shown while the lobby's tile row is on screen and the BOTS panel is shut, with bots on and not in LiDAR mode. The rows fade in one after another when the lineup changes (Bot Matchmaking seating the next bots).
+  - This is the mod's drawing, like the BOTS tile: MCC's own session still holds only the player, because adding fake members to its network session could stall the match start. The bots join as the match loads, as before.
+  - Measured from the owner's Halo 4 lobby screenshot (about 2000x1115) in the header frame (anchored right, scaled by height): rows 50 units apart from y 75, 45 high. Checked by drawing the rectangles and a mock of the rows on that screenshot.
+- **Emblems for pool bots** (`bot_emblem`, `bot_emblems_frame`; `tools/looks_export.py --emblems profiles.ini NAME...`): a bot with no emblem picture gets one drawn in the background, then picked up. One that cannot be drawn (no emblem art extracted) shows a plain badge and is not asked for again.
+- Validation: `native/pool_test.cpp` adds 4 checks (14 in all pass): the look seed equals Python's for three names, a new profile written with that seed and no clan and one per name, the Re-roll keeping a dressed pool bot's clan and hand-set armor, and a rename carrying the pool line (notes and CRLF kept) and saved settings. `tools/test_bot_matchmaking.py` adds 3 tests (7 pass): the brain's seed and clan for those names before and after the profile line, `--emblems`, and the page and rows wiring. All 54 `tools/test_*.py` files pass. `native\build.bat lobbyrows2` built `native/bin/botcore_lobbyrows2.dll` (not in Git). Untested in game: the rows' fit at other window sizes and in the other games' lobbies, the editor on a new pool bot, and the page's layout.
+
 ### Bot Matchmaking: a pool of bots, each match's seats filled from it in queue order, 2026-11-10
 
 The owner: "I have a call of duty mod with bots that can switch between 1-1000 bots per match due to a name que file"; "I would like every bot to be able to be customized and saved"; "if we just did like 50-60 bots right now to see if it works can I just add the other 900 later manually? ... And add an option in the menu that allows me to turn off 'Bot Matchmaking'".

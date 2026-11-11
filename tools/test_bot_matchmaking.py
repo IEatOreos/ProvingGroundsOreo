@@ -55,5 +55,43 @@ class WiringTests(unittest.TestCase):
             self.assertEqual(botctl.setting(str(ini), "matchmaking", "0"), "1")
 
 
+class LobbyProfileTests(unittest.TestCase):
+    """(Nov 11) every lobby bot can be dressed (profile_ensure) and is drawn in MCC's MY GAME SESSION list."""
+
+    def test_pool_bot_seed_is_the_brains(self):
+        # native/pool_test.cpp holds name_look_seed to these: a pool bot given a profile keeps the look it had
+        sys.path.insert(0, str(ROOT))
+        from brain import looks
+        with tempfile.TemporaryDirectory() as d:
+            prof = Path(d) / "bot_profiles.ini"
+            prof.write_text("experience=original\neffects=none\nbot=Alpha,111,TBK\n", encoding="utf-8")
+            for name, seed in (("MadPistol", 999176086), ("Sword117", 4220511441), ("xX_DeadlyAssass", 2723695146)):
+                self.assertEqual(looks.seed_of(name, str(prof)), seed)
+                self.assertEqual(looks.clan_of(name, str(prof)), "")      # (no clan till one is set)
+            # given its profile line (as profile_ensure writes it), the same seed: the same look and emblem
+            prof.write_text(prof.read_text() + "bot=MadPistol,999176086,\n", encoding="utf-8")
+            self.assertEqual(looks.seed_of("MadPistol", str(prof)), 999176086)
+            self.assertEqual(looks.read_profiles(str(prof))[0][-1], ("MadPistol", 999176086, ""))
+
+    def test_emblems_for_named_bots(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        import looks_export
+        with tempfile.TemporaryDirectory() as d:
+            prof = Path(d) / "bot_profiles.ini"
+            prof.write_text("experience=original\n", encoding="utf-8")
+            self.assertIsInstance(looks_export.export_emblems(str(prof), []), int)
+        self.assertIn('looks_export.py\\" --emblems', src("bots_panel.cpp"))       # (bot_emblems_frame asks for them)
+
+    def test_settings_page_and_session_rows(self):
+        panel, overlay, layout = src("bots_panel.cpp"), src("overlay.cpp"), src("ui_layout.h")
+        self.assertIn('caption("Bot profiles: in your lobby");', panel)
+        self.assertIn("int k = profile_ensure(lr.bot[open_k].name);", panel)
+        self.assertIn('button("Edit look and clan tag"', panel)
+        self.assertIn("for (int k = PROF_INSTALL; k < g_nprof; k++)", panel)          # the re-roll keeps them
+        self.assertIn("PROF_MAX = 1024", panel)
+        self.assertIn("if (g_show_tile && !g_panel) draw_session(", overlay)
+        self.assertIn("inline ui_rect mcc_session_row(float W, float H, int k)", layout)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

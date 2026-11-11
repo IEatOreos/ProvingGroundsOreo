@@ -67,6 +67,27 @@ inline ui_rect bug_button_rect(float W, float H, float text_w_px = 0) {
     return { x1 - w, y1 - h, x1, y1 };
 }
 
+// (custom, Nov 11) MCC's lobby "MY GAME SESSION" list, top right, in the header frame (anchored to its right edge, scaled
+// by height). Measured from the owner's lobby screenshot (Halo 4 custom game, ~2000x1115, Nov 11): the header bar
+// 468-9 units in from the frame's right, y 29-66; the host's row (always the player, first) y 75-120 (its focus line
+// under it to 127): his team's colour bar 362-350 in, the name box 344-11 in (its emblem 335-305, its clan tag from 289
+// at +8, its name at +22); and an 8-player session's rows about 50 apart (checked by drawing these rects on the
+// screenshot). Row k: 0 the player's (MCC's own), 1.. the bots the mod draws under it
+inline ui_rect mcc_session_header(float W, float H) {
+    ui_page f = mcc_frame(W, H);
+    float r = f.x0 + f.w;
+    return { r - 468 * f.s, 29 * f.s, r - 9 * f.s, 66 * f.s };
+}
+inline ui_rect mcc_session_row(float W, float H, int k) {      // the name box (x) and the row's height (y)
+    ui_page f = mcc_frame(W, H);
+    float r = f.x0 + f.w, y = (75 + 50 * k) * f.s;
+    return { r - 344 * f.s, y, r - 11 * f.s, y + 45 * f.s };
+}
+inline float mcc_session_bar_x(float W, float H) {             // the team colour bar's left edge (12 units wide)
+    ui_page f = mcc_frame(W, H);
+    return f.x0 + f.w - 362 * f.s;
+}
+
 inline bool ui_inside(const ui_rect& r, float W, float H) { return r.x0 >= 0 && r.y0 >= 0 && r.x1 <= W && r.y1 <= H; }
 inline bool ui_overlap(const ui_rect& a, const ui_rect& b) {
     return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;

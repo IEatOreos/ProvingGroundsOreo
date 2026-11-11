@@ -116,6 +116,58 @@ int main(int argc, char** argv) {
     roster_add(r5, 1, 1, HB_STYLE_ANY, 78);
     CHECK(!(r5.bot[1].name[0] == 'A' && strlen(r5.bot[1].name) == 2), "off: not from pool: %s", r5.bot[1].name);
 
+    // 11. (Nov 11) a pool bot's look seed is brain/looks.py seed_of's: zlib.crc32(name.lower()) (tools/test_bot_matchmaking.py)
+    CHECK(name_look_seed("MadPistol") == 999176086u, "seed MadPistol %u", name_look_seed("MadPistol"));
+    CHECK(name_look_seed("Sword117") == 4220511441u, "seed Sword117 %u", name_look_seed("Sword117"));
+    CHECK(name_look_seed("xX_DeadlyAssass") == 2723695146u, "seed xX %u", name_look_seed("xX_DeadlyAssass"));
+
+    // 12. any bot gets a profile for the editor, with the look it has now, written at once; one profile a name
+    wchar_t prof[MAX_PATH];
+    swprintf_s(prof, L"%sbot_profiles.ini", dir);
+    write(prof, "experience=original\neffects=none\nbot=Alpha,111,TBK\nbot=Bravo,222,\n");
+    bots_panel_profiles(prof);
+    CHECK(profiles_count() == 2, "profiles %d", profiles_count());
+    int k = profile_ensure("MadPistol");
+    CHECK(k == 2 && profiles_count() == 3 && !strcmp(profile_clan(k), ""), "ensure new: %d %d", k, profiles_count());
+    CHECK(profile_ensure("madpistol") == 2 && profile_ensure("Alpha") == 0 && profiles_count() == 3, "ensure existing");
+    bots_panel_profiles(prof);                       // written: read back
+    CHECK(profile_index("MadPistol") == 2, "written %d", profile_index("MadPistol"));
+    {
+        FILE* f = nullptr; _wfopen_s(&f, prof, L"rb"); char all[4096] = ""; size_t n = fread(all, 1, sizeof all - 1, f); all[n] = 0; fclose(f);
+        const char* at = strstr(all, "bot=MadPistol,999176086,");   // (no clan, nothing set by hand: the line ends)
+        CHECK(at && (at[24] == '\r' || at[24] == '\n'), "line: %s", all);
+    }
+
+    // 13. a re-roll draws the 15 again and keeps every bot dressed beyond them, its hand-set look too
+    {
+        char text[4096] = "experience=original\neffects=none\n";
+        for (int i = 0; i < 15; i++) { char l[64]; sprintf_s(l, "bot=Install%d,%d,\n", i, 1000 + i); strcat_s(text, l); }
+        strcat_s(text, "bot=MadPistol,999176086,ODST,h4.primary=3;h4.helmet=12\n");
+        write(prof, text);
+        bots_panel_profiles(prof);
+        CHECK(profiles_count() == 16, "16 profiles: %d", profiles_count());
+        CHECK(profiles_reroll(prof, 0, 0, 12345, 1, -1), "reroll");
+        CHECK(profiles_count() == 16, "after re-roll %d", profiles_count());
+        int m = profile_index("MadPistol");
+        CHECK(m == 15 && !strcmp(profile_clan(m), "ODST") && profile_over_get(m, "h4.helmet") == 12, "kept: %d", m);
+        CHECK(profile_index("Install0") < 0, "the 15 drawn again");
+    }
+
+    // 14. the editor's rename: the bot's pool line (others and notes as written) and saved settings follow
+    write(pool, "# my bots\r\nAlpha\r\nBravo\r\nCharlie\r\n");
+    DeleteFileW(saved);
+    bot_pool_load(dir);
+    hb_bot br{}; strcpy_s(br.name, "Bravo"); br.tier = HB_TIER_DEMON; br.style = 1;
+    bot_pool_remember(br);
+    bot_pool_rename("bravo", "BravoTwo");
+    CHECK(bot_pool_has("BravoTwo") && !bot_pool_has("Bravo") && bot_pool_size() == 3, "renamed in the pool");
+    t = -1;
+    CHECK(bot_pool_saved_of("BravoTwo", &t, nullptr) && t == HB_TIER_DEMON, "saved follows");
+    {
+        FILE* f = nullptr; _wfopen_s(&f, pool, L"rb"); char all[256] = ""; size_t n = fread(all, 1, sizeof all - 1, f); all[n] = 0; fclose(f);
+        CHECK(!strcmp(all, "# my bots\r\nAlpha\r\nBravoTwo\r\nCharlie\r\n"), "file: [%s]", all);
+    }
+
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);
     return fails ? 1 : 0;
 }

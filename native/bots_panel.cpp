@@ -81,6 +81,7 @@ static const char* TITLE_NAME[9] = { "", "HALO: CE", "HALO 2", "HALO 3", "", "HA
 
 static const char* TIER_KEY[HB_TIERS] = { "novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician" };
 const char* team_name(int t) { return t >= 0 && t < HB_TEAMS_MAX ? TEAM_NAME[t] : "?"; }
+uint32_t team_colour(int t) { return TEAM_COL[t >= 0 && t < HB_TEAMS_MAX ? t : 0]; }   // (the lobby's bot rows)
 const char* tier_name(int t) { return t >= 0 && t < HB_TIERS ? TIER_NAME[t] : "?"; }
 const char* tier_key(int t) { return t >= 0 && t < HB_TIERS ? TIER_KEY[t] : "top"; }
 
@@ -183,10 +184,13 @@ static bool name_taken(const hb_roster& r, const char* n, int skip) {
 // match to match. Lines: experience=original|modern, effects=none|rare|common|frequent, bot=<name>,<seed>[,<clan tag>]
 // A 4th field holds what the player set by hand in the bot editor: <game>.<field>=<value> pairs split by ';'
 // (brain/looks.py overrides_of).
-static char g_prof[32][16];
-static char g_prof_clan[32][6];
-static uint32_t g_prof_seed[32];
-static char g_prof_over[32][256];
+// (custom, Nov 11: PROF_MAX, was 32. The first 15 are this install's bots, the re-roll's; after them every other bot
+// opened in the bot editor (Bot Matchmaking's pool, profile_ensure), kept by the re-roll)
+enum { PROF_MAX = 1024, PROF_INSTALL = 15 };
+static char g_prof[PROF_MAX][16];
+static char g_prof_clan[PROF_MAX][6];
+static uint32_t g_prof_seed[PROF_MAX];
+static char g_prof_over[PROF_MAX][256];
 static int g_nprof = 0;
 static int g_experience = 0;                             // 0 Original, 1 Modern
 static int g_effects = 0;                                // how many bots wear an armor effect: EFFECTS_LEVEL
@@ -219,7 +223,7 @@ void bots_panel_profiles(const wchar_t* path) {
     g_elite_share = -1;
     if (_wfopen_s(&f, path, L"r") != 0 || !f) return;
     char line[512];
-    while (g_nprof < 32 && fgets(line, sizeof line, f)) {
+    while (g_nprof < PROF_MAX && fgets(line, sizeof line, f)) {
         for (char* c = line; *c; c++) if (*c == '\r' || *c == '\n') *c = 0;
         if (strncmp(line, "experience=", 11) == 0) { g_experience = _stricmp(line + 11, "modern") == 0; continue; }
         if (strncmp(line, "effects=", 8) == 0) { g_effects = effects_level(line + 8); continue; }
@@ -252,6 +256,39 @@ void bots_panel_profiles(const wchar_t* path) {
 const char* profile_clan_of(const char* name) {
     for (int i = 0; i < g_nprof; i++) if (_stricmp(g_prof[i], name) == 0) return g_prof_clan[i];
     return "";
+}
+
+int profile_index(const char* name) {
+    for (int i = 0; i < g_nprof; i++) if (_stricmp(g_prof[i], name) == 0) return i;
+    return -1;
+}
+
+// zlib's CRC-32 of the lower-case name, as brain/looks.py seed_of gives a bot that is not in the profiles its look seed
+// (zlib.crc32(name.lower().encode("utf-8")) or 1)
+uint32_t name_look_seed(const char* name) {
+    uint32_t c = 0xFFFFFFFFu;
+    for (const unsigned char* p = (const unsigned char*)name; *p; p++) {
+        c ^= (uint32_t)tolower(*p);
+        for (int k = 0; k < 8; k++) c = c & 1 ? (c >> 1) ^ 0xEDB88320u : c >> 1;
+    }
+    c ^= 0xFFFFFFFFu;
+    return c ? c : 1;
+}
+
+bool profiles_save();
+// (custom, Nov 11) any bot's profile, for the bot editor: one of the profiles, or a new one for a bot that has none (a
+// pool bot) with the look seed and clan tag (none) the brain gives it already, so it looks the same; written now.
+// -1: no room or no profiles file
+int profile_ensure(const char* name) {
+    int i = profile_index(name);
+    if (i >= 0 || !name[0] || !g_prof_path[0] || g_nprof >= PROF_MAX) return i;
+    i = g_nprof++;
+    strncpy_s(g_prof[i], name, 15);
+    g_prof_seed[i] = name_look_seed(name);
+    g_prof_clan[i][0] = 0;
+    g_prof_over[i][0] = 0;
+    profiles_save();
+    return i;
 }
 
 // the whole file again, as the panel holds it (the editor's changes); false if it could not be written
@@ -311,7 +348,7 @@ void profile_over_set(int i, const char* key, int v) {
 // result of the roll, never "Random". Lines: <name>|<game>|own|other|k=v... ("own": its preferred species, "other":
 // the other)
 struct look_line { char name[16]; char game[6]; bool other; char kv[640]; };   // (Reach / Halo 4 piece lists: ~500)
-static look_line g_look[192];
+static std::vector<look_line> g_look;                    // (custom, Nov 11: was 192 lines, the 15 bots' worth)
 static int g_nlook = 0;
 static ULONGLONG g_look_mtime = 0, g_look_check = 0, g_look_asked = 0;
 static unsigned long long (*g_make_texture)(int w, int h, const unsigned char* rgba) = nullptr;   // bots_panel_env
@@ -368,15 +405,17 @@ static void looks_load() {
     g_look_mtime = mt;
     FILE* f = nullptr;
     if (_wfopen_s(&f, view, L"r") != 0 || !f) return;
+    g_look.clear();
     g_nlook = 0;
     char line[800];
-    while (g_nlook < COUNT(g_look) && fgets(line, sizeof line, f)) {
+    while (fgets(line, sizeof line, f)) {
         if (line[0] == ';') continue;
         for (char* c = line; *c; c++) if (*c == '\r' || *c == '\n') *c = 0;
         char* a = strchr(line, '|'); if (!a) continue; *a++ = 0;
         char* b = strchr(a, '|'); if (!b) continue; *b++ = 0;
         char* c = strchr(b, '|'); if (!c) continue; *c++ = 0;
-        look_line& L = g_look[g_nlook];
+        g_look.emplace_back();
+        look_line& L = g_look.back();
         strncpy_s(L.name, line, _TRUNCATE);
         strncpy_s(L.game, a, _TRUNCATE);
         L.other = strcmp(b, "other") == 0;
@@ -473,7 +512,7 @@ static int rolled_species(int game_index);
 
 // pictures: native\bin\<file>.rgba (uint32 width, height, then RGBA), made a texture once
 struct tex_entry { char key[64]; ImTextureID id; int w, h; };
-static tex_entry g_tex[64];
+static tex_entry g_tex[256];                             // (custom, Nov 11: was 64; the lobby's emblems too)
 static int g_ntex = 0;
 static const tex_entry* texture(const char* key, const wchar_t* file) {
     for (int i = 0; i < g_ntex; i++) if (!strcmp(g_tex[i].key, key)) return g_tex[i].id ? &g_tex[i] : nullptr;
@@ -590,6 +629,15 @@ bool profiles_reroll(const wchar_t* path, int experience, int effects, uint32_t 
         uint32_t look = rnd(s) & 0x7FFFFFFF;
         const char* clan = rint(s, 100) < 55 ? clans[rint(s, nclans)] : "";
         fprintf(f, "bot=%s,%u,%s\n", names[i], look ? look : 1, clan);
+    }
+    // (custom, Nov 11) the bots edited beyond the install's 15 (Bot Matchmaking's pool, profile_ensure) are kept as
+    // they were: a re-roll draws the 15 again, never the bots the player dressed (a new name taking one's place: theirs)
+    for (int k = PROF_INSTALL; k < g_nprof; k++) {
+        bool clash = false;
+        for (int i = 0; i < 15; i++) clash |= _stricmp(names[i], g_prof[k]) == 0;
+        if (clash) continue;
+        if (g_prof_over[k][0]) fprintf(f, "bot=%s,%u,%s,%s\n", g_prof[k], g_prof_seed[k], g_prof_clan[k], g_prof_over[k]);
+        else fprintf(f, "bot=%s,%u,%s\n", g_prof[k], g_prof_seed[k], g_prof_clan[k]);
     }
     fclose(f);
     bots_panel_profiles(path);
@@ -743,6 +791,101 @@ void bot_pool_forget(const char* name) {
     bot_pool_save();
 }
 
+bool bot_pool_has(const char* name) {
+    for (const std::string& n : g_pool) if (_stricmp(n.c_str(), name) == 0) return true;
+    return false;
+}
+
+// (custom, Nov 11) the bot editor renamed a bot: its line in bot_pool.txt (the first of that name; every other line,
+// note and the order as written) and its saved difficulty and play style follow it
+void bot_pool_rename(const char* from, const char* to) {
+    if (!g_pool_dir[0] || !from[0] || !to[0]) return;
+    wchar_t p[300], tmp[310];
+    swprintf_s(p, L"%sbot_pool.txt", g_pool_dir);
+    swprintf_s(tmp, L"%s.tmp", p);
+    FILE *in = nullptr, *out = nullptr;
+    bool wrote = false;
+    if (_wfopen_s(&in, p, L"rb") == 0 && in) {
+        if (_wfopen_s(&out, tmp, L"wb") == 0 && out) {
+            char line[512], name[16];
+            bool done = false;
+            while (fgets(line, sizeof line, in)) {
+                const char* c = line;
+                while (*c == ' ' || *c == '\t') c++;
+                if (!done && *c != '#' && *c != ';' && pool_clean(c, name) && _stricmp(name, from) == 0) {
+                    fprintf(out, "%s%s", to, strchr(line, '\r') ? "\r\n" : "\n");
+                    done = true;
+                    continue;
+                }
+                fputs(line, out);
+            }
+            fclose(out);
+            wrote = true;
+        }
+        fclose(in);
+        if (wrote) MoveFileExW(tmp, p, MOVEFILE_REPLACE_EXISTING);
+    }
+    if (pool_saved* sv = pool_find_saved(from)) strncpy_s(sv->name, to, 15);
+    bot_pool_save();
+    bot_pool_load(g_pool_dir);
+}
+
+// ---- the lobby's bot rows (custom, Nov 11): each bot's MCC emblem picture, native\bin\emblems\<name>.rgba. The
+// profiles' come with the profile view's export; a pool bot's is drawn on request (tools/looks_export.py --emblems,
+// in the background) and picked up once its file is there
+static std::vector<std::string> g_emb_want, g_emb_wait, g_emb_none;   // (none: asked for, never came: not asked again)
+static ULONGLONG g_emb_asked = 0, g_emb_check = 0;
+
+unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w, int h, const unsigned char* rgba)) {
+    if (!g_make_texture) g_make_texture = make;
+    wchar_t ef[96]; swprintf_s(ef, L"emblems\\%S.rgba", name);
+    char ek[64]; sprintf_s(ek, "emblem:%s", name);
+    if (const tex_entry* t = texture(ek, ef)) return (unsigned long long)t->id;
+    for (const std::string& w : g_emb_want) if (_stricmp(w.c_str(), name) == 0) return 0;
+    for (const std::string& w : g_emb_wait) if (_stricmp(w.c_str(), name) == 0) return 0;
+    for (const std::string& w : g_emb_none) if (_stricmp(w.c_str(), name) == 0) return 0;
+    if (!strchr(name, '"')) g_emb_want.push_back(name);
+    return 0;
+}
+
+void bot_emblems_frame() {
+    ULONGLONG now = GetTickCount64();
+    if (!g_emb_wait.empty() && now - g_emb_check > 500) {      // drawn since: its next texture() reads the file
+        g_emb_check = now;
+        for (size_t k = 0; k < g_emb_wait.size(); k++) {
+            wchar_t ef[96], path[300]; swprintf_s(ef, L"emblems\\%S.rgba", g_emb_wait[k].c_str());
+            bin_file(path, 300, ef);
+            bool there = GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
+            if (there || now - g_emb_asked > 30000) {
+                char ek[64]; sprintf_s(ek, "emblem:%s", g_emb_wait[k].c_str());
+                if (there) texture_forget(ek);
+                else g_emb_none.push_back(g_emb_wait[k]);      // (no emblem art extracted: the row's plain badge)
+                g_emb_wait.erase(g_emb_wait.begin() + k--);
+            }
+        }
+    }
+    if (g_emb_want.empty() || now - g_emb_asked < 5000 || !g_prof_path[0]) return;
+    wchar_t root[260];
+    if (!repo_root(root, 260)) { g_emb_want.clear(); return; }
+    wchar_t py[MAX_PATH + 2]; hb_python(root, py, MAX_PATH + 2);
+    std::wstring cmd = std::wstring(py) + L" -I \"" + root + L"\\tools\\looks_export.py\" --emblems \"" + g_prof_path + L"\"";
+    for (const std::string& n : g_emb_want) {
+        wchar_t w[40]; swprintf_s(w, L" \"%S\"", n.c_str());
+        cmd += w;
+    }
+    std::vector<wchar_t> buf(cmd.begin(), cmd.end());
+    buf.push_back(0);
+    STARTUPINFOW si{}; si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (CreateProcessW(nullptr, buf.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+    g_emb_asked = now;
+    g_emb_wait.insert(g_emb_wait.end(), g_emb_want.begin(), g_emb_want.end());
+    g_emb_want.clear();
+}
+
 // seat i takes the next pool name no other seat holds, and that bot's saved settings; false: none free
 static bool pool_take(hb_roster& r, int i) {
     int n = (int)g_pool.size();
@@ -793,9 +936,10 @@ void roster_name(hb_roster& r, int i, uint32_t seed) {
 static void roster_name_own(hb_roster& r, int i, uint32_t seed) {
     uint32_t s = seed | 1;
     char n[64];
-    int free_prof[32], nfree = 0;
+    std::vector<int> free_prof;
     for (int k = 0; k < g_nprof; k++)
-        if (!name_taken(r, g_prof[k], i) && _stricmp(r.bot[i].name, g_prof[k]) != 0) free_prof[nfree++] = k;
+        if (!name_taken(r, g_prof[k], i) && _stricmp(r.bot[i].name, g_prof[k]) != 0) free_prof.push_back(k);
+    int nfree = (int)free_prof.size();
     if (nfree) { strcpy_s(r.bot[i].name, g_prof[free_prof[rint(s, nfree)]]); return; }
     for (int tries = 0; tries < 200; tries++) {
         made_name(n, sizeof n, s);
@@ -1086,6 +1230,8 @@ void line(float pad = 12) {
 
 // ------------------------------------------------------------------ the panel
 static int g_sel = -1;                 // the selected bot
+static char g_edit_pending[16];        // (custom, Nov 11) the inspector's "Edit look": this bot's editor, on Settings
+static bool g_goto_settings = false;
 static uint32_t g_seed = 0x9E3779B9;
 static int qs_teams = 2, qs_per = 4, qs_tier = 3, qs_style = HB_STYLE_ANY;
 
@@ -1416,6 +1562,12 @@ static void inspector(bots_panel_env& e, bool& changed) {
             muted("Changes to difficulty or play style are saved to this bot.", false);
         }
     }
+    // (custom, Nov 11) its armor, clan tag and name: the bot editor (Settings), for any bot in the list
+    if (button("Edit look and clan tag", OUTLINE, ImVec2(0, 0), true)) {
+        strcpy_s(g_edit_pending, b.name);
+        g_goto_settings = true;
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Its armor, colours, clan tag and name, saved to this bot");
     ImGui::Dummy(ImVec2(0, px(6)));
     if (!hb_panel_firefight) {                               // (Firefight: every bot on your team, no picker)
     caption("Team");
@@ -2533,11 +2685,14 @@ static void bot_editor(bots_panel_env& e, bool& changed) {
     ImGui::SetNextItemWidth(px(300));
     ImGui::InputText("##edname", g_edit_name, sizeof g_edit_name, ImGuiInputTextFlags_CharsNoBlank);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        bool ok = g_edit_name[0] && !strpbrk(g_edit_name, ",;=|");
+        bool ok = g_edit_name[0] && !strpbrk(g_edit_name, ",;=|\"");
         for (int i = 0; ok && i < g_nprof; i++) ok = i == g_edit || _stricmp(g_prof[i], g_edit_name) != 0;
+        // (custom, Nov 11) nor another pool bot's name (Bot Matchmaking): one name, one bot
+        if (ok && _stricmp(g_prof[g_edit], g_edit_name) != 0 && bot_pool_has(g_edit_name)) ok = false;
         if (ok && strcmp(g_prof[g_edit], g_edit_name)) {
             hb_roster& r = *e.roster;                        // the list's bot of that name follows the profile
             for (int i = 0; i < r.n; i++) if (!_stricmp(r.bot[i].name, g_prof[g_edit])) strcpy_s(r.bot[i].name, g_edit_name);
+            if (bot_pool_has(g_prof[g_edit])) bot_pool_rename(g_prof[g_edit], g_edit_name);   // (its pool line, saved settings)
             strcpy_s(g_prof[g_edit], g_edit_name);
             dirty = changed = true;
         } else strcpy_s(g_edit_name, g_prof[g_edit]);
@@ -3080,37 +3235,58 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
     dl->AddRect(body0, ImVec2(body0.x + left_w, body0.y + h), LINE);
     ImGui::SetCursorScreenPos(ImVec2(body0.x + px(20), body0.y + px(16)));
     ImGui::BeginGroup();
-    caption("Bot profiles");
-    muted("Your 15 bots. They keep their names, clan tags and looks from match to match.", false);
+    // (custom, Nov 11) the bots in the lobby now, whoever they are (Bot Matchmaking's pool or the install's 15): each
+    // opens the bot editor, its look, clan tag and name saved to that bot (profile_ensure); its difficulty and play
+    // style shown under it (the Bots tab sets them)
+    if (g_edit_pending[0]) {                                 // (the Bots tab inspector's "Edit look")
+        int k = profile_ensure(g_edit_pending);
+        g_edit_pending[0] = 0;
+        if (k >= 0) open_editor(k);
+    }
+    const hb_roster& lr = *e.roster;
+    caption("Bot profiles: in your lobby");
+    muted("The bots in your next match. Each keeps its name, clan tag, look, difficulty and play style.", false);
     ImGui::Dummy(ImVec2(0, px(8)));
-    int n = profiles_count();
+    int n = lr.n;
     float col_w = (left_w - px(40)) / 3.0f;
     ImVec2 g0 = ImGui::GetCursorScreenPos();
     push(BODY);
-    for (int i = 0; i < n && i < 15; i++) {                  // each name opens the bot editor
-        ImVec2 c(g0.x + (i % 3) * col_w, g0.y + (i / 3) * px(52));
+    int open_k = -1;
+    for (int i = 0; i < n; i++) {                            // each bot opens the bot editor
+        const hb_bot& lb = lr.bot[i];
+        ImVec2 c(g0.x + (i % 3) * col_w, g0.y + (i / 3) * px(62));
         ImGui::SetCursorScreenPos(ImVec2(c.x - px(8), c.y - px(8)));
         ImGui::PushID(i);
-        bool click = nav_button("prof", ImVec2(col_w - px(8), px(40)));
+        bool click = nav_button("prof", ImVec2(col_w - px(8), px(54)));
         bool hov = ImGui::IsItemHovered();
         ImGui::PopID();
-        if (click) open_editor(i);    // after PopID: OpenPopup inside PushID(i) named another popup
+        if (click) open_k = i;        // (opened after the loop: OpenPopup inside PushID(i) named another popup)
         if (hov) {
-            dl->AddRectFilled(ImVec2(c.x - px(8), c.y - px(8)), ImVec2(c.x + col_w - px(16), c.y + px(32)), HOVER, px(3));
+            dl->AddRectFilled(ImVec2(c.x - px(8), c.y - px(8)), ImVec2(c.x + col_w - px(16), c.y + px(46)), HOVER, px(3));
             ImGui::SetTooltip("Edit name, clan tag and armor");
         }
-        const char* clan = profile_clan(i);
+        dl->AddRectFilled(ImVec2(c.x - px(8), c.y - px(6)), ImVec2(c.x - px(5), c.y + px(44)), TEAM_COL[lb.team < HB_TEAMS_MAX ? lb.team : 0]);
+        const char* clan = profile_clan_of(lb.name);
         float x = c.x;
         if (clan[0]) {
             char tagbuf[12]; sprintf_s(tagbuf, "[%s]", clan);
             dl->AddText(ImVec2(x, c.y), ACCENT, tagbuf);
             x += ImGui::CalcTextSize(tagbuf).x + px(8);
         }
-        dl->AddText(ImVec2(x, c.y), TEXT, profile_name(i));
+        dl->AddText(ImVec2(x, c.y), TEXT, lb.name);
+        char sub[48];
+        sprintf_s(sub, "%s  -  %s", tier_name(lb.tier), STYLE_NAME[lb.style < 8 ? lb.style : HB_STYLE_ANY]);
+        push(SMALL);
+        dl->AddText(ImVec2(c.x, c.y + px(26)), TEXT2, sub);
+        pop();
     }
-    ImGui::SetCursorScreenPos(ImVec2(g0.x, g0.y + ((n + 2) / 3) * px(52)));
-    if (n) muted("Pick a bot to change its name, clan tag and armor.", false);
-    if (n == 0) dl->AddText(g0, TEXT2, "No profiles yet: Re-roll makes your 15 bots.");
+    if (open_k >= 0) {
+        int k = profile_ensure(lr.bot[open_k].name);
+        if (k >= 0) open_editor(k);
+    }
+    ImGui::SetCursorScreenPos(ImVec2(g0.x, g0.y + ((n + 2) / 3) * px(62)));
+    if (n) muted("Pick a bot to change its name, clan tag and armor. Difficulty and play style: the Bots tab.", false);
+    if (n == 0) dl->AddText(g0, TEXT2, "No bots in your lobby yet: add some in the Bots tab.");
     pop();
     if (e.matchmaking) {                                     // Bot Matchmaking (custom, Nov 10): the pool and its queue
         ImGui::Dummy(ImVec2(0, px(18)));
@@ -3343,6 +3519,7 @@ bool bots_panel(bots_panel_env& e) {
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false)) g_tab = g_tab > 0 ? g_tab - 1 : 0;   // tabs
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) g_tab = g_tab < 2 ? g_tab + 1 : 2;
     }
+    if (g_goto_settings) { g_tab = 1; g_goto_settings = false; }   // (the inspector's "Edit look")
     if (tab("Bots", g_tab == 0)) g_tab = 0;
     ImGui::SameLine(0, px(6));
     if (tab("Settings", g_tab == 1)) g_tab = 1;
