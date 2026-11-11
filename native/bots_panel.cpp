@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <unordered_set>
+#include <vector>
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_internal.h"             // (SetKeyOwner: the 3D view keeps its arrow keys)
 
@@ -593,7 +596,201 @@ bool profiles_reroll(const wchar_t* path, int experience, int effects, uint32_t 
     return true;
 }
 
+// ------------------------------------------------------------------ Bot Matchmaking (custom, Nov 10; bots_panel.h)
+// The owner: "I have a call of duty mod with bots that can switch between 1-1000 bots per match due to a name que
+// file"; "every bot to be able to be customized and saved". The game holds 16 players, so the pool is any size and
+// each match seats up to 15 of it, the next names down the file. bot_pool.txt lines: a name (cut to 15 characters,
+// the game's name field; printable ASCII, no commas; a repeat skipped); # or ; starts a comment line.
+// bot_pool_saved.ini lines: next=<queue position>, saved=<tier key>,<style key>,<name>.
+uint32_t hb_matchmaking = 1;
+static const int POOL_SEED_N = 60;                       // a new pool: the 15 profiles first, then made-up names
+struct pool_saved { char name[16]; uint8_t tier, style; };
+static std::vector<std::string> g_pool;
+static std::vector<pool_saved> g_pool_saved;
+static int g_pool_next = 0;
+static wchar_t g_pool_dir[260];
+
+static bool pool_clean(const char* in, char out[16]) {
+    while (*in == ' ' || *in == '\t') in++;
+    int n = 0;
+    for (const char* c = in; *c && *c != '\r' && *c != '\n' && n < 15; c++) {
+        unsigned char u = (unsigned char)*c;
+        if (u < 0x20 || u > 0x7E || u == ',') continue;   // (a UTF-8 BOM, tabs, commas: dropped)
+        out[n++] = (char)u;
+    }
+    while (n && out[n - 1] == ' ') n--;
+    out[n] = 0;
+    return n > 0;
+}
+
+static std::string pool_key(const char* name) {
+    std::string k(name);
+    for (char& c : k) c = (char)tolower((unsigned char)c);
+    return k;
+}
+
+static void pool_write_new(const wchar_t* path) {
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, path, L"w") != 0 || !f) return;
+    fprintf(f, "# Bot Matchmaking's pool (BOTS panel > Settings): one bot name per line, in queue order.\n"
+               "# Add as many as you like, any time; each match's seats take the next names down the list.\n"
+               "# Names over 15 characters are cut to 15, repeats are skipped, lines starting # or ; are notes.\n");
+    std::unordered_set<std::string> seen;
+    int n = 0;
+    for (int k = 0; k < g_nprof && n < POOL_SEED_N; k++)
+        if (seen.insert(pool_key(g_prof[k])).second) { fprintf(f, "%s\n", g_prof[k]); n++; }
+    uint32_t s = 0x5EED0060u;
+    char name[64];
+    for (int tries = 0; n < POOL_SEED_N && tries < 5000; tries++) {
+        made_name(name, sizeof name, s);
+        if (seen.insert(pool_key(name)).second) { fprintf(f, "%s\n", name); n++; }
+    }
+    fclose(f);
+}
+
+void bot_pool_load(const wchar_t* dir) {
+    if (dir != g_pool_dir) wcsncpy_s(g_pool_dir, dir, _TRUNCATE);
+    wchar_t p[300];
+    swprintf_s(p, L"%sbot_pool.txt", g_pool_dir);
+    if (GetFileAttributesW(p) == INVALID_FILE_ATTRIBUTES) pool_write_new(p);
+    g_pool.clear();
+    FILE* f = nullptr;
+    char line[512], name[16];
+    if (_wfopen_s(&f, p, L"r") == 0 && f) {
+        std::unordered_set<std::string> seen;
+        while (fgets(line, sizeof line, f)) {
+            const char* c = line;
+            while (*c == ' ' || *c == '\t') c++;
+            if (*c == '#' || *c == ';') continue;
+            if (pool_clean(c, name) && seen.insert(pool_key(name)).second) g_pool.push_back(name);
+        }
+        fclose(f);
+    }
+    swprintf_s(p, L"%sbot_pool_saved.ini", g_pool_dir);
+    g_pool_saved.clear();
+    g_pool_next = 0;
+    if (_wfopen_s(&f, p, L"r") == 0 && f) {
+        while (fgets(line, sizeof line, f)) {
+            int v;
+            if (sscanf_s(line, "next=%d", &v) == 1) { g_pool_next = v; continue; }
+            if (strncmp(line, "saved=", 6) != 0) continue;
+            char buf[512]; strcpy_s(buf, line + 6);
+            char* ctx = nullptr;
+            char* tier = strtok_s(buf, ",", &ctx);
+            char* style = strtok_s(nullptr, ",", &ctx);
+            if (!tier || !style || !ctx || !pool_clean(ctx, name)) continue;
+            pool_saved sv{};
+            strcpy_s(sv.name, name);
+            sv.tier = (uint8_t)key_index(tier, TIER_KEY, HB_TIERS, 3);
+            sv.style = (uint8_t)key_index(style, STYLE_KEY, 8, HB_STYLE_ANY);
+            g_pool_saved.push_back(sv);
+        }
+        fclose(f);
+    }
+    if (g_pool_next < 0 || g_pool_next >= (int)g_pool.size()) g_pool_next = 0;
+}
+
+bool bot_pool_save() {
+    if (!g_pool_dir[0]) return false;
+    wchar_t p[300];
+    swprintf_s(p, L"%sbot_pool_saved.ini", g_pool_dir);
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"w") != 0 || !f) return false;
+    fprintf(f, "; Bot Matchmaking (BOTS panel): the queue position in bot_pool.txt, and each bot's saved difficulty and\n"
+               "; play style (saved=<difficulty>,<style>,<name>). A bot with no line here takes the defaults.\n");
+    fprintf(f, "next=%d\n", g_pool_next);
+    for (const pool_saved& sv : g_pool_saved)
+        fprintf(f, "saved=%s,%s,%s\n", tier_key(sv.tier), style_name(sv.style), sv.name);
+    fclose(f);
+    return true;
+}
+
+int bot_pool_size() { return (int)g_pool.size(); }
+int bot_pool_saved_count() { return (int)g_pool_saved.size(); }
+const char* bot_pool_upcoming(int k) {
+    int n = (int)g_pool.size();
+    return k >= 0 && k < n ? g_pool[(g_pool_next + k) % n].c_str() : "";
+}
+
+static pool_saved* pool_find_saved(const char* name) {
+    for (pool_saved& sv : g_pool_saved) if (_stricmp(sv.name, name) == 0) return &sv;
+    return nullptr;
+}
+
+bool bot_pool_saved_of(const char* name, int* tier, int* style) {
+    pool_saved* sv = pool_find_saved(name);
+    if (!sv) return false;
+    if (tier) *tier = sv->tier;
+    if (style) *style = sv->style;
+    return true;
+}
+
+void bot_pool_remember(const hb_bot& b) {
+    pool_saved* sv = pool_find_saved(b.name);
+    if (!sv) {
+        pool_saved n{};
+        strcpy_s(n.name, b.name);
+        g_pool_saved.push_back(n);
+        sv = &g_pool_saved.back();
+    }
+    sv->tier = b.tier; sv->style = b.style;
+    bot_pool_save();
+}
+
+void bot_pool_forget(const char* name) {
+    for (size_t k = 0; k < g_pool_saved.size(); k++)
+        if (_stricmp(g_pool_saved[k].name, name) == 0) { g_pool_saved.erase(g_pool_saved.begin() + k); break; }
+    bot_pool_save();
+}
+
+// seat i takes the next pool name no other seat holds, and that bot's saved settings; false: none free
+static bool pool_take(hb_roster& r, int i) {
+    int n = (int)g_pool.size();
+    for (int k = 0; k < n; k++) {
+        int j = (g_pool_next + k) % n;
+        if (name_taken(r, g_pool[j].c_str(), i)) continue;
+        strcpy_s(r.bot[i].name, g_pool[j].c_str());
+        g_pool_next = (j + 1) % n;
+        int t, st;
+        if (bot_pool_saved_of(r.bot[i].name, &t, &st)) { r.bot[i].tier = (uint8_t)t; r.bot[i].style = (uint8_t)st; }
+        return true;
+    }
+    return false;
+}
+
+static void roster_name_own(hb_roster& r, int i, uint32_t seed);
+
+int bot_pool_rotate(hb_roster& r, uint32_t difficulty) {
+    bot_pool_load(g_pool_dir);                           // (names added to the file since)
+    if (g_pool.empty() || r.n == 0) return 0;
+    // the difficulty a new bot without saved settings takes: the one the unsaved seats share (all Heroic around a
+    // saved Demon: Heroic), else the "for everyone" choice dealt by seat (Mixed's deal)
+    int shared = -1;
+    bool one = true;
+    for (int i = 0; i < r.n; i++) {
+        if (pool_find_saved(r.bot[i].name)) continue;
+        if (shared < 0) shared = r.bot[i].tier;
+        else if (shared != r.bot[i].tier) one = false;
+    }
+    for (int i = 0; i < r.n; i++) r.bot[i].name[0] = 0;
+    int filled = 0;
+    for (int i = 0; i < r.n; i++) {
+        r.bot[i].tier = (uint8_t)(one && shared >= 0 ? shared : roster_difficulty_tier(difficulty, i));
+        r.bot[i].style = HB_STYLE_ANY;
+        if (pool_take(r, i)) filled++;
+        else roster_name_own(r, i, (uint32_t)GetTickCount() + 7919u * (uint32_t)i);   // (a pool smaller than the seats)
+    }
+    bot_pool_save();
+    return filled;
+}
+
 void roster_name(hb_roster& r, int i, uint32_t seed) {
+    if (hb_matchmaking && !hb_panel_firefight && pool_take(r, i)) return;
+    roster_name_own(r, i, seed);
+}
+
+// a name not from the pool: a free one of the 15 profiles, else made up
+static void roster_name_own(hb_roster& r, int i, uint32_t seed) {
     uint32_t s = seed | 1;
     char n[64];
     int free_prof[32], nfree = 0;
@@ -1209,6 +1406,16 @@ static void inspector(bots_panel_env& e, bool& changed) {
     }
     ImGui::TextUnformatted(b.name);
     pop();
+    if (hb_matchmaking && !hb_panel_firefight) {             // Bot Matchmaking: what comes back with this bot
+        if (bot_pool_saved_of(b.name, nullptr, nullptr)) {
+            muted("Saved: this bot comes back with this difficulty and play style.", false);
+            if (button("Use defaults##pool", GHOST, ImVec2(0, 0), true)) bot_pool_forget(b.name);
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+                ImGui::SetTooltip("Forget this bot's saved settings: next time it takes the table's difficulty.");
+        } else {
+            muted("Changes to difficulty or play style are saved to this bot.", false);
+        }
+    }
     ImGui::Dummy(ImVec2(0, px(6)));
     if (!hb_panel_firefight) {                               // (Firefight: every bot on your team, no picker)
     caption("Team");
@@ -1246,9 +1453,14 @@ static void inspector(bots_panel_env& e, bool& changed) {
     int tier = b.tier < HB_TIERS ? b.tier : 3, rank = tier < 4 ? tier : -1;
     int own = tier == HB_TIER_TACTICIAN ? 0 : tier == HB_TIER_BLIND ? 1 : tier == HB_TIER_DEMON ? 2
             : tier == HB_TIER_SCALING ? 3 : -1;
-    if (segmented("tier", TIER_NAME, 4, &rank, W, TIER_COL)) { b.tier = (uint8_t)rank; sync_difficulty(e); changed = true; }
+    bool pooled = hb_matchmaking && !hb_panel_firefight;     // (Bot Matchmaking: a change here is saved to this bot)
+    if (segmented("tier", TIER_NAME, 4, &rank, W, TIER_COL)) {
+        b.tier = (uint8_t)rank; sync_difficulty(e); changed = true;
+        if (pooled) bot_pool_remember(b);
+    }
     if (segmented("tier_s", OWN_NAME, 4, &own, W, OWN_COL)) {
         b.tier = OWN_TIER[own < 0 ? 0 : own]; sync_difficulty(e); changed = true;
+        if (pooled) bot_pool_remember(b);
     }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
     tier = b.tier < HB_TIERS ? b.tier : 3;
@@ -1272,7 +1484,10 @@ static void inspector(bots_panel_env& e, bool& changed) {
         ImGui::PushStyleColor(ImGuiCol_Border, on ? v4(ACCENT) : v4(LINE));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
         push(SMALL);
-        if (ImGui::Button(STYLE_NAME[st], ImVec2(cw, px(32)))) { b.style = (uint8_t)st; changed = true; }
+        if (ImGui::Button(STYLE_NAME[st], ImVec2(cw, px(32)))) {
+            b.style = (uint8_t)st; changed = true;
+            if (hb_matchmaking && !hb_panel_firefight) bot_pool_remember(b);
+        }
         pop();
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(5);
@@ -2897,6 +3112,40 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
     if (n) muted("Pick a bot to change its name, clan tag and armor.", false);
     if (n == 0) dl->AddText(g0, TEXT2, "No profiles yet: Re-roll makes your 15 bots.");
     pop();
+    if (e.matchmaking) {                                     // Bot Matchmaking (custom, Nov 10): the pool and its queue
+        ImGui::Dummy(ImVec2(0, px(18)));
+        ImGui::PushTextWrapPos(body0.x + left_w - px(20) - ImGui::GetWindowPos().x);   // (window-local x)
+        caption("Bot Matchmaking");
+        uint32_t was = *e.matchmaking;
+        if (toggle(*e.matchmaking ? "On" : "Off", e.matchmaking)) {
+            changed = true;
+            // switched on in the main lobby: the next bots take the seats now, so the list shows the pool at once
+            if (!was && *e.matchmaking && !hb_panel_firefight) bot_pool_rotate(*e.roster, *e.difficulty);
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+            ImGui::SetTooltip("On: after each match the next bots from your pool take the seats.\n"
+                              "Off: the same bots every match, as you set them.");
+        char st[200];
+        if (bot_pool_size())
+            sprintf_s(st, "%d bots in your pool, %d with saved settings. After each match the next %d take the seats.",
+                      bot_pool_size(), bot_pool_saved_count(), e.roster->n < bot_pool_size() ? e.roster->n : bot_pool_size());
+        else sprintf_s(st, "Your pool is empty: add names to native\\bin\\bot_pool.txt, one per line.");
+        muted(st);
+        if (bot_pool_size()) {
+            char up[160] = "Next up: ";
+            for (int k = 0; k < 5 && k < bot_pool_size(); k++) {
+                if (k) strcat_s(up, ", ");
+                strcat_s(up, bot_pool_upcoming(k));
+            }
+            if (bot_pool_size() > 5) strcat_s(up, ", ...");
+            muted(up);
+        }
+        muted("Add names any time to native\\bin\\bot_pool.txt, one per line, in the order they should join. "
+              "A bot you change in the Bots tab keeps its difficulty and play style when it comes back.");
+        if (button("Reload pool", GHOST, ImVec2(0, 0), true) && g_pool_dir[0]) bot_pool_load(g_pool_dir);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Read bot_pool.txt again (it is also read after every match)");
+        ImGui::PopTextWrapPos();
+    }
     ImGui::EndGroup();
     // right: how they dress, the re-roll
     ImVec2 r0(body0.x + left_w + gap, body0.y);
@@ -3194,6 +3443,11 @@ bool bots_panel(bots_panel_env& e) {
         banner = btxt;
     } else if (!*e.enabled) banner = "Bots are off: nobody on this list joins. Switch Bots on at the top.";
     else if (e.title == 1 && r.teams > 2) banner = "Halo: CE has two teams: bots on Green and later teams play as Red or Blue.";
+    else if (e.matchmaking && *e.matchmaking && !hb_panel_firefight && bot_pool_size() && r.n) {
+        sprintf_s(btxt, "Bot Matchmaking is on: after this match the next %d of your %d pool bots take these seats.",
+                  r.n < bot_pool_size() ? r.n : bot_pool_size(), bot_pool_size());
+        banner = btxt;
+    }
     else if (e.collector && *e.collector)                   // (not in LiDAR mode: that banner comes first)
         banner = "Data collector is on: your movement, aim, shots and guns are recorded each match (never your keys).";
     if (banner) {

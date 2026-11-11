@@ -359,10 +359,16 @@ void save_settings() {
             g_shm->difficulty, g_shm->lidar_mode, g_shm->lidar_players, g_collector, g_sounds, g_prejoin,
             g_scale_games);                                                                           // (prejoin kept: a save
                                                                                                    // dropped it)
+    fprintf(f, "matchmaking=%u\n", hb_matchmaking);                     // (custom, Nov 10: Bot Matchmaking)
     roster_write(f, g_roster);
     roster_write(f, g_ff_roster, "ff");
     fclose(f);
+    bot_pool_save();                                                      // (its queue position moves as bots are named)
 }
+
+// (custom, Nov 10) Bot Matchmaking: a match with bots ended (the brain ran, back in the menus): overlay.cpp seats the
+// next pool bots on its own thread, the one the panel edits the list on
+volatile LONG g_pool_due = 0;
 
 // Firefight's own list (4 players: you and 3 bots, all on your team), first made from the list's first 3: the 16-player
 // list is never cut to fit Firefight
@@ -397,6 +403,7 @@ static void load_settings() {
             else if (sscanf_s(line, "collector=%u", &v) == 1) g_collector = v != 0;
             else if (sscanf_s(line, "sounds=%u", &v) == 1) g_sounds = v > 100 ? 100 : v;
             else if (sscanf_s(line, "scale_games=%u", &v) == 1) g_scale_games = v < 1 ? 1 : v > 20 ? 20 : v;
+            else if (sscanf_s(line, "matchmaking=%u", &v) == 1) hb_matchmaking = v != 0;
         }
         fclose(f);
     }
@@ -479,6 +486,7 @@ static DWORD WINAPI main_thread(LPVOID self) {
         wchar_t prof[MAX_PATH];
         swprintf_s(prof, L"%sbot_profiles.ini", g_dir);
         bots_panel_profiles(prof);
+        bot_pool_load(g_dir);                 // Bot Matchmaking's pool (bot_pool.txt: made on first use from the profiles)
     }
     wcscpy_s(wcsrchr(path, L'.'), 8, L".log");   // botcore_<tag>.log next to the DLL
     g_log = _wfsopen(path, L"w", _SH_DENYNO);   // readable while the game runs
@@ -523,7 +531,10 @@ static DWORD WINAPI main_thread(LPVOID self) {
         int menu = mcc_menu_state();
         if (menu != g_last_menu && menu >= 0) {
             if (menu == 1) { g_brain_due = GetTickCount(); g_shm->game = 0; g_playback = 0; }
-            else if (menu == 0) { stop_brain(); g_brain_due = 0; }
+            else if (menu == 0) {
+                if (g_last_menu == 1 && g_brain) InterlockedExchange(&g_pool_due, 1);   // (a match with bots, not a film)
+                stop_brain(); g_brain_due = 0;
+            }
             g_last_menu = menu;
         }
         // start the brain once a game tick with bot support is seen (a few seconds into the

@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Bot Matchmaking: a pool of bots, each match's seats filled from it in queue order, 2026-11-10
+
+The owner: "I have a call of duty mod with bots that can switch between 1-1000 bots per match due to a name que file"; "I would like every bot to be able to be customized and saved"; "if we just did like 50-60 bots right now to see if it works can I just add the other 900 later manually? ... And add an option in the menu that allows me to turn off 'Bot Matchmaking'".
+
+- **The pool** (`native/bots_panel.cpp`, `bots_panel.h` `bot_pool_*`):
+  - `native/bin/bot_pool.txt` has one name per line, in queue order. It is made on first use with 60 bots: the 15 profiles, then made-up names from the panel's own name maker.
+  - Names are cut to 15 characters (the game's name field) and kept to printable ASCII without commas. A UTF-8 BOM is dropped, a repeat in any case is skipped, and lines starting `#` or `;` are notes.
+  - The file is re-read before each rotation (and by the Settings tab's Reload pool button), so names added while MCC runs count.
+  - The match still holds 16 players, so a match seats up to 15 of the pool.
+- **Saved bots** (`native/bin/bot_pool_saved.ini`: `next=` queue position, `saved=<difficulty>,<style>,<name>`):
+  - While Bot Matchmaking is on, changing a bot's difficulty or play style in the inspector saves it to that bot's name, and the bot comes back that way. The inspector says so, with a "Use defaults" button that forgets the saved settings.
+  - A bot with no saved line takes the difficulty the unsaved seats share, so an all-Heroic table around a saved Demon stays Heroic. Otherwise it takes the "for everyone" choice dealt by seat. Its play style is any.
+  - Looks still come from the 15 profiles, or from the name for every other bot, so each pool bot looks the same every match. A pool bot's look is not editable yet.
+- **Rotation**:
+  - When a match with bots ends and MCC is back in the menus (`botcore.cpp`: the brain ran, menu 1 to 0; not a Theater film), `overlay.cpp` `pool_after_match` seats the next bots on the panel's own thread (`bot_pool_rotate`). Teams and the number of seats are kept.
+  - Rotation is skipped after Firefight (its own 3-bot list), in LiDAR mode and with bots off.
+  - A pool smaller than the seats seats every pool name once, and the rest get made-up names.
+  - While it is on, `roster_name` takes the next free pool name, so Quick setup, Add bot and Rename fill from the pool, with saved settings.
+- **The menu**:
+  - Settings tab, under Bot profiles: a "Bot Matchmaking" On/Off switch (on by default; `botcore.ini` `matchmaking=`). With it: the pool's size, how many bots have saved settings, the next five names, where to add names, and Reload pool.
+  - Switching it on seats pool bots at once. Off keeps the same bots every match, as before.
+  - The Bots tab shows a banner while it is on.
+- Validation: new `native/pool_test.cpp` (`native\build_pool_test.bat`) links the real `bots_panel.cpp` and passes 10 checks: a new 60-bot pool, the file's rules, queue order and teams kept, the shared difficulty, a saved Demon coming back and the others at defaults, the position and saved settings surviving a reload, Use defaults, names added while running, a pool smaller than the seats, and the pool used only while on. New `tools/test_bot_matchmaking.py`, 4 wiring tests, including the brain reading the list with the new line. All 54 `tools/test_*.py` files pass. `native\build.bat matchmaking` built `native/bin/botcore_matchmaking.dll` (not in Git), loaded at the next MCC start. `pool_test.exe <bin> make` made the owner's `native/bin/bot_pool.txt` (60 bots; not in Git). Untested in game: the switch's layout, the banner and the rotation after a real match.
+
 ### New Tactician difficulty: Legendary's brain, hands between Heroic and Legendary, 2026-11-10
 
 The owner, picking from proposed new difficulties: "Make a tactician first and make its stats between legendary and heroic".

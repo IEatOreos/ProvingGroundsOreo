@@ -57,6 +57,7 @@ struct bots_panel_env {
     void (*play_sound)(int kind, uint32_t volume);   // plays a PS_ sound (overlay.cpp: from memory); null: none
     bool pad;                   // the last input was the pad: prompts name its buttons (B, not Esc)
     uint32_t* scale_games;      // Scaling difficulty: how many of his last games it averages (1-20); may be null
+    uint32_t* matchmaking;      // Bot Matchmaking on (hb_matchmaking; botcore.ini matchmaking=); may be null
 };
 
 // the panel's sounds (bots_panel.cpp panel_sounds): the focus moved (keys or pad), a control pressed, back (Esc, the
@@ -111,6 +112,25 @@ const char* style_name(int style);                      // rusher .. sniper, any
 // with the prefix "ff": "ffroster=1", "ffbot=..." (no teams line)
 bool roster_parse_line(const char* line, hb_roster& r);
 void roster_write(FILE* f, const hb_roster& r, const char* prefix = "");
+
+// Bot Matchmaking (custom, Nov 10): a pool of bots, any number, each match's seats filled from it in queue order like a
+// name-queue file. native\bin\bot_pool.txt: one name per line (made on first use: the 15 profiles, then made-up names,
+// 60 in all); native\bin\bot_pool_saved.ini: the queue position and each bot's saved difficulty and play style (set in
+// the inspector while it is on). On (1, the default) roster_name takes the next free pool name, and a bot's saved
+// settings come with it; after each match with bots botcore asks overlay.cpp to seat the next bots (bot_pool_rotate).
+// botcore.ini matchmaking=0|1.
+extern uint32_t hb_matchmaking;
+void bot_pool_load(const wchar_t* dir);                 // (re)read the pool and the saved settings from dir (native\bin\)
+bool bot_pool_save();                                   // write bot_pool_saved.ini (queue position, saved bots)
+int  bot_pool_size();
+int  bot_pool_saved_count();
+const char* bot_pool_upcoming(int k);                   // the k-th name from the queue position ("" past the end)
+bool bot_pool_saved_of(const char* name, int* tier, int* style);   // its saved difficulty and play style
+void bot_pool_remember(const hb_bot& b);                // save b's difficulty and play style to its name, written now
+void bot_pool_forget(const char* name);                 // back to the defaults ("for everyone"), written now
+// the next bots in the seats, teams kept: the pool re-read, each seat the next free name; a bot's saved settings,
+// else the seats' shared difficulty (or the "for everyone" one) and any play style. Returns the seats filled
+int  bot_pool_rotate(hb_roster& r, uint32_t difficulty);
 
 // The bug report over a match: with MCC's pause menu up, a "Report bot bug" button; it (or F9) opens the report window.
 // overlay.cpp saves what was typed (logs/bug_reports/<time>/report.json); the brain adds the match recording.

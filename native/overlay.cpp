@@ -381,11 +381,27 @@ static void draw_panel() {
     e.lidar_mode = &g_shm->lidar_mode; e.lidar_players = &g_shm->lidar_players;
     e.collector = &g_collector;
     e.sounds = &g_sounds; e.play_sound = play_sound; e.scale_games = &g_scale_games;
+    e.matchmaking = &hb_matchmaking;
     e.pad = g_pad_last;
     e.title = (int)g_session; e.scale = ui_scale();
     e.f_title = e.f_head = e.f_body = e.f_small = g_font_small;
     e.open = &g_panel;
     if (bots_panel(e)) { g_shm->settings_seq++; save_settings(); }
+}
+
+// (custom, Nov 10) Bot Matchmaking: after a match with bots (botcore.cpp g_pool_due), the next pool bots take the main
+// list's seats, here on the thread that draws and edits the list. Not after Firefight (its own 3-bot list), not in
+// LiDAR mode, not with bots off
+extern volatile LONG g_pool_due;
+static void pool_after_match() {
+    if (!InterlockedExchange(&g_pool_due, 0)) return;
+    if (!hb_matchmaking || g_ff_lobby || !g_shm || !g_shm->bots_enabled || g_shm->lidar_mode) return;
+    int k = bot_pool_rotate(g_roster, g_shm->difficulty);
+    if (!k) return;
+    g_shm->settings_seq++;
+    save_settings();
+    logf("bot matchmaking: %d of %d seats from the pool (%d bots), next up %s", k, g_roster.n, bot_pool_size(),
+         bot_pool_upcoming(0));
 }
 
 // --- the bug report over a match. MCC shows the mouse cursor over a match only for its own menus, so cursor up = the
@@ -625,6 +641,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             }
             static unsigned frame;
             if (bots_title(g_session) && frame++ % 8 == 0) probe_lobby(sc);   // the lobby must be on screen
+            pool_after_match();                                   // (Bot Matchmaking: the next bots, once a match ends)
             g_show_tile = in_ce_menus();
             if (!g_show_tile) g_panel = false;
             if (g_show_tile && g_panel && !g_parked && o_getcursorpos) { o_getcursorpos(&g_park_at); g_parked = true; }
