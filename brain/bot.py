@@ -355,6 +355,15 @@ HUNT_R = 12.0                       # an Invasion defender sent at the carrier /
 # MARKER_R u or its job is him (hunter, cutoff; Perception.update). A cut-off (director.intercepts) keeps within CUT_R
 # u of its point and never hunts him off it (that was the walk back after him)
 MARKER_R, CUT_R = 30.0, 10.0
+# (custom, Nov 10, owner: "the game is about power positions and knowing when to push") Team Slayer, Legendary, Blind,
+# Scaling and Demon (profiles.high_ground) on a post (Order "mid": director.slayer_slots' power positions and perches):
+# guns, hunts and patrols past ANCHOR_R u of it, or under its floor (ANCHOR_DZ), lose weight by teamwork; farther than
+# half that off, or under its floor, getting back outranks them (keep_role). It fights from there and does not walk down
+# on a man off it (fight: as a CTF defender). A power weapon up or lying loose is never held back (power_at), nor the
+# team's run for one. Live Complex 20261110-193429, 8v8: bots stood on the ground floor 51% of the match, over 4.5 u 0-1%
+# (the map's best five positions are there, every one walkable from spawn); posted bots were within 3 u of their post
+# 0-9% of their post time, an item, a hunt or a patrol having won (the post scored 0.6-1.2, a gun 1.2, a patrol 1.25)
+ANCHOR_R, ANCHOR_DZ = 8.0, 1.5
 LOOK_CONE = math.radians(50)        # walking out of a fight, a deliberate look stays this close to the way it goes
 H2A_FEET = 0.38                     # H2A reports a body this far above its floor (tools/ground_offset.py: Lockout 0.38,
                                     # Zenith median 0.41); the nav's points lie on the floor
@@ -1418,7 +1427,7 @@ class Bot:
         o, k = s.order, s.p.teamwork
         if k <= 0 or me.has_flag:
             return
-        goal_pt, firm = None, None
+        goal_pt, firm, anchored, under = None, None, False, (lambda q: False)
         core_rush = s.urgent(me, snap)
         # (in the team's blitz: director.blitz_tick)
         urgent = core_rush or s.pressing(me, snap) or getattr(s, "blitz_until", 0.0) > snap.time
@@ -1481,6 +1490,13 @@ class Bot:
             # (match 214711 at 295-303 s: a mid's item 1.19 over its objective 0.70)
             goal_pt = o.point
             strays, away = (lambda q: dist(q, goal_pt) > PRESS_COVER_R), dist(me.pos, goal_pt) > 0.5 * PRESS_COVER_R
+        elif s.slayer_post(snap) is not None:
+            # (custom, Nov 10) a Team Slayer post held from on high (ANCHOR_R): power weapons excepted, below
+            goal_pt = s.slayer_post(snap)
+            low = lambda q: q.z < goal_pt.z - ANCHOR_DZ
+            strays = lambda q: (q - goal_pt).flat() > ANCHOR_R or low(q)
+            away = (me.pos - goal_pt).flat() > 0.5 * ANCHOR_R or low(me.pos)
+            anchored, under = True, low       # (a gun "on its way" on the floor under it is a drop off it, below)
         elif o.role == "runner" and snap.mode == "ctf" and o.point is not None:
             # a CTF runner keeps to its line to the flag (live: in 150 s no runner came within 8 u of their stand,
             # every closest approach a side fight or an item): RUN_DETOUR more than the straight way strays
@@ -1521,6 +1537,8 @@ class Bot:
                 continue              # the Grenadier's anti-vehicle mission, a power weapon run: outrank its post
                                       # (an attacker on the clock is sent only for one on its way: director.press_fetch_ok)
             kind, arg = key
+            if anchored and (kind == "fight" or (kind == "item" and isinstance(arg, Vec) and s.power_at(arg, snap))):
+                continue              # (custom) a post fights from where it is (fight holds it there); a power gun goes
             if kind == "fight":
                 b = s.per.beliefs.get(arg)
                 # (in sight, or out of it a moment: a tick behind a pillar cut a defender's fight 3.27 -> 1.32 under its
@@ -1540,7 +1558,8 @@ class Bot:
                 q = arg
             else:
                 continue
-            if kind == "item" and dist(me.pos, q) < UPGRADE_ON_WAY and not core_rush and not s.out_of_held(me, snap, q):
+            if (kind == "item" and dist(me.pos, q) < UPGRADE_ON_WAY and not core_rush and not s.out_of_held(me, snap, q)
+                    and not under(q)):
                 # a gun on its way (a step or two): taken whatever its post; an attacker on the Invasion core run only
                 # under the run (live Spire 20261106-185412, 456-472 s: three of seven runners detoured for guns, item
                 # 1.9-2.1 over the core's 1.8-2.1; flagged: the core was not their priority)
@@ -1559,6 +1578,9 @@ class Bot:
                 scores[key] *= 0.15 if urgent else 1.0 - 0.7 * k
         if away:
             pt = goal_pt or s.live_point(me, snap) or s.objective_point(me)
+            if anchored and any(kind == "item" and isinstance(q, Vec) and v >= scores.get(("objective", pt), 0.0)
+                                and s.power_at(q, snap) for (kind, q), v in scores.items()):
+                return    # (custom) off its post for a power weapon it wants: the way back does not cut the trip short
             scores[("objective", pt)] = max(scores.get(("objective", pt), 0.0), 1.2 + 0.6 * k)
 
     @staticmethod
@@ -5114,6 +5136,11 @@ class Bot:
         hold = (s.order.role == "defender" and s.order.point is not None
                 and (snap.mode == "ctf" or (snap.mode == "infection" and me.weapon not in LUNGE))
                 and dist(b.pos, s.order.point) > DEFEND_HOLD and not (target is not None and target.has_flag))
+        post = s.slayer_post(snap)
+        if post is not None and me.weapon not in LUNGE and me.weapon not in ("shotgun", "scattershot"):
+            # (custom, Nov 10) a Team Slayer post on high fights from there: no walk in or down on a man off it (ANCHOR_R,
+            # under its floor), and back to it when he breaks sight. A sword or a shotgun still closes
+            hold = hold or (b.pos - post).flat() > ANCHOR_R or b.pos.z < post.z - ANCHOR_DZ
         s.pushing = s.push_in(me, b, target, snap, d, lo) if not hold else False
         if s.pushing:
             fwd = 1.0
@@ -5517,6 +5544,23 @@ class Bot:
         """A power weapon's spawn (a map item: a weapon of value 0.8 or more) at q."""
         return any(it["kind"] == "weapon" and it["value"] >= 0.8 and dist(it["pos"], q) < 0.5
                    for it in s.map.get("items", []))
+
+    def power_at(s, q, snap):
+        """(custom, Nov 10) A power weapon at q: its spawn (power_spawn), or one of the map's power guns or Halo 4's
+        power drops lying there (director.power_runs' list)."""
+        if s.power_spawn(q):
+            return True
+        power = {it["name"] for it in s.map.get("items", []) if it["kind"] == "weapon" and it["value"] >= 0.8}
+        power |= set(s.map.get("ordnance_power", ()))
+        return any(n in power and dist(g, q) < 1.0 for n, g in (snap.ground_weapons or ()))
+
+    def slayer_post(s, snap):
+        """(custom, Nov 10) Team Slayer, Legendary / Blind / Scaling / Demon (profiles.high_ground) posted (Order "mid"):
+        the post it holds (ANCHOR_R), else None."""
+        o = s.order
+        if snap.mode == "slayer" and o.role == "mid" and o.point is not None and profiles.high_ground(s.p):
+            return o.point
+        return None
 
     def veh_banned(s, v, now):
         return getattr(s, "veh_ban", {}).get(v["handle"], 0.0) > now

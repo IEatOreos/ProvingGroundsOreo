@@ -46,6 +46,15 @@ CUT_RUN, CARRIER_PACE, CUT_MARGIN_S, CUT_NEAR, CUT_LEVEL_DZ = 2.25, 1.0, 1.0, 5.
 CUT_STEP, CUT_MIN_AHEAD, CUT_SPREAD = 3.0, 4.0, 8.0
 CUT_ON_ROUTE, CUT_DETOUR, CUT_OVERLAP, CUT_ALT_R, CUT_ALT_COST = 6.0, 1.6, 0.6, 3.0, 3.0
 CUT_CHASE_R, CUT_NEAR_GOAL, CUT_CANDIDATES, CUT_MAX_STEPS = 15.0, 8.0, 6, 1600
+# (custom, Nov 10, owner) Team Slayer high ground, Legendary / Blind / Scaling / Demon (profiles.high_ground; Bot.slayer_post
+# holds them on it). The team's post (slayer_slots) is kept POST_EXTEND s at a time while one of those tiers holds it
+# (within ANCHOR_R) and sees men from it (one seen in the last POST_QUIET s), up to POST_HOLD_MAX s; two of ours dead
+# within POST_LOSS_R u of it in POST_LOSS_S s and the team moves on at once (upstream: a new post every 25-45 s, the
+# walk up to Complex's top floor about as long). The support and the floater sent on a sweep, when one of those tiers,
+# go to a perch: the map's power position PERCH_MIN-PERCH_MAX u from the fight, PERCH_DZ u or more above it, that sees it
+# (else the sweep's power position), and hold it ("mid"); the lead hunter still goes straight at the fight
+POST_EXTEND, POST_HOLD_MAX, POST_QUIET, POST_LOSS_R, POST_LOSS_S = 15.0, 120.0, 20.0, 12.0, 30.0
+PERCH_MIN, PERCH_MAX, PERCH_DZ = 5.0, 25.0, 1.0
 # the getaway ride: one transport driver parks GETAWAY_D u from their stand on our side while our runners go in, then
 # fetches our carrier at any distance
 GETAWAY, GETAWAY_D = True, 16.0
@@ -809,7 +818,8 @@ class Director:
         # nothing, the team was already inside the flank points by then)
         pushing = (snap.mode == "invasion" and snap.inv_attackers == s.team and snap.inv_phase in LANE_PHASES
                    and getattr(s, "inv_target", None) is not None)
-        for role, point, fit in slots:
+        high_alt = getattr(s, "high_alt", {}) if snap.mode == "slayer" else {}
+        for slot_i, (role, point, fit) in enumerate(slots):
             if not free:
                 break
 
@@ -828,6 +838,10 @@ class Director:
                 return c
             b = min(free, key=cost)
             free.remove(b)
+            if slot_i in high_alt and profiles.high_ground(b.p):
+                # (custom, Nov 10) Team Slayer's support or sweep, Legendary / Blind / Scaling / Demon: its high spot,
+                # held (Bot.slayer_post). Heroic and below keep the upstream hunt
+                role, point = "mid", high_alt[slot_i]
             s.roles[b.id] = role
             via = ()
             if role == "runner" and point != s.capture_point(snap) and snap.mode == "ctf":
@@ -948,6 +962,9 @@ class Director:
         def eligible(bot, point):
             p = snap.player(bot.id)
             order = bot.order
+            # (custom, Nov 10) not a Slayer post held on high by Legendary / Blind / Scaling / Demon (Bot.slayer_post)
+            if snap.mode == "slayer" and order.role == "mid" and profiles.high_ground(bot.p):
+                return False
             return (s.roles.get(bot.id) in roles and order.role in roles and bot.id not in snap.vips
                     and p.vehicle in (None, -1) and not p.has_flag and getattr(bot, "fetch", None) is None
                     and (snap.mode == "slayer" or order.point is None or dist(order.point, point) <= 25.0)
@@ -2661,8 +2678,18 @@ class Director:
         Every bot gets its own spot (spread()), so the team never stacks on one point."""
         pts = s.positions()
         heat = s.hot_spot(now)
+        slayer = snap.mode == "slayer"
+        s.high_alt = {}                   # (custom) slot index -> the high-ground tiers' own spot (assign_roles)
+        lost = None
+        if slayer and getattr(s, "post", None) is not None:
+            # (custom, Nov 10) a post working for the high-ground tiers is held on (POST_EXTEND); one losing us men, left
+            if s.post_lost(now):
+                lost, s.post_until = s.post, now
+            elif now >= s.post_until and s.post_working(now, snap):
+                s.post_until = now + POST_EXTEND
         if now >= getattr(s, "post_until", 0.0):
             s.post_until = now + s.rng.uniform(25, 45)
+            s.post_since = now
             # map brain MAP-06 / MAP-05: the anchor's post by its score (tools/power_positions.py: floor seen, height,
             # items), twice as likely where it sees the hot zone (where the enemy is now); a flat pick held the 8th
             # spot as often as the best, wherever the fights were
@@ -2670,9 +2697,12 @@ class Director:
             w = [i["score"] for i in info] if len(info) == len(pts) else [1.0] * len(pts)
             T = s.terrain()
             w = [max(0.05, v) * (2.0 if heat is not None and T.los(q, heat) else 1.0) for v, q in zip(w, pts)]
+            if lost is not None:          # (custom) not straight back to the post we just lost men on
+                w = [v * (0.2 if dist(q, lost) < 1.0 else 1.0) for v, q in zip(w, pts)]
             s.post = s.rng.choices(pts, weights=w)[0]
             zones = [z.center for z in s.zones.zones] or [s.map["points"]["mid"]]
             s.sweep = s.rng.choice(zones + list(pts))     # (a zone centre is its lowest floor: the power spots too)
+            s.sweep_high = s.rng.choices(pts, weights=w)[0]   # (custom: the high-ground tiers' sweep, a power position)
             s.look_their_side = s.rng.random() < 0.7     # decided per rotation: no flip-flopping
         target = heat if heat is not None else s.likely_enemy(now, pts, snap)
         p = s.posture.value
@@ -2696,10 +2726,47 @@ class Director:
         if anchors and n > 1 and second != post:
             slots.append(("mid", second, "anchor"))
         slots += [("hunter", target, "aggression"), ("hunter", s.spread(target + back, 1, 2.0), "teamwork")]
+        perch = s.perch(target) if slayer else None
+        if perch is not None:
+            s.high_alt[len(slots) - 1] = perch            # (custom) the support, one of the high tiers: from above
         far = max(pts, key=lambda q: min(dist(q, post), dist(q, target)))
         floats = [far, s.sweep]
-        slots += [("hunter", s.spread(floats[i % 2], i // 2), "aggression") for i in range(max(0, n - len(slots)))]
+        for i in range(max(0, n - len(slots))):
+            if slayer and i % 2 == 1:     # (custom) the sweep, one of the high tiers: a power position, held
+                high = s.sweep if s.sweep in pts else getattr(s, "sweep_high", s.sweep)
+                s.high_alt[len(slots)] = s.spread(high, i // 2)
+            slots.append(("hunter", s.spread(floats[i % 2], i // 2), "aggression"))
         return slots[:n] if n >= 1 else slots
+
+    def post_working(s, now, snap):
+        """(custom, Nov 10) The team's Slayer post still worth holding: held POST_HOLD_MAX s at most, one of the
+        high-ground tiers posted on it stands there (ANCHOR_R, not under its floor) and has seen a man in the last
+        POST_QUIET s."""
+        from .bot import ANCHOR_R, ANCHOR_DZ
+        if now - getattr(s, "post_since", now) >= POST_HOLD_MAX:
+            return False
+        for b in s.bots.values():
+            p = snap.player(b.id)
+            if (p is None or not p.alive or not profiles.high_ground(b.p) or b.order.role != "mid"
+                    or b.order.point is None or dist(b.order.point, s.post) > ANCHOR_R):
+                continue
+            if ((p.pos - s.post).flat() <= ANCHOR_R and p.pos.z >= s.post.z - ANCHOR_DZ
+                    and now - max(b.per.last_seen.values(), default=-1e9) < POST_QUIET):
+                return True
+        return False
+
+    def post_lost(s, now):
+        """(custom, Nov 10) Two of ours fell within POST_LOSS_R u of the post in the last POST_LOSS_S s, since it was
+        taken: it is costing us, move on."""
+        since = max(getattr(s, "post_since", 0.0), now - POST_LOSS_S)
+        return sum(1 for t, q in getattr(s, "fell_at", ()) if t >= since and dist(q, s.post) < POST_LOSS_R) >= 2
+
+    def perch(s, target):
+        """(custom, Nov 10) Where to take a fight at target from above: the map's power position nearest it within
+        PERCH_MIN-PERCH_MAX u, PERCH_DZ u or more over it, that sees it. None: none such."""
+        T, eye = s.terrain(), Vec(0, 0, 0.6)
+        return min((q for q in s.positions() if PERCH_MIN <= dist(q, target) <= PERCH_MAX and q.z >= target.z + PERCH_DZ
+                    and T.los(q + eye, target + eye)), key=lambda q: dist(q, target), default=None)
 
     def is_one_flag(s, snap):
         """One Flag CTF: never two flags in this match (the flag keeps its stand while the sides swap each round). In
@@ -2784,6 +2851,9 @@ class Director:
                 if ours:
                     s.tally("our_deaths", where)
                     s.tally("bot_deaths", who)
+                    if p.id in last:          # (custom: where ours fell lately, post_working)
+                        s.__dict__.setdefault("fell_at", []).append((now, last[p.id]))
+                        del s.fell_at[:-20]
                 else:                                  # a kill: where, and the bot that was fighting him
                     s.tally("our_kills", where)
                     killer = next((b for b in s.bots.values() if b.goal[0] == "fight" and b.goal[1] == p.id), None)

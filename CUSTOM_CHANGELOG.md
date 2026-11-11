@@ -15,6 +15,52 @@ The owner: "the bots are shooting at spartans above their head so im doing a tes
 - The same point was tried on Nov 8 and taken back after one Blood Crash match (Ghost kills 0.6 a minute against 1.3-2.2 before). That match's trace is not on this PC to recheck; the wall test is a direct measurement against it. Watch Ghost kills and hits in the next matches.
 - Validation: `tools/test_demon_vehicles.py` (the Ghost aims from its camera point; on the measured rule, aimed from it a bolt meets the chest, from the origin it passed 0.5 u over; the Mongoose keeps its seat view) and `tools/test_h4_vehicle_aim.py` (the Ghost driver's origin 0.496 u up) updated. All 533 regression tests pass. Bots' Ghost fire in a match is untested; the bot process must be restarted.
 
+### Team Slayer: Legendary, Blind, Scaling and Demon hold the high ground, 2026-11-10
+
+The owner, on Complex: "In halo the game is about power positions and knowing when to push. I feel like too many bots are always on the lowest levels of the map. They need to utilize high ground alot more often, or stay in the hot spots once reached unless better conditions arise like a power weapon, or playing objective." Then: "Just make it to where this fixes bots that are Legendary, Blind, Scaling and Demon" and "Dont change the power weapons though. Let them go get those if one is up".
+
+- **Cause**, live Complex 20261110-193429 (8v8 Team Slayer, 678 s; scratchpad `heights.py`, `posts.py`, `floor_area.py`):
+  - Bots stood on the ground floor (under 1 u) 51% of the match and over 4.5 u 0-1%. Complex's five best-rated power positions are up there (z 5.3-6.6), and all 16 positions are walkable from spawn on the nav.
+  - Posted bots (Order "mid", `slayer_slots`' two anchors) were within 3 u of their post 0-9% of their post time. In Slayer a post had no leash (`keep_role` only kept Invasion's "mid"). Its pull scored 0.6-1.2, so a gun (about 1.2), a hunt, or an infantry patrol (1.25) won.
+  - The team's post changed every 25-45 s whatever happened there, about the walk up to the top floor. The support and the floaters went to where the enemy was last seen, or to a zone centre, which is the zone's lowest floor.
+- **Who**: `profiles.high_ground`: tier `top` (fixed Legendary, Blind, Scaling) and Demon. Heroic, Normal and Easy keep the upstream play, and so does every other mode.
+- **The leash** (`brain/bot.py`; `Bot.slayer_post`, `keep_role`, `ANCHOR_R` 8 u, `ANCHOR_DZ` 1.5 u):
+  - Guns, hunts and holds past 8 u of the post, or under its floor, lose weight by teamwork (×0.33 at 0.95). A gun "on the way" (6 u) on the floor under it counts as off it.
+  - Off the post (past 4 u, or under its floor), getting back scores 1.2 + 0.6 teamwork.
+  - Fights are never cut. `fight` holds the bot as a CTF defender is held: no walk in or down on a man off the post, and back to it when he breaks sight. A sword or shotgun still closes.
+  - Power weapons are not changed: a power spawn or a power gun lying loose (`Bot.power_at`: the map's 0.8+ weapons and Halo 4's power drops) is never cut. The way back does not cut short a trip to one the bot wants (scores at least the post). The team's power runs (`fetch`) were already exempt.
+  - The director no longer sends these posts on infantry patrols (`infantry_patrol_orders`). Hunters and free bots still patrol.
+- **Hold a post that works** (`brain/director.py`; `slayer_slots`, `post_working`, `post_lost`, `POST_*`): Team Slayer only.
+  - The post is kept 15 s at a time, up to 120 s, while one of these tiers is posted on it (within 8 u, not under its floor) and has seen a man in the last 20 s.
+  - Two of ours dead within 12 u of it in 30 s, since it was taken, and the team moves on at once (`fell_at`, from `track_events`), weighing that post a fifth.
+  - Otherwise the upstream 25-45 s.
+- **Fights from above** (`perch`, `PERCH_*`, `high_alt`, `assign_roles`):
+  - The support's slot, when one of these tiers takes it, goes to the power position nearest the fight 5-25 u from it, 1 u or more above it, that sees it, and holds it ("mid").
+  - The sweep floaters' slots go to a power position (the sweep's, else `sweep_high`), held.
+  - The lead hunter and the far floaters still go straight at the fight, and the push posture (behind) is unchanged.
+- Validation:
+  - New `tools/test_slayer_high_ground.py`, 11 tests:
+    - the four tiers and no others;
+    - off-post guns and hunts cut, and the way back wins;
+    - a gun by the post kept, one under its floor cut;
+    - fights never cut;
+    - power spawns and loose power guns never cut, at all four tiers;
+    - Heroic, Normal and other modes untouched;
+    - `post_working`, `post_lost` and `perch`.
+  - All 531 regression tests pass.
+  - On Complex's real map data, the director's orders for a mixed team (scratchpad `complex_slots.py`), with the fight on the ground floor (z 0.4):
+    - the two Demon anchors went to z 6.6 and 6.2;
+    - Blind's support to a perch at z 2.8, 13 u off;
+    - Scaling's sweep to a power position at z 3.4;
+    - the Legendary lead hunter to the fight;
+    - the Heroic and Normal slots unchanged.
+  - The live match's 28,200 posted decisions by Legendary, Blind and Demon, re-scored by the new leash (scratchpad `rescore.py`; only the logged candidates, power weapons by their spawns only):
+    - a target off the post or under its floor 61% → 13%;
+    - targets on the ground floor 26% → 8%, on the top floor 11% → 24%;
+    - fights 19% → 19%.
+  - A full think-loop replay on Complex's nav, posted on the top floor (scratchpad `post_replay.py`): with the Sword and Snipers up, Legendary and Demon still go for the Sword as before.
+- Untested in a live match: how the holding plays against people (too passive or not), the fight hold on ledges, and the perch picks over a whole match. Restart the bot process to load it.
+
 ### Halo 4: bots stop retrying racked guns they cannot take (the spawn-room Boltshot stops), 2026-11-10
 
 The owner's bug reports, Warhouse 17:35 "The bots pulling out their bolt shots almost every spawn?" and 18:56 "My team sometimes just stops in base switches to bolt shot and then leaves. I think both teams do it."

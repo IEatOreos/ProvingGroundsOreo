@@ -117,6 +117,12 @@ def fixed_demon(prof):
     return prof.tier == DEMON and prof.extra is None
 
 
+def high_ground(prof):
+    """(custom, Nov 10, owner) Team Slayer's high-ground play (Bot.slayer_post, Director.slayer_slots): Legendary, Blind
+    and Scaling (all tier "top") and Demon. Heroic and below keep the upstream play."""
+    return prof.tier in ("top", DEMON)
+
+
 def resource_priority(prof):
     """Power calls: Demon, Legendary, Heroic/Scaling, Normal, Easy."""
     if prof.extra is not None:

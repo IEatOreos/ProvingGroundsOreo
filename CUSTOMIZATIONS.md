@@ -78,6 +78,12 @@ Primary integration files: brain/bot.py, brain/profiles.py, brain/core.py, brain
   - Needs `native/bin/botcore_blind.dll` (MCC restart) for the menu entries, and a bot-process restart. tools/test_blind_difficulty.py covers it; gameplay is untested.
 - Halo 4 dead pickup spots (2026-11-10, `DEAD_SPOTS`, `DEAD_SPOT_FAILS`, `Bot.skip_dead_spots`): a loose gun's spot where bots waited out the 4 s item wait twice with nothing taken is skipped by every bot, both teams, for the match. A swap that goes through clears the count. For the spawn rooms' racked rifles, which the ground-weapon read lists but nobody can take. tools/test_h4_dead_spots.py covers it.
 - Halo 4 CTF carriers shoot their magnum (2026-11-10, `Bot.carrier_shot`, `CARRIER_SHOOT_R`): carrying on foot on the run home, a man in view within 25 u gets fight's aim and trigger while the walk home goes on; no grenade, ability, Use, reload or switch press (they could drop the flag). Other games keep "a carrier does not fight" (the flag is their carrier's only weapon). tools/test_h4_carrier_shot.py covers it.
+- Team Slayer high ground for Legendary, Blind, Scaling and Demon (2026-11-10, `profiles.high_ground`, `Bot.slayer_post` / `power_at`, `ANCHOR_R` / `ANCHOR_DZ`, `Director.post_working` / `post_lost` / `perch`, `POST_*`, `PERCH_*`):
+  - A posted bot of those tiers keeps to its post. Guns, hunts and patrols off it, or under its floor, lose weight, and it fights from the post.
+  - Power weapons are never held back.
+  - The team keeps a post that is working (up to 120 s) and leaves one that loses two men.
+  - Their support and sweep slots hold perches above the fight.
+  - Heroic and below, and other modes, are unchanged. tools/test_slayer_high_ground.py covers it.
 
 - Visible-target firing hesitation near a balcony: head line of sight is suspected, not confirmed.
 - The initial sniper miss-percentage proposal was implemented later: fixed Easy/Normal/Heroic use 10%/25%/50% intended sniper hits, as described above.
