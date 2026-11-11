@@ -71,7 +71,9 @@ class PointTests(unittest.TestCase):
         self.assertAlmostEqual(o.y, -0.247)
         self.assertIsNone(h4_origin(me, snap, "gunner"))
         snap.vehicles[0]["kind"] = "storm_ghost"
-        self.assertAlmostEqual(h4_origin(me, snap, "driver").z, 0.003)
+        # (custom, Nov 10) a Ghost's driver aims from its camera point, ghost_d_camera (vehicles.H4_DRIVER_AIM): the
+        # owner's wall test put its bolts on that line, 0.5 u over the seat view's
+        self.assertAlmostEqual(h4_origin(me, snap, "driver").z, 0.496)
 
 
 def bot(tier, game_map="h4_test"):

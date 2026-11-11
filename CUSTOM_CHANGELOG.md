@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Halo 4 Ghost drivers aim from the Ghost's camera point: its bolts landed half a unit over their target, 2026-11-10
+
+The owner: "the bots are shooting at spartans above their head so im doing a test to shoot straight at a wall for you to record the height and angle of the ghost shots", then "Yes, fix the aim".
+
+- Measured (`tools/h4_shot_capture.py`, new: read-only, each tick the person's place, aim, view point and vehicle frame, and every projectile followed from where it shows to where it is gone). His wall test on Grind, `logs/h4_shot_capture_20261110-195939`: 200 Ghost bolts in 11 bursts, at 3-14 u, aiming middle, high and low (-9 to +6 degrees).
+  - From the Ghost's origin (the seat view Ghost drivers aimed from, `H4_SEAT_VIEW`), every burst landed 0.46-0.50 u above the aim line, at every distance and aim height.
+  - From its `ghost_d_camera` marker (-0.019, 0, 0.496 in its frame), every burst landed within 0.03 u of the aim line.
+  - The bolts leave the guns about 1.4 u ahead of the origin at about 49-52 u/s and climb to the camera's crosshair point: +11 degrees over the aim at 3 u, +4.5 at 8 u, +3 at 10-14 u.
+  - So a Ghost driver aiming from its origin at a man's chest put its bolts 0.5 u over the chest, about over the head.
+- Fix (`brain/vehicles.py` `H4_DRIVER_AIM`): the Ghost aims from `ghost_d_camera`, as the Banshee aims from its camera anchor. Every tier, Halo 4 only. Its target point (`h4_aim_point`), lead, error and pace are unchanged, and so are the other seats.
+- The same point was tried on Nov 8 and taken back after one Blood Crash match (Ghost kills 0.6 a minute against 1.3-2.2 before). That match's trace is not on this PC to recheck; the wall test is a direct measurement against it. Watch Ghost kills and hits in the next matches.
+- Validation: `tools/test_demon_vehicles.py` (the Ghost aims from its camera point; on the measured rule, aimed from it a bolt meets the chest, from the origin it passed 0.5 u over; the Mongoose keeps its seat view) and `tools/test_h4_vehicle_aim.py` (the Ghost driver's origin 0.496 u up) updated. All 533 regression tests pass. Bots' Ghost fire in a match is untested; the bot process must be restarted.
+
 ### Halo 4: bots stop retrying racked guns they cannot take (the spawn-room Boltshot stops), 2026-11-10
 
 The owner's bug reports, Warhouse 17:35 "The bots pulling out their bolt shots almost every spawn?" and 18:56 "My team sometimes just stops in base switches to bolt shot and then leaves. I think both teams do it."

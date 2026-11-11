@@ -541,8 +541,14 @@ def frame_point(v, p):
 # The Ghost's own "ghost_d_camera" (-0.019, 0, 0.496) was tried and taken back the same day: aimed from it, live Blood
 # Crash 20261108-152614, Ghost drivers made 0.6 kills a minute at the controls (1.3-2.2 in the four matches before) and
 # a man 10-20 u off took damage after 5% of their fire rows (25% before): the captured seat view (H4_SEAT_VIEW, at the
-# origin) stays the Ghost's
-H4_DRIVER_AIM = {"banshee": (-0.104, 0.0, 0.595)}
+# origin) stayed the Ghost's.
+# (custom, Nov 10) Measured since, the owner's wall test (Grind, tools/h4_shot_capture.py, logs/h4_shot_capture_
+# 20261110-195939): 200 Ghost bolts in 11 bursts at 3-14 u, his aim -9 to +6 degrees, landed 0.46-0.50 u over the aim
+# line from the Ghost's origin (its seat view) and within 0.03 u of the one from ghost_d_camera, every burst: the game
+# sends the bolts to the camera's crosshair point (from the guns 1.4 u ahead, converging). Aimed from the origin at a
+# man's chest, they passed over his head ("the bots are shooting at spartans above their head"). The Ghost aims from
+# ghost_d_camera again; the one match's kill rate above is the evidence against it
+H4_DRIVER_AIM = {"banshee": (-0.104, 0.0, 0.595), "ghost": (-0.019, 0.0, 0.496)}
 
 
 def h4_driver_aim(v):

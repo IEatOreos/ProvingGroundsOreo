@@ -145,10 +145,27 @@ class DriverAimTests(unittest.TestCase):
         self.assertAlmostEqual(b.z, 1.0 + 0.595, places=3)
         self.assertAlmostEqual(b.x, 5.0 - 0.104, places=3)
 
-    def test_ghost_and_others_keep_their_seat_view(self):
-        for kind in ("storm_ghost", "storm_mongoose"):
-            with self.subTest(kind=kind):
-                self.assertLess(abs(self.origin(kind).z - 1.0), 0.05)
+    def test_ghost_from_the_camera(self):
+        # (custom, Nov 10: the owner's wall test, 200 bolts within 0.03 u of the aim line from ghost_d_camera)
+        g = self.origin("storm_ghost")
+        self.assertAlmostEqual(g.z, 1.0 + 0.496, places=3)
+        self.assertAlmostEqual(g.x, 5.0 - 0.019, places=3)
+
+    def test_others_keep_their_seat_view(self):
+        self.assertLess(abs(self.origin("storm_mongoose").z - 1.0), 0.05)
+
+    def test_ghost_bolts_land_on_the_chest(self):
+        """The wall test's rule: a bolt lands on the line from the camera point along the aim. Aimed from the camera at
+        a chest 10 u ahead and 0.5 u under it, that line meets the chest; from the origin it passed 0.5 u over it."""
+        chest = Vec(15.0, 5.0, 1.0)
+        for origin, over in ((self.origin("storm_ghost"), 0.0), (Vec(5.0, 5.0, 1.0), 0.496)):
+            with self.subTest(origin=origin):
+                cam = Vec(5.0 - 0.019, 5.0, 1.496)             # where the game's line starts (the measured rule)
+                aim = chest - origin
+                aim = aim * (1.0 / aim.length())
+                t = (chest - cam).flat()
+                land = cam + aim * (t / math.hypot(aim.x, aim.y))
+                self.assertAlmostEqual(land.z - chest.z, over, delta=0.02)
 
 
 class PilotRadarTests(unittest.TestCase):
