@@ -39,7 +39,7 @@ HFOV = math.radians(105.0)              # the player's MCC field of view (GameUs
 VFOV = 2 * math.atan(math.tan(HFOV / 2) * 9 / 16)
 NEW_AFTER, REACT_MAX, GAP = 1.0, 3.0, 3.0
 TEAM, ALIVE, X, Y, Z, YAW, PITCH, SH, HP, RIDE, FLAG, BOT = range(12)
-TIER_NAME = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary", "demon": "Demon", "blind": "Blind"}
+TIER_NAME = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary", "demon": "Demon", "blind": "Blind", "tactician": "Tactician"}
 
 
 def wrap(a):

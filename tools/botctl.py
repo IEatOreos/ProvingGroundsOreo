@@ -49,7 +49,7 @@ def player_cap(game, firefight=False):
 
 
 OFF_SETTINGS = 752
-DIFFICULTY_TIERS = ["novice", "average", "strong", "top", "strong,average,top,novice", "scaling", "demon", "blind"]
+DIFFICULTY_TIERS = ["novice", "average", "strong", "top", "strong,average,top,novice", "scaling", "demon", "blind", "tactician"]
 
 
 OFF_NAME = 772
@@ -114,7 +114,7 @@ def settings(m):
     return struct.unpack_from("<5I", m, OFF_SETTINGS)
 
 
-TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind")   # (Demon and Blind: brain/profiles.py)
+TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician")   # (Demon, Blind, Tactician: brain/profiles.py)
 STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "any")
 
 

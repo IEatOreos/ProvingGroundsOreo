@@ -99,13 +99,33 @@ BLIND_TOWARD = 0.85
 BLIND_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "decide")   # and turn (TURN)
 
 
+# (custom, Nov 10, owner) Tactician: "make its stats between legendary and heroic". Legendary's game sense and decisions
+# (tier "top", extra None, label "tactician": every Legendary rule: memory, radar, teamwork, routes, map timing,
+# tactics, awareness, high ground), its aim and hands halfway between Heroic's and Legendary's (TACTICIAN_HANDS,
+# TACTICIAN_TOWARD of the way from Heroic on), jittered as every tier's are. Like Blind its own hands aim everywhere:
+# no protected head/turret precision, no DMR/sniper head snap (protected_aim). It wins by where it is, not by its aim
+TACTICIAN = "tactician"
+TACTICIAN_TOWARD = 0.5
+TACTICIAN_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot")   # (decide, lead, turn: the same)
+
+
 def fixed_blind(prof):
     return prof.label == BLIND and prof.extra is None
 
 
+def fixed_tactician(prof):
+    return prof.label == TACTICIAN and prof.extra is None
+
+
+def own_hands(prof):
+    """Fixed Legendary whose hands are its own, not Legendary's protected aim: Blind and Tactician."""
+    return fixed_blind(prof) or fixed_tactician(prof)
+
+
 def protected_aim(prof):
-    """Fixed Legendary's protected precision, DMR/sniper head snap and unerring lead; Demon's own, not Blind's."""
-    return fixed_high(prof) and not fixed_blind(prof)
+    """Fixed Legendary's protected precision, DMR/sniper head snap and unerring lead; Demon's own, not Blind's or
+    Tactician's."""
+    return fixed_high(prof) and not own_hands(prof)
 
 
 def fixed_high(prof):
@@ -215,6 +235,8 @@ def make_profile(tier, personality, rng=random):
     """Build stock tier attributes; Demon retains our former fixed Legendary overrides."""
     if tier == BLIND:
         return blind_profile(personality, rng)
+    if tier == TACTICIAN:
+        return tactician_profile(personality, rng)
     vals ={**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     if tier == "top":
@@ -245,4 +267,18 @@ def blind_profile(personality, rng=random):
     prof = make_profile("top", personality, rng)
     drawn = {k: rng.uniform(min(a, b), max(a, b)) for k, (a, b) in blind_ranges().items()}
     return replace(prof, label=BLIND, **drawn)
+
+
+def tactician_hands():
+    """{stat: Tactician's base}: TACTICIAN_TOWARD of the way from Heroic's base to Legendary's (overshoot: Legendary's 0)."""
+    her, leg = TIERS["strong"], dict(TIERS["top"], overshoot=0.0)
+    return {k: her[k] + TACTICIAN_TOWARD * (leg[k] - her[k]) for k in TACTICIAN_HANDS}
+
+
+def tactician_profile(personality, rng=random):
+    """Legendary's profile (its game sense, jittered as ever) with its hands set between Heroic's and Legendary's, each
+    jittered 0.9-1.1 as make_profile jitters every tier's."""
+    prof = make_profile("top", personality, rng)
+    hands = {k: v * rng.uniform(0.9, 1.1) for k, v in tactician_hands().items()}
+    return replace(prof, label=TACTICIAN, **hands)
 

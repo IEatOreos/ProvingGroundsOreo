@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### New Tactician difficulty: Legendary's brain, hands between Heroic and Legendary, 2026-11-10
+
+The owner, picking from proposed new difficulties: "Make a tactician first and make its stats between legendary and heroic".
+
+- **Profile** (`brain/profiles.py` `TACTICIAN`, `tactician_hands`, `tactician_profile`, `fixed_tactician`, `own_hands`):
+  - Fixed Legendary (tier `top`, extra None, label `tactician`), so every Legendary rule applies: memory 10, radar 1.0, teamwork 0.95, routes, map timing, tactics, awareness, Team Slayer high ground, and Legendary's decision interval, lead and 650 deg/s turn.
+  - Its aim and hands (reaction, aim error, lag, tracking, flick, overshoot) are each set halfway between Heroic's and Legendary's base (`TACTICIAN_TOWARD` 0.5), then jittered 0.9-1.1 as every tier's are. Base: reaction 0.171 s, aim error 0.0064, lag 0.0515, tracking 0.0825, flick 0.75, overshoot 0.15.
+  - Like Blind, its own hands aim everywhere: `protected_aim` now excludes `own_hands` (Blind and Tactician), so no protected head/turret precision, unerring lead or DMR/sniper head snap. `fight()`'s head-only override reads `own_hands` instead of `fixed_blind`.
+  - Still Legendary's, looked up by tier: the head-aim share (0.97), the tight trigger (no loose aim), PRESS 1.0 and the dry-shot count.
+- **Native BOTS panel**: tier 7 / difficulty 8 "Tactician" (teal, three chevrons) in `bots_panel` (names, colours, about text, keys, both difficulty pickers between Heroic and Legendary, the inspector's second row, the clamps), `overlay` (`DIFF_NAME[9]`), `botcore` (`difficulty % 9`, `TIERS[9]` launches `--tier tactician`) and `shared.h`. `botctl` keys match; Observer, match export and player stats name it. Mixed's deal is unchanged (it does not include Tactician).
+- Validation: new `tools/test_tactician_difficulty.py`, 4 tests (hands halfway, Legendary's game sense under the same seed, own hands, Legendary / Demon / Blind unchanged, the keys and pickers); `tools/test_demon_difficulty.py` updated to 9 codes. All 53 `tools/test_*.py` files pass. `native\build.bat tactician` built `native/bin/botcore_tactician.dll` (not in Git), loaded at the next MCC start. The footer picker keeps its 600 px width with nine buttons, so check the labels fit. Untested in game.
+
 ### Mixed difficulty deals Demon and Blind too, 2026-11-10
 
 The owner: "When selecting the menu option for mixed teams. Demon, and blind aren't apart of that selection".

@@ -5268,7 +5268,7 @@ class Bot:
         slack = (2.5 if w in AUTO else 1.6) if d < SHORT_BAND and s.p.tactics > 0.15 else 1.0
         on = (s.aim.on_target(me, b.pos, act.yaw, act.pitch, slack)
               or (loose is not None and s.aim.landing(now, loose["early"], tid))) and seen_fire
-        if ((head_only and not profiles.fixed_blind(s.p)) or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me) or h4):
+        if ((head_only and not profiles.own_hands(s.p)) or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me) or h4):
             # (Blind: no head snap, its trigger waits on its own aim)
             # The final shot command snaps to the selected part after the turn cap (Halo 4 Demon: every gun it locks,
             # Bot.think h4_lock).
