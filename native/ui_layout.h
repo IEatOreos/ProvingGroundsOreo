@@ -86,8 +86,11 @@ inline ui_rect mcc_session_header(float H, float x1) {         // its right part
     float s = H / 1080.0f;
     return { x1 - 300 * s, 36 * s, x1, 72 * s };
 }
+// (Nov 11, the owner's 16-player slide-out screenshot: "the next players clips into mine") the player's own row, with
+// its focus line, reaches y 131; the bots' rows start 6 under it (137), the same gap they keep between them (44 high,
+// 50 apart)
 inline ui_rect mcc_session_row(float H, float x1, int k) {     // the name box (x) and the row's height (y)
-    float s = H / 1080.0f, y = (82 + 50 * k) * s;
+    float s = H / 1080.0f, y = (k ? 87 + 50 * k : 82) * s;
     return { x1 - 332 * s, y, x1, y + 44 * s };
 }
 inline float mcc_session_bar_x(float H, float x1) {            // the team colour bar's left edge (12 units wide)

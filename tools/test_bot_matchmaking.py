@@ -101,7 +101,7 @@ class LobbyProfileTests(unittest.TestCase):
         layout = src("ui_layout.h")
         for line in ("inline float mcc_session_probe_y0(float H) { return 78 * (H / 1080.0f); }",
                      "inline float mcc_session_probe_y1(float H) { return 87 * (H / 1080.0f); }",
-                     "float s = H / 1080.0f, y = (82 + 50 * k) * s;",
+                     "float s = H / 1080.0f, y = (k ? 87 + 50 * k : 82) * s;",   # (the first bot 6 under his row)
                      "return { x1 - 332 * s, y, x1, y + 44 * s };",
                      "return x1 - 346 * (H / 1080.0f);"):
             self.assertIn(line, layout)

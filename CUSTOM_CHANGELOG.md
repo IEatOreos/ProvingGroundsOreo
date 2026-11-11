@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### The first bot row no longer touches the player's row, 2026-11-11
+
+The owner, with a 16-player slide-out screenshot: "Even out my tab from theres. the next players clips into mine."
+
+- His own row with its light-blue focus line reaches y 131 (1080 units), and the first bot row started at 132, flush against it. Bot rows keep 6 between them (44 high, 50 apart).
+- `ui_layout.h` `mcc_session_row`: the bots' rows start at 87 + 50k (the first at 137), 6 under his row like the gaps below. His own row stays 82.
+- Checked by outlining the new rows on that screenshot: the gaps are even. `tools/test_bot_matchmaking.py` holds the line (8 tests pass); all 54 `tools/test_*.py` files pass. `native\build.bat lobbyrows4` built `native/bin/botcore_lobbyrows4.dll` (not in Git). Untested in game.
+
 ### The session list's bots follow MCC's list: the slide-out, a picked player, and the right height, 2026-11-11
 
 The owner, with a 6 s recording (2556x1436) after the first live run: the bots showed under him in the lobby's corner, but "if I hover to the right side of the screen new ui shows up ... The second ui keeps all the player on there as well". The recording (frames through Windows' MediaComposition, scratchpad) showed the rows drawn in the corner, the first one over the bottom of his own row, and nothing in the slide-out.
