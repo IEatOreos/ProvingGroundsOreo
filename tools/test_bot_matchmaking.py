@@ -89,8 +89,22 @@ class LobbyProfileTests(unittest.TestCase):
         self.assertIn('button("Edit look and clan tag"', panel)
         self.assertIn("for (int k = PROF_INSTALL; k < g_nprof; k++)", panel)          # the re-roll keeps them
         self.assertIn("PROF_MAX = 1024", panel)
-        self.assertIn("if (g_show_tile && !g_panel) draw_session(", overlay)
-        self.assertIn("inline ui_rect mcc_session_row(float W, float H, int k)", layout)
+        # (Nov 11, the owner's video) drawn wherever MCC's list stands: the lobby's corner, the slide-out, a player picked
+        self.assertIn("if (sess) draw_session(", overlay)
+        self.assertIn("else if (sframe++ % 4 == 0) probe_session(sc);", overlay)
+        self.assertIn("if (best >= 120 * s && best_end > 600 * s) found = (float)best_end + 1;", overlay)
+        self.assertIn("inline ui_rect mcc_session_row(float H, float x1, int k)", layout)
+
+    def test_session_geometry_from_the_video(self):
+        """ui_layout.h's numbers, as the owner's 2556x1436 recording and the probe on its frames gave them (scratchpad
+        probe_sim.py): the player's box 82-126, 332 wide; rows 50 apart; the bar 346-334 left of the box's right edge."""
+        layout = src("ui_layout.h")
+        for line in ("inline float mcc_session_probe_y0(float H) { return 78 * (H / 1080.0f); }",
+                     "inline float mcc_session_probe_y1(float H) { return 87 * (H / 1080.0f); }",
+                     "float s = H / 1080.0f, y = (82 + 50 * k) * s;",
+                     "return { x1 - 332 * s, y, x1, y + 44 * s };",
+                     "return x1 - 346 * (H / 1080.0f);"):
+            self.assertIn(line, layout)
 
 
 if __name__ == "__main__":

@@ -73,19 +73,25 @@ inline ui_rect bug_button_rect(float W, float H, float text_w_px = 0) {
 // under it to 127): his team's colour bar 362-350 in, the name box 344-11 in (its emblem 335-305, its clan tag from 289
 // at +8, its name at +22); and an 8-player session's rows about 50 apart (checked by drawing these rects on the
 // screenshot). Row k: 0 the player's (MCC's own), 1.. the bots the mod draws under it
-inline ui_rect mcc_session_header(float W, float H) {
-    ui_page f = mcc_frame(W, H);
-    float r = f.x0 + f.w;
-    return { r - 468 * f.s, 29 * f.s, r - 9 * f.s, 66 * f.s };
+// (Nov 11, the owner's video at 2560x1440, a true 16:9 frame: the screenshot above was squashed) The list stands in
+// three places: the lobby's top right (the player's box 1571-1903), the slide-out shown when the cursor goes to the
+// right edge (1548-1879, on a dark panel), and moved to the middle with a player picked (to about 1291). In all three
+// the header is y 36-72 and the player's box y 82-126 (its focus line to 129), 332 wide, right-aligned with the
+// header: so the list is placed by that box's right edge as found on screen (overlay.cpp probe_session: the box's
+// bright top edge along y 78-87), x1 in back buffer px.
+inline float mcc_session_probe_y0(float H) { return 78 * (H / 1080.0f); }
+inline float mcc_session_probe_y1(float H) { return 87 * (H / 1080.0f); }
+inline float mcc_session_box_w(float H) { return 332 * (H / 1080.0f); }
+inline ui_rect mcc_session_header(float H, float x1) {         // its right part: where the count goes
+    float s = H / 1080.0f;
+    return { x1 - 300 * s, 36 * s, x1, 72 * s };
 }
-inline ui_rect mcc_session_row(float W, float H, int k) {      // the name box (x) and the row's height (y)
-    ui_page f = mcc_frame(W, H);
-    float r = f.x0 + f.w, y = (75 + 50 * k) * f.s;
-    return { r - 344 * f.s, y, r - 11 * f.s, y + 45 * f.s };
+inline ui_rect mcc_session_row(float H, float x1, int k) {     // the name box (x) and the row's height (y)
+    float s = H / 1080.0f, y = (82 + 50 * k) * s;
+    return { x1 - 332 * s, y, x1, y + 44 * s };
 }
-inline float mcc_session_bar_x(float W, float H) {             // the team colour bar's left edge (12 units wide)
-    ui_page f = mcc_frame(W, H);
-    return f.x0 + f.w - 362 * f.s;
+inline float mcc_session_bar_x(float H, float x1) {            // the team colour bar's left edge (12 units wide)
+    return x1 - 346 * (H / 1080.0f);
 }
 
 inline bool ui_inside(const ui_rect& r, float W, float H) { return r.x0 >= 0 && r.y0 >= 0 && r.x1 <= W && r.y1 <= H; }

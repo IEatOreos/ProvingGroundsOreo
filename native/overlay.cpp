@@ -222,6 +222,66 @@ static void probe_lobby(IDXGISwapChain* sc) {
     g_lobby_visible = ok;
 }
 
+// (custom, Nov 11) Where MCC's MY GAME SESSION list stands: in the lobby's corner, the slide-out panel at the right edge
+// (the cursor taken there) or moved to the middle (a player picked): the player's own box, always the list's first row,
+// has a bright top edge along y 78-87 (1080 units) whose right end is the list's right edge (ui_layout.h
+// mcc_session_row). Every 4th frame a strip of the back buffer across those rows: the longest run of light pixels
+// (r, g, b over 140; the edge fades to the left, so its right end is the sure one), 120 units or longer, ending past
+// x 600. g_sess_x1: that end in buffer px, 0 when not seen twice running (a moment's miss keeps the rows)
+static ID3D11Texture2D* g_sess_tex;
+static UINT g_sess_w, g_sess_h;
+static DXGI_FORMAT g_sess_fmt;
+static float g_sess_x1;
+static int g_sess_miss;
+static void probe_session(IDXGISwapChain* sc) {
+    ID3D11Texture2D* back = nullptr;
+    if (FAILED(sc->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back)) || !back) return;
+    D3D11_TEXTURE2D_DESC bd;
+    back->GetDesc(&bd);
+    float H = (float)bd.Height, s = H / 1080.0f;
+    UINT top = (UINT)mcc_session_probe_y0(H), bot = (UINT)mcc_session_probe_y1(H) + 1, h = bot - top;
+    float found = 0;
+    if (bd.SampleDesc.Count == 1 && bot <= bd.Height) {
+        if (!g_sess_tex || g_sess_w != bd.Width || g_sess_h != h || g_sess_fmt != bd.Format) {
+            if (g_sess_tex) g_sess_tex->Release();
+            D3D11_TEXTURE2D_DESC sd{};
+            sd.Width = bd.Width; sd.Height = h; sd.MipLevels = 1; sd.ArraySize = 1; sd.Format = bd.Format;
+            sd.SampleDesc.Count = 1; sd.Usage = D3D11_USAGE_STAGING; sd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            g_sess_tex = nullptr;
+            g_dev->CreateTexture2D(&sd, nullptr, &g_sess_tex);
+            g_sess_w = bd.Width; g_sess_h = h; g_sess_fmt = bd.Format;
+        }
+        D3D11_MAPPED_SUBRESOURCE m;
+        if (g_sess_tex) {
+            D3D11_BOX box{ 0, top, 0, bd.Width, bot, 1 };
+            g_ctx->CopySubresourceRegion(g_sess_tex, 0, 0, 0, 0, back, 0, &box);
+            if (SUCCEEDED(g_ctx->Map(g_sess_tex, 0, D3D11_MAP_READ, 0, &m))) {
+                UINT best = 0, best_end = 0;
+                for (UINT y = 0; y < h; y++) {
+                    const uint8_t* row = (const uint8_t*)m.pData + y * m.RowPitch;
+                    UINT run = 0;
+                    for (UINT x = 0; x < bd.Width; x++) {
+                        int r, g, b;
+                        const uint8_t* p = row + x * 4;
+                        if (bd.Format == DXGI_FORMAT_B8G8R8A8_UNORM || bd.Format == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB) { b = p[0]; g = p[1]; r = p[2]; }
+                        else if (bd.Format == DXGI_FORMAT_R10G10B10A2_UNORM) {
+                            uint32_t v = *(const uint32_t*)p; r = (v & 1023) >> 2; g = ((v >> 10) & 1023) >> 2; b = ((v >> 20) & 1023) >> 2;
+                        } else { r = p[0]; g = p[1]; b = p[2]; }
+                        if (r > 140 && g > 140 && b > 140) {
+                            if (++run > best) { best = run; best_end = x; }
+                        } else run = 0;
+                    }
+                }
+                g_ctx->Unmap(g_sess_tex, 0);
+                if (best >= 120 * s && best_end > 600 * s) found = (float)best_end + 1;
+            }
+        }
+    }
+    back->Release();
+    if (found > 0) { g_sess_x1 = found; g_sess_miss = 0; }
+    else if (++g_sess_miss >= 2) g_sess_x1 = 0;
+}
+
 static bool in_ce_menus() {
     __try {
         return bots_title(g_session) && g_lobby_visible && g_exe[0x4000B8C + 0x11] == 0;
@@ -348,7 +408,7 @@ static ImU32 faded(ImU32 c, float a) {
     return (c & 0x00FFFFFFu) | ((ImU32)(((c >> 24) & 255) * (a < 0 ? 0 : a > 1 ? 1 : a)) << 24);
 }
 static void draw_session(float t) {
-    if (!g_shm || !g_shm->bots_enabled || g_shm->lidar_mode) return;
+    if (!g_shm || !g_shm->bots_enabled || g_shm->lidar_mode || g_sess_x1 <= 0) return;
     const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;
     if (!R.n) return;
     ImDrawList* dl = ImGui::GetForegroundDrawList();
@@ -361,8 +421,9 @@ static void draw_session(float t) {
         sig = (sig ^ R.bot[i].team) * 16777619u;
     }
     if (sig != sig_was) { sig_was = sig; joined_at = t; }
-    ImVec4 hr = to_ui(mcc_session_header(bb.x, bb.y));
-    float s = (hr.w - hr.y) / 37.0f;                           // px per 1080 unit (the header bar: 37 units)
+    float x1 = g_sess_x1;                                      // (probe_session: the player's box's right edge)
+    ImVec4 hr = to_ui(mcc_session_header(bb.y, x1));
+    float s = (hr.w - hr.y) / 36.0f;                           // px per 1080 unit (the header bar: 36 units)
     char cnt[16];
     sprintf_s(cnt, "%d/%d", R.n + 1, g_ff_lobby ? 4 : 16);
     float cs = 19.0f * s;
@@ -372,10 +433,10 @@ static void draw_session(float t) {
         const hb_bot& b = R.bot[k];
         float a = (t - joined_at) * 3.0f - k * 0.12f;          // (one after another, a third of a second each)
         if (a <= 0) continue;
-        ImVec4 r = to_ui(mcc_session_row(bb.x, bb.y, k + 1));
-        float bx = mcc_session_bar_x(bb.x, bb.y);
-        ImVec4 bar = to_ui(ui_rect{ bx, 0, bx + 12 * mcc_frame(bb.x, bb.y).s, 0 });
-        float u = (r.w - r.y) / 45.0f;                         // px per unit in this row
+        ImVec4 r = to_ui(mcc_session_row(bb.y, x1, k + 1));
+        float bx = mcc_session_bar_x(bb.y, x1);
+        ImVec4 bar = to_ui(ui_rect{ bx, 0, bx + 12 * (bb.y / 1080.0f), 0 });
+        float u = (r.w - r.y) / 44.0f;                         // px per unit in this row
         ImU32 tc = team_colour(b.team);
         int tr = tc & 255, tg = (tc >> 8) & 255, tb = (tc >> 16) & 255;
         ImU32 fill_l = IM_COL32(tr * 55 / 100, tg * 55 / 100, tb * 55 / 100, 235);
@@ -386,7 +447,7 @@ static void draw_session(float t) {
                                     faded(fill_l, a));
         dl->AddRect(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(edge, a), 0, 0, 1.0f);
         // the emblem (brain/emblems.py: the one MCC shows for it in the games), else a plain badge
-        ImVec2 e0(r.x + 9 * u, r.y + 7 * u), e1(r.x + 41 * u, r.y + 39 * u);
+        ImVec2 e0(r.x + 9 * u, r.y + 6 * u), e1(r.x + 41 * u, r.y + 38 * u);
         unsigned long long em = bot_emblem(b.name, make_texture);
         if (em) dl->AddImage((ImTextureID)em, e0, e1, ImVec2(0, 0), ImVec2(1, 1), faded(IM_COL32(255, 255, 255, 255), a));
         else {
@@ -709,6 +770,11 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             static unsigned frame;
             if (bots_title(g_session) && frame++ % 8 == 0) probe_lobby(sc);   // the lobby must be on screen
             pool_after_match();                                   // (Bot Matchmaking: the next bots, once a match ends)
+            // (custom, Nov 11) the session list's bots: wherever MCC's list stands in a lobby's menus (probe_session)
+            static unsigned sframe;
+            bool lobby = bots_title(g_session) && mcc_menu_state() == 0 && !g_playback;
+            if (!lobby) { g_sess_x1 = 0; g_sess_miss = 0; }
+            else if (sframe++ % 4 == 0) probe_session(sc);
             g_show_tile = in_ce_menus();
             if (!g_show_tile) g_panel = false;
             if (g_show_tile && g_panel && !g_parked && o_getcursorpos) { o_getcursorpos(&g_park_at); g_parked = true; }
@@ -720,7 +786,8 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             bool bug = match && (pause || g_bug_open);
             g_bug_ui = bug;
             if (!bug) g_bug_hover = false;
-            if (g_show_tile || notice || bug) {
+            bool sess = lobby && !g_panel && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode;
+            if (g_show_tile || notice || bug || sess) {
                 ImGuiIO& gio = ImGui::GetIO();
                 if (bug && g_bug_open && !g_bug_was_open) {          // F9 opened the window: nothing typed before is its text
                     gio.ClearEventsQueue();
@@ -765,7 +832,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 // left out (it drew over the panel's header), and takes no clicks
                 if (g_show_tile && !g_panel) draw_tile((float)ImGui::GetTime());
                 else g_hover_tile = false;
-                if (g_show_tile && !g_panel) draw_session((float)ImGui::GetTime());   // (the bots in MY GAME SESSION)
+                if (sess) draw_session((float)ImGui::GetTime());     // (the bots in MY GAME SESSION, where it stands)
                 bot_emblems_frame();
                 if (g_show_tile && g_panel) draw_panel();
                 g_popup_before = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);

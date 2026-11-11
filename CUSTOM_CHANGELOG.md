@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### The session list's bots follow MCC's list: the slide-out, a picked player, and the right height, 2026-11-11
+
+The owner, with a 6 s recording (2556x1436) after the first live run: the bots showed under him in the lobby's corner, but "if I hover to the right side of the screen new ui shows up ... The second ui keeps all the player on there as well". The recording (frames through Windows' MediaComposition, scratchpad) showed the rows drawn in the corner, the first one over the bottom of his own row, and nothing in the slide-out.
+
+- **Measured from the recording**, a nearly full-screen capture (the screenshots behind the first numbers were cropped about 7 units at the top: the tile row, 158 by `ui_layout.h`, read 151 there):
+  - The player's box is y 82-126, 332 wide, right-aligned with the header (y 36-72).
+  - Its right edge is at 1903 in the lobby's corner, 1879 in the slide-out (the cursor at the right edge) and about 1291 with a player picked (the list moved to the middle).
+- **Found on screen** (`overlay.cpp` `probe_session`): every 4th frame in a lobby's menus, a strip of the back buffer across y 78-87 is read.
+  - The longest run of light pixels (r, g and b over 140), 120 units or longer and ending past x 600, is the player's box's bright top edge, and its right end is the list's right edge. The edge fades to the left, so the right end is the sure one.
+  - It is cleared after two misses running, and outside a lobby's menus.
+  - Run on the recording's frames and the screenshots with the same rules (scratchpad `probe_sim.py`): 1904 in the corner, 1880 in the slide-out, 1291 picked (on the crop-corrected screenshot), and none on Player Details.
+- **Drawn there** (`draw_session`; `ui_layout.h` `mcc_session_row(H, x1, k)`, `mcc_session_header`, `mcc_session_bar_x`, `mcc_session_probe_y0/1`, `mcc_session_box_w`):
+  - The rows are drawn wherever the list stands, in the lobby's menus, whenever the probe finds the list and the BOTS panel is shut. No longer only with the lobby's tile row in sight, which the slide-out blurs.
+  - Rows are y 82 + 50k, 44 high, 332 wide from the found edge; the team bar is 346-334 left of it.
+  - This places them in other titles' lobbies too, where the list stands as in Halo 4's (unchecked).
+- Validation: `tools/test_bot_matchmaking.py` adds the probe and layout checks (8 tests pass). The pool test passes 14 checks. All 54 `tools/test_*.py` files pass. `native\build.bat lobbyrows3` built `native/bin/botcore_lobbyrows3.dll` (not in Git). Untested in game: the probe on the live buffer (its colours there, not a video's), the slide-out's animation, and other screens with a long light line at that height (the post-game report).
+
 ### Every lobby bot can be dressed and saved; the bots listed under the player in MY GAME SESSION, 2026-11-11
 
 The owner: "Can we make it to where the bots that are in the 'lobby' that are loaded in will show on the bot profile page? I want every bot I edit to save their difficulty playstyle armor everything. If I edit them. But I want them to be viewable at the time of them being in my lobby. ... I would like them to show as a 'real player' In my lobbys game session under my name which is always the top one."
