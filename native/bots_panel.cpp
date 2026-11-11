@@ -622,8 +622,15 @@ void roster_remove(hb_roster& r, int i) {
     r.n--;
 }
 
-// Mixed difficulty deals Heroic, Normal, Legendary, Easy in turn (tools/play.py's old default)
-int roster_mixed_tier(int k) { static const int M[4] = { 2, 1, 3, 0 }; return M[k % 4]; }
+// Mixed difficulty deals Heroic, Normal, Legendary, Easy in turn (tools/play.py's old default). (Custom, Nov 10: and
+// Demon and Blind, the owner: "Demon, and blind aren't apart of that selection". Dealt a bot at a time team by team,
+// so the six go in pairs of near ranks, the stronger of each pair to alternate teams: Normal / Easy, Heroic /
+// Legendary, Demon / Blind. Red then gets Normal, Heroic, Demon and blue Easy, Legendary, Blind; the first four
+// bots are the old four. Not Scaling: it is a match-long climb of its own)
+int roster_mixed_tier(int k) {
+    static const int M[6] = { 1, 0, 2, 3, HB_TIER_DEMON, HB_TIER_BLIND };
+    return M[k % 6];
+}
 static int mixed_tier(int k) { return roster_mixed_tier(k); }
 
 void roster_fill(hb_roster& r, int teams, int per_team, int tier, int style, uint32_t seed) {
@@ -1306,7 +1313,7 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     int qslot = difficulty_slot((uint32_t)qs_tier);
     if (segmented("qtier", DN, 8, &qslot, W, DC)) qs_tier = (int)DIFF_SHOWN[qslot];
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
-    muted(qs_tier < 4 ? TIER_ABOUT[qs_tier] : qs_tier == 4 ? "A mix of all four, like a real lobby."
+    muted(qs_tier < 4 ? TIER_ABOUT[qs_tier] : qs_tier == 4 ? "A mix of Easy to Demon and Blind, like a real lobby."
           : qs_tier == 6 ? DEMON_ABOUT : qs_tier == 7 ? BLIND_ABOUT : SCALE_ABOUT);
     if (qs_tier == 5) scale_games_setting(e, changed);
     ImGui::Dummy(ImVec2(0, px(4)));

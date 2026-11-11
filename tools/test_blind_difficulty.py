@@ -57,6 +57,21 @@ class BlindTests(unittest.TestCase):
     def test_roster_keeps_blind(self):
         self.assertIn("blind", botctl.TIER_KEYS)
 
+    def test_mixed_deals_demon_and_blind(self):
+        """(Nov 10) Mixed deals all six fixed tiers, near ranks paired so alternate teams stay even."""
+        import re
+        src = (ROOT / "native" / "bots_panel.cpp").read_text(encoding="utf-8", errors="replace")
+        body = re.search(r"int roster_mixed_tier\(int k\) \{\s*static const int M\[6\] = \{([^}]*)\};\s*return M\[k % 6\];",
+                         src)
+        self.assertIsNotNone(body)
+        names = {"HB_TIER_DEMON": 5, "HB_TIER_BLIND": 6}
+        deal = [names.get(x.strip(), None) if not x.strip().isdigit() else int(x) for x in body.group(1).split(",")]
+        self.assertEqual(sorted(deal), [0, 1, 2, 3, 5, 6])          # Easy..Legendary, Demon, Blind; no Scaling (4)
+        self.assertEqual(sorted(deal[:4]), [0, 1, 2, 3])            # the first four bots: the old four
+        strength = {0: 0, 1: 1, 2: 2, 3: 3, 6: 4, 5: 5}             # Easy < Normal < Heroic < Legendary < Blind < Demon
+        for a, b in zip(deal[0::2], deal[1::2]):
+            self.assertEqual(abs(strength[a] - strength[b]), 1)     # each red / blue pair a rank apart
+
 
 class MeleeReachTests(unittest.TestCase):
     def test_h4_demon_melee_reach(self):

@@ -98,7 +98,7 @@ int  profiles_effects();                                // 0 none, 1 rare, 2 com
 int  profiles_species();                                // 0 Spartans only, 1 mixed, 2 Elites only (the re-roll)
 int  profiles_elite_share();                            // mixed: the percent rolled Elite, -1 each game's own mix
 int  roster_on_team(const hb_roster& r, int team);
-int  roster_mixed_tier(int k);                          // "Mixed": Heroic, Normal, Legendary, Easy in turn
+int  roster_mixed_tier(int k);                          // "Mixed": Normal, Easy, Heroic, Legendary, Demon, Blind in turn
 int  roster_difficulty_tier(uint32_t difficulty, int k); // a "for everyone" difficulty as the k-th bot's tier
 const char* team_name(int team);
 const char* tier_name(int tier);

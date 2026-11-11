@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Mixed difficulty deals Demon and Blind too, 2026-11-10
+
+The owner: "When selecting the menu option for mixed teams. Demon, and blind aren't apart of that selection".
+
+- `native/bots_panel.cpp` `roster_mixed_tier`: Mixed dealt Heroic, Normal, Legendary, Easy in turn. It now deals Normal, Easy, Heroic, Legendary, Demon, Blind. Bots are dealt one at a time team by team, so each pair is two neighbouring ranks with the stronger to alternate teams: red gets Normal, Heroic, Demon and blue Easy, Legendary, Blind. The first four bots are the old four tiers. Scaling stays out (its match-long climb is its own pick).
+- The Quick setup hover text for Mixed now reads "A mix of Easy to Demon and Blind, like a real lobby."
+- Validation: `tools/test_blind_difficulty.py` adds a test of the deal (all six fixed tiers, no Scaling, the old four first, each pair a rank apart). Both difficulty test files pass. `native\build.bat mixed6` built `native/bin/botcore_mixed6.dll` (not in Git), loaded at the next MCC start. Untested in game.
+
 ### Halo 4: the Boltshot's Short band 0.8 -> 0.6, 2026-11-09 (committed 2026-11-10)
 
 The owner's call, Nov 9. It had sat uncommitted in the shared tree; the dead pickup spots entry below and its tests (`tools/test_h4_dead_spots.py`) assume it.
