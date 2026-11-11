@@ -648,7 +648,8 @@ bool profiles_reroll(const wchar_t* path, int experience, int effects, uint32_t 
 // The owner: "I have a call of duty mod with bots that can switch between 1-1000 bots per match due to a name que
 // file"; "every bot to be able to be customized and saved". The game holds 16 players, so the pool is any size and
 // each match seats up to 15 of it, the next names down the file. bot_pool.txt lines: a name (cut to 15 characters,
-// the game's name field; printable ASCII, no commas; a repeat skipped); # or ; starts a comment line.
+// the game's name field; printable ASCII, no commas; a repeat kept, never seated twice at once); # or ; starts a comment
+// line.
 // bot_pool_saved.ini lines: next=<queue position>, saved=<tier key>,<style key>,<name>.
 uint32_t hb_matchmaking = 1;
 static const int POOL_SEED_N = 60;                       // a new pool: the 15 profiles first, then made-up names
@@ -682,7 +683,8 @@ static void pool_write_new(const wchar_t* path) {
     if (_wfopen_s(&f, path, L"w") != 0 || !f) return;
     fprintf(f, "# Bot Matchmaking's pool (BOTS panel > Settings): one bot name per line, in queue order.\n"
                "# Add as many as you like, any time; each match's seats take the next names down the list.\n"
-               "# Names over 15 characters are cut to 15, repeats are skipped, lines starting # or ; are notes.\n");
+               "# Names over 15 characters are cut to 15, lines starting # or ; are notes. A name listed more than once\n"
+               "# comes up more often (never in two seats at once).\n");
     std::unordered_set<std::string> seen;
     int n = 0;
     for (int k = 0; k < g_nprof && n < POOL_SEED_N; k++)
@@ -705,12 +707,13 @@ void bot_pool_load(const wchar_t* dir) {
     FILE* f = nullptr;
     char line[512], name[16];
     if (_wfopen_s(&f, p, L"r") == 0 && f) {
-        std::unordered_set<std::string> seen;
+        // (custom, Nov 11, the owner: "Leave all of the duplicates": a name listed again stays in the queue, as his Call
+        // of Duty name file has it, so that bot comes up more often; pool_take never seats one name twice at once)
         while (fgets(line, sizeof line, f)) {
             const char* c = line;
             while (*c == ' ' || *c == '\t') c++;
             if (*c == '#' || *c == ';') continue;
-            if (pool_clean(c, name) && seen.insert(pool_key(name)).second) g_pool.push_back(name);
+            if (pool_clean(c, name)) g_pool.push_back(name);
         }
         fclose(f);
     }
@@ -3303,7 +3306,7 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
                               "Off: the same bots every match, as you set them.");
         char st[200];
         if (bot_pool_size())
-            sprintf_s(st, "%d bots in your pool, %d with saved settings. After each match the next %d take the seats.",
+            sprintf_s(st, "%d names in your pool, %d bots with saved settings. After each match the next %d take the seats.",
                       bot_pool_size(), bot_pool_saved_count(), e.roster->n < bot_pool_size() ? e.roster->n : bot_pool_size());
         else sprintf_s(st, "Your pool is empty: add names to native\\bin\\bot_pool.txt, one per line.");
         muted(st);

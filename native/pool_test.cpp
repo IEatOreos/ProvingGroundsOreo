@@ -41,11 +41,13 @@ int main(int argc, char** argv) {
     bot_pool_load(dir);
     CHECK(bot_pool_size() == 60, "new pool size %d", bot_pool_size());
 
-    // 2. the file's rules: BOM, comments, blank lines, a long name cut to 15, a repeat (any case) skipped, commas dropped
-    write(pool, "\xEF\xBB\xBF" "Alpha\r\n# a note\r\n; another\r\n\r\n  Bravo  \r\nxX_DeadlyAssassin_Xx\r\nalpha\r\nCh,arlie\r\nDelta\r\nEcho\r\n");
+    // 2. the file's rules: BOM, comments, blank lines, a long name cut to 15, commas dropped; (Nov 11) a repeat (any case)
+    // kept in the queue, as the owner's Call of Duty name file has them
+    write(pool, "\xEF\xBB\xBF" "Alpha\r\n# a note\r\n; another\r\n\r\n  Bravo  \r\nxX_DeadlyAssassin_Xx\r\nCh,arlie\r\nDelta\r\nEcho\r\nalpha\r\n");
     DeleteFileW(saved);
     bot_pool_load(dir);
-    CHECK(bot_pool_size() == 6, "pool size %d (want 6)", bot_pool_size());
+    CHECK(bot_pool_size() == 7, "pool size %d (want 7)", bot_pool_size());
+    CHECK(!strcmp(bot_pool_upcoming(6), "alpha"), "repeat kept '%s'", bot_pool_upcoming(6));
     CHECK(!strcmp(bot_pool_upcoming(0), "Alpha"), "first '%s'", bot_pool_upcoming(0));
     CHECK(!strcmp(bot_pool_upcoming(1), "Bravo"), "second '%s'", bot_pool_upcoming(1));
     CHECK(!strcmp(bot_pool_upcoming(2), "xX_DeadlyAssass"), "cut '%s'", bot_pool_upcoming(2));
@@ -66,7 +68,10 @@ int main(int argc, char** argv) {
     CHECK(bot_pool_saved_count() == 1, "saved count");
     bot_pool_rotate(r, 4);                            // Charlie, Delta, Echo
     CHECK(!strcmp(r.bot[0].name, "Charlie") && !strcmp(r.bot[2].name, "Echo"), "rotation 2: %s %s %s", r.bot[0].name, r.bot[1].name, r.bot[2].name);
-    bot_pool_rotate(r, 4);                            // Alpha, Bravo, xX...
+    bot_pool_rotate(r, 4);                            // alpha (the repeat), then Alpha skipped (seated), Bravo, xX...
+    CHECK(!strcmp(r.bot[0].name, "alpha"), "the repeat seated: %s", r.bot[0].name);
+    for (int i = 0; i < r.n; i++) for (int j = i + 1; j < r.n; j++)
+        CHECK(_stricmp(r.bot[i].name, r.bot[j].name) != 0, "one name in two seats: %s", r.bot[i].name);
     CHECK(!strcmp(r.bot[1].name, "Bravo"), "Bravo back: %s", r.bot[1].name);
     CHECK(r.bot[1].tier == HB_TIER_DEMON && r.bot[1].style == 2, "Bravo saved: tier %d style %d", r.bot[1].tier, r.bot[1].style);
     CHECK(r.bot[0].tier == 2 && r.bot[0].style == HB_STYLE_ANY, "Alpha default: tier %d style %d", r.bot[0].tier, r.bot[0].style);

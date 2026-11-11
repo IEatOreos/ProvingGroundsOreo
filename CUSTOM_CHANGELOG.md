@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Bot Matchmaking keeps a name's repeats in the queue; the owner's Call of Duty bot list added, 2026-11-11
+
+The owner: "This is the bot.txt file I want to use integrate it in with the names we already have ... Leave all of the duplicates. And all of these names I posted I want to be Legendary, or Blind. Excluding the first Row ... these bots will all be demons."
+
+- **Repeats kept** (`native/bots_panel.cpp` `bot_pool_load`): a name listed more than once in `bot_pool.txt` stays in the queue each time, as his Call of Duty name file has it, so that bot comes up more often. `pool_take` still never seats one name twice at once (a repeat already seated is passed over). A new pool's header says so, and the Settings line reads "names in your pool".
+- **His list** (local data in `native/bin`, not in Git; merged by a scratchpad script, `bot_pool.txt` and `bot_pool_saved.ini` backed up there first):
+  - `bots.txt`'s 839 names (692 different) were added in its order after the pool's 60, under a `# Call of Duty Bots-to-Humans list` note.
+  - The 16 names of his first row are saved as Demon. His other 61 named bots are saved as Legendary (30) or Blind (31), drawn once with a fixed seed and kept. Every named bot was in the file. Play style is any.
+  - 47 of the file's names are over the game's 15 characters and are cut there, e.g. `oO Savage Pigeon Oo` becomes `oO Savage Pigeo`.
+- Validation: `native/pool_test.cpp` now checks that a repeat is kept and is seated when its turn comes, and that one name never sits in two seats (all checks pass). All 54 `tools/test_*.py` files pass. `native\build.bat cod` built `native/bin/botcore_cod.dll` (not in Git). Untested in game.
+
 ### The first bot row no longer touches the player's row, 2026-11-11
 
 The owner, with a 16-player slide-out screenshot: "Even out my tab from theres. the next players clips into mine."
