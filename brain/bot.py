@@ -67,7 +67,10 @@ BANDS = {
     # Halo 4
     "lightrifle": (0.6, 1.0, 1.0, 0.7), "binary_rifle": (0.2, 0.6, 1.0, 1.0), "railgun": (0.6, 1.0, 0.7, 0.3),
     "incineration_cannon": (0.6, 1.0, 0.5, 0.1), "scattershot": (1.0, 0.2, 0.0, 0.0), "lmg": (0.9, 0.7, 0.3, 0.0),
-    "sticky_detonator": (0.4, 0.9, 0.5, 0.1), "boltshot": (0.8, 0.4, 0.05, 0.0)}
+    # (custom, Nov 9: the Boltshot's Short 0.8 -> 0.6, the owner's call. At 0.8 a loose shotgun or Scattershot added
+    # 0.06 to a BR + Boltshot loadout, under UPGRADE_GAIN 0.08: never picked up. At 0.6 the BR's 0.7 is the loadout's best
+    # Short: the shotgun, Scattershot and AR add 0.09; and a loaded BR stays in hand at 2 u, 3.7 to the Boltshot's 4.6)
+    "sticky_detonator": (0.4, 0.9, 0.5, 0.1), "boltshot": (0.6, 0.4, 0.05, 0.0)}
 
 
 # the same gun name, another game's gun: Reach's and Halo 4's magnum kills in 5-6 shots (guide 03), Halo 2 / 3's does not

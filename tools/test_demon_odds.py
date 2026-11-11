@@ -638,7 +638,15 @@ class PickupTests(unittest.TestCase):
 
 class KeepGunTests(unittest.TestCase):
     """No swap mid-fight to a gun slower to the kill counting the swap and its charge (Bot.keeps_gun): live Haven
-    1v1, a loaded BR swapped for the Boltshot at 2.5 u, its charge never fired."""
+    1v1, a loaded BR swapped for the Boltshot at 2.5 u, its charge never fired. (The Boltshot's Short band as it was,
+    0.8, so the range score still wants the swap: these test keeps_gun, not the band.)"""
+
+    def setUp(self):
+        self.band = botmod.BANDS["boltshot"]
+        botmod.BANDS["boltshot"] = (0.8, 0.4, 0.05, 0.0)
+
+    def tearDown(self):
+        botmod.BANDS["boltshot"] = self.band
 
     def choose(self, tier="demon", game_map="h4_test", other="boltshot", d=2.0, his_shield=0.36, mag=30):
         b, me = demon(tier, game_map, wall=None)
@@ -667,6 +675,26 @@ class KeepGunTests(unittest.TestCase):
         for tier, game_map in (("top", "h4_test"), ("demon", "reach_test")):
             with self.subTest(tier=tier, game=game_map):
                 self.assertEqual(self.choose(tier, game_map)[0], 1)
+
+
+class BoltshotBandTests(unittest.TestCase):
+    """The Boltshot's Short band 0.6 (Nov 9): a loose shotgun or Scattershot is worth the trip from BR + Boltshot, and
+    a loaded BR stays in hand at 2 u for every tier."""
+
+    def test_shotgun_and_scattershot_are_picked_up_over_the_boltshot(self):
+        b, _ = demon("average")
+        have = botmod.loadout_value(["battle_rifle", "boltshot"], b.rank, "h4")
+        for gun in ("shotgun", "scattershot"):
+            with self.subTest(gun=gun):
+                gain = botmod.loadout_value(["battle_rifle", gun], b.rank, "h4") - have
+                self.assertGreater(gain, botmod.UPGRADE_GAIN_GAME.get("h4", botmod.UPGRADE_GAIN))
+
+    def test_a_loaded_br_stays_in_hand_up_close(self):
+        b, me = demon("top", wall=None)
+        me.weapons, me.ammo, me.mag = ["battle_rifle", "boltshot"], [108, 30], [30, 10]
+        him = man(1, -2.0, shield=0.36, human=True)
+        see(b, him)
+        self.assertEqual(b.choose_weapon(50.0, me, "fight", 1, Snapshot(50.0, [me, him], mode="slayer")), -1)
 
 
 class RetreatJukeTests(unittest.TestCase):

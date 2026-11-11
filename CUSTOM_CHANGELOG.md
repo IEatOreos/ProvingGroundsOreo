@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Halo 4: the Boltshot's Short band 0.8 -> 0.6, 2026-11-09 (committed 2026-11-10)
+
+The owner's call, Nov 9. It had sat uncommitted in the shared tree; the dead pickup spots entry below and its tests (`tools/test_h4_dead_spots.py`) assume it.
+
+- `brain/bot.py` `BANDS["boltshot"]` Short 0.8 -> 0.6.
+  - At 0.8, a loose shotgun or Scattershot added 0.06 to a BR + Boltshot loadout, under `UPGRADE_GAIN` 0.08, so it was never picked up.
+  - At 0.6, the BR's 0.7 is the loadout's best Short, and the shotgun, Scattershot and AR add 0.09.
+  - A loaded BR stays in hand at 2 u (3.7 to the Boltshot's 4.6).
+- Validation: on a clean checkout of the commits, `test_h4_dead_spots.py` failed 2 of 2 without it and passes with it. Gameplay untested.
+
 ### Halo 4 Ghost drivers aim from the Ghost's camera point: its bolts landed half a unit over their target, 2026-11-10
 
 The owner: "the bots are shooting at spartans above their head so im doing a test to shoot straight at a wall for you to record the height and angle of the ghost shots", then "Yes, fix the aim".
