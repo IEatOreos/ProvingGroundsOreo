@@ -449,6 +449,82 @@ extern uint32_t g_playback;                     // botcore.cpp: a Theater film i
 // options before it are the same in a match and in its film (dumps, tools/globals_dump.py): the film key
 static const size_t HR_GG_PLAYBACK = 0x1DA, HR_GG_OPTIONS = 0x1D0, HR_GG_TICKS = 0x1F0EC;
 
+// (custom, Nov 11) network watch, read only: a snapshot in the log of this machine's player table and of every biped
+// with what points at it, for comparing the host's view of a custom game with a joined friend's. The friend saw the
+// bots slide without animations and his own team as enemies: bots are made with player_new_at on the host only (not
+// through the session), so the client may have no player behind their bodies. Per live player: index, salt, flags
+// (+4), machine (+0x14, 6 bytes), team (+0xAC), unit (+0x28), name (+0xB0). Per biped (object entry type 0): its
+// handle, position, the player whose +0x28 names it, and the offsets in its first 0x600 bytes holding a live
+// player's handle (salt << 16 | index; the unit's own player link is not mapped in Reach yet). Every 10 s, and at most
+// once a second when the live players or bipeds change. "netwatch first tick" says the hook runs on this machine
+static void hr_net_dump(uint8_t* tls, uint8_t* gg, uint32_t live, uint32_t bipeds, const uint32_t* handle,
+                        uint8_t* ents, int omax) {
+    __try {
+        logf("netwatch tick %u playback %d live %04x bipeds %u", gg ? *(uint32_t*)(gg + HR_GG_TICKS) : 0,
+             gg ? (int)gg[HR_GG_PLAYBACK] : -1, live, bipeds);
+        for (int i = 0; i < HB_MAX_PLAYERS; i++) {
+            if (!(live >> i & 1)) continue;
+            uint8_t* p = hr_player(tls, i);
+            const uint8_t* m = p + 0x14;
+            wchar_t name[17] = {};
+            memcpy(name, p + 0xB0, 32);
+            int bot = -1;
+            for (int s = 0; s < HB_MAX_PLAYERS; s++) if (g_shm->bot_player_index[s] == i) bot = s;
+            logf("netwatch  player %2d handle %08x flags %08x machine %02x%02x%02x%02x%02x%02x team %d unit %08x bot %d %ls",
+                 i, handle[i], *(uint32_t*)(p + 4), m[0], m[1], m[2], m[3], m[4], m[5], (int)(int8_t)p[0xAC],
+                 *(uint32_t*)(p + 0x28), bot, name);
+        }
+        for (int i = 0; ents && i < omax; i++) {
+            uint8_t* e = ents + (size_t)i * 0x18;
+            uint8_t* o = *(uint8_t**)(e + 0x10);
+            if (!*(uint16_t*)e || e[4] != 0 || !o) continue;
+            uint32_t h = (uint32_t)*(uint16_t*)e << 16 | (uint32_t)i;
+            int owner = -1;
+            for (int k = 0; k < HB_MAX_PLAYERS; k++)
+                if ((live >> k & 1) && *(uint32_t*)(hr_player(tls, k) + 0x28) == h) owner = k;
+            char refs[160] = {};
+            size_t n = 0;                                  // (one entry is at most 9 characters)
+            for (size_t off = 0; off + 4 <= 0x600 && n < sizeof refs - 16; off += 4) {
+                uint32_t v = *(uint32_t*)(o + off);
+                for (int k = 0; k < HB_MAX_PLAYERS && n < sizeof refs - 16; k++)
+                    if ((live >> k & 1) && v == handle[k])
+                        n += (size_t)sprintf_s(refs + n, sizeof refs - n, " +%03zx=p%d", off, k);
+            }
+            const float* pos = (const float*)(o + 0x44);
+            logf("netwatch  biped %08x at %.1f %.1f %.1f owner %d refs%s", h, pos[0], pos[1], pos[2], owner,
+                 n ? refs : " none");
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) { logf("netwatch faulted"); }
+}
+
+static void hr_net_watch(uint8_t* tls, uint8_t* gg) {
+    static ULONGLONG last = 0;
+    static uint32_t last_live = 0, last_bipeds = 0;
+    static bool first = true;
+    __try {
+        if (first) { first = false; logf("netwatch first tick (players update runs on this machine)"); }
+        uint8_t* ohdr = *(uint8_t**)(tls + 0x10);
+        uint8_t* ents = ohdr ? *(uint8_t**)(ohdr + 0x50) : nullptr;
+        int omax = ohdr ? *(int32_t*)(ohdr + 0x2C) : 0;
+        uint32_t live = 0, bipeds = 0, handle[HB_MAX_PLAYERS] = {};
+        for (int i = 0; i < HB_MAX_PLAYERS; i++)
+            if (hr_live(tls, i)) { live |= 1u << i; handle[i] = (uint32_t)*(uint16_t*)hr_player(tls, i) << 16 | (uint32_t)i; }
+        for (int i = 0; ents && i < omax; i++) {
+            uint8_t* e = ents + (size_t)i * 0x18;
+            if (*(uint16_t*)e && e[4] == 0 && *(uint8_t**)(e + 0x10)) bipeds++;
+        }
+        ULONGLONG now = GetTickCount64();
+        bool changed = live != last_live || bipeds != last_bipeds;
+        if (!(now - last >= 10000 || (changed && now - last >= 1000))) return;
+        last = now; last_live = live; last_bipeds = bipeds;
+        // logf also sets the panel's status line: kept as it was (the snapshot is for the log only)
+        char status[sizeof g_shm->status];
+        memcpy(status, g_shm->status, sizeof status);
+        hr_net_dump(tls, gg, live, bipeds, handle, ents, omax);
+        memcpy(g_shm->status, status, sizeof status);
+    } __except (EXCEPTION_EXECUTE_HANDLER) { logf("netwatch faulted"); }
+}
+
 static void __fastcall h_hr_update(uint8_t* actions) {
     if (g_shm) {
         g_shm->game_tick++;
@@ -461,6 +537,7 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                 fr = film_tick(film_hash(gg, HR_GG_OPTIONS), *(uint32_t*)(gg + HR_GG_TICKS), g_playback != 0, 1u << 26);
             }
             g_shm->game = 4;
+            if (tls) hr_net_watch(tls, gg);
             if (tls && fr) {
                 hr_run_command(tls);
                 while (film_more(*(uint32_t*)(gg + HR_GG_TICKS))) hr_run_command(tls);   // a film: this tick's others

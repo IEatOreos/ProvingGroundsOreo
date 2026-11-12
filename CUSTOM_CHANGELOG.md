@@ -29,6 +29,15 @@ The owner: "I got a game crash after clicking remove all bots. See if you can tr
   - The driver is a scratch tool, not in Git.
   - Untested in game: restart MCC to load the new DLL.
 
+### Reach: network watch log, for bots in custom games with a friend, 2026-11-11
+
+The owner: a friend joined his Reach custom game (anti-cheat off) and "could see and shoot the bots. They just slide around no animations his own team showed as enemies, but played perfectly for me"; "I want to make it multiplayer compatible."
+
+- **Likely cause, from the code (not confirmed yet):** `hr_add_bot` makes each bot with the game's `player_new_at` on the host only, giving it the host's machine, not through the session that tells every machine who is in the match. The friend's game would then get the bots' bodies with no player behind them: no team, and no movement or aim state to animate.
+- **First step, read only:** `native/reach.cpp` `hr_net_watch` / `hr_net_dump`, called each players-update tick. It writes `netwatch` lines to the botcore log: "netwatch first tick" once (the hook runs on this machine), then a snapshot every 10 s, and at most once a second when the live players or bipeds change. Each live player gets its index, handle, flags, machine, team (+0xAC), unit and name. Each biped gets its handle, position, the player whose unit it is, and the offsets in its first 0x600 bytes holding a live player's handle (the unit's own player link, not mapped in Reach yet). It writes nothing to the game, and the panel's status line is kept as it was.
+- The plan: the host and the friend each play one Reach custom game with bots, the friend with bots off; their two logs say whether his machine has players for the bots at all, and which unit field ties a body to its player. That decides the fix: the bots joining the session, or the host's mod telling the friend's which players to make.
+- Validation: `native\build.bat netwatch1` built `native/bin/botcore_netwatch1.dll` (not in Git) with no new warnings. All 55 `tools/test_*.py` files pass (none covers this). Untested in game, on either machine.
+
 ### Bots wear MCC's account rank badges by difficulty, 2026-11-11
 
 The owner: "Look up all of mcc ranks and instead just give a bot a random ranking emblem like i have based on their difficulty. So demon gets the max or close to max and the other bots fill based on the difficulty".
