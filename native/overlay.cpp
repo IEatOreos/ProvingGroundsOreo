@@ -43,6 +43,25 @@ static volatile bool g_pad_held;         // the pad kept from MCC (h_xinput_get)
 static bool g_pad_last;                  // the last input was the pad (the prompts say its buttons)
 static bool g_popup_before;              // a list or dialog was open in the panel the frame before
 static uint8_t* g_exe;
+// (custom, Nov 12) ImGui is not thread safe and MCC uses it from two threads: h_present draws on MCC's render thread,
+// wndproc feeds it the mouse and keys on MCC's window thread. Unguarded, a click landing while a frame read ImGui's
+// input queue tore it, and ImGui's own check failed ("i >= 0 && i < Size": the C runtime's assert, which closed MCC
+// with no crash report). Live Nov 11: MCC closed on the BOTS panel's Remove all, before the list was saved; a scratch
+// driver of the real panel with a second thread sending a 1000 Hz mouse failed that check within 1-6 s, and not in
+// 150 s runs with this lock. Held around every use of ImGui on either thread, never while MCC's own window procedure runs
+static CRITICAL_SECTION g_imgui_lock;
+static bool g_overlay_off;               // (custom, Nov 12) three faults while drawing: no overlay until MCC restarts
+
+// (custom, Nov 12) a failed ImGui check (native/imgui_checks.h: botcore.dll's IM_ASSERT): logged once a place, and MCC
+// goes on (the C runtime's assert dialog closed it). A fault that follows is the overlay's to catch (h_present, wndproc)
+void hb_imgui_assert(const char* expr, const char* file, int line) {
+    static const char* seen_file[32];
+    static int seen_line[32], seen = 0;
+    for (int k = 0; k < seen; k++) if (seen_line[k] == line && seen_file[k] == file) return;
+    if (seen < 32) { seen_file[seen] = file; seen_line[seen++] = line; }
+    const char* f = strrchr(file, '\\');
+    logf("imgui check failed: %s (%s:%d)", expr, f ? f + 1 : file, line);
+}
 
 // Which screen is open, from the files MCC opens (tools: native/filemon.cpp). Opening a custom
 // game lobby loads Data\UI\Screens\MultiplayerCustomGame.gfx and, within ~60 ms, that title's
@@ -757,13 +776,16 @@ static void pad_frame() {
 }
 
 static DWORD g_esc_eat;              // Esc closed the panel at this tick: its release (and repeats) stay ours
-static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+// (custom, Nov 12) where a window message goes (wndproc_route, under g_imgui_lock): on to MCC, kept (0), or Windows'
+// default (raw input kept from MCC)
+enum { WP_MCC, WP_OURS, WP_DEFAULT };
+static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_KEYDOWN || msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MOUSEWHEEL) g_pad_last = false;
     // MCC backs out of the lobby on Esc's release: closing the panel with Esc left the lobby too (live Nov 6), as the
     // pad's B would without g_pad_held
     if (g_esc_eat && (msg == WM_KEYUP || msg == WM_KEYDOWN) && wp == VK_ESCAPE && GetTickCount() - g_esc_eat < 3000) {
         if (msg == WM_KEYUP) g_esc_eat = 0;
-        return 0;
+        return WP_OURS;
     }
     // (custom, Nov 11) the session list's bots in a lobby (the slide-out too, where the tile row is out of sight): the
     // mouse goes to our frame, a click on a bot row is ours; a bot's menu or card open takes every key and click, and Esc
@@ -774,34 +796,54 @@ static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
             if (g_bot_card) g_bot_card = false;
             g_bot_menu = -1;
             play_sound(PS_BACK, g_sounds);
-            g_esc_eat = GetTickCount() | 1; return 0;
+            g_esc_eat = GetTickCount() | 1; return WP_OURS;
         }
         bool typing = g_panel && ImGui::GetIO().WantTextInput;   // a bot's name being typed: B and Esc are its
         if (g_show_tile && !bots_ui) {
-            if (!typing && msg == WM_KEYDOWN && wp == 'B' && !(lp & (1 << 30))) { g_panel = !g_panel; return 0; }
+            if (!typing && msg == WM_KEYDOWN && wp == 'B' && !(lp & (1 << 30))) { g_panel = !g_panel; return WP_OURS; }
             if (!typing && msg == WM_KEYDOWN && wp == VK_ESCAPE && g_panel && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId)) {
                 g_panel = false; play_sound(PS_BACK, g_sounds);   // (a confirmation open: Esc closes just that)
-                g_esc_eat = GetTickCount() | 1; return 0;
+                g_esc_eat = GetTickCount() | 1; return WP_OURS;
             }
         }
         ImGui_ImplWin32_WndProcHandler(h, msg, wp, lp);
         bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
         bool keys = msg >= WM_KEYFIRST && msg <= WM_KEYLAST;
-        if ((g_panel || bots_ui) && msg == WM_INPUT) return DefWindowProcW(h, msg, wp, lp);   // (raw input: not passed on)
+        if ((g_panel || bots_ui) && msg == WM_INPUT) return WP_DEFAULT;   // (raw input: not passed on)
         if (((g_panel || bots_ui) && (mouse || keys)) ||
-            ((g_hover_tile || g_sess_hover >= 0) && mouse && msg != WM_MOUSEMOVE)) return 0;   // ours
+            ((g_hover_tile || g_sess_hover >= 0) && mouse && msg != WM_MOUSEMOVE)) return WP_OURS;   // ours
     } else if (g_ready && in_match()) {                         // the bug report over a match
         bool typing = g_bug_open && ImGui::GetIO().WantTextInput;
-        if (!typing && msg == WM_KEYDOWN && wp == VK_F9 && !(lp & (1 << 30))) { g_bug_open = !g_bug_open; return 0; }
+        if (!typing && msg == WM_KEYDOWN && wp == VK_F9 && !(lp & (1 << 30))) { g_bug_open = !g_bug_open; return WP_OURS; }
         // ImGui hears the game's input only while the report UI is up: fed in play it queued every key and letter
         // typed, with no frame to take them, and F9's window took the backlog as typing; its WM_SETCURSOR answer put
         // the arrow over the game ("windows mouse cursor flickering over gameplay")
         if (g_bug_open || g_bug_ui) ImGui_ImplWin32_WndProcHandler(h, msg, wp, lp);
         bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
         bool keys = msg >= WM_KEYFIRST && msg <= WM_KEYLAST;
-        if (g_bug_open && (mouse || keys || msg == WM_INPUT)) return 0;   // typing never reaches the game
-        if (g_bug_hover && mouse && msg != WM_MOUSEMOVE) return 0;
+        if (g_bug_open && (mouse || keys || msg == WM_INPUT)) return WP_OURS;   // typing never reaches the game
+        if (g_bug_hover && mouse && msg != WM_MOUSEMOVE) return WP_OURS;
     }
+    return WP_MCC;
+}
+// (custom, Nov 12) MCC's window messages: routed under the lock the drawing holds (g_imgui_lock), then passed on with
+// it let go (MCC's own procedure may wait on its render thread, which may be waiting for the lock). A fault in the
+// routing leaves the message to MCC rather than closing it
+static LRESULT CALLBACK wndproc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+    static DWORD told_thread;
+    if (!told_thread) { told_thread = GetCurrentThreadId(); logf("overlay: MCC's window messages on thread %lu", told_thread); }
+    int route = WP_MCC;
+    EnterCriticalSection(&g_imgui_lock);
+    __try {
+        route = wndproc_route(h, msg, wp, lp);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        static bool told;
+        if (!told) { told = true; logf("overlay: fault %08lx routing window message %04x: passed to MCC", GetExceptionCode(), msg); }
+        route = WP_MCC;
+    }
+    LeaveCriticalSection(&g_imgui_lock);
+    if (route == WP_OURS) return 0;
+    if (route == WP_DEFAULT) return DefWindowProcW(h, msg, wp, lp);
     return CallWindowProcW(o_wndproc, h, msg, wp, lp);
 }
 
@@ -851,8 +893,10 @@ static void draw_notice() {
 }
 
 static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
+    volatile bool held = false;                               // (custom, Nov 12) g_imgui_lock: let go on a fault too
     __try {
-        if (!g_ready && g_shm) {
+        if (!g_ready && g_shm && !g_overlay_off) {
+            EnterCriticalSection(&g_imgui_lock); held = true;     // (after a fault: MCC's window thread may be in ImGui)
             if (SUCCEEDED(sc->GetDevice(__uuidof(ID3D11Device), (void**)&g_dev))) {
                 g_dev->GetImmediateContext(&g_ctx);
                 DXGI_SWAP_CHAIN_DESC d;
@@ -881,10 +925,14 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 ImGui_ImplWin32_Init(g_hwnd);
                 ImGui_ImplDX11_Init(g_dev, g_ctx);
                 make_rtv(sc);
-                o_wndproc = (WNDPROC)SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, (LONG_PTR)wndproc);
+                // (custom, Nov 12) once: started again after a fault, a second hook made MCC's procedure ours and every
+                // message called itself without end
+                if (!o_wndproc) o_wndproc = (WNDPROC)SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, (LONG_PTR)wndproc);
                 g_ready = true;
                 logf("overlay ready (window %p)", g_hwnd);
+                logf("overlay: drawing on thread %lu", GetCurrentThreadId());
             }
+            held = false; LeaveCriticalSection(&g_imgui_lock);
         }
         if (g_ready) {
             DXGI_SWAP_CHAIN_DESC scd;                             // the back buffer's size (MCC lays out on it)
@@ -921,6 +969,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             g_sess_drawn = sess;
             if (!sess) g_sess_hover = -1;
             if (g_show_tile || notice || bug || sess || bot_ui()) {
+                EnterCriticalSection(&g_imgui_lock); held = true;  // (custom, Nov 12: MCC's window thread feeds ImGui too)
                 ImGuiIO& gio = ImGui::GetIO();
                 if (bug && g_bug_open && !g_bug_was_open) {          // F9 opened the window: nothing typed before is its text
                     gio.ClearEventsQueue();
@@ -975,9 +1024,22 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 ImGui::Render();
                 g_ctx->OMSetRenderTargets(1, &g_rtv, nullptr);
                 ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+                held = false; LeaveCriticalSection(&g_imgui_lock);
             }
         }
-    } __except (EXCEPTION_EXECUTE_HANDLER) { g_ready = false; }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        // (custom, Nov 12) said in the log (none was: a fault left no trace), the lock let go, the overlay made again;
+        // a third fault turns it off until MCC restarts (MCC's input all its own again)
+        static int faults = 0;
+        faults++;
+        logf("overlay: fault %08lx while drawing (%d): %s", GetExceptionCode(), faults,
+             faults < 3 ? "the overlay starts again" : "the overlay is off until MCC restarts");
+        if (held) { held = false; LeaveCriticalSection(&g_imgui_lock); }
+        g_ready = false;
+        g_panel = false; g_bot_menu = -1; g_bot_card = false;  // (nothing of ours left holding MCC's cursor or pad)
+        g_parked = false; g_pad_held = false;
+        if (faults >= 3) g_overlay_off = true;
+    }
     return o_present(sc, sync, flags);
 }
 
@@ -991,6 +1053,7 @@ static HRESULT __stdcall h_resize(IDXGISwapChain* sc, UINT n, UINT w, UINT h, DX
 // Present/ResizeBuffers addresses from a throwaway swap chain's vtable (they are shared by all
 // swap chains in the process).
 bool overlay_start() {
+    InitializeCriticalSection(&g_imgui_lock);                // (custom, Nov 12: before any hook can draw or route)
     g_exe = (uint8_t*)GetModuleHandleW(nullptr);
     WNDCLASSEXW wc{ sizeof wc, CS_CLASSDC, DefWindowProcW, 0, 0, GetModuleHandleW(nullptr), 0, 0, 0, 0, L"botcore_dummy", 0 };
     RegisterClassExW(&wc);

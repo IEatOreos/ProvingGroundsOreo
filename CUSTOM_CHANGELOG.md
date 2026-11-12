@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+### The BOTS panel's Remove all closed MCC: ImGui used from two threads, 2026-11-12
+
+The owner: "I got a game crash after clicking remove all bots. See if you can track it down".
+
+- **What the PC kept**: nothing that names the crash.
+  - No Windows Error Reporting event or dump, and no Unreal crash report in `LocalLow\MCC\Saved\Crashes` (the last is from April).
+  - The botcore log ends at the lobby probe, with no fault line.
+  - `botcore.ini` still held the 11 bots from the post-match rotation (10:16:00). Remove all never saved, so MCC closed before the confirmation's frame finished.
+  - A C runtime assert ends a process that way: its dialog, then an exit, with no report. The DLL that was running (`botcore_netwatch1.dll`) has asserts compiled in (build.bat does not define NDEBUG).
+- **The panel itself is not it.** A scratch driver links the real `bots_panel.cpp` with ImGui, its asserts on, and loads the crash's own data: botcore.ini, the 899-name pool, the profiles, and MCC's nameplates and ranks. It clicks the toolbar's Remove all, then the confirmation's. No failure: the list empties and saves.
+- **The cause found**: ImGui is not thread safe, and the overlay used it from two of MCC's threads.
+  - `h_present` draws frames on the render thread, while `wndproc` calls `ImGui_ImplWin32_WndProcHandler` (mouse, keys) on MCC's window thread. A click that arrives while a frame reads ImGui's input queue tears it.
+  - The same driver, with a second thread sending mouse events at 1000 Hz as the window thread does, failed ImGui's check `i >= 0 && i < Size` (imgui.h:2282, the C runtime's assert) within 1-6 s, in four runs.
+  - This is not proven to be this exact crash, since nothing was recorded. It is the only failure found that ends MCC this way.
+- **The fix** (`native/overlay.cpp`):
+  - `g_imgui_lock`: one lock around every use of ImGui on either thread. It covers the frame (NewFrame to RenderDrawData), the setup, and the routing of window messages (`wndproc_route`). MCC's own window procedure runs after the lock is let go. With the lock, the driver ran 150 s at 1000 Hz (60,000+ frames) and 150 s flat out (140,000+ frames) with no failure.
+  - `native/imgui_checks.h` (build.bat `/I. /DIMGUI_USER_CONFIG`): in botcore.dll, a failed ImGui check writes `imgui check failed: <check> (<file>:<line>)` to the botcore log, once a place, and MCC goes on. The new DLL holds none of the C runtime's assert dialog. The tests and the preview builds keep ImGui's own assert.
+  - A fault while drawing is now logged (`overlay: fault <code> while drawing`) and the lock let go. Nothing of the overlay is left holding MCC's cursor or pad.
+  - The overlay is then made again, without hooking MCC's window a second time. Upstream's restart hooked it again, and every message would have called itself without end. A third fault turns the overlay off until MCC restarts.
+  - A fault while routing a window message is logged, and the message is passed to MCC.
+  - The log now says which thread draws and which gets the window messages.
+- Validation:
+  - `native\build.bat imguilock` built `native/bin/botcore_imguilock.dll` (not in Git) from the working tree, which includes the uncommitted Reach netwatch logging, as `botcore_netwatch1.dll` did.
+  - All 55 `tools/test_*.py` files pass, and the pool checks pass.
+  - The driver is a scratch tool, not in Git.
+  - Untested in game: restart MCC to load the new DLL.
+
 ### Bots wear MCC's account rank badges by difficulty, 2026-11-11
 
 The owner: "Look up all of mcc ranks and instead just give a bot a random ranking emblem like i have based on their difficulty. So demon gets the max or close to max and the other bots fill based on the difficulty".
