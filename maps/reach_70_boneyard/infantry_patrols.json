@@ -2,5 +2,9 @@
   "Banshee Building": [308.33, 106.76, -7.0],
   "West upper level": [249.79, 90.02, -4.0],
   "Red patrol": {"pos": [302.7, 91.89, -8.0], "team": "red"},
-  "Blue patrol": {"pos": [299.91, 113.31, -7.0], "team": "blue"}
+  "Blue patrol": {"pos": [299.91, 113.31, -7.0], "team": "blue"},
+  "Patrol 5": [256.22, 91.77, -4.0],
+  "Patrol 6": [242.47, 96.77, -9.67],
+  "Red patrol 2": {"pos": [257.5, 78.25, -4.0], "team": "red"},
+  "Blue patrol 2": {"pos": [261.5, 107.0, -6.0], "team": "blue"}
 }

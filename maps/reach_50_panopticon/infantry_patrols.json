@@ -1,0 +1,8 @@
+{
+  "Patrol 1": [216.5, -27.75, -3.1],
+  "Patrol 2": [223.75, -21.5, -7.9],
+  "Blue patrol 1": {"pos": [224.75, -33.5, -7.8], "team": "blue"},
+  "Red patrol 1": {"pos": [224.75, -10.75, -7.9], "team": "red"},
+  "Blue patrol 2": {"pos": [238.75, -7.75, -4.7], "team": "blue"},
+  "Red patrol 2": {"pos": [200.0, -30.75, -4.7], "team": "red"}
+}

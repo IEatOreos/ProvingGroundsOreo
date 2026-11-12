@@ -1,6 +1,54 @@
 [
  {
   "pos": [
+   1.75,
+   -13.0,
+   2.8
+  ],
+  "score": 1.0,
+  "sees": 14,
+  "height": 2.5,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   -2.0,
+   -13.0,
+   2.8
+  ],
+  "score": 1.0,
+  "sees": 11,
+  "height": 2.5,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   -12.75,
+   -25.5,
+   2.8
+  ],
+  "score": 1.0,
+  "sees": 3,
+  "height": 2.0,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
+   12.25,
+   -26.0,
+   2.8
+  ],
+  "score": 1.0,
+  "sees": 7,
+  "height": 2.6,
+  "duck": true,
+  "owner": true
+ },
+ {
+  "pos": [
    2.32,
    -7.84,
    3.09
@@ -52,17 +100,6 @@
   "score": 0.768,
   "sees": 12,
   "height": 1.4,
-  "duck": true
- },
- {
-  "pos": [
-   11.57,
-   -25.34,
-   2.4
-  ],
-  "score": 0.743,
-  "sees": 9,
-  "height": 2.2,
   "duck": true
  }
 ]

@@ -68,7 +68,10 @@
    6.18
   ]
  ],
- "sneak": {},
+ "sneak": {
+  "red": [],
+  "blue": []
+ },
  "zones": {
   "Red base": {
    "poly": [
