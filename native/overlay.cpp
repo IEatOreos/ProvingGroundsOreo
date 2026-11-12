@@ -465,6 +465,11 @@ static void draw_session(float t) {
             edge = IM_COL32(235, 245, 250, 255);
         }
         dl->AddRectFilled(ImVec2(bar.x, r.y), ImVec2(bar.z, r.w), faded(tc, a));
+        // (custom, Nov 11) its rank badge left of the bar, where MCC puts the player's: a tour's shield and the level's
+        // insignia, by its difficulty (bots_panel.cpp bot_rank)
+        int rtour, rlevel;
+        bot_rank(b.name, b.tier, &rtour, &rlevel);
+        rank_badge(dl, ImVec2(r.x - 38 * u, (r.y + r.w) * 0.5f), 46 * u, rtour, rlevel, a);
         // (custom, Nov 11) its nameplate, MCC's own card, as MCC draws a player (the plain ones in the team's colour);
         // the team's shade where none is to be had
         int np = bot_nameplate(b.name);

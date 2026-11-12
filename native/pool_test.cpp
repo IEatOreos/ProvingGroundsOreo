@@ -232,6 +232,25 @@ int main(int argc, char** argv) {
         }
     }
 
+    // 18. (Nov 11) MCC ranks by difficulty: Demon the top two tours (the eagle has no level, tour 10 at level 20+), Easy
+    // the first two, each tier in its own tours, levels 1-30, the same for the same bot every time
+    {
+        const char* names[] = { "MadPistol", "Sword117", "Reaper343", "Oreo", "MS3S", "Lucky117", "Pixelated", "Ice" };
+        for (const char* nmx : names) {
+            int t, l, t2, l2;
+            bot_rank(nmx, HB_TIER_DEMON, &t, &l);
+            CHECK((t == 11 && l == 0) || (t == 10 && l >= 20 && l <= 30), "Demon %s: tour %d level %d", nmx, t, l);
+            bot_rank(nmx, HB_TIER_DEMON, &t2, &l2);
+            CHECK(t == t2 && l == l2, "Demon %s the same", nmx);
+            bot_rank(nmx, 0, &t, &l);
+            CHECK(t >= 1 && t <= 2 && l >= 1 && l <= 30, "Easy %s: tour %d level %d", nmx, t, l);
+            bot_rank(nmx, 3, &t, &l);
+            CHECK(t >= 6 && t <= 9 && l >= 1 && l <= 30, "Legendary %s: tour %d level %d", nmx, t, l);
+            bot_rank(nmx, 2, &t, &l);
+            CHECK(t >= 4 && t <= 6, "Heroic %s: tour %d", nmx, t);
+        }
+    }
+
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);
     return fails ? 1 : 0;
 }

@@ -163,6 +163,15 @@ int  bot_nameplate(const char* name);                   // the bot's: picked in 
 unsigned long long nameplate_tex(int id, unsigned long long (*make)(int w, int h, const unsigned char* rgba));
 bool nameplate_decode(int id, int* w, int* h);          // (tests: its PNG reads)
 
+// (custom, Nov 11) MCC's account ranks (native\bin\ranks, tools/mcc_ranks.py from MCC's pak, run in the background when
+// missing): a bot's tour (1-11, 11 the eagle) and level (1-30, 0 on the eagle) from its name within its difficulty's
+// tours (Demon the top two); its badge (the tour's shield, the level's insignia on it), h px high at c
+void ranks_frame();
+int  ranks_count();                                     // tours read, 0: not yet
+const char* rank_level_name(int level);                 // "Colonel"
+void bot_rank(const char* name, int tier, int* tour, int* level);
+void rank_badge(struct ImDrawList* dl, struct ImVec2 c, float h, int tour, int level, float alpha = 1.0f);
+
 // The bug report over a match: with MCC's pause menu up, a "Report bot bug" button; it (or F9) opens the report window.
 // overlay.cpp saves what was typed (logs/bug_reports/<time>/report.json); the brain adds the match recording.
 struct bug_report_env {

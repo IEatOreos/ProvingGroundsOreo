@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Bots wear MCC's account rank badges by difficulty, 2026-11-11
+
+The owner: "Look up all of mcc ranks and instead just give a bot a random ranking emblem like i have based on their difficulty. So demon gets the max or close to max and the other bots fill based on the difficulty".
+
+- **Found in MCC's files**: the badge beside a player's name is MCC's account rank, a tour's shield with the level's insignia on it (his: "Tour 6, Level 26 Colonel"). It is not in `Data\UI`; it is in MCC's Unreal pak, `MCC\Content\Paks\MCC-WindowsNoEditor.pak` (version 7, index not encrypted).
+  - `UI/Shared/Textures/AccountLevelProgression/T_Im_*`: 30 insignia and 11 tour shields, 512x512 BGRA, stored uncompressed.
+  - `UI/Features/Nameplate/DA_AccountProgression` (MCCAccountProgressionData): 30 levels (1 Rookie .. 26 Colonel .. 30 General, each its icon) and 11 tours (Prestige 0-10 with the icons Tier11 down to Tier01). The last tour, the gold eagle, has no levels (HasLevels false).
+  - (The numbered 1-50 icons in `Data\UI`'s texture pack are the playlists' skill ranks, not these.)
+- **`tools/mcc_ranks.py`** reads the pak's index, decodes DA_AccountProgression's tagged properties through the package's name map, and writes `native/bin/ranks` (game data, not in Git): tour_01-11 and level_01-30 at 128x128, and `index.txt` (tour=<n>|levels or max, level=<n>|<name>, the names from the icons with their spelling put right). If the asset cannot be read, it falls back to the order it held in Nov 2026.
+- **The panel** (`native/bots_panel.cpp` `ranks_frame`, `bot_rank`, `rank_badge`): when `native\bin\ranks` is missing, the extraction runs in the background from the MCC folder the nameplates found, and the ranks are read once it is there.
+  - A bot's rank is drawn from its name and difficulty, the same every match while its difficulty is. Tours by difficulty (`RANK_TOURS`): Easy 1-2, Normal 2-4, Heroic 4-6, Tactician 5-7, Scaling 5-8, Legendary and Blind 6-9, Demon 10-11. Demon gets the eagle (the top) or tour 10 at level 20 or over (near General). The other tours take any level 1-30.
+  - The badge is the tour's shield with the level's insignia at 58% on it (none on the eagle), as his own is drawn.
+- **Shown**: the lobby's rows (`overlay.cpp`) draw the badge left of the team bar, where MCC puts the player's. The bot card adds CURRENT LEVEL ("Tour 6, Level 26", the rank's name, the badge), as MCC's Player Details shows a player's.
+- Validation: new `tools/test_mcc_ranks.py`, 4 tests. They check the names, and against this machine's MCC: pak version 7, the 30 levels and 11 tours read (his Tour 6 the gold spear shield, the eagle with no levels), and an extraction of 41 pictures with `level=26|Colonel`. `native/pool_test.cpp` checks `bot_rank` for 8 names: Demon in tour 11 (no level) or tour 10 at level 20+, the same each time; Easy, Heroic and Legendary in their tours. All checks pass and all 55 `tools/test_*.py` files pass. A mock of his bots' rows with their badges was drawn on his recording's slide-out frame (scratchpad). `native\build.bat ranks2` built `native/bin/botcore_ranks2.dll` (not in Git). Untested in game.
+
 ### Nameplates found: MCC's folder matched in any case, 2026-11-11
 
 The owner, after the first live run: "It did not work. Still no nameplates."

@@ -864,6 +864,7 @@ unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w
 struct np_entry { int id; std::string image; bool team; };
 static std::vector<np_entry> g_np;
 static std::wstring g_np_dir;
+static std::wstring g_mcc_root;                          // MCC's folder (nameplates_load found it; the ranks too)
 
 static std::string xml_attr(const std::string& tag, const char* key) {
     std::string k = std::string(" ") + key + "=\"";
@@ -897,6 +898,7 @@ void nameplates_load(const wchar_t* mcc_root) {
         if (!mcc_root_of(exe, root, 320)) { g_np_from = std::wstring(L"(no MCC folder in ") + exe + L")"; return; }
     }
     g_np_from = root;
+    g_mcc_root = root;                                    // (the ranks are read from its pak: ranks_frame)
     g_np.clear();
     g_np_dir = std::wstring(root) + L"Data\\UI\\NamePlates\\Images\\";
     FILE* f = nullptr;
@@ -1012,7 +1014,105 @@ unsigned long long nameplate_tex(int id, unsigned long long (*make)(int w, int h
     return (unsigned long long)t.id;
 }
 
+// ---- MCC's account ranks (custom, Nov 11). The owner: "Look up all of mcc ranks and instead just give a bot a random
+// ranking emblem like i have based on their difficulty. So demon gets the max or close to max and the other bots fill
+// based on the difficulty". MCC's badge beside a player's name is a tour's shield with the level's insignia on it
+// ("Tour 6, Level 26 Colonel"): tours 1-10 of 30 levels each (Rookie .. Colonel .. General), tour 11 the gold eagle with
+// no levels, the top. Read from MCC's pak by tools/mcc_ranks.py into native\bin\ranks (tour_NN / level_NN .rgba,
+// index.txt), run here in the background when the folder is missing. A bot's rank: drawn from its name within its
+// difficulty's tours (RANK_TOURS), the same every match while its difficulty is
+static char g_rank_name[31][32];                         // level 1-30's names (index.txt)
+static int g_rank_tours = 0;                             // tours read (11), 0: not yet
+static bool g_rank_max[12];                              // the tour has no levels (the last: the eagle)
+static ULONGLONG g_rank_asked = 0, g_rank_check = 0;
+// the tours each difficulty's bots are drawn from, [first, last] (tier order: Easy, Normal, Heroic, Legendary, Scaling,
+// Demon, Blind, Tactician): Demon the top two (the eagle, or tour 10 near General)
+static const int RANK_TOURS[HB_TIERS][2] = { {1, 2}, {2, 4}, {4, 6}, {6, 9}, {5, 8}, {10, 11}, {6, 9}, {5, 7} };
+
+static void ranks_load() {
+    wchar_t p[300];
+    bin_file(p, 300, L"ranks\\index.txt");
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"r") != 0 || !f) return;
+    char line[128];
+    int tours = 0;
+    while (fgets(line, sizeof line, f)) {
+        for (char* c = line; *c; c++) if (*c == '\r' || *c == '\n') *c = 0;
+        int n;
+        char rest[64] = "";
+        if (sscanf_s(line, "tour=%d|%63s", &n, rest, (unsigned)sizeof rest) == 2 && n >= 1 && n <= 11) {
+            g_rank_max[n] = strcmp(rest, "max") == 0;
+            tours = n > tours ? n : tours;
+        } else if (sscanf_s(line, "level=%d|", &n) == 1 && n >= 1 && n <= 30) {
+            const char* bar = strchr(line, '|');
+            if (bar) strncpy_s(g_rank_name[n], bar + 1, _TRUNCATE);
+        }
+    }
+    fclose(f);
+    if (tours) { g_rank_tours = tours; texture_forget("rank:"); }   // (pictures tried before they were there)
+}
+
+void ranks_frame() {
+    if (g_rank_tours) return;
+    ULONGLONG now = GetTickCount64();
+    if (now - g_rank_check < 2000) return;
+    g_rank_check = now;
+    ranks_load();
+    if (g_rank_tours || g_rank_asked || g_mcc_root.empty() || !g_prof_path[0]) return;
+    wchar_t root[260], out[300];
+    if (!repo_root(root, 260)) return;
+    bin_file(out, 300, L"ranks");
+    std::wstring mcc = g_mcc_root;
+    while (!mcc.empty() && mcc.back() == L'\\') mcc.pop_back();       // (a "\" before the quote would escape it)
+    wchar_t py[MAX_PATH + 2]; hb_python(root, py, MAX_PATH + 2);
+    std::wstring cmd = std::wstring(py) + L" -I \"" + root + L"\\tools\\mcc_ranks.py\" extract \"" + mcc + L"\" \"" + out + L"\"";
+    std::vector<wchar_t> buf(cmd.begin(), cmd.end());
+    buf.push_back(0);
+    STARTUPINFOW si{}; si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (CreateProcessW(nullptr, buf.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+    g_rank_asked = now;
+}
+
+int ranks_count() { return g_rank_tours; }
+const char* rank_level_name(int level) { return level >= 1 && level <= 30 ? g_rank_name[level] : ""; }
+
+// the bot's rank from its name and difficulty: a tour of its difficulty's, a level 1-30 (0 on the eagle); Demon's tour 10
+// at level 20 or over
+void bot_rank(const char* name, int tier, int* tour, int* level) {
+    if (tier < 0 || tier >= HB_TIERS) tier = 3;
+    uint32_t s = name_look_seed(name) ^ (0x9E3779B9u * (uint32_t)(tier + 1));
+    s = s * 2654435761u; s ^= s >> 13; s *= 0x85EBCA6Bu; s ^= s >> 16;
+    int lo = RANK_TOURS[tier][0], hi = RANK_TOURS[tier][1];
+    int t = lo + (int)(s % (uint32_t)(hi - lo + 1));
+    int lv = 1 + (int)((s >> 8) % 30u);
+    if (tier == HB_TIER_DEMON && t == 10 && lv < 20) lv = 20 + (int)((s >> 16) % 11u);
+    bool max = t == 11 && (g_rank_tours ? g_rank_max[11] : true);
+    *tour = t;
+    *level = max ? 0 : lv;
+}
+
+// MCC's badge at c, h high: the tour's shield, the level's insignia on it (none on the eagle)
+void rank_badge(ImDrawList* dl, ImVec2 c, float h, int tour, int level, float a) {
+    if (!g_rank_tours || !g_make_texture) return;
+    char k[24]; wchar_t f[48];
+    sprintf_s(k, "rank:t%02d", tour); swprintf_s(f, L"ranks\\tour_%02d.rgba", tour);
+    ImU32 col = IM_COL32(255, 255, 255, (int)(255 * (a < 0 ? 0 : a > 1 ? 1 : a)));
+    if (const tex_entry* t = texture(k, f)) dl->AddImage(t->id, ImVec2(c.x - h * 0.5f, c.y - h * 0.5f), ImVec2(c.x + h * 0.5f, c.y + h * 0.5f),
+                                                       ImVec2(0, 0), ImVec2(1, 1), col);
+    if (level >= 1 && level <= 30) {
+        sprintf_s(k, "rank:l%02d", level); swprintf_s(f, L"ranks\\level_%02d.rgba", level);
+        float r = h * 0.29f;
+        if (const tex_entry* t = texture(k, f)) dl->AddImage(t->id, ImVec2(c.x - r, c.y - r), ImVec2(c.x + r, c.y + r),
+                                                           ImVec2(0, 0), ImVec2(1, 1), col);
+    }
+}
+
 void bot_emblems_frame() {
+    ranks_frame();                                       // (custom, Nov 11: MCC's ranks, read once they are there)
     ULONGLONG now = GetTickCount64();
     if (!g_emb_wait.empty() && now - g_emb_check > 500) {      // drawn since: its next texture() reads the file
         g_emb_check = now;
@@ -3292,6 +3392,21 @@ bool bot_card(bots_panel_env& e, const hb_bot& b) {
         text(315, y + 30, 23, col, val);
         y += 70;
     };
+    // (custom, Nov 11) its MCC rank, as MCC's Player Details shows a player's: "Tour 6, Level 26", the rank's name, the
+    // badge (bot_rank: by its difficulty)
+    if (ranks_count()) {
+        int rt, rl;
+        bot_rank(b.name, tier, &rt, &rl);
+        text(315, y, 19, CAP, "CURRENT LEVEL");
+        dl->AddLine(at(315, y + 25), at(560, y + 25), alpha(CAP, 0.6f), 1.0f);
+        char lv[40];
+        if (rl) sprintf_s(lv, "Tour %d, Level %d", rt, rl);
+        else sprintf_s(lv, "Tour %d", rt);
+        text(315, y + 30, 23, VAL, lv);
+        text(315, y + 58, 21, TEXT2, rl ? rank_level_name(rl) : "The top rank");
+        rank_badge(dl, at(610, y + 46), 88 * P.s, rt, rl);
+        y += 100;
+    }
     field("DIFFICULTY", TIER_NAME[tier], TIER_COL[tier]);
     field("PLAY STYLE", STYLE_NAME[b.style < 8 ? b.style : HB_STYLE_ANY], VAL);
     char team[24];
