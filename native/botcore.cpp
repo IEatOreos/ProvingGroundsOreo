@@ -487,6 +487,7 @@ static DWORD WINAPI main_thread(LPVOID self) {
         swprintf_s(prof, L"%sbot_profiles.ini", g_dir);
         bots_panel_profiles(prof);
         bot_pool_load(g_dir);                 // Bot Matchmaking's pool (bot_pool.txt: made on first use from the profiles)
+        nameplates_load(nullptr);             // (custom, Nov 11) MCC's nameplates, from its own folder
     }
     wcscpy_s(wcsrchr(path, L'.'), 8, L".log");   // botcore_<tag>.log next to the DLL
     g_log = _wfsopen(path, L"w", _SH_DENYNO);   // readable while the game runs

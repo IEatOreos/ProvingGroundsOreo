@@ -14,7 +14,7 @@ set NAME=botcore
 if not "%1"=="" set NAME=botcore_%1
 set MH=third_party\minhook\src
 set IG=third_party\imgui
-cl /nologo /O2 /W3 /EHsc /MT /LD botcore.cpp overlay.cpp bots_panel.cpp model_view.cpp d3dcompiler.lib h2.cpp h3.cpp reach.cpp odst.cpp h4f.cpp spawnhook.cpp report.cpp film.cpp %IG%\imgui.cpp %IG%\imgui_draw.cpp %IG%\imgui_tables.cpp %IG%\imgui_widgets.cpp %IG%\imgui_impl_dx11.cpp %IG%\imgui_impl_win32.cpp %MH%\hook.c %MH%\buffer.c %MH%\trampoline.c %MH%\hde\hde64.c d3d11.lib dxgi.lib user32.lib winmm.lib /Fe:bin\%NAME%.dll /Fo:bin\ || exit /b 1
+cl /nologo /O2 /W3 /EHsc /MT /LD botcore.cpp overlay.cpp bots_panel.cpp model_view.cpp d3dcompiler.lib h2.cpp h3.cpp reach.cpp odst.cpp h4f.cpp spawnhook.cpp report.cpp film.cpp %IG%\imgui.cpp %IG%\imgui_draw.cpp %IG%\imgui_tables.cpp %IG%\imgui_widgets.cpp %IG%\imgui_impl_dx11.cpp %IG%\imgui_impl_win32.cpp %MH%\hook.c %MH%\buffer.c %MH%\trampoline.c %MH%\hde\hde64.c d3d11.lib dxgi.lib user32.lib winmm.lib ole32.lib windowscodecs.lib /Fe:bin\%NAME%.dll /Fo:bin\ || exit /b 1
 cl /nologo /O2 /W4 /EHsc /MT inject.cpp /Fe:bin\inject.exe /Fo:bin\ || exit /b 1
 rem the profile view's game logos as raw pixels (tools/panel_art.py; without them the game list shows names only)
 python -I ..\tools\panel_art.py

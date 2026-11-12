@@ -109,6 +109,28 @@ class LobbyProfileTests(unittest.TestCase):
         self.assertIn("bool bot_card(bots_panel_env& e, const hb_bot& b) {", panel)
         self.assertIn("mv = ed_model(&e, G, sp, g_card_yaw,", panel)
 
+    def test_mcc_nameplates(self):
+        """(Nov 11) MCC's own nameplates, read from its folder: the bots' rows, card and editor, and MCC's screens (the
+        player lookup's +0x18). native/pool_test.cpp checks the catalog and the PNGs against a real MCC."""
+        panel, overlay, report, core, build = (src("bots_panel.cpp"), src("overlay.cpp"), src("report.cpp"),
+                                               src("botcore.cpp"), src("build.bat"))
+        self.assertIn('L"Data\\\\UI\\\\NamePlates\\\\Images\\\\"', panel)
+        self.assertIn('L"Data\\\\UI\\\\playercustomization.xml"', panel)
+        self.assertIn('int v = profile_over_get(k, "mcc.nameplate");', panel)
+        self.assertIn('ed_caption("Nameplate", set);', panel)
+        self.assertIn("unsigned long long npt = np > 0 ? nameplate_tex(np, make_texture) : 0;", overlay)
+        self.assertIn("if (np > 0) out[6] = np;                                       // +0x18: its nameplate", report)
+        self.assertIn("nameplates_load(nullptr);", core)
+        self.assertIn("ole32.lib windowscodecs.lib", build)
+        # the brain's looks read only "<game>." keys: the editor's "mcc.nameplate" is not a game's
+        sys.path.insert(0, str(ROOT))
+        from brain import looks
+        with tempfile.TemporaryDirectory() as d:
+            prof = Path(d) / "bot_profiles.ini"
+            prof.write_text("experience=original\nbot=MadPistol,999176086,,mcc.nameplate=42;h4.primary=3\n", encoding="utf-8")
+            self.assertEqual(looks.overrides_of("MadPistol", str(prof)), {"mcc.nameplate": 42, "h4.primary": 3})
+            self.assertEqual(looks.seed_of("MadPistol", str(prof)), 999176086)
+
     def test_session_geometry_from_the_video(self):
         """ui_layout.h's numbers, as the owner's 2556x1436 recording and the probe on its frames gave them (scratchpad
         probe_sim.py): the player's box 82-126, 332 wide; rows 50 apart; the bar 346-334 left of the box's right edge."""

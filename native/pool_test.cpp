@@ -194,6 +194,33 @@ int main(int argc, char** argv) {
     char was0[16]; strcpy_s(was0, r7.bot[0].name);
     CHECK(!bot_pool_swap(r7, 0, 2) && !strcmp(r7.bot[0].name, was0), "nothing free: kept %s (was %s)", r7.bot[0].name, was0);
 
+    // 16. (Nov 11) MCC's nameplates from its own folder (the env MCC_ROOT, else this machine's Steam copy; none: skipped):
+    // the catalog, a bot's own (never the blank one, the same every time), one picked in the editor, the PNGs read
+    {
+        wchar_t mcc[300];
+        DWORD n = GetEnvironmentVariableW(L"MCC_ROOT", mcc, 300);
+        if (!n) wcscpy_s(mcc, L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief Collection\\");
+        else if (mcc[n - 1] != L'\\') wcscat_s(mcc, L"\\");
+        nameplates_load(mcc);
+        if (!nameplates_count()) printf("nameplates: no MCC at %ls, skipped\n", mcc);
+        else {
+            CHECK(nameplates_count() > 500, "nameplates %d", nameplates_count());
+            CHECK(nameplate_index(1) == 0 && nameplate_team(1), "the blank one first, team-tinted");
+            int a = bot_nameplate("MadPistol"), b2 = bot_nameplate("madpistol"), c = bot_nameplate("Sword117");
+            CHECK(a > 1 && a == b2 && nameplate_index(a) >= 0, "MadPistol's %d %d", a, b2);
+            CHECK(c > 1 && nameplate_index(c) >= 0, "Sword117's %d", c);
+            int w = 0, h = 0;
+            CHECK(nameplate_decode(a, &w, &h) && w == 360 && h == 52, "its PNG %dx%d", w, h);
+            write(prof, "experience=original\neffects=none\nbot=MadPistol,999176086,,mcc.nameplate=42\n");
+            bots_panel_profiles(prof);
+            CHECK(bot_nameplate("MadPistol") == 42, "picked %d", bot_nameplate("MadPistol"));
+            write(prof, "experience=original\neffects=none\nbot=MadPistol,999176086,,mcc.nameplate=99999\n");
+            bots_panel_profiles(prof);
+            CHECK(bot_nameplate("MadPistol") == a, "a picked one MCC does not have: its own %d", bot_nameplate("MadPistol"));
+            printf("nameplates: %d from MCC, MadPistol wears %d\n", nameplates_count(), a);
+        }
+    }
+
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);
     return fails ? 1 : 0;
 }

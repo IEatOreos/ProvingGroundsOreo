@@ -465,9 +465,21 @@ static void draw_session(float t) {
             edge = IM_COL32(235, 245, 250, 255);
         }
         dl->AddRectFilled(ImVec2(bar.x, r.y), ImVec2(bar.z, r.w), faded(tc, a));
-        dl->AddRectFilledMultiColor(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(fill_l, a), faded(fill_r, a), faded(fill_r, a),
-                                    faded(fill_l, a));
-        dl->AddRect(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(edge, a), 0, 0, hov ? 2.0f * u : 1.0f);
+        // (custom, Nov 11) its nameplate, MCC's own card, as MCC draws a player (the plain ones in the team's colour);
+        // the team's shade where none is to be had
+        int np = bot_nameplate(b.name);
+        unsigned long long npt = np > 0 ? nameplate_tex(np, make_texture) : 0;
+        if (npt) {
+            ImU32 tint = nameplate_team(np) ? IM_COL32(tr * 70 / 100 + 76, tg * 70 / 100 + 76, tb * 70 / 100 + 76, 255)
+                                            : IM_COL32(255, 255, 255, 255);
+            dl->AddImage((ImTextureID)npt, ImVec2(r.x, r.y), ImVec2(r.z, r.w), ImVec2(0, 0), ImVec2(1, 1), faded(tint, a));
+            if (hov) dl->AddRectFilled(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(IM_COL32(255, 255, 255, 34), a));
+        } else {
+            dl->AddRectFilledMultiColor(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(fill_l, a), faded(fill_r, a),
+                                        faded(fill_r, a), faded(fill_l, a));
+        }
+        dl->AddRect(ImVec2(r.x, r.y), ImVec2(r.z, r.w), faded(npt && !hov ? IM_COL32(0, 0, 0, 150) : edge, a), 0, 0,
+                    hov ? 2.0f * u : 1.0f);
         // the emblem (brain/emblems.py: the one MCC shows for it in the games), else a plain badge
         ImVec2 e0(r.x + 9 * u, r.y + 6 * u), e1(r.x + 41 * u, r.y + 38 * u);
         unsigned long long em = bot_emblem(b.name, make_texture);
@@ -480,6 +492,9 @@ static void draw_session(float t) {
         char tag[12];
         sprintf_s(tag, clan[0] ? "[%s]" : "[ ]", clan);
         float x = r.x + 55 * u;
+        ImU32 shade = faded(IM_COL32(0, 0, 0, 170), a);           // (a dark edge under the words: light nameplates)
+        dl->AddText(g_font_label, 15 * u, ImVec2(x + u, r.y + 5 * u), shade, tag);
+        dl->AddText(g_font_label, 21 * u, ImVec2(x + u, r.y + 20 * u), shade, b.name);
         dl->AddText(g_font_label, 15 * u, ImVec2(x, r.y + 4 * u), faded(IM_COL32(222, 228, 234, 235), a), tag);
         dl->AddText(g_font_label, 21 * u, ImVec2(x, r.y + 19 * u), faded(IM_COL32(255, 255, 255, 255), a), b.name);
     }

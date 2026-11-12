@@ -13,6 +13,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <objbase.h>
+#include <wincodec.h>                                    // (custom, Nov 11: MCC's nameplate PNGs, read with WIC)
 #undef small                                             // (rpcndr.h's: a ui::button parameter)
 #include "bots_panel.h"
 #include "model_view.h"
@@ -843,12 +845,157 @@ unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w
     if (!g_make_texture) g_make_texture = make;
     wchar_t ef[96]; swprintf_s(ef, L"emblems\\%S.rgba", name);
     char ek[64]; sprintf_s(ek, "emblem:%s", name);
+    if (g_ntex >= COUNT(g_tex)) { texture_forget("np:"); texture_forget("emblem:"); }   // (a full cache: the lobby's go)
     if (const tex_entry* t = texture(ek, ef)) return (unsigned long long)t->id;
     for (const std::string& w : g_emb_want) if (_stricmp(w.c_str(), name) == 0) return 0;
     for (const std::string& w : g_emb_wait) if (_stricmp(w.c_str(), name) == 0) return 0;
     for (const std::string& w : g_emb_none) if (_stricmp(w.c_str(), name) == 0) return 0;
     if (!strchr(name, '"')) g_emb_want.push_back(name);
     return 0;
+}
+
+// ---- MCC's nameplates (custom, Nov 11). The owner: "would you be able to locate the games files and give them actual
+// player cards and emblems inside the games menus?" MCC keeps each player's nameplate (the card behind the name: a
+// square for the emblem on its left, the art behind the name) as a PNG, <MCC>\Data\UI\NamePlates\Images\<image>.png
+// (360 x 52, 540 of them), listed in <MCC>\Data\UI\playercustomization.xml (<Nameplate id image allow_team_color>).
+// Read from the running MCC's own folder (its exe is <MCC>\MCC\Binaries\Win64), nothing copied: each bot wears one,
+// drawn from its name (the blank one left out) or picked in the bot editor (its profile's "mcc.nameplate"). The lobby's
+// rows, the bot card and MCC's own screens (native/report.cpp: the player's nameplate at +0x18) show it
+struct np_entry { int id; std::string image; bool team; };
+static std::vector<np_entry> g_np;
+static std::wstring g_np_dir;
+
+static std::string xml_attr(const std::string& tag, const char* key) {
+    std::string k = std::string(" ") + key + "=\"";
+    size_t a = tag.find(k);
+    if (a == std::string::npos) { k[0] = '\t'; a = tag.find(k); }
+    if (a == std::string::npos) return "";
+    a += k.size();
+    size_t z = tag.find('"', a);
+    return z == std::string::npos ? "" : tag.substr(a, z - a);
+}
+
+void nameplates_load(const wchar_t* mcc_root) {
+    wchar_t root[320];
+    if (mcc_root) wcsncpy_s(root, mcc_root, _TRUNCATE);
+    else {
+        GetModuleFileNameW(nullptr, root, 320);
+        wchar_t* m = wcsstr(root, L"\\MCC\\Binaries\\");
+        if (!m) return;
+        m[1] = 0;
+    }
+    g_np.clear();
+    g_np_dir = std::wstring(root) + L"Data\\UI\\NamePlates\\Images\\";
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, (std::wstring(root) + L"Data\\UI\\playercustomization.xml").c_str(), L"rb") != 0 || !f) return;
+    std::string s;
+    char buf[65536];
+    for (size_t n; (n = fread(buf, 1, sizeof buf, f)) > 0;) s.append(buf, n);
+    fclose(f);
+    for (size_t c; (c = s.find("<!--")) != std::string::npos;) {     // (notes out: some hold old entries)
+        size_t e = s.find("-->", c);
+        s.erase(c, e == std::string::npos ? std::string::npos : e + 3 - c);
+    }
+    size_t a = s.find("<Nameplates>"), z = s.find("</Nameplates>");
+    if (a == std::string::npos || z == std::string::npos) return;
+    for (size_t p = s.find("<Nameplate", a + 1); p != std::string::npos && p < z; p = s.find("<Nameplate", p + 1)) {
+        if (s.compare(p, 11, "<Nameplates") == 0) continue;
+        size_t e = s.find('>', p);
+        if (e == std::string::npos) break;
+        std::string tag = s.substr(p, e - p);
+        int id = atoi(xml_attr(tag, "id").c_str());
+        std::string image = xml_attr(tag, "image");
+        if (id <= 0 || image.empty() || image.size() > 60) continue;
+        std::wstring png = g_np_dir + std::wstring(image.begin(), image.end()) + L".png";
+        if (GetFileAttributesW(png.c_str()) == INVALID_FILE_ATTRIBUTES) continue;   // (one listed is not there: 200)
+        g_np.push_back({ id, image, xml_attr(tag, "allow_team_color") == "true" });
+    }
+}
+
+int nameplates_count() { return (int)g_np.size(); }
+static const np_entry* np_find(int id) {
+    for (const np_entry& e : g_np) if (e.id == id) return &e;
+    return nullptr;
+}
+int nameplate_id_at(int k) { return k >= 0 && k < (int)g_np.size() ? g_np[k].id : -1; }
+int nameplate_index(int id) {
+    for (int k = 0; k < (int)g_np.size(); k++) if (g_np[k].id == id) return k;
+    return -1;
+}
+
+// the bot's nameplate: picked in the bot editor, else drawn from its name (the same every match), never the blank one
+int bot_nameplate(const char* name) {
+    if (g_np.empty() || !name || !name[0]) return -1;
+    int k = profile_index(name);
+    if (k >= 0) {
+        int v = profile_over_get(k, "mcc.nameplate");
+        if (v > 0 && np_find(v)) return v;
+    }
+    uint32_t h = name_look_seed(name) * 2654435761u;
+    h ^= h >> 15;
+    int n = (int)g_np.size();
+    for (int t = 0; t < n; t++) {
+        const np_entry& e = g_np[(h + (uint32_t)t) % (uint32_t)n];
+        if (e.id != 1) return e.id;
+    }
+    return g_np[0].id;
+}
+bool nameplate_team(int id) { const np_entry* e = np_find(id); return e && e->team; }
+
+// a PNG as RGBA (Windows' own decoder, WIC), malloc'd; nullptr when it cannot be read
+static unsigned char* png_rgba(const wchar_t* path, int* w, int* h) {
+    static bool com = false;
+    if (!com) { HRESULT r = CoInitializeEx(nullptr, COINIT_MULTITHREADED); com = SUCCEEDED(r) || r == RPC_E_CHANGED_MODE; }
+    IWICImagingFactory* fac = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&fac)))) return nullptr;
+    IWICBitmapDecoder* dec = nullptr;
+    IWICBitmapFrameDecode* fr = nullptr;
+    IWICFormatConverter* cv = nullptr;
+    unsigned char* px_ = nullptr;
+    UINT W = 0, H = 0;
+    if (SUCCEEDED(fac->CreateDecoderFromFilename(path, nullptr, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &dec)) &&
+        SUCCEEDED(dec->GetFrame(0, &fr)) && SUCCEEDED(fac->CreateFormatConverter(&cv)) &&
+        SUCCEEDED(cv->Initialize(fr, GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, nullptr, 0,
+                                 WICBitmapPaletteTypeCustom)) &&
+        SUCCEEDED(cv->GetSize(&W, &H)) && W && H && W <= 4096 && H <= 4096) {
+        px_ = (unsigned char*)malloc((size_t)W * H * 4);
+        if (px_ && FAILED(cv->CopyPixels(nullptr, W * 4, W * H * 4, px_))) { free(px_); px_ = nullptr; }
+    }
+    if (cv) cv->Release();
+    if (fr) fr->Release();
+    if (dec) dec->Release();
+    fac->Release();
+    if (px_) { *w = (int)W; *h = (int)H; }
+    return px_;
+}
+
+bool nameplate_decode(int id, int* w, int* h) {             // (native/pool_test.cpp: the PNG reads)
+    const np_entry* e = np_find(id);
+    if (!e) return false;
+    unsigned char* p = png_rgba((g_np_dir + std::wstring(e->image.begin(), e->image.end()) + L".png").c_str(), w, h);
+    free(p);
+    return p != nullptr;
+}
+
+// a nameplate as a texture (the cache's "np:<id>"); 0 when it is not there. A full cache lets go of the lobby's
+// emblems and nameplates (read again as wanted: Bot Matchmaking shows new bots all evening)
+unsigned long long nameplate_tex(int id, unsigned long long (*make)(int w, int h, const unsigned char* rgba)) {
+    if (!g_make_texture) g_make_texture = make;
+    const np_entry* e = np_find(id);
+    if (!e || !g_make_texture) return 0;
+    char key[24]; sprintf_s(key, "np:%d", id);
+    for (int i = 0; i < g_ntex; i++) if (!strcmp(g_tex[i].key, key)) return (unsigned long long)g_tex[i].id;
+    if (g_ntex >= COUNT(g_tex)) { texture_forget("np:"); texture_forget("emblem:"); }
+    if (g_ntex >= COUNT(g_tex)) return 0;
+    tex_entry& t = g_tex[g_ntex++];
+    strncpy_s(t.key, key, _TRUNCATE);
+    t.id = ImTextureID_Invalid; t.w = t.h = 0;
+    int w = 0, h = 0;
+    if (unsigned char* p = png_rgba((g_np_dir + std::wstring(e->image.begin(), e->image.end()) + L".png").c_str(), &w, &h)) {
+        t.id = g_make_texture(w, h, p); t.w = w; t.h = h;
+        free(p);
+    }
+    return (unsigned long long)t.id;
 }
 
 void bot_emblems_frame() {
@@ -2735,6 +2882,8 @@ static void bot_editor(bots_panel_env& e, bool& changed) {
     push(BODY);
     ImGui::SetNextItemWidth(px(120));
     ImGui::InputText("##edclan", g_edit_clan, 5, ImGuiInputTextFlags_CharsNoBlank);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+        ImGui::SetTooltip("Up to 4 letters or numbers. Leave it empty for no tag.");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         bool ok = !strpbrk(g_edit_clan, ",;=[]|");
         if (ok) { strcpy_s(g_prof_clan[g_edit], g_edit_clan); dirty = true; }
@@ -2744,9 +2893,37 @@ static void bot_editor(bots_panel_env& e, bool& changed) {
     ImGui::EndGroup();
     ImGui::PopStyleVar();
     ImGui::PopStyleColor(2);
-    ImGui::SameLine(0, px(16));
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + px(30));
-    muted("Up to 4 letters or numbers. Leave it empty for no tag.", false);
+    // (custom, Nov 11) its nameplate, MCC's own card behind its name in MCC's screens and the lobby's list: picked here
+    // (its profile's "mcc.nameplate"), else the one drawn from its name. (The clan tag's hint went to its tooltip)
+    if (nameplates_count()) {
+        ImGui::SetCursorPos(ImVec2(top.x + px(460), top.y + px(52)));
+        ImGui::BeginGroup();
+        int np = bot_nameplate(g_prof[g_edit]), n = nameplates_count(), k = nameplate_index(np);
+        bool set = profile_over_get(g_edit, "mcc.nameplate") > 0;
+        ed_caption("Nameplate", set);
+        float bh = px(40), nw = bh * 360.0f / 52.0f;
+        int pick = -1;
+        if (button("<##np", SECONDARY, ImVec2(px(36), bh))) pick = (k - 1 + n) % n;
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("The nameplate before");
+        ImGui::SameLine(0, px(6));
+        ImVec2 p = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(nw, bh));
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+            ImGui::SetTooltip("MCC's nameplate %d (%d of %d)%s", np, k + 1, n, set ? ", picked" : ", drawn from its name");
+        if (unsigned long long t = nameplate_tex(np, g_make_texture))
+            ImGui::GetWindowDrawList()->AddImage((ImTextureID)t, p, ImVec2(p.x + nw, p.y + bh));
+        ImGui::SameLine(0, px(6));
+        if (button(">##np", SECONDARY, ImVec2(px(36), bh))) pick = (k + 1) % n;
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("The next nameplate");
+        ImGui::SameLine(0, px(10));
+        ImGui::BeginDisabled(!set);
+        if (button("Its own##np", GHOST, ImVec2(0, bh), true)) { profile_over_set(g_edit, "mcc.nameplate", -1); dirty = true; }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
+            ImGui::SetTooltip("Back to the nameplate drawn from its name");
+        if (pick >= 0) { profile_over_set(g_edit, "mcc.nameplate", nameplate_id_at(pick)); dirty = true; }
+        ImGui::EndGroup();
+    }
     ImGui::SetCursorPos(ImVec2(top.x, top.y + px(52) + px(74)));
     line(14);
     // the games down the left (logo and title), the bot's picture in the middle, what it wears on the right
@@ -3107,6 +3284,23 @@ bool bot_card(bots_panel_env& e, const hb_bot& b) {
     sprintf_s(team, hb_panel_firefight ? "Your team" : "%s Team", TEAM_NAME[b.team < HB_TEAMS_MAX ? b.team : 0]);
     field("TEAM", team, hb_panel_firefight ? VAL : TEAM_COL[b.team < HB_TEAMS_MAX ? b.team : 0]);
     field("BOT MATCHMAKING", saved ? "Keeps this difficulty and style" : "Takes the lobby's difficulty", TEXT2);
+    int np = bot_nameplate(b.name);                          // (custom, Nov 11) its nameplate, MCC's card, with its name
+    if (unsigned long long npt = np > 0 ? nameplate_tex(np, e.make_texture) : 0) {
+        text(315, y, 19, CAP, "NAMEPLATE");
+        dl->AddLine(at(315, y + 25), at(560, y + 25), alpha(CAP, 0.6f), 1.0f);
+        ImVec2 n0 = at(315, y + 34), n1 = at(315 + 332, y + 34 + 48);
+        ImU32 tc = TEAM_COL[b.team < HB_TEAMS_MAX ? b.team : 0];
+        ImU32 tint = nameplate_team(np) ? IM_COL32((tc & 255) * 70 / 100 + 76, ((tc >> 8) & 255) * 70 / 100 + 76,
+                                                   ((tc >> 16) & 255) * 70 / 100 + 76, 255) : IM_COL32(255, 255, 255, 255);
+        dl->AddImage((ImTextureID)npt, n0, n1, ImVec2(0, 0), ImVec2(1, 1), tint);
+        if (unsigned long long em = bot_emblem(b.name, e.make_texture))
+            dl->AddImage((ImTextureID)em, at(315 + 9, y + 34 + 7), at(315 + 43, y + 34 + 41));
+        char ct[12];
+        sprintf_s(ct, clan[0] ? "[%s]" : "[ ]", clan);
+        dl->AddText(font, 16 * P.s, at(315 + 57, y + 34 + 6), IM_COL32(222, 228, 234, 235), ct);
+        dl->AddText(font, 22 * P.s, at(315 + 56, y + 34 + 21), IM_COL32(0, 0, 0, 170), b.name);
+        dl->AddText(font, 22 * P.s, at(315 + 55, y + 34 + 20), VAL, b.name);
+    }
     // the difficulty as its rank, top right: a ring in the tier's colour with its chevrons
     text_r(1730, 52, 21, CAP, "DIFFICULTY RANK");
     text_r(1730, 80, 27, VAL, TIER_NAME[tier]);

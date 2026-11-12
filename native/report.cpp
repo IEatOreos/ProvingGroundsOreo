@@ -175,12 +175,18 @@ static void* __fastcall h_string(void* out, const char* s) {
 }
 
 // a bot as MCC keeps a player: MCC's own unknown-player fill (avatar, nameplate and the rest), then the bot's emblem,
-// clan tag and service tag; found
+// nameplate, clan tag and service tag; found. (Custom, Nov 11) The fill FUN_140249418 writes the emblem's five at +0x00
+// to +0x10, then 6 at +0x14 and 1 at +0x18: avatar 6 is MCC's free default (PlayerIDAvatar_001) and nameplate 1 its
+// blank one (playercustomization.xml), so +0x18 is the nameplate: the bot's own (bots_panel.cpp bot_nameplate, MCC's
+// catalog read from its folder), which MCC's screens draw behind its name
+int bot_nameplate(const char* name);                       // bots_panel.cpp
 static char __fastcall h_profile(void* mgr, uint64_t xuid, int32_t* out) {
     if (!out || !is_bot(xuid)) return o_profile(mgr, xuid, out);
     const bot_row& r = g_rows[xuid & 0xFF];
     ((defaults_fn)(g_mcc + MR_DEFAULTS))(out);
     if (r.emblem[0] > 0) memcpy(out, r.emblem, sizeof r.emblem);   // foreground, background, primary, secondary, back
+    int np = r.name[0] ? bot_nameplate(r.name) : -1;
+    if (np > 0) out[6] = np;                                       // +0x18: its nameplate
     ((assign_fn)(g_mcc + MR_ASSIGN))(out + 8, r.clan);             // +0x20: its clan tag, "" for none
     ((assign_fn)(g_mcc + MR_ASSIGN))(out + 0x14, r.tag);           // +0x50: its service tag
     return 1;

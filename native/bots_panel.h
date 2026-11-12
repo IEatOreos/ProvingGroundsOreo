@@ -150,6 +150,17 @@ uint32_t name_look_seed(const char* name);              // brain/looks.py seed_o
 unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w, int h, const unsigned char* rgba));
 void bot_emblems_frame();
 
+// (custom, Nov 11) MCC's nameplates (the card behind a player's name): its catalog and PNGs from MCC's own folder
+// (<MCC>\Data\UI\playercustomization.xml, NamePlates\Images); mcc_root nullptr: the running MCC's (botcore at start)
+void nameplates_load(const wchar_t* mcc_root);
+int  nameplates_count();
+int  nameplate_id_at(int k);                            // the k-th in MCC's order, -1 past the end
+int  nameplate_index(int id);                           // its place in that order, -1 when not one
+bool nameplate_team(int id);                            // MCC tints it in the team's colour (the plain ones)
+int  bot_nameplate(const char* name);                   // the bot's: picked in the editor, else drawn from its name; -1 none
+unsigned long long nameplate_tex(int id, unsigned long long (*make)(int w, int h, const unsigned char* rgba));
+bool nameplate_decode(int id, int* w, int* h);          // (tests: its PNG reads)
+
 // The bug report over a match: with MCC's pause menu up, a "Report bot bug" button; it (or F9) opens the report window.
 // overlay.cpp saves what was typed (logs/bug_reports/<time>/report.json); the brain adds the match recording.
 struct bug_report_env {

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Bots wear MCC's own nameplates: the lobby's rows, their card, the editor, and MCC's screens, 2026-11-11
+
+The owner: "would you be able to locate the games files and give them actual player cards and emblems inside the games menus?"
+
+- **Found in MCC's files**: each player's nameplate (the card behind the name: a square for the emblem on its left, the art behind the name) is a PNG, `<MCC>\Data\UI\NamePlates\Images\<image>.png` (360x52, 540 of them). They are listed in `<MCC>\Data\UI\playercustomization.xml` (`<Nameplate id image allow_team_color>`, 531 with their picture there). The emblems the bots wear were already MCC's (`tools/emblems.py`, from the same catalog and its texture pack).
+- **Read from the running MCC's own folder** (`native/bots_panel.cpp` `nameplates_load`, botcore at start: its exe is `<MCC>\MCC\Binaries\Win64`), nothing copied into the project. The PNGs are decoded with Windows' own WIC (`png_rgba`; `build.bat` links `ole32.lib windowscodecs.lib`) and kept as textures, so a full cache lets go of the lobby's emblems and nameplates (Bot Matchmaking shows new bots all evening).
+- **Each bot's** (`bot_nameplate`): picked in the bot editor (its profile's `mcc.nameplate`), else drawn from its name (the same every match), never the blank one. A picked number MCC does not have falls back to its own.
+- **Shown**:
+  - The lobby's rows (`overlay.cpp` `draw_session`): the nameplate is the row's card as MCC draws a player, the emblem in its square, a dark edge under the name for the light ones, and the plain ones (MCC's team-colour ones) in the team's colour.
+  - The bot card adds NAMEPLATE with its card, emblem and name.
+  - The bot editor has Nameplate beside the clan tag: arrows through MCC's nameplates in its order, the card shown, "Its own" back to the drawn one. The clan tag's hint went to its tooltip.
+- **MCC's own screens** (`native/report.cpp` `h_profile`): the player lookup the mod already answers for bots (emblem, clan tag, service tag) now gives each bot's nameplate too, so MCC's scoreboards and post-game report draw it behind the bot's name. The offset was read from MCC's unknown-player fill (FUN_140249418): the emblem's five at +0x00 to +0x10, then 6 at +0x14 and 1 at +0x18. Avatar 6 is MCC's free default and nameplate 1 its blank one, so +0x18 is the nameplate.
+- **Not possible this way**: MCC's own MY GAME SESSION list still holds only the player. The bots there are the mod's drawing, now on their real nameplates.
+- Validation: `native/pool_test.cpp` checks against this machine's MCC (or `MCC_ROOT`; skipped without one). All pass, including: 531 nameplates, the blank one first and team-tinted, MadPistol's (72) the same in any case and its PNG read at 360x52, a picked one taking over, and one MCC lacks falling back. `tools/test_bot_matchmaking.py` adds the wiring test, including the brain's looks ignoring `mcc.nameplate` (10 pass). All 54 `tools/test_*.py` files pass. A mock of the rows on their nameplates was drawn on his recording's slide-out frame (scratchpad). `native\build.bat nameplates` built `native/bin/botcore_nameplates.dll` (not in Git). Untested in game: MCC's scoreboards and post-game report drawing the nameplates, and the editor's picker.
+
 ### The session list's bots can be picked: their menu and a Player Details card, 2026-11-11
 
 The owner, on MCC's own list: "they can become inspectable, seeing their armor rank etc"; clicking his name gave MCC's player menu (Player Details, Find Player, ...) and Player Details his career screen.
