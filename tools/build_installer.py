@@ -179,12 +179,17 @@ def stage_python():
 
 def privacy_scan():
     step("privacy scan")
-    terms = {os.environ.get("USERNAME", ""), os.environ.get("USERPROFILE", "")}
+    import re
+    terms = {os.environ.get("USERPROFILE", "")}
     try:
         terms |= {t.strip() for t in open(os.path.join(ROOT, ".private_terms"), encoding="utf-8") if t.strip()}
     except OSError:
         pass
     terms = sorted({t.lower() for t in terms if len(t) >= 4})
+    # this PC's user name as a whole word only ("marsh" is not Reach's "Field Marshal" armor); paths and the
+    # .private_terms anywhere
+    user = os.environ.get("USERNAME", "").lower()
+    word = re.compile(r"(?<![a-z0-9])" + re.escape(user) + r"(?![a-z0-9])") if len(user) >= 4 else None
     hits = []
     for dp, _, fs in os.walk(PAYLOAD):
         if os.path.relpath(dp, PAYLOAD).split(os.sep)[0] in ("python", "map_tools") or "map_tools" in dp:
@@ -197,11 +202,13 @@ def privacy_scan():
             for t in terms:
                 if t in text:
                     hits.append((os.path.relpath(p, PAYLOAD), t))
+            if word is not None and word.search(text):
+                hits.append((os.path.relpath(p, PAYLOAD), user))
     for p, t in hits[:20]:
         print(f"   {p}: holds '{t}'", flush=True)
     if hits:
         raise SystemExit(f"the privacy scan found {len(hits)} hit(s): not building")
-    print(f"   {len(terms)} terms, no hit", flush=True)
+    print(f"   {len(terms) + (word is not None)} terms, no hit", flush=True)
 
 
 def stage_texts():
