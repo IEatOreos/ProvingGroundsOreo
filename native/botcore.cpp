@@ -491,6 +491,7 @@ static DWORD WINAPI main_thread(LPVOID self) {
     }
     wcscpy_s(wcsrchr(path, L'.'), 8, L".log");   // botcore_<tag>.log next to the DLL
     g_log = _wfsopen(path, L"w", _SH_DENYNO);   // readable while the game runs
+    logf("nameplates: %d of MCC's, from %ls", nameplates_count(), nameplates_from());   // (custom, Nov 11)
 
     if (anticheat_running()) {
         logf("anti-cheat is running: botcore stays off");

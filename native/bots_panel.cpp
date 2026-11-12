@@ -875,15 +875,28 @@ static std::string xml_attr(const std::string& tag, const char* key) {
     return z == std::string::npos ? "" : tag.substr(a, z - a);
 }
 
+// (Nov 11, live: Steam runs it as ...\mcc\binaries\win64\mcc-win64-shipping.exe, in lower case: the folder is matched
+// in any case, or no nameplate was ever read)
+std::wstring g_np_from;                                     // where they were read from (botcore logs it)
+// MCC's folder from its exe's path (<MCC>\MCC\Binaries\Win64\..., any case), with its last backslash; false: not one
+bool mcc_root_of(const wchar_t* exe, wchar_t* out, size_t cap) {
+    wchar_t low[320];
+    wcsncpy_s(low, exe, _TRUNCATE);
+    _wcslwr_s(low);
+    wchar_t* m = wcsstr(low, L"\\mcc\\binaries\\");
+    if (!m) return false;
+    wcsncpy_s(out, cap, exe, (size_t)(m - low) + 1);
+    return true;
+}
 void nameplates_load(const wchar_t* mcc_root) {
     wchar_t root[320];
     if (mcc_root) wcsncpy_s(root, mcc_root, _TRUNCATE);
     else {
-        GetModuleFileNameW(nullptr, root, 320);
-        wchar_t* m = wcsstr(root, L"\\MCC\\Binaries\\");
-        if (!m) return;
-        m[1] = 0;
+        wchar_t exe[320];
+        GetModuleFileNameW(nullptr, exe, 320);
+        if (!mcc_root_of(exe, root, 320)) { g_np_from = std::wstring(L"(no MCC folder in ") + exe + L")"; return; }
     }
+    g_np_from = root;
     g_np.clear();
     g_np_dir = std::wstring(root) + L"Data\\UI\\NamePlates\\Images\\";
     FILE* f = nullptr;
@@ -913,6 +926,7 @@ void nameplates_load(const wchar_t* mcc_root) {
 }
 
 int nameplates_count() { return (int)g_np.size(); }
+const wchar_t* nameplates_from() { return g_np_from.c_str(); }
 static const np_entry* np_find(int id) {
     for (const np_entry& e : g_np) if (e.id == id) return &e;
     return nullptr;

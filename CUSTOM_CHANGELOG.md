@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Nameplates found: MCC's folder matched in any case, 2026-11-11
+
+The owner, after the first live run: "It did not work. Still no nameplates."
+
+- `botcore_nameplates.log` and the running process showed the cause. Steam runs MCC as `...\mcc\binaries\win64\mcc-win64-shipping.exe`, in lower case. `nameplates_load` looked for `\MCC\Binaries\` as written, so it found no folder, read no catalog and gave no bot a nameplate anywhere. The tests had handed it the folder directly.
+- `native/bots_panel.cpp` `mcc_root_of` finds `<MCC>\` from the exe's path in any case. `native/botcore.cpp` logs `nameplates: <n> of MCC's, from <folder>` (or why none) at start.
+- Validation: `native/pool_test.cpp` checks `mcc_root_of` on his real lower-case path, the usual case and a path that is not MCC's (all checks pass). All 54 `tools/test_*.py` files pass. `native\build.bat nameplates2` built `native/bin/botcore_nameplates2.dll` (not in Git). Untested in game.
+
 ### Bots wear MCC's own nameplates: the lobby's rows, their card, the editor, and MCC's screens, 2026-11-11
 
 The owner: "would you be able to locate the games files and give them actual player cards and emblems inside the games menus?"

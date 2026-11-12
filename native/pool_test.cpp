@@ -194,7 +194,18 @@ int main(int argc, char** argv) {
     char was0[16]; strcpy_s(was0, r7.bot[0].name);
     CHECK(!bot_pool_swap(r7, 0, 2) && !strcmp(r7.bot[0].name, was0), "nothing free: kept %s (was %s)", r7.bot[0].name, was0);
 
-    // 16. (Nov 11) MCC's nameplates from its own folder (the env MCC_ROOT, else this machine's Steam copy; none: skipped):
+    // 16. (Nov 11) MCC's folder from its exe's path in any case: live, Steam ran it in lower case and none was read
+    {
+        wchar_t root[320];
+        CHECK(mcc_root_of(L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief Collection\\mcc\\binaries\\win64\\"
+                          L"mcc-win64-shipping.exe", root, 320) &&
+              !wcscmp(root, L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief Collection\\"), "lower case: %ls", root);
+        CHECK(mcc_root_of(L"C:\\Games\\MCC\\MCC\\Binaries\\Win64\\MCC-Win64-Shipping.exe", root, 320) &&
+              !wcscmp(root, L"C:\\Games\\MCC\\"), "as written: %ls", root);
+        CHECK(!mcc_root_of(L"C:\\Other\\game.exe", root, 320), "not MCC");
+    }
+
+    // 17. (Nov 11) MCC's nameplates from its own folder (the env MCC_ROOT, else this machine's Steam copy; none: skipped):
     // the catalog, a bot's own (never the blank one, the same every time), one picked in the editor, the PNGs read
     {
         wchar_t mcc[300];

@@ -154,6 +154,8 @@ void bot_emblems_frame();
 // (<MCC>\Data\UI\playercustomization.xml, NamePlates\Images); mcc_root nullptr: the running MCC's (botcore at start)
 void nameplates_load(const wchar_t* mcc_root);
 int  nameplates_count();
+const wchar_t* nameplates_from();                       // the MCC folder they were read from (or why none), for the log
+bool mcc_root_of(const wchar_t* exe, wchar_t* out, size_t cap);   // <MCC>\ from its exe's path, in any case
 int  nameplate_id_at(int k);                            // the k-th in MCC's order, -1 past the end
 int  nameplate_index(int id);                           // its place in that order, -1 when not one
 bool nameplate_team(int id);                            // MCC tints it in the team's colour (the plain ones)
