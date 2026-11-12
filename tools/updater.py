@@ -19,7 +19,9 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-RELEASES = "https://github.com/AyoItzKye/project-proving-grounds/releases"
+# (custom, Nov 12) this custom build's own releases: upstream's would offer its newer version as an update, and its
+# Setup would replace the custom bots
+RELEASES = "https://github.com/IEatOreos/ProvingGroundsOreo/releases"
 REPO = RELEASES.split("github.com/")[1].rsplit("/releases", 1)[0]
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
 CHECK_EVERY = 6 * 3600          # seconds between automatic checks
@@ -38,10 +40,13 @@ _job = dict(state="idle", done=0, total=0, error="")   # the download: idle, dow
 
 
 def current():
-    try:
-        return open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
-    except OSError:
-        return "dev"
+    """This copy's version: CUSTOM_VERSION ("0.2.2-custom.11", the custom releases' tags), else upstream's VERSION."""
+    for name in ("CUSTOM_VERSION", "VERSION"):
+        try:
+            return open(os.path.join(ROOT, name), encoding="utf-8").read().strip()
+        except OSError:
+            continue
+    return "dev"
 
 
 def build():
@@ -215,6 +220,8 @@ def selftest():
     assert version_key("0.2.1") == (0, 2, 1, 0) and version_key("dev") is None
     assert version_key("v0.2.2-s166") > version_key("0.2.2-s165") > version_key("0.2.1")
     assert version_key("v0.3.0") > version_key("0.2.9-s999")
+    # (custom) the custom releases' tags
+    assert version_key("v0.2.2-custom.12") > version_key("0.2.2-custom.11") == (0, 2, 2, 11)
     print("updater OK")
 
 

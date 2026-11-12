@@ -379,7 +379,7 @@ git switch -c review/custom-bot-integration
 On the owner's current machine, Git was found at the following path despite being absent from PATH in some sessions.
 
 ```powershell
-$taskGit = 'C:\Users\marsh\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe'
+$taskGit = "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
 & $taskGit status --short --branch
 & $taskGit remote -v
 & $taskGit log -5 --oneline

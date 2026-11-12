@@ -53,10 +53,7 @@ last_ping = [time.time()]
 
 
 def version():
-    try:
-        return open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
-    except OSError:
-        return "dev"
+    return updater.current()      # (custom: CUSTOM_VERSION, the custom releases' version, else upstream's VERSION)
 
 
 def lidar_counts():
@@ -290,7 +287,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send({"ok": updater.install(on_start=lambda: close_for_update(self.server))})
         elif self.path == "/open":                   # a link out of the guide, in the default browser: web pages only
             url = str(body.get("url", ""))
-            if not url.startswith("https://github.com/AyoItzKye/"):
+            # (custom: and this custom build's own repository, its releases page)
+            if not url.startswith(("https://github.com/AyoItzKye/", "https://github.com/IEatOreos/ProvingGroundsOreo")):
                 return self.send({"ok": False}, code=400)
             webbrowser.open(url)
             self.send({"ok": True})

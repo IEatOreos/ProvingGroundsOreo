@@ -367,9 +367,9 @@ These paths are on the owner's PC and are not included in a normal GitHub clone:
 
 | Path | Contents |
 |---|---|
-| `C:\Users\marsh\Documents\Codex\Proving Grounds Legendary backup 2026-11-05` | Original customization backup/context |
-| `C:\Users\marsh\Documents\Codex\Proving Grounds migration 2026-11-05` | Six-file `original/` and `staged/` trees, `customizations.patch`, manifests, migration/validation scripts, `validation.txt`, `MIGRATION_REPORT.md` |
-| `C:\Users\marsh\Documents\Codex\Proving Grounds Legendary sniper live head 2026-11-05` | Later sniper extension: `bot.before.py`, `bot.updated.py`, `change.patch`, `NOTE.md` |
+| `%USERPROFILE%\Documents\Codex\Proving Grounds Legendary backup 2026-11-05` | Original customization backup/context |
+| `%USERPROFILE%\Documents\Codex\Proving Grounds migration 2026-11-05` | Six-file `original/` and `staged/` trees, `customizations.patch`, manifests, migration/validation scripts, `validation.txt`, `MIGRATION_REPORT.md` |
+| `%USERPROFILE%\Documents\Codex\Proving Grounds Legendary sniper live head 2026-11-05` | Later sniper extension: `bot.before.py`, `bot.updated.py`, `change.patch`, `NOTE.md` |
 | `E:\Proving Grounds\Project Proving Grounds\logs\ammo_probe` | Controlled DMR/sniper snapshots, pre-change copies, ammo patch, read-only probes, integration result, and the mislabeled/non-plasma battery samples described above |
 | `E:\Proving Grounds\Project Proving Grounds\logs\trace_reach_forge_halo_20261105-174151.jsonl` | LilWraith inventory/ammo and pickup decisions used for the sniper replacement investigation |
 | `E:\Proving Grounds\Project Proving Grounds\Vehicle Data Recorder` | Separate installed recorder add-on, excluded from the source repository |

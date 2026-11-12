@@ -2,6 +2,13 @@
 
 # Project Proving Grounds
 
+> **This is a customized build** of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds)
+> (upstream 0.2.2), with its own bot changes: the Demon, Blind and Tactician difficulties, Halo 4 aim and vehicle
+> work, CTF cut-offs, Team Slayer high ground and more. Every change is listed in
+> [CUSTOM_CHANGELOG.md](CUSTOM_CHANGELOG.md). Its installer and the launcher's updates come from
+> [this repository's Releases](https://github.com/IEatOreos/ProvingGroundsOreo/releases/latest). Installing it over the
+> original replaces the original in the same folder.
+
 PvP bots for **Halo: The Master Chief Collection** on PC. Bots join your offline custom games as real players on the
 scoreboard: they move, aim, strafe, jump-shot, take power weapons, drive and fly vehicles, play the objective, and
 talk to their team through each team's own director (map callouts). Four difficulties plus Scaling, which follows
@@ -25,12 +32,12 @@ Everything about where the mod stands is in three places:
 
 [![How the bots play each game: summary](docs/bot_status.png)](docs/BOT_STATUS.pdf)
 
-Found a bug that isn't on the Known bugs page? **[Report it here](https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml)** (how: [Report a problem](#report-a-problem)). The launcher tells you when a new version is out.
+Found a bug that isn't on the Known bugs page? **[Report it here](https://github.com/IEatOreos/ProvingGroundsOreo/issues/new?template=bug_report.yml)** (how: [Report a problem](#report-a-problem)). The launcher tells you when a new version is out.
 
 ## Install
 
 1. Check the [system requirements](#system-requirements).
-2. Download **ProjectProvingGrounds-Setup-&lt;version&gt;.exe** from the [**Releases** page](https://github.com/AyoItzKye/project-proving-grounds/releases/latest) (on the right of
+2. Download **ProjectProvingGrounds-Setup-&lt;version&gt;.exe** from the [**Releases** page](https://github.com/IEatOreos/ProvingGroundsOreo/releases/latest) (on the right of
    the GitHub page).
 3. Run it. Windows may say "Windows protected your PC": the installer is not code-signed. Click **More info**, then
    **Run anyway**.
@@ -267,9 +274,9 @@ use.
 
 Press **F9** in a match with bots on to save a bug report: the moment is kept with the recording around it in
 `logs\bug_reports\<date-time>`, and a note you type goes with it. Attach that folder (or the Observer's export of the
-game) to a **[bug report](https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml)**: the
+game) to a **[bug report](https://github.com/IEatOreos/ProvingGroundsOreo/issues/new?template=bug_report.yml)**: the
 form asks for the game, mode, map and difficulty and has a box to drop the zipped report into. Ideas and requests:
-**[New issue > Idea or request](https://github.com/AyoItzKye/project-proving-grounds/issues/new/choose)**.
+**[New issue > Idea or request](https://github.com/IEatOreos/ProvingGroundsOreo/issues/new/choose)**.
 
 ### Where things are
 
@@ -337,7 +344,7 @@ the game. Linux support is new: if something does not work, please [report it](#
 
 1. Install MCC through Steam and start it once (Steam sets up Proton for it), then quit it.
 2. Download **ProjectProvingGrounds-Linux-&lt;version&gt;.tar.gz** from the
-   [Releases page](https://github.com/AyoItzKye/project-proving-grounds/releases/latest) and unpack it (right-click >
+   [Releases page](https://github.com/IEatOreos/ProvingGroundsOreo/releases/latest) and unpack it (right-click >
    Extract, or `tar -xzf ProjectProvingGrounds-Linux-<version>.tar.gz`).
 3. In a terminal (Konsole on the Deck), in the unpacked folder: `./install.sh`. It finds Steam (also the Flatpak
    Steam) and MCC in any of your libraries (an SD card too), copies the mod to `~/.local/share/project-proving-grounds`,

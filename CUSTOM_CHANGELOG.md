@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.2-custom.11 — the first public installer: Team Slayer high ground, CTF cut-offs, Blind and Tactician, Bot Matchmaking, MCC nameplates and ranks, 2026-11-12
+
+The first release published for others to download: `ProjectProvingGrounds-Setup-0.2.2-custom.11.exe` on this repository's Releases page (tools/build_installer.py, adapted from upstream's: the code, the built mod, the map tools, a bundled Python and the map pack in one Setup). The launcher's update check now reads this repository's releases and `CUSTOM_VERSION` (tools/updater.py, tools/launcher.py), so an install is never offered upstream's Setup over the custom bots. README.md says it is a custom build and links here.
+
 ### The BOTS panel's Remove all closed MCC: ImGui used from two threads, 2026-11-12
 
 The owner: "I got a game crash after clicking remove all bots. See if you can track it down".

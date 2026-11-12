@@ -4,7 +4,7 @@ This is a custom derivative of [Project Proving Grounds](https://github.com/AyoI
 
 The 2026-11-06 migration merges our custom behavior into the new installed source and keeps its new native binaries, Firefight lifecycle changes, pickup fixes, vehicle improvements, hazard avoidance and melee validation. See docs/UPSTREAM_MIGRATION_2026-11-06.md for provenance, validation and remaining live checks. The following initial-snapshot section is historical; later notes describe current overrides.
 
-The original README.md documents the upstream mod, and its download and issue links point to upstream. Custom release details belong in CUSTOM_CHANGELOG.md and docs/CUSTOM_RELEASE_WORKFLOW.md. VERSION retains the upstream version; CUSTOM_VERSION identifies our derivative.
+The original README.md documents the upstream mod. Since 0.2.2-custom.11 (2026-11-12, the first public installer) its download and issue links point to this repository, and a note at its top says it is a custom build. Custom release details belong in CUSTOM_CHANGELOG.md and docs/CUSTOM_RELEASE_WORKFLOW.md. VERSION retains the upstream version; CUSTOM_VERSION identifies our derivative, and the launcher's update check reads it and this repository's releases (tools/updater.py `RELEASES`, `current`). tools/build_installer.py builds the Setup from the committed tree (adapted from upstream's; see its docstring).
 
 ## Retained behavior at the initial snapshot
 
