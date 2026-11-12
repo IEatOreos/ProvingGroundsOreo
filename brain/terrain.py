@@ -66,6 +66,9 @@ class RouteVec(Vec):
 
 
 ROUTE_JUMP, ROUTE_CROUCH = 2, 4   # route point flags (the same bits as the jump and crouch buttons)
+# (custom, Nov 9) Terrain.learn_shot_through learns no shoot-through where the wall runs from this far under a round's
+# line to this far over it: a solid pillar or wall (a railing, a grate, a sill is learned as before)
+LEARN_SOLID_BELOW, LEARN_SOLID_ABOVE = 0.6, 1.2
 
 # memory each route-field cache may hold (walking, people's, jump, vehicle): a count limit (600 / 200 fields) let
 # Forge World's 84 MB fields (11 million nodes) fill the PC, the brain out of memory at 834 s. A share of the PC's
@@ -960,6 +963,11 @@ class Terrain:
             k = min(W.shape[-1], clear.shape[-1])
             W[:, :k] &= ~clear[j, i, :k]
         hit = s._wall_bit(W, zs)
+        # (custom, Nov 9: not inside a tall solid run, wall from LEARN_SOLID_BELOW under the line to LEARN_SOLID_ABOVE
+        # over it: a pillar, not a railing or a grate. Haven's bottom-middle pillar, glass to the level data
+        # (wall_kinds.json "window"), had 88 learned shoot-through cells from hits that were not through it, and the
+        # Demons shot into it: the owner's report 20261109-192854 "Bots try to shoot through this massive pillar")
+        hit &= ~(s._wall_bit(W, zs - LEARN_SOLID_BELOW) & s._wall_bit(W, zs + LEARN_SOLID_ABOVE))
         fl = s.floors[:, j, i]
         with np.errstate(invalid="ignore"):
             deck = (((np.r_[za, zs[:-1]] - fl) * (zs - fl) < 0) & np.isfinite(fl)).any(axis=0)

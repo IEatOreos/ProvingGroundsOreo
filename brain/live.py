@@ -1839,6 +1839,20 @@ class LiveH4F(LiveReach):
     # Unread before, every Halo 4 gun was unknown: none was ever dry, and a Legendary pressed an empty rocket launcher 9
     # times at 5-7 u (live 20261108-141550). H2A (groundhog.dll) not decoded: unknown, as before
     H4_AMMO = (0x5AA, 0x5AE)
+    # (custom, Nov 9) guns with a battery, not rounds: their count is not at H4_AMMO, so they read unknown (-1), not
+    # empty. Read 0, a loose one was dropped from ground_weapons and one in hand was "dry": the owner's Beam Rifle read
+    # 0 + 0 the moment he took it, twice, and no bot ever saw it on the ground (Haven 20261109-192854); every bot's
+    # sword read 0 in all 147 rows of 13 matches, and no bot ever carried a Storm Rifle or Plasma Pistol
+    H4_BATTERY = frozenset(("sword", "gravity_hammer", "beam_rifle", "storm_rifle", "plasma_pistol"))
+
+    def rounds(s, handle):
+        if s.AMMO_AT:
+            try:
+                if s.weapon_name(handle) in s.H4_BATTERY:
+                    return -1, -1
+            except (AttributeError, OSError, struct.error, TypeError):
+                pass                       # (no name read: the rounds as before)
+        return super().rounds(handle)
 
     @property
     def AMMO_AT(s):

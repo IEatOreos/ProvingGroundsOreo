@@ -51,6 +51,19 @@ class H4AmmoTests(unittest.TestCase):
         L.g.gun(0x3000, 9, 0, 0)                   # a sword: never a round
         self.assertEqual(L.rounds(0x3000), (-1, -1))
 
+    def test_battery_guns_read_unknown_not_empty(self):
+        """Nov 9: the owner's Beam Rifle read 0 + 0 and no bot ever saw it on the ground."""
+        L = reader()
+        names = {0x1000: "battle_rifle", 0x4000: "beam_rifle", 0x4100: "sword", 0x4200: "storm_rifle"}
+        L.weapon_name = lambda h: names.get(h, "unknown")
+        L.g.gun(0x1000, 7, 72, 36)                 # a BR: its kind has held rounds
+        L.rounds(0x1000)
+        for h in (0x4000, 0x4100, 0x4200):
+            L.g.gun(h, 7, 0, 0)                    # (the same tag word as the BR: read by tag, it would be "empty")
+            with self.subTest(gun=names[h]):
+                self.assertEqual(L.rounds(h), (-1, -1))
+        self.assertEqual(L.rounds(0x1000), (108, 36))
+
     def test_h2a_stays_unread(self):
         L = reader("groundhog.dll")
         L.g.gun(0x1000, 7, 72, 36)

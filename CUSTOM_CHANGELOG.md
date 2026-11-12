@@ -458,6 +458,49 @@ The owner: "Can we also make Lidar more interactive? ... can we make a tool to w
 - `brain/bot.py` `nav_jumps` (`EASY_NAV_JUMP`): Easy and Normal take those jumps on their way. The four checks are in the jump onto a landing, the path to a point, `move_to`'s ways and `route_view`; the walk-or-jump field is the fifth. Their hops, fight jumps and jump shots stay by their jump skill, so Easy still makes none.
 - Validation: new `tools/test_easy_nav_jump.py`, 4 tests (every tier takes the routes; Easy keeps jump skill 0; a Normal jittered under 0.5 still takes them; with the switch off, Easy and that Normal walk round as before). All 457 regression tests pass. Gameplay is untested.
 
+### Halo 4: battery guns read unknown, not empty; Haven's bottom-middle pillar is no longer glass or shoot-through, 2026-11-09
+
+The owner, after Haven 20261109-192854: "I dropped a beam rifle twice that game and it was never picked up figure out why. Also I think reasons alot of bots see eachother and dont shoot is because the walls in lidar might be too tall?", and his report at 103 s: "Bots try to shoot through this massive pillar in the bottom middle of Haven".
+
+- **Beam Rifle.**
+  - His inventory (`collect_*.jsonl`) read the Beam Rifle 0 + 0 the moment he held it, at 380.9 s and again at 414.5 s.
+  - `LiveH4F.ground_weapons` drops a loose gun at 0 rounds, so no bot ever saw it. No "power weapon" note, and no bot held one.
+  - Across 13 matches every bot's sword read 0 (147 rows), and no bot ever carried a Storm Rifle or Plasma Pistol: the battery guns, whose count is not at `H4_AMMO`.
+  - `brain/live.py` `LiveH4F.H4_BATTERY` (sword, gravity hammer, Beam Rifle, Storm Rifle, Plasma Pistol): `rounds` reads them unknown (-1). A loose one is listed, and one in hand is never "dry". With no name read, the rounds read as before.
+- **Look but do not shoot**, every bot row aimed at a man (scratchpad `no_fire.py`):
+
+  | tier | firing | not firing: aim not on him yet | gun pacing | a wall ("shot obstructed") |
+  |---|---|---|---|---|
+  | Demon | 26% | 26% | 29% | 17.6% |
+  | Heroic | 5% | 60% | 30% | 5% (through glass) |
+  | Normal | 12% | 59% | 29% | under 1% |
+  | Easy | 6% | 67% | 26% | under 1% |
+
+  For the lower tiers it is their aim settling, not walls (not changed here). Of the Demons' 242 "obstructed" rows on the owner, 24 had his crosshair on that Demon, 15 of them at one spot pair (a Demon about (-0.8, -10.3), he about (1.7, -2.5)).
+- **The pillar** (x -2..2.5, y -10.8..-14.5):
+  - Haven's `wall_kinds.json` / `glass.json` (from H4EK's bsp: the Forerunner glass shaders) had it as a window from the floor (-0.99) to its top (2.38), so the bots saw through it.
+  - `walls_learned.json` had 88 learned shoot-through cells on it, so the round's line read clear. 94.0-97.5 s: two Demons fired across it at #6 ("line"), and his shield stayed 1.00.
+  - Removed: the pillar's 230 cells from `wall_kinds.json` "window" (3,545 to 3,315; tracked) and `glass.json` (untracked), and its 88 cells from `walls_learned.json` (212 to 124; untracked). Backups: `backups/spots/h4_wraparound_20261109-194815_pillar_*`.
+  - The rest of Haven's glass network (3,315 cells through the centre) is left as it was.
+  - A match running at the time (started 19:44:41) loaded the old data and re-saved its learned walls, the 88 included. After it ended (its last save 19:53:04) they were taken out again (220 to 132; backup `backups/spots/h4_wraparound_*_pillar_walls_learned.json`).
+  - A fresh load of Haven: the three lines the Demons fired across the pillar read blocked for sight and rounds; open lines 3-9 u west and east of it read open.
+- `brain/terrain.py` `learn_shot_through` (`LEARN_SOLID_BELOW` 0.6, `LEARN_SOLID_ABOVE` 1.2): no learned shoot-through inside a wall running from 0.6 u under the round's line to 1.2 u over it (a pillar); a railing, a grate or a sill as before.
+- Validation:
+  - `tools/test_h4_ammo.py` +1 (Beam Rifle, sword and Storm Rifle read unknown while a BR of the same tag word reads its rounds).
+  - New `tools/test_learn_shot_through.py` (a pillar is never learned, a railing is). The pillar case learns a cell with the guard off.
+  - Haven's terrain rebuilt with the pillar out reads its solid line blocked.
+  - All 485 regression tests pass. Gameplay is untested.
+
+### Halo 4: the Boltshot's short-range value 0.8 to 0.6, so a shotgun or Scattershot is picked up, 2026-11-09
+
+- The owner, Nov 9: "why does the scattershot or shotgun never get picked up", then "Can we just lower the bolt shots weight?"
+- `upgrade_point` takes a loose gun that adds over `UPGRADE_GAIN` 0.08 to `loadout_value`: each band's best gun, weighted Short 0.30, Medium 0.35, Long 0.25, Extreme 0.10, plus a power gun's pull. With the Boltshot's Short at 0.8, a shotgun or Scattershot (1.0/0.2/0/0) added 0.06 to BR + Boltshot and 0.00 to BR + AR: never picked up. Their rank 3.4 is also under the Demon power-gun rule's 4.0.
+- `brain/bot.py` `BANDS["boltshot"]` (0.8, 0.4, 0.05, 0) to (0.6, 0.4, 0.05, 0): the BR's Short 0.7 is a BR + Boltshot loadout's best.
+  - From BR + Boltshot: shotgun +0.09, Scattershot +0.09, AR +0.09 (picked up); magnum +0.03; the rest 0.00 or less (as at any value up to 0.7).
+  - `choose_weapon` at 2 u, every tier: a loaded BR 3.7 against the Boltshot 4.6 (5.2 before), under the 1.0 a swap needs, so the BR stays in hand (Halo 4 Demon's `keeps_gun` held it already). With the main gun empty the Boltshot comes out as before.
+- Seen, not changed: the Storm Rifle and Suppressor have no band row. From `WEAPON_RANGE` they read 0.2/1.0/1.0/0.2, a rifle's, where in Halo 4 they are close-range automatics.
+- Validation: `tools/test_demon_odds.py` `BoltshotBandTests` (shotgun and Scattershot over the bar from BR + Boltshot; a loaded BR kept at 2 u by Legendary). `KeepGunTests` set the old 0.8 for their own run, so they still test `keeps_gun`. 72 in the file. All 482 regression tests pass. Gameplay is untested.
+
 ### Halo 4 Demon fights it out with a man on it within 8 u instead of breaking off, 2026-11-09
 
 The owner's bug report, Warhouse FFA 20261109-185804 at 202.1 s: "Camper delayed heavily to kill me".
