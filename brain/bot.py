@@ -962,7 +962,8 @@ class Perception:
             if burst:
                 # a new shooter (or a new burst): a person notices who it is in about his reaction time, off to the
                 # side (Bot.shot_by_other; live Spire: half the Legendary bots turned in 0.0-0.11 s, the player 0.40)
-                s.attacker_notice = now + s.react_time(True) * (1.4 if sloppy else 1.0)
+                # (custom, Nov 12) Easy, Normal, Heroic: by the damage arc, no off-to-the-side delay (profiles.arc_spot)
+                s.attacker_notice = now + s.react_time(not profiles.arc_spot(s.p)) * (1.4 if sloppy else 1.0)
                 if not sloppy and best.weapon not in BLAST:
                     s.shot_line = (best.pos, me.pos, now)   # a round's line to us, a burst once (Bot.plan: learned)
             s.attacker_id, s.attacker_t = best.id, now   # who is hurting us (decide: turn on him)
@@ -1063,7 +1064,11 @@ class Perception:
                     quick = 1.0
                     if now - s.dropped.get(e.id, -9.0) < 3.0:
                         quick = min(quick, 0.35)   # the man we just lost behind a pillar: no new double take
-                    reaction = s.react_time(off > center_half, d, peripheral_multiplier=peripheral_multiplier)
+                    side = off > center_half
+                    if (side and profiles.arc_spot(s.p) and e.id == getattr(s, "attacker_id", None)
+                            and now - getattr(s, "attacker_t", -9.0) < 1.5):
+                        side = False   # (custom, Nov 12) the man hurting us: found by the damage arc (profiles.arc_spot)
+                    reaction = s.react_time(side, d, peripheral_multiplier=peripheral_multiplier)
                     s.pending[e.id] = now + reaction * quick
                 elif now >= s.pending[e.id]:
                     del s.pending[e.id]

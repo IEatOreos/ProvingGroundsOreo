@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Easy, Normal and Heroic react faster and answer the man shooting them, their aim unchanged, 2026-11-12
+
+The owner: "make all difficulties from easy to heroic react faster. That doesnt mean make them better ... its a little unrealistic that when you shoot at a bot it just doesnt shoot back ... raise their base reaction times up, but keep their accuracy settings", then "Make the changes".
+
+- **Base reaction** (`brain/profiles.py` `REACTION`, a share of a good human's 0.22 s; each bot's is jittered 0.9-1.1 and each reaction drawn log-normal around it, as before):
+  - Easy 0.275 s → 0.22 s (1.25 → 1.0).
+  - Normal 0.22 s → 0.194 s (1.0 → 0.88).
+  - Heroic 0.187 s → 0.172 s (0.85 → 0.78).
+  - Legendary (0.154 s), Demon, Blind and Scaling unchanged. Tactician's reaction was the halfway point of Heroic's and Legendary's; it is pinned at its old 0.1705 s (`TACTICIAN_REACTION`), its other hands still halfway.
+- **The man shooting them** (`profiles.arc_spot`, `brain/bot.py` `Perception`): Easy, Normal and Heroic took 1.6× their reaction to recognise anyone past the centre of their view (35°). For the enemy hurting them in the last 1.5 s that delay is gone, as a player follows the HUD's damage arc. It also applies to when they notice who a new shooter is (`hurt_by`'s `attacker_notice`, which lets Normal and Heroic turn on him mid-fight). Every other man at the edge of the screen keeps the delay, so first-sight duels are not quicker. Legendary, Demon, Blind, Tactician and Scaling unchanged.
+- Roughly, from a hit 90° to the side to the start of aiming (turn plus recognition, typical values): Easy ~0.9 s → ~0.65 s, Normal ~0.65 s → ~0.5 s, Heroic ~0.55 s → ~0.4 s.
+- **Unchanged**: aim error, lag, tracking, flick, overshoot, lead, the looser trigger, turn speed (Easy's 270°/s), memory, radar, teamwork and every tactic.
+- Validation: new `tools/test_reaction_speed.py` (the base values and their order; aim tables unchanged; which tiers lose the delay; the shooter found 1.6× quicker at 45° for Easy-Heroic, Legendary the same). `tools/test_tactician_difficulty.py` expects the pinned reaction. All 56 `tools/test_*.py` files pass. **Untested in game.**
+
 ## 0.2.2-custom.11 — the first public installer: Team Slayer high ground, CTF cut-offs, Blind and Tactician, Bot Matchmaking, MCC nameplates and ranks, 2026-11-12
 
 The first release published for others to download: `ProjectProvingGrounds-Setup-0.2.2-custom.11.exe` on this repository's Releases page (tools/build_installer.py, adapted from upstream's: the code, the built mod, the map tools, a bundled Python and the map pack in one Setup). The launcher's update check now reads this repository's releases and `CUSTOM_VERSION` (tools/updater.py, tools/launcher.py), so an install is never offered upstream's Setup over the custom bots. README.md says it is a custom build and links here.

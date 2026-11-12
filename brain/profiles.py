@@ -11,8 +11,10 @@ DEMON = "demon"
 # difficulty lives mostly in what a bot knows and decides (memory, radar, teamwork, CRAFT below).
 HANDS = dict(reaction=0.22, track=0.10, lead=0.8, decide=0.10, overshoot=0.30, aim_err=0.009, lag=0.09, flick=1.0)
 # ... except reaction, as time against a good human's 0.22 s. Easy reacts at the human's speed to a man in its
-# face (Perception.react_time)
-REACTION = {"novice": 1.25, "average": 1.0, "strong": 0.85, "top": 0.70}
+# face (Perception.react_time). (custom, Nov 12, owner: "make all difficulties from easy to heroic react faster ...
+# keep their accuracy settings") Easy 1.25 -> 1.0 (a good human's 0.22 s), Normal 1.0 -> 0.88, Heroic 0.85 -> 0.78;
+# Legendary, Demon, Blind unchanged, Tactician pinned (TACTICIAN_REACTION). Aim, hands and turn speed unchanged
+REACTION = {"novice": 1.0, "average": 0.88, "strong": 0.78, "top": 0.70}
 # ... and Heroic's and Legendary's hands: lag, the aim's pursuit time constant (Aim.step: 0.09 s trailed a man
 # strafing at arm's length by 9 degrees), flick, the Fitts time factor of a flick onto a man, a tighter sampled error
 # and a quicker re-read of his motion. Easy and Normal keep a good human's hands Heroic a third of the way on toward
@@ -107,6 +109,15 @@ BLIND_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "dec
 TACTICIAN = "tactician"
 TACTICIAN_TOWARD = 0.5
 TACTICIAN_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot")   # (decide, lead, turn: the same)
+# (custom, Nov 12) its reaction kept where it was before Heroic's got quicker: halfway from Heroic's old 0.85 to 0.70
+TACTICIAN_REACTION = HANDS["reaction"] * (0.85 + 0.70) / 2
+
+
+def arc_spot(prof):
+    """(custom, Nov 12, owner) Easy, Normal and Heroic find the man hurting them without the off-to-the-side delay, as a
+    player follows the HUD's damage arc (Perception.hurt_by, update); others at the screen's edge keep it. Legendary,
+    Demon, Blind, Tactician and Scaling unchanged."""
+    return prof.extra is None and prof.tier in ("novice", "average", "strong")
 
 
 def fixed_blind(prof):
@@ -270,9 +281,12 @@ def blind_profile(personality, rng=random):
 
 
 def tactician_hands():
-    """{stat: Tactician's base}: TACTICIAN_TOWARD of the way from Heroic's base to Legendary's (overshoot: Legendary's 0)."""
+    """{stat: Tactician's base}: TACTICIAN_TOWARD of the way from Heroic's base to Legendary's (overshoot: Legendary's 0);
+    reaction pinned (TACTICIAN_REACTION)."""
     her, leg = TIERS["strong"], dict(TIERS["top"], overshoot=0.0)
-    return {k: her[k] + TACTICIAN_TOWARD * (leg[k] - her[k]) for k in TACTICIAN_HANDS}
+    mid = {k: her[k] + TACTICIAN_TOWARD * (leg[k] - her[k]) for k in TACTICIAN_HANDS}
+    mid["reaction"] = TACTICIAN_REACTION
+    return mid
 
 
 def tactician_profile(personality, rng=random):
