@@ -42,6 +42,14 @@ maps/*/roofless.json
 # personal terms for the release privacy scan (tools/make_release.py)
 .private_terms
 
+# (custom) the owner's own play (gamertag and stats: tools/owner_profile.py), this PC's learned shoot-through walls, the
+# launcher's per-PC state, an agent's machine settings and MCC menu screenshots: never published
+maps/*/owner_profile.json
+maps/*/walls_learned.json
+user/
+.codex/
+tools/fixtures/
+
 # Local installation archives, companion recorder, and machine-specific files
 /Project Proving Grounds 0.2.0/
 /Project Proving Grounds 0.2.0.zip
