@@ -371,6 +371,26 @@ The owner: "make all difficulties from easy to heroic react faster. That doesnt 
 - **Unchanged**: aim error, lag, tracking, flick, overshoot, lead, the looser trigger, turn speed (Easy's 270°/s), memory, radar, teamwork and every tactic.
 - Validation: new `tools/test_reaction_speed.py` (the base values and their order; aim tables unchanged; which tiers lose the delay; the shooter found 1.6× quicker at 45° for Easy-Heroic, Legendary the same). `tools/test_tactician_difficulty.py` expects the pinned reaction. All 56 `tools/test_*.py` files pass. **Untested in game.**
 
+### Reach: a test that sends the game's own player add for each bot, for a friend in the match, 2026-11-12
+
+The owner, after the first two-PC test: "Yes, start that" (reverse-engineer how Reach tells joined machines which players exist), then "Yes, build it".
+
+- **What the logs showed** (a 4v4 with 6 bots, the friend joined with bots off): the host's game had 8 players, the friend's only the 2 people. Every bot body on his side had no player: unit +0x1CC, a unit's player link, was empty.
+- **Why** (read from `haloreach.dll`; `docs/REACH_NETWORK_PLAYERS_2026-11-12.md` has the addresses):
+  - Every machine makes its players from "player update" entries (type 9) in the simulation queue.
+  - The host sends those only for the session's members (its sender `FUN_1803aafa4`).
+  - `hr_add_bot` makes each bot with `player_new_at` on the host only, so no add ever went out for a bot.
+- **The test, off unless `botcore.ini` says `netbots=1` or `netbots=2`:**
+  - `native/reach.cpp` `hr_net_add` builds the 0xB8-byte record for each new bot: its index, player identifier, add, machine, and the configuration it was made with.
+  - `hr_net_pump` sends it the way the host's sender does: the game's encoder (`FUN_1803c7ce0`), then a type-9 queue entry (`FUN_1803c414c`, `FUN_1803c4290`). It sends only while the host's own sender would (the same session checks) and never in a film. It retries each tick for up to 600 ticks.
+  - The code checks the first bytes of each function it calls and refuses if they differ from this `haloreach.dll` build.
+  - A machine can hold only 4 players. With `netbots=1` every bot has no machine. With `netbots=2` bot slots 0-2 go on the host's machine as controller/user 1-3, and the rest have no machine.
+  - On the host the add does nothing: the slot is already that bot's, with the same identifier.
+  - The log says `netbots: player add queued for index N`, or why it was not sent.
+- `native/botcore.cpp`: `g_netbots`, read and written as `netbots=` (0, 1 or 2; anything else reads as 0).
+- `hr_net_dump`'s player lines add the player's identifier, machine slot, controller and user, so the host's and the friend's logs can be matched.
+- Validation: `native\build.bat netbots1` built `native/bin/botcore_netbots1.dll` (not in Git) with no new warnings. All 55 `tools/test_*.py` files and the pool checks pass; none of them can run the game's network code. **Untested in game**: whether the friend's game takes the adds, links the bodies to the players and animates them; and whether the host stays as it was.
+
 ## 0.2.2-custom.11 — the first public installer: Team Slayer high ground, CTF cut-offs, Blind and Tactician, Bot Matchmaking, MCC nameplates and ranks, 2026-11-12
 
 The first release published for others to download: `ProjectProvingGrounds-Setup-0.2.2-custom.11.exe` on this repository's Releases page (tools/build_installer.py, adapted from upstream's: the code, the built mod, the map tools, a bundled Python and the map pack in one Setup). The launcher's update check now reads this repository's releases and `CUSTOM_VERSION` (tools/updater.py, tools/launcher.py), so an install is never offered upstream's Setup over the custom bots. README.md says it is a custom build and links here.

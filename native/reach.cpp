@@ -229,6 +229,130 @@ static void hr_roll_armor(uint8_t* cfg, uint32_t seed, uint32_t slots, uint32_t 
     }
 }
 
+// (custom, Nov 12) the game's own player add, queued for a bot so a joined machine makes its player too (botcore.ini
+// netbots=, off by default; docs/REACH_NETWORK_PLAYERS_2026-11-12.md). A friend who joined saw the bots' bodies with no
+// player behind them (no team, no animation): hr_add_bot makes the player on the host only, and the host sends player
+// adds only for the session's members (its sender FUN_1803aafa4). This does what that sender does for one record:
+// encode it (FUN_1803c7ce0) into a bit stream, take a simulation queue entry of type 9 ("player update",
+// FUN_1803c414c), copy the bytes in and queue it (FUN_1803c4290). Every machine applies the queue, the host too: there
+// the slot is already this bot's, with its identifier, so the add does nothing (FUN_1804192c4: flags bit 1 is clear).
+// The record (0xB8 bytes): +0 index, +4 player identifier, +0xC type (3 = add), +0x10 machine (6 bytes), +0x18
+// controller, +0x1C user, +0x20 no machine, +0x21 the add's flag (player_new_at's third argument, 0 for our bots),
+// +0x28 the configuration's 0x80 bytes from +0x20. A machine holds at most 4 players (2-bit controller and user, each
+// used once per machine): netbots=2 puts bot slots 0..2 on the host's machine as controller/user 1..3, the rest and
+// netbots=1 have no machine. Sent only when the host's own sender would send (the same session checks), and kept for
+// up to 600 ticks while it can't be.
+extern uint32_t g_playback;                     // botcore.cpp: a Theater film is running (no brain)
+// game globals (TLS +0x48): +0x1DA is 1 while a Theater film plays (0 in a match, whose +0x1DB is 1: recording); the
+// options before it are the same in a match and in its film (dumps, tools/globals_dump.py): the film key
+static const size_t HR_GG_PLAYBACK = 0x1DA, HR_GG_OPTIONS = 0x1D0, HR_GG_TICKS = 0x1F0EC;
+extern uint32_t g_netbots;                      // botcore.cpp (botcore.ini netbots=)
+static const uintptr_t HR_PU_ENCODE = 0x3C7CE0, HR_BS_BEGIN = 0xDCD48, HR_BS_FINISH = 0xDBB2C, HR_SQ_ALLOC = 0x3C414C,
+                       HR_SQ_INSERT = 0x3C4290, HR_SQ_QUEUE = 0x4E0E908, HR_SESSION = 0x4E0E910,
+                       HR_SESS_FLAG = 0x2A1FD40, HR_SESS_MODE = 0x2A1FD48;
+static const size_t HR_PU_RECORD = 0xB8;
+typedef void(__fastcall* hr_pu_encode_fn)(uint8_t* stream, const uint8_t* record);
+typedef void(__fastcall* hr_bs_begin_fn)(uint8_t* stream, int mode);
+typedef void(__fastcall* hr_bs_finish_fn)(uint8_t* stream);
+typedef void(__fastcall* hr_sq_alloc_fn)(uint8_t* queue, int type, int bytes, uint8_t** out);
+typedef void(__fastcall* hr_sq_insert_fn)(uint8_t* queue, uint8_t* element);
+static uint8_t g_hr_net_rec[HB_MAX_PLAYERS][HR_PU_RECORD];   // by player index
+static uint32_t g_hr_net_due[HB_MAX_PLAYERS];                // the game tick it was made at; 0 = nothing to send
+static int g_hr_net_why[HB_MAX_PLAYERS];                     // the last reason it was not sent (logged on a change)
+
+static bool hr_net_code_ok() {                  // this haloreach.dll's code is the one read (first bytes, the dll on file)
+    static const struct { uintptr_t rva; uint8_t b[6]; } want[] = {
+        { HR_PU_ENCODE, { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x48 } }, { HR_BS_BEGIN, { 0x45, 0x33, 0xC0, 0x89, 0x51, 0x18 } },
+        { HR_BS_FINISH, { 0x44, 0x8B, 0x51, 0x30, 0x4C, 0x8B } }, { HR_SQ_ALLOC, { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57 } },
+        { HR_SQ_INSERT, { 0x8B, 0x41, 0x10, 0x83, 0xF8, 0x02 } } };
+    for (const auto& w : want) if (memcmp(g_hr + w.rva, w.b, sizeof w.b)) return false;
+    return true;
+}
+
+// 0 queued; else why not: 1 not this build's code, 2 the session is not sending players now, 3 a film, 4 the stream
+// overflowed, 5 no queue entry
+static int hr_net_send(const uint8_t* rec) {
+    if (!hr_net_code_ok()) return 1;
+    uint8_t* sess = *(uint8_t**)(g_hr + HR_SESSION);
+    uint8_t* s18 = sess ? *(uint8_t**)(sess + 0x18) : nullptr;
+    if (!s18 || (uint32_t)(*(int32_t*)(s18 + 0x60EF8) - 4) > 5 || !g_hr[HR_SESS_FLAG]) return 2;
+    int32_t mode = *(int32_t*)(g_hr + HR_SESS_MODE);
+    if (mode != 0x10 && mode != 3) return 2;
+    uint8_t* queue = *(uint8_t**)(g_hr + HR_SQ_QUEUE);
+    if (!queue) return 2;
+    int32_t qs = *(int32_t*)(queue + 0x10);
+    if (qs == 2 || (uint32_t)(qs - 4) <= 2) return 2;
+    if (g_playback) return 3;
+    uint8_t buf[0x400] = {}, stream[0x200] = {};    // the sender's own sizes: 0x400 bytes (its stream: 0xD0)
+    *(uint8_t**)(stream + 0) = buf;
+    *(uint8_t**)(stream + 8) = buf + sizeof buf;
+    *(int32_t*)(stream + 0x10) = sizeof buf;
+    *(int32_t*)(stream + 0x14) = 1;
+    ((hr_bs_begin_fn)(g_hr + HR_BS_BEGIN))(stream, 0);
+    *(int32_t*)(stream + 0x14) = 1;
+    ((hr_bs_begin_fn)(g_hr + HR_BS_BEGIN))(stream, 1);
+    ((hr_pu_encode_fn)(g_hr + HR_PU_ENCODE))(stream, rec);
+    ((hr_bs_finish_fn)(g_hr + HR_BS_FINISH))(stream);
+    int bytes = (*(int32_t*)(stream + 0x20) + *(int32_t*)(stream + 0x30) + 7) / 8;
+    if (stream[0x1C] || *(int32_t*)(stream + 0x24) > *(int32_t*)(stream + 0x10) * 8 || bytes <= 0 || bytes > (int)sizeof buf)
+        return 4;
+    uint8_t* el = nullptr;
+    ((hr_sq_alloc_fn)(g_hr + HR_SQ_ALLOC))(queue, 9, bytes, &el);
+    if (!el || !*(uint8_t**)(el + 0x10)) return 5;
+    memcpy(*(uint8_t**)(el + 0x10), buf, (size_t)bytes);
+    ((hr_sq_insert_fn)(g_hr + HR_SQ_INSERT))(queue, el);
+    logf("netbots: player add queued for index %d (%d bytes, machine %s)", *(int32_t*)rec, bytes,
+         rec[0x20] ? "none" : "the host's");
+    return 0;
+}
+
+// the record for a bot just made at index (its configuration as passed to player_new_at); sent from the next tick
+static void hr_net_add(uint8_t* tls, int index, int slot, const uint8_t* cfg) {
+    if (!g_netbots || index < 0 || index >= HB_MAX_PLAYERS) return;
+    uint8_t* p = hr_player(tls, index);
+    uint8_t* gg = *(uint8_t**)(tls + 0x48);
+    if (!p || !gg) return;
+    uint8_t* r = g_hr_net_rec[index];
+    memset(r, 0, HR_PU_RECORD);
+    *(int32_t*)(r + 0) = index;
+    memcpy(r + 4, p + 8, 8);                          // its identifier as the player has it (config +0x16)
+    *(int32_t*)(r + 0xC) = 3;
+    if (g_netbots == 2 && slot < 3) {                 // the host's machine (player 0's, as the bot's +0x14), 1..3
+        memcpy(r + 0x10, hr_player(tls, 0) + 0x14, 6);
+        *(int32_t*)(r + 0x18) = slot + 1;
+        *(int32_t*)(r + 0x1C) = slot + 1;
+    } else {
+        r[0x20] = 1;
+        *(int32_t*)(r + 0x18) = -1;
+        *(int32_t*)(r + 0x1C) = -1;
+    }
+    memcpy(r + 0x28, cfg + 0x20, 0x80);
+    g_hr_net_due[index] = *(uint32_t*)(gg + HR_GG_TICKS) | 1;
+    g_hr_net_why[index] = 0;
+}
+
+// each tick: send what is due; give up after 600 ticks (a new match's clock restarts below it: dropped too). Reasons 1
+// (other code), 3 (a film) and 9 (a fault) end it at once
+static void hr_net_pump(uint8_t* gg) {
+    if (!gg) return;
+    uint32_t now = *(uint32_t*)(gg + HR_GG_TICKS);
+    for (int i = 0; i < HB_MAX_PLAYERS; i++) {
+        uint32_t due = g_hr_net_due[i];
+        if (!due) continue;
+        if (now < (due & ~1u) || now - (due & ~1u) > 600) {
+            logf("netbots: player add for index %d dropped after 600 ticks (last reason %d)", i, g_hr_net_why[i]);
+            g_hr_net_due[i] = 0;
+            continue;
+        }
+        int why = 9;
+        __try { why = hr_net_send(g_hr_net_rec[i]); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { why = 9; }
+        if (why && why != g_hr_net_why[i]) logf("netbots: player add for index %d not sent: reason %d", i, why);
+        if (why == 0 || why == 1 || why == 3 || why == 9) g_hr_net_due[i] = 0;    // sent, or never will be
+        g_hr_net_why[i] = why;
+    }
+}
+
 static int64_t hr_add_bot(uint8_t* tls, int arg) {
     uint8_t* globals = *(uint8_t**)(tls + 0x48);
     uint8_t* me = hr_player(tls, 0);
@@ -301,6 +425,7 @@ static int64_t hr_add_bot(uint8_t* tls, int arg) {
         memcpy(hr_player(tls, index) + 0x14, hr_player(tls, 0) + 0x14, 6);
         g_shm->actions[slot].seq = 0;
         g_shm->bot_player_index[slot] = index;
+        hr_net_add(tls, index, slot, cfg);                // (netbots=: the joined machines' player add)
     }
     logf("reach add_bot index %d team %d -> %08x", index, team, h);
     return (int64_t)h;
@@ -444,10 +569,6 @@ static void hr_run_command(uint8_t* tls) {
     g_shm->cmd_done_seq = g_shm->cmd_seq;
 }
 
-extern uint32_t g_playback;                     // botcore.cpp: a Theater film is running (no brain)
-// game globals (TLS +0x48): +0x1DA is 1 while a Theater film plays (0 in a match, whose +0x1DB is 1: recording); the
-// options before it are the same in a match and in its film (dumps, tools/globals_dump.py): the film key
-static const size_t HR_GG_PLAYBACK = 0x1DA, HR_GG_OPTIONS = 0x1D0, HR_GG_TICKS = 0x1F0EC;
 
 // (custom, Nov 11) network watch, read only: a snapshot in the log of this machine's player table and of every biped
 // with what points at it, for comparing the host's view of a custom game with a joined friend's. The friend saw the
@@ -470,9 +591,12 @@ static void hr_net_dump(uint8_t* tls, uint8_t* gg, uint32_t live, uint32_t biped
             memcpy(name, p + 0xB0, 32);
             int bot = -1;
             for (int s = 0; s < HB_MAX_PLAYERS; s++) if (g_shm->bot_player_index[s] == i) bot = s;
-            logf("netwatch  player %2d handle %08x flags %08x machine %02x%02x%02x%02x%02x%02x team %d unit %08x bot %d %ls",
-                 i, handle[i], *(uint32_t*)(p + 4), m[0], m[1], m[2], m[3], m[4], m[5], (int)(int8_t)p[0xAC],
-                 *(uint32_t*)(p + 0x28), bot, name);
+            // (Nov 12) also its identifier (+8), machine slot (+0x1A), controller (+0x1C) and user (+0x20): FUN_18004482c
+            logf("netwatch  player %2d handle %08x flags %08x machine %02x%02x%02x%02x%02x%02x slot %d ctl %d user %d "
+                 "id %016llx team %d unit %08x bot %d %ls",
+                 i, handle[i], *(uint32_t*)(p + 4), m[0], m[1], m[2], m[3], m[4], m[5], (int)*(int16_t*)(p + 0x1A),
+                 *(int32_t*)(p + 0x1C), *(int32_t*)(p + 0x20), (unsigned long long)*(uint64_t*)(p + 8),
+                 (int)(int8_t)p[0xAC], *(uint32_t*)(p + 0x28), bot, name);
         }
         for (int i = 0; ents && i < omax; i++) {
             uint8_t* e = ents + (size_t)i * 0x18;
@@ -538,6 +662,7 @@ static void __fastcall h_hr_update(uint8_t* actions) {
             }
             g_shm->game = 4;
             if (tls) hr_net_watch(tls, gg);
+            if (tls && g_netbots) hr_net_pump(gg);
             if (tls && fr) {
                 hr_run_command(tls);
                 while (film_more(*(uint32_t*)(gg + HR_GG_TICKS))) hr_run_command(tls);   // a film: this tick's others

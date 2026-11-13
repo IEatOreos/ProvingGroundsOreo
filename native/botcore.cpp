@@ -328,6 +328,11 @@ uint32_t g_collector = 0;            // the brain records the player for the Obs
 uint32_t g_scale_games = 5;         // Scaling difficulty: the player's last games averaged (scale_games=)
 uint32_t g_sounds = 60;              // the BOTS panel's sound volume, 0-100, 0 off (sounds=; overlay.cpp play_sound)
 uint32_t g_playback = 0;             // a Theater film is running (set by the games' hooks): no brain, no bots (film.cpp)
+// (custom, Nov 12) Reach test: the host also sends the game's own player add for each bot, so a joined friend's game
+// makes the bots' players (reach.cpp hr_net_add; docs/REACH_NETWORK_PLAYERS_2026-11-12.md). 0 off (the default), 1 every
+// bot machine-less, 2 the first three bots on the host's machine (controller and user 1..3), the rest machine-less.
+// botcore.ini netbots=
+uint32_t g_netbots = 0;
 void film_old_dir(wchar_t* out) {    // where this copy kept them before: <project>\logs\films (film.cpp still reads it)
     swprintf_s(out, MAX_PATH, L"%s..\\..\\logs\\films", g_dir);
 }
@@ -360,6 +365,7 @@ void save_settings() {
             g_scale_games);                                                                           // (prejoin kept: a save
                                                                                                    // dropped it)
     fprintf(f, "matchmaking=%u\n", hb_matchmaking);                     // (custom, Nov 10: Bot Matchmaking)
+    fprintf(f, "netbots=%u\n", g_netbots);                              // (custom, Nov 12: Reach network test)
     roster_write(f, g_roster);
     roster_write(f, g_ff_roster, "ff");
     fclose(f);
@@ -404,6 +410,7 @@ static void load_settings() {
             else if (sscanf_s(line, "sounds=%u", &v) == 1) g_sounds = v > 100 ? 100 : v;
             else if (sscanf_s(line, "scale_games=%u", &v) == 1) g_scale_games = v < 1 ? 1 : v > 20 ? 20 : v;
             else if (sscanf_s(line, "matchmaking=%u", &v) == 1) hb_matchmaking = v != 0;
+            else if (sscanf_s(line, "netbots=%u", &v) == 1) g_netbots = v > 2 ? 0 : v;
         }
         fclose(f);
     }
