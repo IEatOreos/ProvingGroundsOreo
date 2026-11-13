@@ -22,7 +22,7 @@ from escort_bots import TIERS as ESCORT_TIERS
 class DifficultySeparationTests(unittest.TestCase):
     def test_legendary_only_changes_stock_overshoot(self):
         values=[]
-        for style in sorted(profiles.PERSONALITIES):
+        for style in sorted(set(profiles.PERSONALITIES)-{'wheelman'}):   # (the fingerprint's styles; Wheelman: Nov 13)
             for seed in range(5):
                 p=profiles.make_profile('top',style,random.Random(seed))
                 self.assertEqual(p.overshoot, 0.0)

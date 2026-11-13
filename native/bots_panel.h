@@ -11,7 +11,8 @@ struct ImFont;
 
 #define HB_ROSTER_MAX 15        // the game holds 16 players: you and 15 bots
 #define HB_TEAMS_MAX 8
-#define HB_STYLE_ANY 7          // the brain deals a play style
+#define HB_STYLE_ANY 8          // the brain deals a play style (was 7 before Wheelman, Nov 13; saved as words, not numbers)
+#define HB_STYLES 9             // rusher .. sniper, wheelman, any
 #define HB_TIER_SCALING 4       // hb_bot.tier: Scaling (brain/scaling.py)
 #define HB_TIER_DEMON 5         // hb_bot.tier: Demon (custom: fixed Legendary under its own name)
 #define HB_TIER_BLIND 6         // hb_bot.tier: Blind (custom, Nov 10: Legendary, its aim and hands drawn per bot)
@@ -23,7 +24,7 @@ struct hb_bot {
     uint8_t team;               // 0 red, 1 blue, 2.. (Halo 3 / Reach colour order)
     uint8_t tier;               // 0 Easy (novice) .. 3 Legendary (top), 4 Scaling (brain/scaling.py), 5 Demon (custom:
                                 // fixed Legendary under its own name, brain/profiles.py)
-    uint8_t style;              // 0..6 brain/profiles.py PERSONALITIES order, 7 any
+    uint8_t style;              // 0..7 brain/profiles.py PERSONALITIES order (7 Wheelman), 8 any
 };
 
 struct hb_roster {

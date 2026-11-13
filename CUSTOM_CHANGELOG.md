@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### The Wheelman play style: always goes for a vehicle, a Warthog first, and keeps driving, 2026-11-13
+
+The owner: "Should we make a personality that always wants to drive warthogs? Like driver", "Or call it wheelman", then "Keep the two as they are now" (no Demon at a Warthog's, Mongoose's or Ghost's wheel; Easy never sent to drive a person on a gun).
+
+- **Its own pick** (`brain/bot.py` `Bot.wheel_pick`, in `plan` before the usual trip rule): on foot, with no flag, no close fight, nothing urgent (and not in Race, Infection or as a Firefight escort), it goes for the nearest vehicle within `WHEEL_SEEK_R` (60 u) it may drive: a Warthog first (any kind), then another ground vehicle, then an aircraft, a Mongoose last. Every match, whatever the trip, where other bots take a vehicle only for a trip over 35 u, at 30-90%.
+  - An empty one, or (not Easy) one of ours with a teammate on its gun and nobody at the wheel (`vehicles.wheel_open`), so a Wheelman comes to drive you.
+- **The team's wheels** (`brain/director.py` `crew_orders`; `profiles.driver_priority` -1): a Wheelman is first for a Warthog's or Mongoose's wheel, ahead of a nearer Normal or Heroic, and is sent from `WHEEL_CREW_REACH` (70 u; others 45). `wheel_calls` (a person on a gun) also asks it first.
+- **Keeps its vehicle** (`Bot.drive`): at a trip's end it drives on to the next place it is needed (patrol) instead of getting out, as a role's vehicle does. Wedged, it backs off as before, then takes another way up to `WHEEL_WEDGED_MAX` (3) times at a spot before it gets out. Not a Mongoose (its trips still end on foot), nor as a runner or a ferry.
+- **Unchanged**: a Demon Wheelman never takes a Warthog's, Mongoose's or Ghost's wheel (it goes for a tank or an aircraft, else plays on foot); Easy is never sent by the team and never takes the wheel of a person's vehicle. Its driving is its difficulty's. On foot it plays as a flanker (traits). Not dealt to "Any style": only when picked.
+- **Menus** (`native/bots_panel.cpp`, `bots_panel.h` `HB_STYLES` 9, `HB_STYLE_ANY` 8; `tools/botctl.py` `STYLE_KEYS`): "Wheelman" in the bot editor's play styles and the quick setup. Saved bots keep their style: styles are saved as words. Needs `native/bin/botcore_wheelman.dll` (MCC restart).
+- `tools/test_demon_difficulty.py` and `tools/test_difficulty_separation.py`: their fingerprints cover the original seven styles.
+- Validation: new `tools/test_wheelman.py` (11: the priority, menus, not in "any", the pick order, range, Demon and Easy rules, sent ahead of a nearer Normal and from 60 u, kept at a trip's end where a Rusher gets out). All 61 `tools/test_*.py` files and the pool checks pass; `native\build.bat wheelman` built `botcore_wheelman.dll` (not in Git; the build's panel-art step needs PIL, as before). **Untested in game.**
+
 ### Banshee pilots keep their attack on a man out of sight and stay on one man per run, 2026-11-13
 
 The owner: "We have to make the banshee work. They're almost near useless when a bot is driving them. Make their dive pattern more steep or give ideas on what'll make them fly more efficiently".

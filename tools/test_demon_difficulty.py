@@ -21,7 +21,7 @@ import botctl  # noqa: E402
 class DemonProfileTests(unittest.TestCase):
     def test_demon_is_distinct_and_retains_pre_split_numeric_profiles(self):
         numbers=[]
-        for style in sorted(PERSONALITIES):
+        for style in sorted(set(PERSONALITIES)-{'wheelman'}):   # (the golden 7 styles; Wheelman: Nov 13)
             for seed in range(5):
                 demon=make_profile('demon',style,random.Random(seed))
                 self.assertEqual(demon.turn, math.radians(700))   # (Nov 10, owner; was 480)

@@ -115,7 +115,7 @@ def settings(m):
 
 
 TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician")   # (Demon, Blind, Tactician: brain/profiles.py)
-STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "any")
+STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "wheelman", "any")   # (Wheelman: Nov 13)
 
 
 def roster(path, firefight=False):

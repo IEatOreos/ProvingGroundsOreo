@@ -1612,6 +1612,7 @@ class Director:
         return False
 
     CREW_REACH = 45.0      # u: how far a bot is sent on foot to drive a vehicle its team wants (crew_orders)
+    WHEEL_CREW_REACH = 70.0   # u: (custom, Nov 13) a Wheelman's (profiles.wheelman)
     POWER_R = 15.0         # u: a bot on an objective job takes a free power vehicle this near it (crew_orders)
     # (custom, Nov 8; Halo 4) a bot within POWER_R of an empty power vehicle, ranked as high as the one on its way
     # (profiles.resource_priority), takes the job from it when POWER_HANDOVER u or more nearer: a Legendary who respawns by
@@ -1681,6 +1682,8 @@ class Director:
             return {**near, **{bid: b for bid, b in extra.items() if players[bid].vehicle != v["handle"]}}
 
         def reach_of(bid, v):
+            if bid in free and profiles.wheelman(free[bid].p):
+                return s.WHEEL_CREW_REACH          # (custom, Nov 13: a Wheelman from farther)
             return s.CREW_REACH if bid in free or (bid in power_pool and s.power_kind(v["kind"])) else s.POWER_R
 
         def leave(b):
@@ -1731,7 +1734,7 @@ class Director:
                              and (snap.mode == "race" or dist(players[bid].pos, mongoose_goals[bid]) > VEHICLE_TRIP)))
                          and dist(players[bid].pos, Vec(*v["pos"])) <= reach_of(bid, v)]
                 d, b, v = min(pairs, key=lambda x: x[0], default=(None, None, None))
-                if d is None or d > s.CREW_REACH:
+                if d is None or d > (s.WHEEL_CREW_REACH if any(profiles.wheelman(x[1].p) for x in pairs) else s.CREW_REACH):
                     break
                 if not vehicles.taxi_ok(v["kind"]):
                     d, b, v = min((x for x in pairs if x[2]["handle"] == v["handle"]),

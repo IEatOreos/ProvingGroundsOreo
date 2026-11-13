@@ -117,6 +117,10 @@ PRESS_ITEM, PRESS_ITEM_R = 0.5, 1.5   # an Invasion core runner's gun on its way
 NADE_TEAM_R, NADE_LOOK = 4.0, 1.0   # u, s: no grenade with a teammate this near where it goes, now or this soon (nade_clear)
 CALLED_WAIT_R = 15.0         # a driver waits (8 s at most) for a teammate called aboard while he is this near (crew_coming)
 MONGOOSE_RETRY = 30.0        # finish the objective on foot before choosing another transport trip
+# (custom, Nov 13) the Wheelman play style (profiles.wheelman): how far it walks for a vehicle of its own pick (Bot.wheel_pick),
+# and how often a wedged vehicle of its own is turned another way before it gets out (Bot.drive)
+WHEEL_SEEK_R = 60.0
+WHEEL_WEDGED_MAX = 3
 
 
 # projectile speed in world units per second (CE kit tags, tools/ce_projectiles.py: mean of
@@ -2205,7 +2209,9 @@ class Bot:
             want = {"ride": "gunner", "board": "passenger"}.get(s.order.role, "driver")   # (board: a passenger seat)
             # (a teammate's on its side or roof is no ride either, nor a wreck or a dud: vehicles.usable)
             # (custom: the wheel of ours a teammate rides the gun of, nobody driving: director.wheel_calls)
-            wheel = (want == "driver" and v is not None and v.get("team") == me.team and s.order.target == arg
+            # (custom, Nov 13: or a Wheelman's own pick, not Easy's: Bot.wheel_pick)
+            wheel = (want == "driver" and v is not None and v.get("team") == me.team
+                     and (s.order.target == arg or (profiles.wheelman(s.p) and s.p.tier != "novice"))
                      and vehicles.wheel_open(v, snap))
             if v and s.dud_check(now, dt, me, v) and (not v["occupied"] or wheel
                                                       or (want != "driver" and v.get("team") == me.team)):
@@ -3439,6 +3445,13 @@ class Bot:
         # (Firefight teammates stay on foot with the person; a ride to his gun is its own order: live Beachhead Nov 6,
         # 596 rows off to a Mongoose for a hunt 35.5 u away, and driving, they went into walls, GitHub #12)
         ff_mate = snap.mode == "firefight" and s.order.role in ("escort", "defender")
+        if (profiles.wheelman(s.p) and me.vehicle in (None, -1) and not me.has_flag and not close_fight and not urgent
+                and not infected and not ff_mate and snap.mode != "race" and now >= getattr(s, "vehicle_retry_at", 0.0)):
+            pick = s.wheel_pick(now, me, snap)
+            if pick is not None:
+                s.drive_to = far or s.patrol_point(me)
+                s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
+                return ("vehicle", pick["handle"])
         if (far and trip > VEHICLE_TRIP and not me.has_flag and best[0] not in ("fight", "patrol") and not urgent and not infected
                 and not ff_mate and now >= getattr(s, "vehicle_retry_at", 0.0)):
             # any vehicle the table knows (brain/vehicles.py), by its value, nearness and the trip's length
@@ -3459,6 +3472,28 @@ class Bot:
         their guns and seats; the owner's ask Nov 7). Race laps excepted: every racer drives."""
         return (getattr(snap, "mode", None) == "race" or not profiles.fixed_demon(s.p)
                 or not (vehicles.demon_no_drive(v["kind"]) or s.ghost_spent(v)))
+
+    def wheel_pick(s, now, me, snap):
+        """(custom, Nov 13) A Wheelman's own vehicle (profiles.wheelman): the nearest within WHEEL_SEEK_R it may drive, a
+        Warthog first, then another ground vehicle, then an aircraft, a Mongoose last. Empty, or (not Easy) ours with
+        a teammate on its gun and nobody at the wheel (vehicles.wheel_open). None: nothing to take."""
+        best = None
+        for v in snap.vehicles:
+            sp = vehicles.spec(v["kind"])
+            if not sp or sp["move"] == "none" or not vehicles.usable(v, now, s.duds()) or s.veh_banned(v, now):
+                continue
+            wheel = s.p.tier != "novice" and v.get("team") == me.team and vehicles.wheel_open(v, snap)
+            if (v.get("occupied") and not wheel) or not s.may_drive(v, snap):
+                continue
+            d = dist(me.pos, Vec(*v["pos"]))
+            if d > WHEEL_SEEK_R:
+                continue
+            k = vehicles.kind_of(v["kind"])
+            rank = (3 if k == "mongoose" else 0 if k in vehicles.DEMON_NO_DRIVE and k not in ("gungoose", "ghost")
+                    else 2 if sp["move"] == "air" else 1)
+            if best is None or (rank, d) < best[0]:
+                best = ((rank, d), v)
+        return best[1] if best else None
 
     @staticmethod
     def ghost_spent(v):
@@ -4573,6 +4608,11 @@ class Bot:
         working = not mongoose and ((getattr(s, "crew_ride", None) == me.vehicle and s.order.role != "runner")
                    or getattr(s, "vjob", None) in ("escort", "hunt", "anti_vehicle")
                    or (v is not None and not vehicles.taxi_ok(v["kind"])))
+        # (custom, Nov 13) a Wheelman keeps any vehicle but a Mongoose at a trip's end: on to the next place (patrol)
+        keep = not mongoose and profiles.wheelman(s.p) and s.order.role not in ("runner", "ferry")
+        working = working or keep
+        if spot is None:
+            s.wheel_wedged = 0
         if arrived and working:
             # a role's vehicle: on to the next place it is needed (a way its ground does not go: anywhere else); waiting
             # where it is needed is not being stuck
@@ -4594,6 +4634,12 @@ class Bot:
             # a tank is never left while it works: wedged twice here, it takes another way
             s.drive_to, s.drive_pos, s.reversed_n, s.wedge_spot = s.roam(me), None, 0, None
             s.note("vehicle: wedged, another way (the tank is kept)")
+            return
+        if stuck and not arrived and keep and getattr(s, "wheel_wedged", 0) < WHEEL_WEDGED_MAX:
+            # (custom, Nov 13) a Wheelman's: another way, WHEEL_WEDGED_MAX times at a spot, then out as anyone's
+            s.wheel_wedged = getattr(s, "wheel_wedged", 0) + 1
+            s.drive_to, s.drive_pos, s.reversed_n = s.roam(me), None, 0
+            s.note("vehicle: wedged, another way (a Wheelman keeps it)")
             return
         # (a pilot gets out within a safe drop, under MAX_DROP: 1.5 u kept a Banshee bobbing over the core on Spire's
         # top, live match 220515, 200 s, never out)

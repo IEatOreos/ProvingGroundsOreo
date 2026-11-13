@@ -71,13 +71,16 @@ static const char* TIER_ABOUT[8] = {
     "Reacts about a third faster than a good player and uses everything: focus fire with the team, sneaky routes, "
     "constant awareness and every power weapon and respawn timed.",
     SCALE_ABOUT, DEMON_ABOUT, BLIND_ABOUT, TACT_ABOUT };
-// brain/profiles.py PERSONALITIES order (rusher, camper, flanker, objector, spammer, grudger, sniper)
-static const char* STYLE_KEY[8] = { "rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "any" };
-static const char* STYLE_NAME[8] = { "Rusher", "Camper", "Flanker", "Objective", "Grenadier", "Grudge", "Sniper", "Any style" };
-static const char* STYLE_ABOUT[8] = {
+// brain/profiles.py PERSONALITIES order (rusher, camper, flanker, objector, spammer, grudger, sniper, wheelman: Nov 13)
+static const char* STYLE_KEY[HB_STYLES] = { "rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper",
+                                            "wheelman", "any" };
+static const char* STYLE_NAME[HB_STYLES] = { "Rusher", "Camper", "Flanker", "Objective", "Grenadier", "Grudge", "Sniper",
+                                             "Wheelman", "Any style" };
+static const char* STYLE_ABOUT[HB_STYLES] = {
     "Pushes in and fights up close.", "Holds a spot and waits for you.", "Comes at you from the side.",
     "Plays the flag, ball or hill first.", "Throws a lot of grenades.", "Hunts whoever killed it last.",
-    "Stays back at long range.", "The brain picks one each match." };
+    "Stays back at long range.", "Always goes for a vehicle, a Warthog first, and keeps driving.",
+    "The brain picks one each match." };
 static const char* TITLE_NAME[9] = { "", "HALO: CE", "HALO 2", "HALO 3", "", "HALO: REACH", "HALO 2: ANNIVERSARY", "HALO 4",
                                      "HALO 3: ODST" };   // (8: ODST, Firefight only: overlay.cpp title_of)
 
@@ -105,7 +108,7 @@ static int difficulty_slot(uint32_t d) {
     for (int i = 0; i < 9; i++) if (DIFF_SHOWN[i] == d) return i;
     return 7;                                                 // (Mixed)
 }
-const char* style_name(int s) { return s >= 0 && s < 8 ? STYLE_KEY[s] : "any"; }
+const char* style_name(int s) { return s >= 0 && s < HB_STYLES ? STYLE_KEY[s] : "any"; }
 int roster_max_teams(int title) { return hb_panel_firefight ? 1 : title == 1 ? 2 : HB_TEAMS_MAX; }   // (Firefight: yours)
 
 static int key_index(const char* s, const char* const* keys, int n, int fallback) {
@@ -133,7 +136,7 @@ bool roster_parse_line(const char* line, hb_roster& r) {
     int t = atoi(team);
     b.team = (uint8_t)(t < 0 ? 0 : t >= HB_TEAMS_MAX ? HB_TEAMS_MAX - 1 : t);
     b.tier = (uint8_t)key_index(tier, TIER_KEY, HB_TIERS, 3);
-    b.style = (uint8_t)key_index(style, STYLE_KEY, 8, HB_STYLE_ANY);
+    b.style = (uint8_t)key_index(style, STYLE_KEY, HB_STYLES, HB_STYLE_ANY);
     strncpy_s(b.name, name, 15);
     if (b.team + 1 > r.teams) r.teams = b.team + 1;
     return true;
@@ -735,7 +738,7 @@ void bot_pool_load(const wchar_t* dir) {
             pool_saved sv{};
             strcpy_s(sv.name, name);
             sv.tier = (uint8_t)key_index(tier, TIER_KEY, HB_TIERS, 3);
-            sv.style = (uint8_t)key_index(style, STYLE_KEY, 8, HB_STYLE_ANY);
+            sv.style = (uint8_t)key_index(style, STYLE_KEY, HB_STYLES, HB_STYLE_ANY);
             g_pool_saved.push_back(sv);
         }
         fclose(f);
@@ -1552,7 +1555,7 @@ static void bot_row(bots_panel_env& e, int i, float w, bool& changed) {
     ImGui::PopStyleColor(3);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) && !ImGui::IsMouseDragging(0))
         ImGui::SetTooltip("%s, %s. Drag to another team to move.", TIER_NAME[b.tier < HB_TIERS ? b.tier : 3],
-                          b.style < 8 ? STYLE_NAME[b.style] : "");
+                          b.style < HB_STYLES ?STYLE_NAME[b.style] : "");
     if (ImGui::BeginDragDropSource()) {                       // drag onto another team to move it
         ImGui::SetDragDropPayload("HB_BOT", &i, sizeof i);
         push(BODY);
@@ -1915,7 +1918,7 @@ static void inspector(bots_panel_env& e, bool& changed) {
     ImGui::Dummy(ImVec2(0, px(2)));
     caption("Play style");
     float cw = (W - px(6)) * 0.5f;                           // two columns, the chosen one's line under them
-    for (int k = 0; k < 8; k++) {
+    for (int k = 0; k < HB_STYLES; k++) {
         int st = k == 0 ? HB_STYLE_ANY : k - 1;             // "Any style" first
         if (k % 2) ImGui::SameLine(0, px(6));
         bool on = b.style == st;
@@ -1936,7 +1939,7 @@ static void inspector(bots_panel_env& e, bool& changed) {
         ImGui::PopStyleColor(5);
         ImGui::PopID();
     }
-    muted(STYLE_ABOUT[b.style < 8 ? b.style : HB_STYLE_ANY]);
+    muted(STYLE_ABOUT[b.style < HB_STYLES ?b.style : HB_STYLE_ANY]);
     ImGui::Dummy(ImVec2(0, px(4)));
     ImGui::BeginDisabled(r.n >= roster_cap());
     if (button("Duplicate", SECONDARY, ImVec2((W - px(8)) * 0.5f, 0), true)) {
@@ -2001,7 +2004,7 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
     if (ImGui::BeginCombo("##qstyle", STYLE_NAME[qs_style])) {
         g_list_frame = ImGui::GetFrameCount();
-        for (int k = 0; k < 8; k++) {
+        for (int k = 0; k < HB_STYLES; k++) {
             int st = k == 0 ? HB_STYLE_ANY : k - 1;
             if (ImGui::Selectable(STYLE_NAME[st], qs_style == st)) qs_style = st;
             if (qs_style == st) ImGui::SetItemDefaultFocus();   // (the keys start on what it is)
@@ -3408,7 +3411,7 @@ bool bot_card(bots_panel_env& e, const hb_bot& b) {
         y += 100;
     }
     field("DIFFICULTY", TIER_NAME[tier], TIER_COL[tier]);
-    field("PLAY STYLE", STYLE_NAME[b.style < 8 ? b.style : HB_STYLE_ANY], VAL);
+    field("PLAY STYLE", STYLE_NAME[b.style < HB_STYLES ?b.style : HB_STYLE_ANY], VAL);
     char team[24];
     sprintf_s(team, hb_panel_firefight ? "Your team" : "%s Team", TEAM_NAME[b.team < HB_TEAMS_MAX ? b.team : 0]);
     field("TEAM", team, hb_panel_firefight ? VAL : TEAM_COL[b.team < HB_TEAMS_MAX ? b.team : 0]);
@@ -3755,7 +3758,7 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
         }
         dl->AddText(ImVec2(x, c.y), TEXT, lb.name);
         char sub[48];
-        sprintf_s(sub, "%s  -  %s", tier_name(lb.tier), STYLE_NAME[lb.style < 8 ? lb.style : HB_STYLE_ANY]);
+        sprintf_s(sub, "%s  -  %s", tier_name(lb.tier), STYLE_NAME[lb.style < HB_STYLES ?lb.style : HB_STYLE_ANY]);
         push(SMALL);
         dl->AddText(ImVec2(c.x, c.y + px(26)), TEXT2, sub);
         pop();

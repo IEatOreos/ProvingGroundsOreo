@@ -174,9 +174,11 @@ def defend_priority(prof):
 
 def driver_priority(prof):
     """Who the director sends to drive a Warthog or a Mongoose (vehicles.DEMON_NO_DRIVE): Normal and Heroic first, then
-    Scaling and Legendary, then Easy; Demon never (None)."""
+    Scaling and Legendary, then Easy; Demon never (None). (custom, Nov 13) A Wheelman before all of them."""
     if fixed_demon(prof):
         return None
+    if wheelman(prof):
+        return -1
     if prof.extra is not None:
         return 1
     return {"average": 0, "strong": 0, "top": 1}.get(prof.tier, 2)
@@ -201,7 +203,18 @@ PERSONALITIES = {
     "spammer":  dict(aggression=0.7, caution=0.3, camping=0.2, jumpy=0.5, crouchy=0.2, grenades=0.95, grudge=0.4, objective=0.4),
     "grudger":  dict(aggression=0.7, caution=0.3, camping=0.2, jumpy=0.4, crouchy=0.4, grenades=0.5, grudge=0.95, objective=0.3),
     "sniper":   dict(aggression=0.3, caution=0.8, camping=0.7, jumpy=0.1, crouchy=0.8, grenades=0.2, grudge=0.3, objective=0.3),
+    # (custom, Nov 13, owner: "a personality that always wants to drive warthogs ... call it wheelman") on foot a flanker;
+    # its own rules are wheelman() below. Only when picked: not dealt to "any" (tools/play.py's list)
+    "wheelman": dict(aggression=0.6, caution=0.4, camping=0.0, jumpy=0.3, crouchy=0.3, grenades=0.4, grudge=0.3, objective=0.5),
 }
+
+
+def wheelman(prof):
+    """(custom, Nov 13) The Wheelman play style: goes for the nearest vehicle it may drive (a Warthog first) from WHEEL_SEEK_R,
+    first in line for the team's Warthog and Mongoose wheels (driver_priority) and from farther (director.crew_orders),
+    and keeps its vehicle where others get out at a trip's end (Bot.drive). The existing rules stand: a Demon never takes
+    a Warthog's, Mongoose's or Ghost's wheel, Easy is never sent to drive a person on a gun nor takes that wheel itself."""
+    return prof.personality == "wheelman"
 
 
 @dataclass
