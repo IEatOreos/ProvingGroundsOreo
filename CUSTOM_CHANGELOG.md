@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### MCC's session list: one lobby bot as a test (sessionbots=), 2026-11-13
+
+The watch's first live log (a Reach custom game lobby) showed the list holding the owner and a second person, and only the owner while the match loaded. It never held the bots. The owner explained that the second person "was just on my friendslist in the lobby never in my game", so the list carries friends too, with their own flags. The owner: "Yes, try one bot".
+
+- **`native/session_watch.cpp`**: with `botcore.ini` `sessionbots=1` or `2` (default 0, off), the lobby's first bot is appended to MCC's session list in the menus only. It is added before the roster system and the menus receive the list, and only while MCC is in its menus with a person on the list and bots on.
+  - **The entry:** it is built by MCC's own entry builder (FUN_14024F054) in memory from MCC's own allocator (FUN_1409300F4), so MCC frees it with the message. Its id is `0xB07B07B00000000F`.
+  - **Mode 1:** the entry as built, with the friend's numbers (-1, -1, -1).
+  - **Mode 2:** also takes the player's two "in this session" flags and +0x15, the bot's team at +0x64 (a guess), and the player's +0x6C.
+  - Both builder prologues are checked; another MCC build leaves it off. The log says when a bot is added.
+- **`native/report.cpp` `report_note_lobby_bot`**: that id's row (name, service tag, clan tag, MCC's default emblem) is marked as a lobby row. It is never a Halo CE post-game row, and a match's add at index 15 replaces it.
+- **`native/overlay.cpp`**: while `sessionbots=` is set, the mod's own drawn session rows step aside, so only MCC's list shows.
+- **`native/botcore.cpp`**: reads and saves `sessionbots=`.
+- Validation: the DLL builds (`botcore_sessionbot1.dll`). **Untested in game.**
+
 ### MCC's session list: a watch-only log, 2026-11-13
 
 The owner wants the bots as rows in MCC's own MY GAME SESSION list. MCC's post-game report and Player Details already take the bots' made-up ids, with Career all 0 and no crash. A static read of MCC (Oct 31 2026 exe) found one function, `NotifyUIOfSessionMemberUpdate`, that builds the session's players as a one-way message for the roster panel and the menus. The owner: "Yes, build it" (the watch first).

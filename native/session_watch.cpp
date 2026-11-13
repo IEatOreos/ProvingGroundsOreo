@@ -9,16 +9,36 @@
 //    it to the menus (FUN_1408AD688). It is one-way: the menus receive the list, they never act back on the session.
 // The roster hook logs the list; the notify hook notes which of its 12 callers sent it. Any byte mismatch (another
 // MCC build) leaves MCC untouched.
+// (custom, Nov 13, the owner: "Yes, try one bot") Live, the list held the lobby's people (the player, a second
+// person: only a friend on the friends list, the owner said) and, as the match loaded, the player alone; never the
+// bots. botcore.ini sessionbots=1 or 2 (off by default; 2 also the player's session flags, below) adds
+// the lobby's first bot to that list, in the menus only, before the roster system and the menus get it: a node made
+// by MCC's own builder FUN_14024F054 (in MCC's own memory, operator new FUN_1409300F4, so MCC frees it with the
+// message), id 0xB07B07B00000000F (report.cpp report_note_lobby_bot: its name, clan tag, service tag, nameplate, MCC's
+// default emblem), numbers as the non-player person's (-1, -1, -1, 0). The mod's own drawn rows step aside meanwhile
+// (overlay.cpp). A test: what MCC draws, and what its count, Start and the bot's menu do with it.
 #include <windows.h>
 #include <intrin.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include "third_party/minhook/include/MinHook.h"
+#include "shared.h"
+#include "bots_panel.h"
 
 void logf(const char* fmt, ...);
+extern hb_shared* g_shm;
+extern hb_roster g_roster, g_ff_roster;          // botcore.cpp
+extern int hb_panel_firefight;                   // bots_panel.cpp
+extern uint32_t g_sessionbots;                   // botcore.cpp (botcore.ini sessionbots=)
+int mcc_menu_state();                            // overlay.cpp: 0 menus
+void report_note_lobby_bot(int index, const char* name, int team);   // report.cpp
 
 static const uintptr_t SW_NOTIFY = 0x24E4B0, SW_ROSTER = 0x2F4E84, SW_ROSTER_AT = 0x24ED27;
+static const uintptr_t SW_NEW = 0x9300F4, SW_DESC = 0x24F054;
+static const uint8_t SW_NEW_HEAD[] = {0x33, 0xD2, 0xE9};                // (xor edx,edx; jmp: MCC's allocator)
+static const uint8_t SW_DESC_HEAD[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x48, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x30};
+static const int SW_BOT_INDEX = 15;                                      // its made-up id's player index
 static const uint32_t SW_MSG_ID = 0x044563CE;
 static const uint8_t SW_NOTIFY_HEAD[] = {0x48, 0x8B, 0xC4, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
                                          0x48, 0x8D, 0x6C, 0x24, 0x80, 0x48, 0x81, 0xEC, 0x80, 0x01, 0x00, 0x00};
@@ -82,9 +102,68 @@ static void __fastcall h_notify(void* session) {
     t_caller = prev;
 }
 
+// MCC's std::wstring as FUN_14024F054 reads its name argument: a pointer (capacity 8+), the size at +0x10
+struct sw_wstr { const wchar_t* p; uint64_t pad; uint64_t size; uint64_t cap; };
+typedef void*(__fastcall* new_fn)(size_t n);
+typedef void*(__fastcall* desc_fn)(void* node, uint64_t id, const sw_wstr* name, void* unused, uint64_t a5, uint64_t a6,
+                                   int64_t a7, int64_t a8, int64_t a9, uint64_t a10);
+static bool g_add_ok;                            // the allocator and the builder are the ones decoded
+static char g_added[16];                         // the bot last added (logged when it changes)
+
+// the lobby's first bot onto the list's end, in the menus only (sessionbots=1)
+static void add_lobby_bot(uint8_t* msg) {
+    if (!g_add_ok || g_sessionbots < 1 || g_sessionbots > 2 || mcc_menu_state() != 0 || !g_shm || !g_shm->bots_enabled ||
+        g_shm->lidar_mode)
+        return;
+    const hb_roster& R = hb_panel_firefight ? g_ff_roster : g_roster;
+    if (R.n < 1) return;
+    char name[16];
+    strncpy_s(name, R.bot[0].name, _TRUNCATE);
+    int team = R.bot[0].team;
+    if (!name[0]) return;
+    uint8_t* head = msg + 0x38;
+    const uint64_t id = 0xB07B07B000000000ull | (uint64_t)SW_BOT_INDEX;
+    int n = 0;
+    uint8_t* me = nullptr;                                // the player's own node (+0x10 set)
+    for (uint8_t* node = *(uint8_t**)(msg + 0x40); node && node != head && n < 32; node = *(uint8_t**)(node + 8), n++) {
+        if (*(uint64_t*)(node + 0x18) == id) return;    // (already on it)
+        if (node[0x10] && !me) me = node;
+    }
+    if (!n || !me) return;                                // (no player yet: not a lobby's list)
+    report_note_lobby_bot(SW_BOT_INDEX, name, team);      // (MCC's lookups by its id: report.cpp)
+    wchar_t w[16];
+    int k = MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 16);
+    if (k < 2) return;
+    sw_wstr s = {w, 0, (uint64_t)(k - 1), 8};
+    uint8_t* node = (uint8_t*)((new_fn)(g_mcc + SW_NEW))(0x80);
+    if (!node) return;
+    memset(node, 0, 0x80);
+    ((desc_fn)(g_mcc + SW_DESC))(node, id, &s, nullptr, 0, 0, -1, -1, -1, 0);
+    if (g_sessionbots == 2) {
+        // (Nov 13, live: a friend only on the friends list came as flags 00000000 01, numbers -1, -1, -1; the player as
+        // 01010101 0001, numbers 0, -1, 0) mode 2: the player's two "in this session" flags (+0x11, +0x12) and +0x15,
+        // +0x64 its team (the player's 0 on Red: a guess), +0x6C the player's
+        node[0x11] = me[0x11]; node[0x12] = me[0x12]; node[0x15] = me[0x15];
+        *(int32_t*)(node + 0x64) = team;
+        *(int32_t*)(node + 0x6C) = *(int32_t*)(me + 0x6C);
+    }
+    uint8_t* last = *(uint8_t**)head;                     // at the end, as MCC adds them
+    *(uint8_t**)(last + 8) = node;
+    *(uint8_t**)node = last;
+    *(uint8_t**)(node + 8) = head;
+    *(uint8_t**)head = node;
+    if (strcmp(g_added, name)) {
+        strcpy_s(g_added, name);
+        logf("session list: added %s (team %d) as player %d, mode %u", name, team, SW_BOT_INDEX, g_sessionbots);
+    }
+}
+
 static void __fastcall h_roster(void* mgr, uint8_t* msg) {
     __try {
-        if (msg && *(const uint32_t*)(msg + 0x28) == SW_MSG_ID) log_members(msg);
+        if (msg && *(const uint32_t*)(msg + 0x28) == SW_MSG_ID) {
+            add_lobby_bot(msg);
+            log_members(msg);
+        }
     } __except (EXCEPTION_EXECUTE_HANDLER) { logf("session list: unreadable"); }
     o_roster(mgr, msg);
 }
@@ -104,5 +183,11 @@ void session_watch_hooks() {
         logf("session list: hooks failed");
         return;
     }
-    logf("session list: watch on (logs MCC's session players when they change)");
+    __try {
+        g_add_ok = !memcmp(g_mcc + SW_NEW, SW_NEW_HEAD, sizeof SW_NEW_HEAD) &&
+                   !memcmp(g_mcc + SW_DESC, SW_DESC_HEAD, sizeof SW_DESC_HEAD);
+    } __except (EXCEPTION_EXECUTE_HANDLER) { g_add_ok = false; }
+    logf("session list: watch on (logs MCC's session players when they change); one lobby bot %s", !g_add_ok
+         ? "off (not the builder decoded)" : g_sessionbots == 1 ? "added (sessionbots=1, as a plain entry)"
+         : g_sessionbots == 2 ? "added (sessionbots=2, with the player's session flags)" : "off (sessionbots=0)");
 }

@@ -25,6 +25,7 @@ extern hb_roster g_ff_roster;        // botcore.cpp: Firefight's list (3 bots, y
 extern uint32_t g_collector;         // botcore.cpp: the brain records the player (Data collector)
 extern uint32_t g_scale_games;       // botcore.cpp: Scaling difficulty's games averaged
 extern uint32_t g_sounds;            // botcore.cpp: the BOTS panel's sound volume, 0-100 (0 off)
+extern uint32_t g_sessionbots;       // botcore.cpp: a lobby bot in MCC's own session list (session_watch.cpp test)
 void logf(const char* fmt, ...);
 void save_settings();
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
@@ -965,7 +966,9 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             bool bug = match && (pause || g_bug_open);
             g_bug_ui = bug;
             if (!bug) g_bug_hover = false;
-            bool sess = lobby && !g_panel && !g_bot_card && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode;
+            // (custom, Nov 13: sessionbots= puts a bot in MCC's own list; the drawn rows step aside so MCC's shows alone)
+            bool sess = lobby && !g_panel && !g_bot_card && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode &&
+                        !g_sessionbots;
             g_sess_drawn = sess;
             if (!sess) g_sess_hover = -1;
             if (g_show_tile || notice || bug || sess || bot_ui()) {

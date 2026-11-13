@@ -45,7 +45,7 @@ static const uint8_t MR_DEFAULTS_HEAD[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0
 static const uint8_t MR_ASSIGN_HEAD[] = {0x48, 0x83, 0xEC, 0x38, 0x48, 0x85, 0xD2, 0x74, 0x21};
 static const uint32_t BOT_ID_HI = 0xB07B07B0u;
 
-struct bot_row { char name[32]; char tag[8]; char clan[16]; int team; int32_t emblem[5]; bool set; };
+struct bot_row { char name[32]; char tag[8]; char clan[16]; int team; int32_t emblem[5]; bool set; bool lobby; };
 static bot_row g_rows[16];
 static uint32_t g_rows_game;               // botcore's game id when the bots were noted (report_note_bot)
 static uint8_t* g_mcc;
@@ -99,8 +99,31 @@ void report_note_bot(int index, const wchar_t* name, const wchar_t* tag, int tea
     if (clan && clan[0]) WideCharToMultiByte(CP_UTF8, 0, clan, -1, r.clan, sizeof r.clan - 1, nullptr, nullptr);
     for (int k = 0; k < 5; k++) r.emblem[k] = emblem ? emblem[k] : 0;
     r.team = team;
+    r.lobby = false;
     r.set = true;
     g_rows_game = g_shm ? g_shm->game : 0;
+}
+
+// (custom, Nov 13) a lobby bot in MCC's session list (session_watch.cpp, sessionbots=): MCC looks it up by the same
+// made-up id, so it gets a row too: its name, service tag, clan tag (bots_panel.cpp), MCC's default emblem. Marked a
+// lobby row: never a Halo CE post-game row (ce_rows); a match's own add at that index replaces it
+const char* profile_clan_of(const char* name);             // bots_panel.cpp
+void report_note_lobby_bot(int index, const char* name, int team) {
+    if (index < 0 || index >= 16 || !name) return;
+    bot_row& r = g_rows[index];
+    if (r.set && r.lobby && !strcmp(r.name, name) && r.team == team) return;
+    wchar_t w[32], tag[4];
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 32);
+    bot_service_tag(w, tag);
+    r.set = false;
+    strncpy_s(r.name, name, _TRUNCATE);
+    WideCharToMultiByte(CP_UTF8, 0, tag, 4, r.tag, sizeof r.tag - 1, nullptr, nullptr);
+    r.tag[4] = 0;
+    strncpy_s(r.clan, profile_clan_of(name), _TRUNCATE);
+    for (int k = 0; k < 5; k++) r.emblem[k] = 0;
+    r.team = team;
+    r.lobby = true;
+    r.set = true;
 }
 
 // Halo CE hands MCC only the player's results row (live, s117: "report: results 0:1:<the player>"), so its bots were
@@ -117,7 +140,7 @@ static void ce_rows(uint8_t* results) {
     }
     if (!person) return;
     for (int k = 0; k < 16; k++) {
-        if (!g_rows[k].set || listed[k]) continue;
+        if (!g_rows[k].set || g_rows[k].lobby || listed[k]) continue;
         uint8_t* row = nullptr;
         for (int i = 0; i < 16 && !row; i++) {
             uint8_t* e = results + (size_t)i * 0x1C8;

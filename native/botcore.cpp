@@ -334,6 +334,9 @@ uint32_t g_playback = 0;             // a Theater film is running (set by the ga
 // bot machine-less, 2 the first three bots on the host's machine (controller and user 1..3), the rest machine-less.
 // botcore.ini netbots=
 uint32_t g_netbots = 0;
+// (custom, Nov 13) test: the lobby's first bot in MCC's own session list, the menus only (session_watch.cpp). 0 off (the
+// default), 1 as a plain entry, 2 with the player's session flags. botcore.ini sessionbots=
+uint32_t g_sessionbots = 0;
 void film_old_dir(wchar_t* out) {    // where this copy kept them before: <project>\logs\films (film.cpp still reads it)
     swprintf_s(out, MAX_PATH, L"%s..\\..\\logs\\films", g_dir);
 }
@@ -367,6 +370,7 @@ void save_settings() {
                                                                                                    // dropped it)
     fprintf(f, "matchmaking=%u\n", hb_matchmaking);                     // (custom, Nov 10: Bot Matchmaking)
     fprintf(f, "netbots=%u\n", g_netbots);                              // (custom, Nov 12: Reach network test)
+    fprintf(f, "sessionbots=%u\n", g_sessionbots);                      // (custom, Nov 13: MCC's session list test)
     roster_write(f, g_roster);
     roster_write(f, g_ff_roster, "ff");
     fclose(f);
@@ -412,6 +416,7 @@ static void load_settings() {
             else if (sscanf_s(line, "scale_games=%u", &v) == 1) g_scale_games = v < 1 ? 1 : v > 20 ? 20 : v;
             else if (sscanf_s(line, "matchmaking=%u", &v) == 1) hb_matchmaking = v != 0;
             else if (sscanf_s(line, "netbots=%u", &v) == 1) g_netbots = v > 2 ? 0 : v;
+            else if (sscanf_s(line, "sessionbots=%u", &v) == 1) g_sessionbots = v > 2 ? 0 : v;
         }
         fclose(f);
     }
