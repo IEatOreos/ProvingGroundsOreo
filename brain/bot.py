@@ -7289,7 +7289,7 @@ class Bot:
         moving = abs(act.forward) + abs(act.strafe) > 0.3
         # (a lift ride stands still in its column on purpose; a zone shuffle keeps within 0.9 u of the middle, inside the
         # 0.6 u-for-1.2-s test below: it wiggled an Easy holder 1.4 u out of Boneyard's box, test_fluidity_fixes 8d)
-        if not moving or getattr(s, "lift_ride", None) or now < getattr(s, "shuffle_until", 0.0):
+        if not moving or getattr(s, "lift_ride", None) or s.on_cannon(now) or now < getattr(s, "shuffle_until", 0.0):
             s.stuck_since, s.stuck_pos = None, None
             return
         if now < getattr(s, "final_step_until", 0.0) and getattr(s, "grab_point", None) is not None:
@@ -7401,6 +7401,8 @@ class Bot:
         T = s._terrain
         if getattr(s, "lift_ride", None):
             return                     # a gravity lift's column has no floor to read: the lift is the floor (ride_lift)
+        if s.on_cannon(now):
+            return                     # a man cannon's throw (ride_cannon): its window would steer at the landing off the pad
         if s.kit.flying(now):
             return                     # a jetpack flight up to a goal (Kit.fly_to checked the air): "air steer back" pulled
                                        # it back under the ledge it flies onto
@@ -7659,6 +7661,57 @@ class Bot:
             if f.get("kind") == "launcher" and math.hypot(f["pos"][0] - j.sx, f["pos"][1] - j.sy) < 2.0:
                 return Vec(*f["pos"])
         return None
+
+    def cannon_of(s, j):
+        """The airtime (s) of an owner-drawn man cannon ride whose take-off and landing a jump j (from nav) is
+        (maps.owner_ride_links: flagged launch), or None: another jump."""
+        C = getattr(s, "_cannons", None)
+        if C is None:
+            C = s._cannons = [(k["take_off"], k["land"], float(k.get("air_s") or 2.0))
+                              for _, _, k, _ in getattr(s.T(), "hjumps", ()) if k.get("launch")]
+        for to, ld, t in C:
+            if math.hypot(to[0] - j.sx, to[1] - j.sy) < 0.05 and math.hypot(ld[0] - j.x, ld[1] - j.y) < 0.05:
+                return t
+        return None
+
+    def on_cannon(s, now):
+        """Whether a man cannon ride (ride_cannon) is under way: begun no more than its airtime and 8 s ago (one left by
+        a death or a fight keeps nothing off longer)."""
+        r = getattr(s, "cannon_ride", None)
+        return r is not None and now - r[2] < r[3] + 8.0
+
+    def ride_cannon(s, me, act):
+        """On a man cannon ride the owner drew (s.cannon_ride: pad, landing, start, airtime, when it reached the pad):
+        onto the pad and on across it toward the landing (no jump: the cannon throws whoever steps on it), then for
+        the landing all the flight. Run as a jump it was judged short 1.5 s on, in the air for 2.2-2.4 (the owner's
+        rides of Adrift's), and the edge guard steered it back. False when the ride is over: landed, or never thrown
+        (4 s at the pad, or off it), or too long (the airtime and 2 s): that take-off is left 60 s (jump_blocked)."""
+        pad, land, t0, air, on = s.cannon_ride
+        now = getattr(s, "now", 0.0)
+        key = (round(pad.x, 1), round(pad.y, 1))
+        if not s.on_cannon(now):
+            s.cannon_ride = None                 # left long ago (a death, a fight): no verdict on the cannon
+            return False
+        if (me.pos - land).flat() < 1.5 and abs(me.pos.z - land.z) < 0.8:
+            s.cannon_ride = None
+            s.note("man cannon: landed")
+            return False
+        if on is None and (me.pos - pad).flat() < 0.5:
+            on = now
+            s.cannon_ride = (pad, land, t0, air, on)
+        thrown = on is not None and (me.pos - pad).flat() > 2.0
+        if ((on is None and (now - t0 > 6.0 or (me.pos - pad).flat() > 6.0))
+                or (on is not None and not thrown and now - on > 4.0) or (thrown and now - on > air + 2.0)):
+            s.cannon_ride = None
+            fails = s.__dict__.setdefault("jump_fails", {})
+            fails[key] = (fails.get(key, (0, 0.0))[0] + (2 if not thrown else 1), now + 60.0)
+            s.note("man cannon: short of its landing" if thrown else "man cannon: not thrown")
+            return False
+        s.steer(me, land if on is not None else pad, act, True, arrive=0.05)
+        act.jump = False
+        s.planned_jump, s.jump_land = True, land
+        s.nav_cmd = (act.forward, act.strafe)
+        return True
 
     def way_in(s, me, point):
         """Into an Elephant's bay for a goal in it (Sandtrap: each team's flag hangs there and is captured on its floor,
@@ -8014,6 +8067,8 @@ class Bot:
         # (the player: Easy bots jump to get around, never as a fighting trick)
         if getattr(s, "lift_ride", None) and s.ride_lift(me, act):
             return
+        if getattr(s, "cannon_ride", None) and s.ride_cannon(me, act):
+            return
         way = s.way_in(me, point)
         if way is not None:                      # a goal in an Elephant's bay (Sandtrap's flags): its own way in
             point, straight = way
@@ -8217,6 +8272,12 @@ class Bot:
                 s.lift_ride = (lift, Vec(nxt.x, nxt.y, nxt.z), getattr(s, "now", 0.0))
                 s.lift_from = (me.pos.z, (round(nxt.sx, 1), round(nxt.sy, 1)))   # (ride_lift: stalled at the rim)
                 s.ride_lift(me, act)
+                return
+            air = s.cannon_of(nxt)
+            if air is not None:                  # a man cannon the owner drew: onto its pad, thrown to the landing
+                s.cannon_ride = (Vec(nxt.sx, nxt.sy, me.pos.z), Vec(nxt.x, nxt.y, nxt.z), getattr(s, "now", 0.0), air, None)
+                s.note("man cannon: riding")
+                s.ride_cannon(me, act)
                 return
             start = Vec(nxt.sx, nxt.sy, me.pos.z)
             if me.has_flag:                      # carrying: its jump falls short, so it goes later, nearer the landing

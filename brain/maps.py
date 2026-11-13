@@ -327,6 +327,10 @@ def anchor_launches(links, features):
 
 OWNER_RIDES = "owner_rides.json"   # (custom) gravity lifts and man cannons the owner drew in the LiDAR view (tools/spots.py)
 OWNER_PAD_SAME = 1.5               # u: a lift or launcher marker this near an owner ride's pad is that pad's (no second one)
+# u/s along the flat in a man cannon's throw: the owner's three rides of the one he drew on Halo 4 Adrift went 17.8 u in
+# 2.14-2.42 s (trace 20261109-214318). (Nov 13, "on adrift halo 4 they've never used them": scored as a 17.8 u jump,
+# 27.6, the ride cost more than the 23.9 walk round, so the nav never took it; Terrain's launch cost, by its airtime)
+OWNER_CANNON_SPEED = 7.5
 
 
 def owner_rides(name):
@@ -342,10 +346,16 @@ def owner_rides(name):
 
 def owner_ride_links(names):
     """The owner's rides as people's ride links (one way; bots ride them as the rides people recorded: Bot.lift_base, the
-    nav's launch cost), not moved to a marker's trigger (anchor_launches): his pad is where he put it."""
-    return [dict(kind="jump", ride=1, painted=1, human=1, found_by="owner", name=r.get("name", ""),
+    nav's launch cost), not moved to a marker's trigger (anchor_launches): his pad is where he put it. A man cannon's is
+    marked launch, with its airtime at OWNER_CANNON_SPEED (the nav's launch cost however flat; Bot.ride_cannon)."""
+    def link(r):
+        k = dict(kind="jump", ride=1, painted=1, human=1, found_by="owner", name=r.get("name", ""),
                  take_off=list(r["take_off"]), land=list(r["land"]))
-            for nm in names for r in owner_rides(nm)]
+        if r["kind"] == "cannon":
+            flat = math.hypot(r["land"][0] - r["take_off"][0], r["land"][1] - r["take_off"][1])
+            k.update(launch=1, air_s=round(max(1.0, flat / OWNER_CANNON_SPEED), 2))
+        return k
+    return [link(r) for nm in names for r in owner_rides(nm)]
 
 
 def owner_ride_pads(features, names):

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Man cannons the owner draws: bots ride them, 2026-11-13
+
+The owner: "Do bots use man cannons much? I've seen on adrift halo 4 they've never used them I don't think". Seven Adrift (`h4_ca_warhouse`) match traces: bots rode its two gravity lifts 3-20 times a match, and the man cannon the owner drew in the LiDAR view on Nov 9 (`owner_rides.json` "Man cannon 1", (13.5, -12.5, 2.7) to (16.5, 5.0, 2.4)) never, though the owner rode it 3 times and bots stood by its pad often. The map's data has no man cannon of its own.
+
+- Why: the nav scored the drawn cannon as a 17.8 u jump (27.6), dearer than the 23.9 walk round, so it never took it. Taken, a flat ride ran as a jump: judged short 1.5 s on, and the jump window steered for the landing from off the pad.
+- `brain/maps.py` `owner_ride_links`: a drawn man cannon's link is marked `launch` with its airtime, `air_s`, at `OWNER_CANNON_SPEED` 7.5 u/s along the flat (the owner's rides of Adrift's: 17.8 u in 2.14-2.42 s). Adrift's: 2.37 s.
+- `brain/terrain.py` `add_links`: a `launch` link takes the launch cost by its airtime (as rides 10+ u up already did), however flat: Adrift's cannon 6.3 now.
+- `brain/bot.py`: `cannon_of` (the airtime of a drawn cannon's ride a nav jump is), `ride_cannon` and `on_cannon`. A bot onto the pad, on across it toward the landing (no jump), then steering for the landing all the flight. Done when down within 1.5 u of the landing. Never thrown (4 s on the pad, 6 s not reaching it) or short (the airtime + 2 s): that take-off is left 60 s (`jump_blocked`). The edge guard and the unstuck wiggle stand aside during a ride. A ride left over 8 s past its airtime (a death, a fight) is dropped with no verdict. Lifts, and cannons in the map's own data, ride as before.
+- Validation: `tools/test_owner_rides.py` +5 (the launch flag and airtime; onto the pad, thrown, landed; never thrown leaves the take-off; a stale ride dropped; on Adrift the cannon costs under 10, the nav from its pad offers it, the bot knows its airtime). Adrift's nav: from three spots by the pad, toward the landing and past it, the next step is the pad, then the cannon; toward the east lift it is not. All 656 regression tests pass. Untested in a match: whether bots reach the cannon's trigger and land where expected.
+
 ### Tank drivers: a man with a vehicle killer in range counts with the vehicles, 2026-11-13
 
 The owner, on the tank targeting below: "Can you change the one mongoose scenario?" (a Mongoose 30 u off picked over a rocket man 20 u off).

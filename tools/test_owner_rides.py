@@ -43,6 +43,92 @@ class PadTests(unittest.TestCase):
             self.assertEqual(maps.owner_rides("none"), [])
 
 
+class CannonTests(unittest.TestCase):
+    """(Nov 13: "Do bots use man cannons much? I've seen on adrift halo 4 they've never used them") A drawn man cannon
+    is a launch, by its airtime, and a bot rides it: onto the pad, thrown, on for the landing (Bot.ride_cannon)."""
+
+    def test_a_cannon_link_is_a_launch_by_its_airtime(self):
+        rides = [dict(name="Lift", kind="lift", take_off=[1.0, 2.0, 3.0], land=[1.5, 2.5, 9.0]),
+                 dict(name="Cannon", kind="cannon", take_off=[10.0, 0.0, 3.0], land=[25.0, 0.0, 3.0])]
+        with mock.patch.object(maps, "owner_rides", lambda nm: rides):
+            lift, cannon = maps.owner_ride_links(["x"])
+        self.assertNotIn("launch", lift)
+        self.assertEqual((cannon["launch"], cannon["air_s"]), (1, 2.0))     # 15 u at 7.5 u/s
+
+    def bot(self):
+        import random
+        from brain.bot import Bot
+        from brain.profiles import make_profile
+        b = Bot(0, 0, make_profile("top", "rusher", random.Random(3)), {"name": "h4_test"}, random.Random(5))
+        b.notes = []
+        return b
+
+    def ride(self, b, x, z, now):
+        from brain.core import Action
+        b.now, act = now, Action()
+        me = mock.Mock(pos=Vec(x, 0.0, z))
+        return b.ride_cannon(me, act), act
+
+    def test_onto_the_pad_thrown_and_down_at_the_landing(self):
+        b = self.bot()
+        b.cannon_ride = (Vec(0, 0, 0), Vec(17, 0, 0), 0.0, 2.3, None)
+        going, act = self.ride(b, -3.0, 0.0, 0.1)
+        self.assertTrue(going)
+        self.assertGreater(act.forward, 0.9)                 # (yaw 0: +x) at the pad
+        self.assertFalse(act.jump)
+        self.assertTrue(self.ride(b, 0.2, 0.0, 0.6)[0])
+        self.assertEqual(b.cannon_ride[4], 0.6)              # on it
+        going, act = self.ride(b, 6.0, 3.0, 1.4)
+        self.assertTrue(going and act.forward > 0.9)         # in the air: for the landing
+        self.assertTrue(b.on_cannon(1.4))
+        self.assertFalse(self.ride(b, 16.4, 0.3, 2.9)[0])
+        self.assertIsNone(b.cannon_ride)
+        self.assertIn("man cannon: landed", b.notes)
+        self.assertEqual(getattr(b, "jump_fails", {}), {})
+
+    def test_never_thrown_leaves_that_take_off(self):
+        from brain.terrain import JumpVec
+        b = self.bot()
+        b.cannon_ride = (Vec(0, 0, 0), Vec(17, 0, 0), 0.0, 2.3, None)
+        self.ride(b, 0.1, 0.0, 0.5)
+        self.assertTrue(self.ride(b, 0.1, 0.0, 4.0)[0])
+        self.assertFalse(self.ride(b, 0.1, 0.0, 4.6)[0])     # 4 s on the pad, not thrown
+        self.assertIn("man cannon: not thrown", b.notes)
+        self.assertTrue(b.jump_blocked(JumpVec(17, 0, 0, 0.0, 0.0)))
+
+    def test_a_ride_left_long_ago_is_dropped_with_no_verdict(self):
+        b = self.bot()
+        b.cannon_ride = (Vec(0, 0, 0), Vec(17, 0, 0), 0.0, 2.3, None)
+        self.assertFalse(b.on_cannon(10.4))
+        self.assertFalse(self.ride(b, 40.0, 0.0, 10.4)[0])
+        self.assertIsNone(b.cannon_ride)
+        self.assertEqual(getattr(b, "jump_fails", {}), {})
+
+
+ADRIFT = "h4_ca_warhouse"
+
+
+@unittest.skipUnless(os.path.exists(os.path.join(maps.ROOT, ADRIFT, maps.OWNER_RIDES))
+                     and os.path.exists(os.path.join(maps.ROOT, ADRIFT, "heightmap.npz")), "Adrift's drawn cannon not here")
+class AdriftCannonTests(unittest.TestCase):
+    def test_the_nav_takes_the_cannon_and_the_bot_knows_it(self):
+        import random
+        from brain.bot import Bot
+        from brain.profiles import make_profile
+        from brain.terrain import JumpVec
+        m = maps.get_map(ADRIFT)
+        T = maps.terrain(m)
+        mine = [(k, w) for f, t, k, w in T.hjumps if k.get("found_by") == "owner" and k.get("launch")]
+        self.assertEqual(len(mine), 1)
+        k, w = mine[0]
+        self.assertLess(w, 10.0)                             # (a 17.8 u jump's 27.6 lost to the 23.9 walk round)
+        n = T.nav(Vec(13.4, -12.9, 2.7), Vec(17.0, 8.0, 2.4), jump=True, human=True)
+        self.assertIsInstance(n, JumpVec)
+        self.assertEqual((n.sx, n.sy), tuple(k["take_off"][:2]))
+        b = Bot(0, 0, make_profile("top", "rusher", random.Random(3)), m, random.Random(5))
+        self.assertAlmostEqual(b.cannon_of(n), k["air_s"])
+
+
 @unittest.skipUnless(HAVE, "map data not here")
 class NavTests(unittest.TestCase):
     def test_a_drawn_lift_is_a_ride_the_nav_takes(self):

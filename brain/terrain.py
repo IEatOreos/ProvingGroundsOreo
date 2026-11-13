@@ -1672,10 +1672,11 @@ class Terrain:
                     wts.append(cost)
                 continue
             w = math.hypot(b.x - a.x, b.y - a.y) * 1.5 + 1.0
-            if b.z - a.z >= 10.0:
+            if b.z - a.z >= 10.0 or k.get("launch"):
                 # a launch up (a man cannon, a lift): its time aloft at a run's 2.25 u/s, not 1.5 x its flat length
                 # (Spire, live match 230700: the mini base cannon's 24 u flight cost 38 and a bot by its pad walked
-                # on to the middle lift, "just missed man cannon"; the middle lift's 6 s ride cost 5)
+                # on to the middle lift, "just missed man cannon"; the middle lift's 6 s ride cost 5). Or a man cannon
+                # the owner drew, however flat (maps.owner_ride_links: Adrift's, 17.8 u at its own height)
                 w = float(k.get("air_s") or math.hypot(b.x - a.x, b.y - a.y) / 3.5) * 2.25 + 1.0
             ways = [(src, dst, k)]
             if jump_ways(k, s, getattr(s, "jump_apex", 0.8)) == "two-way":
