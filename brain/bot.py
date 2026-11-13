@@ -335,6 +335,17 @@ COMMIT_THREAT_R = 10.0                 # u: a man this close aiming at us takes 
 # (demon_wait); meanwhile another man takes over only hitting it, at arm's length or an easier kill (demon_easier:
 # DEMON_EASIER less shield and body than the Demon), and a radar dot only by the usual nearness rule (turn_ok)
 DEMON_WAIT_HURT, DEMON_WAIT_FULL, DEMON_EASIER = 3.0, 1.2, 0.5
+# (custom, Nov 13, the owner) the pre-nade (Bot.prenade: Legendary, Blind, Demon): a man it cannot see, known within
+# PRENADE_FRESH s, PRENADE_MIN-PRENADE_MAX u off and coming its way, due at his doorway in PRENADE_ETA s; a look for
+# one every PRENADE_EVERY s, once per man per PRENADE_PER_MAN s; turn within PRENADE_TURN s to PRENADE_ALIGN rad, the
+# button held PRENADE_PRESS s, the angle held PRENADE_HOLD s, the next grenade PRENADE_COOLDOWN s on.
+# PRENADE_LOFT: u of aim height over the doorway per u to it, 0 = thrown straight along the view. TODO (the owner: "the grenade
+# arc isn't super important right now but note that for later"): a range-to-loft table per game, from a throw test
+# (a bot throwing at set pitches, the landings noted) or from native reads of grenades in flight and grenade counts
+PRENADE = True
+PRENADE_FRESH, PRENADE_MIN, PRENADE_MAX, PRENADE_ETA = 2.0, 4.0, 20.0, (1.0, 2.5)
+PRENADE_EVERY, PRENADE_PER_MAN, PRENADE_TURN, PRENADE_ALIGN = 0.25, 10.0, 0.8, 0.12
+PRENADE_PRESS, PRENADE_HOLD, PRENADE_COOLDOWN, PRENADE_LOFT = 0.3, 2.5, 6.0, 0.0
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
 # where a DMR always goes over the assault rifle: in hand at every range while it is loaded (choose_weapon), and never
@@ -2456,6 +2467,8 @@ class Bot:
             # (the quick turn also when it is told to walk but slowed by the turn rule below: under 1 u/s it never came)
             s.aim.quick_ok = (me.vel.flat() > 1.0 or walking) and not s.per.pending
             act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
+            pre = kind != "retreat" and s.prenade(now, dt, me, snap, act)   # (custom, Nov 13: Legendary, Blind,
+                                                                             # Demon; its view and feet while on)
             arr = getattr(s, "arrive", None)       # Heroic and up: a grenade onto a landing he is 0.8-2.5 s from (a lift
             if (arr is not None and s.att and s.att[1] == "landing" and s.p.tier in ("strong", "top", "demon")   # exit: INTER-LIFT-02)
                     and now >= s.grenade_ready_at and 0.8 <= arr[1] - now <= 2.5 and 6.0 < dist(me.pos, arr[0]) < 18.0
@@ -2475,7 +2488,7 @@ class Bot:
             if kind == "hold":
                 act.crouch = s.p.crouchy > 0.5 and dist(me.pos, point) < 1.5
             if (kind == "objective" and snap.mode != "slayer" and s.p.tactics > 0.15 and now >= s.grenade_ready_at
-                    and not me.has_flag and me.weapon not in LUNGE      # (a Flood: 15 throws into its run, live Adrift)
+                    and not pre and not me.has_flag and me.weapon not in LUNGE   # (a Flood: 15 throws into its run, live Adrift)
                     and s.rng.random() < OBJ_NADE * dt * s.p.grenades):
                 # a grenade at the objective as it goes in: at a man believed there (seen, heard or called out in the
                 # last 3 s, 8-20 u off) who is about where it looks, with no teammate by him (Invasion territories, a
@@ -7332,6 +7345,109 @@ class Bot:
                 return
         act.fire = s.shot_now = False
         s.note("no clear line: hold fire")
+
+    def prenade_ok(s):
+        """(custom, Nov 13, the owner: "make only legendary blind and demons use the pre nade mechanic") fixed Legendary
+        (Blind with it, tier top) and Demon; not Tactician, not Scaling, not the lower tiers."""
+        return PRENADE and profiles.fixed_high(s.p) and not profiles.fixed_tactician(s.p) and s.grenades_allowed()
+
+    def prenade(s, now, dt, me, snap, act):
+        """(custom, Nov 13) A pre-nade, the owner's own play in a 1v1: a grenade at the doorway a man is about to come
+        through, thrown before either can see the other, then the angle held. The opener (a grenade once he is in view)
+        lost them gunfights: 0.6 s not shooting while he shoots. This one costs no gunfight.
+        1. An enemy it cannot see, known within PRENADE_FRESH s (eyes, radar, a hit, a callout), PRENADE_MIN-PRENADE_MAX
+           u off, moving its way (his heading within 70 degrees of the line to it).
+        2. His doorway: the walkable way from where he is (Demon: anticipate.predict, where he got to; the others his
+           last place on along his heading) to it; the first point of that way it has a line to.
+        3. The timing: his time to the doorway at a run (anticipate.RUN_SPEED) within PRENADE_ETA s (the grenade's
+           flight and fuse); earlier he waits it out, later he is through.
+        4. The throw: the view on the doorway's floor (PRENADE_LOFT: the arc, 0 for now: thrown along the view), the
+           button held PRENADE_PRESS s, then the angle held PRENADE_HOLD s standing, the gun up.
+        5. Never with a man in view (that is the opener), a teammate by the doorway (nade_clear), the doorway within
+           PRENADE_MIN of itself, its flag, a vehicle; once per man per PRENADE_PER_MAN s, the grenade cooldown after.
+        True while it is turning, throwing or holding (the view and the feet are its)."""
+        if not s.prenade_ok():
+            return False
+        st = getattr(s, "prenade_st", None)
+        if st is not None:
+            peek, until, phase, k = st
+            if now > until or (phase != "throw" and s.per.visible_enemies()) or me.vehicle not in (None, -1):
+                s.prenade_st = None
+                return False
+            aim_at = peek + Vec(0.0, 0.0, PRENADE_LOFT * dist(me.pos, peek))
+            act.yaw, act.pitch = s.aim.step(now, dt, me, None, aim_at, Vec(), False)
+            want_y, want_p = angles_to(eye(me), aim_at)
+            if phase == "turn":
+                if abs(wrap(want_y - me.yaw)) < PRENADE_ALIGN and abs(want_p - me.pitch) < PRENADE_ALIGN:
+                    s.prenade_st = (peek, now + PRENADE_PRESS, "throw", k)
+                    s.grenade_ready_at = now + PRENADE_COOLDOWN
+                    act.grenade = True
+                    s.note("pre-nade: thrown at the doorway")
+                else:
+                    s.note("pre-nade: turning to the doorway")
+            elif phase == "throw":
+                act.grenade = True
+                act.forward = act.strafe = 0.0
+                if now + dt >= until:
+                    s.prenade_st = (peek, now + PRENADE_HOLD, "hold", k)
+            else:
+                act.forward = act.strafe = 0.0
+                act.sprint = False
+                s.note("pre-nade: holding the doorway")
+            s.att = ["prenade", k, round(peek.x, 1), round(peek.y, 1)]
+            return True
+        if (me.vehicle not in (None, -1) or me.has_flag or now < s.grenade_ready_at or s.per.visible_enemies()
+                or now < getattr(s, "prenade_next", 0.0)):
+            return False
+        s.prenade_next = now + PRENADE_EVERY              # (a way search each look: not every tick)
+        T = s.T()
+        last = s.__dict__.setdefault("prenade_last", {})
+        best = None
+        from . import anticipate
+        for k, b in s.per.beliefs.items():
+            e = snap.player(k) if isinstance(k, int) else None
+            if (e is None or not e.alive or e.team == me.team or b.seen or now - b.t > PRENADE_FRESH
+                    or b.source not in ("eyes", "radar", "hit", "callout") or now - last.get(k, -99.0) < PRENADE_PER_MAN):
+                continue
+            d = dist(me.pos, b.pos)
+            if not PRENADE_MIN <= d <= PRENADE_MAX + 6.0:
+                continue
+            to = me.pos - b.pos
+            v = b.vel
+            if v.flat() < 0.5 or (v.x * to.x + v.y * to.y) < math.cos(math.radians(70)) * v.flat() * to.flat():
+                continue                                    # not coming this way
+            if profiles.fixed_demon(s.p):
+                where = anticipate.predict(T, me.pos, b, now, tracker=True)
+            else:
+                where = b.pos + Vec(v.x, v.y, 0.0) * min(1.0, now - b.t)
+            try:
+                way = T.path_ahead(where, me.pos, n=int(d * 1.6 / 0.25) + 8, limit=d * 1.6 + 6.0)
+            except Exception:
+                continue
+            walked, prev, peek = 0.0, where, None
+            for q in way:
+                walked += dist(prev, q)
+                prev = q
+                if T.los(me.pos, q):
+                    peek = q
+                    break
+            if peek is None:
+                continue
+            dp = dist(me.pos, peek)
+            eta = walked / anticipate.RUN_SPEED
+            if not (PRENADE_MIN <= dp <= PRENADE_MAX and PRENADE_ETA[0] <= eta <= PRENADE_ETA[1]):
+                continue
+            if not s.nade_clear(me, peek, snap):
+                continue
+            if best is None or eta < best[0]:
+                best = (eta, k, peek)
+        if best is None:
+            return False
+        eta, k, peek = best
+        last[k] = now
+        s.prenade_st = (peek, now + PRENADE_TURN, "turn", k)
+        s.note(f"pre-nade: #{k} due at the doorway in {eta:.1f} s")
+        return s.prenade(now, dt, me, snap, act)
 
     BOXED_S, BOXED_R = 12.0, 2.0   # s walking without leaving 1.2 u of a spot, walls on every side within BOXED_R u
 

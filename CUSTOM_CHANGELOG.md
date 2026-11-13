@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Pre-nades for Legendary, Blind and Demon: a grenade at the doorway before the fight, then the angle held, 2026-11-13
+
+The owner: "How could we make a demon and legendary bot use pre-nades? ... when I 1v1 them I can throw a grenade at their doorway before seeing them due to knowing the radar ... I turned off their opening grenade because that lost them gunfights but a pre nade would work if done right?", then "Build the first one, the grenade arc isn't super important right now but note that for later ... make only legendary blind and demons use the pre nade mechanic".
+
+- `brain/bot.py` `Bot.prenade` (called from `plan` on foot, not fighting, not retreating), `prenade_ok`:
+  1. **The read**: an enemy it cannot see, known within `PRENADE_FRESH` (2 s) by its eyes, radar, a hit or a callout, 4-26 u off, moving its way (heading within 70 degrees of the line to it).
+  2. **His doorway**: the walkable way (`Terrain.path_ahead`) from where he is now (Demon: `anticipate.predict`; the others: his last place, on along his heading) to the bot; the first point of it the bot has a line to.
+  3. **The timing**: his time there at a run (`anticipate.RUN_SPEED`, 2.25 u/s) within `PRENADE_ETA` (1.0-2.5 s: the grenade's flight and fuse); earlier he waits it out, later he is through. Looked for every `PRENADE_EVERY` (0.25 s).
+  4. **The throw**: the view turned onto the doorway's floor (up to `PRENADE_TURN` 0.8 s, to within `PRENADE_ALIGN` 0.12 rad), the button held `PRENADE_PRESS` (0.3 s), then the angle held standing `PRENADE_HOLD` (2.5 s), the gun up; the next grenade `PRENADE_COOLDOWN` (6 s) on. A man in view ends the hold (the fight takes over).
+  5. **Never**: with a man in view (that was the opener's cost), a teammate by the doorway (`nade_clear`), the doorway within 4 u of itself or past 20 u, carrying the flag, in a vehicle; once per man per `PRENADE_PER_MAN` (10 s). The objective grenade waits while a pre-nade is on.
+- **Who**: fixed Legendary, Blind and Demon (`fixed_high`, not Tactician, not Scaling); `LEGENDARY_GRENADES` must allow them. Other tiers, the opener (still off for them) and the fight's grenades unchanged. `PRENADE = False` turns it off.
+- **For later (the owner: "note that for later")**: the throw has no arc yet, `PRENADE_LOFT` 0: the grenade goes along the view onto the doorway's floor, fine near, short or long farther off. Two ways to add it: a range-to-loft table per game from a throw test (a bot throwing at set pitches, the landings noted), or native reads of grenades in flight and of grenade counts (live reads neither now, so a bot with none presses for nothing and still holds the angle).
+- Validation: new `tools/test_prenade.py` (6, a corridor whose doorway is 6 u off: Legendary, Blind and Demon throw at once for a man due in 1.1-2.3 s, the button held, then standing with the eyes on the doorway; Easy, Normal, Heroic, Tactician and Scaling never; due in 6 s or 0.4 s, in view, walking away, a teammate by the doorway: none; once per man per 10 s; the switch). All 65 `tools/test_*.py` files pass. Python only. **Untested in game**: where the grenades land with no arc.
+
 ### Demon commits to a kill: waits for a hurt man out of sight, switches only for a reason, 2026-11-13
 
 The owner: "Why do demons during a gunfight look away if LOS is broken for just a second if they have a memory of where I am?", then "I want it to have the best chance at killing anyone, always having an advantage but I also want it to commit to a kill", and on the middle ground proposed: "Yea we can test that makes those changes".
