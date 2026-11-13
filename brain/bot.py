@@ -121,6 +121,10 @@ MONGOOSE_RETRY = 30.0        # finish the objective on foot before choosing anot
 # and how often a wedged vehicle of its own is turned another way before it gets out (Bot.drive)
 WHEEL_SEEK_R = 60.0
 WHEEL_WEDGED_MAX = 3
+# (custom, Nov 13, the owner) a tank driver's main gun (Bot.vehicle_pick): a man on foot this near first, then a vehicle
+# this near, then the rest by the guide's score
+TANK_FOOT_R = 10.0
+TANK_VEHICLE_R = 40.0
 
 
 # projectile speed in world units per second (CE kit tags, tools/ce_projectiles.py: mean of
@@ -3882,6 +3886,8 @@ class Bot:
         own = snap.flags.get(me.team) if snap.flags else None
         air = (vehicles.spec(kind) or {}).get("move") == "air" and seat == "driver"
         best, top = None, 0.0
+        tank = kind in ("scorpion", "wraith") and seat == "driver"
+        bands = {}                                   # (custom, Nov 13) a tank driver's: k -> (score, band)
         for k in seen:
             b, p = s.per.beliefs[k], snap.player(k)
             if p is None:
@@ -3899,8 +3905,16 @@ class Bot:
                 off=abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - head)) if fwd_gun else None,
                 up=math.atan2(b.pos.z - me.pos.z, max((b.pos - me.pos).flat(), 0.1)), moving=b.vel.flat(), d=d,
                 in_ram=d < 18.0 and p.vehicle == -1) - 1e-4 * d
+            if tank and sc > 0.0:
+                bands[k] = (sc, 0 if pv is None and d <= TANK_FOOT_R else 1 if pv is not None and d <= TANK_VEHICLE_R
+                            else 2)
             if sc > top:
                 best, top = k, sc
+        if bands:
+            # (custom, Nov 13, the owner) a Scorpion's or Wraith's driver: a man on foot within TANK_FOOT_R first (he
+            # boards it or sticks it), else a vehicle within TANK_VEHICLE_R, else the best of the rest; the score
+            # (target_score) within each
+            return min(bands, key=lambda k: (bands[k][1], -bands[k][0]))
         return best
 
     @staticmethod

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Tank drivers: a man on foot close by first, then vehicles in range, 2026-11-13
+
+The owner: "a tank driver, scorpion or wraith prioritizes killing an enemy that's within so many units, then prioritizes vehicles. Unless an infantry is within so many more units?"; on the proposal (infantry within 10 u, then vehicles within 40 u, then the rest): "Yea we can try that at first".
+
+- Before (`brain/bot.py` `Bot.vehicle_pick`, guide 17 §4.2 `vehicles.target_score`): every enemy in sight was scored by his threat and how fast the main gun kills him, distance only a tiebreak. A man carrying a launcher scored three times one with a rifle, so a Scorpion could shell a far Warthog while a man walked up to board it, or a rocket man over a Mongoose in range.
+- Now a Scorpion's or Wraith's driver picks in bands: a man on foot within `TANK_FOOT_R` (10 u) first; else an enemy vehicle within `TANK_VEHICLE_R` (40 u); else the best of the rest (men farther off, vehicles past 40 u). Within a band, the guide's score as before (a Banshee over a Mongoose). A shot the score holds (0) stays held.
+- Every difficulty. The tank's gunner seat (Halo 3's Scorpion), the Mantis and every other vehicle unchanged; Easy's tank still shoots what it meets in front of it on its trip.
+- Validation: new `tools/test_tank_targets.py` (5: the close man first for both tanks; a Mongoose 30 u off over a rocket man 20 u off where the Mantis, uncovered, still picks the rocket man; a man 8 u off over a Banshee 15 u off the old score picked; the score within a band; past both ranges as before). All 63 `tools/test_*.py` files pass. Python only. **Untested in game.**
+
 ### Wheelman: always out looking for a gunner or a passenger, in place of the objective run, 2026-11-13
 
 The owner, on the objective run below: "Can we change number 3 I don't want it sitting idle. It should always be searching for a gunner or passenger".
