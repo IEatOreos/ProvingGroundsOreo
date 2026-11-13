@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Banshee pilots keep their attack on a man out of sight and stay on one man per run, 2026-11-13
+
+The owner: "We have to make the banshee work. They're almost near useless when a bot is driving them. Make their dive pattern more steep or give ideas on what'll make them fly more efficiently".
+
+- Measured: bot Banshee pilots in six matches (Boneyard, Valhalla, four Blood Crash). Their attacks barely lasted:
+  - The guns fired on 1-19% of their rows. 0-22% of those rows saw the man's vitals drop, and there were 0-4 kills a match.
+  - Attack runs lasted 0.1-0.3 s (median). Most ended in travel ("path", up to 87% of a pilot's time on Boneyard) or on a switch to another man. The way out and back (the "pass") lasted 0.1-0.5 s instead of seconds.
+  - Most runs fired nothing: 62 of 75 on Boneyard, 118 of 174 on Valhalla.
+  - The cause: the attack needs a man in sight this tick. Flown past him, or turned off him by a wall guard, he is out of view. The pilot then flew to its objective between structures, where the guards fought each other ("a structure by us, pull up" on 89% of Boneyard's travel rows).
+  - Dives were not shallow: the nose was 24-33 degrees down when firing (median), inside the owner's 23-46. They fired from 15-21 u, 9 u up.
+- `brain/bot.py`:
+  - `Bot.air_keep`: with nobody in sight, a pilot's run man is still its target while he is alive, in its beliefs from the last `AIR_KEEP_S` 6 s and within `AIR_KEEP_R` 60 u. The way out and the turn back into the next run fly on him. `fire_gate` still wants the clear line, so nothing is fired blind.
+  - `Bot.run_target`: while he is in sight, the run's man stays its target over the per-tick pick.
+  - Every tier but Easy, every game, Banshee-role aircraft only (`vehicles.STRATEGY` role "air").
+- Not done, tried in replay: a level approach at the run's height, then a steeper dive from 15 or 20 u flat. It cut the firing ticks in every replay (from 15 u: to 10-45% of today's), so it is left out. It can be tried in a match on its own.
+- Validation (`tools/air_replay.py`, the bot flying four real pilots' windows against the matches' enemies):
+
+  | Window | Travel ("path") before → after | Way out ("pass") | Fire ticks / min |
+  |---|---|---|---|
+  | Boneyard | 59% → 20% | 6% → 41% | 306 → 323 |
+  | Valhalla | 37% → 4% | 10% → 40% | 534 → 519 |
+  | Blood Crash bot 11 | 70% → 20% | 5% → 39% | 277 → 385 |
+  | Blood Crash bot 8 | 42% → 2% | 13% → 41% | 471 → 665 |
+
+  The guards' pull-up notes a minute fell to a fifth to a quarter. New `tools/test_banshee_runs.py` (6 tests: kept out of sight, not past 6 s, dead or 60 u, no run no keep, the run's man held in sight). All 617 regression tests pass. Hits and kills in a match are untested; the bot process must be restarted.
+
 ### Reach Headhunter: skull counts, banking and the live drop point, 2026-11-12
 
 The owner: "see if there is code for headhunter in halo reach, and if not try and start making the bots play that mode", then "Yes, build it".

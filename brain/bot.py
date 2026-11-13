@@ -549,6 +549,11 @@ AIR_ROOM_SPARE, AIR_ROOM_MIN = 1.0, 4.0
 AIR_RUN_SPEED, AIR_RUN_THROTTLE_MIN, AIR_RUN_LOW = 6.0, 0.15, 2.5
 AIR_RUN_FROM = 8.0    # u flat: a man ahead this far off or more is dived on at once (air_pass; his runs fired from 10-19 u)
 AIR_JINK, AIR_JINK_S = 0.4, 1.0   # rad, s: shot at in a run's way in (out of gun range) or way out, a swerve that long
+# (custom, Nov 13) a pilot's attack goes on out of sight (Bot.air_keep): the run's man, in its beliefs from the last
+# AIR_KEEP_S and within AIR_KEEP_R, stays its target through the way out and the turn back. A run lasted 0.1-0.3 s
+# (median, five matches): flown past him, or swung off him by a wall guard, he was out of view, the attack was
+# dropped for the trip to its objective, and the way out and the turn back into the next run never happened
+AIR_KEEP_S, AIR_KEEP_R = 6.0, 60.0
 # an attack run's ground check (Bot.air_guard): its path along the nose AIR_PULL_S ahead at its speed, under AIR_RUN_FLOOR
 # over the floor there: pull out and end the run. (The old rule, 6.8 u over the highest floor within 6 u of four points
 # 2.5 s on, fired on 44% of a replayed Shrine Banshee's ticks and held every dive 16 u over him: tools/air_replay.py)
@@ -4316,8 +4321,16 @@ class Bot:
             s.landing, s.air_dest = False, room
             s.note("air: bomb run on the objective room")
             return
+        if not seen and air and st.get("role") == "air" and not easy and not transit:
+            keep = s.air_keep(now, me, snap)     # (custom, Nov 13) the run's man out of sight: the attack goes on
+            if keep is not None:
+                seen = [keep]
+                s.note("air: out of sight, the run goes on")
         if seen and not gunned:                  # its own gun (or none): by the vehicle's role (vehicles.STRATEGY)
-            tid = (s.vehicle_pick(me, v, "driver", seen, snap) if armed else None) or \
+            # (custom, Nov 13) a pilot keeps its run's man while he is in sight (each tick's pick flipped between men:
+            # 108 of Valhalla's 174 runs ended on a new target)
+            held = s.run_target(seen) if air and st.get("role") == "air" else None
+            tid = held if held is not None else (s.vehicle_pick(me, v, "driver", seen, snap) if armed else None) or \
                 min(seen, key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
             b = s.per.beliefs[tid]
             # (an explosive shot on a tank goes to its back hatch when we are behind it: weak_point)
@@ -4675,6 +4688,23 @@ class Bot:
         if best[0] == 0 and snap.inv_attackers != me.team:
             return None
         return best[2]
+
+    def air_keep(s, now, me, snap):
+        """(custom, Nov 13) The man a pilot's attack run is on while he is out of its sight: alive, an enemy, in its
+        beliefs from the last AIR_KEEP_S (seen, heard, on radar) and within AIR_KEEP_R; else None. Its way out of the
+        run and the turn back fly on him, and its guns wait for the clear line (fire_gate)."""
+        run = getattr(s, "air_run", None)
+        tid = run[1] if run is not None else None
+        b = s.per.beliefs.get(tid) if isinstance(tid, int) else None
+        p = snap.player(tid) if b is not None else None
+        if p is None or not p.alive or p.team == me.team or now - b.t > AIR_KEEP_S or dist(me.pos, b.pos) > AIR_KEEP_R:
+            return None
+        return tid
+
+    def run_target(s, seen):
+        """(custom, Nov 13) The man of a pilot's attack run when he is among those in sight, else None."""
+        run = getattr(s, "air_run", None)
+        return run[1] if run is not None and run[1] in seen else None
 
     def air_pass(s, now, me, tid, b, aim_at, act):
         """A Banshee's attack runs (PASS_* above, the player's flying): "in", the nose on him (it flies where it looks:
