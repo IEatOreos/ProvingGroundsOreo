@@ -312,6 +312,7 @@ void h2_watch();
 void h3_watch();
 void reach_watch();
 void report_hooks();
+void session_watch_hooks();
 void odst_watch();
 void h4f_watch();
 void spawnhook_watch();
@@ -517,6 +518,7 @@ static DWORD WINAPI main_thread(LPVOID self) {
     MH_Initialize();
     overlay_start();
     report_hooks();                           // what MCC shows for the bots: names, tags, emblems (native/report.cpp)
+    session_watch_hooks();                    // (custom, Nov 13) watch only: MCC's session list (native/session_watch.cpp)
     for (;;) {
         g_shm->dll_alive++;
         uint8_t* h1 = (uint8_t*)GetModuleHandleW(L"halo1.dll");

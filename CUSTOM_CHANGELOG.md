@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### MCC's session list: a watch-only log, 2026-11-13
+
+The owner wants the bots as rows in MCC's own MY GAME SESSION list. MCC's post-game report and Player Details already take the bots' made-up ids, with Career all 0 and no crash. A static read of MCC (Oct 31 2026 exe) found one function, `NotifyUIOfSessionMemberUpdate`, that builds the session's players as a one-way message for the roster panel and the menus. The owner: "Yes, build it" (the watch first).
+
+- **`native/session_watch.cpp`** (new; `session_watch_hooks` from `botcore.cpp`, added to `build.bat`): it hooks that function (only to note which caller sent it) and the roster system's receiver. Each time the list changes, it logs one `session list:` line: each player's id, name, second string, flags and numbers, plus the caller. Nothing is changed or added. The prologues and the call site are checked first, and any other MCC build leaves the watch off. The log is capped at 400 lines.
+- Validation: the DLL builds (`botcore_sessionwatch.dll`). **Untested in game**, and no bots appear in MCC's list yet.
+
 ### Bot Matchmaking: parties, Name*N turns and teams dealt by points, 2026-11-13
 
 The owner: a "party system" so bots "that have the same clan tag are always on the same team" and come up together; "the reason I have duplicate names is to represent the same player"; "a point system to each difficulty so when a lobby is made that bots are balanced to each team based on the overall points per team", only from the seats' own bots ("I don't want the script to search out perfect teams ... take the next 7 players and balance them"); "make human players 20 points"; of the even splits "40% B style and 60% A style"; then "Implement it", with the `*5` lines. His picks: the Group parties button (not the party helper), rebalance only when a lobby fills, Scaling 8 points, 3-4 team games balanced as close as it can.
