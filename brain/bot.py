@@ -571,7 +571,12 @@ AIR_ROOF_M = 2.5     # u: an aircraft's middle stays this far under the map's ro
 # 1 s or more faster; logs/tmp/owner_rmb_speed.py.) Reach's fuel rod is cycled to like a secondary: 10 shots from 10-31
 # u (median 16.5), about every 17 s; the cycle to the shot 0.67 s, the shot to the cycle back 0.44 s
 # (logs/tmp/owner_fuelrod.py, his key 1 pairs)
-FUELROD_R, FUELROD_EVERY, FUELROD_FIRE, FUELROD_SHOT, FUELROD_BACK = (10.0, 31.0), 15.0, 0.67, 0.15, 0.44
+FUELROD_R, FUELROD_EVERY, FUELROD_FIRE, FUELROD_SHOT, FUELROD_BACK = (10.0, 31.0), 6.0, 0.67, 0.15, 0.44
+# (custom, Nov 13: the owner, "I'd like the reach and halo 4 banshee pilots to use the bomb a lot more as it's a lot
+# stronger than the plasma casters") FUELROD_EVERY 15 -> 6 s, about a bomb a run (his Reach rhythm was one every
+# 17 s; the game's own recharge is not read: a cycle to a bomb still recharging costs 1.3 s of cannons); the bomb
+# goes with the nose within BOMB_GUN_R of him (its blast), not the cannons' AIR_GUN_R. Recent matches: 3-8 bombs
+BOMB_GUN_R = 3.0
 RAM_ERR = {"average": 20.0, "strong": 12.0, "top": 0.0, "demon": 0.0}   # a ram's heading error, degrees at most (guide 18 2.1; Easy never rams)
 BOOST_R, BOOST_CONE, BOOST_HOLD, BOOST_EVERY = 8.0, math.radians(20.0), 0.85, 3.0   # Bot.ram_boost (a skilled player's)
 FLEE_D, FLEE_PROGRESS, FLEE_REST = 8.0, 0.6, 5.0   # a boarder fled by open ground FLEE_D u on; under FLEE_PROGRESS u
@@ -4849,7 +4854,9 @@ class Bot:
             elif on and lo <= d <= hi and now >= getattr(s, "fire2_next", 0.0):
                 s.fire2_until, s.fire2_next = now + FIRE2_HOLD, now + FIRE2_EVERY
                 act.fire2 = True
-        if (getattr(s, "can_cycle", s.game == "reach") and getattr(s, "veh_kind", "banshee") == "banshee" and on
+        rb = math.atan2(BOMB_GUN_R, max(d, 1.0))     # (custom, Nov 13: the bomb's wider window, its blast)
+        bomb_on = on or (abs(wrap(ya - act.yaw)) < rb and abs(pa - act.pitch) < rb)
+        if (getattr(s, "can_cycle", s.game == "reach") and getattr(s, "veh_kind", "banshee") == "banshee" and bomb_on
                 and FUELROD_R[0] <= d <= FUELROD_R[1] and getattr(s, "rod", None) is None
                 and now >= getattr(s, "rod_next", 0.0) and (s.game == "reach" or me.pos.z - b.pos.z >= 2.0)):
             # (the bomb from over him; Reach's fuel rod straight on) fuel_rod() from drive does the cycle, shot, cycle

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Reach and Halo 4 Banshee pilots drop the bomb about every run, 2026-11-13
+
+The owner: "I'd like the reach and halo 4 banshee pilots to use the bomb a lot more as it's a lot stronger than the plasma casters".
+
+- Before: a bomb at most every 15 s (`FUELROD_EVERY`, from the owner's Reach rhythm, one every 17 s), and only with the nose within the cannons' 1.5 u of the man. Recent matches: 16 cycle presses on Boneyard (about 8 bombs), 6-14 in each of four Blood Crash matches (3-7 bombs).
+- `brain/bot.py` `air_pass`, Reach and Halo 4 (the games where the cycle is decoded; Halo 3 and H2A still have no bomb input):
+  - `FUELROD_EVERY` 15 -> 6 s: about one bomb a run.
+  - The bomb goes with the nose within `BOMB_GUN_R` 3 u of him (its blast), the cannons still within `AIR_GUN_R` 1.5 u.
+  - Unchanged: 10-31 u off, in Halo 4 from 2 u or more over him, the cycle timing (`fuel_rod`).
+- The game's own bomb recharge is not read (the kits are not on this PC). A cycle to a bomb that is still recharging drops nothing and costs about 1.3 s of cannons.
+- Validation (`tools/air_replay.py`, three real pilots' windows, the cycle on as live): bombs 3 -> 6 (Boneyard, 56 s), 3 -> 6 and 4 -> 8 (Blood Crash, 74 and 58 s); cannon fire ticks 11-16% fewer (the cycles). `tools/test_banshee_runs.py` +3 (a bomb with the nose 2 u off him, none 4 u off, the gap). All 631 regression tests pass. Bomb hits in a match are untested; the bot process must be restarted.
+
 ### The Wheelman play style: always goes for a vehicle, a Warthog first, and keeps driving, 2026-11-13
 
 The owner: "Should we make a personality that always wants to drive warthogs? Like driver", "Or call it wheelman", then "Keep the two as they are now" (no Demon at a Warthog's, Mongoose's or Ghost's wheel; Easy never sent to drive a person on a gun).
