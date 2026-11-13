@@ -24,6 +24,52 @@ The owner: "see if there is code for headhunter in halo reach, and if not try an
   - All `tools/test_*.py` pass (592 tests). `tools/live_bots.py` compiles.
   - **Untested in game:** the whole mode. Whether Reach's skulls read as loose objects the way Oddball's do, whether the team score reads in Headhunter, and how Reach's drop points move are not yet seen live.
 
+### Halo 4: every tier takes a Sword, Hammer or SAW over its AR, 2026-11-12
+
+- The owner, Nov 12: "Yes, fix that too", after the note below. Before, in Halo 4 a bot on BR + AR took no sword, gravity hammer or SAW: they added 0.07-0.08 to the AR's Short 1.0, at the game's 0.08 bar. Demons got them by `power_grab` only.
+- `brain/bot.py` `POWER_PICKUP_GAMES` {"h4", "reach"}, `POWER_PICKUP_RANK` 3.8, `power_gun`: a power gun (rank 3.8 and up, and in Reach `NEEDLE_YIELDS_TO`) is worth at least the bar + `OVER_AR_MARGIN` to a bot carrying no loaded power gun (`upgrade_point`), every tier. `drop_slot` gives up as before: the AR from BR + AR, the Boltshot from BR + Boltshot.
+  - Halo 4's Shotgun (3.4) is not one: the playtest note at `DMR_OVER_AR` ("a shotgun is not taken over the AR either") and `test_reach_loadout`'s Halo 4 case. Counted as one at first by Reach's list, that test failed.
+- Checked through `upgrade_point` and `drop_slot`:
+  - Halo 4, Normal, Heroic, Legendary and Demon: sword, hammer and SAW taken from BR + AR (the AR dropped) and BR + Boltshot (the Boltshot dropped).
+  - A loaded SAW or sword carried is not traded for the other; an empty one is.
+  - With a sword and rockets lying there, the rockets.
+  - Easy keeps its walk-over reach (`ON_THE_WAY`): a gun 3 u off is not taken.
+  - Reach: shotgun, sword, hammer, Plasma Launcher and sniper taken from DMR + AR (as before), and a sniper carrier passes a shotgun. Halo 3 as before.
+- Validation: `tools/test_needle_over_dmr.py` +3 (Halo 4's three over BR + AR and BR + Boltshot; a power gun carried is not traded unless empty; the better power gun wins), 11 in the file. All 597 regression tests pass (with other work in progress in the tree). Gameplay is untested.
+
+### Grenade Launcher and Concussion Rifle take the AR's place, power guns still first, 2026-11-12
+
+- The owner, Nov 12: "I do want every weapon to pretty much outweigh the ar combo. So raise the concussion and grenade launcher scores. And the distance scores can be raised to 100 for close and medium".
+- Before: from DMR + AR (Reach) or BR + AR (Halo 4) they added -0.06 to -0.09, never picked up.
+- `brain/bot.py`:
+  - `BANDS`: Short and Medium 1.0. The Grenade Launcher was (0.4, 0.9, 0.4, 0.1), the Concussion Rifle (0.6, 0.8, 0.3, 0.05).
+  - `RANK_GAME`: Reach's Grenade Launcher and Concussion Rifle 3.5 (were 3.0 and 2.8), Halo 4's Concussion Rifle 3.6: the rifle's beside them, no higher.
+  - `OVER_AR_GUNS`: to a bot carrying an AR, a loose one is worth the game's bar + `OVER_AR_MARGIN` 0.005 (`upgrade_point`), and `drop_slot` gives up the AR. Not while a power gun (`NEEDLE_YIELDS_TO`, or rank 4.0 and up) lies within reach.
+- Tried first and dropped: ranks 3.6 (Reach) and 3.85 (Halo 4) got them picked up (+0.10), but their rank's pull took most of a power gun's. Carrying one with a rifle, a sniper, fuel rod, gravity hammer, Focus Rifle, Plasma Launcher or Shotgun (Reach), or a Railgun, fuel rod, sword, hammer or SAW (Halo 4), lying there was left.
+- Checked through `upgrade_point` and `drop_slot`:
+  - Reach, both guns: taken from DMR + AR, AR + Magnum and Needle Rifle + AR (the AR dropped), Plasma Repeater + Plasma Pistol (the Repeater) and DMR + Magnum (the Magnum).
+  - Halo 4, Concussion Rifle: taken from BR + AR, DMR + AR and Light Rifle + AR (the AR), and BR + Boltshot (the Boltshot).
+  - Power guns: never dropped for one. With one carried beside a rifle, rockets, sniper, laser and sword are still taken. With both lying there, the power gun.
+  - Left: in Reach a Grenade Launcher a step nearer is taken over a Shotgun or Plasma Launcher (its Short 1.0 now matches theirs), and one carried is not swapped for them.
+- Seen, not changed: in Halo 4 a bot on BR + AR takes no sword, gravity hammer or SAW (they add 0.07-0.08 to the AR's 1.0 Short, at the 0.08 bar). Demons get them by `power_grab`.
+- Validation: `tools/test_needle_over_dmr.py` +2 (both take the AR's place in Reach and Halo 4; a power gun comes before them, carried, lying beside them, and never dropped). 8 in the file. All 594 regression tests pass (with other work in progress in the tree). Gameplay is untested.
+
+### Reach: bots take a Needle Rifle over a DMR, but not over a power weapon, 2026-11-12
+
+- The owner, Nov 12: "I want bots to pick up the needler rifle over a dmr cause its better. but I dont want them to pick it up over a power weapon".
+- Before: rank 3.0 (the general table), bands 0.6/1.0/0.9/0.5, against Reach's DMR 3.5 with 0.6/1.0/1.0/0.7. From DMR + AR a Needle Rifle added -0.045, under Reach's 0.05 bar.
+- A higher rank alone was no good. At 3.8 it replaced the DMR (+0.075), but from Needle Rifle + AR a sniper, fuel rod or gravity hammer then added only 0.02 (the power pull counts only the top-ranked gun), and the Focus Rifle, Plasma Launcher and Shotgun lost to it.
+- `brain/bot.py`:
+  - `NEEDLE_OVER_DMR` {"reach"}: a loose Needle Rifle is worth `NEEDLE_SWAP_GAIN` 0.055 to a bot carrying a DMR (`upgrade_point`), and `drop_slot` gives up the DMR for it.
+  - `NEEDLE_YIELDS_TO` (rockets, sniper, Focus Rifle, Spartan Laser, fuel rod, Plasma Launcher, sword, gravity hammer, Shotgun, Grenade Launcher, Concussion Rifle): with one of them lying within reach, the Needle Rifle has its own gain only.
+  - `RANK_GAME["reach"]["needle_rifle"]` 3.5, the DMR's (no power pull).
+- Checked through `upgrade_point` and `drop_slot`:
+  - DMR + AR takes it and drops the DMR; AR + Magnum drops the AR; Needle Rifle + AR leaves a DMR lying there.
+  - Carrying a power gun + DMR, it drops the DMR and keeps the power gun.
+  - From Needle Rifle + AR, every power gun is taken but the Grenade Launcher and Concussion Rifle (not taken from DMR + AR before either).
+  - With both lying there, the Needle Rifle a step nearer, the power gun is taken.
+- Validation: new `tools/test_needle_over_dmr.py`, 6 tests. All 576 regression tests pass (with other work in progress in the tree). Gameplay is untested.
+
 ### Bots answer the owner's Falcon and pickups; carriers ride; no Demon in a Ghost, 2026-11-12
 
 The owner: "when I drive the falcon no bot enters it tell me why, also bots don't get in a warthog or mongooses passenger when carrying the bomb or flag. And finally make demon bots not drive ghosts".

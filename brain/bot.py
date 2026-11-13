@@ -62,7 +62,10 @@ BANDS = {
     "gravity_hammer": (1.0, 0.2, 0.0, 0.0), "spike_rifle": (0.8, 0.4, 0.05, 0.0),
     # Halo: Reach
     "dmr": (0.6, 1.0, 1.0, 0.7), "needle_rifle": (0.6, 1.0, 0.9, 0.5), "focus_rifle": (0.1, 1.0, 1.0, 1.0),
-    "grenade_launcher": (0.4, 0.9, 0.4, 0.1), "plasma_launcher": (0.3, 0.9, 0.7, 0.3), "concussion_rifle": (0.6, 0.8, 0.3, 0.05),
+    # (custom, Nov 12: the Grenade Launcher's and Concussion Rifle's Short and Medium 1.0, were 0.4 / 0.9 and 0.6 / 0.8,
+    # and their ranks up, RANK_GAME. The owner: "I do want every weapon to pretty much outweigh the ar combo". Before,
+    # from DMR + AR or BR + AR they added -0.06 to -0.09 and were never picked up)
+    "grenade_launcher": (1.0, 1.0, 0.4, 0.1), "plasma_launcher": (0.3, 0.9, 0.7, 0.3), "concussion_rifle": (1.0, 1.0, 0.3, 0.05),
     "plasma_repeater": (0.9, 0.7, 0.2, 0.0),
     # Halo 4
     "lightrifle": (0.6, 1.0, 1.0, 0.7), "binary_rifle": (0.2, 0.6, 1.0, 1.0), "railgun": (0.6, 1.0, 0.7, 0.3),
@@ -316,6 +319,28 @@ UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to b
 # dropped for one, the AR given up for one first (drop_slot). Playtest, Nov 7: the bots do not play the AR's close
 # fights as people do; the DMR suits them (and a shotgun is not taken over the AR either)
 DMR_OVER_AR = {"reach", "h4"}
+# (custom, Nov 12) where the Needle Rifle takes the DMR's place: a loose one is worth NEEDLE_SWAP_GAIN to a bot carrying
+# a DMR, the DMR given up for it (drop_slot), and it ranks with the DMR (RANK_GAME 3.5, was 3.0). Just over Reach's
+# UPGRADE_GAIN_GAME 0.05, under a power gun's gain (the Shotgun's 0.06 up). The owner: "I want bots to pick up the
+# needler rifle over a dmr cause its better. but I dont want them to pick it up over a power weapon". A rank of 3.8
+# would have done the first and cost the second: from Needle Rifle + AR a sniper, fuel rod or hammer gained 0.02
+NEEDLE_OVER_DMR = {"reach"}
+NEEDLE_SWAP_GAIN = 0.055
+# ... and it gives way to a power gun lying within reach: that one is weighed on its own gain (a Shotgun's 0.06 lost to
+# a Needle Rifle a step nearer; ranked over the DMR, its 0.02 of power pull cost the Plasma Launcher its 0.06)
+NEEDLE_YIELDS_TO = frozenset(("rockets", "sniper", "focus_rifle", "spartan_laser", "fuelrod", "plasma_launcher",
+                              "sword", "gravity_hammer", "shotgun", "grenade_launcher", "concussion_rifle"))
+# (custom, Nov 12) guns that take the AR's place (the owner: "I do want every weapon to pretty much outweigh the ar
+# combo"): to a bot carrying an AR a loose one is worth just over the game's bar, the AR given up (drop_slot), unless a
+# power gun (NEEDLE_YIELDS_TO, or rank 4.0 and up) lies within reach. Their bands' Short and Medium are 1.0 and their
+# rank the rifle's (RANK_GAME), so their rank takes no power gun's pull
+OVER_AR_GUNS = frozenset(("grenade_launcher", "concussion_rifle"))
+OVER_AR_MARGIN = 0.005
+# (custom, Nov 12) a power gun (NEEDLE_YIELDS_TO, or rank POWER_PICKUP_RANK and up: Halo 4's sword and hammer 3.8, the
+# SAW 4.0) is worth at least the bar + OVER_AR_MARGIN to a bot carrying none, every tier, in these games: in Halo 4 a bot
+# on BR + AR took no sword, hammer or SAW (0.07-0.08 over the AR's Short 1.0, at the 0.08 bar); Demons only by power_grab
+POWER_PICKUP_GAMES = {"h4", "reach"}
+POWER_PICKUP_RANK = 3.8
 UPGRADE_R, UPGRADE_ON_WAY = 14.0, 6.0  # u: a better gun this near is weighed; this near, its post does not hold it back
 EYES_KEEP = 3.0                        # s every bot keeps watching where a man it saw went (look_point)
 HIT_KEEP, HIT_WHIP = 2.0, 0.35         # a hit is turned to this long at least, with this spin at least (Normal's): Easy too
@@ -614,11 +639,15 @@ EMP_GAMES = {"h3", "odst", "reach", "h4"}
 # games where the magnum is a real gun (guide 03: Reach's 5-shot kill, Halo 4's 6), the AR a fair one (Reach: the
 # plasma repeater is the Elites' assault rifle; the plasma pistol is the weakest gun in the game, kept for its
 # overcharge: the repeater had no rank or band row, read as a 2 u gun, and the pistol won every fight past 4 u)
-RANK_GAME = {"reach": {"dmr": 3.5, "focus_rifle": 3.6, "magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6,
+# (Reach's needle_rifle 3.5, the DMR's, was 3.0: custom, Nov 12, NEEDLE_OVER_DMR)
+# (Reach's grenade_launcher / concussion_rifle 3.5, were 3.0 / 2.8, Halo 4's concussion_rifle 3.6: custom, Nov 12, the
+# rifle's beside them and no higher (OVER_AR_GUNS). At 3.6 in Reach and 3.85 in Halo 4 the pull of their rank took most of
+# a power gun's: carrying one with a rifle, a sniper, fuel rod, hammer, Railgun or SAW lying there was left)
+RANK_GAME = {"reach": {"dmr": 3.5, "needle_rifle": 3.5, "focus_rifle": 3.6, "grenade_launcher": 3.5, "concussion_rifle": 3.5, "magnum": 2.6, "assault_rifle": 2.2, "plasma_repeater": 2.3, "plasma_pistol": 1.0}, "h4": {"magnum": 2.2, "assault_rifle": 2.6,
              # (custom, the owner's Halo 4 power-weapon order, 2026-11-08)
              "incineration_cannon": 5.0, "sniper": 5.0, "beam_rifle": 5.0, "rockets": 4.9, "binary_rifle": 4.8,
              "spartan_laser": 4.5, "railgun": 4.2, "fuelrod": 4.2, "sword": 3.8, "gravity_hammer": 3.8,
-             "lmg": 4.0, "lightrifle": 3.6, "shotgun": 3.4, "scattershot": 3.4},
+             "lmg": 4.0, "lightrifle": 3.6, "shotgun": 3.4, "scattershot": 3.4, "concussion_rifle": 3.6},
              "h3": {"magnum": 1.2}}
 
 
@@ -4950,6 +4979,16 @@ class Bot:
                 continue
             keep = inv if len(inv) < 2 else [w for k, w in enumerate(inv) if k != s.drop_slot(inv, ammo, n)]
             gain = loadout_value(keep + [n], s.rank, s.game) - have
+            if (s.game in NEEDLE_OVER_DMR and n == "needle_rifle" and "dmr" in inv and "dmr" not in keep
+                    and not any(m in NEEDLE_YIELDS_TO and dist(me.pos, p) < reach for m, p in snap.ground_weapons)):
+                gain = max(gain, NEEDLE_SWAP_GAIN)          # (custom, Nov 12: the Needle Rifle for its DMR)
+            if (n in OVER_AR_GUNS and "assault_rifle" in inv and "assault_rifle" not in keep
+                    and not any(m not in OVER_AR_GUNS and (m in NEEDLE_YIELDS_TO or s.rank(m) >= 4.0)
+                                and dist(me.pos, p) < reach for m, p in snap.ground_weapons)):
+                gain = max(gain, minimum_gain + OVER_AR_MARGIN)   # (custom, Nov 12: OVER_AR_GUNS for its AR)
+            if (s.game in POWER_PICKUP_GAMES and s.power_gun(n)
+                    and not any(s.power_gun(w) for w, a in zip(inv, ammo) if a != 0)):
+                gain = max(gain, minimum_gain + OVER_AR_MARGIN)   # (custom, Nov 12: a power gun, none carried)
             if gain > minimum_gain and (best is None or gain - 0.01 * d > best[0]):
                 best = (gain - 0.01 * d, q, n)
         if best is None:
@@ -4966,6 +5005,12 @@ class Bot:
         for (m, spot), n in DEAD_SPOTS.items():
             if m == name and n >= DEAD_SPOT_FAILS:
                 skip[spot] = math.inf
+
+    def power_gun(s, w):
+        """(custom) A power gun for the pickup rules: rank POWER_PICKUP_RANK and up; in Reach NEEDLE_YIELDS_TO too. (Not
+        Halo 4's Shotgun, 3.4: "a shotgun is not taken over the AR either", the playtest note at DMR_OVER_AR, and
+        test_reach_loadout's Halo 4 case)"""
+        return s.rank(w) >= POWER_PICKUP_RANK or (s.game == "reach" and w in NEEDLE_YIELDS_TO)
 
     def swap_rested(s, me, snap):
         """Spots where this bot swapped guns in the last 20 s (the gun it dropped lies there now): no upgrade from them.
@@ -4987,6 +5032,10 @@ class Bot:
             return loadout_value([w for i, w in enumerate(inv) if i != k] + ([new] if new else []), s.rank, s.game)
 
         def dmr_rule(k):            # (DMR_OVER_AR: never the DMR for an AR; for a DMR, the AR goes first)
+            if s.game in NEEDLE_OVER_DMR and new == "needle_rifle":
+                return -1 if inv[k] == "dmr" else 0         # (custom, Nov 12: the DMR goes for a Needle Rifle)
+            if new in OVER_AR_GUNS and "assault_rifle" in inv:
+                return -1 if inv[k] == "assault_rifle" else 0   # (custom, Nov 12: the AR goes, OVER_AR_GUNS)
             if s.game not in DMR_OVER_AR:
                 return 0
             return 1 if inv[k] == "dmr" and new == "assault_rifle" else -1 if inv[k] == "assault_rifle" and new == "dmr" else 0
