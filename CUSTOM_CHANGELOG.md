@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Tank drivers: a man with a vehicle killer in range counts with the vehicles, 2026-11-13
+
+The owner, on the tank targeting below: "Can you change the one mongoose scenario?" (a Mongoose 30 u off picked over a rocket man 20 u off).
+
+- `brain/bot.py` `Bot.vehicle_pick`: a man on foot carrying a gun that kills vehicles (`VEHICLE_KILLERS`: rockets, Spartan Laser, Plasma Launcher, missile pod, railgun, fuel rod, incineration cannon) within `TANK_VEHICLE_R` (40 u) is in the vehicles' band, the second, and the guide's score decides among them: a rocket man 20 u off now goes before a Mongoose 30 u off. A man within 10 u still goes first whatever he carries; one with a rifle past 10 u stays with the rest.
+- A correction to the entry below: its test named the launcher "rocket_launcher", the brain's name is "rockets", so its "rocket man" carried a pistol to the score. The example there (a Mongoose over him) held for a man with a rifle, not a launcher.
+- Validation: `tools/test_tank_targets.py` (6: a rocket man 20 u off over a Mongoose 30 u off for both tanks, not past 40 u; a man with a pistol 20 u off still after the Mongoose; past both ranges the plain score, checked against `target_score`). All `tools/test_*.py` files pass. Python only. **Untested in game.**
+
 ### LiDAR Simulator: simulate every map of one game, 2026-11-13
 
 The owner: "can we add an option to lidar simulate all the maps in a per game basis? So if I want to simulate all of reach I can do that instead of having to Que them all".

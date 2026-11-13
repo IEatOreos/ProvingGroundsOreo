@@ -3906,14 +3906,16 @@ class Bot:
                 up=math.atan2(b.pos.z - me.pos.z, max((b.pos - me.pos).flat(), 0.1)), moving=b.vel.flat(), d=d,
                 in_ram=d < 18.0 and p.vehicle == -1) - 1e-4 * d
             if tank and sc > 0.0:
-                bands[k] = (sc, 0 if pv is None and d <= TANK_FOOT_R else 1 if pv is not None and d <= TANK_VEHICLE_R
-                            else 2)
+                # (a man on foot with a gun that kills vehicles, VEHICLE_KILLERS, is ranked with the vehicles: the owner,
+                # "change the one mongoose scenario", a rocket man 20 u off over a Mongoose 30 u off)
+                bands[k] = (sc, 0 if pv is None and d <= TANK_FOOT_R else
+                            1 if (pv is not None or p.weapon in VEHICLE_KILLERS) and d <= TANK_VEHICLE_R else 2)
             if sc > top:
                 best, top = k, sc
         if bands:
             # (custom, Nov 13, the owner) a Scorpion's or Wraith's driver: a man on foot within TANK_FOOT_R first (he
-            # boards it or sticks it), else a vehicle within TANK_VEHICLE_R, else the best of the rest; the score
-            # (target_score) within each
+            # boards it or sticks it), else a vehicle or a man with a vehicle killer within TANK_VEHICLE_R, else the best
+            # of the rest; the score (target_score) within each
             return min(bands, key=lambda k: (bands[k][1], -bands[k][0]))
         return best
 
