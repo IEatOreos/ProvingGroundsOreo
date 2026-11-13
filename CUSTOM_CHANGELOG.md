@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Wheelman: first to pick up our carrier, the getaway ride, and an objective run, 2026-11-13
+
+The owner: "Can we also add to wheelman to always go pick up flag carriers or objective? Or is that already baked in to a driver", then "Add all three".
+
+- **Our carrier** (`brain/director.py` `ferry_orders`): a Wheelman at the wheel of a vehicle with a passenger seat free is sent for our flag or bomb carrier on foot before a nearer driver, from `WHEEL_CREW_REACH` (70 u; other drivers 45). The getaway ride waiting for him still goes first, from any distance. The carrier still gets in within 10 u, as before.
+- **The getaway ride** (`vehicle_jobs`): drivers are now weighed Wheelmen first, so the team's one getaway ride (parked on the way out of their base while our runners go for their flag) is a Wheelman's; other drivers in their old order.
+- **The objective run** (`vehicle_jobs`): a Wheelman with no other job (no carrier to hunt or escort, no riders to take, no getaway, no enemy vehicle for its tank, no gunner to fetch) drives to the objective (`straight_objective`: their flag, the hill, the ball, the bomb, a drop point), there to be when a ride is wanted. Not in a Mongoose, nor as a runner or a ferry. Slayer: its patrol, as before. Riders aboard: taken to their own objective, as for every driver.
+- **Unchanged**: a Demon Wheelman still never drives a Warthog, Mongoose or Ghost; other drivers' jobs as before.
+- Validation: `tools/test_wheelman.py` adds 3 (14 in all: the carrier sent to a Wheelman at 60 u over a Normal at 20 u, not at 80 u, and no other driver from 60 u; the getaway ride to a Wheelman listed second and, with none, to the first driver as before; the objective run in CTF to their flag, none for a Rusher or in Slayer). All 62 `tools/test_*.py` files pass. Python only: a bot-process restart, no new DLL. Committed as dafbdad, this entry after it (the changelog was being edited at the same time). **Untested in game.**
+
 ### LiDAR Viewer and Simulator: zoom where you point, double-click to fly there, arrow keys to move, 2026-11-13
 
 The owner: "in the LiDAR simulator can we make it to where I can traverse the map better instead of just being able to rotate? I would like to free move around the map and zoom in to where I exactly need to edit."
