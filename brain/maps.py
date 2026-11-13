@@ -361,6 +361,24 @@ def owner_ride_pads(features, names):
     return out
 
 
+VEHICLE_BLOCKS = "vehicle_blocks.json"   # (custom, Nov 13) areas the owner keeps every ground vehicle out of
+
+
+def owner_vblocks(name):
+    """The owner's vehicle blockers for map folder `name` (maps/<name>/vehicle_blocks.json, the LiDAR view's Edit
+    spots): [(centre Vec, radius)], the malformed ones left out (Terrain.vblock_nodes)."""
+    path = os.path.join(ROOT, name, VEHICLE_BLOCKS)
+    if not os.path.exists(path):
+        return []
+    out = []
+    for b in (read_json(path) or {}).get("blocks", []):
+        p, r = (b.get("pos"), b.get("r")) if isinstance(b, dict) else (None, None)
+        if (isinstance(p, list) and len(p) == 3 and all(isinstance(v, (int, float)) for v in p)
+                and isinstance(r, (int, float)) and 0.0 < r <= 30.0):
+            out.append((_v(p), float(r)))
+    return out
+
+
 def usable_links(links, pvp=None):
     """LiDAR links bots may use: people's; jumps a bot called and landed on the call, in a match or in the
     simulator (tools/lidar_sim.py); others bots did twice. Not ones bots keep failing. In PvP matches
@@ -533,6 +551,7 @@ def _build(m, window):
                 stair_rule=m["name"].startswith(("h4_", "h2a_")),
                 window=window, walked=walked, lifts=[f["pos"] for f in m.get("features", []) if f.get("kind") == "lift"])
     T.add_links(m["teleporters"])
+    T.vblocks = [b for nm in names for b in owner_vblocks(nm)]   # (custom, Nov 13: no vehicle in these, every size)
     if not m["name"].startswith(("h2_", "h3_", "reach_", "odst_", "h2a_", "h4_")):  # jump links, for skilled bots (CE jump physics; ponytail:
         T.build_jumps()                  # Halo 2's jump is not measured yet, so no gap jumps there)
     data = {}

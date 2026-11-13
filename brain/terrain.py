@@ -1487,10 +1487,11 @@ class Terrain:
         x, y = s.x0 + (i + 0.5) * NAV_CELL, s.y0 + (j + 0.5) * NAV_CELL
         return Vec(x, y, float(s.lz[l, j, i]))
 
-    def _straight_ok(s, a, l, j, i, ground=None):
+    def _straight_ok(s, a, l, j, i, ground=None, avoid=()):
         """Can you walk in a straight line from a to node (l, j, i) without climbing a wall? ground (a vehicle's: vnav
         passes vroomy): a wall's cell on that ground is no wall; its painted floor runs by walls (Spire's people's road
-        at (-139.9, -348.3): the look ahead stopped at the next cell)."""
+        at (-139.9, -348.3): the look ahead stopped at the next cell). avoid: node ids no shortcut crosses (custom, Nov
+        13: vnav's vehicle blockers and wedge marks; the path itself goes round them)."""
         b = s._center(l, j, i)
         L = math.hypot(b.x - a.x, b.y - a.y)
         n = max(2, int(L / (NAV_CELL * 0.5)))
@@ -1507,6 +1508,8 @@ class Terrain:
             if ll is None or s.lz[ll, jj, ii] < prev - 0.6:
                 return False      # (no drop off a ledge: the path search knows its rails and slits, Countdown)
             if oob is not None and oob[ll, jj, ii]:
+                return False
+            if avoid and (ll * s.nh + jj) * s.nw + ii in avoid and (jj, ii) != start[1:] and (jj, ii) != (j, i):
                 return False
             if (s.near_wall[ll, jj, ii] and (ground is None or not ground[ll, jj, ii]) and (jj, ii) != start[1:]
                     and (jj, ii) != (j, i)):
@@ -2158,6 +2161,37 @@ class Terrain:
             for k in ("_vground", "_vpiece", "_vnear"):
                 d.pop(k, None)
 
+    VBLOCK_DZ = 2.5      # u: a blocker's floors, over and under its middle (one floor of a base, not the deck over it)
+
+    def vblock_nodes(s):
+        """(custom, Nov 13) The nav cells inside the owner's vehicle blockers (s.vblocks: [(centre Vec, radius)], from
+        maps/<map>/vehicle_blocks.json, the LiDAR view's Edit spots): off every vehicle size's ground (_build_vnav)
+        and a wall to drive_clear. Worked out once per set of blockers. ("It was trying to push into the base at home
+        which I want vehicles to avoid at all sizes", the owner, Nov 13)"""
+        blocks = getattr(s, "vblocks", ())
+        key = tuple((round(c.x, 2), round(c.y, 2), round(c.z, 2), round(r, 2)) for c, r in blocks)
+        got = s.__dict__.get("_vblock_cache")
+        if got is not None and got[0] == key:
+            return got[1]
+        out = set()
+        for c, r in blocks:
+            if not s.inside(c.x, c.y):
+                continue
+            k = int(math.ceil(r / NAV_CELL))
+            j0, i0 = s._cell(c)
+            for j in range(max(0, j0 - k), min(s.nh, j0 + k + 1)):
+                for i in range(max(0, i0 - k), min(s.nw, i0 + k + 1)):
+                    x, y = s.x0 + (i + 0.5) * NAV_CELL, s.y0 + (j + 0.5) * NAV_CELL
+                    if math.hypot(x - c.x, y - c.y) > r:
+                        continue
+                    for l in range(s.L):
+                        z = s.lz[l, j, i]
+                        if math.isfinite(z) and abs(z - c.z) <= s.VBLOCK_DZ:
+                            out.add((l, j, i))
+        s._vblock_cache = (key, out)
+        s._vblock_ids = {(l * s.nh + j) * s.nw + i for l, j, i in out}
+        return out
+
     def _build_vnav(s):
         """The ground a vehicle can drive: the walking graph's edges between nodes VEH_ROOM cells clear of any wall
         (doors, corridors, stair wells are out), no step up of more than VEH_RISE a cell (a ramp, not a stair),
@@ -2184,6 +2218,7 @@ class Terrain:
                 blocked |= {(l0, j0 + dj, i0 + di) for dj in (-1, 0, 1) for di in (-1, 0, 1)
                             if 0 <= j0 + dj < roomy.shape[1] and 0 <= i0 + di < roomy.shape[2]}
         blocked -= hand
+        blocked |= s.vblock_nodes()              # (custom, Nov 13) the owner's vehicle blockers: over his paint too
         for n in blocked:
             roomy[n] = False
         g = s.graph.tocoo()
@@ -2214,7 +2249,7 @@ class Terrain:
         for l, j, i in getattr(s, "drive_paint", ()):   # painted by hand: kept however small its piece
             s.vroomy[l, j, i] = s.lwalk[l, j, i]
         for n in blocked:                        # (the rides' cells, a bot's wedged ones too, are in drive_paint)
-            s.vroomy[n] = False
+            s.vroomy[n] = False                  # (and the owner's vehicle blockers, vblock_nodes)
         on = s.vroomy.ravel()                    # and only its edges (a step into a small piece was a dead end)
         keep = keep & on[g.row] & on[g.col]
         s.graph_v = csr_matrix((g.data[keep], (g.row[keep], g.col[keep])), shape=g.shape)
@@ -2243,6 +2278,10 @@ class Terrain:
         c, sn, step = math.cos(yaw), math.sin(yaw), NAV_CELL * 0.8   # (0.8 of a cell: fly_clear's, no cell skipped)
         cell, t = start[1:], step
         marked = s.__dict__.get("vwedge_nodes", ())   # (custom, Nov 13: where vehicles wedged, vwedge)
+        s.vblock_nodes()                              # (and the owner's vehicle blockers: _vblock_ids; not when it is
+        blocks = s.__dict__.get("_vblock_ids", ())    # in one, a Warthog parked in the base: out of it is the way)
+        if (start[0] * s.nh + start[1]) * s.nw + start[2] in blocks:
+            blocks = ()
         while t <= far:
             x, y = p.x + c * t, p.y + sn * t
             if not s.inside(x, y):
@@ -2251,7 +2290,7 @@ class Terrain:
             if (jj, ii) != cell:
                 ll = s._layer(jj, ii, prev, reach_from=prev, tan=tan)
                 if (ll is None or (s.near_wall[ll, jj, ii] and not s.vroomy[ll, jj, ii])
-                        or (ll * s.nh + jj) * s.nw + ii in marked):
+                        or (ll * s.nh + jj) * s.nw + ii in marked or (ll * s.nh + jj) * s.nw + ii in blocks):
                     return t
                 cell, prev = (jj, ii), float(s.lz[ll, jj, ii])
                 tan = float(s.tz[ll, jj, ii]) if s.tz is not None else 0.0
@@ -2323,6 +2362,11 @@ class Terrain:
                 return s.nav(a, b)
         N, flat = s.nh * s.nw, cost.ravel()
         far = None
+        # (custom, Nov 13) no shortcut across the owner's vehicle blockers or a wedge mark (not from inside one)
+        s.vblock_nodes()
+        avoid = set(s.__dict__.get("_vblock_ids", ())) | set(s.__dict__.get("vwedge_nodes", ()))
+        if (l * s.nh + j) * s.nw + i in avoid:
+            avoid = ()
         for k in range(lookahead):
             n = l * N + j * s.nw + i
             nb = s.graph_v.indices[s.graph_v.indptr[n]:s.graph_v.indptr[n + 1]]
@@ -2334,7 +2378,7 @@ class Terrain:
                 break
             nl, rem = divmod(int(nb[m]), N)
             l, (j, i) = nl, divmod(rem, s.nw)
-            if k == 0 or s._straight_ok(a, l, j, i, s.vroomy):
+            if k == 0 or s._straight_ok(a, l, j, i, s.vroomy, avoid):
                 far = (l, j, i)
             else:
                 break

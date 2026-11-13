@@ -71,6 +71,54 @@ class WedgeTests(unittest.TestCase):
         self.assertIsNone(T.vwedge(p, 0.0))                  # (marked once)
 
 
+class BlockerTests(unittest.TestCase):
+    """The owner's vehicle blockers (Edit spots, maps/<map>/vehicle_blocks.json): no ground vehicle of any size in."""
+
+    @classmethod
+    def setUpClass(cls):
+        m = maps.get_map("bloodgulch")
+        cls.T = T = maps._build(m, None)                     # (one of our own: the blocker stays in it)
+        cls.p = open_spot(T, far=12.0)
+        cls.c = Vec(cls.p.x + 7.0, cls.p.y, cls.p.z)          # a blocker 7 u east of an open spot, 2.5 u round
+        T.vblocks = [(cls.c, 2.5)]
+        T._vreset()
+
+    def test_off_every_size_of_ground(self):
+        for big in (False, True):
+            self.T.vnav(self.p, Vec(self.p.x + 40, self.p.y, self.p.z), big=big)
+            self.assertFalse(self.T.vroomy[self.T._node(self.c)])
+
+    def test_a_wall_to_the_look_ahead_but_not_from_inside(self):
+        d = self.T.drive_clear(self.p, 0.0, 12.0)
+        self.assertLess(d, 7.0 - 2.5 + 0.5)                  # stops at its edge
+        self.assertGreaterEqual(self.T.drive_clear(self.c, math.pi, 3.0), 3.0)   # parked in it: out is open
+
+    def test_a_route_past_it_goes_round(self):
+        T, a, b = self.T, self.p, Vec(self.c.x + 6.0, self.c.y, self.c.z)
+        pos = a
+        for _ in range(60):
+            w = T.vnav(pos, b)
+            if w is None or (w - pos).flat() < 0.2:
+                break
+            step = min(1.0, (w - pos).flat())
+            pos = pos + (w - pos) * (step / (w - pos).flat())
+            self.assertGreater((pos - self.c).flat(), 2.5 - 0.3)   # (a cell's slack at its edge)
+
+    def test_malformed_blockers_are_left_out(self):
+        import json
+        import os
+        import tempfile
+        from unittest import mock
+        d = tempfile.mkdtemp(prefix="vblock_")
+        os.makedirs(os.path.join(d, "m"))
+        with open(os.path.join(d, "m", maps.VEHICLE_BLOCKS), "w", encoding="utf-8") as f:
+            json.dump(dict(blocks=[dict(pos=[1, 2, 3], r=4), dict(pos=[1, 2], r=4), dict(pos=[1, 2, 3], r=0),
+                                   dict(pos=[1, 2, 3], r=99), "junk"]), f)
+        with mock.patch.object(maps, "ROOT", d):
+            self.assertEqual([(b[0].x, b[1]) for b in maps.owner_vblocks("m")], [(1.0, 4.0)])
+            self.assertEqual(maps.owner_vblocks("none"), [])
+
+
 class BackOffTests(unittest.TestCase):
     def test_tank_back_off_is_longer(self):
         from brain.bot import TANK_BACK_S

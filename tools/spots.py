@@ -25,6 +25,11 @@ from (brain/maps.py load_map), so an edit is what the next match loads:
           waypoints in order from the team's own base to the enemy flag; the carrier runs it backwards home. Skilled
           bots prefer them (director.pick_route: routes skill squared). Each needs at least two points.
           A Forge layout's lanes and sneak routes are made again with its callouts, as its holds are.
+  vblock  vehicle blockers (custom, Nov 13): vehicle_blocks.json {blocks: [{name, pos, r}]} in the folder of the map
+          or layout shown (brain/maps.py owner_vblocks): circles no ground vehicle of any size drives into, a base's way
+          in ("It was trying to push into the base at home which I want vehicles to avoid at all sizes"): off every
+          vehicle ground and a wall to the drivers' look ahead (Terrain.vblock_nodes). An edit without "vblock" (a
+          view from before) keeps the file as it is.
 Every save keeps the files it replaces in backups/spots/ and writes each one whole (a match may read it any time).
 
 usage: python -I spots.py --selftest
@@ -50,7 +55,8 @@ TEAMS = ("red", "blue")
 MAX_HOT, MAX_PATROL, MAX_HOLD, MAX_RIDE = 32, 32, 16, 32
 MAX_LANE, MAX_SNEAK, MAX_SNEAK_POINTS = 12, 8, 32   # lanes; sneak routes a team; waypoints a route
 RIDE_KINDS = ("lift", "cannon")
-NEAR = 1.0                        # a computed power position this close to an owner spot gives way (power_positions --add)
+MAX_VBLOCK, VBLOCK_R = 32, (0.5, 30.0)   # vehicle blockers; a blocker's radius, u
+NEAR = 1.0                       # a computed power position this close to an owner spot gives way (power_positions --add)
 LIMIT = 20000.0                   # no map reaches this far from its origin
 LEVEL_POINTS = 200000             # the level floor sent to the view at most (its cells thinned to fit)
 _LOCK = threading.Lock()
@@ -81,7 +87,8 @@ def files(name):
     own = lambda fn: (os.path.join(vd, fn) if os.path.exists(os.path.join(vd, fn)) and not builtin
                       else os.path.join(d, fn))
     return dict(hot=own("positions.json"), patrol=os.path.join(d, "infantry_patrols.json"), hold=own("callouts.json"),
-                ride=os.path.join(vd, "owner_rides.json"))   # (its own folder: the brain reads each of data_names)
+                ride=os.path.join(vd, "owner_rides.json"),   # (its own folder: the brain reads each of data_names)
+                vblock=os.path.join(vd, "vehicle_blocks.json"))
 
 
 def _rel(path, start=ROOT):
@@ -125,9 +132,31 @@ def load(name):
     ride = [dict(name=r.get("name") or "", kind=r["kind"], take_off=_xyz(r.get("take_off")), land=_xyz(r.get("land")))
             for r in _read(f["ride"], {}).get("rides", []) if isinstance(r, dict) and r.get("kind") in RIDE_KINDS
             and _xyz(r.get("take_off")) and _xyz(r.get("land"))]
+    vblock = [dict(name=b.get("name") or "", pos=_xyz(b.get("pos")), r=float(b["r"]))
+              for b in _read(f["vblock"], {}).get("blocks", []) if isinstance(b, dict) and _xyz(b.get("pos"))
+              and isinstance(b.get("r"), (int, float)) and VBLOCK_R[0] <= b["r"] <= VBLOCK_R[1]]
     rel = {k: _rel(p) for k, p in f.items()}
     shared = {k: "/variants/" in name and "/variants/" not in rel[k] for k in rel}
-    return dict(map=name, hot=hot, patrol=patrol, hold=hold, ride=ride, lane=lane, sneak=sneak, files=rel, shared=shared)
+    return dict(map=name, hot=hot, patrol=patrol, hold=hold, ride=ride, lane=lane, sneak=sneak, vblock=vblock,
+                files=rel, shared=shared)
+
+
+def check_vblocks(sent):
+    """The edit's vehicle blockers [(name, pos, r)], or None when it has none at all (a view from before: the file
+    kept as it is). Raises ValueError for a malformed one."""
+    if "vblock" not in sent:
+        return None
+    out = []
+    for k, b in enumerate(sent.get("vblock") or [], 1):
+        b = b if isinstance(b, dict) else {}
+        pos, r = _xyz(b.get("pos")), b.get("r")
+        nm = " ".join(b["name"].split())[:60] if isinstance(b.get("name"), str) else ""
+        if pos is None or not isinstance(r, (int, float)) or isinstance(r, bool) or not VBLOCK_R[0] <= r <= VBLOCK_R[1]:
+            raise ValueError(f"vehicle blocker {k} needs a place and a radius of {VBLOCK_R[0]:g}-{VBLOCK_R[1]:g} u")
+        out.append((nm or f"Vehicle blocker {k}", pos, round(float(r), 2)))
+    if len(out) > MAX_VBLOCK:
+        raise ValueError(f"at most {MAX_VBLOCK} vehicle blockers")
+    return out
 
 
 def check(sent):
@@ -259,6 +288,7 @@ def save(name, sent, describe=None, root=None):
     if not map_ok(name):
         raise ValueError(f"no map {name!r}")
     hot, patrol, hold, ride, lane, sneak = check(sent)
+    vblock = check_vblocks(sent)
     f = files(name)
     with _LOCK:
         old_rows = _read(f["hot"], [])
@@ -279,6 +309,8 @@ def save(name, sent, describe=None, root=None):
         out["ride"] = json.dumps(dict(rides=[dict(name=nm, kind=k, take_off=a, land=b) for nm, k, a, b in ride]), indent=1) + "\n"
         if not ride and not os.path.exists(f["ride"]):
             out.pop("ride")
+        if vblock is not None and (vblock or os.path.exists(f["vblock"])):
+            out["vblock"] = json.dumps(dict(blocks=[dict(name=nm, pos=p, r=r) for nm, p, r in vblock]), indent=1) + "\n"
         bak = os.path.join(root or ROOT, "backups", "spots")
         stamp, kept, changed = time.strftime("%Y%m%d-%H%M%S"), [], []
         for k, text in out.items():
@@ -297,7 +329,7 @@ def save(name, sent, describe=None, root=None):
             _write(path, text)
             changed.append(_rel(path))
     return dict(hot=len(hot), patrol=len(patrol), hold={t: len(hold[t]) for t in TEAMS}, ride=len(ride), lane=len(lane),
-                sneak={t: len(sneak[t]) for t in TEAMS}, backups=kept,
+                sneak={t: len(sneak[t]) for t in TEAMS}, vblock=len(vblock or []), backups=kept,
                 changed=changed, warnings=ride_problems(name, ride) if ride else [])
 
 
@@ -440,8 +472,18 @@ def selftest():
                 edit["lane"] = cur["lane"] + [[7.0, 8.0, 9.0]]
                 route = [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]]
                 edit["sneak"] = dict(red=cur["sneak"]["red"] + [route], blue=cur["sneak"]["blue"])
+                edit["vblock"] = [dict(name="Home base way in", pos=[4.0, 5.0, 6.0], r=3.5), dict(pos=[1.0, 1.0, 1.0], r=2)]
                 r = save(name, edit, describe=lambda p: dict(pos=p, score=1.0, sees=1, height=0.0, duck=False), root=tmp)
-                assert len(r["changed"]) == 4 and len(r["backups"]) == 3, r          # (owner_rides.json is new)
+                assert len(r["changed"]) == 5 and len(r["backups"]) == 3, r   # (owner_rides, vehicle_blocks: new)
+                assert r["vblock"] == 2
+                assert [(b["name"], b["pos"], b["r"]) for b in load(name)["vblock"]] == \
+                    [("Home base way in", [4.0, 5.0, 6.0], 3.5), ("Vehicle blocker 2", [1.0, 1.0, 1.0], 2.0)]
+                for bad in ([dict(pos=[0, 0, 0], r=0.1)], [dict(pos=[0, 0], r=3)], [dict(pos=[0, 0, 0], r=True)]):
+                    try:
+                        check_vblocks(dict(vblock=bad))
+                        raise AssertionError(f"accepted {bad}")
+                    except ValueError:
+                        pass
                 assert len(r["warnings"]) == 1 and r["warnings"][0].startswith("Man cannon: where you step in is outside"), r
                 after = load(name)
                 assert [x["name"] for x in after["ride"]] == ["Lift 1", "Man cannon"]
@@ -459,6 +501,7 @@ def selftest():
                 assert r["changed"] == [] and r["backups"] == [], r
                 r = save(name, same, root=tmp)              # a view without lanes / sneak: they are kept, not wiped
                 assert r["changed"] == [] and r["lane"] == len(after["lane"]), r
+                assert len(load(name)["vblock"]) == 2         # (and without "vblock": the blockers kept too)
                 assert load(name)["sneak"]["red"][-1] == route
                 try:
                     save(name, dict(hot=[], patrol=[], hold=dict(red=[], blue=[[0, 0, 0]])), root=tmp)

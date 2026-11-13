@@ -127,6 +127,7 @@
   .tsw.patrol.red { background: #ff7373; transform: none; } .tsw.patrol.blue { background: #73a6ff; transform: none; }
   .tsw.lift { border: 2px solid var(--lime); border-radius: 50%; background: none; width: 8px; height: 8px; }
   .tsw.cannon { background: var(--lime); transform: rotate(45deg) scale(0.85); }
+  .tsw.vblock { border: 2px dashed var(--orange); border-radius: 50%; background: none; width: 8px; height: 8px; }
   .tsw.lane { border: 2px solid #5ee6f0; border-radius: 50%; background: none; width: 8px; height: 8px; }
   .tsw.sneak { width: 12px; height: 4px; border: none; border-radius: 2px; }
   .tsw.sneak.red { background: #ff7373; } .tsw.sneak.blue { background: #73a6ff; }
@@ -326,6 +327,7 @@
         <button data-tool="lane" aria-pressed="false" title="A CTF lane: a waypoint attackers pass through on the way to the enemy flag, and carriers on the way home (the lane with the least recent danger is picked)"><span class="tsw lane" aria-hidden="true"></span>Lane point</button>
         <button data-tool="sneak_red" aria-pressed="false" title="A red sneak route: click its waypoints in order, from red's base to the blue flag. Red carriers run it backwards home. Skilled bots prefer sneak routes"><span class="tsw sneak red" aria-hidden="true"></span>Red sneak route</button>
         <button data-tool="sneak_blue" aria-pressed="false" title="A blue sneak route: click its waypoints in order, from blue's base to the red flag. Blue carriers run it backwards home. Skilled bots prefer sneak routes"><span class="tsw sneak blue" aria-hidden="true"></span>Blue sneak route</button>
+        <button data-tool="vblock" aria-pressed="false" title="An area no ground vehicle of any size drives into (a base's way in): click its middle, then set its radius"><span class="tsw vblock" aria-hidden="true"></span>Vehicle blocker</button>
       </div>
       <p id="ed-hint" class="dim"></p>
       <p id="ed-counts"></p>
@@ -1321,7 +1323,9 @@ const levelBuf = new Buf(); let levelCell = 0.5;
 const edBufs = { hot: new Buf(), power: new Buf(), patrol: new Buf(), patrol_red: new Buf(), patrol_blue: new Buf(),
                  red: new Buf(), blue: new Buf(), sel: new Buf(),
                  ride_lift: new Buf(), ride_cannon: new Buf(), ride_land: new Buf(), ride_line: new Buf(), ride_start: new Buf(),
-                 lane: new Buf(), sneak_red: new Buf(), sneak_blue: new Buf(), sneak_red_line: new Buf(), sneak_blue_line: new Buf() };
+                 lane: new Buf(), sneak_red: new Buf(), sneak_blue: new Buf(), sneak_red_line: new Buf(), sneak_blue_line: new Buf(),
+                 vblock: new Buf(), vblock_ring: new Buf() };
+const ORANGE_C = [1, 0.6, 0.24, 1];
 const CYAN = [0.37, 0.9, 0.94, 1];
 const isSneak = s => !!s && (s.kind === "sneak_red" || s.kind === "sneak_blue");
 const sneakTeam = k => k === "sneak_red" ? "red" : "blue";
@@ -1339,7 +1343,8 @@ const TOOL_HINT = {
   cannon: "Man cannon: click where you step onto it, then where it puts you down. Bots run onto it and ride it, one way.",
   lane: "Click the floor to add a CTF lane point. Attackers pass through one on the way to the enemy flag and carriers on the way home, each picking the lane with the least recent danger. Usually one left, one middle, one right.",
   sneak_red: "Red sneak route: click its waypoints in order, from red's base to the blue flag (corners, cover, the long way round). Red carriers run it backwards home. Enter finishes the route.",
-  sneak_blue: "Blue sneak route: click its waypoints in order, from blue's base to the red flag (corners, cover, the long way round). Blue carriers run it backwards home. Enter finishes the route."
+  sneak_blue: "Blue sneak route: click its waypoints in order, from blue's base to the red flag (corners, cover, the long way round). Blue carriers run it backwards home. Enter finishes the route.",
+  vblock: "Click the floor at the middle of an area vehicles must keep out of (a base's way in), then set its radius. No ground vehicle of any size drives into it; one parked inside drives out."
 };
 const edDirty = () => !!ed.data && JSON.stringify(edPayload()) !== ed.saved;
 function edPayload() {
@@ -1349,6 +1354,7 @@ function edPayload() {
            hold: { red: d.hold.red, blue: d.hold.blue },
            ride: (d.ride || []).map(r => ({ name: r.name, kind: r.kind, take_off: r.take_off, land: r.land })) };
   if (ed.routesOk) { out.lane = d.lane; out.sneak = { red: d.sneak.red, blue: d.sneak.blue }; }   // (an old viewer: left out, kept)
+  if (ed.vblockOk) out.vblock = d.vblock.map(b => ({ name: b.name, pos: b.pos, r: b.r }));   // (custom, Nov 13)
   return out;
 }
 function edItems() {   // every spot on screen: {kind, i, pos}; kind hot (yours), power (computed), patrol, red, blue,
@@ -1359,6 +1365,7 @@ function edItems() {   // every spot on screen: {kind, i, pos}; kind hot (yours)
   (d.ride || []).forEach((r, i) => { out.push({ kind: "ride_a", i, pos: r.take_off }); out.push({ kind: "ride_b", i, pos: r.land }); });
   (d.lane || []).forEach((p, i) => out.push({ kind: "lane", i, pos: p }));
   for (const t of ["red", "blue"]) ((d.sneak || {})[t] || []).forEach((r, i) => r.forEach((p, j) => out.push({ kind: "sneak_" + t, i, j, pos: p })));
+  (d.vblock || []).forEach((b, i) => out.push({ kind: "vblock", i, pos: b.pos }));   // (a vehicle blocker: its middle)
   return out;
 }
 const isRide = s => !!s && (s.kind === "ride_a" || s.kind === "ride_b");
@@ -1366,6 +1373,7 @@ function edGet(s) {
   const d = ed.data; if (!s || !d) return null;
   if (isRide(s)) { const r = d.ride[s.i]; return r ? { pos: s.kind === "ride_a" ? r.take_off : r.land, ride: r } : null; }
   if (s.kind === "lane") return d.lane[s.i] ? { pos: d.lane[s.i] } : null;
+  if (s.kind === "vblock") return d.vblock[s.i] ? { pos: d.vblock[s.i].pos, block: d.vblock[s.i] } : null;
   if (isSneak(s)) { const r = d.sneak[sneakTeam(s.kind)][s.i]; return r && r[s.j] ? { pos: r[s.j], route: r, team: sneakTeam(s.kind) } : null; }
   return s.kind === "hot" || s.kind === "power" ? d.hot[s.i] : s.kind === "patrol" ? d.patrol[s.i] : { pos: d.hold[s.kind][s.i] };
 }
@@ -1378,11 +1386,13 @@ function edSetPos(s, p) {
   else if (s.kind === "ride_b") d.ride[s.i].land = p;
   else if (s.kind === "lane") d.lane[s.i] = p;
   else if (isSneak(s)) d.sneak[sneakTeam(s.kind)][s.i][s.j] = p;
+  else if (s.kind === "vblock") d.vblock[s.i].pos = p;
 }
 function edLabel(s) {
   const d = ed.data;
   if (isRide(s)) { const r = d.ride[s.i]; return (r.name || RIDE_NAME[r.kind]) + (s.kind === "ride_b" ? ": lands here" : ""); }
   if (s.kind === "lane") return "Lane " + (s.i + 1);
+  if (s.kind === "vblock") { const b = d.vblock[s.i]; return (b.name || "Vehicle blocker " + (s.i + 1)) + " (" + b.r + " u)"; }
   if (isSneak(s)) { const r = d.sneak[sneakTeam(s.kind)][s.i];
     return (s.kind === "sneak_red" ? "Red" : "Blue") + " sneak " + (s.i + 1) +
       (s.j === 0 ? (r.length > 1 ? ": start" : "") : s.j === r.length - 1 ? ": end" : " · " + (s.j + 1)); }
@@ -1407,6 +1417,14 @@ function edRebuild() {
       edBufs["sneak_" + t + "_line"].push(r[k - 1][0], r[k - 1][1], r[k - 1][2] + 0.15);
       edBufs["sneak_" + t + "_line"].push(r[k][0], r[k][1], r[k][2] + 0.15);
     }
+  for (const b of (ed.data && ed.data.vblock) || []) {          // a vehicle blocker's edge, a ring on its floor
+    const n = 40;
+    for (let k = 0; k < n; k++) {
+      const a0 = 2 * Math.PI * k / n, a1 = 2 * Math.PI * (k + 1) / n;
+      edBufs.vblock_ring.push(b.pos[0] + b.r * Math.cos(a0), b.pos[1] + b.r * Math.sin(a0), b.pos[2] + 0.2);
+      edBufs.vblock_ring.push(b.pos[0] + b.r * Math.cos(a1), b.pos[1] + b.r * Math.sin(a1), b.pos[2] + 0.2);
+    }
+  }
   if (ed.rideStart) edBufs.ride_start.push(ed.rideStart.pos[0], ed.rideStart.pos[1], ed.rideStart.pos[2] + 0.15);
   const g = edGet(ed.sel);
   if (g) edBufs.sel.push(g.pos[0], g.pos[1], g.pos[2] + 0.15);
@@ -1426,6 +1444,7 @@ function drawSpots() {
   lines(edBufs.sneak_red_line, [1, 0.45, 0.45, 0.85]); lines(edBufs.sneak_blue_line, [0.45, 0.65, 1, 0.85]);
   points(edBufs.sneak_red, -14, [1, 0.45, 0.45, 1], 1, false); points(edBufs.sneak_blue, -14, [0.45, 0.65, 1, 1], 1, false);
   points(edBufs.lane, -22, CYAN, 3, false);
+  lines(edBufs.vblock_ring, ORANGE_C); points(edBufs.vblock, -18, ORANGE_C, 2, false);
   points(edBufs.sel, -34, [1, 1, 1, 1], 3, false);
   gl.enable(gl.DEPTH_TEST);
 }
@@ -1435,7 +1454,8 @@ function spotTags() {   // each spot's name over it (the computed power position
   const list = ed.on && ed.data ? edItems().filter(s => (s.kind !== "power" && s.kind !== "ride_b"   // landings, a sneak
     && !(isSneak(s) && s.j > 0)) || picked(s)) : [];                    // route's later waypoints: when picked)
   const COL = { hot: "var(--gold)", power: "var(--gold)", patrol: "var(--mint)", red: "#ff8a8a", blue: "#9dbaff",
-                ride_a: "var(--lime)", ride_b: "var(--lime)", lane: "#5ee6f0", sneak_red: "#ff8a8a", sneak_blue: "#9dbaff" };
+                ride_a: "var(--lime)", ride_b: "var(--lime)", lane: "#5ee6f0", sneak_red: "#ff8a8a", sneak_blue: "#9dbaff",
+                vblock: "var(--orange)" };
   for (let i = 0; i < Math.max(stagEls.length, list.length); i++) {
     if (!stagEls[i]) { const t = document.createElement("div"); t.className = "stag"; document.body.appendChild(t); stagEls.push(t); }
     const el = stagEls[i], s = list[i], at = s ? project(s.pos[0], s.pos[1], s.pos[2] + 0.15) : null;
@@ -1519,6 +1539,11 @@ function edAdd(tool, p) {
   } else if (tool === "lane") {
     d.lane.push(p);
     edSelect({ kind: "lane", i: d.lane.length - 1 });
+  } else if (tool === "vblock") {          // (custom, Nov 13) its middle; the radius in the panel
+    let n = d.vblock.length + 1;
+    while (d.vblock.some(b => b.name === "Vehicle blocker " + n)) n++;
+    d.vblock.push({ name: "Vehicle blocker " + n, pos: p, r: 3 });
+    edSelect({ kind: "vblock", i: d.vblock.length - 1 });
   } else if (tool === "sneak_red" || tool === "sneak_blue") {   // each click the next waypoint of the route being drawn
     const team = sneakTeam(tool), routes = d.sneak[team];
     if (!ed.route || ed.route.team !== team || !routes[ed.route.i]) {
@@ -1541,6 +1566,7 @@ function edDelete() {
     d.hold[s.kind].splice(s.i, 1);
   } else if (isRide(s)) d.ride.splice(s.i, 1);   // (either end picked: the whole ride)
   else if (s.kind === "lane") d.lane.splice(s.i, 1);
+  else if (s.kind === "vblock") d.vblock.splice(s.i, 1);
   else if (isSneak(s)) {                          // one waypoint; the route with it once it has none left
     const team = sneakTeam(s.kind), r = d.sneak[team][s.i];
     r.splice(s.j, 1);
@@ -1575,6 +1601,7 @@ function edPanel() {
     (d.patrol.some(r => r.team) ? " (" + d.patrol.filter(r => r.team === "red").length + " red, " + d.patrol.filter(r => r.team === "blue").length + " blue only)" : "") + " · holds " + d.hold.red.length + " red, " + d.hold.blue.length + " blue" +
     ((d.ride || []).length ? " · " + d.ride.length + " lift" + (d.ride.length === 1 ? "" : "s") + " / man cannon" + (d.ride.length === 1 ? "" : "s") : "") +
     (ed.routesOk ? " · " + d.lane.length + " lane" + (d.lane.length === 1 ? "" : "s") + " · sneak routes " + d.sneak.red.length + " red, " + d.sneak.blue.length + " blue" : "") +
+    (ed.vblockOk && d.vblock.length ? " · " + d.vblock.length + " vehicle blocker" + (d.vblock.length === 1 ? "" : "s") : "") +
     (dirty ? " · not saved" : "");
   const s = ed.sel, g = edGet(s);
   box.hidden = !g;
@@ -1600,6 +1627,7 @@ function edPanel() {
     info.textContent = (r.kind === "lift" ? "Bots step into the lift here and ride it up" : "Bots run onto the man cannon here and fly") +
       " to where it puts them down, one way, from the next match. Drag either end to move it. Save warns if an end is off the floor bots can walk.";
   }
+  else if (s.kind === "vblock") info.textContent = "No ground vehicle of any size (tank, Warthog, Mongoose, Ghost) drives into this circle from the next match: its route goes round and its look ahead sees a wall. One parked inside drives out. It covers the floor within 2.5 u of the middle's height, so a deck over it is not blocked.";
   else if (s.kind === "lane") info.textContent = "Lane " + (s.i + 1) + " of " + d.lane.length + ": in CTF, attackers pass through it on the way to the enemy flag and carriers on the way home, then take the shortest way. Each picks the lane where the team has met the least danger lately; split attacks post pushers on lanes.";
   else if (isSneak(s)) {
     const enemy = g.team === "red" ? "blue" : "red";
@@ -1628,6 +1656,17 @@ function edPanel() {
     nm.value = r.name; kd.value = r.kind;
     nm.oninput = () => { r.name = nm.value.replace(/\s+/g, " ").trim(); edRebuild(); };
     kd.onchange = () => { r.kind = kd.value; edRebuild(); };
+  }
+  if (s.kind === "vblock") {      // (custom, Nov 13) a vehicle blocker: its name and radius
+    const b = g.block;
+    box.insertAdjacentHTML("beforeend", '<label for="ed-name">Name</label><input id="ed-name" maxlength="60" autocomplete="off">' +
+      '<label for="ed-radius">Radius (u, 0.5-30)</label><input id="ed-radius" type="number" min="0.5" max="30" step="0.5">');
+    const nm = $("ed-name"), rd = $("ed-radius");
+    nm.value = b.name; rd.value = b.r;
+    nm.oninput = () => { b.name = nm.value.replace(/\s+/g, " ").trim(); edRebuild(); };
+    rd.oninput = () => { const v = parseFloat(rd.value);
+      if (isFinite(v) && v >= 0.5 && v <= 30) { b.r = Math.round(v * 100) / 100; edSay(""); edRebuild(); }
+      else edSay("A blocker's radius is 0.5 to 30 u.", true); };
   }
   const acts = document.createElement("div"); acts.className = "edacts";
   if (s.kind === "power") {
@@ -1664,6 +1703,9 @@ async function edLoad() {
     d.lane = d.lane || []; d.sneak = { red: (d.sneak && d.sneak.red) || [], blue: (d.sneak && d.sneak.blue) || [] };
     for (const b of document.querySelectorAll('#ed-tools button[data-tool="lane"], #ed-tools button[data-tool^="sneak"]'))
       b.hidden = !ed.routesOk;
+    ed.vblockOk = Array.isArray(d.vblock);   // (custom, Nov 13: a viewer from before blockers: the file kept as it is)
+    d.vblock = d.vblock || [];
+    document.querySelector('#ed-tools button[data-tool="vblock"]').hidden = !ed.vblockOk;
     ed.data = d; ed.saved = JSON.stringify(edPayload()); ed.sel = null;
     const sh = Object.keys(d.shared || {}).filter(k => d.shared[k]);
     $("ed-files").textContent = "Saves to " + [...new Set(Object.values(d.files))].join(", ") +

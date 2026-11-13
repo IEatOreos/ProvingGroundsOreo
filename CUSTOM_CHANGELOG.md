@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Vehicle blockers in the LiDAR view: areas no ground vehicle of any size drives into, 2026-11-13
+
+The owner: "It was trying to push into the base at home which I want vehicles to avoid at all sizes so maybe we will add a lidar simulator blocker", then "Yes add it now".
+
+- Edit spots, new Vehicle blocker tool:
+  - Click the middle of an area, then set its name and radius (0.5-30 u, 3 by default) in the panel. It shows as an orange ring on the floor; drag the middle to move it, Remove or Delete takes it out.
+  - Saved to `vehicle_blocks.json` in the folder of the map or layout shown (`tools/spots.py` "vblock").
+  - A viewer from before blockers sends no "vblock", and the file is kept as it is.
+- `brain/maps.py` `owner_vblocks`: the brain reads each folder of `data_names` (malformed ones left out) into `Terrain.vblocks` when the nav is built.
+- `brain/terrain.py`:
+  - `vblock_nodes`: the cells inside each blocker within `VBLOCK_DZ` 2.5 u of its middle's height (one floor, not a deck over it) are off every vehicle size's ground, over painted drive cells too.
+  - `drive_clear` meets them as a wall, so the ground guard steers off them, but not from inside one (a vehicle parked there drives out).
+  - `_straight_ok` takes `avoid`: `vnav`'s shortcuts never cross a blocker or a wedge mark (a route past one cut 0.67 u into its edge without it).
+  - Every ground vehicle (tanks, Warthogs, Mongooses, Ghosts); aircraft are not affected.
+- Checked on the report's layout (Forge World `v4328b40e`): a 4 u blocker over the wedge spot in the red spawn area was read from its file, its cells were off both the car and tank ground, and a vehicle 6 u off driving at it met a wall at its edge (2.0 u). The test blocker was removed; the save had also rewritten the layout's `callouts.json` (its empty `sneak` written as empty red and blue lists, the same to the brain), which was put back.
+- Validation: `tools/test_tank_drive.py` +4 (off both sizes' ground; a wall to the look ahead, not from inside; a route past it goes round; malformed blockers left out); `tools/spots.py --selftest` (blockers saved, named, refused out of range, kept by an edit without them); `tools/test_spots.py` updated. All 638 regression tests pass; `lidar.py --selftest` passes. In the viewer (its pane hidden, so through the editor's own functions): the tool added a blocker, the radius and name fields took 4 u and a name, Save wrote it and loaded it back. Its drawing and vehicles keeping out of it in a match are unverified.
+
 ### Tanks drive on a tank-sized ground, back off long enough to turn, and a wedge marks the spot for every vehicle, 2026-11-13
 
 The owner's F9 on a Forge World layout (`20261112-213825`, 196.5 s): "Bots dont advance the map with a scorpion"; then "It was trying to push into the base at home which I want vehicles to avoid at all sizes ... for know do your proposed fixes both".
