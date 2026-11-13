@@ -95,6 +95,19 @@ def roster_plan(roster, players, teams, game):
     return out
 
 
+def save_humans(players):
+    """(custom, Nov 13) The people in this team match, a human=<team> line each, in native/bin/bot_pool_humans.txt:
+    Bot Matchmaking (native/bots_panel.cpp bot_pool_rotate) counts them, 20 points each, when it deals the next lobby's
+    teams. Bots an earlier session left ("Bot ...") are not people. Never in the way of a match starting."""
+    try:
+        people = [p for p in players if not p["name"].startswith("Bot ")]
+        with open(os.path.join(ROOT, "native", "bin", "bot_pool_humans.txt"), "w", encoding="ascii") as f:
+            f.write("# the people in the last team match (tools/play.py), for Bot Matchmaking's team points\n")
+            f.writelines(f"human={int(p['team'])}\n" for p in people)
+    except Exception:
+        pass
+
+
 def add_bot(m, machine, team, name, game):
     """botctl.add_bot with this install's look, clan and emblem for the name, waited through a paused game (botcore
     takes commands on the game's thread: none in the pause menu). Prints the outcome; True when the game made it. A
@@ -247,6 +260,8 @@ def main():
         room = min(room, int(o.max_bots))
     if room < botctl.MAX_PLAYERS - len(players):
         print(f"Firefight: {room} bots at most ({botctl.FIREFIGHT_PLAYERS} players in all)")
+    if roster is not None and teams and not ff:      # (custom, Nov 13) Bot Matchmaking deals the next lobby's teams by
+        save_humans(players)                         # points, the people counted on their own team
     if roster is not None:                           # the BOTS panel's list (Firefight: its first 3, all your teammates)
         print(f"bot list: {len(roster)} bots from {o.roster}" + (f", {max(0, room)} join (Firefight)" if ff else ""))
         for team, name in roster_plan(roster, players, teams, o.game)[:max(0, room)]:

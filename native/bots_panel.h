@@ -139,6 +139,20 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty);   // seat i: the n
 // style, team, its armor in 3D in the lobby's game). False once closed (Back, Esc, the pad's B)
 bool bot_card(bots_panel_env& e, const hb_bot& b);
 void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt line and saved settings follow (the editor)
+// (custom, Nov 13) bot_pool.txt "Name*5": one bot, 5 turns spread through the queue. Parties: bots whose profiles share a
+// clan tag; bot_pool_rotate pulls a seated bot's clanmates into the next seats 70% of the time, then deals the seats'
+// bots to teams by points (the team sizes kept, a party as one block, the people of the last match counted: tools/play.py
+// writes native\bin\bot_pool_humans.txt, human=<team> lines; none: one on Red). Two teams: the smallest gap, then the
+// Demons stacked (2+ apart) 60%, spread 40%; more teams: as close as a quick deal and swaps get
+#define HB_HUMAN_POINTS 20
+int  tier_points(int tier);                             // Easy 1, Normal 2, Heroic 3, Tactician 5, Legendary, Blind and
+                                                        // Scaling 8, Demon 12
+int  bot_pool_humans(int team);                         // the people on that team in the last match
+int  roster_team_points(const hb_roster& r, int team);  // its bots' points and its people's
+void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng);
+void bot_pool_seed(uint32_t s);                         // (tests) the parties' and the deal's random draws
+int  bot_pool_group_parties();                          // Settings "Group parties": clanmates' lines together (.bak kept);
+                                                        // the clans grouped, -1 the file not written
 
 // (custom, Nov 11) every bot can be dressed: the Settings tab's profiles are the lobby's bots, any of them opened in the
 // bot editor gets a profile (bot_profiles.ini, after the install's 15; up to 1024; the re-roll keeps them)

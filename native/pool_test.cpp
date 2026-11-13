@@ -4,6 +4,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "bots_panel.h"
 
@@ -58,7 +59,8 @@ int main(int argc, char** argv) {
     CHECK(bot_pool_rotate(r, 4) == 3, "filled");
     CHECK(!strcmp(r.bot[0].name, "Alpha") && !strcmp(r.bot[1].name, "Bravo") && !strcmp(r.bot[2].name, "xX_DeadlyAssass"),
           "rotation 1: %s %s %s", r.bot[0].name, r.bot[1].name, r.bot[2].name);
-    CHECK(r.bot[0].team == 0 && r.bot[1].team == 1 && r.bot[2].team == 0, "teams kept");
+    // (Nov 13: the teams are dealt by points now; the team sizes are kept)
+    CHECK(roster_on_team(r, 0) == 2 && roster_on_team(r, 1) == 1, "team sizes kept: %d %d", roster_on_team(r, 0), roster_on_team(r, 1));
     CHECK(r.bot[0].tier == 2 && r.bot[1].tier == 2, "shared Heroic kept: %d %d", r.bot[0].tier, r.bot[1].tier);
     CHECK(!strcmp(bot_pool_upcoming(0), "Charlie"), "next up '%s'", bot_pool_upcoming(0));
 
@@ -249,6 +251,142 @@ int main(int argc, char** argv) {
             bot_rank(nmx, 2, &t, &l);
             CHECK(t >= 4 && t <= 6, "Heroic %s: tour %d", nmx, t);
         }
+    }
+
+    // 19. (Nov 13) "Name*3": one bot, 3 turns spread through the queue (line 1 of 6: at 1, 3 and 5, before the line
+    // standing there); the editor's rename keeps the turns
+    write(pool, "A\nB*3\nC\nD\nE\nF\n");
+    DeleteFileW(saved);
+    bot_pool_load(dir);
+    {
+        const char* want19[] = { "A", "B", "C", "B", "D", "E", "B", "F" };
+        CHECK(bot_pool_size() == 8, "Name*3 size %d", bot_pool_size());
+        for (int k = 0; k < 8; k++) CHECK(!strcmp(bot_pool_upcoming(k), want19[k]), "turn %d: %s want %s", k, bot_pool_upcoming(k), want19[k]);
+        bot_pool_rename("b", "Bee");
+        FILE* f = nullptr; _wfopen_s(&f, pool, L"rb"); char all[128] = ""; size_t n = fread(all, 1, sizeof all - 1, f); all[n] = 0; fclose(f);
+        CHECK(!strcmp(all, "A\nBee*3\nC\nD\nE\nF\n"), "renamed keeps *3: [%s]", all);
+        write(pool, "Long_Name_Over_15*2\nX*abc\n");
+        bot_pool_load(dir);
+        CHECK(bot_pool_size() == 3 && !strcmp(bot_pool_upcoming(0), "Long_Name_Over_") && !strcmp(bot_pool_upcoming(2), "X*abc"),
+              "a long name's *2 kept, *abc a name: %d %s %s", bot_pool_size(), bot_pool_upcoming(0), bot_pool_upcoming(2));
+    }
+
+    // 20. (Nov 13) the owner's points: Easy 1, Normal 2, Heroic 3, Legendary 8, Scaling 8, Demon 12, Blind 8, Tactician 5;
+    // a human 20
+    {
+        const int want20[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5 };
+        for (int t = 0; t < HB_TIERS; t++) CHECK(tier_points(t) == want20[t], "tier %d points %d", t, tier_points(t));
+        CHECK(HB_HUMAN_POINTS == 20, "human points");
+    }
+
+    // 21. two teams: the smallest gap with the team sizes kept; of the even splits, Demons stacked about 60% of the time.
+    // The owner's lobby: you, 2 Demon, Blind, Legendary, 3 Tactician, 3 Heroic, Normal, 4 Easy (45 vs 45)
+    bots_panel_profiles(prof);                        // (whatever profiles: none of these bots has a clan)
+    {
+        const int tiers[15] = { HB_TIER_DEMON, HB_TIER_DEMON, HB_TIER_BLIND, 3, HB_TIER_TACTICIAN, HB_TIER_TACTICIAN,
+                                HB_TIER_TACTICIAN, 2, 2, 2, 1, 0, 0, 0, 0 };
+        int humans[HB_TEAMS_MAX] = { 1 };
+        int stacked = 0, runs = 2000;
+        for (int k = 0; k < runs; k++) {
+            hb_roster b{}; b.teams = 2; b.n = 15;
+            for (int i = 0; i < 15; i++) { b.bot[i].tier = (uint8_t)tiers[i]; b.bot[i].team = (uint8_t)(i < 7 ? 0 : 1); sprintf_s(b.bot[i].name, "T%d", i); }
+            uint32_t rng = 1000u + 7u * k;
+            roster_point_balance(b, humans, rng);
+            int red = 20, blue = 0, dr = 0;
+            for (int i = 0; i < 15; i++) {
+                (b.bot[i].team == 0 ? red : blue) += tier_points(b.bot[i].tier);
+                if (b.bot[i].tier == HB_TIER_DEMON && b.bot[i].team == 0) dr++;
+            }
+            if (k < 3 || red != blue) CHECK(red == 45 && blue == 45 && roster_on_team(b, 0) == 7, "run %d: %d vs %d, %d red", k, red, blue, roster_on_team(b, 0));
+            stacked += dr != 1;
+        }
+        CHECK(stacked > runs * 55 / 100 && stacked < runs * 65 / 100, "Demons stacked %d of %d (want about 60%%)", stacked, runs);
+        printf("points: the owner's 8v8 even every time, Demons stacked in %d of %d\n", stacked, runs);
+        // the 4v4 from the queue sim: you, Demon, Legendary, Blind, Tactician, Heroic, Normal, Easy (59: a gap of 1)
+        const int t4[7] = { HB_TIER_DEMON, 3, HB_TIER_BLIND, HB_TIER_TACTICIAN, 2, 1, 0 };
+        hb_roster b{}; b.teams = 2; b.n = 7;
+        for (int i = 0; i < 7; i++) { b.bot[i].tier = (uint8_t)t4[i]; b.bot[i].team = (uint8_t)(i < 3 ? 0 : 1); sprintf_s(b.bot[i].name, "F%d", i); }
+        uint32_t rng = 5;
+        roster_point_balance(b, humans, rng);
+        int red = 20, blue = 0;
+        for (int i = 0; i < 7; i++) (b.bot[i].team == 0 ? red : blue) += tier_points(b.bot[i].tier);
+        CHECK(abs(red - blue) == 1 && roster_on_team(b, 0) == 3, "4v4: %d vs %d", red, blue);
+        // three teams: sizes kept, totals close (12 8 8 8 5 3 3 2 1: 50, 16-17 each)
+        const int t3[9] = { HB_TIER_DEMON, 3, 3, HB_TIER_BLIND, HB_TIER_TACTICIAN, 2, 2, 1, 0 };
+        int none[HB_TEAMS_MAX] = {};
+        hb_roster c{}; c.teams = 3; c.n = 9;
+        for (int i = 0; i < 9; i++) { c.bot[i].tier = (uint8_t)t3[i]; c.bot[i].team = (uint8_t)(i % 3); sprintf_s(c.bot[i].name, "G%d", i); }
+        rng = 9;
+        roster_point_balance(c, none, rng);
+        int lo = 999, hi = 0;
+        for (int t = 0; t < 3; t++) {
+            int p = 0;
+            for (int i = 0; i < 9; i++) if (c.bot[i].team == t) p += tier_points(c.bot[i].tier);
+            lo = p < lo ? p : lo; hi = p > hi ? p : hi;
+            CHECK(roster_on_team(c, t) == 3, "3 teams: team %d has %d", t, roster_on_team(c, t));
+        }
+        CHECK(hi - lo <= 2, "3 teams: %d to %d", lo, hi);
+    }
+
+    // 22. parties: one clan's bots always on one team; the next seats pull clanmates about 70% of the time
+    write(prof, "experience=original\neffects=none\nbot=P1,1,XO\nbot=P2,2,XO\nbot=P3,3,XO\nbot=Solo,4,ZZ\n");
+    bots_panel_profiles(prof);
+    {
+        hb_roster b{}; b.teams = 2; b.n = 6;
+        const char* nm[6] = { "P1", "N1", "P2", "N2", "P3", "N3" };
+        for (int i = 0; i < 6; i++) { strcpy_s(b.bot[i].name, nm[i]); b.bot[i].tier = (uint8_t)(i == 1 ? HB_TIER_DEMON : 2); b.bot[i].team = (uint8_t)(i % 2); }
+        int humans[HB_TEAMS_MAX] = { 1 };
+        for (int k = 0; k < 50; k++) {
+            uint32_t rng = 31u + k;
+            roster_point_balance(b, humans, rng);
+            CHECK(b.bot[0].team == b.bot[2].team && b.bot[2].team == b.bot[4].team, "party split: %d %d %d", b.bot[0].team, b.bot[2].team, b.bot[4].team);
+            CHECK(roster_on_team(b, 0) == 3, "sizes with a party");
+        }
+        write(pool, "P1\nN1\nN2\nN3\nN4\nP2\nN5\nP3\nN6\n");
+        int pulled = 0, runs = 300;
+        for (int k = 0; k < runs; k++) {
+            DeleteFileW(saved);
+            bot_pool_load(dir);
+            bot_pool_seed(4242u + 13u * k);
+            hb_roster s = seats(6);
+            bot_pool_rotate(s, 2);
+            bool p23 = !strcmp(s.bot[1].name, "P2") && !strcmp(s.bot[2].name, "P3");
+            if (p23) {
+                pulled++;
+                CHECK(!strcmp(s.bot[3].name, "N1") && !strcmp(bot_pool_upcoming(0), "N4"), "after the pull: %s, next %s", s.bot[3].name, bot_pool_upcoming(0));
+                CHECK(s.bot[0].team == s.bot[1].team && s.bot[1].team == s.bot[2].team, "pulled party on one team");
+            } else CHECK(!strcmp(s.bot[1].name, "N1"), "no pull: queue order %s", s.bot[1].name);
+        }
+        CHECK(pulled > runs * 62 / 100 && pulled < runs * 78 / 100, "party pulled %d of %d (want about 70%%)", pulled, runs);
+        printf("parties: pulled in %d of %d\n", pulled, runs);
+    }
+
+    // 23. the people of the last match (tools/play.py's bot_pool_humans.txt) count on their team; none: you on Red
+    {
+        wchar_t hum[MAX_PATH];
+        swprintf_s(hum, L"%sbot_pool_humans.txt", dir);
+        DeleteFileW(hum);
+        bot_pool_load(dir);
+        CHECK(bot_pool_humans(0) == 1 && bot_pool_humans(1) == 0, "default: you on Red");
+        write(hum, "human=1\nhuman=1\nhuman=0\n");
+        bot_pool_load(dir);
+        CHECK(bot_pool_humans(0) == 1 && bot_pool_humans(1) == 2, "read: %d %d", bot_pool_humans(0), bot_pool_humans(1));
+        hb_roster b = seats(2);                       // Old0 red, Old1 blue, Heroic
+        CHECK(roster_team_points(b, 1) == 43 && roster_team_points(b, 0) == 23, "team points %d %d", roster_team_points(b, 0), roster_team_points(b, 1));
+        DeleteFileW(hum);
+    }
+
+    // 24. "Group parties": each clan's lines together where its first stood, a round per repeat, notes and the rest kept
+    write(pool, "# note\nP1\nN1\nN2\nP2*2\nN3\nP3\nP1\nSolo\n");
+    bot_pool_load(dir);
+    {
+        CHECK(bot_pool_group_parties() == 1, "one party grouped (ZZ has one bot)");
+        FILE* f = nullptr; _wfopen_s(&f, pool, L"rb"); char all[256] = ""; size_t n = fread(all, 1, sizeof all - 1, f); all[n] = 0; fclose(f);
+        CHECK(!strcmp(all, "# note\nP1\nP2*2\nP3\nN1\nN2\nN3\nP1\nSolo\n"), "grouped file: [%s]", all);
+        wchar_t bak[MAX_PATH]; swprintf_s(bak, L"%s.bak", pool);
+        CHECK(GetFileAttributesW(bak) != INVALID_FILE_ATTRIBUTES, "backup kept");
+        CHECK(bot_pool_size() == 9, "pool re-read %d", bot_pool_size());
+        CHECK(bot_pool_group_parties() == 1, "again: the same");
     }
 
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);

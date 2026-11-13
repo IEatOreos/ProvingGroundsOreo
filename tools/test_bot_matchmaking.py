@@ -142,6 +142,28 @@ class LobbyProfileTests(unittest.TestCase):
                      "return x1 - 346 * (H / 1080.0f);"):
             self.assertIn(line, layout)
 
+    def test_people_saved_for_team_points(self):
+        """(Nov 13) play.py writes each team match's people, a human=<team> line each, for the next lobby's team points
+        (bots_panel.cpp bot_pool_load reads bot_pool_humans.txt); bots left by an earlier session are not people;
+        Firefight and free for all write nothing. The deal itself: native/pool_test.cpp checks 19-24."""
+        import play
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "native" / "bin").mkdir(parents=True)
+            was = play.ROOT
+            play.ROOT = d
+            try:
+                play.save_humans([{"name": "Oreo", "team": 1}, {"name": "Friend", "team": 0},
+                                  {"name": "Bot 3", "team": 0}])
+            finally:
+                play.ROOT = was
+            text = (Path(d) / "native" / "bin" / "bot_pool_humans.txt").read_text(encoding="ascii")
+        self.assertEqual([l for l in text.splitlines() if not l.startswith("#")], ["human=1", "human=0"])
+        self.assertIn("if roster is not None and teams and not ff:", src("../tools/play.py"))
+        panel = src("bots_panel.cpp")
+        self.assertIn('swprintf_s(p, L"%sbot_pool_humans.txt", g_pool_dir);', panel)
+        self.assertIn('sscanf_s(line, "human=%d", &t) == 1', panel)
+        self.assertIn("if (!hb_panel_firefight) roster_point_balance(r, g_humans, rng);", panel)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
