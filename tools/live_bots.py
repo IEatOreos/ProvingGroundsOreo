@@ -1205,6 +1205,9 @@ def main():
                                  if not (isinstance(t, tuple) and t[0] == "bot")},
                         blitz=blitz_rows(directors),
                         crouch=[p.id for p in snap.players if p.crouching],   # (who reads crouched: aim heights)
+                        # (custom) Headhunter's estimated skull counts and its banks (brain/headhunter.py)
+                        skulls={str(k): v for k, v in snap.skulls_held.items() if v},
+                        banked=[list(b) for b in (snap.hh.banked[-5:] if snap.hh is not None else [])],
                         world=everyone.rows(now, snap.players, bot_set, T.los, aims),   # + still, formed up, in sights,
                         # people's crosshairs and rides
                         deployed=[[d["kind"], round(d["pos"].x, 2), round(d["pos"].y, 2), round(d["pos"].z, 2), d["team"]]

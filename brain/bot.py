@@ -2170,7 +2170,11 @@ class Bot:
             v = next((v for v in snap.vehicles if v["handle"] == arg), None)
             want = {"ride": "gunner", "board": "passenger"}.get(s.order.role, "driver")   # (board: a passenger seat)
             # (a teammate's on its side or roof is no ride either, nor a wreck or a dud: vehicles.usable)
-            if v and s.dud_check(now, dt, me, v) and (not v["occupied"] or (want != "driver" and v.get("team") == me.team)):
+            # (custom: the wheel of ours a teammate rides the gun of, nobody driving: director.wheel_calls)
+            wheel = (want == "driver" and v is not None and v.get("team") == me.team and s.order.target == arg
+                     and vehicles.wheel_open(v, snap))
+            if v and s.dud_check(now, dt, me, v) and (not v["occupied"] or wheel
+                                                      or (want != "driver" and v.get("team") == me.team)):
                 # (the other side's door every 3 s it does not get in: a Falcon's second gun)
                 vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1)
                 s.move_to(me, vp, act, nav)
@@ -3373,7 +3377,10 @@ class Bot:
                 return ("vehicle", v["handle"])
         if s.goal[0] == "vehicle" and best[0] != "fight" and not urgent:
             v = next((v for v in snap.vehicles if v["handle"] == s.goal[1]), None)
-            if (v and (not v["occupied"] or s.order.role in ("ride", "board")) and now < getattr(s, "vehicle_until", 0.0)
+            if (v and (not v["occupied"] or s.order.role in ("ride", "board")
+                       or (s.order.role == "drive" and s.order.target == v["handle"] and v.get("team") == me.team
+                           and vehicles.wheel_open(v, snap)))
+                    and now < getattr(s, "vehicle_until", 0.0)
                     and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)
                     and (s.order.role in ("ride", "board") or s.may_drive(v, snap))):
                 return s.goal                  # committed to this vehicle run
@@ -5544,7 +5551,7 @@ class Bot:
         s.veh_way = w[:3] + (now,)
         if now - w[2] < 6.0:
             return False
-        s.__dict__.setdefault("veh_ban", {})[v["handle"]] = now + 30.0
+        s.__dict__.setdefault("veh_ban", {})[v["handle"]] = (now + 30.0, Vec(*v["pos"]))   # (where it stood: veh_banned)
         s.veh_way, s.vehicle_until, s.vehicle_retry_at = None, now, now + 20.0
         return True
 
@@ -5570,8 +5577,18 @@ class Bot:
             return o.point
         return None
 
+    VEH_BAN_MOVED = 4.0    # u: (custom) a vehicle given up on (vehicle_stalled) is no longer banned once moved this far
+
     def veh_banned(s, v, now):
-        return getattr(s, "veh_ban", {}).get(v["handle"], 0.0) > now
+        """A vehicle this bot found no way to lately (vehicle_stalled), while it still stands where it was found. (custom,
+        Nov 12) Once it has moved (a person drove or flew it off) the ban is gone: live Forge World 20261112-200003, a
+        Blind bot gave up on a parked Falcon at 576 s, the owner took off in it at 583 s, and the bot ignored the call
+        onto its gun 584-604 s, the Falcon set down 11 u away."""
+        ban = getattr(s, "veh_ban", {}).get(v["handle"])
+        if ban is None:
+            return False
+        until, at = ban if isinstance(ban, tuple) else (ban, None)
+        return until > now and (at is None or dist(Vec(*v["pos"]), at) < s.VEH_BAN_MOVED)
 
     def keep_off(s, me, target, d):
         """Normal and up, against a man with a sword or a hammer and no such weapon of our own: back off while he is within

@@ -2,6 +2,78 @@
 
 ## Unreleased
 
+### Reach Headhunter: skull counts, banking and the live drop point, 2026-11-12
+
+The owner: "see if there is code for headhunter in halo reach, and if not try and start making the bots play that mode", then "Yes, build it".
+
+- **Before:**
+  - Headhunter was recognised (`brain/modes.py`: the variant name, Reach's drop points on every multiplayer map, the loose skulls).
+  - A third of the team ran to the drop point nearest its middle whatever it carried. Nobody knew who held skulls, and no recorded match had ever played it.
+- **New `brain/headhunter.py` `Skulls`**, filled every tick by `modes.Watch` (`snap.skulls_held`, `snap.hh`). It reads nothing new from the game:
+  - A loose skull that vanishes with a living player on it (1.6 u) is his.
+  - A death drops them all.
+  - A team score rising while a carrier of that team stands in a drop point is a bank, and that drop point is the live one (kept 90 s).
+  - Skulls carried and 3 s in a drop point with no score: that drop point is not live and is skipped 45 s.
+  - With no score for his team (Reach's free-for-all scores are not decoded), or the score never moving for anyone, he is taken to have banked.
+- **The director** (`brain/director.py`):
+  - `hh_bankers` (in `assign_roles`, as a carrier): a bot banks at 5 skulls always, 3 within 45 u of the drop point, 1 within 12 u, or enough to win. It runs to the live drop point (else the nearest not found dead) with no rogue moment.
+  - `mode_slots`: an enemy carrying 3 or more that one of ours saw in the last 8 s is hunted first (two hunters from four bots up). Two take the loose skulls within 40 u, some cover the drop point, and the rest play Slayer.
+- `tools/live_bots.py`: the trace's world lines carry `skulls` (the estimates) and `banked`, to check them after a match.
+- Validation:
+  - New `tools/test_headhunter.py` (16 tests): pickups, a rolling skull, deaths, a bank marking the live drop point, a dead drop point skipped then retried, free-for-all banking, a score that never moves, the bank rules, the Watch filling the snapshot, who banks, and hunting a seen carrier but not an unseen one.
+  - All `tools/test_*.py` pass (592 tests). `tools/live_bots.py` compiles.
+  - **Untested in game:** the whole mode. Whether Reach's skulls read as loose objects the way Oddball's do, whether the team score reads in Headhunter, and how Reach's drop points move are not yet seen live.
+
+### Bots answer the owner's Falcon and pickups; carriers ride; no Demon in a Ghost, 2026-11-12
+
+The owner: "when I drive the falcon no bot enters it tell me why, also bots don't get in a warthog or mongooses passenger when carrying the bomb or flag. And finally make demon bots not drive ghosts".
+
+- **The Falcon** (live Forge World Slayer 20261112-200003, flights at 98-113 s and 583-604 s, nobody ever aboard):
+  - Bots are called aboard a person's aircraft only once it is set down (`landed_aircraft`), when he stops by them (a honk), or when the bot's own trip is 25 u or more (`rider_calls`). In the air, nobody is called.
+  - First flight: he set down at 108 s. Two bots were sent to its guns at 109.5 and 111.5 s, and he died at 113 s.
+  - Second flight: a Blind bot had given up on that Falcon at 576 s while it stood parked out of reach ("no way to it", a 30 s ban). From 584 s it ignored every call onto its gun, even after the Falcon set down 11 u away (596-602 s).
+  - Of the others, one was on its way to drive another vehicle and one was Easy, which takes no calls.
+- **Fixes:**
+  - `Bot.veh_banned`: the ban keeps where the vehicle stood and ends once it has moved 4 u (`VEH_BAN_MOVED`).
+  - `director.honk_orders`: a person's aircraft set down calls bots from 20 u (`LAND_CALL_R_PERSON`), not 10.
+- **Carriers** (live Breakpoint 20261112-193700, 306-321 s): the owner's Warthog stood 1-4 u from our Easy bomb carrier, who never got in.
+  - A carrier was put in a vehicle only by a bot driver (`ferry_orders`) or by a honk, which Easy refuses (`set_order`).
+  - New `director.person_pickup`, run first in `ferry_orders`: a person at the wheel of a ground vehicle with a passenger seat free, within 8 u of our carrier bot (flag or bomb, 30 u or more from where he scores), gets him into the passenger seat. Easy is included, its order set outright as `ferry_orders` does. Never a tank, never with the person on a gun.
+- **Demon and the Ghost:** `vehicles.DEMON_NO_DRIVE` adds the Ghost, in every game, Race laps excepted.
+  - The director never sends a Demon to one; Normal and Heroic go first (`driver_priority`).
+  - A Demon put at a Ghost's controls gets out, as at a Warthog's.
+- Validation:
+  - `tools/test_demon_no_drive.py` and `tools/test_demon_vehicles.py` updated: Ghost on the list, a Demon never sent to one, Heroic drives it, a Demon at its controls gets out, a Demon still drives a Scorpion.
+  - `tools/test_wheel_and_one_bomb.py` adds the carrier pickup (Easy gets in; not from 15 u, not into a full Warthog, not with the person on the gun) and the ban ending once the Falcon moves.
+  - All `tools/test_*.py` pass (570 tests).
+  - **Untested in game:** whether Reach and Halo 4 seat a flag or bomb carrier bot in a passenger seat.
+
+### A driver for a person on a driverless gun; One Bomb's sides swap each round, 2026-11-12
+
+The owner: "Check the bug report" (Blood Crash CTF 20261112-164125, F9: "Whya re they not driving me") and "on breakpoint a bot on my team second round of assault got stuck for a long time carrying bomb" (Breakpoint 20261112-193700).
+
+- **Blood Crash, 189-209 s:** the owner sat on a Warthog's gun with nobody at the wheel.
+  - The vehicle counted as taken, so the empty-vehicle driver picks (`crew_orders`) skipped it.
+  - `rider_calls` counted the empty wheel as a free seat and called two bots into the one passenger seat. One got in and sat; the other stood beside it.
+- **The fix:**
+  - `brain/vehicles.py` `wheel_open`: a vehicle whose riders are all on its guns. A person in a passenger seat cannot be told from a driver, so only guns count.
+  - `brain/director.py` `wheel_calls`, run before `rider_calls`: when a person rides such a gun, the bot on foot within 30 u best to drive (`driver_priority`: Normal and Heroic first) is sent to the wheel, as a honk. Never a Demon at a Warthog's or Mongoose's wheel, never Easy, never the flag carrier. A bot that has not got in after 15 s is skipped for 30 s and the next one is tried.
+  - `rider_calls` no longer counts that wheel as a passenger seat.
+  - `brain/bot.py`: a bot sent there may walk to and enter the driver's seat of a teammate's vehicle while `wheel_open` holds. Before, any occupied vehicle was "taken" for a driver.
+- **Breakpoint, round 2:** One Bomb picked the attackers by the bomb stand's team in the map data (team 1), but Reach swaps sides each round.
+  - In round 2 team 0 attacked, and its target goal was the one removed as "the attackers' own".
+  - Its carriers had no goal and walked to `carry_point`'s fallback, the map's mid (-10.85, -12.79). Two Easy bots held the bomb there from 274 to about 370 s.
+  - The loose bomb also read as the other team's, so no non-Easy bot of ours went for it.
+- **The fix** (`brain/modes.py` `Watch.bomb_attackers`):
+  - The attackers are the bomb carrier's team, kept while the bomb lies loose away from its stand.
+  - With the bomb on its stand, the attackers are the team whose living players are nearer it by 8 u or more (they spawn by it).
+  - The goal is the one far from the stand, for the defenders. The bomb belongs to the attackers, and an armed bomb is the defenders' to disarm.
+  - The stand's team is still used until a side is seen. With no stand, the old rule applies.
+- Validation:
+  - New `tools/test_wheel_and_one_bomb.py`: the owner on the gun gets a Heroic driver; no Demon or Easy; a person who may be driving and a vehicle with another rider are left alone; too far is not called; the attacking side follows round 1, round 2 and a carrier; an armed bomb is the defenders'.
+  - All `tools/test_*.py` pass (565 tests).
+  - **Untested in game:** whether Halo 4 and Reach seat a bot at the wheel of a vehicle a person rides the gun of, and the round 2 side detection in a live match.
+
 ### Easy, Normal and Heroic react faster and answer the man shooting them, their aim unchanged, 2026-11-12
 
 The owner: "make all difficulties from easy to heroic react faster. That doesnt mean make them better ... its a little unrealistic that when you shoot at a bot it just doesnt shoot back ... raise their base reaction times up, but keep their accuracy settings", then "Make the changes".

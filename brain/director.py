@@ -87,7 +87,8 @@ LANE_PHASES = (2,)          # the Invasion phases whose push takes the flanks (a
 BLITZ_MODES = ("ctf", "assault", "stockpile", "king", "headhunter")    # (+ Invasion attacking; desperate says why not others)
 AIR_CALL = 2.5               # a transport aircraft calls riders from this many CALL_R (rider_calls; Bot.crew_coming waits)
 HORN_CALL_R = 40.0           # u: the bot a person's horn picked (his view on him) is called from this far (honk_orders)
-LAND_CALL_R = 10.0           # u: an aircraft of ours set down calls the bots on foot this near aboard (honk_orders) ...
+LAND_CALL_R_PERSON = 20.0    # u: (custom) ... a person's aircraft set down (honk_orders)
+LAND_CALL_R = 10.0          # u: an aircraft of ours set down calls the bots on foot this near aboard (honk_orders) ...
 LANDED_H, LANDED_V = 1.5, 1.0   # ... down: under this high over the floor (u) and this slow (u/s) (landed_aircraft)
 # Invasion's desperate moments for the attackers (desperate): the phase's last INV_LAST_S of its INV_PHASE_S clock (guide
 # 19's rule facts: 4 minutes a phase; it running out loses the round), or a wave wiped: two thirds of the team (2 at
@@ -802,6 +803,15 @@ class Director:
                 via = s.pick_route(now, carrier, [], home=True) if snap.mode == "ctf" else ()
                 carrier.order, carrier.via_left = Order("runner", home, via=via), list(via)
             slots = [sl for sl in slots if not (sl[0] == "runner" and sl[1] == s.capture_point(snap))]
+        for b, zone in s.hh_bankers(now, snap, free):
+            # (custom, Nov 12) Headhunter: a bot carrying skulls enough to bank runs them to the drop point, as a carrier
+            # runs home: no rogue moment (brain/headhunter.should_bank)
+            free.remove(b)
+            s.roles[b.id] = "runner"
+            if b.order.role != "runner" or b.order.point != zone:
+                b.order, b.via_left = Order("runner", zone), []
+                s.event(now, "objective", f"{snap.player(b.id).name}: banking "
+                                          f"{snap.skulls_held.get(b.id, 0)} skulls")
         vip = next((v for v in snap.vips if snap.player(v) is not None and snap.player(v).team == s.team), None)
         vb = next((b for b in free if b.id == vip), None)
         if vb is not None:     # our VIP (a bot): its own play, never an escort of itself
@@ -891,6 +901,25 @@ class Director:
         s.vehicle_orders(now, snap, alive + blitzing)
         s.infantry_patrol_orders(now, snap, alive)
         s.pair_orders(now, snap, alive)
+
+    def hh_bankers(s, now, snap, free):
+        """(custom, Nov 12) Headhunter: [(bot, drop point)] the bots of free carrying skulls enough to bank them now
+        (headhunter.should_bank: 5 always, 3 within 45 u of the drop point, 1 within 12 u, or enough to win)."""
+        from .headhunter import should_bank
+        hh = getattr(snap, "hh", None)
+        if snap.mode != "headhunter" or hh is None:
+            return []
+        need = None
+        if snap.score_limit and s.team in (snap.score or {}):
+            need = snap.score_limit - snap.score[s.team]
+        out = []
+        for b in free:
+            p = snap.player(b.id)
+            n = snap.skulls_held.get(b.id, 0)
+            zone = hh.bank_zone(p.pos, now) if p is not None and n > 0 else None
+            if zone is not None and should_bank(n, dist(p.pos, zone), need):
+                out.append((b, zone))
+        return out
 
     PAIR_ROLES = ("mid", "hunter", "free")   # (custom) the Slayer jobs a Demon's partner shares (pair_orders)
     PAIR_GAP = 3.0                           # u: the partner's spot off the lead's point (spread's ring)
@@ -1109,6 +1138,7 @@ class Director:
                         and not (s.carrying and s.roles.get(b.id) == "escort"):
                     b.order = Order("driver_wait", vp)
             s.event(now, "vehicle", f"{players[near.id].name}: hop on the gun ({v['kind']})")
+        s.wheel_calls(now, snap, alive, players)
         s.rider_calls(now, snap, alive, players)
         s.ferry_orders(now, snap, alive, players)
         s.vehicle_jobs(now, snap, alive, players)
@@ -1145,6 +1175,8 @@ class Director:
             call_r = s.CALL_R * (AIR_CALL if sp["move"] == "air" else 1.0)
             coming = [b for b in alive if b.order.target == h and b.order.role in ("ride", "board")]
             free = len(sp["seats"]) - v.get("riders", 0) - len(coming)
+            if vehicles.wheel_open(v, snap):
+                free -= 1                        # (custom: the empty wheel is a driver's, wheel_calls; not a passenger's)
             gun_free = vehicles.needs_gunner(v, snap) and not any(b.order.role == "ride" for b in coming)
             drv = next((b for b in alive if players[b.id] is not None and players[b.id].vehicle == h
                         and getattr(b, "seat", "") == "driver"), None)
@@ -1203,6 +1235,53 @@ class Director:
                 # nobody coming any more: no waiting for them (the same match, 1033-1040 s: the Falcon sat 7 s more for
                 # the man no longer called)
                 getattr(drv, "called_aboard", {}).pop(h, None)
+
+    WHEEL_R, WHEEL_GIVE_UP = 30.0, 15.0   # u, s: (custom) a driver for a person on a driverless gun comes from this near;
+                                          # one not in it after this long is skipped for 30 s (wheel_calls)
+
+    def wheel_calls(s, now, snap, alive, players):
+        """(custom, Nov 12) A person rides the gun of a vehicle of ours with nobody at its wheel (vehicles.wheel_open):
+        the bot on foot within WHEEL_R best to drive it (profiles.driver_priority: Normal and Heroic first; never a Demon
+        at a Warthog's or a Mongoose's wheel) is sent to drive (Order "drive" on that vehicle, as a honk: sure). The one
+        sent keeps the job while the wheel stays open, up to WHEEL_GIVE_UP s, then another is tried. Once in, he drives as
+        every bot at a wheel does (vehicle_jobs). Not our flag carrier, not Easy. The owner's Blood Crash CTF report
+        ("Why are they not driving me", 20261112-164125)."""
+        from . import vehicles
+        sent = s.__dict__.setdefault("wheel_sent", {})       # vehicle handle -> (bot id, since)
+        skip = s.__dict__.setdefault("wheel_skip", {})       # (bot id, handle) -> not before
+        open_now = set()
+        for v in snap.vehicles:
+            h = v["handle"]
+            if v.get("team") != s.team or not vehicles.wheel_open(v, snap):
+                continue
+            if not any(p.vehicle == h and p.alive and not p.is_bot for p in snap.players):
+                continue                          # (a person aboard only)
+            open_now.add(h)
+            vp = Vec(*v["pos"])
+            bid, since = sent.get(h, (None, now))
+            b = s.bots.get(bid) if bid is not None else None
+            if b is not None and (b not in alive or players.get(b.id) is None or players[b.id].vehicle != -1
+                                  or now - since > s.WHEEL_GIVE_UP):
+                skip[(bid, h)] = now + 30.0
+                b = None
+            if b is None:
+                cands = [x for x in alive if players.get(x.id) is not None and players[x.id].alive
+                         and players[x.id].vehicle == -1 and not players[x.id].has_flag and x.p.teamwork > 0
+                         and x.p.tier != "novice" and skip.get((x.id, h), 0.0) <= now
+                         and s.roles.get(x.id) not in ("ferry", "ride", "board", "drive")
+                         and x.may_drive(v, snap) and not x.urgent(players[x.id], snap)
+                         and dist(players[x.id].pos, vp) <= s.WHEEL_R]
+                b = min(cands, key=lambda x: (profiles.driver_priority(x.p), dist(players[x.id].pos, vp)), default=None)
+                if b is None:
+                    sent.pop(h, None)
+                    continue
+                since = now
+                s.event(now, "vehicle", f"{players[b.id].name}: to the wheel, a teammate on the gun ({v['kind']})")
+            b.set_order(Order("drive", vp, target=h), sure=True)
+            s.roles[b.id] = "drive"
+            sent[h] = (b.id, since)
+        for h in [h for h in sent if h not in open_now]:
+            del sent[h]
 
     def rider_ok(s, b, players, gun_free, bound, person=False):
         """A bot rider_calls may call to a vehicle whose places (where it is, where it goes) are bound. A defender only
@@ -1472,6 +1551,9 @@ class Director:
         home = s.carry_point(snap)
         if dist(carrier.pos, home) < 30.0:
             return
+        cb = s.bots.get(carrier.id)
+        if cb is not None and s.person_pickup(now, snap, carrier, cb):
+            return
         drivers = []
         for b in alive:
             p = players[b.id]
@@ -1499,6 +1581,35 @@ class Director:
         if cb is not None and d < 10.0:          # our carrier is a bot: in he gets
             cb.order = Order("board", Vec(*v["pos"]), target=v["handle"])   # (a passenger seat, not the gun)
             s.roles[cb.id] = "board"
+
+    PERSON_PICKUP_R = 8.0   # u: (custom) our carrier bot gets into a person's vehicle with a passenger seat free this near
+
+    def person_pickup(s, now, snap, carrier, cb):
+        """(custom, Nov 12) A person of ours at the wheel of a ground vehicle with a passenger seat free pulls up within
+        PERSON_PICKUP_R of our carrier bot (flag or bomb, on foot, far from where he scores): the carrier gets in, Easy
+        too (its order set outright, as ferry's; set_order lets Easy refuse every call). True: he was sent. The owner:
+        "bots don't get in a warthog or mongooses passenger when carrying the bomb or flag"; live Breakpoint
+        20261112-193700, 306-321 s, his Warthog stood 1-4 u from our Easy bomb carrier, who never got in. A person on a
+        gun is not at the wheel (gunner_seat); one in a passenger seat cannot be told from a driver."""
+        from . import vehicles
+        for v in snap.vehicles:
+            sp = vehicles.spec(v["kind"])
+            k = vehicles.kind_of(v["kind"])
+            if (v.get("team") != s.team or sp is None or sp["move"] not in ("ground", "hover") or k in vehicles.TANKS
+                    or v.get("dead") or not ("passenger" in sp["seats"]
+                                             or vehicles.REACH_SEATS.get(k, {}).get("passenger"))):
+                continue
+            aboard = [p for p in snap.players if p.alive and p.vehicle == v["handle"]]
+            if not any(not p.is_bot and not getattr(p, "gunner_seat", False) for p in aboard):
+                continue
+            if v.get("riders", 0) >= len(sp["seats"]) or dist(Vec(*v["pos"]), carrier.pos) > s.PERSON_PICKUP_R:
+                continue
+            if cb.order.role != "board" or cb.order.target != v["handle"]:
+                s.event(now, "vehicle", f"{carrier.name}: into the passenger seat, a teammate's {v['kind']}")
+            cb.order = Order("board", Vec(*v["pos"]), target=v["handle"])
+            s.roles[cb.id] = "board"
+            return True
+        return False
 
     CREW_REACH = 45.0      # u: how far a bot is sent on foot to drive a vehicle its team wants (crew_orders)
     POWER_R = 15.0         # u: a bot on an objective job takes a free power vehicle this near it (crew_orders)
@@ -1716,8 +1827,13 @@ class Director:
         # a honk (live_bots: a person stopped by us, or their horn) calls from 20 u; an aircraft of ours set down calls
         # those within LAND_CALL_R (Nov 6: bots get in an aircraft that lands
         # close to them; a player's Falcon pickups: down on the floor 3-6 u from the gunner, 16-25 s)
-        calls = [(h, picks.get(h), 20.0) for h in honks] + [(h, None, LAND_CALL_R) for h in s.landed_aircraft(now, snap)
-                                                           if h not in honks]
+        # (custom, Nov 12) a person's aircraft set down calls from LAND_CALL_R_PERSON: live Forge World 20261112-200003,
+        # the owner's Falcon sat down 6 s at 596-602 s, the nearest teammates able to come 11-17 u off, nobody called
+        person_in = {v["handle"] for v in snap.vehicles
+                     if any(p.vehicle == v["handle"] and p.alive and not p.is_bot for p in snap.players)}
+        calls = [(h, picks.get(h), 20.0) for h in honks] + [
+            (h, None, LAND_CALL_R_PERSON if h in person_in else LAND_CALL_R)
+            for h in s.landed_aircraft(now, snap) if h not in honks]
         for h, picked, reach in calls:
             v = next((x for x in snap.vehicles if x["handle"] == h and x.get("team") == s.team), None)
             sp = vehicles.spec(v["kind"]) if v else None
@@ -2257,8 +2373,9 @@ class Director:
         """Roles for brain/modes.py's game types (Reach). Territories: two take the nearest zone not ours (the one
         with the fewest enemies seen), one holds each zone we own while we have the numbers, the rest cover the
         target. Assault / Stockpile: our carriers run (assign_roles), two escort; a loose object gets two runners
-        and an escort; their carrier gets hunters; two hold our goal. Headhunter: one in three banks at the nearest
-        drop point (skull counts are not read), the rest hunt. Infection: survivors hold rooms with few ways in, in
+        and an escort; their carrier gets hunters; two hold our goal. Headhunter (custom, Nov 12): a bot carrying skulls
+        enough banks them (hh_bankers; counts estimated, brain/headhunter.py), an enemy seen carrying 3 or more is
+        hunted, two take the loose skulls near us, some cover the drop point, the rest hunt. Infection: survivors hold rooms with few ways in, in
         groups (Reach's Safe Haven: the haven); the infected hunt the nearest survivor, a third wait round the corners of
         the survivors' holds."""
         from .modes import zombie_team, holds, pick_holds
@@ -2339,12 +2456,27 @@ class Director:
             slots += [("mid", q, "aggression") for q in s.overlooks(mid, n)]
             return slots
         if snap.mode == "headhunter":
+            from .headhunter import HUNT_SKULLS
             drops = [z for z, r, o in (snap.obj_zones or [])] or [mid]
             c = centre()
-            near = min(drops, key=lambda z: dist(z, c))
-            for sk in sorted(snap.obj_items, key=lambda it: dist(it["pos"], c))[:2]:   # skulls lying where men died
+            hh = getattr(snap, "hh", None)
+            near = (hh.bank_zone(c, now) if hh is not None else None) or min(drops, key=lambda z: dist(z, c))
+            # (custom, Nov 12) an enemy carrying HUNT_SKULLS or more that one of ours saw in the last 8 s is hunted
+            # first: his death drops them all (Reach shows every carrier's count over his head)
+            known = {}
+            for b in s.bots.values():
+                for k, bl in b.per.beliefs.items():
+                    if isinstance(k, int) and now - bl.t < 8.0 and (k not in known or bl.t > known[k].t):
+                        known[k] = bl
+            rich = sorted((p for p in foes if p.id in known and snap.skulls_held.get(p.id, 0) >= HUNT_SKULLS),
+                          key=lambda p: -snap.skulls_held.get(p.id, 0))
+            for p in rich[:2]:
+                slots += [("hunter", known[p.id].pos, "aggression")] * (2 if n >= 4 else 1)
+            for sk in sorted((it for it in snap.obj_items if dist(it["pos"], c) < 40.0),
+                             key=lambda it: dist(it["pos"], c))[:2]:   # skulls lying where men died
                 slots.append(("runner", sk["pos"], "objective"))
-            slots += [("runner", near, "objective")] * max(1, n // 3)
+            # the drop point covered: those who will bank find it held (the bankers run on their own: hh_bankers)
+            slots += [("mid", q, "aggression") for q in s.overlooks(near, max(1, n // 4))]
             return slots + s.slayer_slots(now, snap, n)
         if snap.mode == "infection":
             infected = zombie_team(snap)

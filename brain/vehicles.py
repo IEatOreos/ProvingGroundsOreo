@@ -488,11 +488,24 @@ def needs_gunner(v, snap):
     return not v["gunner"] if "gunner" in v else v.get("riders", 0) == 1   # (Reach reads who is in the gun)
 
 
+def wheel_open(v, snap):
+    """(custom, Nov 12) A vehicle with someone aboard and nobody at its wheel: everyone in it rides one of its guns (read as
+    a vehicle riding on it: gunner_seat). The owner's Blood Crash CTF (20261112-164125, 189-209 s): he sat on a Warthog's
+    gun 20 s and two bots were called into its one passenger seat; nobody was sent to drive ("Why are they not driving
+    me"). A person in a passenger seat cannot be told from a driver, so only the guns count."""
+    s = spec(v["kind"])
+    if not s or s["move"] == "none" or v.get("dead") or not v.get("riders", 0):
+        return False
+    aboard = [p for p in snap.players if p.alive and p.vehicle == v["handle"]]
+    return len(aboard) == v["riders"] and all(getattr(p, "gunner_seat", False) for p in aboard)
+
+
 # (custom, the owner's ask Nov 7) the ground transports a Demon never drives, in any game: every Warthog (chaingun, rocket,
 # gauss, troop) and the Mongooses. It rides their guns and seats; Normal and Heroic are the team's drivers
 # (profiles.driver_priority, director.crew_orders). His Gore Valley CTF (20261107-223617): two Demons drove about a minute
 # each, a Warthog driver has no gun, and 28% of his hits on Demons came while they were in vehicles
-DEMON_NO_DRIVE = {"warthog", "rwarthog", "gauss", "thog", "mongoose", "gungoose"}
+# (custom, Nov 12, the owner: "make demon bots not drive ghosts") the Ghost too, in every game; Demons on foot instead
+DEMON_NO_DRIVE = {"warthog", "rwarthog", "gauss", "thog", "mongoose", "gungoose", "ghost"}
 
 
 # (custom, Nov 7) a light vehicle's body as boxes in its own frame (forward, left, up from its origin; u), for whether a

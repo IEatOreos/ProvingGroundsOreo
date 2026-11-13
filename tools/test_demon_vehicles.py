@@ -260,8 +260,9 @@ class GhostBailTests(unittest.TestCase):
             with self.subTest(kind=kind):
                 self.assertFalse(b.may_drive(dict(handle=1, kind=kind, left=0.18), snap))
                 self.assertFalse(b.may_drive(dict(handle=1, kind=kind, left=0.06), snap))
-                self.assertTrue(b.may_drive(dict(handle=1, kind=kind, left=0.35), snap))
-                self.assertTrue(b.may_drive(dict(handle=1, kind=kind), snap))           # (health unread)
+                # (custom, Nov 12: "make demon bots not drive ghosts": a healthy one neither)
+                self.assertFalse(b.may_drive(dict(handle=1, kind=kind, left=0.35), snap))
+                self.assertFalse(b.may_drive(dict(handle=1, kind=kind), snap))          # (health unread)
 
     def test_a_tank_goes_down_with_its_driver(self):
         self.assertTrue(bot().may_drive(dict(handle=1, kind="storm_scorpion", left=0.12), Snapshot(10.0, [])))

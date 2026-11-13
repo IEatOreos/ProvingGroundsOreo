@@ -42,9 +42,9 @@ def crew_scene(tiers, kind="warthog", mode="slayer", dists=None):
 class NoDriveRuleTests(unittest.TestCase):
     def test_which_vehicles(self):
         for name in ("warthog", "storm_warthog", "warthog_rocket", "warthog_gauss", "rwarthog", "thog", "mongoose",
-                     "storm_mongoose", "gungoose"):
+                     "storm_mongoose", "gungoose", "ghost", "storm_ghost"):
             self.assertTrue(vehicles.demon_no_drive(name), name)
-        for name in ("ghost", "scorpion", "banshee", "wraith", "mantis", "falcon", "hornet", "elephant"):
+        for name in ("scorpion", "banshee", "wraith", "mantis", "falcon", "hornet", "elephant"):
             self.assertFalse(vehicles.demon_no_drive(name), name)
 
     def test_driver_priority(self):
@@ -59,11 +59,11 @@ class NoDriveRuleTests(unittest.TestCase):
         mapdata = dict(name="h4_test")
         demon, heroic = bot(0, "demon", mapdata), bot(1, "strong", mapdata)
         slayer, race = SimpleNamespace(mode="slayer"), SimpleNamespace(mode="race")
-        for kind in ("warthog", "mongoose", "warthog_gauss"):
+        for kind in ("warthog", "mongoose", "warthog_gauss", "ghost"):
             self.assertFalse(demon.may_drive(dict(kind=kind), slayer), kind)
             self.assertTrue(demon.may_drive(dict(kind=kind), race), kind)
             self.assertTrue(heroic.may_drive(dict(kind=kind), slayer), kind)
-        for kind in ("ghost", "scorpion", "banshee"):
+        for kind in ("scorpion", "banshee"):
             self.assertTrue(demon.may_drive(dict(kind=kind), slayer), kind)
 
 
@@ -86,8 +86,20 @@ class DirectorDriverTests(unittest.TestCase):
         d.crew_orders(100, snap, players, bots)
         self.assertNotEqual(bots[0].order.role, "drive")
 
-    def test_a_demon_still_drives_a_ghost(self):
+    def test_a_demon_is_never_sent_to_a_ghost(self):
+        # (custom, Nov 12: the owner, "make demon bots not drive ghosts")
         d, bots, players, snap = crew_scene(["demon"], kind="ghost")
+        d.crew_orders(100, snap, players, bots)
+        self.assertNotEqual(bots[0].order.role, "drive")
+
+    def test_heroic_drives_the_ghost_though_the_demon_is_nearer(self):
+        d, bots, players, snap = crew_scene(["demon", "strong"], kind="ghost", dists=[2.0, 12.0])
+        d.crew_orders(100, snap, players, bots)
+        self.assertNotEqual(bots[0].order.role, "drive")
+        self.assertEqual(bots[1].order.role, "drive")
+
+    def test_a_demon_still_drives_a_scorpion(self):
+        d, bots, players, snap = crew_scene(["demon"], kind="scorpion")
         d.crew_orders(100, snap, players, bots)
         self.assertEqual(bots[0].order.role, "drive")
 
@@ -114,7 +126,7 @@ class SeatedDemonTests(unittest.TestCase):
         return b, act
 
     def test_demon_at_a_warthog_wheel_gets_out(self):
-        for kind in ("warthog", "mongoose"):
+        for kind in ("warthog", "mongoose", "ghost"):
             b, act = self.seated("driver", kind)
             self.assertTrue(act.action, kind)
             self.assertGreater(b.exit_until, 100)

@@ -132,6 +132,8 @@ class Snapshot:
     infected: int = -1         # Infection: the infected side when the reader knows it (Halo 3: by the zombies' gun)
     vips: tuple = ()           # VIP: each team's VIP (player ids), as the game marks them (Halo 3: brain/modes.py)
     race_next: dict = field(default_factory=dict)   # Race: player id -> his next gate (Vec), brain/modes.py Race
+    skulls_held: dict = field(default_factory=dict)   # (custom) Headhunter: player id -> skulls carried (estimated)
+    hh: object = None          # (custom) Headhunter: brain/headhunter.Skulls (bank_zone)
 
     def player(s, pid):
         return next((p for p in s.players if p.id == pid), None)

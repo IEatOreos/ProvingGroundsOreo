@@ -416,6 +416,29 @@ class Watch:
         teams = {t for _, _, t in hist}
         return next(iter(teams)) if len(teams) == 1 and teams <= {0, 1} else None
 
+    BOMB_SIDE_MARGIN = 8.0     # u: (custom) the other team must be this much nearer the bomb's stand to be the attackers
+
+    def bomb_attackers(s, snap, home, stand_team):
+        """(custom, Nov 12) One Bomb's attacking team this round: the team of whoever carries the bomb (kept while it lies
+        loose away from its stand); with it on its stand, the team whose living players are nearer it by BOMB_SIDE_MARGIN
+        (the attackers spawn by it: Reach swaps sides each round), else the one known, else its stand's team."""
+        it = snap.obj_items[0] if snap.obj_items else None
+        cur = getattr(s, "bomb_att", None)
+        if it is not None and it["carrier"] is not None:
+            p = snap.player(it["carrier"])
+            if p is not None and p.team in (0, 1):
+                s.bomb_att = p.team
+                return p.team
+        if it is not None and home is not None and (it["pos"] - home).flat() < 1.0:
+            import statistics
+            near = {t: statistics.median(dist(p.pos, home) for p in snap.players if p.alive and p.team == t)
+                    for t in (0, 1) if any(p.alive and p.team == t for p in snap.players)}
+            if len(near) == 2:
+                lead = min(near, key=near.get)
+                if cur is None or (lead != cur and near[cur] - near[lead] >= s.BOMB_SIDE_MARGIN):
+                    s.bomb_att = cur = lead
+        return cur if cur is not None else stand_team
+
     def update(s, live, snap, now, raw=None):
         snap.mode = s.mode
         if s.mode == "headhunter" and raw is not None and hasattr(live, "loose_named") and now - s.items_t > 0.25:
@@ -458,6 +481,12 @@ class Watch:
                         s.held.pop(k, None)
                 out.append((pos, r, s.owner.get(k, -1)))
             snap.obj_zones = out
+            if s.mode == "headhunter":
+                # (custom, Nov 12) who carries how many skulls, and which drop point banks (brain/headhunter.py)
+                from .headhunter import Skulls
+                s.hh = getattr(s, "hh", None) or Skulls()
+                s.hh.update(now, snap, [(pos, r) for pos, r, _ in out], list(getattr(s, "skulls", [])))
+                snap.skulls_held, snap.hh = dict(s.hh.held), s.hh
         if s.mode in ("assault", "stockpile"):
             stand_kind, goal_kind = ("bomb", "bomb_goal") if s.mode == "assault" else ("stockpile_flag", "stockpile_goal")
             # two teams: stands and goals of team 0, 1 or neutral (8); 2 and 3 are the four-team game's
@@ -489,7 +518,23 @@ class Watch:
                     goals.setdefault(team, []).append(pos)
             one = s.one_bomb(now, snap.obj_items) if s.mode == "assault" else None
             if one is not None:                   # One Bomb: the attackers' own goal is nobody's target
-                goals.pop(one, None)
+                got = s.items[0] if s.items else {}
+                home = stands.get(got.get("stand"))
+                att = s.bomb_attackers(snap, home, one)
+                # (custom, Nov 12) sides swap each round, the map's stand and goal teams do not: the attackers are found
+                # from who carries the bomb or spawns by it (bomb_attackers); their goal is the one far from its stand.
+                # The owner's Breakpoint (20261112-193700) round 2: the stand still read team 1's, team 0 attacked, its
+                # goal was popped, and its carriers stood 95 s at the map's mid (carry_point's fallback, 274-370 s)
+                far = max((g for team_goals in goals.values() for g in team_goals),
+                          key=lambda g: dist(g, home), default=None) if home is not None else None
+                if far is not None:
+                    goals = {1 - att: [far]}
+                    for it in snap.obj_items:
+                        it["team"] = att
+                        if it.get("armed") is not None:
+                            it["armed"] = 1 - att
+                else:
+                    goals.pop(one, None)
             snap.obj_goals = goals
             carriers = {it["carrier"] for it in s.items if it["carrier"] is not None}
             for p in snap.players:
