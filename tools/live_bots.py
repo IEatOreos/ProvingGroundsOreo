@@ -938,11 +938,13 @@ def main():
     names_due = None if o.game == "reach" else float("inf")   # Reach: logs/reach_names.txt once, 20 s after bots join (after any refresh)
     # Reach Invasion (brain/invasion.py): the map's setup from its scenario; the watcher runs while the variant is it
     inv_styles = None                             # a map variant read from its file: its game variant's phases
+    hh_move = None                                # (custom, Nov 12) Headhunter's drop point movement time, s (headhunter.Skulls)
     if o.game == "reach" and not FIREFIGHT and MAP["objects"].get("mvar"):     # (brain/mvar.py: its file by its title)
         try:
             from brain import mvar
             gv = mvar.find_game_variant(live.variant_name())
             inv_styles = mvar.phase_styles(gv) or None
+            hh_move = mvar.drop_point_move(gv)
             if gv:
                 opts = ", ".join(f"{x['name']} = {x['value']}" for x in gv["options"])
                 print(f"game variant file {os.path.basename(gv['path'])} ({gv['title']!r}): {opts}", flush=True)
@@ -1081,6 +1083,7 @@ def main():
                     mode = mode_of(o.game, live)
                     if mode in OBJECT_MODES and (mode_watch[0] is None or mode_watch[0].kind != mode):
                         mode_watch[0] = ModeWatch(mode, MAP["objects"], o.game)
+                        mode_watch[0].hh_move = hh_move       # (custom: Headhunter, brain/modes.py)
                         print(f"game type: {mode}", flush=True)
                     elif mode not in OBJECT_MODES:
                         mode_watch[0] = None

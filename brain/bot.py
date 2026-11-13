@@ -445,6 +445,9 @@ STAGE_MATE = 12.0                   # company: a teammate this close (the lead e
 # clear base (8v8: never clear), 16-29% backing off to cover, and no life of 41 came within 6 u of the stand
 # (logs/tmp/runner_probe.py). GRAB_R 0 and STAGE_NEED_CLEAR True: the old play (A/B)
 GRAB_R, GRAB_SCORE = 8.0, 2.4
+# (custom, Nov 12) Headhunter: a banker's drop point scores this + per skull carried (up to the cap): 1 skull 3.3, 3+
+# skulls 3.5-4.0, over a hunt (3.16) always and over a seen enemy's fight (3.41) from 3 skulls
+HH_BANK_SCORE, HH_BANK_PER, HH_BANK_CAP = 3.2, 0.1, 8
 GRAB_NEEDS_COMPANY, GRAB_MATE_R = True, 10.0   # (wave 2: guarded, the grab only with a teammate this near: grab_ok)
 STAGE_NEED_CLEAR = False
 KING_TAKE_IN = True                 # a King hill held by theirs is gone into with company, not waited out (keep_role)
@@ -3326,6 +3329,14 @@ class Bot:
                 if snap.mode == "ctf" and s.grab_ok(me, snap, o.point, seen):
                     # inside GRAB_R the grab, unguarded or with company: it beats a new fight, not a committed one
                     scores[("objective", pt)] = max(scores[("objective", pt)], GRAB_SCORE)
+            carried = (snap.skulls_held or {}).get(me.id, 0) if snap.mode == "headhunter" else 0
+            if (o.role == "runner" and carried > 0 and not me.has_flag
+                    and any(dist(o.point, z) < 1.0 for z, r, _ in (snap.obj_zones or ()))):
+                # (custom, Nov 12) a banker (director.hh_bankers) carrying skulls to a drop point: like a flag carrier,
+                # more so the more he carries. Before, 0.7-1.7 lost to a hunt's 3.16: live Launch Station Headhunter
+                # 20261112-223426, a bot with 13-16 skulls hunted round the live drop point 20 s and died with them
+                scores[("objective", pt)] = max(scores[("objective", pt)],
+                                                HH_BANK_SCORE + HH_BANK_PER * min(carried, HH_BANK_CAP))
             if me.has_flag:
                 scores[("objective", pt)] = 3.0  # carrying: go home, do not stop to fight
             elif (o.role == "hunter" and live is not None) or o.role == "cutoff":

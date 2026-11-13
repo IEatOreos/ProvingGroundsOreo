@@ -484,7 +484,7 @@ class Watch:
             if s.mode == "headhunter":
                 # (custom, Nov 12) who carries how many skulls, and which drop point banks (brain/headhunter.py)
                 from .headhunter import Skulls
-                s.hh = getattr(s, "hh", None) or Skulls()
+                s.hh = getattr(s, "hh", None) or Skulls(getattr(s, "hh_move", None))   # (hh_move: live_bots)
                 s.hh.update(now, snap, [(pos, r) for pos, r, _ in out], list(getattr(s, "skulls", [])))
                 snap.skulls_held, snap.hh = dict(s.hh.held), s.hh
         if s.mode in ("assault", "stockpile"):

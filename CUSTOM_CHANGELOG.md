@@ -229,6 +229,16 @@ The owner: "We have to make the banshee work. They're almost near useless when a
 
   The guards' pull-up notes a minute fell to a fifth to a quarter. New `tools/test_banshee_runs.py` (6 tests: kept out of sight, not past 6 s, dead or 60 u, no run no keep, the run's man held in sight). All 617 regression tests pass. Hits and kills in a match are untested; the bot process must be restarted.
 
+### Reach Headhunter: bankers bank, drop points move on, four team scores, 2026-11-12
+
+The owner: "check the last match in observer and see how the bots played headhunter", then "Yes, fix all three". On live Launch Station Headhunter 20261112-223426 (4 teams of 3, drop points moving every 30 s), the owner's team's bots banked 3 of its 49 points and the bots died carrying about 450 skulls between them.
+
+- A banker carrying skulls to a drop point (director.hh_bankers) scores 3.2 + 0.1 a skull (up to 8) for it (bot.HH_BANK_SCORE). Before it scored 0.7-1.7 and lost to a hunt's 3.16; one bot with 13-16 skulls hunted round the live drop point for 20 s and died with them. Now it beats a hunt with 1 skull and a seen enemy's fight (3.41) with 3. A skull runner sent to a loose skull is unchanged.
+- The live drop point is kept for the variant's "Drop point movement time": mvar.drop_point_move reads it from the game variant file, live_bots passes it to the mode watch, and headhunter.Skulls takes it ("never": for good; not read: 30 s, was 90 s). A drop point found dead is skipped for at most that long too. Before, the bankers ran to a drop point 75 s after it had moved.
+- Reach reads the scores of teams 2 and on (live.LiveReach.more_team_scores): only in a team game, only for teams a player is on, and only a plausible value, so a bad read cannot fail the whole score read. The offsets past blue (8 bytes apart) are assumed, not checked against the HUD.
+
+Tests: 15 new in tools/test_headhunter.py (move time, the variant option, the scores of teams 2 and 3, and banking over a hunt on Headlong; the two bank tests fail with the boost off). All 612 tools/test_*.py pass. Untested in game.
+
 ### Reach Headhunter: skull counts, banking and the live drop point, 2026-11-12
 
 The owner: "see if there is code for headhunter in halo reach, and if not try and start making the bots play that mode", then "Yes, build it".

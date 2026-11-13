@@ -1221,15 +1221,34 @@ class LiveReach(LiveH3):
     REACH_SCORE_LIMIT = 0x10D28  # int16 score to win (25, then 50 in a second game)
     REACH_TIME_LIMIT = 0x17A6    # byte, minutes (9, then 12; 0 = none)
 
+    REACH_TEAMS_MAX = 8          # (custom, Nov 12) Reach's teams: the scores go on 8 bytes apart past blue (assumed)
+
+    def more_team_scores(s, b, players, limit):
+        """(custom, Nov 12) The scores of team 2 and on (four-team Headhunter: live Launch Station 20261112-223426 had
+        teams 2 and 3 with no score, so their banks were guessed): only teams a player is on, in a team game, and only
+        a plausible number (the offsets past blue are not verified against the HUD; a bad read is left out rather than
+        failing the whole read in live_bots' sanity check)."""
+        on = {d.get("team") for d in (players or ()) if isinstance(d, dict)}
+        on = {t for t in on if isinstance(t, int) and 2 <= t < s.REACH_TEAMS_MAX}
+        if not on or not s.variant().get("teams"):
+            return {}
+        out = {}
+        for t in sorted(on):
+            v = struct.unpack_from("<i", b, 8 * t)[0]
+            if 0 <= v <= max(500, 4 * max(0, limit)):
+                out[t] = v
+        return out
+
     def match_state(s, players=None):
         """Reach team scores (and the limit / clock once decoded). Halo 4 and H2A derive from this
         class but have their own layout: they override match_state."""
         if s._blk is None:
             s.players()
         gg = s.g.u64(s._blk + 0x48)
-        b = s.g.read(gg + s.REACH_TEAM_SCORE, 16)
+        b = s.g.read(gg + s.REACH_TEAM_SCORE, 8 * s.REACH_TEAMS_MAX)
         score = {0: struct.unpack_from("<i", b, 0)[0], 1: struct.unpack_from("<i", b, 8)[0]}
         limit = struct.unpack("<h", s.g.read(gg + s.REACH_SCORE_LIMIT, 2))[0] if s.REACH_SCORE_LIMIT else 0
+        score.update(s.more_team_scores(b, players, limit))
         left = None
         if s.REACH_TIME_LIMIT:
             minutes = s.g.read(gg + s.REACH_TIME_LIMIT, 1)[0]

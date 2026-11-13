@@ -747,6 +747,21 @@ def phase_styles(gv):
     return out
 
 
+def drop_point_move(gv):
+    """(custom, Nov 12) A Headhunter variant's "Drop point movement time" in s: 30 for "30 seconds", 60 for "1 minute",
+    0 for "never"; None when it has no such option (brain/headhunter.py Skulls)."""
+    for o in (gv or {}).get("options", []):
+        if (o.get("name") or "").lower() != "drop point movement time":
+            continue
+        v = (o.get("value") or "").lower().split()
+        if v and v[0] == "never":
+            return 0
+        if len(v) == 2 and v[0].isdigit():
+            return int(v[0]) * (60 if v[1].startswith("minute") else 1)
+        return o.get("number")
+    return None
+
+
 def _main(argv):
     path = argv[0]
     if path.lower().endswith(".bin"):

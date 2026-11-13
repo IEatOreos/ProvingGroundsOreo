@@ -21,12 +21,18 @@ PICK_R, PICK_DZ = 1.6, 2.0   # u: who picked a vanished skull up: a living playe
 GONE_R = 0.75                # u: a skull read again within this of where it was is the same skull (it rolls)
 ZONE_PAD = 0.5               # u: a drop point's boundary, a little generous
 BANK_WAIT = 3.0              # s in a drop point with skulls and no score before it is taken as not live
-DEAD_FOR = 45.0              # s a drop point found not live is skipped
-LIVE_KEEP = 90.0             # s a drop point seen banking is taken as the live one
+DEAD_FOR = 45.0              # s a drop point found not live is skipped (at most; see Skulls.dead_for)
+# s a drop point seen banking is taken as the live one: the variant's "Drop point movement time" (live_bots reads the
+# game variant file; "never": for good), else this. It was 90 s: on live Launch Station Headhunter 20261112-223426
+# (30 s) the bankers ran to a drop point 75 s after it had moved
+LIVE_KEEP = 30.0
 
 
 class Skulls:
-    def __init__(s):
+    def __init__(s, move=None):
+        """move: the variant's drop point movement time in s (0: never moves), None: not read (LIVE_KEEP)."""
+        s.live_keep = LIVE_KEEP if move is None else (float("inf") if move <= 0 else float(move))
+        s.dead_for = min(DEAD_FOR, s.live_keep)   # a drop point not live now may be chosen at the next move
         s.held = {}          # player id -> skulls carried (estimate)
         s.prev = None        # the loose skulls last read [Vec]
         s.score = {}         # team -> score last read
@@ -77,7 +83,7 @@ class Skulls:
                 s.dead.pop(k, None)
             elif n > 0 and now - since >= BANK_WAIT:
                 if p.team in score:
-                    s.dead[k] = now + DEAD_FOR          # stood in it with skulls, no score: not live
+                    s.dead[k] = now + s.dead_for        # stood in it with skulls, no score: not live
                     if s.live and s.live[0] == k:
                         s.live = None
                     s.inside[p.id] = (k, now)           # (judged once a BANK_WAIT)
@@ -100,7 +106,7 @@ class Skulls:
         found dead: the nearest of all). None: no drop points."""
         if not s.zones:
             return None
-        if s.live is not None and now - s.live[1] <= LIVE_KEEP and s.dead.get(s.live[0], 0.0) <= now:
+        if s.live is not None and now - s.live[1] <= s.live_keep and s.dead.get(s.live[0], 0.0) <= now:
             return s.zones[s.live[0]][0]
         ok = [z for k, (z, r) in enumerate(s.zones) if s.dead.get(k, 0.0) <= now] or [z for z, r in s.zones]
         return min(ok, key=lambda z: dist(z, q))
