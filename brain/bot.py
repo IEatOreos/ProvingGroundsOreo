@@ -2255,8 +2255,10 @@ class Bot:
             wheel = (want == "driver" and v is not None and v.get("team") == me.team
                      and (s.order.target == arg or (profiles.wheelman(s.p) and s.p.tier != "novice"))
                      and vehicles.wheel_open(v, snap))
+            # (custom, Nov 13: not the wheel of a Warthog a Wheelman of ours is on his way to: wheel_yield)
             if v and s.dud_check(now, dt, me, v) and (not v["occupied"] or wheel
-                                                      or (want != "driver" and v.get("team") == me.team)):
+                                                      or (want != "driver" and v.get("team") == me.team)) \
+                    and not (want == "driver" and s.wheel_yield(v)):
                 # (the other side's door every 3 s it does not get in: a Falcon's second gun)
                 vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1)
                 s.move_to(me, vp, act, nav)
@@ -3522,7 +3524,7 @@ class Bot:
             v = next((v for v in snap.vehicles if v["handle"] == s.order.target), None)
             if v is not None and dist(me.pos, Vec(*v["pos"])) < (50 if s.order.role == "drive" else 30) \
                     and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now) \
-                    and (s.order.role != "drive" or s.may_drive(v, snap)):
+                    and (s.order.role != "drive" or (s.may_drive(v, snap) and not s.wheel_yield(v))):
                 s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
                 return ("vehicle", v["handle"])
         if s.goal[0] == "vehicle" and best[0] != "fight" and not urgent:
@@ -3532,7 +3534,7 @@ class Bot:
                            and vehicles.wheel_open(v, snap)))
                     and now < getattr(s, "vehicle_until", 0.0)
                     and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)
-                    and (s.order.role in ("ride", "board") or s.may_drive(v, snap))):
+                    and (s.order.role in ("ride", "board") or (s.may_drive(v, snap) and not s.wheel_yield(v)))):
                 return s.goal                  # committed to this vehicle run
             if now >= getattr(s, "vehicle_until", 0.0):
                 s.vehicle_retry_at = now + 20.0   # could not get in: walk for a while
@@ -3543,7 +3545,7 @@ class Bot:
             v = next((v for v in snap.vehicles if v["handle"] == errand[0]), None)
             if (now < errand[1] and v is not None and not v["occupied"] and me.vehicle in (None, -1) and not urgent
                     and vehicles.usable(v, now, s.duds())
-                    and not me.has_flag and not s.veh_banned(v, now) and s.may_drive(v, snap)):
+                    and not me.has_flag and not s.veh_banned(v, now) and s.may_drive(v, snap) and not s.wheel_yield(v)):
                 s.drive_to = far or s.objective_point(me)
                 s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
                 return ("vehicle", v["handle"])
@@ -3568,7 +3570,7 @@ class Bot:
             # (not on wheels to a goal far over it: live Spire 20261105-060020 phase 3, five attackers took turns in
             # the Warthog at the spire's foot for the core 37 u up, 300-1,200 rows each "waiting for crew", no pickup)
             pick = max((v for v in snap.vehicles if vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)
-                        and s.trip_ok(v, me, far) and s.may_drive(v, snap)),
+                        and s.trip_ok(v, me, far) and s.may_drive(v, snap) and not s.wheel_yield(v)),
                        key=lambda v: vehicles.ride_score(v, me, far, trip), default=None)
             if (pick and vehicles.ride_score(pick, me, far, trip) > 0.15
                     and (snap.mode == "race" or s.rng.random() < 0.3 + 0.6 * s.p.map_iq)):
@@ -3582,6 +3584,13 @@ class Bot:
         their guns and seats; the owner's ask Nov 7). Race laps excepted: every racer drives."""
         return (getattr(snap, "mode", None) == "race" or not profiles.fixed_demon(s.p)
                 or not (vehicles.demon_no_drive(v["kind"]) or s.ghost_spent(v)))
+
+    def wheel_yield(s, v):
+        """(custom, Nov 13, owner: "Make wheelman get priority for driving warthogs") A Warthog a Wheelman of ours is on
+        his way to drive (director.wheel_dibs_of): any other bot leaves its wheel to him, on foot (a seat or a call
+        aboard is still his; one already at a wheel stays there). A Wheelman never yields."""
+        d = getattr(s, "wheel_dibs", None)
+        return bool(d) and not profiles.wheelman(s.p) and d.get(v["handle"], s.id) != s.id
 
     def wheel_pick(s, now, me, snap):
         """(custom, Nov 13) A Wheelman's own vehicle (profiles.wheelman): the nearest within WHEEL_SEEK_R it may drive, a

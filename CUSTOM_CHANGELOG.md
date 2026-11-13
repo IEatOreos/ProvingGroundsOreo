@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Wheelman: first claim on a Warthog's wheel, 2026-11-13
+
+The owner: "Make wheelman get priority for driving warthogs". The director already sent a Wheelman first when it handed out wheels (`profiles.driver_priority`), but any other bot with a long trip still took a free Warthog on its own, or kept a driving job given before, while a Wheelman walked to it.
+
+- `brain/director.py` `wheel_dibs_of` / `wheel_dibs_of_bots`, each update: the Warthogs (any kind: `vehicles.WARTHOGS`, `is_warthog`) a Wheelman of ours, alive and on foot, is on his way to. Every bot of the team gets them (`wheel_dibs`).
+- `brain/bot.py` `wheel_yield`: any other bot of ours, Easy too, leaves those Warthogs' wheels to him, in its own vehicle pick, a committed run to one, a spawn errand, an order to drive one, and at the door: it thinks again. Its gun or passenger seat, or a call aboard, is still its to take. A bot already at a wheel stays there. A Wheelman never yields.
+- `brain/director.py` `crew_orders`: no driving job on those Warthogs for anyone else, and one already given is dropped. `wheel_calls`: a person on such a Warthog's gun waits for the Wheelman on his way rather than another driver.
+- Validation: `tools/test_wheelman.py` +4 (whose dibs, every Warthog kind, none for a Ghost or from a seat; who yields; a crew job dropped and none given, as before with nobody on his way; a person on the gun). All 683 regression tests pass. Untested in a match.
+
 ### Pre-nades for Legendary, Blind and Demon: a grenade at the doorway before the fight, then the angle held, 2026-11-13
 
 The owner: "How could we make a demon and legendary bot use pre-nades? ... when I 1v1 them I can throw a grenade at their doorway before seeing them due to knowing the radar ... I turned off their opening grenade because that lost them gunfights but a pre nade would work if done right?", then "Build the first one, the grenade arc isn't super important right now but note that for later ... make only legendary blind and demons use the pre nade mechanic".

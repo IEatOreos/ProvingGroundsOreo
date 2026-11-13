@@ -203,6 +203,71 @@ class CarrierRideTests(unittest.TestCase):
             self.assertIn(bots[1].order.role, want, style)
 
 
+class WheelDibsTests(unittest.TestCase):
+    """(Nov 13, the owner: "Make wheelman get priority for driving warthogs") a Warthog a Wheelman of ours is on his
+    way to: nobody else of ours takes its wheel (Director.wheel_dibs_of, Bot.wheel_yield)."""
+
+    def dibs(self, goal_kind="warthog", vehicle=-1, style="wheelman"):
+        w = bot(1, "average", style)
+        w.goal = ("vehicle", 10)
+        snap = Snapshot(100, [PlayerState(1, 0, "w", Vec(30, 0, 0), vehicle=vehicle)],
+                        vehicles=[veh(10, goal_kind, 0)], mode="slayer")
+        return Director.wheel_dibs_of_bots([w], snap)
+
+    def test_whose_dibs(self):
+        self.assertEqual(self.dibs(), {10: 1})
+        for kind in ("rwarthog", "gauss", "thog"):
+            self.assertEqual(self.dibs(kind), {10: 1}, kind)
+        self.assertEqual(self.dibs("ghost"), {})                 # (Warthogs only)
+        self.assertEqual(self.dibs(vehicle=11), {})              # (in another vehicle already)
+        self.assertEqual(self.dibs(style="rusher"), {})
+
+    def test_who_yields(self):
+        b, w = bot(0, "average", "rusher"), bot(1, "average", "wheelman")
+        b.wheel_dibs = w.wheel_dibs = {10: 1}
+        self.assertTrue(b.wheel_yield(veh(10, "warthog", 0)))
+        self.assertFalse(b.wheel_yield(veh(11, "warthog", 0)))
+        self.assertFalse(w.wheel_yield(veh(10, "warthog", 0)))
+        w2 = bot(2, "average", "wheelman")
+        w2.wheel_dibs = {10: 1}
+        self.assertFalse(w2.wheel_yield(veh(10, "warthog", 0)))  # (a Wheelman never yields)
+        self.assertFalse(bot(3, "average", "rusher").wheel_yield(veh(10, "warthog", 0)))   # (no director: as before)
+
+    def test_a_job_on_it_is_dropped_and_not_given(self):
+        b = bot(0, "average", "rusher")
+        b.order = Order("drive", Vec(0, 0, 0), target=10)
+        players = {0: PlayerState(0, 0, "b0", Vec(3, 0, 0))}
+        snap = Snapshot(100, list(players.values()), vehicles=[veh(10, "warthog", 0)], mode="slayer")
+        d = Director.__new__(Director)
+        d.team = d.side = 0
+        d.map, d.bots, d.roles = MAP, {0: b}, {0: "drive"}
+        d.event = lambda *args: None
+        d.enemy_vehicles = lambda *args: []
+        d.crews = {10: (0, 95.0)}                                # (his since 95: kept 30 s, as before)
+        b.wheel_dibs = {10: 1}                                   # (a Wheelman, not on this team's foot list, on his way)
+        d.crew_orders(100, snap, players, [b])
+        self.assertNotIn(10, d.crews)
+        b.wheel_dibs = {}
+        b.order = Order("mid", Vec(80, 0, 0))
+        d.crew_orders(100, snap, players, [b])
+        self.assertEqual((b.order.role, b.order.target), ("drive", 10))   # (no Wheelman on his way: as before)
+
+    def test_a_person_on_the_gun_waits_for_the_wheelman(self):
+        for dibs, want in (({10: 1}, "mid"), ({}, "drive")):
+            b = bot(0, "average", "rusher")
+            b.wheel_dibs = dibs
+            you = PlayerState(5, 0, "you", Vec(0, 0, 0), vehicle=10)
+            you.is_bot, you.gunner_seat = False, True
+            players = {0: PlayerState(0, 0, "b0", Vec(5, 0, 0))}
+            snap = Snapshot(100, [players[0], you], vehicles=[veh(10, "warthog", 0, occupied=True, riders=1)], mode="slayer")
+            d = Director.__new__(Director)
+            d.team = d.side = 0
+            d.map, d.bots, d.roles = MAP, {0: b}, {0: "mid"}
+            d.event = lambda *args: None
+            d.wheel_calls(100, snap, [b], players)
+            self.assertEqual(b.order.role, want, dibs)
+
+
 class KeepTests(unittest.TestCase):
     def arrive(self, style):
         b = bot(0, "average", style)

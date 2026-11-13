@@ -506,6 +506,13 @@ def wheel_open(v, snap):
 # each, a Warthog driver has no gun, and 28% of his hits on Demons came while they were in vehicles
 # (custom, Nov 12, the owner: "make demon bots not drive ghosts") the Ghost too, in every game; Demons on foot instead
 DEMON_NO_DRIVE = {"warthog", "rwarthog", "gauss", "thog", "mongoose", "gungoose", "ghost"}
+# (custom, Nov 13) every Warthog: a Wheelman of ours on his way to one has its wheel (director.wheel_dibs_of, Bot.wheel_yield)
+WARTHOGS = {"warthog", "rwarthog", "gauss", "thog"}
+
+
+def is_warthog(name):
+    """A Warthog of any kind: chaingun, rocket, gauss, troop (WARTHOGS)."""
+    return kind_of(name) in WARTHOGS
 
 
 # (custom, Nov 7) a light vehicle's body as boxes in its own frame (forward, left, up from its origin; u), for whether a

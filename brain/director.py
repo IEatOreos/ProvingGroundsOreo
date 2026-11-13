@@ -268,12 +268,34 @@ class Director:
             # Easy ignores the team: no team shot, no score posture (it plays the same at 0-10 and 10-0), no hot zone
             b.team_focus, b.posture, b.hot_spot = (focus, s.posture.value, hot) \
                 if b.p.teamwork > 0 else ({}, 0.5, None)
+        dibs = s.wheel_dibs_of(snap)
+        for b in s.bots.values():
+            b.wheel_dibs = dibs                  # (custom, Nov 13: Easy too; Bot.wheel_yield)
         if now >= s.next_roles:
             s.next_roles = now + 2.0
             s.assign_roles(now, snap)
         s.blitz_tick(now, snap)
         s.wave_tick(now, snap)
         s.core_wave_tick(now, snap)
+
+    @staticmethod
+    def wheel_dibs_of_bots(bots, snap):
+        """(custom, Nov 13, owner: "Make wheelman get priority for driving warthogs") {Warthog handle: Wheelman's id}: the
+        Warthogs (vehicles.WARTHOGS) a Wheelman of ours (profiles.wheelman), alive and on foot, is on his way to (his goal
+        that vehicle: Bot.wheel_pick, an order to drive it). Nobody else of ours takes their wheel (Bot.wheel_yield,
+        crew_orders, wheel_calls)."""
+        from . import vehicles
+        hogs = {v["handle"] for v in snap.vehicles if vehicles.is_warthog(v["kind"])}
+        out = {}
+        for b in bots:
+            p = snap.player(b.id)
+            if (profiles.wheelman(b.p) and p is not None and p.alive and p.vehicle in (None, -1)
+                    and b.goal[0] == "vehicle" and b.goal[1] in hogs):
+                out.setdefault(b.goal[1], b.id)
+        return out
+
+    def wheel_dibs_of(s, snap):
+        return s.wheel_dibs_of_bots(s.bots.values(), snap)
 
     def desperate(s, now, snap):
         """(where, why) when only everyone going in together saves the game, else None. BLITZ_MODES by the score posture:
@@ -1272,7 +1294,7 @@ class Director:
                          and players[x.id].vehicle == -1 and not players[x.id].has_flag and x.p.teamwork > 0
                          and x.p.tier != "novice" and skip.get((x.id, h), 0.0) <= now
                          and s.roles.get(x.id) not in ("ferry", "ride", "board", "drive")
-                         and x.may_drive(v, snap) and not x.urgent(players[x.id], snap)
+                         and x.may_drive(v, snap) and not Bot.wheel_yield(x, v) and not x.urgent(players[x.id], snap)
                          and dist(players[x.id].pos, vp) <= s.WHEEL_R]
                 b = min(cands, key=lambda x: (profiles.driver_priority(x.p), dist(players[x.id].pos, vp)), default=None)
                 if b is None:
@@ -1707,7 +1729,10 @@ class Director:
                           for bid, b in free.items()}
         def may_drive(b, v):
             # (custom: no Demon at the wheel of a Warthog or a Mongoose, vehicles.DEMON_NO_DRIVE; Race laps excepted)
-            return snap.mode == "race" or not (profiles.fixed_demon(b.p) and vehicles.demon_no_drive(v["kind"]))
+            # (custom, Nov 13: nor anyone at a Warthog's a Wheelman of ours is on his way to, Bot.wheel_yield: a job on
+            # one already given is dropped)
+            return (snap.mode == "race" or not (profiles.fixed_demon(b.p) and vehicles.demon_no_drive(v["kind"]))) \
+                and not Bot.wheel_yield(b, v)
 
         def pool_for(v):
             # who may be sent to v: a transport or a Ghost the free bots; a power vehicle the busy ones near it too, and
