@@ -342,10 +342,10 @@ def level_floor(name):
         k = max(1, math.ceil(len(l) / LEVEL_POINTS))
         l, j, i = l[::k], j[::k], i[::k]
         if len(l):
-            x = T.x0 + (i + 0.5) * NAV_CELL * T.nstep
-            y = T.y0 + (j + 0.5) * NAV_CELL * T.nstep
+            x = T.x0 + (i + 0.5) * NAV_CELL            # (Terrain._center: a nav cell is NAV_CELL whatever nstep)
+            y = T.y0 + (j + 0.5) * NAV_CELL
             pts = np.round(np.stack([x, y, T.lz[l, j, i]], 1), 2)
-            return dict(cell=NAV_CELL * T.nstep * math.sqrt(k), points=pts.ravel().tolist(), source="nav")
+            return dict(cell=NAV_CELL * math.sqrt(k), points=pts.ravel().tolist(), source="nav")
     except Exception as e:                       # (a nav that cannot load: the level data's floors)
         print(f"spots: no nav floor for {name}: {type(e).__name__}: {e}", flush=True)
     from brain.variants import base_of

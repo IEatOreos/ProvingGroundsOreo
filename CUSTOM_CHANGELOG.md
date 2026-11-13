@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Tanks drive on a tank-sized ground, back off long enough to turn, and a wedge marks the spot for every vehicle, 2026-11-13
+
+The owner's F9 on a Forge World layout (`20261112-213825`, 196.5 s): "Bots dont advance the map with a scorpion"; then "It was trying to push into the base at home which I want vehicles to avoid at all sizes ... for know do your proposed fixes both".
+
+- What the trace showed: two bot Scorpions spent about 2.5 minutes each by their own bases.
+  - Cosmic (Demon) sat within 2 u of (-56.4, -195.7) from 113 s to 270 s. The loop: throttle 0.35-0.6 with the hull facing about 45 degrees into a wall, no movement, 1.2 s of reverse (0.2 u back), then in again. After two wedges, "another way" picked a random place, routed out the same way. OblivionClaw by (-42, -98) did the same.
+  - At the spot the nav saw only part of what it pushed into: open floor ahead on the vehicles' ground, a wall 1.8 u along the hull. Every vehicle had one ground, kept 0.75 u (`VEH_ROOM`) from walls: about half a Scorpion's width, not room to turn it.
+- `brain/terrain.py`:
+  - `use_vground(big)`: a tank's own vehicle ground, `VEH_ROOM_TANK` 5 cells (1.25 u, half a Scorpion's length) from walls. Each size keeps its own graph and caches, built on first use; `vnav` and `drive_clear` take `big`. The paint, rides and out-of-bounds resets clear both (`_vreset`).
+  - `vwedge(p, yaw)`: where a vehicle wedged, the floor `VWEDGE_AHEAD` 1.5 u ahead of its hull, `VWEDGE_R` 1.25 u round, costs `VWEDGE_COST` 40 times more to drive into. It is taken off the vehicles' ground, and `drive_clear` meets it as a wall, on every size's ground. Kept for the match (`_build_vnav` applies the list), at most 64.
+- `brain/bot.py`:
+  - `tank_ground(v, T)`: a Scorpion, Wraith or Mantis drives and looks (trip, retreat, `ground_guard`) on the tank ground.
+  - A wedged vehicle marks the spot (`vwedge`, the hull's heading).
+  - A wedged tank backs off `TANK_BACK_S` 2.5 s with its view on its way on (the trip's next point), so its hull swings round. Other vehicles keep the 1.2 s three-point turn.
+- Checked on the report's layout: the look along the hull at the wedge spot went from 1.8 u to 0.4 u after the mark; the look along its route (-78 degrees) stayed 6 u clear. The tank ground there is 248,692 cells against the cars' 278,694.
+- Not fixed: the hand-placed blocker for a base's way in that vehicles of every size should keep out of (a LiDAR editor blocker, the owner's idea for later).
+- Also: `tools/spots.py` level floor and `tools/lidar_sim.py` air-only seed took a nav cell as `NAV_CELL * nstep`; it is `NAV_CELL` (`Terrain._center`). Every map's heightmap cell is 0.25 u (nstep 1), so nothing changed in practice.
+- Validation: new `tools/test_tank_drive.py` (the tank ground smaller and inside the cars', each size's ground kept apart; a wedge is a wall ahead for both sizes, costs more, survives a rebuild, is marked once, the way back open; the longer back-off). All 634 regression tests pass. Tank driving in a match is untested; the bot process must be restarted.
+
 ### Reach and Halo 4 Banshee pilots drop the bomb about every run, 2026-11-13
 
 The owner: "I'd like the reach and halo 4 banshee pilots to use the bomb a lot more as it's a lot stronger than the plasma casters".

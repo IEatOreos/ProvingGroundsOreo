@@ -188,8 +188,8 @@ class Airspace:
         l, j, i = np.nonzero(T.lwalk & T.reach)
         if not len(l):
             return
-        x = T.x0 + (i + 0.5) * NAV_CELL * T.nstep
-        y = T.y0 + (j + 0.5) * NAV_CELL * T.nstep
+        x = T.x0 + (i + 0.5) * NAV_CELL                # (Terrain._center: a nav cell is NAV_CELL whatever nstep)
+        y = T.y0 + (j + 0.5) * NAV_CELL
         k = np.clip(((T.lz[l, j, i] - s.z0) / s.v).astype(int), 0, s.nz - 1)
         vj = np.clip(((y - T.y0) / s.v).astype(int), 0, s.ny - 1)
         vi = np.clip(((x - T.x0) / s.v).astype(int), 0, s.nx - 1)

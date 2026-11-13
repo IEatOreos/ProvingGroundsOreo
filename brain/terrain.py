@@ -744,7 +744,7 @@ class Terrain:
         s.hand_drive = set(s.drive_paint)        # (a skilled player's: never left off for a wedge, _build_vnav)
         s.fly_cells = {k: {(round(x * 2), round(y * 2)): z for x, y, z in layers.get("fly_" + k, []) +
                            (layers.get("fly", []) if k == "high" else [])} for k in ("low", "high")}
-        s.__dict__.pop("graph_v", None)          # the vehicles' ground is built again with the painted drive cells
+        s._vreset()                              # the vehicles' ground is built again with the painted drive cells
         s.__dict__.pop("_fly_fields", None)
 
     def top_near(s, x, y, r, zmax=None):
@@ -813,7 +813,7 @@ class Terrain:
             s.air_heights = heights
         for k, v in (marks or {}).items():
             s.__dict__.setdefault("air_marks", {})[k] = v
-        s.__dict__.pop("graph_v", None)
+        s._vreset()
         s.__dict__.pop("_fly_fields", None)
 
     AIR_LOW_MIN, AIR_LOW_MAX = 2.5, 6.0      # attack runs: this far over the ground at least / at most
@@ -1868,7 +1868,7 @@ class Terrain:
         s.oob = mask if mask.any() else None
         s.oob_spots = [Vec(float(x), float(y), float(z)) for x, y, z, *_ in spots]
         s._refresh_barriers()
-        s.__dict__.pop("graph_v", None)          # (its ground leaves them out: _build_vnav)
+        s._vreset()                              # (its ground leaves them out: _build_vnav)
 
     def _apply_oob(s):
         """Out of bounds' cost on whichever reversed walking graphs exist (row = an edge's end): off from the last
@@ -2084,14 +2084,87 @@ class Terrain:
     # Revenant, Scorpion; the shortest line hugged every corner at VEH_ROOM): an edge into a cell nearer a wall than
     # VEH_PREF u costs up to VEH_WALL_COST times more, falling off to none at VEH_PREF
     VEH_PREF, VEH_WALL_COST = 3.0, 2.0
+    # (custom, Nov 13) a tank's ground (use_vground "tank": Scorpion, Wraith, Mantis): VEH_ROOM_TANK cells clear of
+    # walls, half a Scorpion's length so it can turn there (VEH_ROOM's 0.75 u is about half its width). On the one
+    # ground a Forge World layout's Scorpions pushed into their own base's way in 2.5 minutes, wedged, backing off and
+    # in again ("Bots dont advance the map with a scorpion", 20261112-213825)
+    VEH_ROOM_TANK = 5
+    # (custom, Nov 13) where a vehicle wedged (vwedge): the floor VWEDGE_AHEAD u ahead of it, VWEDGE_R round, costs
+    # VWEDGE_COST times more on every size's ground for the rest of the match. Its way on after backing off went in
+    # at the same spot: the trip's next place was routed through it again
+    VWEDGE_AHEAD, VWEDGE_R, VWEDGE_COST, VWEDGE_MAX = 1.5, 1.25, 40.0, 64
+    VGROUND_KEYS = ("graph_v", "graph_v_to", "vroomy", "_vfields", "_vground", "_vpiece", "_vnear")
+
+    def use_vground(s, big=False):
+        """(custom, Nov 13) The vehicle ground vnav / drive_clear answer on: a tank's (big) or every other vehicle's.
+        Each size keeps its own graph and caches, swapped in on use (built on its first)."""
+        want = "tank" if big else "car"
+        cur = s.__dict__.get("_vsize", "car")
+        if cur == want:
+            return
+        store = s.__dict__.setdefault("_vstore", {})
+        store[cur] = {k: s.__dict__.pop(k) for k in s.VGROUND_KEYS if k in s.__dict__}
+        s.__dict__.update(store.pop(want, {}))
+        s._vsize = want
+
+    def _vreset(s):
+        """The vehicle ground of every size to be built again (paint, rides, out of bounds changed)."""
+        s.__dict__.pop("graph_v", None)
+        s.__dict__.pop("_vstore", None)
+
+    def vwedge(s, p, yaw):
+        """(custom, Nov 13) A vehicle wedged at p pushing along yaw: the floor ahead of it costs VWEDGE_COST times more
+        on every size's ground built or to be built (_build_vnav applies the list). Returns the point marked, or None
+        (one within 1 u is marked already, or VWEDGE_MAX reached)."""
+        q = Vec(p.x + math.cos(yaw) * s.VWEDGE_AHEAD, p.y + math.sin(yaw) * s.VWEDGE_AHEAD, p.z)
+        marks = s.__dict__.setdefault("vwedges", [])
+        if len(marks) >= s.VWEDGE_MAX or any((q - m).flat() < 1.0 and abs(q.z - m.z) < 1.5 for m in marks):
+            return None
+        marks.append(q)
+        s._vwedge_apply(s.__dict__, [q])
+        for d in s.__dict__.get("_vstore", {}).values():
+            s._vwedge_apply(d, [q])
+        return q
+
+    def _vwedge_apply(s, d, pts):
+        """Edges into the floor round each point cost VWEDGE_COST times more in ground set d (a graph_v, its
+        transpose and its fields: s.__dict__, or a stored size's), and that floor is off its ground (vroomy): the
+        ground guard's look (drive_clear) meets it as a wall, so a hull pointed at it turns off it instead of pushing
+        in again. (What it pushed into is not in the level data: the wedge spot read open floor 6 u ahead.)"""
+        g = d.get("graph_v")
+        if g is None or not pts:
+            return
+        r = int(math.ceil(s.VWEDGE_R / NAV_CELL))
+        nodes = set()
+        for q in pts:
+            if not s.inside(q.x, q.y):
+                continue
+            j0, i0 = s._cell(q)
+            for j in range(max(0, j0 - r), min(s.nh, j0 + r + 1)):
+                for i in range(max(0, i0 - r), min(s.nw, i0 + r + 1)):
+                    for l in range(s.L):
+                        z = s.lz[l, j, i]
+                        if math.isfinite(z) and abs(z - q.z) < 1.5 and (s._center(l, j, i) - q).flat() <= s.VWEDGE_R:
+                            nodes.add((l * s.nh + j) * s.nw + i)
+        if not nodes:
+            return
+        g.data[np.isin(g.indices, np.fromiter(nodes, dtype=g.indices.dtype))] *= s.VWEDGE_COST
+        d["graph_v_to"] = g.T.tocsr()
+        d["_vfields"] = {}
+        s.__dict__.setdefault("vwedge_nodes", set()).update(nodes)   # (drive_clear: a wall on every size's look)
+        vr = d.get("vroomy")
+        if vr is not None:
+            vr[np.unravel_index(np.fromiter(nodes, dtype=np.int64), vr.shape)] = False
+            for k in ("_vground", "_vpiece", "_vnear"):
+                d.pop(k, None)
 
     def _build_vnav(s):
         """The ground a vehicle can drive: the walking graph's edges between nodes VEH_ROOM cells clear of any wall
         (doors, corridors, stair wells are out), no step up of more than VEH_RISE a cell (a ramp, not a stair),
-        drops to VEH_DROP. Built once, on the first drive."""
+        drops to VEH_DROP. Built once a size, on its first drive (use_vground: a tank's VEH_ROOM_TANK)."""
         from scipy import ndimage
         from scipy.sparse import csr_matrix
-        k = s.VEH_ROOM
+        k = s.VEH_ROOM_TANK if s.__dict__.get("_vsize", "car") == "tank" else s.VEH_ROOM
         yy, xx = np.mgrid[-k:k + 1, -k:k + 1]
         disk = xx ** 2 + yy ** 2 <= k * k
         roomy = np.stack([s.lwalk[l] & ~ndimage.binary_dilation(s.near_wall[l], structure=disk) for l in range(s.L)])
@@ -2149,12 +2222,15 @@ class Terrain:
         s._vfields = {}
         for k in ("_vground", "_vpiece", "_vnear"):
             s.__dict__.pop(k, None)
+        s._vwedge_apply(s.__dict__, s.__dict__.get("vwedges", []))   # (custom, Nov 13) where vehicles wedged
 
-    def drive_clear(s, p, yaw, far=6.0):
+    def drive_clear(s, p, yaw, far=6.0, big=False):
         """A ground vehicle's short look ahead (Bot.ground_guard): how far its centre goes from p along yaw (flat) before
         a wall, stepping cell to cell as the nav does (_layer: each floor a step up or a drop on from the last, so ramps
         and drops are open): no floor a step on (a face, a lip), or a cell beside a rising wall (near_wall) off the
-        vehicle's ground (painted drive cells run by walls). far when nothing is in the way or the line leaves the grid."""
+        vehicle's ground (painted drive cells run by walls). far when nothing is in the way or the line leaves the grid.
+        big: a tank's ground (use_vground)."""
+        s.use_vground(big)
         if getattr(s, "graph_v", None) is None:
             s._build_vnav()
         if not s.inside(p.x, p.y):
@@ -2166,6 +2242,7 @@ class Terrain:
         tan = float(s.tz[start]) if s.tz is not None else 0.0
         c, sn, step = math.cos(yaw), math.sin(yaw), NAV_CELL * 0.8   # (0.8 of a cell: fly_clear's, no cell skipped)
         cell, t = start[1:], step
+        marked = s.__dict__.get("vwedge_nodes", ())   # (custom, Nov 13: where vehicles wedged, vwedge)
         while t <= far:
             x, y = p.x + c * t, p.y + sn * t
             if not s.inside(x, y):
@@ -2173,16 +2250,19 @@ class Terrain:
             jj, ii = s._cell(Vec(x, y, 0.0))
             if (jj, ii) != cell:
                 ll = s._layer(jj, ii, prev, reach_from=prev, tan=tan)
-                if ll is None or (s.near_wall[ll, jj, ii] and not s.vroomy[ll, jj, ii]):
+                if (ll is None or (s.near_wall[ll, jj, ii] and not s.vroomy[ll, jj, ii])
+                        or (ll * s.nh + jj) * s.nw + ii in marked):
                     return t
                 cell, prev = (jj, ii), float(s.lz[ll, jj, ii])
                 tan = float(s.tz[ll, jj, ii]) if s.tz is not None else 0.0
             t += step
         return far
 
-    def vnav(s, a, b, lookahead=24):
+    def vnav(s, a, b, lookahead=24, big=False):
         """Next point to drive toward from a to b (vehicles: _build_vnav's ground, a longer look ahead than on foot),
-        or the walking answer where the vehicle's ground does not reach (off it; no way on it: see below)."""
+        or the walking answer where the vehicle's ground does not reach (off it; no way on it: see below). big: a
+        tank's ground (use_vground)."""
+        s.use_vground(big)
         if getattr(s, "graph_v", None) is None:
             s._build_vnav()
         if math.hypot(b.x - a.x, b.y - a.y) < 4.0:

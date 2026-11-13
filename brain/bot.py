@@ -558,6 +558,14 @@ AIR_JINK, AIR_JINK_S = 0.4, 1.0   # rad, s: shot at in a run's way in (out of gu
 # (median, five matches): flown past him, or swung off him by a wall guard, he was out of view, the attack was
 # dropped for the trip to its objective, and the way out and the turn back into the next run never happened
 AIR_KEEP_S, AIR_KEEP_R = 6.0, 60.0
+TANK_BACK_S = 2.5     # (custom, Nov 13) s: a wedged tank backs off this long, its view on its way on (Bot.drive)
+
+
+def tank_ground(v, T=None):
+    """(custom, Nov 13) The ground keywords for Terrain.vnav / drive_clear: a tank's own (use_vground) for a
+    Scorpion, Wraith or Mantis on a terrain with sizes (T.use_vground), none for the rest (stand-ins take none)."""
+    return {"big": True} if (v is not None and vehicles.kind_of(v["kind"]) in vehicles.TANKS
+                           and hasattr(T, "use_vground")) else {}
 # an attack run's ground check (Bot.air_guard): its path along the nose AIR_PULL_S ahead at its speed, under AIR_RUN_FLOOR
 # over the floor there: pull out and end the run. (The old rule, 6.8 u over the highest floor within 6 u of four points
 # 2.5 s on, fired on 44% of a replayed Shrine Banshee's ticks and held every dive 16 u over him: tools/air_replay.py)
@@ -4286,7 +4294,7 @@ class Bot:
                 s.retreat_until, s.retreat_to = now + 4.0, to
                 s.note("vehicle: shield down, back to " + ("a teammate" if mates else "base"))
         if now < getattr(s, "retreat_until", 0.0) and dist(me.pos, s.retreat_to) > 4.0:
-            w = s.T().vnav(me.pos, s.retreat_to) if hasattr(s.T(), "vnav") else nav(me.pos, s.retreat_to)
+            w = s.T().vnav(me.pos, s.retreat_to, **tank_ground(v, s.T())) if hasattr(s.T(), "vnav") else nav(me.pos, s.retreat_to)
             w = w if w is not None else s.retreat_to
             act.yaw, act.forward, act.strafe, act.fire = math.atan2(w.y - me.pos.y, w.x - me.pos.x), 1.0, 0.0, False
             s.att = ["retreat", None, round(w.x, 1), round(w.y, 1)]
@@ -4501,7 +4509,8 @@ class Bot:
                 if T is None:
                     from .maps import terrain
                     T = s._terrain = terrain(s.map)
-                w = T.vnav(me.pos, target) if hasattr(T, "vnav") else nav(me.pos, target)
+                # (custom, Nov 13: a tank on a tank's ground, Terrain.use_vground)
+                w = T.vnav(me.pos, target, **tank_ground(v, T)) if hasattr(T, "vnav") else nav(me.pos, target)
                 w = w if w is not None else target       # (no route read: straight at it)
                 # as near the goal as the vehicle's ground goes: out here. Only on that ground: off it, its edge is 0.25
                 # u away, so a Warthog wedged by it "arrived" every tick, was sent on again and never counted as stuck
@@ -4629,9 +4638,19 @@ class Bot:
             # Sidewinder)
             s.reversed_n = getattr(s, "reversed_n", 0) + 1
             s.wedge_spot = getattr(s, "wedge_spot", None) or me.pos
+            # (custom, Nov 13) where it pushed in costs every vehicle's way from now (Terrain.vwedge): the next way on
+            # went in at the same spot (a Forge World layout's Scorpions, 2.5 minutes in their own base's way in)
+            Tw = s.T()
+            if v is not None and hasattr(Tw, "vwedge") and Tw.vwedge(me.pos, s.heading(me, v)) is not None:
+                s.note("vehicle: wedged, the way in marked for every vehicle")
             # (on the ground with the view 60 degrees to a side: a reversing Warthog swings its nose round to the view, a
             # three-point turn, and the next try the other way; straight back and on again met the same rock)
-            s.reverse_until, s.reverse_yaw = now + 1.2, me.yaw + s.strafe_dir * math.pi / 3
+            # (custom, Nov 13) a tank backs off TANK_BACK_S with its view on its way on, so its slow hull swings round
+            # to it: 1.2 s took a Scorpion 0.2 u back, its hull still on the wall, and it drove in again)
+            if v is not None and vehicles.kind_of(v["kind"]) in vehicles.TANKS:
+                s.reverse_until, s.reverse_yaw = now + TANK_BACK_S, act.yaw
+            else:
+                s.reverse_until, s.reverse_yaw = now + 1.2, me.yaw + s.strafe_dir * math.pi / 3
             s.strafe_dir = -s.strafe_dir
             s.drive_pos = None
             return
@@ -6334,7 +6353,8 @@ class Bot:
         # past it (the corner it turns at) only slows it
         steer_look = min(look, to + 0.5) if att[0] in ("path", "retreat") and to is not None else look
         ease_d = s.GROUND_NOSE + s.GROUND_EASE * speed     # (contact within GROUND_EASE s)
-        clear = lambda yaw, far=look: T.drive_clear(me.pos, yaw, far)
+        kw = tank_ground(v, T)                # (custom, Nov 13: a tank's look on a tank's ground)
+        clear = lambda yaw, far=look: T.drive_clear(me.pos, yaw, far, **kw)
         hit = lambda d, far=look: d if d < far - 1e-6 else math.inf     # (far: nothing in the way that far)
         near = math.inf
         if att[0] in s.GROUND_AIMING:
