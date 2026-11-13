@@ -109,6 +109,8 @@
   #sim-speeds button:last-child, #sim-mappers button:last-child { border-radius: 0 4px 4px 0; }
   #sim-speeds button[aria-pressed="true"], #sim-mappers button[aria-pressed="true"] { position: relative; z-index: 1; }
   #sim .pair { display: flex; gap: 6px; }
+  #sim-all-game { flex: 1; min-width: 0; background: #0e1824; color: var(--text); border: 1px solid var(--line); border-radius: 4px;
+                  padding: 4px 6px; min-height: 28px; font: inherit; font-size: 13px; }
   #sim-cover { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center; }
   #sim .dim { color: var(--dim); }
   #sim .dim:empty { display: none; }
@@ -356,7 +358,22 @@
     </div>
     <div class="acts">
       <button id="sim-pick" class="primary" title="Open a map (or a Forge layout) to look at it and edit its spots; simulate it from here or from the list">Open a map</button>
-      <button id="sim-all" title="Every map in turn">Every map</button>
+    </div>
+    <div class="field">
+      <label class="flabel" for="sim-all-game">Simulate every map of</label>
+      <div class="pair">
+        <select id="sim-all-game">
+          <option value="">Every game</option>
+          <option value="ce">Halo CE</option>
+          <option value="h2">Halo 2</option>
+          <option value="h2a">Halo 2 Anniversary</option>
+          <option value="h3">Halo 3</option>
+          <option value="odst">ODST</option>
+          <option value="reach">Reach</option>
+          <option value="h4">Halo 4</option>
+        </select>
+        <button id="sim-all" title="Every map of that game in turn (Forge layouts not included); each is saved as it finishes">Simulate all</button>
+      </div>
     </div>
     <div class="acts">
       <button id="sim-pause">Pause</button>
@@ -712,9 +729,16 @@ function setCover(on) {
 }
 $("sim-pick").onclick = () => { pickMode = false; showMaps(true); };   // (custom) open first, simulate by choice
 $("sim-this").onclick = () => simulate({ name: browseName, title: browseTitle });
-$("sim-all").onclick = async () => {
-  if (!confirm("Simulate every map in turn? It takes a few minutes a map; each map is saved when it finishes.")) return;
-  const r = await simPost({ action: "all" }); if (!r.ok) $("sim-state").textContent = r.data.error || "Could not start.";
+$("sim-all").onclick = async () => {   // (custom, Nov 13) every map, or every map of one game
+  const sel = $("sim-all-game"), game = sel.value, label = sel.options[sel.selectedIndex].text;
+  if (!mapsData) await loadMaps();
+  const n = mapsData ? mapsData.maps.filter(m => !m.name.includes("/variants/") && (!game || m.game === game)).length : null;
+  const what = game ? "every " + label + " map" : "every map";
+  if (!confirm("Simulate " + what + (n ? " (" + n + " maps)" : "") + " in turn? It takes a few minutes a map; each map is saved when it finishes." +
+               (simState && simState.current ? "\n\n" + simState.title + " stops now (what it mapped so far is saved)." : ""))) return;
+  const r = await simPost(game ? { action: "all", game } : { action: "all" });
+  if (!r.ok) $("sim-state").textContent = r.data.error || "Could not start.";
+  else if (browsing) location.search = "";   // (from a map opened in the view: watch the simulation)
 };
 $("sim-pause").onclick = () => simPost({ action: simState && simState.paused ? "resume" : "pause" });
 $("sim-stop").onclick = () => simPost({ action: "stop" });

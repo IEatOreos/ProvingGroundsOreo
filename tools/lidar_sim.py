@@ -538,8 +538,17 @@ class Control:
                 s.queue = [name]
                 s.stop_now, s.paused = s.current is not None, False   # (the map running now ends, this one starts)
             elif act == "all":
-                s.queue = [m for m in s.names if "/variants/" not in m]
+                # (custom, Nov 13: "simulate all the maps in a per game basis") game: that game's maps only
+                game = d.get("game")
+                if game is not None and game not in GAMES:
+                    return 400, dict(error="game must be one of " + ", ".join(GAMES))
+                queue = [m for m in s.names if "/variants/" not in m
+                         and (game is None or J.game_of(m.partition("/")[0]) == game)]
+                if not queue:
+                    return 404, dict(error="no maps with level data for that game")   # (the queue as it was)
+                s.queue = queue
                 s.stop_now, s.paused = s.current is not None, False
+                return 200, dict(ok=True, queued=len(s.queue))
             elif act == "speed":
                 v = float(d.get("speed", 4))
                 if v not in s.SPEEDS:

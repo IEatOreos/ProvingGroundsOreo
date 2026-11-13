@@ -26,6 +26,24 @@ class CrewTests(unittest.TestCase):
         self.assertEqual((c.state()["mappers"], c.state()["run_mappers"]), ("ground", "air"))
 
 
+class AllOfAGameTests(unittest.TestCase):
+    """(Nov 13: "simulate all the maps in a per game basis") Every map, or every map of one game, queued."""
+    NAMES = ["bloodgulch", "h3_construct", "reach_70_boneyard", "reach_cex_headlong",
+             "reach_forge_halo", "reach_forge_halo/variants/v1234abcd", "h4_ca_blood_crash"]
+
+    def test_one_game(self):
+        c = lidar_sim.Control(self.NAMES)
+        self.assertEqual(c.command(dict(action="all", game="reach")), (200, dict(ok=True, queued=3)))
+        self.assertEqual(c.queue, ["reach_70_boneyard", "reach_cex_headlong", "reach_forge_halo"])   # (no Forge layouts)
+
+    def test_every_game_and_refusals(self):
+        c = lidar_sim.Control(self.NAMES)
+        self.assertEqual(c.command(dict(action="all"))[1]["queued"], 6)
+        self.assertEqual(c.command(dict(action="all", game="halo5"))[0], 400)
+        self.assertEqual(c.command(dict(action="all", game="odst"))[0], 404)      # (none here)
+        self.assertEqual(len(c.queue), 6)                                         # (a refused one changed nothing)
+
+
 class SimStateTests(unittest.TestCase):
     """A map opened in the simulator's window asks GET /sim: the panel's state, and the simulator (which closes 90 s
     after its window stops asking) sees the window is open. The LiDAR Viewer has no simulator: 404."""

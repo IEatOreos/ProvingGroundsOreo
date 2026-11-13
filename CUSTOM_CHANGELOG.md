@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### LiDAR Simulator: simulate every map of one game, 2026-11-13
+
+The owner: "can we add an option to lidar simulate all the maps in a per game basis? So if I want to simulate all of reach I can do that instead of having to Que them all".
+
+- The Simulator panel's "Every map" button is now "Simulate every map of" a game (Halo CE, Halo 2, Halo 2 Anniversary, Halo 3, ODST, Reach, Halo 4) or every game, then Simulate all.
+  - The confirmation names the game and how many maps (on this PC: Halo CE 19, Halo 2 25, H2A 7, Halo 3 32, ODST 8, Reach 28, Halo 4 25, 144 in all), and says when the map running now stops.
+  - From a map opened in the window it switches to the simulation.
+  - Forge layouts are left out, as before.
+- `tools/lidar_sim.py` `Control` action "all" takes `game`: that game's maps only (`jumpphys.game_of`). An unknown game is refused (400), a game with no maps here too (404), and a refused one leaves the queue as it was. The answer says how many were queued.
+- Validation: `tools/test_lidar_mappers.py` +2 (one game's maps only, no layouts; every game; the refusals keep the queue; the test caught a refusal that emptied it). All 650 regression tests pass. In the Simulator window, with the confirmation cancelled so nothing ran: the list showed every game, and the confirmations read Reach 28, Halo 4 25, every game 144. A full run by game is untested.
+
 ### Tank drivers: a man on foot close by first, then vehicles in range, 2026-11-13
 
 The owner: "a tank driver, scorpion or wraith prioritizes killing an enemy that's within so many units, then prioritizes vehicles. Unless an infantry is within so many more units?"; on the proposal (infantry within 10 u, then vehicles within 40 u, then the rest): "Yea we can try that at first".
