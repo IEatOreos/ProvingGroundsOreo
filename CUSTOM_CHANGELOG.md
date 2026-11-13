@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Easy keeps moving, part 2: hunts, posts, giving up sooner, neighbouring zones, 2026-11-13
+
+The owner, choosing from the proposals for Easy's idle time: "1-5 not 6".
+
+- **1. No standing at an empty hunt spot** (`brain/bot.py` `Bot.plan`, `EASY_HUNT_DONE` 3 u): within 3 u of where it last knew of a man, Easy walks on to its roam point instead of standing there looking about (it stood 13-67% of its hunt time, Nov 12).
+- **2. Circling at posts** (`Bot.loiter` `brisk`, `EASY_LOITER_R` 6 u): at a post (an objective point, a hold) Easy circles up to 6 u round it (others 2.5-4) and goes on to the next spot as soon as it reaches one, or after 3 s, with no stops. A zone it must stand in or the hill keeps its own radius, brisk too; a zone too small to walk in keeps its shuffle.
+- **3. Jumping and dropping when stuck: no change.** It is there already: the unstuck wiggle jumps for every tier, Easy included ("getting unstuck is navigation: every tier jumps"), and the edge guard stops only at a fall (it turns another way after a while). The "step down" notes in Easy's traces are the guard letting a planned step down through, not a stop.
+- **4. Giving a goal up sooner** (`Bot.headway`, `EASY_HEADWAY_S`): the existing clock, which bans a goal (a gun, a hunt spot, an objective point) with no headway, runs 3.5 s for Easy instead of 6. Zones, the hill and a carrier's run stay exempt, as for everyone.
+- **5. Neighbouring zones** (`Bot.roam`, `EASY_ROAM_NEAR` 30 u): Easy's next roam point is a zone 8-30 u off and not the one before the one it just reached, so it walks round the map instead of back and forth or across it; none that near: any, as before.
+- `Bot.easy_mover`: fixed Easy (not Scaling), for all of these and the fight on the move.
+- Validation: `tools/test_easy_moving.py` +5 (11: the empty hunt spot through `think`, Normal still walking to it; brisk loiter's next spot at once, not otherwise; Easy's ban at 3.5 s, Normal's at 6; neighbouring zones only for Easy, Normal anywhere; no back and forth over 12 roam picks). All 64 `tools/test_*.py` files pass. No match simulator here: the gain is not measured. Python only. **Untested in game.**
+
 ### Easy keeps moving: no stalled roam points, fights on the move, 2026-11-13
 
 The owner: "I would like to make easy actually move a lot and not stall so much. They don't have to be able to shoot or retrieve obj, or drive. Just to where they roam a lot more actively without stopping".

@@ -60,22 +60,31 @@ class RoamStallTests(unittest.TestCase):
 
 
 class FightMovingTests(unittest.TestCase):
-    def fight(self, tier, ticks=20):
+    def test_easy_walks_on_from_an_empty_hunt_spot(self):
+        for tier in ("novice", "average"):
+            b, act, walked, me = self.fight(tier, goal=("hunt", Vec(1.5, 0.0, 0.0)), enemy_at=Vec(60, 60, 0))
+            if tier == "novice":
+                self.assertEqual(walked[-1], b.roam_point)
+            else:
+                self.assertEqual(walked[-1], Vec(1.5, 0.0, 0.0))              # (as before: to the spot)
+
+    def fight(self, tier, ticks=20, goal=("fight", 1), enemy_at=Vec(10, 0, 0)):
         b = make(tier)
         b._terrain = SimpleNamespace(sees=lambda *a, **k: True, shot_los=lambda *a, **k: True,
                                      target_parts=lambda *a, **k: (True, True), point_los=lambda *a, **k: True)
         for name in ("no_wall_jump", "edge_guard", "obstacle_guard", "unstuck"):
             setattr(b, name, lambda *a, **k: None)
+        b.look_point = lambda me, p, nav=None, post=None: p                   # (no map: looks where it goes)
         walked = []
 
         def move_to(me, p, act, nav, **kw):                                   # (no map: straight at it, full speed)
             walked.append(p)
             act.yaw, act.forward, act.strafe = math.atan2(p.y - me.pos.y, p.x - me.pos.x), 1.0, 0.0
         b.move_to = move_to
-        b.goal, b.next_decide = ("fight", 1), 99.0
+        b.goal, b.next_decide = goal, 99.0
         b.per.recognized.add(1)
         me = PlayerState(0, 0, "bot", Vec(), weapon="assault_rifle", weapons=["assault_rifle"], mag=[32], ammo=[96])
-        him = PlayerState(1, 1, "enemy", Vec(10, 0, 0))
+        him = PlayerState(1, 1, "enemy", enemy_at)
         act = None
         for k in range(ticks):
             act = b.think(1.0 + k / 30, 1 / 30, Snapshot(1.0 + k / 30, [me, him]), lambda a, c, **kw: True,
@@ -104,6 +113,73 @@ class FightMovingTests(unittest.TestCase):
             self.assertFalse(any(p == b.roam_point for p in walked if b.roam_point is not None))
         finally:
             botmod.EASY_FIGHT_MOVING = True
+
+
+class Ground:
+    """Terrain stand-in: floor everywhere, clear lines, no path field (headway falls back to the straight line)."""
+
+    def ground_ok(self, *a, **k):
+        return True
+
+    def los(self, *a, **k):
+        return True
+
+    def _field(self, *a, **k):
+        raise KeyError
+
+
+class MoreMovingTests(unittest.TestCase):
+    """(Nov 13, the owner's items 1-5) hunts, posts, headway and roam choice."""
+
+    def test_easy_roams_to_a_neighbouring_zone(self):
+        zones = SimpleNamespace(zones=[SimpleNamespace(center=Vec(x, 0.0, 0.0)) for x in (12.0, 25.0, 60.0, -55.0)])
+        for tier, allowed in (("novice", {12.0, 25.0}), ("average", {12.0, 25.0, 60.0, -55.0})):
+            seen = set()
+            for seed in range(40):
+                b = Bot(0, 0, make_profile(tier, "rusher", random.Random(1)), {"name": "reach_test", "zones": zones},
+                        random.Random(seed))
+                b.notes = []
+                seen.add(b.roam(PlayerState(0, 0, "bot", Vec()), 0.0).x)
+            self.assertTrue(seen <= allowed, (tier, seen))
+            if tier == "average":
+                self.assertTrue(seen & {60.0, -55.0}, seen)                   # (others: anywhere, as before)
+
+    def test_easy_does_not_go_back_and_forth(self):
+        zones = SimpleNamespace(zones=[SimpleNamespace(center=Vec(x, y, 0.0)) for x, y in
+                                       ((0.0, 0.0), (15.0, 0.0), (15.0, 15.0), (0.0, 15.0))])
+        b = Bot(0, 0, make_profile("novice", "rusher", random.Random(1)), {"name": "reach_test", "zones": zones},
+                random.Random(5))
+        b.notes = []
+        me = PlayerState(0, 0, "bot", Vec())
+        trail = [Vec()]
+        for k in range(12):
+            p = b.roam(me, float(k))
+            me.pos = p                                                        # (there)
+            trail.append(p)
+        for a, c in zip(trail, trail[2:]):
+            self.assertGreater((a - c).flat(), 1.0)                           # never straight back where it came from
+
+    def test_brisk_loiter_never_stops(self):
+        for brisk in (True, False):
+            b = make("novice")
+            b._terrain = Ground()
+            me = PlayerState(0, 0, "bot", Vec())
+            first = b.loiter(0.0, me, Vec(), 6.0, brisk=brisk)
+            me.pos = first                                                    # at the spot it went to
+            nxt = b.loiter(0.1, me, Vec(), 6.0, brisk=brisk)
+            (self.assertNotEqual if brisk else self.assertEqual)(nxt, first)  # brisk: the next one at once
+
+    def test_easy_gives_a_goal_up_sooner(self):
+        for tier, ban_by in (("novice", 3.6), ("average", 6.1)):
+            b = make(tier)
+            b._terrain = Ground()
+            me = PlayerState(0, 0, "bot", Vec())
+            goal = ("item", Vec(20.0, 0.0, 0.0))
+            t = 0.0
+            while t < 7.0 and not getattr(b, "goal_ban", {}):
+                b.headway(t, me, goal)
+                t += 0.1
+            self.assertAlmostEqual(t, ban_by, delta=0.25, msg=tier)
 
 
 if __name__ == "__main__":

@@ -130,6 +130,11 @@ TANK_VEHICLE_R = 40.0
 # to its roam point (Bot.plan; False: it fights as before)
 ROAM_STALL_S, ROAM_STALL_D, ROAM_BAD_S, ROAM_MIN_D = 4.0, 2.0, 60.0, 8.0
 EASY_FIGHT_MOVING = True
+# (custom, Nov 13, the owner, items 1-5) Easy (Bot.easy_mover): within EASY_HUNT_DONE u of a hunt's spot it walks on
+# to its roam point; at a post (not a zone or the hill) it circles EASY_LOITER_R u round it with no stops (loiter
+# brisk); a goal with no headway is given up after EASY_HEADWAY_S s (others 6); it roams to a zone EASY_ROAM_NEAR u
+# or nearer, not the one it came from
+EASY_HUNT_DONE, EASY_LOITER_R, EASY_HEADWAY_S, EASY_ROAM_NEAR = 3.0, 6.0, 3.5, 30.0
 
 
 # projectile speed in world units per second (CE kit tags, tools/ce_projectiles.py: mean of
@@ -2306,7 +2311,7 @@ class Bot:
         patrol_seen = s.per.visible_enemies() if kind == "patrol" else []
         on_way = s.on_way_target(now, me, snap, kind, arg)   # (custom: a Demon's errand with a man in view, below)
         carry_shot = s.carrier_shot(now, me, snap, kind, arg) if on_way is None and kind != "fight" else None
-        if kind == "fight" and s.p.tier == "novice" and s.p.extra is None and EASY_FIGHT_MOVING:
+        if kind == "fight" and s.easy_mover() and EASY_FIGHT_MOVING:
             # (custom, Nov 13, the owner: Easy "roam a lot more actively without stopping"; its shooting need not be
             # good) Easy fights on the move: the aim and trigger its fight's, the feet on to where it roams (it stood
             # 37-65% of its fight time, seven live matches Nov 12). Its own melee, grenade and reload presses stay
@@ -2360,6 +2365,11 @@ class Bot:
             s.engaged_since = s.charge_since = s.on_since = None
             point, post = (arg if isinstance(arg, Vec) else s.roam(me, now)), None
             point = s.detour(now, me, kind, point)
+            easy = s.easy_mover()
+            if easy and kind == "hunt" and (me.pos - point).flat() < EASY_HUNT_DONE:
+                # (custom, Nov 13) where it last knew of him and nobody there: Easy walks on to where it roams instead
+                # of standing there looking about (it stood 13-67% of its hunt time, seven live matches Nov 12)
+                point = s.roam(me, now)
             small = None                         # the radius of a zone too small to loiter in (below)
             # (a CTF hunter neither: it chases a carrier, or stands on our dropped flag to return it). A runner whose
             # objective is a place to hold (a zone, the hill) works it too: Easy's runners stood on their Invasion
@@ -2383,10 +2393,12 @@ class Bot:
                 if zr is not None and (snap.mode != "invasion" or snap.inv_attackers == me.team):
                     wander = 0.6 * zr
                     small = zr if zr < 1.6 else None
+                elif easy and not on_hill:
+                    wander = max(wander, EASY_LOITER_R)   # (custom, Nov 13) Easy circles wide about a post, not a zone
                 if kind == "objective" and s.order.role == "defender" and snap.mode == "ctf":
                     post, point = point, s.post_loiter(now, me, point)
                 else:
-                    post, point = point, s.loiter(now, me, point, wander)
+                    post, point = point, s.loiter(now, me, point, wander, brisk=easy and not small)
             elif kind == "retreat":
                 # recharging in cover: watch out of it, not the wall it hides behind
                 post = point
@@ -5999,6 +6011,12 @@ class Bot:
     def _goal_key(goal):
         return goal[0], round(goal[1].x), round(goal[1].y)
 
+    def easy_mover(s):
+        """(custom, Nov 13, the owner: Easy "roam a lot more actively without stopping") fixed Easy, not Scaling: the
+        bot the keep-moving rules are for (EASY_FIGHT_MOVING, EASY_HUNT_DONE, EASY_LOITER_R, EASY_HEADWAY_S,
+        EASY_ROAM_NEAR)."""
+        return s.p.tier == "novice" and s.p.extra is None
+
     def headway(s, now, me, goal, snap=None):
         """A human who has not got any closer to where he is going for 6 s (an item behind a teleporter frame, a
         post the level data puts in a gap he cannot fit) gives up on it for 30 s and does something else. Never a
@@ -6033,7 +6051,8 @@ class Bot:
             pass
         if getattr(s, "way_key", None) != key or d < s.way_best - 0.5:
             s.way_key, s.way_best, s.way_t = key, d, now
-        elif now - s.way_t > 6.0 and d > (1.5 if goal[0] == "item" else 4.0):   # posts: loitering is near
+        elif now - s.way_t > (EASY_HEADWAY_S if s.easy_mover() else 6.0) and d > (1.5 if goal[0] == "item" else 4.0):
+            # (posts: loitering is near. custom, Nov 13: Easy gives a goal up sooner, EASY_HEADWAY_S)
             s.__dict__.setdefault("goal_ban", {})[key] = now + 30.0
             s.way_key, s.next_decide = None, now
 
@@ -6067,13 +6086,15 @@ class Bot:
                 return s.detour_pt
         return point
 
-    def loiter(s, now, me, post, far=2.5):
+    def loiter(s, now, me, post, far=2.5, brisk=False):
         """At a post a human is not a statue: he drifts a few steps around it, stops, peeks, and
-        drifts again (campers stay longer at each spot). Only spots with floor under them, at most `far` off."""
+        drifts again (campers stay longer at each spot). Only spots with floor under them, at most `far` off. (custom,
+        Nov 13) brisk (Easy, EASY_LOITER_R): no stops, the next spot as soon as it is at this one, or after 3 s."""
         if (me.pos - post).flat() > max(3.5, far + 1.0):
             s.loiter_pt = None
             return post
-        if getattr(s, "loiter_pt", None) is None or now > s.loiter_until:
+        reached = brisk and getattr(s, "loiter_pt", None) is not None and (me.pos - s.loiter_pt).flat() < 0.6
+        if getattr(s, "loiter_pt", None) is None or now > s.loiter_until or reached:
             # (shorter stops than 1.5-4 s: bots stood still 16-28% of the time to the player's 13%, half of it at posts,
             # Cyberdyne; 0.6-2 s left Invasion bots still 2-10% of the time, Spire; campers twice as long. 0.8-2.6 s
             # until at a post with room: the Oddball side holding the ball stood 27-59% of its time at its guard posts,
@@ -6082,6 +6103,8 @@ class Bot:
             room = far >= 1.5
             camp = (1.5 if room else 2.0) if s.p.camping > 0.5 else 1.0
             s.loiter_pt, s.loiter_until = post, now + s.rng.uniform(*((0.4, 1.4) if room else (0.8, 2.6))) * camp
+            if brisk:
+                s.loiter_until = now + 3.0       # (walking to it; reached, the next at once: above)
             if getattr(s, "_terrain", None) is None:
                 from .maps import terrain
                 s._terrain = terrain(s.map)
@@ -8754,7 +8777,17 @@ class Bot:
             zones = s.map["zones"].zones
             bad = getattr(s, "roam_bad", {})
             pick = None
-            for _ in range(8):
+            if now is not None and s.easy_mover():
+                # (custom, Nov 13) Easy wanders on to a neighbouring zone, ROAM_MIN_D-EASY_ROAM_NEAR u off, not the one
+                # it came from: a steady walk round the map, not a random one across it (or onto a floor it cannot reach)
+                last = getattr(s, "roam_last", None)
+                near = [z.center for z in zones if ROAM_MIN_D <= (me.pos - z.center).flat() <= EASY_ROAM_NEAR
+                        and bad.get((round(z.center.x), round(z.center.y)), 0.0) <= now
+                        and (last is None or (z.center - last).flat() > 1.0)]
+                if near:
+                    pick = s.rng.choice(near)
+                s.roam_last = s.roam_point
+            for _ in range(0 if pick is not None else 8):
                 c = s.rng.choice(zones).center
                 if (me.pos - c).flat() >= ROAM_MIN_D and bad.get((round(c.x), round(c.y)), 0.0) <= (now or 0.0):
                     pick = c
