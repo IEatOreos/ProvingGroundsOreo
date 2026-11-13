@@ -111,6 +111,66 @@ class CrewTests(unittest.TestCase):
         self.assertNotEqual(self.scene([("demon", "wheelman", 5.0)])[0].order.role, "drive")
 
 
+def seated_scene(specs, mode="ctf", carrier_at=None):
+    """Bots at the wheels of Warthogs: specs [(tier, style, x)]; carrier_at: our carrier bot on foot there."""
+    bots, players, vs = [], {}, []
+    for i, (t, st, x) in enumerate(specs):
+        b = bot(i, t, st)
+        b.seat = "driver"
+        bots.append(b)
+        players[i] = PlayerState(i, 0, f"b{i}", Vec(x, 0, 0), vehicle=20 + i)
+        vs.append(dict(veh(20 + i, "warthog", x, occupied=True, riders=1)))
+    if carrier_at is not None:
+        cb = bot(9, "average", "rusher")
+        cp = PlayerState(9, 0, "carrier", carrier_at)
+        cp.has_flag = True
+        bots.append(cb)
+        players[9] = cp
+    snap = Snapshot(100, list(players.values()), vehicles=vs, mode=mode)
+    d = Director.__new__(Director)
+    d.team = d.side = 0
+    d.map, d.bots, d.roles = MAP, {b.id: b for b in bots}, {b.id: "mid" for b in bots}
+    d.event = lambda *args: None
+    d.carry_point = lambda snap: Vec(200, 0, 0)
+    d.gunner_pickup = lambda *a, **k: None
+    return d, bots, players, snap
+
+
+class CarrierRideTests(unittest.TestCase):
+    """(Nov 13, the owner: "always go pick up flag carriers or objective") a Wheelman first for our carrier, from
+    farther, first for the getaway ride, and to the objective when nothing is carried."""
+
+    def ferry(self, specs):
+        d, bots, players, snap = seated_scene(specs, carrier_at=Vec(0, 0, 0))
+        d.ferry_orders(100, snap, bots, players)
+        return [b.order.role for b in bots[:len(specs)]]
+
+    def test_carrier_pickup_wheelman_first_and_from_farther(self):
+        self.assertEqual(self.ferry([("average", "rusher", 20.0), ("average", "wheelman", 60.0)]), ["mid", "ferry"])
+        self.assertEqual(self.ferry([("average", "rusher", 20.0), ("average", "wheelman", 80.0)]), ["ferry", "mid"])
+        self.assertEqual(self.ferry([("average", "wheelman", 60.0)]), ["ferry"])
+        self.assertEqual(self.ferry([("average", "rusher", 60.0)]), ["mid"])
+
+    def jobs(self, specs, mode="ctf", park=Vec(-80, 0, 0)):
+        d, bots, players, snap = seated_scene(specs, mode=mode)
+        d.getaway_park = lambda snap, at: park
+        d.vehicle_jobs(100, snap, bots, players)
+        return bots
+
+    def test_getaway_ride_goes_to_the_wheelman(self):
+        bots = self.jobs([("average", "rusher", 10.0), ("strong", "wheelman", 30.0)])
+        self.assertEqual((bots[0].vjob, bots[1].vjob), (None, "getaway"))
+        bots = self.jobs([("average", "rusher", 10.0), ("strong", "flanker", 30.0)])
+        self.assertEqual((bots[0].vjob, bots[1].vjob), ("getaway", None))   # (as before: the first free driver)
+
+    def test_objective_run(self):
+        b = self.jobs([("average", "wheelman", 10.0)], park=None)[0]
+        self.assertEqual(b.vjob, "objective")
+        self.assertEqual(b.drive_to, MAP["flags"][1])                         # their flag (straight_objective)
+        self.assertIsNone(self.jobs([("average", "rusher", 10.0)], park=None)[0].vjob)
+        self.assertIsNone(self.jobs([("average", "wheelman", 10.0)], mode="slayer", park=None)[0].vjob)
+
+
 class KeepTests(unittest.TestCase):
     def arrive(self, style):
         b = bot(0, "average", style)

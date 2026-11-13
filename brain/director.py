@@ -1350,7 +1350,8 @@ class Director:
             c = snap.player(snap.inv_core_carrier)
             ours = c if c is not None and c.alive and c.team == s.team else None
         getaway = None
-        for b in alive:
+        # (custom, Nov 13) Wheelmen first: the getaway ride, one a team, is the first free driver's (profiles.wheelman)
+        for b in sorted(alive, key=lambda b: not profiles.wheelman(b.p)):
             me = players[b.id]
             v = next((x for x in snap.vehicles if me is not None and x["handle"] == me.vehicle), None)
             sp = vehicles.spec(v["kind"]) if v else None
@@ -1396,6 +1397,11 @@ class Director:
             if job is None and vehicles.needs_gunner(v, snap) and b.p.tier != "novice" and not aboard:
                 mate = s.gunner_pickup(now, b, me, snap, alive, players)
                 job = ("pickup", mate) if mate is not None else None
+            if job is None and profiles.wheelman(b.p) and kind != "mongoose" and b.order.role not in ("runner", "ferry"):
+                # (custom, Nov 13) nothing carried, nobody to fetch: a Wheelman drives to the objective (their flag,
+                # the hill, the ball, the bomb, a drop point) to be by it when a ride is wanted; Slayer: its patrol
+                pt = s.straight_objective(snap, me.pos)
+                job = ("objective", pt) if pt is not None else None
             was = getattr(b, "vjob", None)
             b.vjob = job[0] if job else None
             if job and job[1] is not None:
@@ -1570,8 +1576,13 @@ class Director:
             return
         d, b, v = min(drivers, key=lambda x: x[0])
         ride = next((x for x in drivers if getattr(x[1], "vjob", None) == "getaway"), None)
+        # (custom, Nov 13) a Wheelman at a wheel (profiles.wheelman): before a nearer driver, from WHEEL_CREW_REACH
+        wheel = min((x for x in drivers if profiles.wheelman(x[1].p) and x[0] <= s.WHEEL_CREW_REACH),
+                    key=lambda x: x[0], default=None)
         if ride is not None:                 # the getaway ride waiting for him goes, whatever the distance
             d, b, v = ride
+        elif wheel is not None:
+            d, b, v = wheel
         elif d > 45.0:
             return
         if b.order.role != "ferry":
