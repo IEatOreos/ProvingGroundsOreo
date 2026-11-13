@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### LiDAR Viewer and Simulator: zoom where you point, double-click to fly there, arrow keys to move, 2026-11-13
+
+The owner: "in the LiDAR simulator can we make it to where I can traverse the map better instead of just being able to rotate? I would like to free move around the map and zoom in to where I exactly need to edit."
+
+- Before: left-drag orbited, right- or Shift-drag panned, and the wheel zoomed toward the view's middle, so a spot took zoom, pan, zoom, pan. The arrow keys only turned and tilted it.
+- `tools/lidar_view.html` (the Viewer's and the Simulator's page):
+  - The wheel zooms toward the floor under the cursor: the view scales round that point, so it stays under the cursor. It falls back to the plane at the view's height where no floor is drawn. As close as 1 u now (was 2).
+  - A double-click flies to the spot under it, at half the distance (4-30 u). Off while Edit spots is adding something: those clicks are the tool's.
+  - The arrow keys move over the map while held, along the view; Shift is three times as fast, and the speed follows the zoom. Page Up / Down raise and lower the view.
+  - `[` / `]` turn it and Home / End tilt it (what the arrows did). The middle mouse button pans too.
+  - Any drag, wheel or key cuts a double-click's flight short. Moving turns "Follow you" off.
+  - The help line names the new controls; its tooltip has the rest.
+- Validation (the page in a 1280x800 viewport, its frames run by hand: the Browser pane was hidden on the owner's desktop): six wheel notches toward a floor point took the view from 88 u to 30 u, the point stayed within 8 px of the cursor; a double-click flew to the clicked point (3.46, 4.50, 3.49) at half the distance; the up arrow held 0.5 s moved 5.97 u straight ahead (0 aside), as worked out; Page Up raised it; `]` turned it; every key let go cleanly. `lidar.py --selftest` passes. Not tried by hand with a mouse.
+
 ### Vehicle blockers in the LiDAR view: areas no ground vehicle of any size drives into, 2026-11-13
 
 The owner: "It was trying to push into the base at home which I want vehicles to avoid at all sizes so maybe we will add a lidar simulator blocker", then "Yes add it now".
