@@ -282,11 +282,69 @@ class CommitTests(unittest.TestCase):
         self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 1)
 
     def test_lets_a_healthy_man_go_after_the_gap_but_chases_a_hurt_one(self):
+        # (custom, Nov 13, the owner: commit to a kill) the wait out of sight: DEMON_WAIT_FULL a healthy man (was 0.8
+        # s), DEMON_WAIT_HURT one with his shield low (was 1.6 s)
+        from brain.bot import DEMON_WAIT_FULL, DEMON_WAIT_HURT
         bot, me, cur, new, snap = self.setup()
-        bot.per.last_seen[1] = 48.9
-        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 2)
-        bot.per.last_vitals[1] = (0.1, 1.0, 48.9)
+        bot.per.last_seen[1] = 50.0 - (DEMON_WAIT_FULL - 0.1)
         self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 1)
+        bot.per.last_seen[1] = 50.0 - (DEMON_WAIT_FULL + 0.1)
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 2)
+        bot.per.last_vitals[1] = (0.1, 1.0, 50.0 - (DEMON_WAIT_FULL + 0.1))
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 1)
+        # 2.5 s on, his shield by its reckoning still low (est_shield: the recharge starts 2 s after a hit): it waits;
+        # past DEMON_WAIT_HURT (or once it reckons the shield back over half, about 2.8 s) it moves on
+        bot.per.last_seen[1] = 47.5
+        bot.per.last_vitals[1] = (0.1, 1.0, 47.5)
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 1)
+        bot.per.last_seen[1] = 50.0 - (DEMON_WAIT_HURT + 0.1)
+        bot.per.last_vitals[1] = (0.1, 1.0, bot.per.last_seen[1])
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 80.0}, 2, 1), 2)
+
+    def test_waiting_a_close_man_aiming_is_no_reason_an_easier_kill_is(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.per.last_seen[1] = 49.5                           # he ducked out half a second ago
+        new.pos = Vec(0, 8, 0)                                # 8 u off, looking straight at us (not shooting)
+        bot.per.beliefs[2] = Belief(new.pos, Vec(), 50.0, True, "eyes")
+        new.yaw, new.pitch = -math.pi / 2, math.atan2(0.35 - 0.62, 8.0)
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 60.0}, 2, 1), 1)
+        new.shield = 0.2                                      # his shield nearly gone: the easier kill
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 60.0}, 2, 1), 2)
+        new.shield, new.yaw = 0.3, 0.0                        # weaker than us by 0.7 and looking away
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 60.0}, 2, 1), 2)
+        new.shield, new.pos = 1.0, Vec(0, 1.2, 0)             # at arm's length
+        bot.per.beliefs[2] = Belief(new.pos, Vec(), 50.0, True, "eyes")
+        self.assertEqual(bot.demon_commit(50.0, me, snap, [2], {2: 60.0}, 2, 1), 2)
+
+    def test_a_hunt_for_the_man_it_fought_watches_where_he_is(self):
+        for tier, want in (("demon", "commit"), ("top", None)):
+            bot, me, cur, new, snap = self.setup(tier=tier)
+            for name in ("no_wall_jump", "edge_guard", "obstacle_guard", "unstuck"):
+                setattr(bot, name, lambda *a, **k: None)
+            bot.move_to = lambda me, p, act, nav, **kw: setattr(act, "forward", 1.0)
+            bot.per.beliefs[1] = Belief(Vec(10, 0, 0), Vec(), 48.0, False, "eyes")
+            bot.per.beliefs.pop(2)
+            bot.commit_carry, bot.goal, bot.next_decide = 1, ("hunt", Vec(10, 1, 0)), 99.0
+            snap = Snapshot(50.0, [me, cur])
+            bot.think(50.0, 1 / 30, snap, lambda *a, **k: False, lambda a, b, **kw: b, [])
+            got = (bot.att or [None])[0]
+            if want:
+                self.assertEqual(got, want, (tier, bot.att))
+                self.assertEqual(bot.att[2:], [10.0, 0.0])            # where it believes he is
+            else:
+                self.assertNotEqual(got, "commit", (tier, bot.att))     # Legendary: as before
+
+    def test_waiting_a_radar_dot_takes_the_usual_nearness(self):
+        bot, me, cur, new, snap = self.setup()
+        bot.per.last_seen[1] = 49.5
+        bot.per.beliefs[1] = Belief(cur.pos, Vec(), 49.5, False, "eyes")
+        snap = Snapshot(50.0, [me, cur, new])
+        for d, want in ((6.0, False), (3.0, True)):           # him 10 u off: a dot at 6 u waits, one at 3 u (2x) is checked
+            bot.per.beliefs[2] = Belief(Vec(0, d, 0), Vec(), 49.9, False, "radar")
+            bot.goal = ("fight", 1)
+            bot.per.visible_enemies = lambda: []
+            chose = bot.decide(50.0, me, snap)
+            self.assertEqual(chose[0] == "hunt" and chose[1] == Vec(0, d, 0), want, (d, chose))
 
     def test_in_view_needs_twice_the_threat(self):
         bot, me, cur, new, snap = self.setup()

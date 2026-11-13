@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Demon commits to a kill: waits for a hurt man out of sight, switches only for a reason, 2026-11-13
+
+The owner: "Why do demons during a gunfight look away if LOS is broken for just a second if they have a memory of where I am?", then "I want it to have the best chance at killing anyone, always having an advantage but I also want it to commit to a kill", and on the middle ground proposed: "Yea we can test that makes those changes".
+
+- **What the traces showed** (six Reach matches, Nov 12, ~700 breaks of sight on the man a Demon fought): in 84% its view stayed on where it believed he was. The 16% that swung 60+ degrees away: another man close and aiming at it took over 0.03-0.2 s after the break (`demon_commit`'s "the one we fight looking away" is always true of a man out of sight); the man was let go after 0.8 s (1.6 s shield down) and a hunt, an item or an objective took over at 1.3-1.8 s; a radar dot's hunt (3.2) beat the kept fight (2.9) once he was out of sight (`turn_ok` lets any dot win then); at a vehicle's wheel, the drive.
+- **How long it waits** (`brain/bot.py` `Bot.demon_wait`, `demon_waiting`): for the man it fights out of sight, `DEMON_WAIT_HURT` (3 s) while his shield is low by its reckoning (`est_shield` 0.5 or less; it reckons the recharge from 2 s after the hit, so about 2.8 s in practice), else `DEMON_WAIT_FULL` (1.2 s).
+- **While it waits** (`demon_commit`, `demon_easier`): another man takes over only hitting it (`shot_by_other`), at arm's length (1.5 u), or as an easier kill in view: his shield 0.25 or less (no shields: his body half), or `DEMON_EASIER` (0.5) less shield and body than the Demon and not looking its way. A close man merely aiming at it no longer does. Halo 4's `chase_ok` still lets the man go.
+- **Radar dots** (`decide`): while it waits, a dot's hunt only by the usual rule: the dot under half his distance, or the man there shooting it. A shot from behind still turns it.
+- **A hunt for the man it fought** (`plan`, `commit_carry`): its eyes on where it believes he is, chest high (attention "commit"), not along its path.
+- Unchanged: in view (`COMMIT_HOLD`, `COMMIT_MARGIN`), retreats to recharge, re-arming, the team spread, the drive. Demon only; Legendary and the rest as before.
+- Validation: `tools/test_demon_anticipate.py` (56): the waits for a healthy man (kept at 1.1 s, let go at 1.3 s) and a hurt one (kept at 2.5 s, let go past 3 s) replace the old 0.8 / 1.6 s test; a close man aiming kept off, a cracked, a weaker-and-looking-away and an arm's-length one taking over; a dot at 6 u waiting, one at 3 u checked, the man 10 u off; the hunt watching him, Legendary not. All 64 `tools/test_*.py` files pass. Python only. **Untested in game.**
+
 ### Easy keeps moving, part 2: hunts, posts, giving up sooner, neighbouring zones, 2026-11-13
 
 The owner, choosing from the proposals for Easy's idle time: "1-5 not 6".

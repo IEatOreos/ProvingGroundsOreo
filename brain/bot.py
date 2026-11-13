@@ -331,6 +331,10 @@ COMMIT_HOLD = 2.0                      # s a target in view is kept before anoth
 COMMIT_MARGIN = 2.0                    # x the threat a man in view must pose to take over (others: 1.25 at full tactics)
 COMMIT_GAP, COMMIT_HURT_GAP = 0.8, 1.6   # s out of sight the man fought stays the target (his shield down: longer)
 COMMIT_THREAT_R = 10.0                 # u: a man this close aiming at us takes over from one looking away
+# (custom, Nov 13, the owner) Demon waits for the man it fights out of sight this long, his shield low / full
+# (demon_wait); meanwhile another man takes over only hitting it, at arm's length or an easier kill (demon_easier:
+# DEMON_EASIER less shield and body than the Demon), and a radar dot only by the usual nearness rule (turn_ok)
+DEMON_WAIT_HURT, DEMON_WAIT_FULL, DEMON_EASIER = 3.0, 1.2, 0.5
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
 # where a DMR always goes over the assault rifle: in hand at every range while it is loaded (choose_weapon), and never
@@ -2421,6 +2425,13 @@ class Bot:
                 act.jump = True    # a jump for nothing while it waits about
             s.aim.whip = 0.0
             look = s.look_point(me, point, nav, post)
+            ck = getattr(s, "commit_carry", None)
+            cb = s.per.beliefs.get(ck) if kind == "hunt" and ck is not None and profiles.fixed_demon(s.p) else None
+            if cb is not None and isinstance(arg, Vec) and (arg - cb.pos).flat() < 4.0:
+                # (custom, Nov 13) a Demon hunting the man it fought: its eyes on where it believes he is, chest high,
+                # not along its path (where he peeks from)
+                look = cb.pos + Vec(0.0, 0.0, 0.35)
+                s.att = ["commit", ck, round(cb.pos.x, 1), round(cb.pos.y, 1)]   # (not walk_cone's: the whole turn)
             glance = s.dot_glance(now, me)          # (custom: Demon, a radar dot close behind it: a look its way)
             if glance is not None:
                 look = glance
@@ -2952,6 +2963,18 @@ class Bot:
         d_best = dist(me.pos, s.per.beliefs[best].pos)
         if s.shot_by_other(now, me, snap, best, cur, seen) or d_best <= 1.5:
             return best
+        # (custom, Nov 13, the owner: "the best chance at killing anyone ... but I also want it to commit to a kill")
+        # the man it fights out of sight and still waited for (demon_waiting): another man takes over only for a real
+        # reason: hitting it (above), at arm's length (above), or an easier kill in view (demon_easier)
+        waiting = cur not in seen and s.demon_waiting(now, snap, cur)
+        if waiting:
+            if e is not None and best in seen and s.demon_easier(me, e, snap.shieldless):
+                s.note(f"commit: #{cur} out of sight, #{best} the easier kill")
+                return best
+            if s.chase_ok(now, me, snap, cur):
+                s.note(f"commit: waiting for #{cur}")
+                return cur
+            return best
         if (e is not None and d_best < COMMIT_THREAT_R and aims_at(e, me, 0.2)
                 and not (cur in seen and aims_at(tgt, me, 0.2))):
             return best                      # a man close in with us in his sights, the one we fight looking away
@@ -2970,6 +2993,28 @@ class Bot:
             return cur
         done = 1.0 - (tgt.shield + tgt.health) / 2.0
         return best if scored[best] >= COMMIT_MARGIN * (1.0 + 2.0 * max(0.0, done)) * scored[cur] else cur
+
+    def demon_wait(s, now, snap, k):
+        """(custom, Nov 13) How long a Demon waits for the man it fights out of sight: DEMON_WAIT_HURT s when his shield
+        is down or low by its reckoning (est_shield 0.5 or less: the kill is close, he will peek again), else
+        DEMON_WAIT_FULL s (a healthy man hiding is no kill to wait on)."""
+        est = s.per.est_shield(k, now, snap.shieldless)
+        return DEMON_WAIT_HURT if est is not None and est <= 0.5 else DEMON_WAIT_FULL
+
+    def demon_waiting(s, now, snap, k):
+        """(custom, Nov 13) Fixed Demon, the man k it fights out of sight no longer than demon_wait."""
+        if not profiles.fixed_demon(s.p) or k is None or k not in s.per.beliefs:
+            return False
+        e = snap.player(k)
+        return e is not None and e.alive and now - s.per.last_seen.get(k, -9.0) <= s.demon_wait(now, snap, k)
+
+    @staticmethod
+    def demon_easier(me, e, shieldless=False):
+        """(custom, Nov 13) A man in view who is an easier kill than the one a Demon waits for: his shield down (no
+        shields: his body half gone), or weaker than the Demon by DEMON_EASIER and not looking its way."""
+        cracked = e.health <= 0.5 if shieldless else e.shield <= 0.25
+        weaker = e.shield + e.health < me.shield + me.health - DEMON_EASIER and not aims_at(e, me, 0.4)
+        return cracked or weaker
 
     def shot_by_other(s, now, me, snap, k, cur, seen):
         """Turn on k right now, whatever the hold and the kill under way? When k is the one hitting us this second
@@ -3190,6 +3235,12 @@ class Bot:
                 radius = DEMON_RADAR_TURN_R
             near = [(dist(me.pos, b.pos), k) for k, b in s.per.beliefs.items() if isinstance(k, int) and not b.seen
                     and b.source in ("radar", "hit") and now - b.t < 1.0 and k != cur and dist(me.pos, b.pos) < radius]
+            # (custom, Nov 13) a Demon waiting for the man it fights out of sight (demon_waiting): a dot only by the
+            # usual rule, much nearer than him or shooting it (turn_ok let any dot win once he was out of view)
+            waiting = s.demon_waiting(now, snap, cur) and cur not in seen
+            if (near and waiting and not s.shot_by_other(now, me, snap, min(near)[1], cur, seen)
+                    and dist(me.pos, s.per.beliefs[cur].pos) <= 2.0 * min(near)[0]):
+                near = []
             if near and not s.finishing(snap, seen) and s.turn_ok(now, me, seen, min(near)[0], snap, min(near)[1]):
                 # a hunt (look_point watches the corner he would come round). As a "fight" on a man never seen it
                 # aimed at the dot through the wall, and the next decision skipped that dot (the target in hand), went
