@@ -163,12 +163,44 @@ class CarrierRideTests(unittest.TestCase):
         bots = self.jobs([("average", "rusher", 10.0), ("strong", "flanker", 30.0)])
         self.assertEqual((bots[0].vjob, bots[1].vjob), ("getaway", None))   # (as before: the first free driver)
 
-    def test_objective_run(self):
-        b = self.jobs([("average", "wheelman", 10.0)], park=None)[0]
-        self.assertEqual(b.vjob, "objective")
-        self.assertEqual(b.drive_to, MAP["flags"][1])                         # their flag (straight_objective)
-        self.assertIsNone(self.jobs([("average", "rusher", 10.0)], park=None)[0].vjob)
-        self.assertIsNone(self.jobs([("average", "wheelman", 10.0)], mode="slayer", park=None)[0].vjob)
+    def search(self, tier="average", style="wheelman", mate=None, person=None, mode="slayer"):
+        """A driver alone at a Warthog's wheel at x 0; a teammate bot on foot at mate, a person of ours at person."""
+        d, bots, players, snap = seated_scene([(tier, style, 0.0)], mode=mode)
+        del d.gunner_pickup                                    # (the real one)
+        if mate is not None:
+            m = bot(5, "average", "rusher")
+            m.order = Order("mid", mate + Vec(3, 0, 0))          # (his objective 3 u off: no trip worth a ride)
+            players[5] = PlayerState(5, 0, "mate", mate)
+            bots.append(m)
+            d.bots[5], d.roles[5] = m, "mid"
+        if person is not None:
+            snap.players.append(PlayerState(7, 0, "owner", person, is_bot=False))
+        snap.players = [p for p in snap.players if p.id not in players] + list(players.values())
+        d.getaway_park = lambda snap, at: None
+        d.vehicle_jobs(100, snap, bots, players)
+        return bots[0], d, bots, players, snap
+
+    def test_searches_for_a_rider_anywhere(self):
+        b = self.search(mate=Vec(150, 0, 0))[0]
+        self.assertEqual((b.vjob, b.drive_to), ("pickup", Vec(150, 0, 0)))
+        b = self.search(person=Vec(-120, 0, 0))[0]
+        self.assertEqual((b.vjob, b.drive_to), ("pickup", Vec(-120, 0, 0)))
+        b = self.search(mate=Vec(150, 0, 0), person=Vec(-40, 0, 0))[0]
+        self.assertEqual(b.drive_to, Vec(-40, 0, 0))                          # (the nearest)
+
+    def test_not_others_easy_not_for_a_person_nobody_patrols(self):
+        self.assertNotEqual(self.search(style="rusher", mate=Vec(150, 0, 0))[0].vjob, "pickup")
+        self.assertIsNone(self.search(tier="novice", person=Vec(-40, 0, 0))[0].vjob)
+        self.assertEqual(self.search(tier="novice", mate=Vec(150, 0, 0))[0].vjob, "pickup")
+        self.assertIsNone(self.search()[0].vjob)                              # (nobody: its patrol, Bot.drive)
+
+    def test_calls_him_aboard_whatever_his_trip(self):
+        for style, want in (("wheelman", ("ride", "board")), ("rusher", ("mid",))):
+            b, d, bots, players, snap = self.search(style=style, mate=Vec(5, 0, 0))
+            d.carrying = False
+            d.report = lambda *a, **k: None                    # (the "Get in" callout: no zones here)
+            d.rider_calls(100, snap, bots, players)
+            self.assertIn(bots[1].order.role, want, style)
 
 
 class KeepTests(unittest.TestCase):

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Wheelman: always out looking for a gunner or a passenger, in place of the objective run, 2026-11-13
+
+The owner, on the objective run below: "Can we change number 3 I don't want it sitting idle. It should always be searching for a gunner or passenger".
+
+- **The search** (`brain/director.py` `vehicle_jobs`, `gunner_pickup(anyone=True)`): a Wheelman with a seat free and no other job drives to the nearest teammate on foot, any distance (others: a gunner only, within 60 u, and only one with a trip of 25 u or more). Bots and a person of ours both count, not a carrier (the ferry's job), a defender (his post) or, while we carry, an escort (`wheel_rider_ok`). By him it stops and waits (the existing pickup wait, 8 s; one who does not get in is skipped for 30 s). An Easy Wheelman fetches only bots: Easy never drives a person. Nobody to fetch: its patrol, so it keeps moving. The objective run (drive to their flag or the hill and wait there) is gone.
+- **The call** (`rider_calls`): a Wheelman's vehicle calls a teammate within 12 u aboard whatever his trip (others: only a trip of 25 u or more), the gun first, then a passenger seat. Once riders are in it takes them where they go, as every driver.
+- Validation: `tools/test_wheelman.py` (16: the search for a bot 150 u off, a person 120 u off, the nearer of the two; none for a Rusher, none for a person by an Easy Wheelman, nobody to fetch; a teammate 5 u off with a 3 u trip called by a Wheelman, not by a Rusher). All 62 `tools/test_*.py` files pass. Python only. **Untested in game.**
+
 ### Wheelman: first to pick up our carrier, the getaway ride, and an objective run, 2026-11-13
 
 The owner: "Can we also add to wheelman to always go pick up flag carriers or objective? Or is that already baked in to a driver", then "Add all three".

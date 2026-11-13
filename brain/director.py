@@ -1195,8 +1195,11 @@ class Director:
             person = drv is None and any(p.vehicle == h and p.alive and not p.is_bot and not getattr(p, "gunner_seat", False)
                                          for p in snap.players)
 
+            # (custom, Nov 13) a Wheelman's calls anyone it came for, whatever his trip (wheel_rider_ok)
+            wheel = drv is not None and profiles.wheelman(drv.p)
+
             def wanted(b):
-                return b.id in was or s.rider_ok(b, players, gun_free, bound, person)
+                return b.id in was or s.rider_ok(b, players, gun_free, bound, person) or (wheel and s.wheel_rider_ok(b))
             cands = sorted((b for b in alive if b not in coming and b.p.teamwork > 0 and players[b.id] is not None
                             and players[b.id].vehicle == -1 and not players[b.id].has_flag and s.gunner_available(b)
                             and dist(players[b.id].pos, vp) < call_r and wanted(b)),
@@ -1297,12 +1300,20 @@ class Director:
     PICKUP_WAIT_AIR = 20.0              # s: ... an aircraft, set down by him (gunner_pickup)
     PICKUP_DETOUR = 25.0                # u: on a trip (goal), a gunner fetched only this far off its way (gunner_pickup)
 
-    def gunner_pickup(s, now, b, me, snap, alive, players, goal=None):
+    def wheel_rider_ok(s, x):
+        """(custom, Nov 13) A bot a Wheelman's vehicle fetches and calls aboard (profiles.wheelman) whatever his trip's
+        length: not a defender (his post), not an escort while we carry, as rider_ok."""
+        role = s.roles.get(x.id)
+        return role != "defender" and (role != "escort" or not getattr(s, "carrying", False))
+
+    def gunner_pickup(s, now, b, me, snap, alive, players, goal=None, anyone=False):
         """Where a bot at the wheel of a gun vehicle with its gun seat empty and no job goes: to the nearest teammate on
         foot rider_calls would put on the gun there (live Spire 230307, 69-95 s: a defender drove his Warthog alone to
         his post for 26 s, no job, every teammate posted farther than CALL_R off it, then chased men to run them over).
         On a trip to goal (a runner's) only one PICKUP_DETOUR or less off the way. A teammate he waited PICKUP_WAIT s by
-        without boarding is skipped for 30 s. None: nobody to fetch."""
+        without boarding is skipped for 30 s. None: nobody to fetch. (custom, Nov 13) anyone: a Wheelman's search for a
+        gunner or a passenger, any distance, any trip (wheel_rider_ok), a person of ours on foot too (not for an Easy
+        Wheelman: Easy never drives a person)."""
         skip = b.__dict__.setdefault("pickup_skip", {})
         at = getattr(b, "pickup_at", None)       # (the teammate, since when the driver has been by him)
         from . import vehicles
@@ -1322,9 +1333,20 @@ class Director:
                  and players[x.id].vehicle == -1 and not players[x.id].has_flag and x.p.teamwork > 0
                  and x.p.tier != "novice" and now - skip.get(x.id, -99.0) > 30.0 and s.gunner_available(x)
                  and x.order.role not in ("ride", "board", "ferry")
-                 and s.rider_ok(x, players, True, [players[x.id].pos])
+                 and (s.wheel_rider_ok(x) if anyone else s.rider_ok(x, players, True, [players[x.id].pos]))
                  and (goal is None or way(me.pos, players[x.id].pos) + way(players[x.id].pos, goal) - way(me.pos, goal)
                       <= s.PICKUP_DETOUR)]
+        if anyone:
+            if b.p.tier != "novice":
+                cands += [(dist(me.pos, p.pos), p) for p in snap.players if p.team == s.team and p.alive and not p.is_bot
+                          and p.vehicle in (None, -1) and not p.has_flag and now - skip.get(p.id, -99.0) > 30.0]
+            d, x = min(cands, key=lambda c: c[0], default=(None, None))     # (the nearest, any distance)
+            if x is None:
+                b.pickup_at = None
+                return None
+            since = at[1] if at and at[0] == x.id else None
+            b.pickup_at = (x.id, (since or now) if d < 8.0 else None)
+            return players[x.id].pos if x.id in players else x.pos
         d, x = min((c for c in cands if c[0] <= s.PICKUP_R or air and goal is not None),
                    key=lambda c: (profiles.gunner_priority(c[1].p), c[0]), default=(None, None))
         if x is None or d > s.PICKUP_R and not (air and goal is not None):
@@ -1397,11 +1419,14 @@ class Director:
             if job is None and vehicles.needs_gunner(v, snap) and b.p.tier != "novice" and not aboard:
                 mate = s.gunner_pickup(now, b, me, snap, alive, players)
                 job = ("pickup", mate) if mate is not None else None
-            if job is None and profiles.wheelman(b.p) and kind != "mongoose" and b.order.role not in ("runner", "ferry"):
-                # (custom, Nov 13) nothing carried, nobody to fetch: a Wheelman drives to the objective (their flag,
-                # the hill, the ball, the bomb, a drop point) to be by it when a ride is wanted; Slayer: its patrol
-                pt = s.straight_objective(snap, me.pos)
-                job = ("objective", pt) if pt is not None else None
+            if (job is None and profiles.wheelman(b.p) and kind != "mongoose" and b.order.role not in ("runner", "ferry")
+                    and v.get("riders", 0) < len(sp["seats"])):
+                # (custom, Nov 13, the owner: "I don't want it sitting idle. It should always be searching for a gunner
+                # or passenger") a Wheelman with a seat free and no other job drives to the nearest teammate on foot,
+                # any distance, a person too (gunner_pickup anyone); rider_calls calls him aboard there. Nobody: its
+                # patrol
+                mate = s.gunner_pickup(now, b, me, snap, alive, players, anyone=True)
+                job = ("pickup", mate) if mate is not None else None
             was = getattr(b, "vjob", None)
             b.vjob = job[0] if job else None
             if job and job[1] is not None:
