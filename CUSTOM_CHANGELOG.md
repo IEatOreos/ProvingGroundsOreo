@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Easy keeps moving: no stalled roam points, fights on the move, 2026-11-13
+
+The owner: "I would like to make easy actually move a lot and not stall so much. They don't have to be able to shoot or retrieve obj, or drive. Just to where they roam a lot more actively without stopping".
+
+- **What the traces showed** (seven live matches, Nov 12, `logs/tmp`-style scan of each Easy bot's speed over 2 s): Easy stood (under 0.5 u/s) 18-60% of its time on foot. In fights it stood 37-65% of the time; roaming 3-58%, worst on Spire (32%) and Boneyard (58%), among wall, step-down and "floor not in the nav" notes. One Easy Camper (WonderBird, Spire) stood 203 s, goal roam, its next waypoint the spot it stood on: `Bot.roam` only picked a new zone centre within 3 u of the old one, so one it could not get to was kept for good.
+- **Roam** (`brain/bot.py` `Bot.roam`, on foot): a roam point with no `ROAM_STALL_D` (2 u) of headway in `ROAM_STALL_S` (4 s) is given up for `ROAM_BAD_S` (60 s), and a new one is drawn at least `ROAM_MIN_D` (8 u) off (8 draws; else any). Every tier's roaming; a vehicle's roam (no clock) as before.
+- **Easy's fights** (`Bot.plan`, `EASY_FIGHT_MOVING`): an Easy bot (not Scaling) fights walking on to its roam point, its fight's aim, trigger, melee, grenade and reload as before, no sprint. Normal and up fight as before. `EASY_FIGHT_MOVING = False` puts Easy's back.
+- Objectives and driving unchanged (the owner: not needed).
+- Validation: new `tools/test_easy_moving.py` (6: a stalled roam point given up after 4 s and marked, a new one 8 u or more off; one walked toward kept 8 s; without a clock as before; Easy fighting a man 10 u off walks at full speed toward its roam point, not sprinting, its fight running; Normal and the switch off fight as before). All 64 `tools/test_*.py` files pass. This install has no match simulator, so the gain is not measured. Python only. **Untested in game.**
+
 ### Man cannons the owner draws: bots ride them, 2026-11-13
 
 The owner: "Do bots use man cannons much? I've seen on adrift halo 4 they've never used them I don't think". Seven Adrift (`h4_ca_warhouse`) match traces: bots rode its two gravity lifts 3-20 times a match, and the man cannon the owner drew in the LiDAR view on Nov 9 (`owner_rides.json` "Man cannon 1", (13.5, -12.5, 2.7) to (16.5, 5.0, 2.4)) never, though the owner rode it 3 times and bots stood by its pad often. The map's data has no man cannon of its own.

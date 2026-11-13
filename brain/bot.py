@@ -125,6 +125,11 @@ WHEEL_WEDGED_MAX = 3
 # this near, then the rest by the guide's score
 TANK_FOOT_R = 10.0
 TANK_VEHICLE_R = 40.0
+# (custom, Nov 13, the owner: Easy moves a lot, no stalling) a roam point with no ROAM_STALL_D u of headway in
+# ROAM_STALL_S s is given up for ROAM_BAD_S s, a new one at least ROAM_MIN_D u off (Bot.roam); Easy fights walking on
+# to its roam point (Bot.plan; False: it fights as before)
+ROAM_STALL_S, ROAM_STALL_D, ROAM_BAD_S, ROAM_MIN_D = 4.0, 2.0, 60.0, 8.0
+EASY_FIGHT_MOVING = True
 
 
 # projectile speed in world units per second (CE kit tags, tools/ce_projectiles.py: mean of
@@ -2301,7 +2306,19 @@ class Bot:
         patrol_seen = s.per.visible_enemies() if kind == "patrol" else []
         on_way = s.on_way_target(now, me, snap, kind, arg)   # (custom: a Demon's errand with a man in view, below)
         carry_shot = s.carrier_shot(now, me, snap, kind, arg) if on_way is None and kind != "fight" else None
-        if kind == "fight":
+        if kind == "fight" and s.p.tier == "novice" and s.p.extra is None and EASY_FIGHT_MOVING:
+            # (custom, Nov 13, the owner: Easy "roam a lot more actively without stopping"; its shooting need not be
+            # good) Easy fights on the move: the aim and trigger its fight's, the feet on to where it roams (it stood
+            # 37-65% of its fight time, seven live matches Nov 12). Its own melee, grenade and reload presses stay
+            s.fight(now, dt, me, snap, arg, act, nav)
+            walk = Action(yaw=act.yaw, pitch=act.pitch)
+            s.move_to(me, s.roam(me, now), walk, nav)
+            angle = walk.yaw - act.yaw
+            c, sn = math.cos(angle), math.sin(angle)
+            act.forward = walk.forward * c - walk.strafe * sn
+            act.strafe = walk.forward * sn + walk.strafe * c
+            act.jump, act.crouch, act.sprint = walk.jump, walk.crouch, False
+        elif kind == "fight":
             s.fight(now, dt, me, snap, arg, act, nav)
         elif patrol_seen or on_way is not None or carry_shot is not None:
             patrol_target = (on_way if on_way is not None else carry_shot if carry_shot is not None
@@ -2341,7 +2358,7 @@ class Bot:
             s.retreat_juke(act)
         else:
             s.engaged_since = s.charge_since = s.on_since = None
-            point, post = (arg if isinstance(arg, Vec) else s.roam(me)), None
+            point, post = (arg if isinstance(arg, Vec) else s.roam(me, now)), None
             point = s.detour(now, me, kind, point)
             small = None                         # the radius of a zone too small to loiter in (below)
             # (a CTF hunter neither: it chases a carrier, or stands on our dropped flag to return it). A runner whose
@@ -8720,7 +8737,28 @@ class Bot:
         c = Vec(sum(t.x for t in threats) / len(threats), sum(t.y for t in threats) / len(threats), me.pos.z)
         return me.pos + (me.pos - c).norm() * 12
 
-    def roam(s, me):
+    def roam(s, me, now=None):
+        """Where a bot with nothing to do wanders: a callout zone's centre, a new one within 3 u of it. (custom, Nov 13,
+        the owner: "make easy actually move a lot and not stall so much") now given (on foot): one it made no headway to
+        in ROAM_STALL_S (ROAM_STALL_D u) is given up ROAM_BAD_S, and a new one is ROAM_MIN_D u or more off (an Easy
+        Camper stood 203 s on Spire, its way to a zone centre it could not reach starting where it stood)."""
+        if now is not None:
+            prog = getattr(s, "roam_prog", None)
+            if prog is None or prog[2] != s.roam_point or (me.pos - prog[1]).flat() >= ROAM_STALL_D:
+                s.roam_prog = (now, me.pos, s.roam_point)
+            elif now - prog[0] > ROAM_STALL_S and s.roam_point is not None:
+                s.__dict__.setdefault("roam_bad", {})[(round(s.roam_point.x), round(s.roam_point.y))] = now + ROAM_BAD_S
+                s.note("roam: no headway, somewhere else")
+                s.roam_point = None
         if s.roam_point is None or (me.pos - s.roam_point).flat() < 3:
-            s.roam_point = s.rng.choice(s.map["zones"].zones).center
+            zones = s.map["zones"].zones
+            bad = getattr(s, "roam_bad", {})
+            pick = None
+            for _ in range(8):
+                c = s.rng.choice(zones).center
+                if (me.pos - c).flat() >= ROAM_MIN_D and bad.get((round(c.x), round(c.y)), 0.0) <= (now or 0.0):
+                    pick = c
+                    break
+            s.roam_point = pick if pick is not None else s.rng.choice(zones).center
+            s.roam_prog = None
         return s.roam_point
