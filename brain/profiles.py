@@ -112,6 +112,17 @@ TACTICIAN_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot") 
 # (custom, Nov 12) its reaction kept where it was before Heroic's got quicker: halfway from Heroic's old 0.85 to 0.70
 TACTICIAN_REACTION = HANDS["reaction"] * (0.85 + 0.70) / 2
 
+# (custom, Nov 13, owner: "a hybrid difficulty between Legendary and Demon", then: aim halfway and fixed, Demon's
+# awareness only, named Mythic, 10 points) Mythic: Legendary (tier "top", extra None, label "mythic": every Legendary
+# rule, and Legendary's protected head / turret precision) whose aim, hands and decision time sit MYTHIC_TOWARD of the
+# way from Legendary's base to Demon's, jittered as every tier's are, with Demon's eyes (demon_eyes: its wide view, every
+# radar dot noticed, a firing man's dot, the dot's drift). Demon's other rules (fight commitment, pickups, regen reads,
+# the vehicle bans) stay Demon's. Why: the owner went 43-0 against Legendary and Blind, who lost the first look (49-62%
+# to his 69%); Blind's quicker hands alone did not help it (3 kills, 14 deaths), Demon's eyes win that look
+MYTHIC = "mythic"
+MYTHIC_TOWARD = 0.5
+MYTHIC_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "decide")   # and turn (TURN, not jittered)
+
 
 def arc_spot(prof):
     """(custom, Nov 12, owner) Easy, Normal and Heroic find the man hurting them without the off-to-the-side delay, as a
@@ -126,6 +137,16 @@ def fixed_blind(prof):
 
 def fixed_tactician(prof):
     return prof.label == TACTICIAN and prof.extra is None
+
+
+def fixed_mythic(prof):
+    return prof.label == MYTHIC and prof.extra is None
+
+
+def demon_eyes(prof):
+    """(custom, Nov 13) Demon's awareness (Perception.update: the wide view, every radar dot noticed, a firing man's
+    dot, the dot's drift): Demon and Mythic."""
+    return fixed_demon(prof) or fixed_mythic(prof)
 
 
 def own_hands(prof):
@@ -261,6 +282,8 @@ def make_profile(tier, personality, rng=random):
         return blind_profile(personality, rng)
     if tier == TACTICIAN:
         return tactician_profile(personality, rng)
+    if tier == MYTHIC:
+        return mythic_profile(personality, rng)
     vals ={**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     if tier == "top":
@@ -308,4 +331,22 @@ def tactician_profile(personality, rng=random):
     prof = make_profile("top", personality, rng)
     hands = {k: v * rng.uniform(0.9, 1.1) for k, v in tactician_hands().items()}
     return replace(prof, label=TACTICIAN, **hands)
+
+
+def mythic_hands():
+    """{stat: Mythic's base}: MYTHIC_TOWARD of the way from Legendary's base (overshoot 0, as make_profile sets it) to
+    Demon's (DEMON_AIM, no reaction delay, 0.01 s decisions), and the turn speed between theirs."""
+    leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"])
+    dem = dict(TIERS[DEMON], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN[DEMON])
+    return {k: leg[k] + MYTHIC_TOWARD * (dem[k] - leg[k]) for k in MYTHIC_HANDS + ("turn",)}
+
+
+def mythic_profile(personality, rng=random):
+    """Legendary's profile (its game sense, jittered as ever) with its hands set between Legendary's and Demon's, each
+    jittered 0.9-1.1 as make_profile jitters every tier's (the turn speed not: TURN never is)."""
+    prof = make_profile("top", personality, rng)
+    base = mythic_hands()
+    turn = base.pop("turn")
+    hands = {k: v * rng.uniform(0.9, 1.1) for k, v in base.items()}
+    return replace(prof, label=MYTHIC, turn=turn, **hands)
 

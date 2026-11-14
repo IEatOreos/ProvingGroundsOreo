@@ -1076,9 +1076,10 @@ class Perception:
         vision_mode = "see" if getattr(los, "__name__", "") == "sees" else None
         fixed_high = profiles.fixed_high(s.p)
         demon = profiles.fixed_demon(s.p)
-        center_half = math.radians(90) if demon else math.radians(50) if fixed_high else FOV_HALF
-        peripheral_half = center_half if demon else math.radians(60) if fixed_high else PERIPHERAL_HALF
-        peripheral_multiplier = 1.0 if demon else 1.5 if fixed_high else 1.6
+        eyes = profiles.demon_eyes(s.p)          # (custom, Nov 13) Demon's awareness: Demon and Mythic
+        center_half = math.radians(90) if eyes else math.radians(50) if fixed_high else FOV_HALF
+        peripheral_half = center_half if eyes else math.radians(60) if fixed_high else PERIPHERAL_HALF
+        peripheral_multiplier = 1.0 if eyes else 1.5 if fixed_high else 1.6
         new_sightings = []
         s.hurt_by(now, me, snap, los)
         if demon:
@@ -1180,13 +1181,14 @@ class Perception:
             # whether it is noticed
             moving = e.vel.flat() > 0.6 and not e.crouching
             tracked = me.tracker and d < RADAR_RANGE and not getattr(s, "jammed", False)
-            # Demon: unsuppressed fire shows on the tracker too, standing or crouched (Halo's red dot on firing)
-            dot = tracked and (moving or (demon and shot))
-            if dot and (demon or s.rng.random() < s.p.radar * 0.15):
+            # Demon (and Mythic: demon_eyes): unsuppressed fire shows on the tracker too, standing or crouched (Halo's red
+            # dot on firing)
+            dot = tracked and (moving or (eyes and shot))
+            if dot and (eyes or s.rng.random() < s.p.radar * 0.15):
                 # Demon reads which way the dot drifts (radar_heading); the other tiers see a dot, no heading
-                heading = s.radar_heading(e.id, e.pos, now) if demon else Vec()
+                heading = s.radar_heading(e.id, e.pos, now) if eyes else Vec()
                 s.beliefs[e.id] = Belief(e.pos, heading, now, False, "radar")
-                if demon:
+                if eyes:
                     continue        # the dot is exact: no rougher "heard" guess over it
             # his gunfire within earshot: about where the shots came from, a belief look_point pre-aims toward. Not over
             # a hit a moment ago (that turns the bot on its shooter); Easy (aware 0) does not listen for it

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Mythic difficulty: between Legendary and Demon, 2026-11-13
+
+The owner, after going 43-0 on Warhouse against two Legendary, a Blind and a Heroic: "I am thinking we make a hybrid difficulty between Legendary and Demon". His choices: aim halfway and fixed, Demon's awareness only, the name Mythic, 10 matchmaking points. In that game the Legendary and Blind bots lost the first look (49-62% to his 69%); Blind, with hands up to 85% of the way to Demon's, did worst (3 kills, 14 deaths), so Mythic takes Demon's eyes as well as better hands.
+
+- Brain (brain/profiles.py `MYTHIC`, `mythic_hands`, `mythic_profile`, `fixed_mythic`, `demon_eyes`): fixed Legendary (tier `top`, label `mythic`, extra None), so every Legendary rule applies, including high ground, pre-nades and the protected head / turret precision (`protected_aim`). Reaction, aim error, lag, tracking, flick, overshoot and decision time sit halfway from Legendary's base to Demon's (reaction 0.077 s, decisions 0.055 s, aim error 0.003 rad), jittered 0.9-1.1 per bot as every tier is; turn speed 675 deg/s.
+- Demon's eyes (brain/bot.py `Perception.update`, now `profiles.demon_eyes`: Demon and Mythic): the 180-degree view with no edge delay, every eligible radar dot noticed, a firing man's dot standing or crouched, and the dot's drift. Demon's regen reads, fight commitment, pickups, Halo 4 / Reach direct fire and vehicle bans stay Demon-only.
+- Native (bots_panel.h `HB_TIER_MYTHIC 8`, `HB_TIERS 9`; bots_panel.cpp, botcore.cpp, overlay.cpp, shared.h): tier key `mythic` (botcore.ini `bot=` lines), "for everyone" difficulty 9 (`difficulty % 10`, play.py `--tier mythic`), 10 matchmaking points, rank tours 8-10, rose colour, Demon's five chevrons. The pickers show Easy, Normal, Heroic, Tactician, Legendary, Blind, Mythic, Demon, Mixed, Scaling. The footer picker is 660 units wide (was 600) and Quick setup 680 (was 620), so each button keeps its old width. In the bot inspector the second row is Tactician, Blind, Mythic and Demon, and Scaling moves to a row of its own. Mixed still deals Normal, Easy, Heroic, Legendary, Demon and Blind, without Mythic.
+- Tools: botctl `TIER_KEYS` / `DIFFICULTY_TIERS`, the Observer's, player_stats' and match_export's names.
+
+Checks: `native\build.bat mythic` built native/bin/botcore_mythic.dll (only the existing `_wfopen` warnings; panel_art.py's PIL step fails as before); `native\build_pool_test.bat` passes with Mythic's 10 points. tools/test_mythic_difficulty.py is new (7 tests; the two eyes tests fail with Demon's eyes off). test_demon_difficulty, test_tactician_difficulty, test_bot_matchmaking and test_mcc_ranks read the native source and are updated for the new tables. All 691 tools/test_*.py pass. The panel's new layout has not been seen on screen, and Mythic has not been played.
+
 ### The lobby bots' own emblems in MCC, 2026-11-13
 
 The avatars worked live. The owner, showing their own emblem beside their name: "Make them do the same". A bot in a match already showed its own emblem (brain/looks.py `emblem_of`, sent with the add), but in the lobby nothing had sent it yet, so MCC's rows drew its default.

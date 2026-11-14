@@ -53,7 +53,8 @@ class TacticianTests(unittest.TestCase):
         self.assertIn("tactician", botctl.TIER_KEYS)
         self.assertEqual(botctl.DIFFICULTY_TIERS[8], "tactician")
         panel = (ROOT / "native" / "bots_panel.cpp").read_text(encoding="utf-8", errors="replace")
-        self.assertIn("static const uint32_t DIFF_SHOWN[9] = { 0, 1, 2, 8, 3, 7, 6, 4, 5 };", panel)
+        # (Nov 13) Mythic (9) between Blind and Demon
+        self.assertIn("static const uint32_t DIFF_SHOWN[DIFF_CHOICES] = { 0, 1, 2, 8, 3, 7, 9, 6, 4, 5 };", panel)
         self.assertIn("d == 8 ? HB_TIER_TACTICIAN", panel)
 
 

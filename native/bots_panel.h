@@ -17,7 +17,8 @@ struct ImFont;
 #define HB_TIER_DEMON 5         // hb_bot.tier: Demon (custom: fixed Legendary under its own name)
 #define HB_TIER_BLIND 6         // hb_bot.tier: Blind (custom, Nov 10: Legendary, its aim and hands drawn per bot)
 #define HB_TIER_TACTICIAN 7     // hb_bot.tier: Tactician (custom, Nov 10: Legendary's brain, hands Heroic-Legendary)
-#define HB_TIERS 8
+#define HB_TIER_MYTHIC 8        // hb_bot.tier: Mythic (custom, Nov 13: Legendary, hands halfway to Demon, Demon's eyes)
+#define HB_TIERS 9
 
 struct hb_bot {
     char name[16];              // up to 15 characters, the game's name field
@@ -36,7 +37,8 @@ struct hb_roster {
 struct bots_panel_env {
     hb_roster* roster;
     uint32_t* enabled;          // bots join at all
-    uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling, 6 demon, 7 blind, 8 tactician
+    uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling, 6 demon, 7 blind, 8 tactician,
+                                // 9 mythic
     uint32_t* lidar_mode;       // mapping bots instead of fighters
     uint32_t* lidar_players;    // players in all in LiDAR mode (2..16)
     uint32_t* collector;        // records the player each match for the Observer (tools/collector.py); may be null
@@ -146,7 +148,7 @@ void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt li
 // Demons stacked (2+ apart) 60%, spread 40%; more teams: as close as a quick deal and swaps get
 #define HB_HUMAN_POINTS 20
 int  tier_points(int tier);                             // Easy 1, Normal 2, Heroic 3, Tactician 5, Legendary, Blind and
-                                                        // Scaling 8, Demon 12
+                                                        // Scaling 8, Mythic 10, Demon 12
 int  bot_pool_humans(int team);                         // the people on that team in the last match
 int  roster_team_points(const hb_roster& r, int team);  // its bots' points and its people's
 void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng);

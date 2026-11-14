@@ -76,17 +76,21 @@ class NativeTableTests(unittest.TestCase):
         self.assertIn("#define HB_TIER_BLIND 6", header)
         self.assertIn("#define HB_TIER_TACTICIAN 7", header)
         self.assertEqual(self.strings(panel, "TIER_NAME")[7], "Tactician")
-        self.assertIn("#define HB_TIERS 8", header)
+        self.assertIn("#define HB_TIER_MYTHIC 8", header)              # (Nov 13)
+        self.assertEqual(self.strings(panel, "TIER_NAME")[8], "Mythic")
+        self.assertIn("#define HB_TIERS 9", header)
 
     def test_difficulty_launches_demon(self):
         core = (ROOT / "native" / "botcore.cpp").read_text(encoding="utf-8")
         tiers = self.strings(core, "TIERS")
-        self.assertEqual(len(tiers), 9)
+        self.assertEqual(len(tiers), 10)
         self.assertEqual(tiers[6], "demon")
         self.assertEqual(tiers[7], "blind")
         self.assertEqual(tiers[8], "tactician")
+        self.assertEqual(tiers[9], "mythic")                           # (Nov 13)
         self.assertEqual(botctl.DIFFICULTY_TIERS, tiers)
-        self.assertIn("difficulty % 9", core)
+        self.assertIn("difficulty % 10", core)
+        self.assertNotIn("difficulty % 9", core)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 # Project Proving Grounds
 
 > **This is a customized build** of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds)
-> (upstream 0.2.2), with its own bot changes: the Demon, Blind and Tactician difficulties, Halo 4 aim and vehicle
+> (upstream 0.2.2), with its own bot changes: the Demon, Mythic, Blind and Tactician difficulties, Halo 4 aim and vehicle
 > work, CTF cut-offs, Team Slayer high ground and more. Every change is listed in
 > [CUSTOM_CHANGELOG.md](CUSTOM_CHANGELOG.md). Its installer and the launcher's updates come from
 > [this repository's Releases](https://github.com/IEatOreos/ProvingGroundsOreo/releases/latest). Installing it over the
