@@ -342,6 +342,14 @@ int main(int argc, char** argv) {
             CHECK(b.bot[0].team == b.bot[2].team && b.bot[2].team == b.bot[4].team, "party split: %d %d %d", b.bot[0].team, b.bot[2].team, b.bot[4].team);
             CHECK(roster_on_team(b, 0) == 3, "sizes with a party");
         }
+        // (Nov 14) the lobby's "Balance teams": the sizes evened, then the points dealt with the party together
+        for (int k = 0; k < 20; k++) {
+            hb_roster c = b;
+            for (int i = 0; i < 6; i++) c.bot[i].team = 0;
+            roster_balance(c);
+            CHECK(roster_on_team(c, 0) == 3 && roster_on_team(c, 1) == 3, "balance sizes %d %d", roster_on_team(c, 0), roster_on_team(c, 1));
+            CHECK(c.bot[0].team == c.bot[2].team && c.bot[2].team == c.bot[4].team, "balance split the party");
+        }
         write(pool, "P1\nN1\nN2\nN3\nN4\nP2\nN5\nP3\nN6\n");
         int pulled = 0, runs = 300;
         for (int k = 0; k < runs; k++) {

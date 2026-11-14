@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Balance teams deals by points, 2026-11-14
+
+The owner: the lobby's Balance teams button "just makes it to where the two teams have equal players. Can we make it to where its balancing in the sense of how our matchmaking works? ... it would put ms3s and j1br on the same team and try to balance the pts system."
+
+- native/bots_panel.cpp `roster_balance`: after evening out the team sizes (as before), it calls Bot Matchmaking's `roster_point_balance`: clanmates (one clan tag, e.g. COD's MS3S and J1BR) move as one block, the people of the last match count 20 each, the smallest points gap wins and ties pick Demons stacked 60% / spread 40%. Team sizes and every bot's difficulty stay as they are. Not in Firefight. Each press can pick another of the equally even splits. The tooltip says so.
+- native/pool_test.cpp: a 6-bot lineup all on one team comes out 3v3 with its party together.
+
+Checks: build_pool_test.bat, all pool checks pass. Builds (botcore_balance.dll). Not yet pressed in MCC.
+
 ### Demon plays the objective when near it, 2026-11-13
 
 The owner, after a Crazy King game on Condemned (20261113-204320) that blue lost with its two Demons set to Objective: "make demon bots play the objective when theyre near it". Within 8 u of the hill those Demons chose it 3% and 13% of the time; every other bot, Easy through Mythic, 30-85%. They stood on it 2 s and 4 s of 5 minutes, red's two Easy bots 130 s and 105 s. What beat it were Demon-only scores: the gun grab a few steps off (2.95 + 0.2 kept), the stand-ground hunt on a man on its tracker (3.2), and committed fights.

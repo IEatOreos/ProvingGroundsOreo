@@ -1558,10 +1558,13 @@ void roster_balance(hb_roster& r) {
             if (roster_on_team(r, t) > roster_on_team(r, hi)) hi = t;
             if (roster_on_team(r, t) < roster_on_team(r, lo)) lo = t;
         }
-        if (roster_on_team(r, hi) - roster_on_team(r, lo) <= 1) return;
+        if (roster_on_team(r, hi) - roster_on_team(r, lo) <= 1) break;
         for (int i = r.n - 1; i >= 0; i--)
             if (r.bot[i].team == hi) { r.bot[i].team = (uint8_t)lo; break; }
     }
+    // (custom, Nov 14) then dealt by points like Bot Matchmaking's lobbies (the owner: "balancing in the sense of how
+    // our matchmaking works", clanmates "on the same team"): parties together, the people counted, the sizes kept
+    if (!hb_panel_firefight) roster_point_balance(r, g_humans, pool_rng());
 }
 
 void roster_shuffle(hb_roster& r, uint32_t seed) {
@@ -4346,7 +4349,7 @@ bool bots_panel(bots_panel_env& e) {
         if (!hb_panel_firefight) {                          // (Firefight: one team, nothing to balance)
             ImGui::BeginDisabled(r.n < 2);
             if (button("Balance teams", GHOST, ImVec2(0, 0), true)) { roster_balance(r); changed = true; }
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even out the team sizes");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even out the team sizes, then the team points (like Bot Matchmaking): clanmates stay together");
             ImGui::SameLine(0, px(2));
             if (button("Shuffle teams", GHOST, ImVec2(0, 0), true)) { roster_shuffle(r, seed()); changed = true; }
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("New teams for everyone, same team sizes");
