@@ -44,9 +44,11 @@ static const uint8_t MR_DEFAULTS_HEAD[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0
                                            0x31, 0x00, 0x00, 0x00};   // (... mov dword [out], 49: the default emblem)
 static const uint8_t MR_ASSIGN_HEAD[] = {0x48, 0x83, 0xEC, 0x38, 0x48, 0x85, 0xD2, 0x74, 0x21};
 static const uint32_t BOT_ID_HI = 0xB07B07B0u;
+static const uint32_t LOBBY_ID_HI = 0xB07B07B1u;   // (Nov 13) the lobby's bots in MCC's session list: their own ids
 
-struct bot_row { char name[32]; char tag[8]; char clan[16]; int team; int32_t emblem[5]; bool set; bool lobby; };
+struct bot_row { char name[32]; char tag[8]; char clan[16]; int team; int32_t emblem[5]; bool set; };
 static bot_row g_rows[16];
+static bot_row g_lobby[16];                // the lobby's bots (session_watch.cpp), never a match's rows
 static uint32_t g_rows_game;               // botcore's game id when the bots were noted (report_note_bot)
 static uint8_t* g_mcc;
 static volatile LONG g_pending = -1;      // the bot whose row is being built (its id looked up last)
@@ -65,6 +67,16 @@ static profile_fn o_profile;
 static bool is_bot(uint64_t xuid) {
     return (uint32_t)(xuid >> 32) == BOT_ID_HI && (xuid & 0xFFFFFFFFull) < 16 && g_rows[xuid & 0xFF].set;
 }
+
+// a match's bot or a lobby's bot by its made-up id; its row number for g_pending: 0-15 a match's, 16-31 a lobby's
+static int row_number(uint64_t xuid) {
+    if (is_bot(xuid)) return (int)(xuid & 0xFF);
+    if ((uint32_t)(xuid >> 32) == LOBBY_ID_HI && (xuid & 0xFFFFFFFFull) < 16 && g_lobby[xuid & 0xFF].set)
+        return 16 + (int)(xuid & 0xFF);
+    return -1;
+}
+
+static const bot_row& row_at(int n) { return n < 16 ? g_rows[n] : g_lobby[n - 16]; }
 
 static bool returns_to(void* ra, const uintptr_t* sites, int n) {
     for (int k = 0; k < n; k++)
@@ -99,19 +111,19 @@ void report_note_bot(int index, const wchar_t* name, const wchar_t* tag, int tea
     if (clan && clan[0]) WideCharToMultiByte(CP_UTF8, 0, clan, -1, r.clan, sizeof r.clan - 1, nullptr, nullptr);
     for (int k = 0; k < 5; k++) r.emblem[k] = emblem ? emblem[k] : 0;
     r.team = team;
-    r.lobby = false;
     r.set = true;
     g_rows_game = g_shm ? g_shm->game : 0;
 }
 
 // (custom, Nov 13) a lobby bot in MCC's session list (session_watch.cpp, sessionbots=): MCC looks it up by the same
-// made-up id, so it gets a row too: its name, service tag, clan tag (bots_panel.cpp), MCC's default emblem. Marked a
-// lobby row: never a Halo CE post-game row (ce_rows); a match's own add at that index replaces it
+// made-up id, so it gets a row too: its name, service tag, clan tag (bots_panel.cpp), MCC's default emblem.
+// (Nov 13, "Yes add all the bots") A table of its own, ids 0xB07B07B1000000<index>, so the lobby's names never
+// replace a finished match's rows (the post-game report is opened from the menus too)
 const char* profile_clan_of(const char* name);             // bots_panel.cpp
 void report_note_lobby_bot(int index, const char* name, int team) {
     if (index < 0 || index >= 16 || !name) return;
-    bot_row& r = g_rows[index];
-    if (r.set && r.lobby && !strcmp(r.name, name) && r.team == team) return;
+    bot_row& r = g_lobby[index];
+    if (r.set && !strcmp(r.name, name) && r.team == team) return;
     wchar_t w[32], tag[4];
     MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 32);
     bot_service_tag(w, tag);
@@ -122,7 +134,6 @@ void report_note_lobby_bot(int index, const char* name, int team) {
     strncpy_s(r.clan, profile_clan_of(name), _TRUNCATE);
     for (int k = 0; k < 5; k++) r.emblem[k] = 0;
     r.team = team;
-    r.lobby = true;
     r.set = true;
 }
 
@@ -140,7 +151,7 @@ static void ce_rows(uint8_t* results) {
     }
     if (!person) return;
     for (int k = 0; k < 16; k++) {
-        if (!g_rows[k].set || g_rows[k].lobby || listed[k]) continue;
+        if (!g_rows[k].set || listed[k]) continue;
         uint8_t* row = nullptr;
         for (int i = 0; i < 16 && !row; i++) {
             uint8_t* e = results + (size_t)i * 0x1C8;
@@ -187,13 +198,13 @@ static void __fastcall h_build(int* report, uint8_t* results) {
 
 static char __fastcall h_gamertag(void* mgr, uint64_t xuid, void* out) {
     if (returns_to(_ReturnAddress(), MR_LOOKUP_AT, 2))
-        InterlockedExchange(&g_pending, is_bot(xuid) ? (LONG)(xuid & 0xFF) : -1);
+        InterlockedExchange(&g_pending, (LONG)row_number(xuid));
     return o_gamertag(mgr, xuid, out);
 }
 
 static void* __fastcall h_string(void* out, const char* s) {
     LONG b = g_pending;
-    if (b >= 0 && returns_to(_ReturnAddress(), MR_NAME_AT, 2)) s = g_rows[b].name;   // its name, not a blank
+    if (b >= 0 && b < 32 && returns_to(_ReturnAddress(), MR_NAME_AT, 2)) s = row_at(b).name;   // its name, not a blank
     return o_string(out, s);
 }
 
@@ -204,8 +215,9 @@ static void* __fastcall h_string(void* out, const char* s) {
 // catalog read from its folder), which MCC's screens draw behind its name
 int bot_nameplate(const char* name);                       // bots_panel.cpp
 static char __fastcall h_profile(void* mgr, uint64_t xuid, int32_t* out) {
-    if (!out || !is_bot(xuid)) return o_profile(mgr, xuid, out);
-    const bot_row& r = g_rows[xuid & 0xFF];
+    int rn = out ? row_number(xuid) : -1;
+    if (rn < 0) return o_profile(mgr, xuid, out);
+    const bot_row& r = row_at(rn);
     ((defaults_fn)(g_mcc + MR_DEFAULTS))(out);
     if (r.emblem[0] > 0) memcpy(out, r.emblem, sizeof r.emblem);   // foreground, background, primary, secondary, back
     int np = r.name[0] ? bot_nameplate(r.name) : -1;

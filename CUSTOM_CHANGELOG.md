@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### MCC's session list: every lobby bot, 2026-11-13
+
+The refresh worked (the bot was on MCC's first list in the lobby, and after a match another lineup's first bot took its place). The owner: "Yes add all the bots", up to 15 (the most the roster holds).
+
+- native/session_watch.cpp: every bot in the lobby's roster (up to 15; 16 places) is appended to MCC's list, in roster order, each in its own node from MCC's builder, id 0xB07B07B1000000<place>. The refresh compares the whole lineup (a hash of names and teams), so a changed lineup, bots turned off or a return from a match asks MCC for a new list. Modes 1 and 2 are as before, per bot.
+- native/report.cpp: the lobby's bots get their own table (`g_lobby`, ids 0xB07B07B1...) instead of the match rows' table. Before, the one lobby bot at index 15 could replace a finished match's 15th bot in the post-game report, which is opened from the menus too. `row_number` / `row_at` serve both tables for MCC's name and profile lookups; the `lobby` flag is gone.
+
+Checks: `native\build.bat sessionall` built native/bin/botcore_sessionall.dll (only the existing `_wfopen` warnings; the PIL step fails as before; a first try failed because `SW_MAX` is a windows.h ShowWindow constant, now `SW_LOBBY_ROWS`). That build also holds the working tree's uncommitted Mythic work. Not yet run in MCC: whether MCC draws all of them, the player count, Start, the bots' Player Details, and the post-game report after a match.
+
 ### MCC's session list: the lobby bot without waiting (MCC asked for the list), 2026-11-13
 
 The one-bot test worked: Wheezy came up under MY GAME SESSION, with the player and above the friends, in MCC's own row (the clan tag, nameplate and rank from the mod's lookups), but only about 90 s in. MCC sends that list only when something changes (that time, a friend's status). The owner: "Instant refresh first".
