@@ -777,6 +777,12 @@ def reach_demon_direct_fire(prof, game, me, target):
             and (me.weapon in AUTO or me.weapon in PRECISION or me.weapon == "shotgun")
             and me.vehicle == -1 and target is not None and target.vehicle == -1)
 
+# (custom, Nov 14) Halo 2 Demon's Battle Rifle: the trigger goes with the sight of him and the press snaps to his head
+# (head_solution), like Reach's DMR. Parkerr on Midship (20261114-152922) waited on his own capped aim: the trigger was
+# allowed 52% of his fight time (Halo 4 Demon 78%), fights ran 5.1 s (2.3 s) and he went 2-9. Demon only, on foot.
+def h2_demon_br(prof, game, me):
+    return game == "h2" and profiles.fixed_demon(prof) and me.weapon == "battle_rifle" and me.vehicle == -1
+
 
 # Halo 4 Demon (custom, Nov 7): the owner's Warhouse and Adrift games. Halo 4 reports a body 0.38 u over its floor
 # (H2A_FEET), so the generic eye (pos + 0.62) sat 0.38 u over the real view and the generic chest at the real head:
@@ -2022,7 +2028,8 @@ class Bot:
                 target = snap.player(lock[0])
                 if target is not None and target.alive and h4_demon_fire(s.p, s.game, me, target):
                     locked = h4_ray(me, target, lock[1], lead=True)
-            if locked is None and (act.fire and me.vehicle == -1 and me.weapon in ("dmr", "sniper")
+            if locked is None and (act.fire and me.vehicle == -1
+                    and (me.weapon in ("dmr", "sniper") or h2_demon_br(s.p, s.game, me))   # (Halo 2 Demon's BR)
                     and ((profiles.protected_aim(s.p)) or percentage_sniper(s.p, me))   # (Blind: no head snap)
                     and shot_part is not None):
                 target = snap.player(shot_part[0])
@@ -5618,7 +5625,8 @@ class Bot:
         slack = (2.5 if w in AUTO else 1.6) if d < SHORT_BAND and s.p.tactics > 0.15 else 1.0
         on = (s.aim.on_target(me, b.pos, act.yaw, act.pitch, slack)
               or (loose is not None and s.aim.landing(now, loose["early"], tid))) and seen_fire
-        if ((head_only and not profiles.own_hands(s.p)) or direct_fire) and (w == "dmr" or percentage_sniper(s.p, me) or h4):
+        if ((head_only and not profiles.own_hands(s.p)) or direct_fire) and (
+                w == "dmr" or percentage_sniper(s.p, me) or h4 or h2_demon_br(s.p, s.game, me)):
             # (Blind: no head snap, its trigger waits on its own aim)
             # The final shot command snaps to the selected part after the turn cap (Halo 4 Demon: every gun it locks,
             # Bot.think h4_lock).
@@ -7419,6 +7427,9 @@ class Bot:
             off = abs(wrap(math.atan2(e.pos.y - me.pos.y, e.pos.x - me.pos.x) - act.yaw))
             # A Demon DMR command snaps to its checked point after the view turn cap (Halo 4 Demon: every gun, think).
             aligned = (direct_fire and (me.weapon == "dmr" or h4)) or d < 2.0 or off < max(0.15, math.atan2(1.2, d))
+            if (not aligned and target is not None and e.id == target.id and selected[1]
+                    and h2_demon_br(s.p, s.game, me) and profiles.protected_aim(s.p)):
+                aligned = True     # (Halo 2 Demon's BR: the press snaps to his head after this, think)
             if aligned and s.line_clear(now, me, e.id, snap):
                 return
         act.fire = s.shot_now = False

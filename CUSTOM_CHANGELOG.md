@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Halo 2 Demon's Battle Rifle fires on sight, 2026-11-14
+
+The owner: "Check the bot Parkerr and see why he doesnt hit as much as Halo 4 or Halo reach". Midship (20261114-152922), Parkerr (Demon, Battle Rifle): 2-9. His presses landed like the other games' Demons (damage within 0.35 s on 55% of presses; Reach Demon 55%, Halo 4 65%), but the trigger was allowed only 52% of his fight time (Halo 4 Demon 78%) and fights ran 5.1 s (2.3 s). Reach's DMR and Halo 4's guns fire on the sight of him and snap the press to the part; Halo 2's BR waited on the bot's own turn-capped aim.
+
+- Brain (`brain/bot.py` `h2_demon_br`): Halo 2 (not H2A) Demon, Battle Rifle, on foot. In `fight` the trigger goes with the sight of him and a clear line (as Reach's DMR); in `think` the press snaps to his head (`head_solution`) past the turn cap; `fire_gate` lets that press through for the selected man. Legendary, Blind, Mythic, other guns and other games are unchanged.
+- Validation: `tools/test_h2_demon_br.py` is new (4 tests: only H2 Demon's BR on foot; the press snaps to the head; Legendary and Halo 3 keep their aim; the Demon fires before Legendary's aim settles). All 726 `tools/test_*.py` pass. Not yet played in MCC: whether the snapped bursts land and the fights end sooner is untested.
+
 ### Balance teams deals by points, 2026-11-14
 
 The owner: the lobby's Balance teams button "just makes it to where the two teams have equal players. Can we make it to where its balancing in the sense of how our matchmaking works? ... it would put ms3s and j1br on the same team and try to balance the pts system."
