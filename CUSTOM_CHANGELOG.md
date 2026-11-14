@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### MCC's Career page: a watch-only log of its stats, 2026-11-13
+
+The rank badges worked live (MCC's rank table: 330 ranks, every bot its own badge). sessionbots=2 put the session leader's crown on every bot and still no team colour, so the owner's botcore.ini is back to 1 (local). The owner wants the bots' Career page to show stats ("can we just fake their stats? What can that hurt?"), from the 45 matches' carnage reports the mod keeps in logs/. A bot's Career page shows zeros today. The owner: "Yes, build it" (the watch first).
+
+- native/career_watch.cpp (new): hooks FUN_140527A50(page, column), the Career page's multiplayer fill ("populateContentMultiplayer"). It logs, when they change: the column (0/1, each stat holds two 0x38 columns), the game (page +0x1008), games played, won, first places, kills, headshots, assists, betrayals, best spree and deaths (0x70-byte entries from +0x1988, a byte at +0 and the value at +0x20; the offsets paired with their $SR_ / $CAREER_ labels from the disassembly), and the offsets in the page holding an Xbox id or a bot's made-up id. Nothing is changed. Prologue checked first.
+- Ruled out: FUN_14049DA34 parses the player's own progression JSON (XP), and FUN_140338E48 / FUN_140344990 (MCC's one call into XblUserStatisticsGetMultipleUserStatistics...) carry campaign scoring stats. Neither is the multiplayer Career page.
+- native/session_watch.cpp starts it (so botcore.cpp, which holds the teammate's uncommitted work, is not touched); native/build.bat compiles it.
+
+Checks: `native\build.bat careerwatch` built native/bin/botcore_careerwatch.dll (only the existing `_wfopen` warnings; the PIL step fails as before). That build also holds the working tree's uncommitted Mythic work. Not yet run in MCC.
+
 ### MCC's session list: the lobby bots' rank badges, 2026-11-13
 
 All 9 bots showed under MY GAME SESSION (PLAYER COUNT 10), the post-game report kept the match's bots, and the list refilled with the next lineup. Every bot had the same bronze badge. The owner, on team colours or badges: "Which ever you can make way on first".
