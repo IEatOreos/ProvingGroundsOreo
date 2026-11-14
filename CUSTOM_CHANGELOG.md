@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### MCC's Career page: the bots' own numbers, and a leaderboard, 2026-11-13
+
+The watch above never ran: the Career page the owner opens (Player Details > Career > Multiplayer: Total Games Won, Kills, Deaths, Assists, with "Compared to you") is filled by another function. Read statically instead, it showed exactly where a bot's zeros come from, so this goes straight to the numbers. The owner asked for a leaderboard ("me and the bots. Kills, Deaths, Assists, K/d") and for the bots' stats on their Career page.
+
+- tools/bot_career.py (new): everyone's totals (games, won, kills, deaths, assists) from MCC's post-game reports: every logs/trace_*.carnage.xml and MCC's current report, each match once by its GameUniqueId in a ledger (native/bin/career/ledger.json), so they outlive the recording rotation. A match counts when its person played 60 s or more; a win is first place (mStanding 0) unless everyone is first (a draw). It writes native/bin/career/totals.txt and, run by hand, prints the leaderboard by K/D (--by kills|deaths|assists|games). The first run: 45 reports, 42 matches counted (three quick quits).
+- tools/play.py: runs it in the background (--quiet) as each match starts, right after the last match's report is kept.
+- native/career.cpp (was career_watch.cpp): FUN_1404A0EA4(page) fills the Multiplayer tab; the shown player's id is page +0x16F0, and its stats come from MCC's player records (FUN_14024B924, none for a bot's id). Each row has its stat code at +0x200 (0x0EC28B21 won, 0x6AD86331 kills, 0x75D204D0 deaths, 0x539C9E21 assists), and FUN_140318E94(row, text) copies the row's number text in (its length +0x14, its bytes +0x18, nothing else read). While a bot's page fills, those four texts become the bot's totals (with commas, as MCC writes them). "Compared to you" stays MCC's (your own numbers). Matchmaking and Custom Games show the same numbers. totals.txt is read again when it changes. Guarded by both prologues and the two instructions read.
+- native/report.cpp: `report_bot_name`, a bot's name by its made-up id (a match's or a lobby's).
+- tools/test_bot_career.py (new): one match kept once, quick quits left out, wins and draws, totals outliving a deleted report.
+
+Checks: `native\build.bat career` built native/bin/botcore_career.dll (only the existing `_wfopen` warnings; the PIL step fails as before). That build also holds the working tree's uncommitted Mythic work. tools/test_bot_career.py passes. Not yet run in MCC: a bot's Career page with the numbers.
+
 ### MCC's Career page: a watch-only log of its stats, 2026-11-13
 
 The rank badges worked live (MCC's rank table: 330 ranks, every bot its own badge). sessionbots=2 put the session leader's crown on every bot and still no team colour, so the owner's botcore.ini is back to 1 (local). The owner wants the bots' Career page to show stats ("can we just fake their stats? What can that hurt?"), from the 45 matches' carnage reports the mod keeps in logs/. A bot's Career page shows zeros today. The owner: "Yes, build it" (the watch first).

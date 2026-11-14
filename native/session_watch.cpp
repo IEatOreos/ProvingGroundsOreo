@@ -245,10 +245,10 @@ static DWORD WINAPI refresh_thread(void*) {
     return 0;
 }
 
-void career_watch_hooks();                       // career_watch.cpp (Nov 13: the Career page's stats, watch only)
+void career_hooks();                             // career.cpp (Nov 13: the bots' numbers on MCC's Career page)
 
 void session_watch_hooks() {
-    career_watch_hooks();
+    career_hooks();
     g_mcc = (uint8_t*)GetModuleHandleW(nullptr);
     bool ok = false;
     __try {

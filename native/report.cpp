@@ -89,6 +89,15 @@ static int row_number(uint64_t xuid) {
 
 static const bot_row& row_at(int n) { return n < 16 ? g_rows[n] : g_lobby[n - 16]; }
 
+// (custom, Nov 13) a bot's name by its made-up id, a match's or a lobby's (career.cpp: its MCC Career page); false
+// for every other id
+bool report_bot_name(uint64_t xuid, char* out, int cap) {
+    int n = row_number(xuid);
+    if (n < 0 || !out || cap < 2) return false;
+    strncpy_s(out, cap, row_at(n).name, _TRUNCATE);
+    return out[0] != 0;
+}
+
 static bool returns_to(void* ra, const uintptr_t* sites, int n) {
     for (int k = 0; k < n; k++)
         if ((uint8_t*)ra == g_mcc + sites[k] + 5) return true;

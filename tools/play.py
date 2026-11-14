@@ -60,6 +60,14 @@ def match_trace(map_name, logs=os.path.join(ROOT, "logs"), games=None, after=Non
     saved matches and traces named any other way are never touched."""
     old = sorted(glob.glob(os.path.join(logs, "trace_*_????????-??????.jsonl")), key=os.path.getmtime)
     keep_carnage(old)
+    if os.path.normcase(os.path.abspath(logs)) == os.path.normcase(os.path.abspath(os.path.join(ROOT, "logs"))):
+        # (custom, Nov 13) everyone's career totals (tools/bot_career.py: the bots' MCC Career pages, the leaderboard),
+        # the report just kept added before the rotation can take it; in the background, never in the match's way
+        try:
+            subprocess.Popen([sys.executable, "-I", os.path.join(HERE, "bot_career.py"), "--quiet"],
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except Exception:
+            pass
     recording.rotate(logs, games, after)
     if os.path.normcase(os.path.abspath(logs)) == os.path.normcase(os.path.abspath(os.path.join(ROOT, "logs"))):
         # (custom) the owner's play profile: the last match, its carnage report just copied, summarised in the background
