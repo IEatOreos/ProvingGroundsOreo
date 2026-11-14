@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### The lobby bots' own emblems in MCC, 2026-11-13
+
+The avatars worked live. The owner, showing their own emblem beside their name: "Make them do the same". A bot in a match already showed its own emblem (brain/looks.py `emblem_of`, sent with the add), but in the lobby nothing had sent it yet, so MCC's rows drew its default.
+
+- brain/emblems.py: `export` also writes each bot's five emblem numbers to native/bin/emblems/<name>.ids, even without the art (no PIL: the numbers still go out). They are the same numbers a match sends (checked: Wheezy 233 568 30 2 5, Oreo 94 585 30 31 20 from both).
+- native/report.cpp: `report_lobby_emblem` reads <name>.ids for a lobby bot's row; MCC's default until it is there.
+- native/session_watch.cpp: a lobby bot without its numbers is asked of tools/looks_export.py --emblems in the background (20 s apart, three tries a name). Whether each bot's emblem is there is part of the lineup's hash, so MCC gets a new list once it arrives. The panel's own request only runs for the mod's drawn rows, which step aside while sessionbots is on.
+- Seeded by hand: the numbers for the 444 bots that already had an emblem picture (game data, not in git).
+
+Checks: `native\build.bat emblems` built native/bin/botcore_emblems.dll (only the existing `_wfopen` warnings; the PIL step fails as before). That build also holds the working tree's uncommitted Mythic work. brain/emblems.py selftest passes. Not yet run in MCC.
+
 ### The bots' own avatars in MCC, 2026-11-13
 
 The Career numbers worked live (Wheezy: 0 won, 16 kills, 8 deaths, 1 assist, its leaderboard line). The owner: "Can you have the bots player details page have them pick a unique or random avatar?"

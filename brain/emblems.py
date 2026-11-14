@@ -84,11 +84,27 @@ def write_rgba(img, path):
     os.replace(tmp, path)
 
 
+def write_ids(e, path):
+    """(custom, Nov 13) The emblem's five MCC numbers (ids order), one line: MCC's own lobby rows for the bot
+    (native/report.cpp reads <name>.ids, MCC draws the emblem from them)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(" ".join(str(v) for v in ids(e)) + "\n")
+    os.replace(tmp, path)
+
+
 def export(names_seeds):
-    """Every bot's emblem picture: native/bin/emblems/<name>.rgba. Returns how many were written."""
+    """Every bot's emblem picture: native/bin/emblems/<name>.rgba, and its numbers, <name>.ids (written even without
+    the art). Returns how many pictures were written."""
     n = 0
     for name, seed in names_seeds:
-        img = compose(roll(seed))
+        e = roll(seed)
+        write_ids(e, os.path.join(OUT, f"{name}.ids"))
+        try:
+            img = compose(e)
+        except ImportError:                                      # (no PIL: the numbers still go out)
+            img = None
         if img is not None:
             write_rgba(img, os.path.join(OUT, f"{name}.rgba"))
             n += 1

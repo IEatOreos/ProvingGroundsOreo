@@ -143,12 +143,42 @@ void report_note_bot(int index, const wchar_t* name, const wchar_t* tag, int tea
 // replace a finished match's rows (the post-game report is opened from the menus too)
 const char* profile_clan_of(const char* name);             // bots_panel.cpp
 void bot_rank(const char* name, int tier, int* tour, int* level);   // bots_panel.cpp
+
+// (custom, Nov 13, the owner: "here is my profile showing my emblem beside my calling card. Make them do the same") a
+// lobby bot's emblem, the five numbers a match sends for it (brain/looks.py emblem_of): native\bin\emblems\<name>.ids
+// (brain/emblems.py export, tools/looks_export.py --emblems: session_watch.cpp asks for a missing one). False: none yet
+bool report_lobby_emblem(const char* name, int32_t out[5]) {
+    wchar_t p[MAX_PATH];
+    HMODULE me = nullptr;
+    if (!name || !name[0] || strchr(name, '\\') || strchr(name, '/') ||
+        !GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            (LPCWSTR)&report_lobby_emblem, &me))
+        return false;
+    DWORD n = GetModuleFileNameW(me, p, MAX_PATH);
+    wchar_t* slash = n && n < MAX_PATH ? wcsrchr(p, L'\\') : nullptr;
+    if (!slash) return false;
+    wchar_t w[40];
+    if (!MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 40)) return false;
+    if (swprintf_s(slash + 1, MAX_PATH - (slash + 1 - p), L"emblems\\%s.ids", w) < 0) return false;
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"r") != 0 || !f) return false;
+    int v[5] = {};
+    bool ok = fscanf_s(f, "%d %d %d %d %d", &v[0], &v[1], &v[2], &v[3], &v[4]) == 5 && v[0] > 0;
+    fclose(f);
+    if (ok) for (int k = 0; k < 5; k++) out[k] = v[k];
+    return ok;
+}
+
 void report_note_lobby_bot(int index, const char* name, int team, int tier) {
     if (index < 0 || index >= 16 || !name) return;
     bot_row& r = g_lobby[index];
     int tour = 0, level = 0;
     bot_rank(name, tier, &tour, &level);
-    if (r.set && !strcmp(r.name, name) && r.team == team && r.tour == tour && r.level == level) return;
+    int32_t emb[5] = {};
+    report_lobby_emblem(name, emb);
+    if (r.set && !strcmp(r.name, name) && r.team == team && r.tour == tour && r.level == level &&
+        !memcmp(r.emblem, emb, sizeof emb))
+        return;
     wchar_t w[32], tag[4];
     MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 32);
     bot_service_tag(w, tag);
@@ -159,7 +189,7 @@ void report_note_lobby_bot(int index, const char* name, int team, int tier) {
     WideCharToMultiByte(CP_UTF8, 0, tag, 4, r.tag, sizeof r.tag - 1, nullptr, nullptr);
     r.tag[4] = 0;
     strncpy_s(r.clan, profile_clan_of(name), _TRUNCATE);
-    for (int k = 0; k < 5; k++) r.emblem[k] = 0;
+    memcpy(r.emblem, emb, sizeof emb);                      // (0s: MCC's default until its numbers are there)
     r.team = team;
     r.set = true;
 }

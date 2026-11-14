@@ -127,7 +127,8 @@ static volatile uint64_t g_listed;               // the bots on the last list MC
 
 // (Nov 13, "Yes add all the bots", up to 15) every bot in the lobby: the roster holds up to 15 (the game's 16
 // players), so the list holds up to 16 with the player
-struct sw_want { int n; char name[SW_LOBBY_ROWS][16]; int team[SW_LOBBY_ROWS], tier[SW_LOBBY_ROWS]; };
+struct sw_want { int n; char name[SW_LOBBY_ROWS][16]; int team[SW_LOBBY_ROWS], tier[SW_LOBBY_ROWS]; bool emb[SW_LOBBY_ROWS]; };
+bool report_lobby_emblem(const char* name, int32_t out[5]);   // report.cpp: its emblem's numbers are there
 
 // the bots wanted on the list: the lobby's, in the menus, with bots on; their hash (0 none)
 static uint64_t wanted_bots(sw_want& w) {
@@ -145,6 +146,9 @@ static uint64_t wanted_bots(sw_want& w) {
         for (const char* c = w.name[w.n]; *c; c++) { h ^= (uint8_t)*c; h *= 1099511628211ull; }
         h ^= 0x100u + (uint32_t)w.team[w.n]; h *= 1099511628211ull;
         h ^= 0x200u + (uint32_t)w.tier[w.n]; h *= 1099511628211ull;   // (its badge: its difficulty's rank)
+        int32_t e[5];
+        w.emb[w.n] = report_lobby_emblem(w.name[w.n], e);             // (its emblem: a new list once it is there)
+        h ^= 0x300u + (uint32_t)w.emb[w.n]; h *= 1099511628211ull;
         w.n++;
     }
     return w.n ? h : 0;
@@ -216,6 +220,60 @@ static void __fastcall h_roster(void* mgr, uint8_t* msg) {
     o_roster(mgr, msg);
 }
 
+// (Nov 13, the bots' emblems) the lobby bots whose emblem numbers are not there yet, asked of brain/looks.py in the
+// background (tools/looks_export.py --emblems: native\bin\emblems\<name>.ids, the emblem a match sends for it), 20 s
+// apart at most; a name asked three times is not asked again
+void hb_python(const wchar_t* root, wchar_t* out, size_t cap);   // bots_panel.cpp
+static void ask_emblems(const sw_want& w) {
+    static ULONGLONG asked;
+    static char tried[64][16];
+    static int tries[64], ntried;
+    ULONGLONG now = GetTickCount64();
+    if (asked && now - asked < 20000) return;
+    wchar_t bin[MAX_PATH], root[MAX_PATH], py[MAX_PATH + 2];
+    HMODULE me = nullptr;
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            (LPCWSTR)&ask_emblems, &me))
+        return;
+    DWORD n = GetModuleFileNameW(me, bin, MAX_PATH);
+    wchar_t* slash = n && n < MAX_PATH ? wcsrchr(bin, L'\\') : nullptr;
+    if (!slash) return;
+    *slash = 0;                                               // native\bin
+    wcscpy_s(root, bin);
+    wchar_t* s = wcsstr(root, L"\\native\\bin");
+    if (!s) return;
+    *s = 0;                                                   // the repo
+    wchar_t cmd[2048];
+    hb_python(root, py, MAX_PATH + 2);
+    int at = swprintf_s(cmd, L"%s -I \"%s\\tools\\looks_export.py\" --emblems \"%s\\bot_profiles.ini\"", py, root, bin);
+    int names = 0;
+    for (int i = 0; i < w.n && at > 0 && at < 1900; i++) {
+        if (w.emb[i] || strchr(w.name[i], '"')) continue;
+        int t = 0;
+        while (t < ntried && strcmp(tried[t], w.name[i])) t++;
+        if (t == ntried) {
+            if (ntried == 64) continue;
+            strcpy_s(tried[ntried], w.name[i]);
+            tries[ntried++] = 0;
+        }
+        if (tries[t] >= 3) continue;
+        tries[t]++;
+        wchar_t wn[40];
+        MultiByteToWideChar(CP_UTF8, 0, w.name[i], -1, wn, 40);
+        at += swprintf_s(cmd + at, 2048 - at, L" \"%s\"", wn);
+        names++;
+    }
+    if (!names || at <= 0) return;
+    asked = now;
+    STARTUPINFOW si{}; si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    if (CreateProcessW(nullptr, cmd, nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        if (InterlockedIncrement(&g_lines) <= 400) logf("session list: asked for %d bots' emblems", names);
+    }
+}
+
 // once a second: when the bot on MCC's last list is not the one wanted, MCC's own request for a new list
 typedef void(__fastcall* request_fn)(void* session, uint8_t urgent);
 static void refresh_tick() {
@@ -224,6 +282,7 @@ static void refresh_tick() {
     static ULONGLONG asked;
     sw_want w;
     uint64_t want = wanted_bots(w);
+    if (w.n) ask_emblems(w);
     if (mcc_menu_state() != 0) g_listed = 0;              // (the next lobby gets a new list)
     if (want != want_was) { want_was = want; tries = 0; }
     if (want == g_listed || tries >= 5) return;
