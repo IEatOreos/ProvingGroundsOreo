@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include <wctype.h>
 #include "third_party/minhook/include/MinHook.h"
 #include "shared.h"
@@ -241,6 +242,47 @@ static void* __fastcall h_string(void* out, const char* s) {
 // catalog read from its folder), which MCC's screens draw behind its name
 int bot_nameplate(const char* name);                       // bots_panel.cpp
 
+// (custom, Nov 13, the owner: "have the bots player details page have them pick a unique or random avatar") The
+// lookup's +0x14 is the avatar (MCC's fill: 6, PlayerIDAvatar_001, the grey helmet every bot had). MCC's avatars are
+// <MCC>\Data\UI\playercustomization.xml's <Avatar id> 1-116 (Nov 2026); a bot's is drawn from its name, the same
+// everywhere and every match. Read once at start; ids not 1..n without a gap leave MCC's default
+static int g_avatars;                                      // MCC's avatar ids are 1..g_avatars (0: not read)
+
+static void avatars_load() {
+    wchar_t p[MAX_PATH];
+    DWORD n = GetModuleFileNameW(nullptr, p, MAX_PATH);    // <MCC>\mcc\binaries\win64\MCC-Win64-Shipping.exe
+    if (!n || n >= MAX_PATH) return;
+    for (int up = 0; up < 4; up++) {
+        wchar_t* s = wcsrchr(p, L'\\');
+        if (!s) return;
+        *s = 0;
+    }
+    if (wcscat_s(p, L"\\Data\\UI\\playercustomization.xml")) return;
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"rb") != 0 || !f) return;
+    static char buf[1 << 20];
+    size_t len = fread(buf, 1, sizeof buf - 1, f);
+    fclose(f);
+    buf[len] = 0;
+    bool seen[1024] = {};
+    int max = 0, count = 0;
+    for (const char* q = strstr(buf, "<Avatar id=\""); q; q = strstr(q + 1, "<Avatar id=\"")) {
+        int id = atoi(q + 12);
+        if (id < 1 || id >= 1024 || seen[id]) return;
+        seen[id] = true;
+        count++;
+        if (id > max) max = id;
+    }
+    if (count && count == max) g_avatars = max;
+}
+
+static int bot_avatar(const char* name) {
+    uint32_t h = 2166136261u ^ 0xA7A7A7A7u;                 // (its own draw: not the nameplate's or the rank's)
+    for (const char* c = name; *c; c++) { h ^= (uint8_t)*c; h *= 16777619u; }
+    h ^= h >> 15; h *= 0x2C1B3C6Du; h ^= h >> 12;
+    return 1 + (int)(h % (uint32_t)g_avatars);
+}
+
 // the XP MCC's account rank (tour 1-11, level 1-30; the eagle 0) starts at, from MCC's own table; -1 not known
 static int64_t rank_xp(int tour, int level) {
     if (!g_ranks_global || tour < 1 || tour > 11) return -1;
@@ -276,6 +318,7 @@ static char __fastcall h_profile(void* mgr, uint64_t xuid, int32_t* out) {
     if (r.emblem[0] > 0) memcpy(out, r.emblem, sizeof r.emblem);   // foreground, background, primary, secondary, back
     int np = r.name[0] ? bot_nameplate(r.name) : -1;
     if (np > 0) out[6] = np;                                       // +0x18: its nameplate
+    if (g_avatars > 0 && r.name[0]) out[5] = bot_avatar(r.name);   // +0x14: its avatar
     ((assign_fn)(g_mcc + MR_ASSIGN))(out + 8, r.clan);             // +0x20: its clan tag, "" for none
     ((assign_fn)(g_mcc + MR_ASSIGN))(out + 0x14, r.tag);           // +0x50: its service tag
     if (r.tour > 0) {                                               // +0x80: its XP, for its rank's badge
@@ -319,7 +362,8 @@ void report_hooks() {
             !memcmp(g_mcc + MR_RANK_LEVEL, MR_RANK_LEVEL_HEAD, sizeof MR_RANK_LEVEL_HEAD))
             g_ranks_global = MR_RANKS_AT + 7 + *(int32_t*)(g_mcc + MR_RANKS_AT + 3);
     } __except (EXCEPTION_EXECUTE_HANDLER) { g_ranks_global = 0; }
-    logf("report: bots' names, clan tags, service tags and emblems in MCC on; lobby bots' rank badges %s",
-         g_ranks_global == 0x4001500 ? "on" : "off (not the table decoded)");
+    avatars_load();
+    logf("report: bots' names, clan tags, service tags and emblems in MCC on; lobby bots' rank badges %s; avatars %d",
+         g_ranks_global == 0x4001500 ? "on" : "off (not the table decoded)", g_avatars);
     if (g_ranks_global != 0x4001500) g_ranks_global = 0;
 }

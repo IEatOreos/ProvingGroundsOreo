@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### The bots' own avatars in MCC, 2026-11-13
+
+The Career numbers worked live (Wheezy: 0 won, 16 kills, 8 deaths, 1 assist, its leaderboard line). The owner: "Can you have the bots player details page have them pick a unique or random avatar?"
+
+- native/report.cpp: MCC's player lookup's +0x14 is the avatar. MCC's unknown-player fill sets 6 (PlayerIDAvatar_001, the grey helmet every bot showed). MCC's avatars are <MCC>\Data\UI\playercustomization.xml's `<Avatar id>` 1-116, read once at start (found from MCC's own exe path). A bot's avatar is drawn from its name (its own hash, not the nameplate's or the rank's), so it is the same in the session list, Player Details, Career and the post-game report, every match. Ids that are not 1..n without a gap, or a catalog that cannot be read, leave MCC's default. The start line logs how many were read.
+
+Checks: `native\build.bat avatars` built native/bin/botcore_avatars.dll (only the existing `_wfopen` warnings; the PIL step fails as before). That build also holds the working tree's uncommitted Mythic work. Not yet run in MCC.
+
 ### MCC's Career page: the bots' own numbers, and a leaderboard, 2026-11-13
 
 The watch above never ran: the Career page the owner opens (Player Details > Career > Multiplayer: Total Games Won, Kills, Deaths, Assists, with "Compared to you") is filled by another function. Read statically instead, it showed exactly where a bot's zeros come from, so this goes straight to the numbers. The owner asked for a leaderboard ("me and the bots. Kills, Deaths, Assists, K/d") and for the bots' stats on their Career page.
