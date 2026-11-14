@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Demon precision guns fire on sight in Halo 2, H2A and Halo 3, 2026-11-14
+
+The owner, after the Halo 2 Battle Rifle change below: "Do H2a, Halo 3, And Halo 2, and all precision weapons to the list for each ... for demon only".
+
+- Brain (`brain/bot.py` `demon_precision_snap`, was `h2_demon_br`; `DEMON_SNAP_GAMES`): Demon only, on foot, in Halo 2, H2A and Halo 3, with any gun in `PRECISION` (Battle Rifle, Covenant Carbine, Magnum, Sniper Rifle, Beam Rifle, and the other games' names, which never match there). The same three places as below: the trigger goes with the sight of him, the press snaps to his head, `fire_gate` lets it through. Reach and Halo 4 Demons keep their own paths; Legendary, Mythic, Blind and the lower tiers are unchanged.
+- Validation: `tools/test_h2_demon_br.py` rewritten for the three games and five guns (automatics, shotgun, rockets and sword excluded; CE, Reach, Halo 4 excluded; Legendary, Blind, Heroic, Mythic excluded). All 726 `tools/test_*.py` pass. Not yet played in MCC, and there are no H2A or Halo 3 recordings: the generic head point (feet + 0.62) is untested against H2A's raised body report (`H2A_FEET`) and a crouched target, and the Carbine's and Beam Rifle's hits are unmeasured.
+
 ### No Demon Wheelman, 2026-11-14
 
 The owner: "make it to where bots that dont drive passenger vehicles cannot get wheelman". Demon is the one difficulty that never takes a Warthog's, Mongoose's or Ghost's wheel (`vehicles.DEMON_NO_DRIVE`), so a Demon Wheelman only ever went for a tank or aircraft.
