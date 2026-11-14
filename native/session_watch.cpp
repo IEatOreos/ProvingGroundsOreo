@@ -17,6 +17,13 @@
 // message), id 0xB07B07B00000000F (report.cpp report_note_lobby_bot: its name, clan tag, service tag, nameplate, MCC's
 // default emblem), numbers as the non-player person's (-1, -1, -1, 0). The mod's own drawn rows step aside meanwhile
 // (overlay.cpp). A test: what MCC draws, and what its count, Start and the bot's menu do with it.
+// (custom, Nov 13, the owner: "Instant refresh first") Live, Wheezy came up under MY GAME SESSION (with the player,
+// above the friends; MCC's clan tag, nameplate and rank) but only some 90 s in: MCC sends the list only when something
+// changes (that time, the friend's status). Now, in the menus, when the bot on MCC's last list is not the one wanted, the
+// mod asks MCC for a new list with MCC's own request, FUN_14024E458(session [0x144000D08], urgent 0): it stamps the
+// session's +0x1D8 (and +0x1E0 when urgent), and MCC's own session update (FUN_140246070, its +0xBFB) sends the list
+// on its own thread a moment later. The UI roster system asks the same way (its +0xA0). Once a second at most, 3 s
+// apart, 5 tries for each change.
 #include <windows.h>
 #include <intrin.h>
 #include <stdio.h>
@@ -38,6 +45,9 @@ static const uintptr_t SW_NOTIFY = 0x24E4B0, SW_ROSTER = 0x2F4E84, SW_ROSTER_AT 
 static const uintptr_t SW_NEW = 0x9300F4, SW_DESC = 0x24F054;
 static const uint8_t SW_NEW_HEAD[] = {0x33, 0xD2, 0xE9};                // (xor edx,edx; jmp: MCC's allocator)
 static const uint8_t SW_DESC_HEAD[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x48, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x30};
+static const uintptr_t SW_REQUEST = 0x24E458, SW_SESSION = 0x4000D08;   // MCC's "send the list again", its session
+static const uint8_t SW_REQUEST_HEAD[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x30};
+static const uint8_t SW_REQUEST_STAMP[] = {0x48, 0x83, 0xB9, 0xD8, 0x01, 0x00, 0x00, 0x00};   // at +0x23: cmp [rcx+1D8h],0
 static const int SW_BOT_INDEX = 15;                                      // its made-up id's player index
 static const uint32_t SW_MSG_ID = 0x044563CE;
 static const uint8_t SW_NOTIFY_HEAD[] = {0x48, 0x8B, 0xC4, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
@@ -108,25 +118,34 @@ typedef void*(__fastcall* new_fn)(size_t n);
 typedef void*(__fastcall* desc_fn)(void* node, uint64_t id, const sw_wstr* name, void* unused, uint64_t a5, uint64_t a6,
                                    int64_t a7, int64_t a8, int64_t a9, uint64_t a10);
 static bool g_add_ok;                            // the allocator and the builder are the ones decoded
+static bool g_request_ok;                        // MCC's list request is the one decoded
 static char g_added[16];                         // the bot last added (logged when it changes)
+static char g_listed[16];                        // the bot on the last list MCC sent ("": none)
 
-// the lobby's first bot onto the list's end, in the menus only (sessionbots=1)
-static void add_lobby_bot(uint8_t* msg) {
+// the bot wanted on the list: the lobby's first, in the menus, with bots on ("" none)
+static void wanted_bot(char (&name)[16], int* team) {
+    name[0] = 0;
     if (!g_add_ok || g_sessionbots < 1 || g_sessionbots > 2 || mcc_menu_state() != 0 || !g_shm || !g_shm->bots_enabled ||
         g_shm->lidar_mode)
         return;
     const hb_roster& R = hb_panel_firefight ? g_ff_roster : g_roster;
     if (R.n < 1) return;
-    char name[16];
     strncpy_s(name, R.bot[0].name, _TRUNCATE);
-    int team = R.bot[0].team;
+    if (team) *team = R.bot[0].team;
+}
+
+// the lobby's first bot onto the list's end, in the menus only (sessionbots=1)
+static void add_lobby_bot(uint8_t* msg) {
+    char name[16];
+    int team = 0;
+    wanted_bot(name, &team);
     if (!name[0]) return;
     uint8_t* head = msg + 0x38;
     const uint64_t id = 0xB07B07B000000000ull | (uint64_t)SW_BOT_INDEX;
     int n = 0;
     uint8_t* me = nullptr;                                // the player's own node (+0x10 set)
     for (uint8_t* node = *(uint8_t**)(msg + 0x40); node && node != head && n < 32; node = *(uint8_t**)(node + 8), n++) {
-        if (*(uint64_t*)(node + 0x18) == id) return;    // (already on it)
+        if (*(uint64_t*)(node + 0x18) == id) { strcpy_s(g_listed, name); return; }   // (already on it)
         if (node[0x10] && !me) me = node;
     }
     if (!n || !me) return;                                // (no player yet: not a lobby's list)
@@ -152,6 +171,7 @@ static void add_lobby_bot(uint8_t* msg) {
     *(uint8_t**)node = last;
     *(uint8_t**)(node + 8) = head;
     *(uint8_t**)head = node;
+    strcpy_s(g_listed, name);
     if (strcmp(g_added, name)) {
         strcpy_s(g_added, name);
         logf("session list: added %s (team %d) as player %d, mode %u", name, team, SW_BOT_INDEX, g_sessionbots);
@@ -161,11 +181,42 @@ static void add_lobby_bot(uint8_t* msg) {
 static void __fastcall h_roster(void* mgr, uint8_t* msg) {
     __try {
         if (msg && *(const uint32_t*)(msg + 0x28) == SW_MSG_ID) {
+            g_listed[0] = 0;
             add_lobby_bot(msg);
             log_members(msg);
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) { logf("session list: unreadable"); }
     o_roster(mgr, msg);
+}
+
+// once a second: when the bot on MCC's last list is not the one wanted, MCC's own request for a new list
+typedef void(__fastcall* request_fn)(void* session, uint8_t urgent);
+static void refresh_tick() {
+    static char want_was[16];
+    static int tries;
+    static ULONGLONG asked;
+    char want[16];
+    wanted_bot(want, nullptr);
+    if (mcc_menu_state() != 0) g_listed[0] = 0;           // (the next lobby gets a new list)
+    if (strcmp(want, want_was)) { strcpy_s(want_was, want); tries = 0; }
+    if (!strcmp(want, g_listed) || tries >= 5) return;
+    ULONGLONG now = GetTickCount64();
+    if (now - asked < 3000) return;
+    void* session = *(void**)(g_mcc + SW_SESSION);
+    if (!session) return;
+    asked = now;
+    if (!tries++ && InterlockedIncrement(&g_lines) <= 400)
+        logf("session list: asked MCC for a new list (wanted %s, on it %s)", want[0] ? want : "none",
+             g_listed[0] ? g_listed : "none");
+    ((request_fn)(g_mcc + SW_REQUEST))(session, 0);
+}
+
+static DWORD WINAPI refresh_thread(void*) {
+    for (;;) {
+        Sleep(1000);
+        __try { refresh_tick(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+    return 0;
 }
 
 void session_watch_hooks() {
@@ -187,7 +238,16 @@ void session_watch_hooks() {
         g_add_ok = !memcmp(g_mcc + SW_NEW, SW_NEW_HEAD, sizeof SW_NEW_HEAD) &&
                    !memcmp(g_mcc + SW_DESC, SW_DESC_HEAD, sizeof SW_DESC_HEAD);
     } __except (EXCEPTION_EXECUTE_HANDLER) { g_add_ok = false; }
-    logf("session list: watch on (logs MCC's session players when they change); one lobby bot %s", !g_add_ok
+    __try {
+        g_request_ok = !memcmp(g_mcc + SW_REQUEST, SW_REQUEST_HEAD, sizeof SW_REQUEST_HEAD) &&
+                       !memcmp(g_mcc + SW_REQUEST + 0x23, SW_REQUEST_STAMP, sizeof SW_REQUEST_STAMP);
+    } __except (EXCEPTION_EXECUTE_HANDLER) { g_request_ok = false; }
+    logf("session list: watch on (logs MCC's session players when they change); one lobby bot %s%s", !g_add_ok
          ? "off (not the builder decoded)" : g_sessionbots == 1 ? "added (sessionbots=1, as a plain entry)"
-         : g_sessionbots == 2 ? "added (sessionbots=2, with the player's session flags)" : "off (sessionbots=0)");
+         : g_sessionbots == 2 ? "added (sessionbots=2, with the player's session flags)" : "off (sessionbots=0)",
+         g_add_ok && g_sessionbots ? g_request_ok ? ", MCC asked for the list at once" : ", not asked (request not decoded)" : "");
+    if (g_add_ok && g_request_ok && g_sessionbots) {
+        HANDLE t = CreateThread(nullptr, 0, refresh_thread, nullptr, 0, nullptr);
+        if (t) CloseHandle(t);
+    }
 }

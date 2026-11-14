@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### MCC's session list: the lobby bot without waiting (MCC asked for the list), 2026-11-13
+
+The one-bot test worked: Wheezy came up under MY GAME SESSION, with the player and above the friends, in MCC's own row (the clan tag, nameplate and rank from the mod's lookups), but only about 90 s in. MCC sends that list only when something changes (that time, a friend's status). The owner: "Instant refresh first".
+
+- native/session_watch.cpp: in the menus, when the bot on MCC's last list is not the one wanted (another first bot, bots off, back from a match), MCC's own list request FUN_14024E458(session [0x144000D08], 0) is called. It stamps the session's +0x1D8, and MCC's own session update (FUN_140246070) sends the list on its own thread a moment later. The UI roster system asks the same way. A small thread checks once a second; requests are at least 3 s apart, at most 5 for each change. The request's bytes are checked first (the head and its `cmp [rcx+1D8h],0`); any mismatch leaves it off.
+
+Checks: `native\build.bat sessionrefresh` built native/bin/botcore_sessionrefresh.dll (only the existing `_wfopen` warnings; the PIL step fails as before). That build also holds the working tree's uncommitted Mythic work. Not yet run in MCC: how soon Wheezy now shows, and the player count, Start and the bot's Player Details, are untested.
+
 ### MCC's session list: one lobby bot as a test (sessionbots=), 2026-11-13
 
 The watch's first live log (a Reach custom game lobby) showed the list holding the owner and a second person, and only the owner while the match loaded. It never held the bots. The owner explained that the second person "was just on my friendslist in the lobby never in my game", so the list carries friends too, with their own flags. The owner: "Yes, try one bot".
