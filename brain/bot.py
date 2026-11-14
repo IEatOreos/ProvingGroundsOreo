@@ -197,6 +197,13 @@ ON_WAY_LAST = 1.5                        # u from the gun: the pickup's last ste
 # halo 4". A man in view this near: shot on the way home (Bot.carrier_shot), every tier
 CARRIER_SHOOT_R = 25.0
 ON_WAY_OBJ_LAST = 3.0                    # u from an objective run's point (outside Slayer, Race): its own last steps
+# (custom, Nov 13) Demon this near its objective point plays it (Bot.demon_objective): guns, hunts, holds, patrols and,
+# off the point, fights stay DEMON_OBJ_MARGIN under the objective (over the 0.15 pick noise and the 0.2 kept-goal bonus);
+# a man within DEMON_OBJ_ARM is still fought. Roles whose point is a place to be (not a carrier to chase)
+# A teammate already on it (Bot.mate_holds, within DEMON_OBJ_DZ of its floor): the rule lets go, the Demon guards and
+# hunts as before (owner, Nov 13)
+DEMON_OBJ_NEAR, DEMON_OBJ_MARGIN, DEMON_OBJ_ARM, DEMON_OBJ_DZ = 15.0, 0.4, 3.0, 2.5
+DEMON_OBJ_ROLES = ("defender", "runner", "mid")
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -3123,6 +3130,54 @@ class Bot:
                 and dist(me.pos, s.per.beliefs[k].pos) <= DEMON_ENGAGE_R]
         return s.pick_target(now, me, snap, seen) if seen else None
 
+    def demon_objective(s, me, snap, scores, seen):
+        """(custom, Nov 13, owner: "make demon bots play the objective when theyre near it") Demon within DEMON_OBJ_NEAR
+        of its objective point (a defender's hill or post, a runner's flag, a mid's watch spot; not Slayer or Race, not
+        carrying, on foot, not dry): a gun, a hunt, a hold or a patrol stays under the objective (DEMON_OBJ_MARGIN), and
+        so does a fight until it is on the point (ON_WAY_OBJ_LAST): it walks on and fights the man in view on its way
+        (on_way_target), a man at arm's length (DEMON_OBJ_ARM) still fought. Live Condemned Crazy King 20261113-204320:
+        within 8 u of the hill the two Demons chose it 3% and 13% of the time (Easy to Mythic 30-85%), beaten by a gun
+        grab (3.15), a stand-ground hunt (3.2) and committed fights; they stood on it 2 s and 4 s of 5 minutes."""
+        if (not profiles.fixed_demon(s.p) or snap.mode in ("slayer", "race") or me.has_flag
+                or me.vehicle not in (None, -1) or s.order.role not in DEMON_OBJ_ROLES or s.dry(me)):
+            return
+        obj = [k for k in scores if k[0] == "objective" and isinstance(k[1], Vec)]
+        if not obj:
+            return
+        key = max(obj, key=lambda k: scores[k])
+        on = (me.pos - key[1]).flat() <= ON_WAY_OBJ_LAST
+        if (me.pos - key[1]).flat() > DEMON_OBJ_NEAR:
+            return
+        if s.mate_holds(me, snap, key[1]):
+            return                      # (owner, Nov 13: a teammate on it, the Demon plays as before: guards, hunts)
+        cap = scores[key] - DEMON_OBJ_MARGIN
+        capped = False
+        for k in list(scores):
+            if k[0] in ("item", "hunt", "hold", "patrol"):
+                pass
+            elif k[0] == "fight" and not on:
+                b = s.per.beliefs.get(k[1])
+                if b is not None and dist(me.pos, b.pos) < DEMON_OBJ_ARM:
+                    continue
+            else:
+                continue
+            if scores[k] > cap:
+                scores[k] = cap
+                capped = True
+        if capped:
+            s.note("objective: near it, playing it" if not on else "objective: on it, staying")
+
+    @staticmethod
+    def mate_holds(me, snap, point):
+        """A living teammate on the objective (demon_objective lets go then): in King of the Hill inside the hill, else
+        within ON_WAY_OBJ_LAST of the point (and about its floor, DEMON_OBJ_DZ)."""
+        if snap.mode == "king" and snap.hill is not None:
+            c, r = snap.hill, snap.hill_r or ON_WAY_OBJ_LAST
+        else:
+            c, r = point, ON_WAY_OBJ_LAST
+        return any(p.alive and p.team == me.team and p.id != me.id and (p.pos - c).flat() <= r
+                   and abs(p.pos.z - c.z) < DEMON_OBJ_DZ for p in snap.players)
+
     def carrier_shot(s, now, me, snap, kind, arg):
         """(custom, Nov 10) Halo 4 CTF, carrying the flag on foot on its way home: the man in view within
         CARRIER_SHOOT_R to shoot with the carrier's magnum while it runs on (fight's aim and trigger, the walk home as
@@ -3467,6 +3522,7 @@ class Bot:
                 if d < (3.0 if grab else CLOSE_FIGHT_R) and regroup is None:   # (alone against two: regroup_point)
                     top = max(v for k, v in scores.items() if k[0] != "retreat" or d < 3.0)
                     scores[key] = max(scores[key], top + 0.25)
+        s.demon_objective(me, snap, scores, seen)
         infected = False
         if snap.mode == "infection":
             from .modes import zombie_team

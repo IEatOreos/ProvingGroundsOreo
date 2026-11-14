@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Demon plays the objective when near it, 2026-11-13
+
+The owner, after a Crazy King game on Condemned (20261113-204320) that blue lost with its two Demons set to Objective: "make demon bots play the objective when theyre near it". Within 8 u of the hill those Demons chose it 3% and 13% of the time; every other bot, Easy through Mythic, 30-85%. They stood on it 2 s and 4 s of 5 minutes, red's two Easy bots 130 s and 105 s. What beat it were Demon-only scores: the gun grab a few steps off (2.95 + 0.2 kept), the stand-ground hunt on a man on its tracker (3.2), and committed fights.
+
+- Brain (brain/bot.py `demon_objective`, `DEMON_OBJ_NEAR` 15 u, `DEMON_OBJ_MARGIN` 0.4, `DEMON_OBJ_ARM` 3 u, `DEMON_OBJ_ROLES`): a Demon on foot within 15 u of its objective point, as defender, runner or mid (the hill, a post, a flag, a watch spot; not a hunter or escort chasing a carrier), outside Slayer and Race, not carrying and not dry: guns, hunts, holds and patrols stay 0.4 under the objective. Until it is on the point (3 u) fights do too: it walks on and shoots the man in view on its way (`on_way_target`), and a man within 3 u is still fought. On the point it fights from there. Retreats are left as they were. Called in `decide` after the shot-back and close-fight lifts.
+- A teammate already on it (`mate_holds`; the owner: "it can change if it registers a teammate is on the objective"): a living teammate inside the hill in King of the Hill, else within 3 u of the point and 2.5 u of its floor. Then the rule lets go and the Demon guards, hunts and fights as before; it comes back once nobody of ours is on it.
+- Not changed: how the team plan hands out King of the Hill roles (blue's bots changed role 104 times that game, red's Mythic held one all game), and the other tiers' gun trips.
+
+Checks: tools/test_demon_objective.py is new (8 tests). All 699 tools/test_*.py pass. There is no King of the Hill simulator, so this has not been seen in a match.
+
 ### Mythic difficulty: between Legendary and Demon, 2026-11-13
 
 The owner, after going 43-0 on Warhouse against two Legendary, a Blind and a Heroic: "I am thinking we make a hybrid difficulty between Legendary and Demon". His choices: aim halfway and fixed, Demon's awareness only, the name Mythic, 10 matchmaking points. In that game the Legendary and Blind bots lost the first look (49-62% to his 69%); Blind, with hands up to 85% of the way to Demon's, did worst (3 kills, 14 deaths), so Mythic takes Demon's eyes as well as better hands.
