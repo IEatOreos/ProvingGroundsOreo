@@ -234,7 +234,8 @@ def wheelman(prof):
     """(custom, Nov 13) The Wheelman play style: goes for the nearest vehicle it may drive (a Warthog first) from WHEEL_SEEK_R,
     first in line for the team's Warthog and Mongoose wheels (driver_priority) and from farther (director.crew_orders),
     and keeps its vehicle where others get out at a trip's end (Bot.drive). The existing rules stand: a Demon never takes
-    a Warthog's, Mongoose's or Ghost's wheel, Easy is never sent to drive a person on a gun nor takes that wheel itself."""
+    a Warthog's, Mongoose's or Ghost's wheel, Easy is never sent to drive a person on a gun nor takes that wheel itself.
+    (custom, Nov 14) A Demon is never a Wheelman: make_profile makes it a Flanker."""
     return prof.personality == "wheelman"
 
 
@@ -284,6 +285,10 @@ def make_profile(tier, personality, rng=random):
         return tactician_profile(personality, rng)
     if tier == MYTHIC:
         return mythic_profile(personality, rng)
+    if tier == DEMON and personality == "wheelman":
+        # (custom, Nov 14, owner: "bots that dont drive passenger vehicles cannot get wheelman") a Demon drives no
+        # Warthog, Mongoose or Ghost (vehicles.DEMON_NO_DRIVE), so no Wheelman: the style it plays on foot, Flanker
+        personality = "flanker"
     vals ={**TIERS[tier], **CRAFT[tier], **PERSONALITIES[personality]}
     jit = {k: v * rng.uniform(0.9, 1.1) for k, v in vals.items()}
     if tier == "top":

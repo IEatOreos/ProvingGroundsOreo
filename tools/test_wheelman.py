@@ -41,6 +41,18 @@ class ProfileTests(unittest.TestCase):
         self.assertIsNone(p("demon"))
         self.assertEqual(profiles.driver_priority(profiles.make_profile("average", "rusher", random.Random(1))), 0)
 
+    def test_no_demon_wheelman(self):
+        # (Nov 14, owner: "bots that dont drive passenger vehicles cannot get wheelman") a Demon asked to be one is a
+        # Flanker (the Wheelman's on-foot traits); every other difficulty keeps it
+        d = profiles.make_profile("demon", "wheelman", random.Random(1))
+        self.assertFalse(profiles.wheelman(d))
+        self.assertEqual(d.personality, "flanker")
+        for t in ("novice", "average", "strong", "top", "blind", "tactician", "mythic"):
+            self.assertTrue(profiles.wheelman(profiles.make_profile(t, "wheelman", random.Random(1))), t)
+        header = (ROOT / "native" / "bots_panel.h").read_text(encoding="utf-8", errors="replace")
+        self.assertIn("#define HB_STYLE_WHEELMAN 7", header)
+        self.assertIn("return !(tier == HB_TIER_DEMON && style == HB_STYLE_WHEELMAN);", header)
+
     def test_menus_and_not_dealt_to_any(self):
         self.assertEqual(botctl.STYLE_KEYS[-2:], ("wheelman", "any"))
         panel = (ROOT / "native" / "bots_panel.cpp").read_text(encoding="utf-8", errors="replace")
@@ -72,7 +84,7 @@ class PickTests(unittest.TestCase):
         self.assertEqual(self.pick("average", [veh(2, "warthog", WHEEL_SEEK_R - 5)]), 2)
         self.assertIsNone(self.pick("average", [veh(2, "warthog", 10, occupied=True, riders=1)]))
 
-    def test_demon_wheelman_skips_warthog_mongoose_ghost(self):
+    def test_demon_skips_warthog_mongoose_ghost(self):   # (Nov 14: no Demon Wheelman; may_drive still rules a pick)
         vs = [veh(1, "warthog", 5), veh(2, "mongoose", 6), veh(3, "ghost", 7), veh(4, "scorpion", 40)]
         self.assertEqual(self.pick("demon", vs), 4)
         self.assertIsNone(self.pick("demon", vs[:3]))

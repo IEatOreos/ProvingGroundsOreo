@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### No Demon Wheelman, 2026-11-14
+
+The owner: "make it to where bots that dont drive passenger vehicles cannot get wheelman". Demon is the one difficulty that never takes a Warthog's, Mongoose's or Ghost's wheel (`vehicles.DEMON_NO_DRIVE`), so a Demon Wheelman only ever went for a tank or aircraft.
+
+- Brain (`brain/profiles.py` `make_profile`): a Demon given the Wheelman style plays as a Flanker (the Wheelman's own on-foot traits). Every other difficulty, Mythic included, keeps Wheelman.
+- Menus (`native/bots_panel.h` `HB_STYLE_WHEELMAN`, `hb_style_fits`; `native/bots_panel.cpp`): the bot editor greys out Wheelman for a Demon (tooltip: Demon never drives a Warthog, Mongoose or Ghost); Quick setup's style list does the same when the difficulty is Demon. A Demon set to Wheelman any other way (its difficulty changed, the "for everyone" bar, a Mixed deal, a saved lineup or a Bot Matchmaking saved bot) becomes Any style.
+- Validation: `tools/test_wheelman.py` +1 (a Demon Wheelman is a Flanker; every other difficulty keeps it; the header's rule). All 70 `tools/test_*.py` files and the pool checks pass; `native\build.bat nodemonwheel` built `botcore_nodemonwheel.dll`. Not yet seen in MCC.
+
 ### Halo 2 Demon's Battle Rifle fires on sight, 2026-11-14
 
 The owner: "Check the bot Parkerr and see why he doesnt hit as much as Halo 4 or Halo reach". Midship (20261114-152922), Parkerr (Demon, Battle Rifle): 2-9. His presses landed like the other games' Demons (damage within 0.35 s on 55% of presses; Reach Demon 55%, Halo 4 65%), but the trigger was allowed only 52% of his fight time (Halo 4 Demon 78%) and fights ran 5.1 s (2.3 s). Reach's DMR and Halo 4's guns fire on the sight of him and snap the press to the part; Halo 2's BR waited on the bot's own turn-capped aim.

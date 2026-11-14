@@ -148,6 +148,7 @@ bool roster_parse_line(const char* line, hb_roster& r) {
     b.team = (uint8_t)(t < 0 ? 0 : t >= HB_TEAMS_MAX ? HB_TEAMS_MAX - 1 : t);
     b.tier = (uint8_t)key_index(tier, TIER_KEY, HB_TIERS, 3);
     b.style = (uint8_t)key_index(style, STYLE_KEY, HB_STYLES, HB_STYLE_ANY);
+    if (!hb_style_fits(b.tier, b.style)) b.style = HB_STYLE_ANY;   // (custom, Nov 14: no Demon Wheelman)
     strncpy_s(b.name, name, 15);
     if (b.team + 1 > r.teams) r.teams = b.team + 1;
     return true;
@@ -783,6 +784,7 @@ void bot_pool_load(const wchar_t* dir) {
             strcpy_s(sv.name, name);
             sv.tier = (uint8_t)key_index(tier, TIER_KEY, HB_TIERS, 3);
             sv.style = (uint8_t)key_index(style, STYLE_KEY, HB_STYLES, HB_STYLE_ANY);
+            if (!hb_style_fits(sv.tier, sv.style)) sv.style = HB_STYLE_ANY;   // (custom, Nov 14: no Demon Wheelman)
             g_pool_saved.push_back(sv);
         }
         fclose(f);
@@ -848,7 +850,8 @@ void bot_pool_remember(const hb_bot& b) {
         g_pool_saved.push_back(n);
         sv = &g_pool_saved.back();
     }
-    sv->tier = b.tier; sv->style = b.style;
+    sv->tier = b.tier;
+    sv->style = hb_style_fits(b.tier, b.style) ? b.style : HB_STYLE_ANY;   // (custom, Nov 14: no Demon Wheelman)
     bot_pool_save();
 }
 
@@ -1517,7 +1520,8 @@ int roster_on_team(const hb_roster& r, int team) {
 bool roster_add(hb_roster& r, int team, int tier, int style, uint32_t seed) {
     if (r.n >= roster_cap()) return false;
     hb_bot& b = r.bot[r.n];
-    b.team = (uint8_t)team; b.tier = (uint8_t)tier; b.style = (uint8_t)style;
+    b.team = (uint8_t)team; b.tier = (uint8_t)tier;
+    b.style = (uint8_t)(hb_style_fits(tier, style) ? style : HB_STYLE_ANY);   // (custom, Nov 14: no Demon Wheelman)
     r.n++;
     roster_name(r, r.n - 1, seed);
     if (team + 1 > r.teams) r.teams = team + 1;
@@ -2215,10 +2219,15 @@ static void inspector(bots_panel_env& e, bool& changed) {
         ImGui::PushStyleColor(ImGuiCol_Border, on ? v4(ACCENT) : v4(LINE));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
         push(SMALL);
+        bool fits = hb_style_fits(b.tier, st);                // (custom, Nov 14: no Demon Wheelman)
+        ImGui::BeginDisabled(!fits);
         if (ImGui::Button(STYLE_NAME[st], ImVec2(cw, px(32)))) {
             b.style = (uint8_t)st; changed = true;
             if (hb_matchmaking && !hb_panel_firefight) bot_pool_remember(b);
         }
+        ImGui::EndDisabled();
+        if (!fits && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
+            ImGui::SetTooltip("Demon never drives a Warthog, Mongoose or Ghost");
         pop();
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(5);
@@ -2288,11 +2297,14 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     ImGui::PushStyleColor(ImGuiCol_Header, v4(alpha(ACCENT, 0.16f)));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, v4(HOVER));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+    bool qs_demon = qs_tier == 6;                            // (custom, Nov 14: all Demon, no Wheelman; Mixed's Demons
+    if (qs_demon && qs_style == HB_STYLE_WHEELMAN) qs_style = HB_STYLE_ANY;   //  get Any style: bots_panel)
     if (ImGui::BeginCombo("##qstyle", STYLE_NAME[qs_style])) {
         g_list_frame = ImGui::GetFrameCount();
         for (int k = 0; k < HB_STYLES; k++) {
             int st = k == 0 ? HB_STYLE_ANY : k - 1;
-            if (ImGui::Selectable(STYLE_NAME[st], qs_style == st)) qs_style = st;
+            if (ImGui::Selectable(STYLE_NAME[st], qs_style == st,
+                                  qs_demon && st == HB_STYLE_WHEELMAN ? ImGuiSelectableFlags_Disabled : 0)) qs_style = st;
             if (qs_style == st) ImGui::SetItemDefaultFocus();   // (the keys start on what it is)
         }
         ImGui::EndCombo();
@@ -4248,6 +4260,10 @@ bool bots_panel(bots_panel_env& e) {
     for (int i = 0; i < r.n; i++)
         if (r.bot[i].team + 1 > r.teams) r.teams = r.bot[i].team + 1;
     bool changed = false;
+    // (custom, Nov 14, owner: "bots that dont drive passenger vehicles cannot get wheelman") a Demon set to Wheelman,
+    // by any path (its difficulty changed, the "for everyone" bar, a Mixed deal): Any style
+    for (int i = 0; i < r.n; i++)
+        if (!hb_style_fits(r.bot[i].tier, r.bot[i].style)) { r.bot[i].style = HB_STYLE_ANY; changed = true; }
     ImGuiIO& io = ImGui::GetIO();
     float W = io.DisplaySize.x * 0.94f < px(1400) ? io.DisplaySize.x * 0.94f : px(1400);
     float H = io.DisplaySize.y * 0.9f < px(860) ? io.DisplaySize.y * 0.9f : px(860);
