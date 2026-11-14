@@ -4421,8 +4421,11 @@ class Bot:
             act.fire = s.seat_fire = fire
             act.forward = act.strafe = 0.0
             # taken there (a taxi, director.vehicle_jobs): a runner out by their flag, a passenger by his objective, as
-            # people hop off at the fight they rode to
-            if me.has_flag and s.order.point is not None and (me.pos - s.order.point).flat() < 5.0 and now - s.seat_since > 1.0:
+            # people hop off at the fight they rode to. (custom, Nov 14) Never on a board order: its point is where the
+            # vehicle stood, so a carrier just in was 'home' a second later, out, told to board, in again (live Tempest
+            # 20261113: a Demon bomb carrier out of a Warthog's passenger seat 11 times in 90 s at one spot)
+            if (me.has_flag and s.order.role != "board" and s.order.point is not None
+                    and (me.pos - s.order.point).flat() < 5.0 and now - s.seat_since > 1.0):
                 act.action, act.fire = True, False   # ferried home: out on our stand to score
                 s.note("vehicle: home with the flag, out")
                 return

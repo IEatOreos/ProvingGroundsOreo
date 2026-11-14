@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Carriers stay in the Warthog they board, 2026-11-14
+
+The owner: "I have a tempest game where flag carriers or bomb carriers keep hopping out of warthogs passenger seat I suspect when they start getting shot at? Investigate". Three Tempest matches (20261113-210610, -233345, -234604): 28 times a carrier left a vehicle, 27 from a passenger seat, 17 noted "vehicle: home with the flag, out". The director's board order (`ferry_orders`, `person_pickup`) points at where the vehicle stood, and the passenger rule that drops a ferried carrier on its stand fired on being 5 u from the order's point, so a carrier just in was "home" a second later: out, told to board, in again (a Demon bomb carrier 11 times in 90 s at one spot, its driver waiting for crew). Shots taken were from standing at the Warthog, not the cause.
+
+- Brain (`brain/bot.py` `drive`, passenger seat): the "home with the flag, out" exit no longer applies on a board order. On the run home (a runner order) the carrier still gets out by its stand.
+- Validation: `tools/test_carrier_board_loop.py` is new (3 tests: a boarded carrier stays in, Reach and Halo 4, every tier; the runner still gets out by its stand; not far from it). It fails with the fix removed. All 72 `tools/test_*.py` files pass. Not yet played in MCC; the other 11 exits (mostly the parked/nobody-drives rule while the Warthog waited) should go with the loop, unchecked.
+
 ### Demon precision guns fire on sight in Halo 2, H2A and Halo 3, 2026-11-14
 
 The owner, after the Halo 2 Battle Rifle change below: "Do H2a, Halo 3, And Halo 2, and all precision weapons to the list for each ... for demon only".
