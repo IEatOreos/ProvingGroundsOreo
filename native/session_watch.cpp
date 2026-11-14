@@ -41,7 +41,7 @@ extern hb_roster g_roster, g_ff_roster;          // botcore.cpp
 extern int hb_panel_firefight;                   // bots_panel.cpp
 extern uint32_t g_sessionbots;                   // botcore.cpp (botcore.ini sessionbots=)
 int mcc_menu_state();                            // overlay.cpp: 0 menus
-void report_note_lobby_bot(int index, const char* name, int team);   // report.cpp
+void report_note_lobby_bot(int index, const char* name, int team, int tier);   // report.cpp
 
 static const uintptr_t SW_NOTIFY = 0x24E4B0, SW_ROSTER = 0x2F4E84, SW_ROSTER_AT = 0x24ED27;
 static const uintptr_t SW_NEW = 0x9300F4, SW_DESC = 0x24F054;
@@ -127,7 +127,7 @@ static volatile uint64_t g_listed;               // the bots on the last list MC
 
 // (Nov 13, "Yes add all the bots", up to 15) every bot in the lobby: the roster holds up to 15 (the game's 16
 // players), so the list holds up to 16 with the player
-struct sw_want { int n; char name[SW_LOBBY_ROWS][16]; int team[SW_LOBBY_ROWS]; };
+struct sw_want { int n; char name[SW_LOBBY_ROWS][16]; int team[SW_LOBBY_ROWS], tier[SW_LOBBY_ROWS]; };
 
 // the bots wanted on the list: the lobby's, in the menus, with bots on; their hash (0 none)
 static uint64_t wanted_bots(sw_want& w) {
@@ -141,8 +141,10 @@ static uint64_t wanted_bots(sw_want& w) {
         strncpy_s(w.name[w.n], R.bot[k].name, _TRUNCATE);
         if (!w.name[w.n][0]) continue;
         w.team[w.n] = R.bot[k].team;
+        w.tier[w.n] = R.bot[k].tier;
         for (const char* c = w.name[w.n]; *c; c++) { h ^= (uint8_t)*c; h *= 1099511628211ull; }
         h ^= 0x100u + (uint32_t)w.team[w.n]; h *= 1099511628211ull;
+        h ^= 0x200u + (uint32_t)w.tier[w.n]; h *= 1099511628211ull;   // (its badge: its difficulty's rank)
         w.n++;
     }
     return w.n ? h : 0;
@@ -167,7 +169,7 @@ static void add_lobby_bots(uint8_t* msg) {
     int added = 0;
     for (int i = 0; i < w.n; i++) {
         if (on[i]) continue;
-        report_note_lobby_bot(i, w.name[i], w.team[i]);   // (MCC's lookups by its id: report.cpp)
+        report_note_lobby_bot(i, w.name[i], w.team[i], w.tier[i]);   // (MCC's lookups by its id: report.cpp)
         wchar_t ws[16];
         int k = MultiByteToWideChar(CP_UTF8, 0, w.name[i], -1, ws, 16);
         if (k < 2) continue;

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### MCC's session list: the lobby bots' rank badges, 2026-11-13
+
+All 9 bots showed under MY GAME SESSION (PLAYER COUNT 10), the post-game report kept the match's bots, and the list refilled with the next lineup. Every bot had the same bronze badge. The owner, on team colours or badges: "Which ever you can make way on first".
+
+- native/report.cpp: MCC's player lookup's +0x80 is HaloStatsPlayerXP (the key names, FUN_1400C6CB0). MCC's unknown-player fill leaves it 0, the lowest badge. MCC turns XP into its account rank with a table it loads at start: manager [0x144001500], ready at +0x138, entries +0xD8..+0xE0 of 0x88 bytes (+0x20 the XP a rank starts at, +0x24 level, +0x28 prestige; FUN_140347264 / FUN_1403472E4). A lobby bot's lookup now gives the XP its rank starts at. That rank is the one the mod already draws for it, from its name and difficulty (bots_panel.cpp `bot_rank`, tour = prestige + 1). The table's level numbering (0- or 1-based) is read from the table, and the first read is logged. Guarded by the table global's load in FUN_140499908 and the level lookup's head. A match's bots are unchanged.
+- native/session_watch.cpp: each bot's difficulty goes to its row, and is part of the lineup's hash (a changed difficulty asks for a new list).
+- Team colours: the owner's botcore.ini is set to sessionbots=2 (the player's session flags, the team at +0x64; already built, untested). Local setting only.
+
+Checks: `native\build.bat sessionranks` built native/bin/botcore_sessionranks.dll (only the existing `_wfopen` warnings; the PIL step fails as before). That build also holds the working tree's uncommitted Mythic work. Not yet run in MCC: whether the roster's badge reads the profile's XP, the table's log line, and mode 2's team colours.
+
 ### MCC's session list: every lobby bot, 2026-11-13
 
 The refresh worked (the bot was on MCC's first list in the lobby, and after a match another lineup's first bot took its place). The owner: "Yes add all the bots", up to 15 (the most the roster holds).

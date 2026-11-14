@@ -45,8 +45,19 @@ static const uint8_t MR_DEFAULTS_HEAD[] = {0x40, 0x53, 0x48, 0x83, 0xEC, 0x20, 0
 static const uint8_t MR_ASSIGN_HEAD[] = {0x48, 0x83, 0xEC, 0x38, 0x48, 0x85, 0xD2, 0x74, 0x21};
 static const uint32_t BOT_ID_HI = 0xB07B07B0u;
 static const uint32_t LOBBY_ID_HI = 0xB07B07B1u;   // (Nov 13) the lobby's bots in MCC's session list: their own ids
+// (custom, Nov 13, the owner: "Which ever you can make way on first", the rank badges) The lookup's +0x80 is the
+// player's HaloStatsPlayerXP (the key names: FUN_1400C6CB0; MCC's unknown-player fill leaves it 0, the lowest badge).
+// MCC turns XP into its account rank with a table it loads at start: manager [0x144001500] (FUN_140499908 +0x43),
+// ready when its +0x138 is set, entries from +0xD8 to +0xE0 of 0x88 bytes: +0x20 the XP the rank starts at, +0x24
+// the level, +0x28 the prestige (FUN_140347264 / FUN_1403472E4: the last entry at or under the XP). A lobby bot's
+// rank is the one the mod draws for it (bots_panel.cpp bot_rank: tour = prestige + 1, level 1-30, the eagle level 0),
+// so the lookup gives the XP that rank starts at
+static const uintptr_t MR_RANKS_AT = 0x49994B, MR_RANK_LEVEL = 0x347264;
+static const uint8_t MR_RANK_LEVEL_HEAD[] = {0x41, 0x83, 0xC9, 0xFF, 0x80, 0xB9, 0x38, 0x01, 0x00, 0x00, 0x00, 0x74, 0x32,
+                                             0x48, 0x8B, 0x81, 0xD8, 0x00, 0x00, 0x00};
+static uintptr_t g_ranks_global;          // MCC's rank table manager's global (0: not the build decoded)
 
-struct bot_row { char name[32]; char tag[8]; char clan[16]; int team; int32_t emblem[5]; bool set; };
+struct bot_row { char name[32]; char tag[8]; char clan[16]; int team; int32_t emblem[5]; int tour, level; bool set; };
 static bot_row g_rows[16];
 static bot_row g_lobby[16];                // the lobby's bots (session_watch.cpp), never a match's rows
 static uint32_t g_rows_game;               // botcore's game id when the bots were noted (report_note_bot)
@@ -111,6 +122,7 @@ void report_note_bot(int index, const wchar_t* name, const wchar_t* tag, int tea
     if (clan && clan[0]) WideCharToMultiByte(CP_UTF8, 0, clan, -1, r.clan, sizeof r.clan - 1, nullptr, nullptr);
     for (int k = 0; k < 5; k++) r.emblem[k] = emblem ? emblem[k] : 0;
     r.team = team;
+    r.tour = r.level = 0;
     r.set = true;
     g_rows_game = g_shm ? g_shm->game : 0;
 }
@@ -120,14 +132,19 @@ void report_note_bot(int index, const wchar_t* name, const wchar_t* tag, int tea
 // (Nov 13, "Yes add all the bots") A table of its own, ids 0xB07B07B1000000<index>, so the lobby's names never
 // replace a finished match's rows (the post-game report is opened from the menus too)
 const char* profile_clan_of(const char* name);             // bots_panel.cpp
-void report_note_lobby_bot(int index, const char* name, int team) {
+void bot_rank(const char* name, int tier, int* tour, int* level);   // bots_panel.cpp
+void report_note_lobby_bot(int index, const char* name, int team, int tier) {
     if (index < 0 || index >= 16 || !name) return;
     bot_row& r = g_lobby[index];
-    if (r.set && !strcmp(r.name, name) && r.team == team) return;
+    int tour = 0, level = 0;
+    bot_rank(name, tier, &tour, &level);
+    if (r.set && !strcmp(r.name, name) && r.team == team && r.tour == tour && r.level == level) return;
     wchar_t w[32], tag[4];
     MultiByteToWideChar(CP_UTF8, 0, name, -1, w, 32);
     bot_service_tag(w, tag);
     r.set = false;
+    r.tour = tour;
+    r.level = level;
     strncpy_s(r.name, name, _TRUNCATE);
     WideCharToMultiByte(CP_UTF8, 0, tag, 4, r.tag, sizeof r.tag - 1, nullptr, nullptr);
     r.tag[4] = 0;
@@ -214,6 +231,34 @@ static void* __fastcall h_string(void* out, const char* s) {
 // blank one (playercustomization.xml), so +0x18 is the nameplate: the bot's own (bots_panel.cpp bot_nameplate, MCC's
 // catalog read from its folder), which MCC's screens draw behind its name
 int bot_nameplate(const char* name);                       // bots_panel.cpp
+
+// the XP MCC's account rank (tour 1-11, level 1-30; the eagle 0) starts at, from MCC's own table; -1 not known
+static int64_t rank_xp(int tour, int level) {
+    if (!g_ranks_global || tour < 1 || tour > 11) return -1;
+    const uint8_t* mgr = *(const uint8_t* const*)(g_mcc + g_ranks_global);
+    if (!mgr || !mgr[0x138]) return -1;
+    const uint8_t* e = *(const uint8_t* const*)(mgr + 0xD8);
+    const uint8_t* end = *(const uint8_t* const*)(mgr + 0xE0);
+    if (!e || end < e || (end - e) % 0x88 || (end - e) / 0x88 > 4000) return -1;
+    int n = (int)((end - e) / 0x88), base = 1 << 30;
+    for (int i = 0; i < n; i++)                                    // (the levels' first: 0 or 1)
+        if (*(const int32_t*)(e + i * 0x88 + 0x24) < base) base = *(const int32_t*)(e + i * 0x88 + 0x24);
+    static bool told;
+    if (!told) {
+        told = true;
+        logf("report: MCC's rank table: %d ranks, levels from %d; first %u xp (%d, %d), last %u xp (%d, %d)", n, base,
+             *(const uint32_t*)(e + 0x20), *(const int32_t*)(e + 0x28), *(const int32_t*)(e + 0x24),
+             *(const uint32_t*)(e + (n - 1) * 0x88 + 0x20), *(const int32_t*)(e + (n - 1) * 0x88 + 0x28),
+             *(const int32_t*)(e + (n - 1) * 0x88 + 0x24));
+    }
+    for (int i = 0; i < n; i++) {
+        const uint8_t* x = e + i * 0x88;
+        if (*(const int32_t*)(x + 0x28) != tour - 1) continue;
+        if (level < 1 || *(const int32_t*)(x + 0x24) == level - 1 + base) return *(const uint32_t*)(x + 0x20);
+    }
+    return -1;
+}
+
 static char __fastcall h_profile(void* mgr, uint64_t xuid, int32_t* out) {
     int rn = out ? row_number(xuid) : -1;
     if (rn < 0) return o_profile(mgr, xuid, out);
@@ -224,6 +269,11 @@ static char __fastcall h_profile(void* mgr, uint64_t xuid, int32_t* out) {
     if (np > 0) out[6] = np;                                       // +0x18: its nameplate
     ((assign_fn)(g_mcc + MR_ASSIGN))(out + 8, r.clan);             // +0x20: its clan tag, "" for none
     ((assign_fn)(g_mcc + MR_ASSIGN))(out + 0x14, r.tag);           // +0x50: its service tag
+    if (r.tour > 0) {                                               // +0x80: its XP, for its rank's badge
+        int64_t xp = -1;
+        __try { xp = rank_xp(r.tour, r.level); } __except (EXCEPTION_EXECUTE_HANDLER) { xp = -1; }
+        if (xp >= 0) out[0x20] = (int32_t)xp;
+    }
     return 1;
 }
 
@@ -254,5 +304,13 @@ void report_hooks() {
         logf("report: hooks failed");
         return;
     }
-    logf("report: bots' names, clan tags, service tags and emblems in MCC on");
+    __try {
+        // the table's manager: mov rbx,[rip+disp] at FUN_140499908 +0x43, and the level lookup's head
+        if (g_mcc[MR_RANKS_AT] == 0x48 && g_mcc[MR_RANKS_AT + 1] == 0x8B && g_mcc[MR_RANKS_AT + 2] == 0x1D &&
+            !memcmp(g_mcc + MR_RANK_LEVEL, MR_RANK_LEVEL_HEAD, sizeof MR_RANK_LEVEL_HEAD))
+            g_ranks_global = MR_RANKS_AT + 7 + *(int32_t*)(g_mcc + MR_RANKS_AT + 3);
+    } __except (EXCEPTION_EXECUTE_HANDLER) { g_ranks_global = 0; }
+    logf("report: bots' names, clan tags, service tags and emblems in MCC on; lobby bots' rank badges %s",
+         g_ranks_global == 0x4001500 ? "on" : "off (not the table decoded)");
+    if (g_ranks_global != 0x4001500) g_ranks_global = 0;
 }
