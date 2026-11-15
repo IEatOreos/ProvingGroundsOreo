@@ -626,6 +626,10 @@ FUELROD_R, FUELROD_EVERY, FUELROD_FIRE, FUELROD_SHOT, FUELROD_BACK = (10.0, 31.0
 BOMB_GUN_R = 3.0
 RAM_ERR = {"average": 20.0, "strong": 12.0, "top": 0.0, "demon": 0.0}   # a ram's heading error, degrees at most (guide 18 2.1; Easy never rams)
 BOOST_R, BOOST_CONE, BOOST_HOLD, BOOST_EVERY = 8.0, math.radians(20.0), 0.85, 3.0   # Bot.ram_boost (a skilled player's)
+# (custom, Nov 14, the owner: "I want the ghost to boost when they go to run over a person ... you have to hold it
+# down") a Ghost running a man down holds the boost from GHOST_SPLAT_BOOST_R, his nose within BOOST_CONE of the nose to
+# start and twice that to keep it, the whole run (Bot.ram_boost splat)
+GHOST_SPLAT_BOOST_R = 15.0
 FLEE_D, FLEE_PROGRESS, FLEE_REST = 8.0, 0.6, 5.0   # a boarder fled by open ground FLEE_D u on; under FLEE_PROGRESS u
                                                    # in a flee: none for FLEE_REST s (Bot.drive, open_way)
 BOARD_GIVE_UP, BOARD_BAN = 4.0, 20.0   # s pressing Use beside an enemy vehicle before it is left alone, and for how long
@@ -4646,7 +4650,7 @@ class Bot:
                 act.yaw = way
                 act.forward, act.strafe = 1.0, 0.0
                 s.att = ["splatter", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
-                s.ram_boost(now, me, v, b, act)
+                s.ram_boost(now, me, v, b, act, splat=True)
             else:                                # a gun run side on, in its range, never parked
                 act.forward = 1.0 if d > hi else 0.5 if d > lo else -0.4
                 act.strafe = s.strafe_dir * (0.8 if d <= hi else 0.4) * max(0.5, s.p.strafe)
@@ -4677,7 +4681,10 @@ class Bot:
                     act.fire = aligned or (armed and dist(me.pos, b.pos) < 15)
             if kind == "mantis":
                 s.mantis_weapons(now, me, v, snap, tid, b, aim_at, act)
-        elif seen:                               # a gunner's vehicle: circle the fight in its range, side on
+        elif seen and not (v is not None and vehicles.is_warthog(v["kind"])):
+            # a gunner's vehicle: circle the fight in its range, side on. (custom, Nov 14, the owner: "I dont want any
+            # warthog driver to circle in a fight, just stick to their normal pathing": a Warthog drives its way on,
+            # below, its gunner on the man; a light vehicle head on is still run down, above)
             tid = ctid                            # (the man its gun is on: guide 17 §4.5, the arc kept on him)
             b = s.per.beliefs[tid]
             to = math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x)
@@ -5158,7 +5165,7 @@ class Bot:
                     continue
         return away
 
-    def ram_boost(s, now, me, v, b, act):
+    def ram_boost(s, now, me, v, b, act, splat=False):
         """The boost into a man close ahead (a Ghost or Chopper, vehicles.BOOSTS; the player's Chopper and Ghost boosts
         Avalanche: 6 of 7 Chopper boosts with a man ahead, 4 under 6 u, held 0.6-1.2 s, median 0.83; his one Ghost boost
         from 9 u, a kill): inside BOOST_R and BOOST_CONE of the nose, held BOOST_HOLD, then not for BOOST_EVERY. Sent as
@@ -5166,6 +5173,18 @@ class Bot:
         (maps/_inputs/h3.json, master 86f0e19); Halo 2 and the rest: noted, not sent where it is not decoded."""
         k = vehicles.kind_of(v["kind"]) if v else None
         if k not in vehicles.BOOSTS or s.p.tier == "novice":
+            return
+        if splat and k == "ghost":
+            # (custom, Nov 14) a Ghost's run over a man: held down from GHOST_SPLAT_BOOST_R the whole run, not tapped
+            d = (b.pos - me.pos).flat()
+            off = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - s.heading(me, v)))
+            on = now - getattr(s, "splat_boost_t", -9.0) < 0.2       # (held last tick: the wider cone keeps it)
+            if d < GHOST_SPLAT_BOOST_R and off < BOOST_CONE * (2.0 if on else 1.0):
+                if not on:
+                    s.note("vehicle: boost into him (held)")
+                s.splat_boost_t = now
+                act.fire2 = True
+            s.boost(act)
             return
         if now < getattr(s, "boost_until", 0.0):
             act.fire2 = True

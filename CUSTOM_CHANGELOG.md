@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Warthogs drive on in a fight; Ghosts hold the boost on a run-over; a boost recorder, 2026-11-14
+
+The owner: "I dont want any warthog driver to circle in a fight, just stick to their normal pathing. Also I want the ghost to boost when they go to run over a person. It makes it better. boosting on controller is my left trigger if that helps and you have to hold it down".
+
+- `brain/bot.py` `drive`: a Warthog driver (any kind, `vehicles.is_warthog`) with a gunner and a man in sight no longer circles him: it drives its way on (its trip, its patrol), its gunner on the man. A light vehicle head on is still run down, and a Warthog with nobody on its gun still runs down a man on foot. Other gun carriers (Spectre, Falcon, Elephant, Prowler) circle as before.
+- `brain/bot.py` `ram_boost(splat=True)` from the run-over: a Ghost holds the boost from `GHOST_SPLAT_BOOST_R` 15 u, the whole run, his man within `BOOST_CONE` of its nose to start and twice that to keep it. It was a 0.85 s tap from 8 u. Not Easy. The Chopper's charge and the other boosters as before.
+- Found: in 49 recent Reach and Halo 4 matches, bot Ghosts and Banshees holding the boost went no faster than without it (about 5.5 u/s top) while people's reached 9-15 u/s. The boost the bots send (Reach: the action's +0x3C, Halo 4: the second trigger) does not seem to reach the game in those vehicles; the bits of the old decode (Reach: also +0x08, +0x48, +0xA0) were never kept.
+- `tools/boost_capture.py` (new, read-only): the person's raw action (botcore's `dbg_action`) and speed every tick while he drives, and a summary of the bits on while he went fast. For the owner's test: a Ghost, then a Banshee, full throttle, the boost (left trigger) held 3 s and let go 3 s, five or six times, in Reach and in Halo 4.
+- Validation: `tools/test_vehicle_fight_ways.py` (new, 7: a gunned Warthog of each kind keeps its way, a Spectre still circles; the Ghost's held boost, its reach, cone and hold, not Easy or a Warthog, Halo 4's second trigger; the recorder's summary on made-up holds). All 736 regression tests pass. Untested in a match; the boost will not take until the recorder finds its bits.
+
 ### Carriers stay in the Warthog they board, 2026-11-14
 
 The owner: "I have a tempest game where flag carriers or bomb carriers keep hopping out of warthogs passenger seat I suspect when they start getting shot at? Investigate". Three Tempest matches (20261113-210610, -233345, -234604): 28 times a carrier left a vehicle, 27 from a passenger seat, 17 noted "vehicle: home with the flag, out". The director's board order (`ferry_orders`, `person_pickup`) points at where the vehicle stood, and the passenger rule that drops a ferried carrier on its stand fired on being 5 u from the order's point, so a carrier just in was "home" a second later: out, told to board, in again (a Demon bomb carrier 11 times in 90 s at one spot, its driver waiting for crew). Shots taken were from standing at the Warthog, not the cause.
