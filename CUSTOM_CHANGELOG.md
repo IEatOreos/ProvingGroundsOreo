@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Bots' career stats can start over, 2026-11-15
+
+The owner: "reset all the bots stats. For a fresh restart of stats", the bots only (their own totals kept). Deleting the ledger would not have done it: `bot_career.py` reads every match report still in `logs/` again.
+
+- Tools (`tools/bot_career.py --reset-bots`): every match known so far (after reading every report still on disk) is marked `bots_reset`; the bots' rows of those matches no longer count, the person's still do, and the matches stay in the ledger so they are not counted again. The next match counts for everyone.
+- Run once on 2026-11-15 (87 matches): no bot left on the leaderboard, the owner's totals unchanged. Backups: `native/bin/career/ledger_before_bot_reset_20261115.json` and `totals_before_bot_reset_20261115.txt` (game data, not in git).
+- Validation: `tools/test_bot_career.py` +1 (bots start at 0, the person kept; a report still in `logs/` is not counted again; the next match counts for both). All 74 `tools/test_*.py` files pass. Not yet seen on a bot's MCC Career page after a new match.
+
 ### Warthog guns shoot vehicles first; no in-and-out gunner loop; bots fight on the way to a vehicle, 2026-11-15
 
 The owner's F9 reports from Forge World and Boneyard (20261115-044159, -045642, -051122): "Bots in warthog gunners dont shoot other vehicles", "BOT AIMING STRAIGHT DOWN IN WARTHOG GUNNER SEAT", "lilwraith not doing much out in the open when being shot". Then: "fix the gunner getting out issue, also make warthogs prioritize shooting other vehicles before infantry. Unless infantry is close similar to the tank mechanic ... Make the rocket hog shoot at infantry if and only when no enemy vehicles are within a range", and "make bots fight on the way to a vehicle and during patrol routes".

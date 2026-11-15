@@ -11,8 +11,14 @@ deletes old traces with their reports. A match counts when its person (the row t
 Writes native/bin/career/totals.txt, one player a line: name<TAB>games<TAB>won<TAB>kills<TAB>deaths<TAB>assists<TAB>bot
 (botcore's career.cpp shows a bot's on its MCC Career page). Game data: native/bin, not in git.
 
+(custom, Nov 15) The owner: "reset all the bots stats. For a fresh restart of stats", the bots only (the owner's
+totals kept). --reset-bots marks every match known so far (the ledger, after reading every report still on disk) "bots_reset":
+the bots' rows of those matches no longer count, the person's still do. The matches stay in the ledger so the reports
+still in logs/ are not counted again.
+
 usage: python -I bot_career.py               update, then print the leaderboard (by K/D; --by kills|deaths|assists|games)
        python -I bot_career.py --quiet       update only (tools/play.py, in the background, as a match starts)
+       python -I bot_career.py --reset-bots  update, then every bot's numbers start again from 0
 """
 import glob
 import json
@@ -87,7 +93,7 @@ def totals(ledger):
             continue
         draw = all(p["standing"] == 0 for p in players)
         for p in players:
-            if not p["name"]:
+            if not p["name"] or (p["bot"] and match.get("bots_reset")):   # (--reset-bots: before the bots' restart)
                 continue
             t = out.setdefault(p["name"], {"games": 0, "won": 0, "kills": 0, "deaths": 0, "assists": 0,
                                            "bot": p["bot"]})
@@ -111,7 +117,11 @@ def main(argv):
     except (OSError, ValueError):
         ledger = {}
     added = update(ledger)
-    if added:
+    reset = "--reset-bots" in argv
+    if reset:
+        for match in ledger.values():
+            match["bots_reset"] = True
+    if added or reset:
         tmp = ledger_path + ".tmp"
         json.dump(ledger, open(tmp, "w", encoding="utf-8"))
         os.replace(tmp, ledger_path)
@@ -121,6 +131,8 @@ def main(argv):
         for name, t in sorted(tot.items()):
             f.write(f"{name}\t{t['games']}\t{t['won']}\t{t['kills']}\t{t['deaths']}\t{t['assists']}\t{int(t['bot'])}\n")
     os.replace(tmp, os.path.join(OUT, "totals.txt"))
+    if reset:
+        print(f"bots' numbers reset: {len(ledger)} matches so far no longer count for any bot")
     if "--quiet" in argv:
         return 0
     by = argv[argv.index("--by") + 1] if "--by" in argv and argv.index("--by") + 1 < len(argv) else "kd"

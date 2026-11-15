@@ -68,7 +68,31 @@ def test_ledger_outlives_deleted_reports():
         assert "Oreo\t1\t0\t2\t7\t0\t1" in text, text
 
 
+def test_reset_bots_keeps_the_person():
+    """(custom, Nov 15) --reset-bots: every bot starts again from 0, the person's totals kept; the reports still in
+    logs/ are not counted again, and the next match counts for everyone."""
+    a = report("g1", [(ME, "Me", 0, 0, 10, 4, 2, 600), (bot(1), "Wheezy", 1, 1, 4, 10, 1, 600)])
+    b = report("g2", [(ME, "Me", 0, 1, 3, 5, 0, 300), (bot(1), "Wheezy", 1, 0, 5, 3, 2, 300)])
+    with tempfile.TemporaryDirectory() as tmp:
+        logs, out = os.path.join(tmp, "logs"), os.path.join(tmp, "out")
+        os.makedirs(logs)
+        open(os.path.join(logs, "trace_a.carnage.xml"), "w", encoding="utf-8").write(a)
+        bc.LOGS, bc.OUT, bc.MCC_REPORT = logs, out, os.path.join(tmp, "none.xml")
+        bc.main(["--quiet"])
+        bc.main(["--quiet", "--reset-bots"])
+        text = open(os.path.join(out, "totals.txt"), encoding="utf-8").read()
+        assert "Me\t1\t1\t10\t4\t2\t0" in text and "Wheezy" not in text, text
+        bc.main(["--quiet"])                                                   # (g1 still in logs/: not again)
+        text = open(os.path.join(out, "totals.txt"), encoding="utf-8").read()
+        assert "Wheezy" not in text, text
+        open(os.path.join(logs, "trace_b.carnage.xml"), "w", encoding="utf-8").write(b)
+        bc.main(["--quiet"])
+        text = open(os.path.join(out, "totals.txt"), encoding="utf-8").read()
+        assert "Me\t2\t1\t13\t9\t2\t0" in text and "Wheezy\t1\t1\t5\t3\t2\t1" in text, text
+
+
 if __name__ == "__main__":
     test_totals_wins_and_quick_quits()
     test_ledger_outlives_deleted_reports()
+    test_reset_bots_keeps_the_person()
     print("ok")
