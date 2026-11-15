@@ -98,6 +98,7 @@ class Snapshot:
     score: dict = field(default_factory=lambda: {0: 0, 1: 0})   # team -> points (free for all: each player's team)
     mode: str = "slayer"   # slayer | ctf | king | oddball | firefight
     score_limit: int = 0       # the variant's score to win, 0 = not known (brain/match.py)
+    score_live: bool = False   # (custom, Nov 13) score read from the game this tick (live_bots match_sane), not the default
     time_left: object = None   # seconds left in the match, None = no limit or not known
     vehicles: list = field(default_factory=list)   # [{handle, kind, pos, occupied}] (live game)
     honks: list = field(default_factory=list)      # vehicle handles a teammate honked from (director.honk_orders)
@@ -127,6 +128,10 @@ class Snapshot:
     # the other objective modes (brain/modes.py: territories, assault, stockpile, headhunter, infection):
     # zones [(Vec, radius, owner team or -1)], objects to carry [{pos, carrier, kind}], each team's goals {team: [Vec]}
     obj_zones: list = field(default_factory=list)
+    # (custom, Nov 13) Territories' variant rules (brain/modes.py Watch.set_territory_rules): Capture Lock on (Land
+    # Grab: a zone taken is its taker's for the round), the style ("symmetric" | "asymmetric" | None not read)
+    terr_lock: bool = False
+    terr_style: str = None
     obj_items: list = field(default_factory=list)
     obj_goals: dict = field(default_factory=dict)
     infected: int = -1         # Infection: the infected side when the reader knows it (Halo 3: by the zombies' gun)

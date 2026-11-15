@@ -1965,8 +1965,11 @@ class Director:
         if snap.mode == "king" and snap.hill is not None:
             return snap.hill
         if snap.mode in ("territories", "headhunter", "infection") and snap.obj_zones:
-            return min((z for z, r, o in snap.obj_zones if o != s.team), key=lambda z: dist(z, s.map["points"]["mid"]),
-                       default=snap.obj_zones[0][0])
+            # (custom, Nov 13) Land Grab (Capture Lock): a neutral zone only, theirs is locked
+            lock = snap.mode == "territories" and getattr(snap, "terr_lock", False)
+            return min((z for z, r, o in snap.obj_zones if (o == -1 if lock else o != s.team)),
+                       key=lambda z: dist(z, s.map["points"]["mid"]),
+                       default=s.map["points"]["mid"] if lock else snap.obj_zones[0][0])
         if snap.mode in ("assault", "stockpile") and snap.obj_items:
             return snap.obj_items[0]["pos"]
         if snap.mode == "invasion":
@@ -2450,6 +2453,25 @@ class Director:
         centre = lambda: Vec(sum(p.pos.x for p in mine) / len(mine), sum(p.pos.y for p in mine) / len(mine),
                              sum(p.pos.z for p in mine) / len(mine)) if mine else mid
         slots = []
+        if snap.mode == "territories" and getattr(snap, "terr_lock", False):
+            # (custom, Nov 13, owner) Land Grab (Capture Lock): a zone taken is its taker's for the round, ours or theirs,
+            # so nobody guards ours or goes at theirs; two take the neutral one with the fewest of them by, an escort and
+            # the overlooks cover it, then the next. None left (the round ends as the last is taken): Slayer. The owner's
+            # Powerhouse Land Grab: "Bots are trying to capture points in territories that are already capped. Or theyre
+            # trying to defend them"
+            free = [(z, r) for z, r, o in (snap.obj_zones or []) if o == -1]
+            if not free:
+                return s.slayer_slots(now, snap, n)
+            c = centre()
+            target, tr = min(free, key=lambda zr: (seen(zr[0]), dist(zr[0], c)))
+            slots += [("defender", s.spread(target, k, 0.6 * tr), "objective") for k in range(2)]
+            others = sorted((zr for zr in free if zr[0] is not target), key=lambda zr: (seen(zr[0]), dist(zr[0], c)))
+            if others and n >= 4:
+                # a second neutral zone gets two of its own (five zones, a 4v4: one push at a time left the rest free)
+                z2, r2 = others[0]
+                slots += [("defender", s.spread(z2, k, 0.6 * r2), "objective") for k in range(2)]
+            slots += [("escort", target, "aggression")]
+            return slots + [("mid", q, "aggression") for q in s.overlooks(target, n)]
         if snap.mode == "territories":
             zones = snap.obj_zones or [(mid, 3.0, -1)]
             ours = [(z, r) for z, r, o in zones if o == s.team]

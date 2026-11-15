@@ -762,6 +762,24 @@ def drop_point_move(gv):
     return None
 
 
+def territory_rules(gv):
+    """(custom, Nov 13) A Territories variant's rules: dict(style "symmetric" | "asymmetric", lock: Capture Lock on,
+    capture: its Capture Time in s), None when it has none of them. MCC's own: TERRITORIES Asymmetric, lock off, 30 s;
+    LAND GRAB Symmetric, lock on, 30 s; 3-PLOT Symmetric, lock off, 5 s (brain/modes.py Watch, director.mode_slots)."""
+    out = {}
+    for o in (gv or {}).get("options", []):
+        name, v = (o.get("name") or "").lower(), (o.get("value") or "").lower()
+        if name == "style" and v in ("symmetric", "asymmetric"):
+            out["style"] = v
+        elif name == "capture lock":
+            out["lock"] = v == "enabled"
+        elif name == "capture time":
+            w = v.split()
+            if len(w) == 2 and w[0].isdigit():
+                out["capture"] = float(int(w[0]) * (60 if w[1].startswith("minute") else 1))
+    return out or None
+
+
 def _main(argv):
     path = argv[0]
     if path.lower().endswith(".bin"):

@@ -242,6 +242,54 @@ class Watch:
         s.stands, s.stands_t = [], -9.0
         s.zombie_tag, s.infected_ids = None, {}    # Halo 3 Infection (split_infected)
         s.objs, s.game, s.race, s.race_score = objs, game, None, None   # Race (race_update)
+        s.terr_style, s.terr_lock, s.round_total = None, False, None    # Territories' rules (set_territory_rules)
+
+    def set_territory_rules(s, rules):
+        """(custom, Nov 13, owner: "make the distinction" between Land Grab and Territories) The variant's Territories
+        rules (brain/mvar.py territory_rules): its Capture Time for CAPTURE_S, its style, and Capture Lock (Land Grab: a
+        zone taken is that team's for the round, and the score is each team's count of zones taken)."""
+        if not rules:
+            return
+        s.capture = rules.get("capture") or s.capture
+        s.terr_style, s.terr_lock = rules.get("style"), bool(rules.get("lock"))
+
+    def territory_round(s, snap):
+        """A new round: every zone is nobody's again. Told by everyone dead at once (a round ends with every player
+        taken off the map: live 229.7 s, all 8 of 8, and at the match's end) or, while the score is read (a limit read,
+        score_read), by the teams' total score falling (each round starts 0-0). Live Powerhouse Land Grab
+        20261113-222752: round 2 began at 230 s with round 1's owners kept, so one team guarded zones that were neutral
+        and the other attacked them; from round 2 on the score read failed (0-0, no limit, no clock)."""
+        new = bool(snap.players) and not any(p.alive for p in snap.players)
+        total = sum(int(v or 0) for v in (snap.score or {}).values())
+        if s.score_read(snap):
+            new = new or (s.round_total is not None and total < s.round_total)
+            s.round_total = total
+        if new:
+            s.owner.clear()
+            s.held.clear()
+
+    @staticmethod
+    def score_read(snap):
+        """The game's score is being read (live_bots sets score_live from a kept match read; a dropped or failed read
+        leaves the snapshot's default 0-0, as Powerhouse's round 2 did)."""
+        return bool(snap.score) and bool(getattr(snap, "score_live", False))
+
+    def lock_from_score(s, snap, zones, alive):
+        """Capture Lock (Land Grab): the score is each team's count of zones taken this round. A team scored more than
+        it owns here: its zones are the ones it holds alone now (longest first), then those its men stand nearest
+        (within 2 u of the edge). Live Powerhouse: the game had 4-1 (all five taken) at 224 s while the 30 s rule had
+        found 2."""
+        for team, v in (snap.score or {}).items():
+            team = int(team)
+            missing = int(v or 0) - sum(1 for o in s.owner.values() if o == team)
+            if missing <= 0:
+                continue
+            free = [k for k in range(len(zones)) if s.owner.get(k, -1) == -1]
+            held = sorted((k for k in free if s.held.get(k, (None,))[0] == team), key=lambda k: s.held[k][1])
+            near = sorted(((min((dist(p.pos, zones[k][0]) - zones[k][1] for p in alive if p.team == team), default=99.0), k)
+                           for k in free if k not in held), key=lambda dk: dk[0])
+            for k in (held + [k for d, k in near if d <= 2.0])[:missing]:
+                s.owner[k] = team
 
     def rally_dest(s, live, gates):
         """Rally's / Rocket Race's destination (the game moves one live rally flag), the gate LiveReach.rally_dest names
@@ -466,6 +514,11 @@ class Watch:
             kind = {"territories": "territory", "headhunter": "drop_point", "infection": "haven"}[s.mode]
             zones = s.lay.get(kind, [])
             out = []
+            # Capture Lock with the score read: the score says when a zone is taken, the 30 s guess does not (the game's
+            # capture runs faster with more men in it)
+            by_score = s.mode == "territories" and s.terr_lock and s.score_read(snap)
+            if s.mode == "territories":
+                s.territory_round(snap)
             for k, (pos, r, _) in enumerate(zones):
                 teams = {p.team for p in alive if dist(p.pos, pos) <= r + 0.3 and abs(p.pos.z - pos.z) < 2.5}
                 if s.mode == "territories":
@@ -475,12 +528,19 @@ class Watch:
                         if team != t:
                             since = now
                         s.held[k] = (t, since)
-                        if now - since >= s.capture:
+                        # (Capture Lock: a zone taken stays its taker's for the round)
+                        if (now - since >= s.capture and not by_score
+                                and not (s.terr_lock and s.owner.get(k, -1) != -1)):
                             s.owner[k] = t
                     else:
                         s.held.pop(k, None)
+            if by_score:
+                s.lock_from_score(snap, zones, alive)
+            for k, (pos, r, _) in enumerate(zones):
                 out.append((pos, r, s.owner.get(k, -1)))
             snap.obj_zones = out
+            if s.mode == "territories":
+                snap.terr_lock, snap.terr_style = s.terr_lock, s.terr_style
             if s.mode == "headhunter":
                 # (custom, Nov 12) who carries how many skulls, and which drop point banks (brain/headhunter.py)
                 from .headhunter import Skulls

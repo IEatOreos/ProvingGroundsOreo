@@ -318,17 +318,20 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
         MATCH["t"] = now
         try:
             v = live.match_state(raw)
-            sane = v and all(-50 <= x <= max(500, 4 * (v["limit"] or 0)) for x in v["score"].values()) \
-                and 0 <= (v["limit"] or 0) <= 10000
-            MATCH["v"] = v if sane else None       # at the match end the memory is reused: garbage scores
-        except Exception:
+            MATCH["v"] = match_sane(v)             # at the match end the memory is reused: garbage scores
+            if MATCH["v"] != v:
+                why = "dropped" if MATCH["v"] is None else "limit" if MATCH["v"]["limit"] != v.get("limit") else "clock"
+                match_note(now, why, f"match read {why}: read {v}, kept {MATCH['v']}")
+        except Exception as e:
             MATCH["v"] = None
+            match_note(now, "failed", f"match read failed: {e!r}")
     for d in raw:                                # every death is a point for the other team (Slayer): the
         if d["index"] in prev and d["pos"] is None:   # tally for games whose team scores are not decoded (H2)
             TALLY[1 - d["team"] % 2] = TALLY.get(1 - d["team"] % 2, 0) + 1
     if MATCH.get("v"):
         snap.score = MATCH["v"]["score"] or (dict(TALLY) if TEAMS and snap.mode == "slayer" else snap.score)
         snap.score_limit, snap.time_left = MATCH["v"]["limit"], MATCH["v"]["time_left"]
+        snap.score_live = bool(MATCH["v"]["score"])         # (custom, Nov 13: Land Grab, brain/modes.py score_read)
     if FIREFIGHT:                                # the Covenant are the enemy: they join as players
         for d in live.ai_units(raw):
             fx, fy, fz = d["aim"]
@@ -411,6 +414,32 @@ def vehicle_left(live, handle):
 GROUND = {"t": -1.0, "list": []}     # loose weapons, re-read twice a second
 PICKUP_GAMES = ("ce", "h2", "h3", "reach", "h4")   # games where a bot's Use takes a gun (Bot.can_pickup, main)
 MATCH = {"t": -1.0, "v": None}       # live.match_state(): score, limit, time left, twice a second
+
+
+def match_sane(v):
+    """(custom, Nov 13) live.match_state()'s read, each part judged on its own: scores out of range drop the whole read
+    (None: at the match end the memory is reused, garbage scores); a limit out of 0..10000 reads 0 (not known) and a
+    clock out of 0..24 h None, the scores kept. Before, any bad part dropped all: live Powerhouse Land Grab
+    20261113-222752 read 0-0, limit 0, no clock from round 2 on (snapshot defaults) while the rounds went on scoring."""
+    if not v or not isinstance(v.get("score"), dict):
+        return None
+    limit = v.get("limit") or 0
+    limit = limit if 0 <= limit <= 10000 else 0
+    if not all(-50 <= x <= max(500, 4 * limit) for x in v["score"].values()):
+        return None
+    left = v.get("time_left")
+    left = left if left is None or 0.0 <= left <= 86400.0 else None
+    out = dict(v, limit=limit, time_left=left)
+    return v if out == v else out
+
+
+def match_note(now, key, text):
+    """A match read kept in part or failed, printed to the brain's log the first 3 times for each kind (key): what
+    round 2 of a multi-round Reach game reads (match_sane)."""
+    seen = MATCH.setdefault("notes", {})
+    seen[key] = seen.get(key, 0) + 1
+    if seen[key] <= 3:
+        print(f"{now:6.1f}s {text}", flush=True)
 HILL = {}                            # "last": the last King hill read (centre, radius), kept through missed reads
 HONK = {}                            # person id -> (vehicle, where it stopped, since when): the honk stand-in
 # the person's horn (botctl.owner_horn) at the wheel: the bot his view is on (within HORN_CONE of his facing, HORN_R off)
@@ -939,12 +968,14 @@ def main():
     # Reach Invasion (brain/invasion.py): the map's setup from its scenario; the watcher runs while the variant is it
     inv_styles = None                             # a map variant read from its file: its game variant's phases
     hh_move = None                                # (custom, Nov 12) Headhunter's drop point movement time, s (headhunter.Skulls)
+    terr_rules = None                             # (custom, Nov 13) Territories' style, Capture Lock, capture time (modes.Watch)
     if o.game == "reach" and not FIREFIGHT and MAP["objects"].get("mvar"):     # (brain/mvar.py: its file by its title)
         try:
             from brain import mvar
             gv = mvar.find_game_variant(live.variant_name())
             inv_styles = mvar.phase_styles(gv) or None
             hh_move = mvar.drop_point_move(gv)
+            terr_rules = mvar.territory_rules(gv)
             if gv:
                 opts = ", ".join(f"{x['name']} = {x['value']}" for x in gv["options"])
                 print(f"game variant file {os.path.basename(gv['path'])} ({gv['title']!r}): {opts}", flush=True)
@@ -1084,6 +1115,7 @@ def main():
                     if mode in OBJECT_MODES and (mode_watch[0] is None or mode_watch[0].kind != mode):
                         mode_watch[0] = ModeWatch(mode, MAP["objects"], o.game)
                         mode_watch[0].hh_move = hh_move       # (custom: Headhunter, brain/modes.py)
+                        mode_watch[0].set_territory_rules(terr_rules)   # (custom, Nov 13: Land Grab, brain/modes.py)
                         print(f"game type: {mode}", flush=True)
                     elif mode not in OBJECT_MODES:
                         mode_watch[0] = None
