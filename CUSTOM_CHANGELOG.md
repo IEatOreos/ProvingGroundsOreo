@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Warthog guns shoot vehicles first; no in-and-out gunner loop; bots fight on the way to a vehicle, 2026-11-15
+
+The owner's F9 reports from Forge World and Boneyard (20261115-044159, -045642, -051122): "Bots in warthog gunners dont shoot other vehicles", "BOT AIMING STRAIGHT DOWN IN WARTHOG GUNNER SEAT", "lilwraith not doing much out in the open when being shot". Then: "fix the gunner getting out issue, also make warthogs prioritize shooting other vehicles before infantry. Unless infantry is close similar to the tank mechanic ... Make the rocket hog shoot at infantry if and only when no enemy vehicles are within a range", and "make bots fight on the way to a vehicle and during patrol routes".
+
+- **Found:**
+  - With an occupied enemy vehicle within 45 u, Warthog chaingun gunners aimed at it 27% of the time, rocket Warthog gunners 11%. The rocket gun held fire on every man on foot, so it fired 8% of its seat time.
+  - A rider in a parked vehicle nobody drives got out after 5 s (the nobody-drives rule), and its ride order put it back in about a second later. Over 100 such loops in the three matches, 10 by one Demon on the rocket Warthog at its spawn. The game read its view about 3 degrees down, so the droop the owner saw is most likely the turret at each get-in (unconfirmed).
+  - On foot on the way to a vehicle no tier ever fired: a Legendary took four hits in 0.8 s from two men it saw (26 u, 42 u) and died. A fight won the vote, but the drive order outranked any fight past 8 u.
+- `brain/bot.py` `vehicle_pick`, a Warthog's gun (`HOG_GUNS`: chaingun, gauss, rocket), banded like the tank drivers':
+  - a man on foot within `HOG_FOOT_R` 10 u first (not for the rocket gun);
+  - then a vehicle, or a man with a vehicle killer (not for the rocket gun), within `HOG_VEHICLE_R` 60 u, by the guide's score within the band (a Banshee or a tank over a Mongoose);
+  - then the rest by the score.
+- The rocket gun fights men on foot only while no occupied enemy vehicle within `RHOG_VEHICLE_R` 60 u is known to it (its crew in sight, or a sight line to it: `vehicle_in_sight`), and never one within `RHOG_FOOT_MIN` 6 u (its own splash). `vehicles.target_score` has a `ground_ok` argument for it; without it the anti-air hold is as before.
+- `drive` (non-driver seats): the nobody-drives get-out marks that vehicle `parked_ban` for `PARKED_BAN` 20 s. `veh_banned` honours it until a rider joins the vehicle or it is driven off, so the ride order, the vehicle run and every vehicle pick skip it.
+- `plan` (vehicle run on foot), every tier: with a man in view (`vehicle_way_target`), the fight's aim and trigger stay on him while the walk goes on to the seat, as on a patrol (no sprint while it does), except in the last `VEHICLE_FIGHT_LAST` 3 u, where it gets in; not while carrying or dry. A man within 8 u still turns the run into a fight, as before. Patrols already fight on the way at every tier; unchanged.
+- Validation: `tools/test_warthog_guns.py` is new (17 tests: the Warthog bands, the rocket gun's rule with a vehicle in or out of sight and range, the parked ban and its lifting, fighting on the way for every tier and its exceptions). All 753 regression tests pass. **Untested in a match**: the turret droop, how often gunners now see vehicle crews (13-55% before, by kind), and the slower vehicle runs under fire.
+
 ### Warthogs drive on in a fight; Ghosts hold the boost on a run-over; a boost recorder, 2026-11-14
 
 The owner: "I dont want any warthog driver to circle in a fight, just stick to their normal pathing. Also I want the ghost to boost when they go to run over a person. It makes it better. boosting on controller is my left trigger if that helps and you have to hold it down".

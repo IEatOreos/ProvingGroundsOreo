@@ -125,6 +125,19 @@ WHEEL_WEDGED_MAX = 3
 # this near, then the rest by the guide's score
 TANK_FOOT_R = 10.0
 TANK_VEHICLE_R = 40.0
+# (custom, Nov 15, the owner: "make warthogs prioritize shooting other vehicles before infantry. Unless infantry is close
+# similar to the tank mechanic") a Warthog's gun (chaingun, gauss, rocket): a man on foot within HOG_FOOT_R first (not the
+# rocket gun's), else a vehicle (or a man with a vehicle killer) within HOG_VEHICLE_R, else the rest. The rocket gun
+# fights men on foot only with no occupied enemy vehicle it can see within RHOG_VEHICLE_R, and none within RHOG_FOOT_MIN
+# (its own splash)
+HOG_GUNS = ("warthog", "gauss", "rwarthog")
+HOG_FOOT_R, HOG_VEHICLE_R = 10.0, 60.0
+RHOG_VEHICLE_R, RHOG_FOOT_MIN = 60.0, 6.0
+# (custom, Nov 15) s a rider that got out of a parked vehicle nobody drives stays off it (Bot.veh_banned)
+PARKED_BAN = 20.0
+# (custom, Nov 15, the owner: "make bots fight on the way to a vehicle") every tier walks on to its seat fighting the man
+# in view (as on a patrol), but not in its last VEHICLE_FIGHT_LAST u, where it gets in
+VEHICLE_FIGHT_LAST = 3.0
 # (custom, Nov 13, the owner: Easy moves a lot, no stalling) a roam point with no ROAM_STALL_D u of headway in
 # ROAM_STALL_S s is given up for ROAM_BAD_S s, a new one at least ROAM_MIN_D u off (Bot.roam); Easy fights walking on
 # to its roam point (Bot.plan; False: it fights as before)
@@ -2300,20 +2313,35 @@ class Bot:
                     and not (want == "driver" and s.wheel_yield(v)):
                 # (the other side's door every 3 s it does not get in: a Falcon's second gun)
                 vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1)
-                s.move_to(me, vp, act, nav)
-                # looking where it goes, the seat at the end (the view stayed where it was: live Boneyard, a bot walked
-                # 6.4 s to a vehicle looking 168 degrees away). A man it watches stays within LOOK_CONE of the way, and
-                # a step 60+ degrees off the view slows while the view comes round, as on any walk (watching freely,
-                # Normal to Legendary walked to vehicles 13-22% of their walking time looking 60+ degrees off their
-                # way, Spire King and High Ground, logs/tmp/look_intent.py; the player 9% in all)
-                look = s.look_point(me, vp, nav)
-                if (math.hypot(act.forward, act.strafe) > 0.5 and s.att and s.att[0] in ("watch", "post", "flank")
-                        and not str(s.att[1]).endswith("hit") and s.att[1] != "teleporter"):
-                    look = s.walk_cone(me, look, act.yaw + math.atan2(act.strafe, act.forward))
-                act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
-                if (abs(math.atan2(act.strafe, act.forward)) > math.radians(60) and not s.notes
-                        and abs(act.forward) + abs(act.strafe) > 0.1):
-                    act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
+                foe = s.vehicle_way_target(now, me, snap, vp)
+                if foe is not None:
+                    # (custom, Nov 15, the owner: "make bots fight on the way to a vehicle") the fight's aim and trigger
+                    # on the man in view, the walk on to the seat, as on a patrol (live Boneyard 20261115-044159: a
+                    # Legendary walking to a vehicle took four hits from two men it saw in 0.8 s and died, never firing)
+                    s.fight(now, dt, me, snap, foe, act, nav)
+                    walk = Action(yaw=act.yaw, pitch=act.pitch)
+                    s.move_to(me, vp, walk, nav)
+                    angle = walk.yaw - act.yaw
+                    c, sn = math.cos(angle), math.sin(angle)
+                    act.forward = walk.forward * c - walk.strafe * sn
+                    act.strafe = walk.forward * sn + walk.strafe * c
+                    act.jump, act.crouch, act.sprint = walk.jump, act.crouch or walk.crouch, False
+                    s.note("vehicle: fighting on the way")
+                else:
+                    s.move_to(me, vp, act, nav)
+                    # looking where it goes, the seat at the end (the view stayed where it was: live Boneyard, a bot
+                    # walked 6.4 s to a vehicle looking 168 degrees away). A man it watches stays within LOOK_CONE of
+                    # the way, and a step 60+ degrees off the view slows while the view comes round, as on any walk
+                    # (watching freely, Normal to Legendary walked to vehicles 13-22% of their walking time looking 60+
+                    # degrees off their way, Spire King and High Ground, logs/tmp/look_intent.py; the player 9% in all)
+                    look = s.look_point(me, vp, nav)
+                    if (math.hypot(act.forward, act.strafe) > 0.5 and s.att and s.att[0] in ("watch", "post", "flank")
+                            and not str(s.att[1]).endswith("hit") and s.att[1] != "teleporter"):
+                        look = s.walk_cone(me, look, act.yaw + math.atan2(act.strafe, act.forward))
+                    act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
+                    if (abs(math.atan2(act.strafe, act.forward)) > math.radians(60) and not s.notes
+                            and abs(act.forward) + abs(act.strafe) > 0.1):
+                        act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
                 s.enter_riders = v.get("riders", 0)     # who was in it: tells our seat once in (drive)
                 s.enter_want = want                     # the seat it asks for (drive: where that is the one it gets)
                 if dist(me.pos, vp) < 1.6 or dist(me.pos, Vec(*v["pos"])) < 2.2:
@@ -3197,6 +3225,15 @@ class Bot:
                 return None
         seen = [k for k in s.per.visible_enemies() if k in s.per.beliefs
                 and dist(me.pos, s.per.beliefs[k].pos) <= DEMON_ENGAGE_R]
+        return s.pick_target(now, me, snap, seen) if seen else None
+
+    def vehicle_way_target(s, now, me, snap, seat_at):
+        """(custom, Nov 15) The man to fight while on foot on the way to a vehicle's seat at seat_at: every tier, a man in
+        view (pick_target), not carrying, not dry, and not in the last VEHICLE_FIGHT_LAST u, where it gets in. None
+        otherwise."""
+        if me.vehicle not in (None, -1) or me.has_flag or s.dry(me) or dist(me.pos, seat_at) < VEHICLE_FIGHT_LAST:
+            return None
+        seen = [k for k in s.per.visible_enemies() if k in s.per.beliefs]
         return s.pick_target(now, me, snap, seen) if seen else None
 
     def demon_objective(s, me, snap, scores, seen):
@@ -4127,6 +4164,9 @@ class Bot:
         air = (vehicles.spec(kind) or {}).get("move") == "air" and seat == "driver"
         best, top = None, 0.0
         tank = kind in ("scorpion", "wraith") and seat == "driver"
+        hog = kind in HOG_GUNS and seat == "gunner"   # (custom, Nov 15) a Warthog's gun (HOG_GUNS)
+        rocket = hog and kind == "rwarthog"
+        ground_ok = rocket and not s.vehicle_in_sight(me, snap, seen, RHOG_VEHICLE_R)
         bands = {}                                   # (custom, Nov 13) a tank driver's: k -> (score, band)
         for k in seen:
             b, p = s.per.beliefs[k], snap.player(k)
@@ -4144,7 +4184,16 @@ class Bot:
                 killer=p.weapon in VEHICLE_KILLERS, objective=obj,
                 off=abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - head)) if fwd_gun else None,
                 up=math.atan2(b.pos.z - me.pos.z, max((b.pos - me.pos).flat(), 0.1)), moving=b.vel.flat(), d=d,
-                in_ram=d < 18.0 and p.vehicle == -1) - 1e-4 * d
+                in_ram=d < 18.0 and p.vehicle == -1, ground_ok=ground_ok) - 1e-4 * d
+            if rocket and pv is None and d < RHOG_FOOT_MIN:
+                sc = 0.0                             # (custom: a rocket at a man this close splashes the Warthog)
+            if hog and sc > 0.0:
+                # (custom, Nov 15, the owner) a Warthog's gun: a man on foot close in first (not the rocket gun's), else a
+                # vehicle (Banshees, tanks, the lot: their score within), or a man with a vehicle killer (not the rocket
+                # gun's: men on foot are its last resort), within HOG_VEHICLE_R, else the rest
+                killer = p.weapon in VEHICLE_KILLERS and not rocket
+                bands[k] = (sc, 0 if pv is None and d <= HOG_FOOT_R and not rocket else
+                            1 if (pv is not None or killer) and d <= HOG_VEHICLE_R else 2)
             if tank and sc > 0.0:
                 # (a man on foot with a gun that kills vehicles, VEHICLE_KILLERS, is ranked with the vehicles: the owner,
                 # "change the one mongoose scenario", a rocket man 20 u off over a Mongoose 30 u off)
@@ -4155,9 +4204,31 @@ class Bot:
         if bands:
             # (custom, Nov 13, the owner) a Scorpion's or Wraith's driver: a man on foot within TANK_FOOT_R first (he
             # boards it or sticks it), else a vehicle or a man with a vehicle killer within TANK_VEHICLE_R, else the best
-            # of the rest; the score (target_score) within each
+            # of the rest; the score (target_score) within each. (custom, Nov 15) A Warthog's gun the same way (hog above)
             return min(bands, key=lambda k: (bands[k][1], -bands[k][0]))
         return best
+
+    def vehicle_in_sight(s, me, snap, seen, r):
+        """(custom, Nov 15) An occupied enemy vehicle within r u that this seat knows of: its crew in sight, or a sight
+        line to it from here (a crew is often not yet recognised; the rocket Warthog waits for it, not men on foot)."""
+        T = None
+        for x in snap.vehicles:
+            if (not x.get("occupied") or x.get("team") in (-1, None, me.team) or x["handle"] == me.vehicle
+                    or x.get("dead")):
+                continue
+            at = Vec(*x["pos"])
+            if dist(me.pos, at) >= r:
+                continue
+            if any((snap.player(k) or me).vehicle == x["handle"] for k in seen if isinstance(k, int)):
+                return True
+            if T is None:
+                try:
+                    T = s.T()
+                except Exception:      # (no level data: the crews in sight only)
+                    T = False
+            if T and T.sees(me.pos, at):
+                return True
+        return False
 
     @staticmethod
     def heading(me, v):
@@ -4506,6 +4577,12 @@ class Bot:
                 not any(p.vehicle == me.vehicle and not p.is_bot and p.alive for p in snap.players)   # (a hover is no park)
             if v is not None and (v.get("riders", 0) <= 1 or parked) and sp and sp["move"] != "none" and now - s.seat_since > 4.0:
                 act.action, act.fire = True, False
+                # (custom, Nov 15) not straight back in: a ride order or the vehicle run put it in again a second later,
+                # out once more 5 s on (live Forge World 20261115-051122: a Demon in and out of the rocket Warthog at
+                # its spawn 10 times, its gun drooping at each get-in; over 100 such loops in three matches). Off this
+                # vehicle PARKED_BAN s, until someone gets in or it is driven off (veh_banned)
+                s.__dict__.setdefault("parked_ban", {})[v["handle"]] = (now + PARKED_BAN, Vec(*v["pos"]),
+                                                                       max(0, v.get("riders", 0) - 1))
             return
         r = getattr(s, "ram", None)              # a run at a man (ram_ok): over when he is dead or after 6 s
         if r is not None:
@@ -6010,6 +6087,10 @@ class Bot:
         Nov 12) Once it has moved (a person drove or flew it off) the ban is gone: live Forge World 20261112-200003, a
         Blind bot gave up on a parked Falcon at 576 s, the owner took off in it at 583 s, and the bot ignored the call
         onto its gun 584-604 s, the Falcon set down 11 u away."""
+        park = getattr(s, "parked_ban", {}).get(v["handle"])
+        if (park is not None and park[0] > now and dist(Vec(*v["pos"]), park[1]) < s.VEH_BAN_MOVED
+                and v.get("riders", 0) <= park[2]):
+            return True       # (custom, Nov 15) left parked with nobody driving: not again until a rider joins it
         ban = getattr(s, "veh_ban", {}).get(v["handle"])
         if ban is None:
             return False

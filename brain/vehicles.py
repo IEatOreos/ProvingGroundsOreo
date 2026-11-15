@@ -241,12 +241,13 @@ def seat_gun(kind, seat):
 
 
 def target_score(game, shooter, gun, seat, target, killer=False, objective=1.0, off=None, up=0.0, moving=0.0,
-                 d=10.0, in_ram=False):
+                 d=10.0, in_ram=False, ground_ok=False):
     """guide 17 §4.2: base_threat x objective_weight x killability (1 / seconds to kill) x angle_factor, with each
     shooter's own preferences. shooter: our kind; gun: our seat's TTK row; target: his vehicle's kind (None: on foot);
     killer: he carries a vehicle killer; objective: 2.0 a carrier, 1.5 in the hill, 1.3 by our objective, else 1.0;
     off: radians off the nose of a gun that points where the vehicle does (None: a turret that turns); up: radians
-    above us; moving: his speed (u/s); d: distance (u); in_ram: inside our run at him (Bot.ram_ok). 0: hold fire."""
+    above us; moving: his speed (u/s); d: distance (u); in_ram: inside our run at him (Bot.ram_ok); ground_ok: the rocket
+    Warthog may fight men on foot (custom). 0: hold fire."""
     col = "infantry" if target is None or game == "ce" else TARGET_COL.get(target, target)   # (CE: vehicles never
     if col is None:                                                                         # die, their crews do)
         col = "infantry"
@@ -266,8 +267,9 @@ def target_score(game, shooter, gun, seat, target, killer=False, objective=1.0, 
         score *= 1.5
     if shooter == "wraith" and seat == "driver":
         score *= 1.5 if moving < 0.5 else 0.4 if target is None else 1.0
-    if shooter == "rwarthog" and target is None and game in ("reach", "h4"):
+    if shooter == "rwarthog" and target is None and game in ("reach", "h4") and not ground_ok:
         score = 0.0                                # anti-air: "hold fire on ground targets" (Reach / Halo 4 M12R)
+        # (custom, Nov 15, the owner: ground_ok, no enemy vehicle in its range: men on foot too, Bot.vehicle_pick)
     if shooter in ("scorpion", "wraith") and seat == "gunner" and game in ("h3", "odst") and d < 3.3:
         score *= 10.0                              # the tank gunner's standing order: the hull and 10 m first (§4.5)
     return score
