@@ -50,6 +50,16 @@ The owner: the lobby's Balance teams button "just makes it to where the two team
 
 Checks: build_pool_test.bat, all pool checks pass. Builds (botcore_balance.dll). Not yet pressed in MCC.
 
+### Stockpile: carriers drop the flag in their goal, 2026-11-13
+
+The owner, testing every Reach mode 4v4 with Demons: "theyll go pick up a flag one of many, and then just hold it inside their capture point. We need the bots to drop the flag once they get to the capture point and go capture others ... they wont drop it until they die". Launch Station Stockpile (20261113-220813): bot carriers walked to 0.1 u from their goal's centre and stood there holding the flag up to 32 s until killed; every bot carry but six ended in a death.
+
+- Brain (brain/bot.py `stockpile_drop`, `STP_DROP_R` 0.8 u, `STP_DROP_DZ` 1.5 u, `STP_DROP_TAP` 0.3 s, `STP_DROP_CYCLE` 1.6 s, `STP_DROP_TAPS`): in Stockpile, a carrier on foot within 0.8 u of its own goal's centre taps a player's drop keys in turn until the flag is gone: the weapon switch (`Action.cycle`, Reach's decoded switch key) at once, then Use 0.8 s later, again every 1.6 s. It is the last step of `plan`. The trace note names the key tapped ("stockpile: dropping the flag in our goal (cycle)" / "(action)"), so the next match shows which one drops it. The flag then lies in our goal, which the director already treats as banked (within 2 u), so it is not taken again and the bot gets its next role.
+- It stops first (`STP_STILL_V` 0.3 u/s, `STP_SETTLE` 0.2 s): in the goal it lets go of walk, strafe, sprint and jump, and taps only once it has been under 0.3 u/s for 0.2 s; pushed back into motion, it settles again. The owner, after the switch worked: "Theyre running and then switching weapons so the flag is thrown a little too far ... stop in the capture zone then switch weapons so momentum doesnt carry the flag".
+- First try, replaced the same evening: a weapon slot choice (`act.weapon`) every tick. Live Launch Station 20261113-223850 (the owner: "they still hold the flag"): carriers sent it for seconds at the goal's centre and kept the flag.
+
+Checks: tools/test_stockpile_drop.py is new (5 tests). All 717 tools/test_*.py pass. Which key drops the flag is not yet seen in a match.
+
 ### Demon plays the objective when near it, 2026-11-13
 
 The owner, after a Crazy King game on Condemned (20261113-204320) that blue lost with its two Demons set to Objective: "make demon bots play the objective when theyre near it". Within 8 u of the hill those Demons chose it 3% and 13% of the time; every other bot, Easy through Mythic, 30-85%. They stood on it 2 s and 4 s of 5 minutes, red's two Easy bots 130 s and 105 s. What beat it were Demon-only scores: the gun grab a few steps off (2.95 + 0.2 kept), the stand-ground hunt on a man on its tracker (3.2), and committed fights.

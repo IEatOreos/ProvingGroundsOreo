@@ -204,6 +204,16 @@ ON_WAY_OBJ_LAST = 3.0                    # u from an objective run's point (outs
 # hunts as before (owner, Nov 13)
 DEMON_OBJ_NEAR, DEMON_OBJ_MARGIN, DEMON_OBJ_ARM, DEMON_OBJ_DZ = 15.0, 0.4, 3.0, 2.5
 DEMON_OBJ_ROLES = ("defender", "runner", "mid")
+# (custom, Nov 13) Stockpile: a carrier this near its goal's centre (and its floor) drops the flag there (Bot.stockpile_drop;
+# the director counts a flag within 2 u of our goal as in it, banked)
+STP_DROP_R, STP_DROP_DZ = 0.8, 1.5
+# ... by a player's keys, each tapped STP_DROP_TAP s (held, then let go: a press) in turn every STP_DROP_CYCLE s: the
+# weapon switch (Action.cycle, Reach's decoded switch key), then Use (action). A slot choice did not drop it, live
+STP_DROP_TAP, STP_DROP_CYCLE = 0.3, 1.6
+STP_DROP_TAPS = ((0.0, "cycle"), (0.8, "action"))
+# ... standing still first (owner, Nov 13: a tap on the run threw the flag past the zone): no move until its speed is
+# under STP_STILL_V u/s, then STP_SETTLE s still before the first tap
+STP_STILL_V, STP_SETTLE = 0.3, 0.2
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -2674,7 +2684,49 @@ class Bot:
             # retreating, or patrolling, whenever they arent fighting"; reload_check holds it while a man is in view or
             # rounds are coming in)
             s.reload_check(now, me, act)
+        s.stockpile_drop(now, me, snap, act)
         return act
+
+    def stockpile_drop(s, now, me, snap, act):
+        """(custom, Nov 13, owner: "drop the flag once they get to the capture point and go capture others") Stockpile,
+        carrying a flag on foot within STP_DROP_R of our goal's centre (STP_DROP_DZ of its floor): it drops it there, by
+        the keys a player drops it with, tapped in turn until it is gone (STP_DROP_TAPS: the weapon switch, then Use; the
+        note says which, so a trace shows the one that worked). It then lies in our goal, which the director no longer
+        counts loose (2 u), and the bot is free for the next one. Live Launch Station 20261113-220813: carriers stood 0.1 u
+        from the goal's centre holding it until killed, up to 32 s. 20261113-223850: a weapon slot set (act.weapon) every
+        tick in the goal for seconds did not drop it (the game keeps the flag in hand against a slot choice)."""
+        if snap.mode != "stockpile" or not me.has_flag or me.vehicle not in (None, -1):
+            s.stp_drop_t0 = None
+            return False
+        goals = (getattr(snap, "obj_goals", None) or {}).get(me.team) or []
+        if not any((me.pos - g).flat() <= STP_DROP_R and abs(me.pos.z - g.z) < STP_DROP_DZ for g in goals):
+            s.stp_drop_t0 = None
+            return False
+        act.weapon, act.action, act.cycle, act.reload = -1, False, False, False
+        # (owner, Nov 13: "theyre running and then switching weapons so the flag is thrown a little too far ... stop in
+        # the capture zone then switch weapons so momentum doesnt carry the flag") stand still first: no walk, sprint or
+        # jump, and the tap only once it has been still STP_SETTLE s
+        act.forward = act.strafe = 0.0
+        act.sprint = act.jump = False
+        v = getattr(me, "vel", None)
+        if v is not None and v.flat() > STP_STILL_V:
+            s.stp_drop_t0 = None
+            s.note("stockpile: stopping in our goal to drop the flag")
+            return True
+        t0 = getattr(s, "stp_drop_t0", None)
+        if t0 is None:
+            t0 = s.stp_drop_t0 = now
+        if now - t0 < STP_SETTLE:
+            s.note("stockpile: still in our goal, about to drop the flag")
+            return True
+        phase = (now - t0 - STP_SETTLE) % STP_DROP_CYCLE
+        for start, key in STP_DROP_TAPS:
+            if start <= phase < start + STP_DROP_TAP:
+                setattr(act, key, True)
+                s.note(f"stockpile: dropping the flag in our goal ({key})")
+                return True
+        s.note("stockpile: dropping the flag in our goal (between taps)")
+        return True
 
     def learn_mags(s, me):
         """Every gun's fullest magazine, learned every tick, fights too (reload_check reads it). Learned between fights
