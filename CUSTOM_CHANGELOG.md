@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Service Record: the rebuild at match start waits up to 90 s for the career totals, 2026-11-15
+
+- **Seen live** (the owner's Boneyard match start at 19:58:31): the report was kept at 19:58:31, `bot_career.py` wrote the ledger at 19:58:51 and the site was rebuilt at 19:58:52 with that match in it (a bot's games went from 1 to 2). So the rebuild at match start works, but the ledger took 20 s, the whole of the wait the build allowed (`--wait-ledger 20`); a slower start would have built without the newest match.
+- `tools/play.py`: `--wait-ledger 90`. The build still starts the moment the ledger has every report on disk; the longer limit only matters when the PC is slow at a match start.
+- Validation: `tools/test_service_record.py` (11) and `tools/test_bot_career.py` pass. **Untested**: a match start since this change.
+
 ### Service Record: the rank insignia, cut from the owner's rank chart, 2026-11-15
 
 The owner sent his picture of the Reach rank chart (374 x 746, one row of framed tiles per rank, a tile per Grade), after: "Try to extract every insignia rank from the photo for each rank ... and if that shows to be a trouble revert to hand made for the ones you have trouble on". None gave trouble.

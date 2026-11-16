@@ -69,10 +69,11 @@ def match_trace(map_name, logs=os.path.join(ROOT, "logs"), games=None, after=Non
         except Exception:
             pass
         # (custom, Nov 15) the Service Record site (tools/service_record.py, logs/service_record): rebuilt with the
-        # match just reported, once bot_career.py above has added it to the ledger; in the background too
+        # match just reported, once bot_career.py above has added it to the ledger; in the background too. It waits
+        # up to 90 s for that: in the first live match start the ledger was written 20 s after the report was kept
         try:
             subprocess.Popen([sys.executable, "-I", os.path.join(HERE, "service_record.py"), "--quiet",
-                              "--wait-ledger", "20"], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                              "--wait-ledger", "90"], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except Exception:
             pass
     recording.rotate(logs, games, after)
