@@ -277,10 +277,16 @@ TRACE_NAME = re.compile(r"^trace_(.+_\d{8}-\d{6})\.jsonl$")
 
 def read_kills(path):
     """One recording's kill rows ([{..., "t": seconds into the match}], as written: tools/kill_record.py), or None
-    when it was recorded without them (no kill_record line among its first lines) or cannot be read. Read-only."""
+    when it was recorded without them (no kill_record line among its first lines) or cannot be read. Read-only.
+
+    A version 1 recording wrote the engine's state as read after each death, so the kill that won the match reads as
+    "over" (live Powerhouse 20261115-203100: MCC's report counted that kill; it did not count the kill 6 s later,
+    whose credit the game never wrote). Its rows are put as version 2 writes them: the first "over" row is "played"
+    when the game wrote its credit at that death."""
     try:
         with open(path, "rb") as f:
-            if b'"kill_record": ' not in f.read(1 << 18):
+            mark = re.search(rb'"kill_record": (\d+)', f.read(1 << 18))
+            if not mark:
                 return None
             f.seek(0)
             rows = []
@@ -294,6 +300,11 @@ def read_kills(path):
                 k = d.get("kill") if isinstance(d, dict) else None
                 if isinstance(k, dict):
                     rows.append(dict(k, t=d.get("t")))
+            if int(mark.group(1)) == 1:
+                over = [k for k in rows if k.get("st") == kill_record.OVER and isinstance(k.get("t"), (int, float))]
+                last = min(over, key=lambda k: k["t"], default=None)
+                if last is not None and last.get("new") is True:
+                    last["st"] = 1
             return rows
     except OSError:
         return None

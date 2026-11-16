@@ -5,8 +5,8 @@ LiveReach.kill_watch: the fields and how they were found). Read-only, in Python:
 
 tools/live_bots.py keeps one Watch for a recorded Reach match and writes into the match's recording:
 
-  {"t", "kill_record": 1}        once, at the start: this recording has kill rows (a match without it was recorded
-                                 before they were written: "not recorded yet", never zeros)
+  {"t", "kill_record": 2}        once, at the start: this recording has kill rows (a match without it was recorded
+                                 before they were written: "not recorded yet", never zeros). The number is VERSION
   {"t", "kill": {...}}           one a death:
       "v"     who died (the player's index in the game, as every id in the recording)
       "k"     the player the game credits with it; None: nobody
@@ -18,7 +18,10 @@ tools/live_bots.py keeps one Watch for a recorded Reach match and writes into th
               who damaged him lately, newest first, 4 at most (the game's own list)
       "vt", "kt" teams; "vb", "kb" 1 for a bot; "vp", "kp" [x, y, z] where each stood (kp: where the killer last
               stood alive; None: never seen)
-      "gt"    the game's tick; "st" the engine's state (1: the match is played, 2: it is over)
+      "gt"    the game's tick; "st" the engine's state when he was last seen alive, a pass before (1: the match is
+              played, 2: it is over). Version 1 wrote the state read after the death, which is 2 for the kill that
+              wins the match: live Powerhouse 20261115-203100, MCC's report counted that kill and not the melee
+              kill 6 s later (tools/service_record.py read_kills puts a version 1 recording right)
 
 No names are written (people's gamertags stay out of the recording); the Service Record names the ids from MCC's
 report. read() says what a row counts as; both tools use it, so there is one reading of the facts.
@@ -29,7 +32,7 @@ import math
 import struct
 
 NONE = 0xFFFFFFFF
-VERSION = 1
+VERSION = 2
 OVER = 2            # the engine's state once the match is over: deaths from then on are not in MCC's report
 
 
@@ -60,10 +63,13 @@ class Watch:
         s.live = live
         s.was = {}          # index -> (salt, unit, credited killer's handle) at the last pass
         s.at = {}           # index -> where he last stood alive
+        s.state = None      # the engine's state at the last pass
 
     def tick(s, snap):
         live = s.live
-        state, rows = live.kill_watch()
+        now_state, rows = live.kill_watch()
+        # the state he died in is the last pass's: the kill that wins a match turns the state to "over" in its own tick
+        state, s.state = (s.state if s.state is not None else now_state), now_state
         who = {(r[0] << 16) | i: i for i, r in rows.items()}
         here = {p.id: p for p in snap.players}
         for p in snap.players:
@@ -193,6 +199,20 @@ def selftest():
     assert read(dict(r2, kt=1), teams=False) == ("kill", 0, 8)
     # a melee kill leaves no entry: the credit was written, the body says what killed
     assert read(dict(r, new=True, c=43)) == ("kill", 0, 43)
+    # the kill that wins the match turns the engine's state to "over" in its own tick: it counts (the state he was
+    # last seen alive in); a death after it does not
+    g.rows[1], g.rows[2] = (0xEC71, 0xC1, NONE, H(0)), (0xEC72, 0xC2, NONE, H(0))
+    assert w.tick(Snap(alive)) == []
+    g.state = OVER
+    g.bodies[0xC1] = body(6, H(0), [(999, 1.0, 1.0, 0xA0, H(0), 6, 1)])
+    g.rows[1] = (0xEC71, NONE, 0xC1, H(0))
+    r = w.tick(Snap(alive))[0]
+    assert r["st"] == 1 and read(r) == ("kill", 0, 6), r
+    g.bodies[0xC2] = body(43, H(0), [(999, 1.0, 1.0, 0xA0, H(0), 43, 0)])
+    g.rows[2] = (0xEC72, NONE, 0xC2, H(0))
+    r = w.tick(Snap(alive))[0]
+    assert r["st"] == OVER and read(r) is None, r
+    g.state = 1
     # a player who leaves the game (his unit goes, no body), a death after the match is over, rows that are not rows
     g.rows[0] = (0xEC70, NONE, NONE, NONE)
     assert w.tick(Snap(alive)) == []

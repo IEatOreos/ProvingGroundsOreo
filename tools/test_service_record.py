@@ -326,7 +326,7 @@ def test_kills_by_weapon_opponent_and_map():
             row(ME, "Me", 0, 0, 1, 1, 0, 600), row(bot(1), "Wheezy", 1, 1, 3, 5, 0, 600),
             row(bot(2), "Oreo", 0, 0, 2, 2, 0, 600), row(bot(3), "Ice", 1, 1, 0, 0, 0, 600, betrayals=1)]))
         w.write(name + ".jsonl", "\n".join([
-            '{"t": 0.0, "kill_record": 1}',
+            '{"t": 0.0, "kill_record": 2}',
             '{"t": 0.5, "meta": {"map": "reach_70_boneyard", "bot": {"id": 1, "name": "Wheezy"}}}',
             kill(1, 2, 6, (10, 20, 0), (30, 40, 0)),                                # Oreo's DMR
             kill(1, 2, 11, (12, 22, 0), (31, 41, 0), hits=[[3, 11, 0, 1.0, 0.1, 1], [2, 8, 1, 0.0, 0.9, 40]]),
@@ -365,7 +365,8 @@ def test_kills_by_weapon_opponent_and_map():
         old = player(data, "Old")["g"]["reach"]                # (only the match from before the kill rows)
         assert (old["kill_games"], old["weapons"], old["versus"], old["heat"]) == (0, {}, {}, {}), old
         assert data["weapons"]["reach:6"] == ["DMR", True] and data["weapons"]["reach:99"] == ["Damage type 99", True]
-        assert data["weapons"]["reach:43"] == ["Melee", False], data["weapons"]      # (named by the list, not seen live)
+        assert data["weapons"]["reach:43"] == ["Melee", True], data["weapons"]
+        assert data["weapons"]["reach:41"] == ["Fall", False], data["weapons"]       # (named by the list, not seen live)
         assert data["heat_maps"] == {"reach_70_boneyard": {"img": "maps/reach_70_boneyard.png",
                                                            "frame": [100.0, 200.0, 3.0, 2.0]}}, data["heat_maps"]
         assert os.path.getsize(os.path.join(w.paths.out, "maps", "reach_70_boneyard.png")) > 0
@@ -397,6 +398,29 @@ def test_two_people_named_by_their_report_rows():
     assert sr.kill_tally(same, rows)["Wheezy"]["versus"] == {sr.UNNAMED: [1, 2]}
 
 
+def test_the_kill_that_wins_the_match_counts():
+    """The first recordings (version 1) wrote the engine's state as read after each death: "over" for the kill that
+    won the match. That row counts when the game wrote its credit at that death; the deaths after it do not, nor does
+    a first "over" row whose credit is left from an earlier death. A version 2 recording is read as written."""
+    detail = {"teams": True, "players": [
+        {"name": "Oreo", "bot": True, "idx": 2, "team": 0, "kills": 2, "deaths": 0},
+        {"name": "Wheezy", "bot": True, "idx": 1, "team": 1, "kills": 0, "deaths": 2}]}
+    rows = [kill(1, 2, 6, (1, 1, 0), (2, 2, 0), t=5.0),
+            kill(1, 2, 6, (3, 3, 0), (4, 4, 0), t=9.0, st=2),                       # the kill that won it
+            kill(1, 2, 43, (5, 5, 0), (6, 6, 0), t=12.0, st=2),                     # after the match
+            kill(1, 2, 43, (5, 5, 0), (6, 6, 0), t=15.0, st=2, new=False, hits=[[2, 43, 0, 1.0, 1.0, 2]])]
+    with tempfile.TemporaryDirectory() as tmp:
+        def counted(version, lines):
+            path = os.path.join(tmp, f"trace_reach_70_boneyard_20261115-19000{version}.jsonl")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join([json.dumps({"t": 0.0, "kill_record": version})] + lines) + "\n")
+            return [(name, k, d) for name, k, _, d, _ in sr.kill_check(detail, sr.read_kills(path))]
+        assert counted(1, rows) == [("Oreo", 2, 0), ("Wheezy", 0, 2)], counted(1, rows)
+        assert counted(2, rows) == [("Oreo", 1, 0), ("Wheezy", 0, 1)], counted(2, rows)
+        assert counted(1, [rows[0], rows[3]]) == [("Oreo", 1, 0), ("Wheezy", 0, 1)]   # (a left-over credit: not it)
+        assert counted(1, list(reversed(rows))) == [("Oreo", 2, 0), ("Wheezy", 0, 2)]  # (by time, not by line)
+
+
 def test_a_long_recording_keeps_its_kill_rows():
     """The recording's time window (tools/recording.py) trims a long match's oldest rows; the kill rows and the line
     that says the recording has them stay, once each."""
@@ -407,7 +431,7 @@ def test_a_long_recording_keeps_its_kill_rows():
         path = os.path.join(tmp, "trace_reach_70_boneyard_20261115-190000.jsonl")
         r = rec.RollingFile(path, 10.0)
         r.slack, r.due = 5.0, 15.0
-        r.write('{"t": 0.0, "kill_record": 1}\n')
+        r.write('{"t": 0.0, "kill_record": 2}\n')
         for k in range(400):
             now = k / 10
             if k in (5, 120, 395):

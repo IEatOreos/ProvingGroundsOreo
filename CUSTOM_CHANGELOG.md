@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Kill record: the kill that wins the match counts; the first whole match equals MCC's report, 2026-11-15
+
+The owner played the first match recorded with the kill record (Powerhouse 20261115-203100, TU Team Slayer DMR, the owner and 7 bots, 478 s) and asked for it to be checked.
+
+- **Seen**: 94 rows, no read failed, every body read. Kills and deaths equalled MCC's report for 6 of the 8 players. The other two were one kill apart: the kill that won the match. The engine's state turns to "over" in that kill's own tick, so its row said "over" and was left out. MCC's report counts it. It does not count a melee kill 6 s later, whose credit the game never wrote.
+- `tools/kill_record.py` `Watch`: a row's state is the one its victim was last seen alive in, a pass before. The recording's first line now says version 2.
+- `tools/service_record.py` `read_kills`: a version 1 recording's first "over" row is read as "played" when the game wrote its credit at that death. Only that match is version 1, with any other recorded before this change.
+- `tools/service_record_site/weapons.json`: six more damage types matched to what the killer held in that match, so they lose their star on the site: assault rifle (4 of 4), shotgun (2 of 2), needle rifle (3 of 3), focus rifle (5 of 5), gravity hammer (1 of 1), and melee (8 of 8 bot kills with the melee button pressed in the 1.3 s before).
+- Validation:
+  - With the fix that match's rows equal MCC's report for all 8 players: kills and deaths (93 each in all), each player's "killed most" and "most killed by" by name and count, and each player's melee and grenade kills.
+  - `tools/test_service_record.py` +1 (15): a version 1 recording's winning kill counts, a death after it and a left-over credit do not, a version 2 recording is read as written. `tools/kill_record.py` self-check: the winning kill and a death after it. All 78 `tools/test_*.py` files pass.
+- **Untested**: a version 2 recording from a live match (the next one). A match that ends on time or by the owner's menu after a kill in the same tick. A whole match with betrayals or suicides (that match had none; the probed one's two betrayals in its window read as betrayals). Firefight, free for all, round-based modes, a second person.
+- **Not changed**: the site still rebuilds only when a match starts, and a match's report is copied beside its recording at that same moment. So a match's kills, like its map, reach the site when the next match starts.
+
 ### Service Record: every kill recorded in Reach, so Weapons, Enemies and Heatmaps fill in, 2026-11-15
 
 The site shipped with those three pages saying "not recorded yet"; the owner asked for the per-kill record as the follow-up. Python only: no botcore change, no DLL build, no MCC restart.
