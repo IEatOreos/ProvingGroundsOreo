@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<title>Proving Grounds Service Record</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="#/">
+    <svg class="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+      <path d="M16 2 28 8v9c0 7-5 11-12 13C9 28 4 24 4 17V8z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 13h12M10 18h12M13 23h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span class="brand-name">Proving Grounds <b>Service Record</b></span>
+  </a>
+  <div class="top-tools">
+    <label class="game-pick">Game
+      <select id="game"></select>
+    </label>
+  </div>
+</header>
+<div class="shell">
+  <nav id="nav" class="side" aria-label="Sections"></nav>
+  <main id="main" tabindex="-1">
+    <noscript><p class="note">This page needs JavaScript to show the stats.</p></noscript>
+    <p id="boot" class="note">Loading the stats…</p>
+  </main>
+</div>
+<footer class="foot">
+  <span id="built"></span>
+  <span>A fan-made stats page for our own bots. Not affiliated with Microsoft, 343 Industries or Bungie.</span>
+</footer>
+<div id="tip" class="tip" role="status" hidden></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

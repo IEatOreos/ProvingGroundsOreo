@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Proving Grounds Service Record: a stats site for the bots, 2026-11-15
+
+The owner's brief (`docs/SERVICE_RECORD_SITE_BRIEF.md`): a stats tracker laid out like a 2010 service record, from what the mod already records. His answers to its questions: a local website named "Proving Grounds Service Record", on this PC only; "Just the bots for now" (a match's scoreboard still shows every gamertag); Reach first with a game filter; "for now I want the stats to be reset to 0 and then have them be live updated after every match or two"; game types grouped into families; the brief's credit formula, the same for every bot; Weapons, Enemies and Heatmaps say "not recorded yet"; "all the medals from mcc".
+
+- `tools/service_record.py` (new): one build writes `logs/service_record/index.html` (opens from the folder, no server) from the career ledger, MCC's post-game reports and the bots' own files, all read and never written.
+  - It keeps each report's detail once, by `GameUniqueId`, in its own store `native/bin/service_record/matches.json`, because the recording rotation deletes the reports. Store and site are game data: not in git.
+  - Counting is `bot_career.py`'s own (imported, one copy): a match counts when its person played 60 s, a bot's row from before the bots' restart does not. So with "All games" chosen the leaderboard equals `native/bin/career/totals.txt`, and every bot starts at 0.
+  - Listed: every bot of `bot_profiles.ini` (at 0 from the start) and any other bot once it has a counted match. People are never listed.
+  - Credits: `tools/service_record_site/ranks.json` (the 22 Reach ranks and their Grades, 50 steps; 1,000 a counted game, +1,000 a win, 100 a kill, 50 an assist, 25 a medal), from a bot's counted Reach matches only.
+  - Pages: leaderboard (sortable, a name filter); per bot Overview, Game History with each match's scoreboard, Profile (Reach armor by the Armory's piece names from `native/look_names.h`, difficulty, play style, how the rank was earned), Summary with game type tabs, By Game Type, By Map, Medals, Weapons, Enemies; Commendations, Heatmaps and Achievements say what is not recorded and why.
+- `tools/service_record_art.py` (new): `medals` reads MCC's medal numbers from this PC's `MCC-Win64-Shipping.exe` (the report's `Medal mId` has no names), their names and icons from `careerdb.xml` and `medalstexturepack`, into `native/bin/service_record/art/` (not in git). Run once per MCC update; without it medals show by number with our own placeholder.
+- `tools/play.py`: as a match starts, the site is rebuilt in the background after `bot_career.py` has added the last match (`--wait-ledger 20`). An open page checks for a new build every 30 s and reloads.
+- **Not recorded yet** (shown as such, no numbers made up): kills and deaths per weapon, a full versus table, heatmaps (all three need a per-kill record in the trace), commendations, achievements, an armor picture, the Reach rank insignia (our own numbered placeholder until the owner's rank chart picture is cut up).
+- Validation:
+  - `tools/test_service_record.py` (new, 11): the leaderboard equals `totals.txt` on a made-up ledger (a quick quit, a draw, two games); the bots' restart and the roster at 0; people on the scoreboard and off the lists; K/D with no deaths, 2-place rates, `13d 3h 36m`; the rank table (Colonel Grade 3 to Brigadier 220,000, Noble to Eclipse 1,500,000, 0 Recruit, 20,000,000 Inheritor); credits from Reach only; game type families and map names; a report kept after the rotation; a bad report and a missing ledger; looks by piece name. All 76 `tools/test_*.py` files pass (75 before).
+  - On the real data: the site builds in under 1 s (41 bots at 0; a preview from the ledger kept before the restart: 308 bots, 78 matches, 0.6 s). 311 medals read from MCC, all with an icon; on the 567 player rows of the 50 reports on disk, the Killing Spree medal (136) is there exactly when the row's most kills in a row is 5 or more, and each row's medals sum to its `mTotalMedalCount`.
+  - Opened from `file://` in headless Edge and Chrome (41 rows drawn); every page looked at through a local server at 912 px and 375 px wide with no sideways scroll and no console errors; text contrast 4.69:1 or better, the ring's colours pass the chart palette checker on this surface.
+  - **Untested**: the rebuild at a real match start (the hook is `bot_career.py`'s pattern), a real Chrome or Edge window, a screen reader.
+
 ### Reach Banshee pilots bomb first, every 3.2 s, at the controller's switch speed, 2026-11-15
 
 The owner, recording on Boneyard: "show in reach how fast you can shoot a banshee bomb while spamming it, and then implement the bots prioritizing the banshee bomb first"; then "I showed two ways to shoot with the plasma casters first then bomb, and the bomb first method which is usually better."

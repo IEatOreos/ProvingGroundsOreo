@@ -1,0 +1,28 @@
+{
+  "comment": "The Service Record's ranks (tools/service_record.py). cr: the credits that reach the rank, then each Grade after it. credits: what one counted game, win, kill, assist and medal are worth (MCC's reports have no credits, so the rank is rebuilt from the recorded stats).",
+  "credits": {"game": 1000, "win": 1000, "kill": 100, "assist": 50, "medal": 25},
+  "ranks": [
+    {"rank": "Recruit", "cr": [0]},
+    {"rank": "Private", "cr": [7500]},
+    {"rank": "Corporal", "cr": [10000, 15000]},
+    {"rank": "Sergeant", "cr": [20000, 26250, 32500]},
+    {"rank": "Warrant Officer", "cr": [45000, 78000, 111000, 144000]},
+    {"rank": "Captain", "cr": [210000, 233000, 256000, 279000]},
+    {"rank": "Major", "cr": [325000, 350000, 375000, 400000]},
+    {"rank": "Lt. Colonel", "cr": [450000, 480000, 510000, 540000]},
+    {"rank": "Commander", "cr": [600000, 650000, 700000, 750000]},
+    {"rank": "Colonel", "cr": [850000, 960000, 1070000, 1180000]},
+    {"rank": "Brigadier", "cr": [1400000, 1520000, 1640000, 1760000]},
+    {"rank": "General", "cr": [2000000, 2200000, 2350000, 2500000, 2650000]},
+    {"rank": "Field Marshal", "cr": [3000000]},
+    {"rank": "Hero", "cr": [3700000]},
+    {"rank": "Legend", "cr": [4600000]},
+    {"rank": "Mythic", "cr": [5650000]},
+    {"rank": "Noble", "cr": [7000000]},
+    {"rank": "Eclipse", "cr": [8500000]},
+    {"rank": "Nova", "cr": [11000000]},
+    {"rank": "Forerunner", "cr": [13000000]},
+    {"rank": "Reclaimer", "cr": [16500000]},
+    {"rank": "Inheritor", "cr": [20000000]}
+  ]
+}

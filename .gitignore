@@ -48,6 +48,7 @@ maps/*/owner_profile.json
 maps/*/walls_learned.json
 user/
 .codex/
+.claude/
 tools/fixtures/
 
 # Local installation archives, companion recorder, and machine-specific files

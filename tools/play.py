@@ -68,6 +68,13 @@ def match_trace(map_name, logs=os.path.join(ROOT, "logs"), games=None, after=Non
                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except Exception:
             pass
+        # (custom, Nov 15) the Service Record site (tools/service_record.py, logs/service_record): rebuilt with the
+        # match just reported, once bot_career.py above has added it to the ledger; in the background too
+        try:
+            subprocess.Popen([sys.executable, "-I", os.path.join(HERE, "service_record.py"), "--quiet",
+                              "--wait-ledger", "20"], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except Exception:
+            pass
     recording.rotate(logs, games, after)
     if os.path.normcase(os.path.abspath(logs)) == os.path.normcase(os.path.abspath(os.path.join(ROOT, "logs"))):
         # (custom) the owner's play profile: the last match, its carnage report just copied, summarised in the background
