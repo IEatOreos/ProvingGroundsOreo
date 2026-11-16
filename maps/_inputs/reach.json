@@ -43,6 +43,20 @@
    "how": "decoded live 2026-10-30: key 1, 25 ticks held, idle noise excluded"
   }
  ],
+ "fire2": [
+  {
+   "off": 8,
+   "mask": 36507516928,
+   "press": false,
+   "how": "decoded live 2026-11-15 (tools/boost_capture.py with tools/reach_shot_capture.py for the vehicle's place, logs/boost_capture_reach_20261115-184247, Boneyard, controller left trigger): every boost hold set +0x08 0x880048000 (bits 15, 18, 31, 35) with +0x24 1.0 and +0x3C 1.0 (Bot.boost sends +0x3C as the vertical input), on 4808 of 4817 Ghost ticks together. Ghost at full throttle 4.96 u/s unboosted, 8.17 boosted (top 9.6, a 10.7 s hold kept 8 u/s); Banshee 4.89 -> 10.17 (top 12.1). Bot boosts with +0x3C alone ran about 5.5 u/s in 49 matches"
+  },
+  {
+   "off": 32,
+   "mask": 4575657221408423936,
+   "press": false,
+   "how": "the same capture: +0x24, the left trigger's float, 1.0 (0x3F800000, this u64's high half) on every boost hold; the bits are cleared off the hold, so the person's own trigger in the template action never reaches a bot"
+  }
+ ],
  "ability": [
   {
    "off": 8,

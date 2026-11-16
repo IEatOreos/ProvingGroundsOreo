@@ -605,7 +605,20 @@ CHAINGUN_HEAT = (13.5, 3.3)   # s: Reach's Warthog chaingun, fire to overheat an
 # (median 21.5), about every 6 s; past him it flies on straight and climbs to 20-28 u off, then turns back hard (13 to 4
 # u/s). The bomb is cycled to (FUELROD_*, Bot.fuel_rod)
 PASS_START, PASS_OVER, PASS_EXTEND, PASS_OUT_S, PASS_START_H, PASS_START_MIN = 15.0, 6.0, 22.0, 6.0, 15.0, 12.0
-CANNON_R, FIRE2_R, FIRE2_HOLD, FIRE2_EVERY = 28.0, (12.0, 36.0), 2.4, 6.0
+CANNON_R = 28.0
+# (custom, Nov 15) Reach's boost reaches the game now (maps/_inputs/reach.json "fire2", the owner's Boneyard capture:
+# Ghost 5.0 -> 8.2 u/s, Banshee 4.9 -> 10.2). A Reach pilot's run boosts on the way in only past CANNON_R with its nose
+# within TRAVEL_BOOST_CONE of him (the old on-target hold from 12-36 u ran the dive at 10 u/s past AIR_RUN_SPEED), and on
+# the way out (the player's way out ran 13 u/s). Turning back with him more than AIR_TIGHT_TURN off the nose it pulls
+# the throttle back (AIR_TIGHT_THROTTLE): his Banshee turned 105 deg/s so (median, 408 ticks), 66 at full throttle, 32
+# boosted
+AIR_TIGHT_TURN, AIR_TIGHT_THROTTLE = math.radians(60.0), -1.0
+# (custom, Nov 15) Reach kinds whose travel boost is held the whole open leg, not in the keyboard player's taps
+# (vehicles.TRAVEL_BOOST): the owner's Ghost held it 10.7 s at 8 u/s with no fall-off, his Banshee 4 s at 10-12 u/s
+TRAVEL_BOOST_HELD = {"ghost", "banshee"}
+# (custom, Nov 15) the Reach Ghost's bolts fly 29.3 u/s (152 bolts, the owner's Boneyard capture, logs/reach_shot_
+# capture_20261115-184247; p10-p90 29.2-29.5), not the plasma rifle's 37 its lead was figured with
+REACH_GHOST_BOLT = 29.3
 AIR_GUN_R = 1.5       # u: an aircraft's guns fire with its nose this near his middle (Bot.air_pass)
 # (custom) Bot.air_pass under a low roof: a run's start height at most the room under it (air_ceiling) less AIR_ROOM_SPARE,
 # never under AIR_ROOM_MIN over the floor
@@ -1279,7 +1292,8 @@ class Aim:
         s.focus = 0.0
 
     def step(s, now, dt, me, target_id, tpos, tvel, aim_head, gun=None, origin=None, crouched=False, precise=False,
-             target_point=None, protected=False, splash_at_feet=True):
+             target_point=None, protected=False, splash_at_feet=True, shot_speed=None):
+        # shot_speed: (custom, Nov 15) its shot's own speed (u/s) where it is not the gun's (Reach's Ghost bolts);
         # gun: what the shot comes out of when it is not the gun in hand (a vehicle's turret: vehicles.GUNNER_GUN);
         # origin: where that shot leaves (vehicles.gun_height), else the eye; crouched: the target is (his head and
         # chest lower: core.CROUCH_HEAD, CROUCH_CHEST)
@@ -1310,7 +1324,7 @@ class Aim:
             s.err = (s.rng.gauss(0, spread), s.rng.gauss(0, spread * 0.6))
         d = dist(me.pos, tpos)
         gun = gun or me.weapon
-        lead_t = d / PROJECTILE_SPEED.get(gun, 360.0)   # flight time of this gun's shot
+        lead_t = d / (shot_speed or PROJECTILE_SPEED.get(gun, 360.0))   # flight time of this gun's shot
         # lead: bullet flight plus the ~0.05 s from our read of the game to the shot leaving;
         # explosives at the feet (the splash still kills a near miss), else chest or head
         h = 0.05 if gun in SPLASH and splash_at_feet else aim_height(aim_head, crouched)
@@ -4700,7 +4714,7 @@ class Bot:
             # over it, out, round, again every 6-8 s (air_pass: its runs; fuel_rod: the bomb, cycled to in every game
             # where the cycle is decoded)
             act.yaw, act.pitch = angles_to(eye(me), room)
-            s.air_pass(now, me, "room", Belief(room, Vec(), now, True, "eyes"), room, act)
+            s.air_pass(now, me, "room", Belief(room, Vec(), now, True, "eyes"), room, act, v)
             s.fuel_rod(now, act)
             s.landing, s.air_dest = False, room
             s.note("air: bomb run on the objective room")
@@ -4744,7 +4758,8 @@ class Bot:
             act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=st.get("gun"),
                                             origin=origin, target_point=tp,
                                             crouched=crouched(foe), protected=profiles.fixed_high(s.p),
-                                            splash_at_feet=not chest_shot)
+                                            splash_at_feet=not chest_shot,
+                                            shot_speed=REACH_GHOST_BOLT if s.game == "reach" and kind == "ghost" else None)
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             d = dist(me.pos, b.pos)
             lo, hi = st["rng"]
@@ -4757,7 +4772,7 @@ class Bot:
                 s.ram_boost(now, me, v, b, act)
                 s.att = ["charge", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             elif passes:
-                s.air_pass(now, me, tid, b, aim_at, act)    # a Banshee's attack runs: a skilled player's (air_pass)
+                s.air_pass(now, me, tid, b, aim_at, act, v)    # a Banshee's attack runs: a skilled player's (air_pass)
             elif st["role"] == "artillery":
                 # holds its range and keeps moving side on between shots; a man close enough to board it is backed
                 # away from (research: Wraith and Scorpion are boarded from the flanks; the mortar faces its target)
@@ -5115,10 +5130,10 @@ class Bot:
         run = getattr(s, "air_run", None)
         return run[1] if run is not None and run[1] in seen else None
 
-    def air_pass(s, now, me, tid, b, aim_at, act):
+    def air_pass(s, now, me, tid, b, aim_at, act, v=None):
         """A Banshee's attack runs (PASS_* above, the player's flying): "in", the nose on him (it flies where it looks:
-        act.yaw / act.pitch come aimed from drive), the cannons on target inside CANNON_R, the second weapon held
-        FIRE2_HOLD on target inside FIRE2_R (a bomb, outside Reach, only from 2 u or more over him); within PASS_OVER
+        act.yaw / act.pitch come aimed from drive), the cannons on target inside CANNON_R, Reach's boost past CANNON_R
+        and its pull-back turn (AIR_TIGHT_TURN; v: the vehicle, for its heading); within PASS_OVER
         flat of him, or with him behind, "out": on along the run's heading, climbing to the travel height, until
         PASS_EXTEND flat off or PASS_OUT_S, then the turn back (half throttle its first second) into the next run.
         Never hovering in place (the old side-to-side gun run read as glitching)."""
@@ -5166,6 +5181,7 @@ class Bot:
             act.yaw, act.pitch, act.forward = run[3], (0.6 if h < start_h else 0.0), 1.0
             act.fire = False
             act.fire2 = now < getattr(s, "fire2_until", 0.0)   # (a press already going is held through)
+            act.fire2 = act.fire2 or s.game == "reach"         # (custom, Nov 15) Reach: boosted out, as the player
             if jinking:
                 act.yaw += AIR_JINK * jink[1]
                 act.fire2 = act.fire2 or s.game == "reach"
@@ -5206,11 +5222,16 @@ class Bot:
         # Live Nov 7 with a bot pilot, Halo 3's and H2A's cycle and second input fired nothing but the cannons: their
         # bomb input is not decoded. Halo 4's second input is the Mantis's rockets
         if s.game == "reach":
-            lo, hi = FIRE2_R
-            if now < getattr(s, "fire2_until", 0.0):
-                act.fire2 = True
-            elif on and lo <= d <= hi and now >= getattr(s, "fire2_next", 0.0):
-                s.fire2_until, s.fire2_next = now + FIRE2_HOLD, now + FIRE2_EVERY
+            # (custom, Nov 15) boosted in from past gun range with the nose on the way to him, then the dive at
+            # AIR_RUN_SPEED; turning back hard with him off the nose: the throttle pulled back, no boost (its tighter
+            # turn: AIR_TIGHT_TURN)
+            ya_way = math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x)
+            off_nose = abs(wrap(ya_way - s.heading(me, v))) if v is not None else 0.0
+            if off_nose > AIR_TIGHT_TURN:
+                act.forward, act.fire2 = AIR_TIGHT_THROTTLE, False
+                act.fire = False
+                s.note("air: pulled back, turning tight")
+            elif d > CANNON_R and off_nose < TRAVEL_BOOST_CONE:
                 act.fire2 = True
         rb = math.atan2(BOMB_GUN_R, max(d, 1.0))     # (custom, Nov 13: the bomb's wider window, its blast)
         bomb_on = on or (abs(wrap(ya - act.yaw)) < rb and abs(pa - act.pitch) < rb)
@@ -5226,7 +5247,9 @@ class Bot:
         """Reach: the player's right button in a Banshee is its boost (his speed held 8.8 u/s, not 4.3), and that button
         sets the action's +0x3C float to 1 (decoded live, tools/decode_buttons.py fire2=rmb: also bits at +0x08, +0x48,
         +0xA0, not sent: a table entry clears its bits every tick, and +0x3C is the Falcon's climb). botcore writes
-        +0x3C from the vertical input (shared.h hb_vertical), so the boost hold goes out as vertical 1."""
+        +0x3C from the vertical input (shared.h hb_vertical), so the boost hold goes out as vertical 1. (custom, Nov 15)
+        That alone never boosted (bots ~5.5 u/s); act.fire2 itself now sends the controller's boost bits and trigger
+        float (maps/_inputs/reach.json "fire2", the owner's Boneyard capture)."""
         if s.game == "reach" and act.fire2:
             act.vertical = 1.0
 
@@ -5253,8 +5276,9 @@ class Bot:
         # elsewhere the second input is a Banshee's bomb, or nothing where it is not decoded
         if hg is None or s.p.tier == "novice" or not (s.game == "reach" or (s.game == "h3" and k in vehicles.BOOSTS)):
             return
+        held = s.game == "reach" and k in TRAVEL_BOOST_HELD      # (custom, Nov 15) the whole open leg
         holding = now < getattr(s, "tboost_until", 0.0)
-        if not holding and now < getattr(s, "tboost_next", 0.0):
+        if not held and not holding and now < getattr(s, "tboost_next", 0.0):
             return
         T = s.air_terrain() if air else s.T()
         head = s.heading(me, v)
@@ -5271,6 +5295,8 @@ class Bot:
         if not holding:
             s.tboost_until, s.tboost_next = now + hg[0], now + hg[0] + hg[1]
             s.note("vehicle: boost on the way")
+        if held:
+            s.tboost_until = now + 0.25                           # (kept on while the leg stays open)
         act.fire2 = True
         s.boost(act)
 

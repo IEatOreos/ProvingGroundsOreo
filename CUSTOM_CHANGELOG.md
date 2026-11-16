@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Reach Ghost and Banshee bots boost for real; Banshee runs boost in and out and pull back to turn; Ghost lead from its bolt speed, 2026-11-15
+
+The owner recorded himself on Boneyard (controller): a Ghost with boost holds and hard turns, Ghost shots at about 3, 8 and 17 u (middle, high, low), then a Banshee with boost holds and turns with the throttle back and forward. "For the ghost I would like for the bots to boost when deciding to splatter an enemy, or to get to a spot when not fighting in it. And the banshee as well."
+
+- **Found** (`tools/boost_capture.py` joined with the new `tools/reach_shot_capture.py` for the vehicle's place; `logs/boost_capture_reach_20261115-184247`, `logs/reach_shot_capture_20261115-184247`):
+  - Every boost hold set the action's `+0x08` u64 to `0x880048000` (bits 15, 18, 31, 35), `+0x24` to 1.0 and `+0x3C` to 1.0, together on 4808 of 4817 Ghost ticks. Bots sent only `+0x3C`; botcore writes `+0x08` and `+0x0C` itself, so the bits never reached the game.
+  - The boost: Ghost at full throttle 4.96 u/s unboosted, 8.17 boosted (top 9.6); a 10.7 s hold kept about 8 u/s. Banshee 4.89 to 10.17 (top 12.1), holds of 4 s.
+  - Turn rates: Ghost 40 deg/s at full throttle, 35 boosted, 72 with the throttle off. Banshee 66 deg/s at full throttle, 32 boosted, 105 with the throttle pulled back.
+  - Ghost bolts: 29.3 u/s (152 bolts, p10-p90 29.2-29.5). They land on the aim line from the Ghost's place + (-0.44 forward, 0, +0.58 up) within 0.05 u at every range, and within 0.08 u of the bots' current aim line (`eye`, its place + 0.62), so the aim height was already right. Its lead used the plasma rifle's 37 u/s.
+  - The capture recorder's own speed read 0 in a vehicle: a seated unit's place is relative to the vehicle (the join above fixes that for the analysis).
+- `maps/_inputs/reach.json` `fire2` (new): while a bot's `fire2` is held, `+0x08` mask `0x880048000` and `+0x24` 1.0 (the u64 at `+0x20`, high half); cleared otherwise, so the person's trigger in the template action never leaks to bots. No botcore build: the brain writes the table at start. Bot.boost still sends `+0x3C` 1.0, as the person's action has it.
+- `brain/bot.py`, Reach only, every tier but Easy as before:
+  - `travel_boost`: a Ghost or Banshee (`TRAVEL_BOOST_HELD`) holds the boost the whole open leg (nose within 20 deg of its way, the way clear), not the keyboard player's 1.7 s / 2.4 s taps. Other kinds and games unchanged.
+  - `air_pass`: the old on-target boost from 12-36 u is gone (it now would have run the dive at 10 u/s past `AIR_RUN_SPEED`). The way in boosts past `CANNON_R` (28 u) with the nose within 20 deg of him; the way out boosts. With him more than `AIR_TIGHT_TURN` (60 deg) off the nose, the throttle goes to `AIR_TIGHT_THROTTLE` (-1), no boost, no fire. The jink boost when shot at is kept.
+  - The Ghost's splatter boost (held from 15 u, Nov 14) is unchanged; it now reaches the game.
+  - `Aim.step` `shot_speed`: the Reach Ghost driver's lead uses `REACH_GHOST_BOLT` 29.3 u/s. (Demon's lead factor is 0, so Demon is unaffected.)
+- `tools/reach_shot_capture.py` (new, read-only): Reach's version of `h4_shot_capture.py` (its summary), with the vehicle's place, forward and up.
+- Validation: `tools/test_reach_boost.py` (new, 10: the table's bits held and cleared, the person's trigger cleared, the Ghost's held travel boost and Halo 3's taps, the Banshee's boost in from past gun range, none in the dive, the pull-back turn, the boost out, Halo 4 unchanged, the bolt speed's lead). All 75 `tools/test_*.py` files pass. **Untested in a match**: that the bots' boost now reaches the game (the bits match the person's exactly, but only his were seen), whether a boosted Banshee can still fire, the Banshee's boost limit past 4 s, and how the faster runs and pull-back turns change hits and deaths.
+
 ### Bots' career stats can start over, 2026-11-15
 
 The owner: "reset all the bots stats. For a fresh restart of stats", the bots only (their own totals kept). Deleting the ledger would not have done it: `bot_career.py` reads every match report still in `logs/` again.
