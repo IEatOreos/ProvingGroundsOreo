@@ -304,12 +304,12 @@
     const m = D.matches.find((x) => x.id === id);
     if (!m) return [banner(p), panel("Match", empty("Match not found", "This match is not in the record (it may be from before the bots' stats were reset)."))];
     const full = m.report;
-    const heads = [["Place"], ["Player", "l"]].concat(full ? [["Score"]] : [], [["Kills"], ["Deaths"], ["Assists"]],
+    const heads = [["Place"], ["Player", "l"]].concat(full ? [["Score", "hide-s"]] : [], [["Kills"], ["Deaths"], ["Assists"]],
       full ? [["Betrayals", "hide-s"], ["Medals", "hide-s"]] : [], [["Time", "hide-s"]]);
     const line = (r) => el("tr", null, td(ordinal(r.st + 1)),
       td(el("span", { class: "cell" }, r.listed && players.has(r.n) ? el("a", { href: href(["p", r.n, "overview"]) }, r.n) : r.n,
         r.n === p.name && el("span", { class: "tag" }, "this bot"), !r.bot && el("span", { class: "tag" }, "player")), "l"),
-      full ? td(int(r.score)) : null, td(int(r.k)), td(int(r.d)), td(int(r.a)),
+      full ? td(int(r.score), "hide-s") : null, td(int(r.k)), td(int(r.d)), td(int(r.a)),
       full ? [td(int(r.bt), "hide-s"), td(int(r.md), "hide-s")] : null,
       td(Math.floor(r.sec / 60) + ":" + String(r.sec % 60).padStart(2, "0"), "hide-s"));
     let rows;
