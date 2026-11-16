@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### A recorded match is on the Service Record as it ends; heatmaps open on where the fights were, 2026-11-15
+
+The owner, asked whether the site should rebuild when a match ends: "Whatever you think is most efficient".
+
+- **Before**: a match's report was kept beside its recording, added to the career ledger and put on the site only when the next match started (`tools/play.py`), so the last match of an evening waited for the next evening's first. play.py cannot do it at the end: botcore stops it the moment a match ends. The brain ends on its own a few seconds later.
+- `tools/after_match.py` (new): the same three steps, in play.py's order, as a recorded match ends. `play.keep_carnage` is asked about that match's recording only, then `bot_career.py` runs, then `service_record.py`. It waits up to 20 s for MCC's report. Nothing is done for a match with no report, one kept already, or a recording that is gone.
+- `tools/live_bots.py`: starts it in the background as the brain stops, after the recording is closed, and only for the mod's own logs folder. The next match's start finds the report kept and the match counted, and repeats nothing.
+- Heatmaps (`tools/service_record_site/app.js`, `style.css`): when every spot lies in a small part of the map's picture, the page opens on that part, with "Show the whole map" under it. A Forge variant in a corner of Forge World had its 32 spots in one blob. The picture is now drawn into the canvas, cut to the view and dimmed there. The page's foot says "Rebuilds when a recorded match ends and when one starts".
+- Validation:
+  - `tools/test_after_match.py` (new, 3): the report kept by play.py's own rule, then the totals, then the site; nothing for a report from minutes before, a kept one, a recording that is gone; a late report waited for; the brain starts it after closing the recording. All 79 `tools/test_*.py` files pass.
+  - Run by hand on the real Forge World match that had just ended (20261115-204102, its report 14 s older than its recording's last line): the report was kept, the ledger and the site rebuilt, in under a second. `service_record.py --check-kills` then said both recorded matches' rows equal MCC's report for every player.
+  - The real site in a browser: that match's Weapons page, its heatmap zoomed and whole, Powerhouse's heatmap whole with no zoom offered, no console errors.
+- **Untested**: the brain starting it by itself as a match ends (the next recorded match). The zoom on a phone. A report MCC writes more than 30 s before the brain stops is not kept, by play.py's rule; it was 14 to 17 s in three matches.
+
 ### Kill record: the kill that wins the match counts; the first whole match equals MCC's report, 2026-11-15
 
 The owner played the first match recorded with the kill record (Powerhouse 20261115-203100, TU Team Slayer DMR, the owner and 7 bots, 478 s) and asked for it to be checked.

@@ -187,11 +187,9 @@ th[aria-sort="descending"] button::after { content: " \25BC"; color: var(--accen
 .vbars text { font: 11px var(--font); fill: var(--ink-2); }
 .tip { position: fixed; z-index: 20; pointer-events: none; background: var(--panel-3); color: var(--ink); border: 1px solid var(--accent); border-radius: var(--radius); padding: var(--s-1) var(--s-2); font-size: var(--t-sm); max-width: 16rem; }
 
-/* heatmaps: the map's picture dimmed under the spots; without one, the spots on a plain panel */
-.heat { position: relative; max-width: 900px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.heat img { width: 100%; height: auto; filter: grayscale(0.9) brightness(0.5) contrast(1.1); }
-.heat canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
-.heat.plain canvas { position: static; height: auto; }
+/* heatmaps: one canvas, the map's picture drawn dimmed under the spots (app.js); without one, the spots alone */
+.heat { max-width: 900px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.heat canvas { display: block; width: 100%; height: auto; }
 .key { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); list-style: none; margin: 0; padding: 0; color: var(--ink-2); font-size: var(--t-sm); }
 .key .sw { display: inline-block; width: 12px; height: 12px; margin-right: var(--s-2); vertical-align: -1px; }
 .key .kill { background: var(--kill); border-radius: 50%; }

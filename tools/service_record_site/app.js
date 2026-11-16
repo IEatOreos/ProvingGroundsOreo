@@ -460,6 +460,7 @@
   // Kills and deaths on a map's top-down picture (maps/<id>.png, copied in by the build with the part of the level it
   // shows). Each spot is a soft glow, so places fought over often grow bright, with a mark on top: a dot where this
   // bot stood for a kill, a cross where it died. Without a picture of the map the spots are plotted on a plain panel.
+  // A map tab leaves the view (whole map or zoomed) to the map it opens: its link drops ?view.
   function heatmaps(p) {
     const g = side(p);
     if (!recorded(g)) return [banner(p), panel("Heatmaps", empty("Not recorded yet", NO_KILLS))];
@@ -469,26 +470,45 @@
     const id = ids.includes(route.q.map) ? route.q.map : ids[0];
     const show = ["kills", "deaths"].includes(route.q.show) ? route.q.show : "both";
     const spots = g.heat[id], pic = (D.heat_maps || {})[id];
-    const link = (q) => href(["p", p.name, "heatmaps"], Object.assign({ map: id === ids[0] ? null : id, show: show === "both" ? null : show }, q));
+    const link = (q) => href(["p", p.name, "heatmaps"], Object.assign({ map: id === ids[0] ? null : id, show: show === "both" ? null : show,
+      view: route.q.view === "all" ? "all" : null }, q));
     const mapTabs = el("ul", { class: "tabs" }, ids.map((m) => el("li", null,
-      el("a", { href: link({ map: m === ids[0] ? null : m }), "aria-current": m === id ? "true" : null }, mapName(m) + " (" + int(count(m)) + ")"))));
+      el("a", { href: link({ map: m === ids[0] ? null : m, view: null }), "aria-current": m === id ? "true" : null }, mapName(m) + " (" + int(count(m)) + ")"))));
     const showTabs = el("ul", { class: "seg", "aria-label": "Show" }, [["both", "Kills and deaths"], ["kills", "Kills"], ["deaths", "Deaths"]].map(([k, label]) =>
       el("li", null, el("a", { href: link({ show: k === "both" ? null : k }), "aria-current": k === show ? "true" : null }, label))));
     const nk = spots.k.length / 2, nd = spots.d.length / 2;
     const canvas = el("canvas", { role: "img", "aria-label": p.name + " on " + mapName(id) + ": " + int(nk) + " kills, " + int(nd) + " deaths plotted" });
-    let frame = pic && pic.frame;
-    if (!frame) {                                   // no picture: the spots' own bounds, a tenth of margin, square units
-      const all = spots.k.concat(spots.d), xs = all.filter((_, i) => i % 2 === 0), ys = all.filter((_, i) => i % 2 === 1);
-      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-      const pad = Math.max(4, 0.1 * Math.max(x1 - x0, y1 - y0));
-      frame = [x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad];
+    // What is shown: [x0, y0, width, height] in the level's units. The whole picture, or, when every spot lies in a
+    // small part of it (a Forge variant in a corner of Forge World), that part with a margin; without a picture, the
+    // spots' own bounds. The picture is drawn into the canvas, cut to the view and dimmed, under the spots.
+    const all = spots.k.concat(spots.d), xs = all.filter((_, i) => i % 2 === 0), ys = all.filter((_, i) => i % 2 === 1);
+    const bx = Math.min(...xs), by = Math.min(...ys), bw = Math.max(...xs) - bx, bh = Math.max(...ys) - by;
+    const pad = Math.max(6, 0.15 * Math.max(bw, bh));
+    let near = [bx - pad, by - pad, bw + 2 * pad, bh + 2 * pad];
+    const frame = pic && pic.frame;
+    const small = frame && near[2] < 0.6 * frame[2] && near[3] < 0.6 * frame[3];
+    const whole = route.q.view === "all" || !small;
+    if (frame) {                                    // no taller than it is wide, no flatter than 5:3, inside the picture
+      const w = Math.min(frame[2], Math.max(near[2], near[3])), h = Math.min(frame[3], Math.max(near[3], 0.6 * w));
+      const cx = near[0] + near[2] / 2, cy = near[1] + near[3] / 2;
+      near = [Math.min(Math.max(cx - w / 2, frame[0]), frame[0] + frame[2] - w), Math.min(Math.max(cy - h / 2, frame[1]), frame[1] + frame[3] - h), w, h];
     }
+    const view = frame && whole ? frame : near;
+    const art = pic ? new Image() : null;
     const draw = () => {
-      const W = 1200, H = Math.max(1, Math.round((W * frame[3]) / frame[2]));
+      const W = 1200, H = Math.max(1, Math.round((W * view[3]) / view[2]));
       canvas.width = W;
       canvas.height = H;
       const c = canvas.getContext("2d"), css = getComputedStyle(document.documentElement);
-      const at = (list, i) => [((list[i] - frame[0]) / frame[2]) * W, (1 - (list[i + 1] - frame[1]) / frame[3]) * H];
+      if (art && art.complete && art.naturalWidth) {
+        const iw = art.naturalWidth, ih = art.naturalHeight, filters = "filter" in c;
+        if (filters) c.filter = "grayscale(0.9) brightness(0.5) contrast(1.1)";
+        c.drawImage(art, ((view[0] - frame[0]) / frame[2]) * iw, (1 - (view[1] + view[3] - frame[1]) / frame[3]) * ih,
+          (view[2] / frame[2]) * iw, (view[3] / frame[3]) * ih, 0, 0, W, H);
+        if (filters) c.filter = "none";
+        else { c.fillStyle = "rgba(6, 13, 22, 0.55)"; c.fillRect(0, 0, W, H); }      // (a browser without them: a dark wash)
+      }
+      const at = (list, i) => [((list[i] - view[0]) / view[2]) * W, (1 - (list[i + 1] - view[1]) / view[3]) * H];
       const layers = [["deaths", spots.d, css.getPropertyValue("--death").trim() || "#6cb8ff"],
         ["kills", spots.k, css.getPropertyValue("--kill").trim() || "#f2b84b"]].filter((x) => show === "both" || show === x[0]);
       c.globalCompositeOperation = "lighter";
@@ -516,10 +536,12 @@
       }
     };
     draw();
-    const figure = el("div", { class: "heat" + (pic ? "" : " plain") },
-      pic && el("img", { src: pic.img, alt: "", onerror: (e) => { e.target.remove(); figure.classList.add("plain"); } }), canvas);
+    if (art) { art.onload = draw; art.src = pic.img; }
+    const figure = el("div", { class: "heat" }, canvas);
+    const viewLink = small && el("p", null, el("a", { class: "more", href: link({ view: whole ? null : "all" }) },
+      whole ? "Zoom in on where the fights were" : "Show the whole map"));
     return [banner(p), mapTabs,
-      panel(mapName(id), el("div", { class: "body" }, figure,
+      panel(mapName(id), el("div", { class: "body" }, figure, viewLink,
         el("ul", { class: "key" },
           el("li", null, el("span", { class: "sw kill" }), int(nk) + (nk === 1 ? " kill" : " kills") + ": a dot where this bot stood"),
           el("li", null, el("span", { class: "sw death" }), int(nd) + (nd === 1 ? " death" : " deaths") + ": a cross where it died")),
@@ -620,7 +642,7 @@
     route.q.game = null;
     location.hash = href(route.parts, q);
   });
-  document.getElementById("built").textContent = "Built " + D.built + ". Rebuilds when a match starts.";
+  document.getElementById("built").textContent = "Built " + D.built + ". Rebuilds when a recorded match ends and when one starts.";
   window.addEventListener("hashchange", render);
   render();
 

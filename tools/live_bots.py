@@ -1412,6 +1412,19 @@ def main():
                 print("bug report recordings:", e, flush=True)
         if collector:
             collector.close()
+        if o.trace:
+            # (custom, Nov 15) this match into the career totals and onto the Service Record now, not when the next
+            # match starts: MCC's report kept beside the recording, then both rebuilt (tools/after_match.py). In the
+            # background, and only for the mod's own logs folder
+            try:
+                import subprocess
+                mine = os.path.normcase(os.path.abspath(os.path.join(ROOT, "logs")))
+                if os.path.normcase(os.path.abspath(os.path.dirname(o.trace))) == mine:
+                    subprocess.Popen([sys.executable, "-I", os.path.join(mine, "..", "tools", "after_match.py"), o.trace],
+                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            except Exception as e:
+                print("after match not started:", e, flush=True)
         for index, slot in slots.items():
             botctl.act(m, slot, 0, 0, last_yaw.get(index, 0.0), 0, 0)
 
