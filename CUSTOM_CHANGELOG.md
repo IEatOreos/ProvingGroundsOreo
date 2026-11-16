@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Service Record: every weapon has its picture; a blueprint theme, 2026-11-15
+
+The owner: "Make all the weapons have their png picture like the original website nice and neat. I think the website also needs a little more flare and theme".
+
+- **The pictures are MCC's own**: `careerdb.xml`'s Weapons list gives every damage type the picture MCC draws on its post-game Tools of Destruction, 352 x 100 light blue line drawings kept in `globaluitexturepack` and `mainmenuandcampaigntexturepack`. Nothing was downloaded.
+- `tools/service_record_art.py` `weapons` (new): reads them into `native/bin/service_record/art/weapons/` (not in git), each cut to what is drawn so it sits centred in its card, with `art/weapons.json` (damage type number to file). `tools/service_record_site/weapon_art.json` (new) says which of MCC's damage types each recorded number is (its names only, no picture). All 72 of Reach's numbers get one, 55 different pictures.
+- `tools/service_record.py` `weapon_pictures`: the pictures of the weapons a page names are copied into the site (`weapons/`), as `weapon_art` in the page data. One without a picture keeps the site's own plain mark.
+- Pages (`app.js`): the Weapons page is cards (the picture, the name, "Kills: N | Deaths: N", its share of the recorded kills and deaths) in place of the table; Top weapons on Summary shows the three deadliest the same way, and Overview has them too. Overview opens with four large numbers (kills, kill/death, wins, medals). The leaderboard's first three places are in gold.
+- Theme (`style.css`, our own drawing, no game art): a blueprint. A drafting grid behind the pages, panels with two bracketed corners and a heading bar that fades out, a hatched nameplate banner with a larger emblem and insignia, the rank bar in gold, weapon and medal cards on squared paper. A page's blocks rise into place, and bars draw from the left, unless the PC asks for reduced motion.
+- Validation: `tools/test_service_record_art.py` +2 (8: pictures read from a made-up MCC, a BC3 texture built by hand, cut to what is drawn, a number MCC has no picture for left out, the site copying safe names only; every number of `weapons.json` has an entry in `weapon_art.json`). All 79 `tools/test_*.py` files pass. On the real data: 11 recorded weapons, 11 pictures, each loads; every one of the 72 looked at on a labelled sheet beside its name. Leaderboard, Overview, Summary, Weapons and Medals looked at at 1280 px (headless Edge, from the folder); 12 pages at 375 px with no sideways scroll, no control under 24 px and no console errors. **Untested**: a real Chrome or Edge window, a screen reader; the pictures of the 61 damage types no bot has killed or died by yet are matched by name, as `weapons.json`'s unchecked names are.
+
 ### A recorded match is on the Service Record as it ends; heatmaps open on where the fights were, 2026-11-15
 
 The owner, asked whether the site should rebuild when a match ends: "Whatever you think is most efficient".

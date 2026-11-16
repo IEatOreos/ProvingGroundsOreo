@@ -125,6 +125,87 @@ def test_ranks_from_a_folder_of_numbered_pictures():
     assert big.size == (256, 256) and big.getpixel((128, 128)) == (9, 9, 9, 255) and big.getpixel((128, 10))[3] == 0
 
 
+def texture_pack(base, pictures):
+    """A made-up MCC texture pack (<base>.perm.bin / .temp.bin): pictures = {name: (width, height, lit blocks)}, a
+    BC3 picture of 4 x 4 blocks, see-through but for the (column, row) blocks listed, which are one solid colour."""
+    perm, temp = b"", b""
+    for name, (w, h, lit) in pictures.items():
+        data = b""
+        for row in range(h // 4):
+            for col in range(w // 4):
+                a = 255 if (col, row) in lit else 0
+                data += bytes([a, a, 0, 0, 0, 0, 0, 0]) + struct.pack("<HHI", 0x65BF, 0x65BF, 0)
+        e = bytearray(480)
+        e[0x44:0x44 + len(name)] = name.encode()
+        struct.pack_into("<I", e, 0x68, 3)
+        struct.pack_into("<HH", e, 0x74, w, h)
+        struct.pack_into("<QQ", e, 0x88, len(data), len(temp))
+        perm, temp = perm + bytes(e), temp + data
+    os.makedirs(os.path.dirname(base), exist_ok=True)
+    with open(base + ".perm.bin", "wb") as f:
+        f.write(perm)
+    with open(base + ".temp.bin", "wb") as f:
+        f.write(temp)
+
+
+def test_weapon_pictures_from_mcc():
+    """Each damage type number gets the picture MCC's own table names for it (or the picture named after an @), cut
+    to what is drawn; a number whose picture this MCC lacks is left out; the site copies only safe names."""
+    import json
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as tmp:
+        mcc, out = os.path.join(tmp, "mcc"), os.path.join(tmp, "art")
+        os.makedirs(os.path.join(mcc, os.path.dirname(art.CAREERDB)))
+        with open(os.path.join(mcc, art.CAREERDB), "w", encoding="utf-8") as f:
+            f.write('<db>\n<Weapons>\n<!-- <Weapon id="_damage_reporting_type_cut" image="pgcr_cut" /> -->\n'
+                    '<Weapon id="_damage_reporting_type_marksman_rifle" image="pgcr_DMR" name="$weapon_marksman_rifle" />\n'
+                    '<Weapon id="_damage_reporting_type_banshee" image="wod_banshee" name="$b" />\n'
+                    '<Weapon id="_damage_reporting_type_wasp" name="$no_image" />\n</Weapons>\n</db>\n')
+        texture_pack(os.path.join(mcc, art.WEAPON_PACKS[0]), {"PGCR_DMR": (32, 16, {(3, 1), (4, 1), (3, 2), (4, 2)})})
+        texture_pack(os.path.join(mcc, art.WEAPON_PACKS[1]), {"WOD_BANSHEE": (16, 8, {(0, 0)}), "PGCR_Guardians": (8, 8, {(0, 0), (1, 1)})})
+        table = os.path.join(tmp, "weapon_art.json")
+        with open(table, "w", encoding="utf-8") as f:
+            json.dump({"note": "made up", "reach": {"0": "@PGCR_Guardians", "6": "marksman_rifle", "29": "banshee",
+                                                    "30": "banshee", "40": "wasp", "41": "not_in_mcc", "42": "@NoSuchPicture"}}, f)
+        assert art.weapon_catalog(open(os.path.join(mcc, art.CAREERDB), encoding="utf-8").read()) == {
+            "marksman_rifle": "pgcr_DMR", "banshee": "wod_banshee"}
+        assert art.weapons(mcc, out, table) == 4
+        index = json.load(open(os.path.join(out, "weapons.json"), encoding="utf-8"))
+        assert index == {"reach": {"0": "pgcr_guardians.png", "6": "pgcr_dmr.png", "29": "wod_banshee.png",
+                                   "30": "wod_banshee.png"}}, index
+        assert sorted(os.listdir(os.path.join(out, "weapons"))) == ["pgcr_dmr.png", "pgcr_guardians.png", "wod_banshee.png"]
+        dmr = Image.open(os.path.join(out, "weapons", "pgcr_dmr.png"))
+        assert dmr.mode == "RGBA" and dmr.size == (16, 16), dmr.size        # (8 x 8 drawn, 4 kept round it)
+        assert dmr.getpixel((8, 8))[3] == 255 and dmr.getpixel((1, 1))[3] == 0
+        # the site's side: the earned ones copied in, by safe names only
+        spec2 = importlib.util.spec_from_file_location("service_record", os.path.join(HERE, "service_record.py"))
+        sr = importlib.util.module_from_spec(spec2)
+        spec2.loader.exec_module(sr)
+        store, site = os.path.join(tmp, "store"), os.path.join(tmp, "site")
+        os.makedirs(store)
+        os.rename(out, os.path.join(store, "art"))
+        index["reach"].update({"7": "../../secret.png", "8": "gone.png", "9": 5})
+        with open(os.path.join(store, "art", "weapons.json"), "w", encoding="utf-8") as f:
+            json.dump(index, f)
+        got = sr.weapon_pictures(["reach:6", "reach:29", "reach:7", "reach:8", "reach:9", "reach:99", "h4:6", "reach:?"],
+                                 sr.Paths(store=store, out=site))
+        assert got == {"reach:6": "weapons/pgcr_dmr.png", "reach:29": "weapons/wod_banshee.png"}, got
+        assert sorted(os.listdir(os.path.join(site, "weapons"))) == ["pgcr_dmr.png", "wod_banshee.png"]
+        assert sr.weapon_pictures(["reach:6"], sr.Paths(store=os.path.join(tmp, "none"), out=site)) == {}
+    assert art.weapons(os.path.join(tempfile.gettempdir(), "no_such_mcc_folder"), "unused") == 0
+
+
+def test_every_reach_damage_type_has_a_picture_entry():
+    """weapon_art.json names a picture for every number weapons.json names, and nothing else."""
+    import json
+    with open(art.WEAPON_ART, encoding="utf-8") as f:
+        pictures = json.load(f)["reach"]
+    with open(os.path.join(HERE, "service_record_site", "weapons.json"), encoding="utf-8") as f:
+        names = json.load(f)["reach"]["names"]
+    assert set(pictures) == set(names), sorted(set(pictures) ^ set(names), key=int)
+    assert all(isinstance(v, str) and v and " " not in v for v in pictures.values())
+
+
 def exe(ids):
     """A made-up 64-bit PE whose code looks a name up as MCC's does: ids = [(number, text), ...] in the code's
     order; the first is number 0, the last is coded as MCC codes its last."""

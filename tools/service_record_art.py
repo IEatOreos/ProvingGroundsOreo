@@ -27,7 +27,14 @@ step instead, each file's name starting with its step's number, 0 to the table's
 written). A picture keeps its own see-through parts and is centred on a square. No address is kept here: this tool
 never downloads.
 
+The weapons' pictures (the owner, Nov 15: "Make all the weapons have their png picture like the original website"):
+`weapons` reads the ones MCC itself draws on its post-game Tools of Destruction, 352 x 100 line drawings, one for
+every damage type of careerdb.xml's Weapons list, kept in globaluitexturepack and mainmenuandcampaigntexturepack.
+service_record_site/weapon_art.json says which damage type each recorded number is. Writes art/weapons/<picture>
+.png, cut to what is drawn, and art/weapons.json ({game: {number: file}}). Not in git either.
+
 usage: python -I service_record_art.py medals [MCC folder]
+       python -I service_record_art.py weapons [MCC folder]
        python -I service_record_art.py ranks <the rank chart picture>
        python -I service_record_art.py ranks <a folder of one picture a step, each named <step>_...>
 """
@@ -42,6 +49,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 OUT = os.path.join(ROOT, "native", "bin", "service_record", "art")
 RANKS_JSON = os.path.join(HERE, "service_record_site", "ranks.json")
+WEAPON_ART = os.path.join(HERE, "service_record_site", "weapon_art.json")
+WEAPON_PACKS = (os.path.join("data", "ui", "texturepacks", "globaluitexturepack"),
+                os.path.join("data", "ui", "texturepacks", "mainmenuandcampaigntexturepack"))
 TILE_SIZES = range(20, 49)     # a tile's side in the picture, pixels (the owner's chart: 28)
 FRAME_LIT = 38                 # every pixel of a tile's frame is at least this bright (0-255); the sheet is black
 INSIGNIA = 96                  # the side of each insignia written
@@ -155,13 +165,14 @@ def catalog(xml_text):
     return out
 
 
-def icons(mcc):
-    """{TEXTURE NAME: (width, height, BC3 bytes)} from medalstexturepack (480-byte entries: name at +0x44, format
-    +0x68 (3 = BC3), size +0x74, data size +0x88 and offset +0x90 in .temp.bin). The first of a name is kept."""
+def icons(mcc, pack=PACK):
+    """{TEXTURE NAME: (width, height, BC3 bytes)} from one of MCC's texture packs, medalstexturepack unless another
+    is named (480-byte entries: name at +0x44, format +0x68 (3 = BC3), size +0x74, data size +0x88 and offset +0x90
+    in .temp.bin). The first of a name is kept."""
     out = {}
-    with open(os.path.join(mcc, PACK + ".perm.bin"), "rb") as f:
+    with open(os.path.join(mcc, pack + ".perm.bin"), "rb") as f:
         perm = f.read()
-    with open(os.path.join(mcc, PACK + ".temp.bin"), "rb") as temp:
+    with open(os.path.join(mcc, pack + ".temp.bin"), "rb") as temp:
         for k in range(len(perm) // 480):
             e = perm[k * 480:(k + 1) * 480]
             name = e[0x44:0x64].split(b"\0")[0].decode("latin1").upper()
@@ -215,6 +226,71 @@ def medals(mcc, out=OUT):
     os.replace(tmp, os.path.join(out, "medals.json"))
     print(f"medals: {len(table)} named, {drawn} with an icon -> {out}")
     return len(table), drawn
+
+
+def weapon_catalog(xml_text):
+    """{"marksman_rifle": "pgcr_DMR", ...}: the picture MCC's careerdb.xml gives each damage type (its Weapons list,
+    comments dropped; an id is _damage_reporting_type_<the key>)."""
+    a, b = xml_text.find("<Weapons>"), xml_text.find("</Weapons>")
+    if a < 0 or b < 0:
+        return {}
+    out = {}
+    for attrs in re.findall(r"<Weapon\s([^>]*)>", re.sub(r"<!--.*?-->", "", xml_text[a:b], flags=re.S)):
+        m = dict(re.findall(r'(\w+)="([^"]*)"', attrs))
+        key = m.get("id", "").replace("_damage_reporting_type_", "")
+        if key and m.get("image"):
+            out.setdefault(key, m["image"])
+    return out
+
+
+def trimmed(img, margin=4):
+    """A picture cut to what is drawn on it (its see-through edges off, `margin` pixels kept), so every weapon sits
+    centred in its card whatever corner of MCC's canvas it was drawn in."""
+    box = img.getchannel("A").getbbox()
+    if not box:
+        return img
+    return img.crop((max(0, box[0] - margin), max(0, box[1] - margin),
+                     min(img.width, box[2] + margin), min(img.height, box[3] + margin)))
+
+
+def weapons(mcc, out=OUT, table=WEAPON_ART):
+    """Write the picture of everything that kills: <out>/weapons/<picture>.png, and <out>/weapons.json,
+    {game: {damage type number: file}} for the numbers of weapon_art.json whose picture this MCC has. Returns how
+    many numbers got a picture."""
+    need = [os.path.join(mcc, CAREERDB)] + [os.path.join(mcc, p + x) for p in WEAPON_PACKS for x in (".perm.bin", ".temp.bin")]
+    lost = [p for p in need if not os.path.exists(p)]
+    if lost:
+        print("weapons skipped: this copy of MCC has no " + lost[0])
+        return 0
+    with open(need[0], encoding="utf-8", errors="replace") as f:
+        cat = weapon_catalog(f.read())
+    with open(table, encoding="utf-8") as f:
+        wanted = {g: t for g, t in json.load(f).items() if isinstance(t, dict)}
+    pics = {}
+    for pack in WEAPON_PACKS:
+        for name, pic in icons(mcc, pack).items():
+            pics.setdefault(name, pic)
+    os.makedirs(os.path.join(out, "weapons"), exist_ok=True)
+    index, written = {}, set()
+    for game, numbers in wanted.items():
+        for number, value in numbers.items():
+            picture = value[1:] if value.startswith("@") else cat.get(value, "")
+            file = picture.lower() + ".png"
+            if picture.upper() not in pics or not re.fullmatch(r"[a-z0-9_]+\.png", file):
+                continue
+            if file not in written:
+                path = os.path.join(out, "weapons", file)
+                trimmed(bc3(*pics[picture.upper()])).save(path + ".tmp", "PNG")
+                os.replace(path + ".tmp", path)
+                written.add(file)
+            index.setdefault(game, {})[str(number)] = file
+    tmp = os.path.join(out, "weapons.json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(index, f, indent=1)
+    os.replace(tmp, os.path.join(out, "weapons.json"))
+    count = sum(len(v) for v in index.values())
+    print(f"weapons: {count} of {sum(len(v) for v in wanted.values())} damage types pictured, {len(written)} pictures -> {out}")
+    return count
 
 
 def find_tiles(lum, sizes=TILE_SIZES, lit=FRAME_LIT):
@@ -340,15 +416,15 @@ if __name__ == "__main__":
             ranks(sys.argv[2])
         except (ValueError, OSError) as e:
             sys.exit(f"ranks not cut: {e}")
-    elif sys.argv[1:2] == ["medals"]:
+    elif sys.argv[1:2] in (["medals"], ["weapons"]):
         sys.path.insert(0, ROOT)
         from brain import paths                                 # (where MCC is)
         folder = sys.argv[2] if len(sys.argv) > 2 else paths.mcc()
         if not folder:
             sys.exit("MCC was not found: give its folder")
         try:
-            medals(folder)
+            (medals if sys.argv[1] == "medals" else weapons)(folder)
         except (ValueError, struct.error, OSError) as e:
-            sys.exit(f"medals not read: {e}")
+            sys.exit(f"{sys.argv[1]} not read: {e}")
     else:
         sys.exit(__doc__)

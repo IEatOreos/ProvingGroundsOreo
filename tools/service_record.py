@@ -851,7 +851,31 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "players": out_players, "matches": matches, "medals": medals,
         "medal_art": bool(medal_names),
         "weapons": weapons, "heat_maps": {k: v for k, v in heat_maps.items() if v},
+        "weapon_art": weapon_pictures(weapons, paths),
     }
+
+
+def weapon_pictures(keys, paths):
+    """{"reach:6": "weapons/pgcr_dmr.png", ...}: the picture of each damage type the pages name, copied into the site
+    from this PC's art store (tools/service_record_art.py weapons: MCC's own pictures, never in git). A damage type
+    with no picture there is left out, and its card shows the site's own placeholder."""
+    index = load_json(os.path.join(paths.store, "art", "weapons.json"), {})
+    out = {}
+    for key in keys:
+        game_key, _, kind = key.partition(":")
+        name = index.get(game_key, {}).get(kind) if isinstance(index.get(game_key), dict) else None
+        if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9_]+\.png", name):
+            continue
+        src = os.path.join(paths.store, "art", "weapons", name)
+        dst = os.path.join(paths.out, "weapons", name)
+        try:
+            if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copyfile(src, dst)
+        except OSError:
+            continue
+        out[key] = "weapons/" + name
+    return out
 
 
 def write_site(data, paths):

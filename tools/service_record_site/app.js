@@ -208,6 +208,31 @@
   const weaponName = (key) => (D.weapons && D.weapons[key]) || ["Damage type " + key.split(":").pop(), true];
   const weaponList = (g) => Object.entries((g && g.weapons) || {})
     .sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1] || weaponName(a[0])[0].localeCompare(weaponName(b[0])[0]));
+  // A weapon's picture: MCC's own drawing of it, read from this PC's MCC by tools/service_record_art.py and copied
+  // in by the build (weapons/<name>.png); our own plain mark where there is none.
+  function weaponPicture(key) {
+    const src = D.weapon_art && D.weapon_art[key];
+    if (src) return el("img", { src, alt: "", loading: "lazy" });
+    return svg("svg", { viewBox: "0 0 96 48", "aria-hidden": "true" },
+      svg("circle", { cx: 48, cy: 24, r: 15, fill: "none", stroke: "currentColor", "stroke-width": 2 }),
+      svg("path", { d: "M48 3v12M48 33v12M21 24h12M63 24h12", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round" }));
+  }
+  // Weapons as cards, as the old stats pages showed them: the picture, the name, "Kills: N | Deaths: N", and under
+  // them this weapon's share of every recorded kill and death (`all` is the bot's whole list, `shown` the cards).
+  function weaponCards(shown, all, cls) {
+    const kills = all.reduce((n, w) => n + w[1][0], 0), deaths = all.reduce((n, w) => n + w[1][1], 0);
+    const pc = (n, of) => (of ? Math.round((100 * n) / of) + "%" : "-");
+    return el("ul", { class: "weapons" + (cls ? " " + cls : "") }, shown.map(([key, n]) => {
+      const [name, sure] = weaponName(key);
+      const shares = pc(n[0], kills) + " of kills, " + pc(n[1], deaths) + " of deaths";
+      return el("li", null,
+        el("div", { class: "pic" }, weaponPicture(key)),
+        el("div", { class: "nm" }, name, !sure && el("span", { class: "mark", title: "Named from the game's list of damage types; not yet matched to a kill seen live" }, " *")),
+        el("div", { class: "kd" }, "Kills: ", el("b", null, int(n[0])), el("span", { class: "sep", "aria-hidden": "true" }, "|"), "Deaths: ", el("b", null, int(n[1]))),
+        el("div", { class: "share", "data-tip": name + ": " + shares }, el("span", { style: "width:" + (kills ? (100 * n[0]) / kills : 0) + "%" })),
+        el("div", { class: "pc" }, shares));
+    }));
+  }
   function killNote(g, s) {
     if (g.kill_games >= s.games) {
       return "From the mod's record of every kill in " + (s.games === 1 ? "this bot's 1 counted match." : "all " + int(s.games) + " of this bot's counted matches.");
@@ -237,7 +262,7 @@
       });
       body.replaceChildren(...(rows.length ? rows.map((p, i) => {
         const s = bucket(p);
-        return el("tr", null, td(i + 1),
+        return el("tr", null, td(i + 1, i < 3 && s.games && !want ? "pos lead" : "pos"),
           td(el("span", { class: "cell" }, emblem(p, true), el("a", { href: href(["p", p.name, "overview"]) }, p.name),
             p.clan && el("span", { class: "tag hide-s" }, p.clan)), "l"),
           td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
@@ -289,7 +314,14 @@
       el("dt", null, "Playing since"), el("dd", null, g ? day(g.first) : "-")),
       el("a", { class: "more", href: href(["p", p.name, "summary"]) }, "Career stats"));
     const runs = g ? g.streak.runs : [];
-    return [banner(p), el("div", { class: "grid" }, armor, facts),
+    // the four numbers a record is read for first, large; then the bot's three deadliest weapons, when kills are recorded
+    const hero = el("ul", { class: "hero" }, [["Kills", int(s.kills)], ["Kill/Death", dec(s.r.kd)],
+      ["Wins", int(s.wins) + (s.games ? " of " + int(s.games) : "")], ["Medals", int(s.medals)]]
+      .map(([k, v]) => el("li", null, el("span", { class: "v" }, v), el("span", { class: "k" }, k))));
+    const best = recorded(g) ? weaponList(g).filter((w) => w[1][0]).slice(0, 3) : [];
+    return [banner(p), hero, el("div", { class: "grid" }, armor, facts),
+      best.length ? panel("Top weapons", el("div", { class: "body" }, weaponCards(best, weaponList(g), "best")),
+        el("a", { class: "more", href: href(["p", p.name, "weapons"]) }, "View weapons")) : null,
       el("div", { class: "grid" },
         panel("Games played", el("div", { class: "body" }, ring(g ? g.cats : {}))),
         panel("Kills by type", s.detailed ? el("div", { class: "body" }, hbars(killTypes(s)), reportNote(s))
@@ -376,7 +408,7 @@
         el("a", { class: "more", href: href(["p", p.name, "medals"]) }, "View all medals")),
       panel("Top weapons", recorded(g)
         ? el("div", { class: "body" }, weaponList(g).some((w) => w[1][0])
-          ? hbars(weaponList(g).filter((w) => w[1][0]).slice(0, 5).map(([key, n]) => [weaponName(key)[0], n[0]]))
+          ? weaponCards(weaponList(g).filter((w) => w[1][0]).slice(0, 3), weaponList(g), "best")
           : el("p", { class: "note" }, "No kills in the recorded matches yet."),
           el("p", { class: "note" }, killNote(g, bucket(p))))
         : el("div", { class: "body" },
@@ -419,18 +451,13 @@
     const list = weaponList(g);
     const kills = list.reduce((n, w) => n + w[1][0], 0), deaths = list.reduce((n, w) => n + w[1][1], 0);
     const unchecked = list.some(([key]) => !weaponName(key)[1]);
-    const lines = list.map(([key, n]) => {
-      const [name, sure] = weaponName(key);
-      return el("tr", null, td(sure ? name : [name, el("span", { class: "mark", title: "Named from the game's list of damage types; not yet matched to a kill seen live" }, " *")], "l wrap"),
-        td(int(n[0])), td(int(n[1])), td(kills ? Math.round((100 * n[0]) / kills) + "%" : "-", "hide-s"),
-        td(deaths ? Math.round((100 * n[1]) / deaths) + "%" : "-", "hide-s"));
-    }).concat(el("tr", null, el("th", { scope: "row", class: "l" }, "Total"), td(int(kills)), td(int(deaths)), td("", "hide-s"), td("", "hide-s")));
     return [banner(p),
-      panel("Weapons", el("div", null,
-        table(killNote(g, s) + " Kills are the ones the game credits to this bot against players of the other team; deaths are every way it died.",
-          [["Weapon", "l"], ["Kills"], ["Deaths"], ["Share of kills", "hide-s"], ["Share of deaths", "hide-s"]], lines),
-        unchecked && el("div", { class: "body" }, el("p", { class: "note" },
-          "* Named from the game's own list of damage types. This name has not yet been matched to a kill seen live.")))),
+      panel("Weapons", el("div", { class: "body" },
+        el("p", { class: "note" }, killNote(g, s) + " Kills are the ones the game credits to this bot against players of the other team; deaths are every way it died."),
+        weaponCards(list, list),
+        unchecked && el("p", { class: "note" },
+          "* Named from the game's own list of damage types. This name has not yet been matched to a kill seen live.")),
+        el("span", { class: "note" }, int(kills) + (kills === 1 ? " kill, " : " kills, ") + int(deaths) + (deaths === 1 ? " death" : " deaths"))),
       byType];
   }
 

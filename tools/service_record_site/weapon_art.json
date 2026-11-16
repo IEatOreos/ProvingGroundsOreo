@@ -1,0 +1,23 @@
+{
+  "note": "Which of MCC's own pictures shows each thing that kills (tools/service_record_art.py weapons). The numbers are weapons.json's: the damage type the game writes into a dead player's body. A value is MCC's name for that damage type (data/careerdb/careerdb.xml, _damage_reporting_type_<value>: MCC's table then picks the picture it draws on its own post-game Tools of Destruction), or, after an @, a picture's own name in MCC's texture packs where MCC's table has no such damage type. No picture is kept here: they are read from this PC's MCC into native/bin/service_record/art/weapons (not in git). A number matched to a kill seen live is listed in weapons.json; the pictures follow the same names.",
+  "reach": {
+    "0": "@PGCR_Guardians", "1": "@PGCR_Guardians", "2": "@PGCR_Guardians", "3": "@wod_suicide",
+    "4": "magnum_pistol", "5": "assault_rifle", "6": "marksman_rifle", "7": "shotgun", "8": "sniper_rifle",
+    "9": "rocket_launcher", "10": "spartan_laser", "11": "frag_grenade", "12": "grenade_launcher",
+    "13": "plasma_pistol", "14": "needler", "15": "plasma_rifle", "16": "plasma_repeater",
+    "17": "needle_rifle", "18": "spike_rifle", "19": "plasma_launcher", "20": "gravity_hammer",
+    "21": "energy_blade", "22": "plasma_grenade", "23": "concussion_rifle",
+    "24": "ghost", "25": "revenant_driver", "26": "revenant_gunner", "27": "wraith", "28": "wraith_antiinfantry",
+    "29": "banshee", "30": "banshee_bomb", "31": "seraph", "32": "mongoose", "33": "warthog_driver",
+    "34": "warthog_gunner", "35": "warthog_gunner_gauss", "36": "warthog_gunner_rocket",
+    "37": "scorpion", "38": "scorpion_gunner", "39": "falcon_driver", "40": "falcon_gunner",
+    "41": "falling_damage", "42": "collision_damage", "43": "melee", "44": "explosion",
+    "45": "birthday_party_explosion", "46": "flag", "47": "bomb", "48": "bomb_explosion", "49": "ball",
+    "50": "teleporter", "51": "transfer_damage", "52": "armor_lock_crush", "53": "airstrike",
+    "54": "human_turret", "55": "plasma_cannon", "56": "plasma_mortar", "57": "plasma_turret",
+    "58": "shade_turret", "59": "sabre", "60": "smg", "61": "carbine", "62": "battle_rifle",
+    "63": "focus_rifle", "64": "fuel_rod_cannon", "65": "missle_launcher", "66": "brute_shot",
+    "67": "flamethrower", "68": "sentinal_gun", "69": "sentinel_beam", "70": "sentinel_rpg",
+    "71": "proximity_mine"
+  }
+}
