@@ -6829,6 +6829,18 @@ class Bot:
             s.tboost_until = 0.0
             s.note("vehicle: wall close, easing off")
 
+    def air_unboost(s, act, vtol, way=None):
+        """(custom, Nov 15) air_guard stepped in: Reach's boost let go (it held a bot Banshee into Boneyard's back wall
+        for 13 s, then the bot got out: bug report 20261115-200228), and a run's way out turned to the open heading the
+        guard found (way), so the next tick's way out does not point it back at the wall."""
+        if s.game == "reach" and act.fire2:
+            act.fire2 = False
+            if not vtol:
+                act.vertical = 0.0
+        run = getattr(s, "air_run", None)
+        if way is not None and run is not None and run[0] == "out":
+            run[3] = way
+
     def air_guard(s, me, act, snap):
         """Every flyer's driver (Banshee, Hornet, Falcon, any "air" vehicle): a short-sighted LiDAR ahead every tick and a
         stall detector. The probe (Terrain.fly_clear along where it flies, 4-12 u by its speed, at its height, 0.6 u
@@ -6903,6 +6915,7 @@ class Bot:
             # (a Banshee backed off 0.9 u in a second on full reverse, live Sidewinder at 33 s: it does back up)
             back = now < rec[0]
             act.yaw, act.forward, act.strafe, act.fire = (rec[3], -1.0, 0.0, False) if back else (rec[2], 0.8, 0.0, False)
+            s.air_unboost(act, vtol, rec[2])
             if up_ok(act.yaw):
                 climb()
             s.note("air: stuck, backing off" if back else "air: stuck, out to open air")
@@ -6930,6 +6943,7 @@ class Bot:
                         and me.pos.z + 3.0 <= T.air_roof(me.pos.x, me.pos.y) - AIR_ROOF_M):
                     climb()
                     act.forward, act.strafe = max(-ease, min(ease, act.forward)), act.strafe * 0.5
+                    s.air_unboost(act, vtol)
                     s.note("air: wall ahead, climbing over")
                 else:
                     # the turn it took is held a second while it stays open (the goal's heading every tick flipped it
@@ -6943,6 +6957,7 @@ class Bot:
                         s.air_turn = (w, now + 1.0)
                     if w is None:
                         act.forward, act.strafe = -1.0, 0.0
+                        s.air_unboost(act, vtol)
                         s.note("air: wall ahead, backing off")
                     else:
                         if vtol:                    # (a Falcon keeps its facing for its gunners: the stick turns)
@@ -6950,6 +6965,7 @@ class Bot:
                             act.forward, act.strafe = m * math.cos(w - act.yaw), m * math.sin(w - act.yaw)
                         else:
                             act.yaw, act.forward = w, min(act.forward, ease + 0.2)
+                        s.air_unboost(act, vtol, w)
                         s.note("air: wall ahead, turning to open air")
         if landing:
             return
@@ -6968,6 +6984,8 @@ class Bot:
                 act.strafe = max(-1.0, min(1.0, act.strafe + 0.6 * push * math.sin(away - act.yaw)))
             else:
                 act.yaw += max(-0.6, min(0.6, wrap(away - act.yaw))) * 0.5 * push
+            if push > 0.5:                       # (within half its room: the boost let go)
+                s.air_unboost(act, vtol)
             s.note("air: too near something, easing off")
         if (getattr(s, "att", None) or [None])[0] in ("run", "pass"):
             # an attack run (air_pass): only the ground on its own path counts, AIR_PULL_S along the nose at its speed
@@ -6983,6 +7001,7 @@ class Bot:
                     run = getattr(s, "air_run", None)
                     if run is not None and run[0] == "in":
                         run[:] = ["out", run[1], now, act.yaw]   # the run ends: on, climbing
+                    s.air_unboost(act, vtol)
                     s.note("air: the ground on the run, pulling out")
                     break
             return

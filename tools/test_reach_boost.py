@@ -181,6 +181,29 @@ class BombFirstTests(unittest.TestCase):
         self.assertEqual(b.reach_shot_speed("ghost"), REACH_GHOST_BOLT)
 
 
+class GuardTests(unittest.TestCase):
+    """(bug report 20261115-200228: a bot Banshee boosted into Boneyard's back wall 13 s on its way out, then got out)"""
+
+    def test_the_guard_lets_go_and_turns_the_way_out(self):
+        b = bot("demon", name="reach_test")
+        b.air_run = ["out", 6, 40.0, -0.6]
+        act = Act()
+        act.fire2, act.vertical = True, 1.0
+        b.air_unboost(act, False, 1.2)
+        self.assertFalse(act.fire2)
+        self.assertEqual(act.vertical, 0.0)
+        self.assertEqual(b.air_run[3], 1.2)
+
+    def test_a_falcon_keeps_its_climb_and_a_run_in_its_heading(self):
+        b = bot("demon", name="reach_test")
+        b.air_run = ["in", 6, 40.0, -0.6]
+        act = Act()
+        act.fire2, act.vertical = True, 1.0
+        b.air_unboost(act, True, 1.2)
+        self.assertEqual(act.vertical, 1.0)
+        self.assertEqual(b.air_run[3], -0.6)
+
+
 class LeadTests(unittest.TestCase):
     def test_the_ghost_bolts_own_speed_leads_farther(self):
         me = PlayerState(0, 0, "bot", Vec(0, 0, 0), vehicle=20)

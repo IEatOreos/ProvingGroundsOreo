@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Reach Banshee: the air guards let go of the boost and turn the way out, 2026-11-15
+
+The owner's F9 on Boneyard (`logs/bug_reports/reach_70_boneyard_20261115-195851`, 20:02:28): "Oreo driving banshee weird stuck on back wall. Jumping out, not shooting bomb correctly".
+
+- **Found** (its trace, bot 3 Oreo, Demon): on the way out of a run (`att` "pass") from 92 s to 105.5 s it pressed into the back building at 0.4-3 u/s with the boost held the whole time (the way-out boost from earlier today). The guards turned it to open air ("wall ahead, turning to open air", "stuck, out to open air"), but the next tick's way out pointed it back along the run's saved heading, and "the ground on the run, pulling out" fired every tick. After 13 s the stuck rule got it out (Use held 0.8 s). The same at 131.9 s and 204.1 s. Its bomb cycles came in pairs 0.47 s apart, every 3.2-3.3 s, as planned; whether the game switched is not in the trace.
+- `brain/bot.py` `air_unboost` (new), called from `air_guard` wherever it steps in (stuck, wall ahead climbing / turning / backing off, the ground on a run, and "too near something" within half its room): Reach's boost let go, and on a run's way out its saved heading becomes the open one the guard found. Every game's guard as before otherwise; a Falcon keeps its climb input.
+- Validation: `tools/test_reach_boost.py` +2. All 75 `tools/test_*.py` files pass. **Untested in a match**; the bombs still need a live look.
+
 ### Service Record: the rebuild at match start waits up to 90 s for the career totals, 2026-11-15
 
 - **Seen live** (the owner's Boneyard match start at 19:58:31): the report was kept at 19:58:31, `bot_career.py` wrote the ledger at 19:58:51 and the site was rebuilt at 19:58:52 with that match in it (a bot's games went from 1 to 2). So the rebuild at match start works, but the ledger took 20 s, the whole of the wait the build allowed (`--wait-ledger 20`); a slower start would have built without the newest match.
