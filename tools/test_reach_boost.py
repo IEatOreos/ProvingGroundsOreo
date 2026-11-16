@@ -49,6 +49,14 @@ class TableTests(unittest.TestCase):
         self.assertEqual(struct.unpack_from("<f", act, 0x20)[0], 0.5)   # (the low half, the strafe, untouched)
 
 
+class CycleTableTests(unittest.TestCase):
+    def test_the_switch_bit_goes_with_the_press(self):
+        with open(ROOT / "maps" / "_inputs" / "reach.json", encoding="utf-8") as f:
+            rows = json.load(f)["cycle"]
+        self.assertIn(dict(off=8, mask=1 << 44, press=True), [{k: r[k] for k in ("off", "mask", "press")} for r in rows])
+        self.assertIn(768, [r["mask"] for r in rows if r["off"] == 0x40])     # (the held key as before)
+
+
 class Ground:
     def height_over(s, x, y, z):
         return 0.0

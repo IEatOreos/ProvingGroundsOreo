@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Reach bot pilots' bomb switch: the controller's switch bit, 2026-11-15
+
+The owner, in the first Boneyard match after the bomb-first change: "the bot hasnt used the bomb once".
+
+- **Found** (`logs/trace_reach_70_boneyard_20261115-194821.jsonl`): the bot pilot pressed the cycle 27 times in about 2 minutes of flying, so the brain did ask for the bomb; the game never switched. In the owner's controller capture (`logs/boost_capture_reach_20261115-191207`) every one of his 10 switch taps set `+0x40 0x100` and, 0.1-0.2 s in, `+0x08` bit 44 (`0x100000000000`) for a tick or two. botcore writes `+0x08` itself, so a bot's cycle had only the `+0x40` key bits.
+- `maps/_inputs/reach.json` `cycle`: `+0x08` bit 44 on the press tick (press-only), with the `+0x40 0x300` key as before. The cycle is used only by the Banshee's bomb (`Bot.fuel_rod`).
+- The same match showed the boost reaching the game: bot Ghosts with it held ran p90 8.4-8.7 u/s (5.2 without; never over about 5.5 before), the bot Banshee p90 7.6 (6.1 without; its guards eased it often).
+- Validation: `tools/test_reach_boost.py` +1. All 75 `tools/test_*.py` files pass. **Untested in a match**: that the switch now takes.
+
 ### Proving Grounds Service Record: a stats site for the bots, 2026-11-15
 
 The owner's brief (`docs/SERVICE_RECORD_SITE_BRIEF.md`): a stats tracker laid out like a 2010 service record, from what the mod already records. His answers to its questions: a local website named "Proving Grounds Service Record", on this PC only; "Just the bots for now" (a match's scoreboard still shows every gamertag); Reach first with a game filter; "for now I want the stats to be reset to 0 and then have them be live updated after every match or two"; game types grouped into families; the brief's credit formula, the same for every bot; Weapons, Enemies and Heatmaps say "not recorded yet"; "all the medals from mcc".

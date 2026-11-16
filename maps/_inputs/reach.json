@@ -41,6 +41,12 @@
    "mask": 768,
    "press": false,
    "how": "decoded live 2026-10-30: key 1, 25 ticks held, idle noise excluded"
+  },
+  {
+   "off": 8,
+   "mask": 17592186044416,
+   "press": true,
+   "how": "decoded live 2026-11-15 (the owner's controller, Banshee bomb switches, logs/boost_capture_reach_20261115-191207): every one of his 10 switch taps set +0x40 0x100 and, 0.1-0.2 s in, +0x08 bit 44 (0x100000000000) for a tick or two; the game's input makes that bit from the tap, botcore writes +0x08 itself, so a bot's cycle never had it. Live Boneyard 20261115-194821 before: a bot pilot pressed the cycle 27 times and the owner saw no bomb"
   }
  ],
  "fire2": [
