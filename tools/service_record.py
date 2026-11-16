@@ -276,13 +276,9 @@ TRACE_NAME = re.compile(r"^trace_(.+_\d{8}-\d{6})\.jsonl$")
 
 
 def read_kills(path):
-    """One recording's kill rows ([{..., "t": seconds into the match}], as written: tools/kill_record.py), or None
-    when it was recorded without them (no kill_record line among its first lines) or cannot be read. Read-only.
-
-    A version 1 recording wrote the engine's state as read after each death, so the kill that won the match reads as
-    "over" (live Powerhouse 20261115-203100: MCC's report counted that kill; it did not count the kill 6 s later,
-    whose credit the game never wrote). Its rows are put as version 2 writes them: the first "over" row is "played"
-    when the game wrote its credit at that death."""
+    """One recording's kill rows as written (tools/kill_record.py): {"v": the recorder's version, "rows": [{...,
+    "t": seconds into the match}]}, or None when it was recorded without them (no kill_record line among its first
+    lines) or cannot be read. Read-only. The store keeps this as it is; kill_rows reads it."""
     try:
         with open(path, "rb") as f:
             mark = re.search(rb'"kill_record": (\d+)', f.read(1 << 18))
@@ -300,14 +296,27 @@ def read_kills(path):
                 k = d.get("kill") if isinstance(d, dict) else None
                 if isinstance(k, dict):
                     rows.append(dict(k, t=d.get("t")))
-            if int(mark.group(1)) == 1:
-                over = [k for k in rows if k.get("st") == kill_record.OVER and isinstance(k.get("t"), (int, float))]
-                last = min(over, key=lambda k: k["t"], default=None)
-                if last is not None and last.get("new") is True:
-                    last["st"] = 1
-            return rows
+            return {"v": int(mark.group(1)), "rows": rows}
     except OSError:
         return None
+
+
+def kill_rows(entry):
+    """A stored recording's kill rows as version 2 of the recorder writes them. entry: what read_kills gave, or the
+    bare list of rows the store kept on its first day (version 1, as written).
+
+    Version 1 wrote the engine's state as read after each death, so the kill that won the match reads as "over" (live
+    Powerhouse 20261115-203100: MCC's report counted that kill; it did not count the kill 6 s later, whose credit the
+    game never wrote). Its first "over" row is "played" when the game wrote its credit at that death. Done here, each
+    time the rows are used, so what the store keeps stays what the recording said."""
+    version, rows = (entry.get("v", 1), entry.get("rows", [])) if isinstance(entry, dict) else (1, entry)
+    rows = [k for k in rows if isinstance(k, dict)] if isinstance(rows, list) else []
+    if version == 1:
+        over = [k for k in rows if k.get("st") == kill_record.OVER and isinstance(k.get("t"), (int, float))]
+        last = min(over, key=lambda k: k["t"], default=None)
+        if last is not None and last.get("new") is True:
+            rows = [dict(k, st=1) if k is last else k for k in rows]
+    return rows
 
 
 def update_kills(store, paths):
@@ -331,9 +340,9 @@ def update_kills(store, paths):
             continue
         files[key] = sig
         changed += 1
-        rows = read_kills(path)
-        if rows is not None:
-            kills[m.group(1)] = rows
+        entry = read_kills(path)
+        if entry is not None:
+            kills[m.group(1)] = entry
     for key in [k for k in files if k not in names]:         # (rotated away: its rows stay)
         del files[key]
         changed += 1
@@ -701,8 +710,8 @@ def collect(ledger, store_matches, roster, kills=None):
                  "type": (detail or {}).get("type", ""), "cat": family((detail or {}).get("type", "")),
                  "teams": bool(detail and detail["teams"]), "report": bool(detail), "rows": out_rows}
         matches.append(match)
-        rows = (kills or {}).get(f"{map_id}_{detail['start']}") if detail and map_id and detail.get("start") else None
-        tally = kill_tally(detail, rows) if rows is not None else None
+        entry = (kills or {}).get(f"{map_id}_{detail['start']}") if detail and map_id and detail.get("start") else None
+        tally = kill_tally(detail, kill_rows(entry)) if entry is not None else None
         match["kills"] = tally is not None
         for p in counting:
             if p["name"] not in listed:
@@ -937,9 +946,10 @@ def main(argv):
         matches = load_json(os.path.join(paths.store, "matches.json"), {}).get("matches", {})
         kills = load_json(os.path.join(paths.store, "kills.json"), {}).get("kills", {})
         for m in sorted(matches.values(), key=lambda m: m.get("start", "")):
-            rows = kills.get(f"{m.get('map')}_{m.get('start')}")
-            if rows is None:
+            entry = kills.get(f"{m.get('map')}_{m.get('start')}")
+            if entry is None:
                 continue
+            rows = kill_rows(entry)
             lines = kill_check(m, rows)
             off = [x for x in lines if x[1] != x[2] or x[3] != x[4]]
             print(f"{m['map']} {m['start']} ({m.get('type', '')}): {len(rows)} rows, "

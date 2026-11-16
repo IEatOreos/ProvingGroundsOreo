@@ -414,11 +414,19 @@ def test_the_kill_that_wins_the_match_counts():
             path = os.path.join(tmp, f"trace_reach_70_boneyard_20261115-19000{version}.jsonl")
             with open(path, "w", encoding="utf-8") as f:
                 f.write("\n".join([json.dumps({"t": 0.0, "kill_record": version})] + lines) + "\n")
-            return [(name, k, d) for name, k, _, d, _ in sr.kill_check(detail, sr.read_kills(path))]
+            return [(name, k, d) for name, k, _, d, _ in sr.kill_check(detail, sr.kill_rows(sr.read_kills(path)))]
         assert counted(1, rows) == [("Oreo", 2, 0), ("Wheezy", 0, 2)], counted(1, rows)
         assert counted(2, rows) == [("Oreo", 1, 0), ("Wheezy", 0, 1)], counted(2, rows)
         assert counted(1, [rows[0], rows[3]]) == [("Oreo", 1, 0), ("Wheezy", 0, 1)]   # (a left-over credit: not it)
         assert counted(1, list(reversed(rows))) == [("Oreo", 2, 0), ("Wheezy", 0, 2)]  # (by time, not by line)
+        # the store keeps the rows as the recording said (version and all); the first day's store kept a version 1
+        # recording as a bare list of rows, read the same way
+        kept = sr.read_kills(os.path.join(tmp, "trace_reach_70_boneyard_20261115-190001.jsonl"))
+        assert kept["v"] == 1 and [k["st"] for k in kept["rows"]] == [2, 2, 2, 1], kept
+        bare = sr.kill_rows(kept["rows"])
+        assert bare == sr.kill_rows(kept) and sorted(k["st"] for k in bare) == [1, 1, 2, 2], bare
+        assert [k["st"] for k in kept["rows"]] == [2, 2, 2, 1]                        # (reading changes nothing kept)
+        assert sr.kill_rows({"v": 2, "rows": kept["rows"]}) == kept["rows"] and sr.kill_rows({"v": 1}) == []
 
 
 def test_a_long_recording_keeps_its_kill_rows():
@@ -445,7 +453,7 @@ def test_a_long_recording_keeps_its_kill_rows():
         with open(path, encoding="utf-8") as f:
             times = [json.loads(x)["t"] for x in f if '"pos"' in x]
         assert times[0] > 20.0, times[0]                       # (the oldest rows are gone)
-        rows = sr.read_kills(path)
+        rows = sr.kill_rows(sr.read_kills(path))
         assert [(k["t"], k["vp"][0]) for k in rows] == [(0.5, 5), (12.0, 120), (39.5, 395)], rows
 
 
