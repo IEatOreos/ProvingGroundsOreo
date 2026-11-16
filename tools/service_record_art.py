@@ -14,17 +14,30 @@ Writes native/bin/service_record/art/medals/<number>.png and art/medals.json ({n
 tools/service_record.py copies the earned ones into the site. Game data: not in git. A medal with no icon in the
 pack keeps its name and the site's own placeholder.
 
+The rank insignia (the owner, Nov 15: "extract every insignia rank from the photo for each rank"): `ranks` cuts
+them from his picture of the rank chart, a black sheet with one row of square framed tiles per rank, a tile per
+Grade. The tiles are found by their lit frames; their rows must hold exactly the tiles the rank table holds
+(service_record_site/ranks.json: 1, 1, 2, 3, 4 ... 5, then 1 each), else nothing is written and the site keeps
+its own numbered placeholders. Writes art/ranks/<step>.png (the step's place in the table, 0 = Recruit; the
+tile's black made see-through) and keeps a copy of the picture beside them. Not in git either.
+
 usage: python -I service_record_art.py medals [MCC folder]
+       python -I service_record_art.py ranks <the rank chart picture>
 """
 import json
 import os
 import re
+import shutil
 import struct
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 OUT = os.path.join(ROOT, "native", "bin", "service_record", "art")
+RANKS_JSON = os.path.join(HERE, "service_record_site", "ranks.json")
+TILE_SIZES = range(20, 49)     # a tile's side in the picture, pixels (the owner's chart: 28)
+FRAME_LIT = 38                 # every pixel of a tile's frame is at least this bright (0-255); the sheet is black
+INSIGNIA = 96                  # the side of each insignia written
 EXE = os.path.join("MCC", "Binaries", "Win64", "MCC-Win64-Shipping.exe")
 CAREERDB = os.path.join("data", "careerdb", "careerdb.xml")
 PACK = os.path.join("data", "ui", "texturepacks", "medalstexturepack")
@@ -197,8 +210,96 @@ def medals(mcc, out=OUT):
     return len(table), drawn
 
 
+def find_tiles(lum, sizes=TILE_SIZES, lit=FRAME_LIT):
+    """[[(x, y, side), ...], ...]: every square of the usual side whose four edges are lit all along and brighter than
+    the pixels just outside them, as rows top to bottom, each row left to right. `lum` is the picture's brightness,
+    a 2D array."""
+    import numpy as np
+    from numpy.lib.stride_tricks import sliding_window_view as window
+    lum = np.asarray(lum, dtype=np.float32)
+    h, w = lum.shape
+    found = []
+    for s in sizes:
+        if s + 2 > min(h, w):
+            break
+        across, down = window(lum, s, axis=1), window(lum, s, axis=0)     # [y, x]: s pixels right of / below (x, y)
+        hmin, hmean, vmin, vmean = across.min(axis=2), across.mean(axis=2), down.min(axis=2), down.mean(axis=2)
+        rows, cols = h - s + 1, w - s + 1
+        ok = ((hmin[:rows, :cols] >= lit) & (hmin[s - 1:, :cols] >= lit) &
+              (vmin[:rows, :cols] >= lit) & (vmin[:rows, s - 1:] >= lit))
+        for y, x in np.argwhere(ok):
+            if not (0 < y < rows - 1 and 0 < x < cols - 1):
+                continue
+            edge = hmean[y, x] + hmean[y + s - 1, x] + vmean[y, x] + vmean[y, x + s - 1]
+            outside = hmean[y - 1, x] + hmean[y + s, x] + vmean[y, x - 1] + vmean[y, x + s]
+            found.append((float(edge - outside), int(x), int(y), s))
+    kept = []
+    for score, x, y, s in sorted(found, reverse=True):          # (the clearest frame of each overlapping bunch)
+        if score > 0 and all(abs(x - kx) > ks // 2 or abs(y - ky) > ks // 2 for kx, ky, ks in kept):
+            kept.append((x, y, s))
+    if kept:                                                    # (the chart's tiles are one size: its key's bigger
+        sides = [s for _, _, s in kept]                         # sample tile, and any other frame, is not one of them)
+        usual = max(set(sides), key=sides.count)
+        kept = [t for t in kept if abs(t[2] - usual) <= max(1, usual // 12)]
+    out = []
+    for x, y, s in sorted(kept, key=lambda t: (t[1], t[0])):
+        if out and abs(y - out[-1][0][1]) <= s * 0.4:
+            out[-1].append((x, y, s))
+        else:
+            out.append([(x, y, s)])
+    return [sorted(row) for row in out]
+
+
+def rank_rows(path=RANKS_JSON):
+    """How many tiles each rank's row holds: the rank and its Grades, from the rank table."""
+    with open(path, encoding="utf-8") as f:
+        return [len(r["cr"]) for r in json.load(f)["ranks"]]
+
+
+def insignia(img, x, y, s, side=INSIGNIA):
+    """One tile's inside (its frame left off) as an RGBA picture `side` wide; the tile's black is see-through."""
+    import numpy as np
+    from PIL import Image
+    frame = max(1, round(s / 14))
+    inner = img.crop((x + frame, y + frame, x + s - frame, y + s - frame)).resize((side, side), Image.LANCZOS)
+    rgb = np.asarray(inner.convert("RGB"), dtype=np.float32)
+    alpha = np.clip((rgb.max(axis=2) - 14) / 40, 0, 1) * 255     # (under 14 of 255: the sheet; over 54: solid)
+    return Image.fromarray(np.dstack([rgb, alpha]).astype(np.uint8), "RGBA")
+
+
+def ranks(picture, out=OUT):
+    """Cut every rank's insignia from the chart picture into <out>/ranks/<step>.png. Returns how many were written;
+    ValueError (nothing written) when the picture's tiles are not the rank table's."""
+    import numpy as np
+    from PIL import Image
+    img = Image.open(picture).convert("RGB")
+    rows = find_tiles(np.asarray(img.convert("L")))
+    want, got = rank_rows(), [len(r) for r in rows]
+    if got != want:
+        raise ValueError(f"the picture's rows of tiles {got} are not the rank table's {want}")
+    folder = os.path.join(out, "ranks")
+    os.makedirs(folder, exist_ok=True)
+    step = 0
+    for row in rows:
+        for x, y, s in row:
+            path = os.path.join(folder, f"{step}.png")
+            insignia(img, x, y, s).save(path + ".tmp", "PNG")
+            os.replace(path + ".tmp", path)
+            step += 1
+    keep = os.path.join(out, "rank_chart" + os.path.splitext(picture)[1].lower())
+    if os.path.abspath(picture) != os.path.abspath(keep):
+        shutil.copyfile(picture, keep)
+    print(f"ranks: {step} insignia -> {folder}")
+    return step
+
+
 if __name__ == "__main__":
-    if sys.argv[1:2] == ["medals"]:
+    if sys.argv[1:2] == ["ranks"] and len(sys.argv) == 3:
+        try:
+            ranks(sys.argv[2])
+        except (ValueError, OSError) as e:
+            sys.exit(f"ranks not cut: {e}")
+    elif sys.argv[1:2] == ["medals"]:
         sys.path.insert(0, ROOT)
         from brain import paths                                 # (where MCC is)
         folder = sys.argv[2] if len(sys.argv) > 2 else paths.mcc()

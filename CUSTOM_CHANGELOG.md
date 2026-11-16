@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Service Record: the rank insignia, cut from the owner's rank chart, 2026-11-15
+
+The owner sent his picture of the Reach rank chart (374 x 746, one row of framed tiles per rank, a tile per Grade), after: "Try to extract every insignia rank from the photo for each rank ... and if that shows to be a trouble revert to hand made for the ones you have trouble on". None gave trouble.
+
+- `tools/service_record_art.py` `ranks <picture>` (new):
+  - Finds the chart's square tiles by their lit frames (every pixel of all four edges at least 38 of 255, brighter than the pixels just outside), keeps the tiles of the usual side (the chart's key has one bigger sample tile), and reads them as rows.
+  - The rows must hold exactly the tiles the rank table holds (`ranks.json`: 1, 1, 2, 3, seven rows of 4, 5, then ten of 1); else nothing is written and the site keeps its numbered placeholders.
+  - Writes `native/bin/service_record/art/ranks/<step>.png` (96 x 96, the frame left off, the tile's black see-through) and keeps a copy of the picture as `art/rank_chart.jpg`. Game art: not in git.
+- The site needed no change: the build already copies `art/ranks` and the pages show `ranks/<step>.png` where there is one.
+- Validation:
+  - `tools/test_service_record_art.py` (new, 5): a made-up chart's tiles found in the table's order with its key tile left out; each cut named by its step, its own shade in the middle and its black see-through; a chart a rank short and a black picture refused with nothing written; MCC's medal numbers decoded from a made-up exe (all four codings, and refused when medal 8 is not the assist); medal names and kinds. All 77 `tools/test_*.py` files pass (76 before).
+  - On the owner's picture: 50 tiles of 28 px found, rows as the table; every cut looked at on one sheet beside the chart, all 22 ranks and their Grades in order. The site rebuilt with them: all 50 load at 96 x 96, and the banner and leaderboard draw the picture, not the placeholder.
+  - **Soft, not sharp**: each insignia is 24 px across in the picture and is shown at 56 px. A bigger picture of the same chart, cut with the same command, would be sharper.
+  - **Untested**: a rank above Recruit on a live page (every bot is a Recruit today).
+
 ### Reach bot pilots' bomb switch: the controller's switch bit, 2026-11-15
 
 The owner, in the first Boneyard match after the bomb-first change: "the bot hasnt used the bomb once".
