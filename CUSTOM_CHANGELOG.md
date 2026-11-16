@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Reach Banshee pilots bomb first, every 3.2 s, at the controller's switch speed, 2026-11-15
+
+The owner, recording on Boneyard: "show in reach how fast you can shoot a banshee bomb while spamming it, and then implement the bots prioritizing the banshee bomb first"; then "I showed two ways to shoot with the plasma casters first then bomb, and the bomb first method which is usually better."
+
+- **Found** (`logs/boost_capture_reach_20261115-191207`, `logs/reach_shot_capture_20261115-191208`):
+  - Spammed, the bomb fired once every 3.06-3.08 s (7 bombs); in his runs after that, every 4.3-7.4 s with the cannons between.
+  - On a controller the cycle (+0x40 0x100) to the bomb's shot took 0.20-0.25 s; bomb first, the cycle back came 0.12 s after the bomb and the cannons 0.15 s after that. The bots used his keyboard pairs: 0.67 s to the shot, 0.59 s back, and one bomb every 6 s.
+  - Bombs flew 19-22 u/s and landed within 0.7 u of his aim line at 10-20 u (nose 27-43 deg down): no arc to aim over. Cannon bolts flew about 78 u/s.
+- `brain/bot.py`, Reach only (Halo 4 unchanged), every tier the bomb was on before:
+  - `REACH_FUELROD` (3.2, 0.25, 0.12, 0.05) through `fuelrod_times`: a bomb at most every 3.2 s (0.1 s over the recharge), the shot 0.25 s after the cycle press, a 0.12 s tap, the cycle back 0.05 s later. The bomb still goes first whenever it is ready and in reach (10-31 u, the nose within 3 u of him): it outranks the cannons in the same tick, as before.
+  - The run's boost is off while the bomb is under way (`air_pass`, way in and way out).
+  - `reach_shot_speed`: while the bomb is selected the lead uses `REACH_BOMB_SPEED` 20 u/s (the Ghost's bolt speed moved here too).
+- Validation: `tools/test_reach_boost.py` +4 (the Reach bomb timeline, Halo 4's kept, the 3.2 s and no boost on the bomb's tick, the bomb's lead). All 75 `tools/test_*.py` files pass. **Untested in a match**: whether a bot's cycle press (the keyboard decode, +0x40 0x300) switches as fast as his controller's 0x100, and the hits.
+
 ### Reach Ghost and Banshee bots boost for real; Banshee runs boost in and out and pull back to turn; Ghost lead from its bolt speed, 2026-11-15
 
 The owner recorded himself on Boneyard (controller): a Ghost with boost holds and hard turns, Ghost shots at about 3, 8 and 17 u (middle, high, low), then a Banshee with boost holds and turns with the throttle back and forward. "For the ghost I would like for the bots to boost when deciding to splatter an enemy, or to get to a spot when not fighting in it. And the banshee as well."

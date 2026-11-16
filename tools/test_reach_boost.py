@@ -129,6 +129,50 @@ class RunTests(unittest.TestCase):
         self.assertNotEqual(act.forward, AIR_TIGHT_THROTTLE)
 
 
+class BombFirstTests(unittest.TestCase):
+    """(Nov 15: "the bomb first method which is usually better") Reach's controller rhythm: a bomb every 3.2 s, the
+    cycle to the shot 0.25 s, back on the cannons about 0.4 s after the press."""
+
+    def timeline(self, name):
+        b = bot("strong", name=name)
+        b.rod = ["to", 0.0]
+        out = []
+        for i in range(120):
+            now = i / 60
+            act = Act()
+            act.cycle = False
+            b.fuel_rod(now, act)
+            out.append((now, act.cycle, act.fire))
+            if b.rod is None:
+                break
+        return out
+
+    def test_reach_bomb_then_cannons_fast(self):
+        out = self.timeline("reach_test")
+        cycles = [t for t, c, _ in out if c]
+        shots = [t for t, _, f in out if f]
+        self.assertEqual(len(cycles), 2)
+        self.assertAlmostEqual(shots[0], 0.25, delta=1 / 60 + 1e-9)
+        self.assertLess(cycles[1], 0.5)
+
+    def test_halo4_keeps_its_timing(self):
+        shots = [t for t, _, f in self.timeline("h4_test") if f]
+        self.assertGreater(shots[0], 0.6)
+
+    def test_every_run_from_3_2_s_and_no_boost_into_it(self):
+        b, act = RunTests().run_at(Vec(CANNON_R, 0, 9.0))     # (29.4 u: in the bomb's reach, past gun range, nose on)
+        self.assertIsNotNone(b.rod)
+        self.assertAlmostEqual(b.rod_next - 50.0, 3.2)
+        self.assertFalse(act.fire2)
+
+    def test_the_bombs_lead(self):
+        b = bot("strong", name="reach_test")
+        self.assertIsNone(b.reach_shot_speed("banshee"))
+        b.rod = ["to", 0.0]
+        self.assertEqual(b.reach_shot_speed("banshee"), 20.0)
+        self.assertEqual(b.reach_shot_speed("ghost"), REACH_GHOST_BOLT)
+
+
 class LeadTests(unittest.TestCase):
     def test_the_ghost_bolts_own_speed_leads_farther(self):
         me = PlayerState(0, 0, "bot", Vec(0, 0, 0), vehicle=20)

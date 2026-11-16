@@ -660,6 +660,19 @@ FUELROD_R, FUELROD_EVERY, FUELROD_FIRE, FUELROD_SHOT, FUELROD_BACK = (10.0, 31.0
 # 17 s; the game's own recharge is not read: a cycle to a bomb still recharging costs 1.3 s of cannons); the bomb
 # goes with the nose within BOMB_GUN_R of him (its blast), not the cannons' AIR_GUN_R. Recent matches: 3-8 bombs
 BOMB_GUN_R = 3.0
+# (custom, Nov 15) Reach's bomb first, the owner's Boneyard capture on a controller (logs/boost_capture_reach_20261115-
+# 191207, logs/reach_shot_capture_20261115-191208: "the bomb first method which is usually better"): spammed, one bomb
+# every 3.06-3.08 s (7 bombs), so REACH_FUELROD's every is that recharge; the cycle to the shot 0.20-0.25 s, the shot to
+# the cycle back 0.12 s, the cannons 0.15 s after that (the keyboard's 0.67 / 0.44 above were his key 1 pairs). His
+# bombs flew 19-22 u/s (REACH_BOMB_SPEED, the lead while it is selected) and landed within 0.7 u of his aim line from
+# 10-20 u. (every, cycle to shot, trigger tap, shot to cycle back), s
+REACH_FUELROD = (3.2, 0.25, 0.12, 0.05)       # (every: 0.1 s over the recharge, a press on a bomb not ready is wasted)
+REACH_BOMB_SPEED = 20.0
+
+
+def fuelrod_times(game):
+    """(every, fire, shot, back) for this game's bomb: Reach's measured controller rhythm, else FUELROD_*."""
+    return REACH_FUELROD if game == "reach" else (FUELROD_EVERY, FUELROD_FIRE, FUELROD_SHOT, FUELROD_BACK)
 RAM_ERR = {"average": 20.0, "strong": 12.0, "top": 0.0, "demon": 0.0}   # a ram's heading error, degrees at most (guide 18 2.1; Easy never rams)
 BOOST_R, BOOST_CONE, BOOST_HOLD, BOOST_EVERY = 8.0, math.radians(20.0), 0.85, 3.0   # Bot.ram_boost (a skilled player's)
 # (custom, Nov 14, the owner: "I want the ghost to boost when they go to run over a person ... you have to hold it
@@ -4759,7 +4772,7 @@ class Bot:
                                             origin=origin, target_point=tp,
                                             crouched=crouched(foe), protected=profiles.fixed_high(s.p),
                                             splash_at_feet=not chest_shot,
-                                            shot_speed=REACH_GHOST_BOLT if s.game == "reach" and kind == "ghost" else None)
+                                            shot_speed=s.reach_shot_speed(kind))
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             d = dist(me.pos, b.pos)
             lo, hi = st["rng"]
@@ -5181,7 +5194,8 @@ class Bot:
             act.yaw, act.pitch, act.forward = run[3], (0.6 if h < start_h else 0.0), 1.0
             act.fire = False
             act.fire2 = now < getattr(s, "fire2_until", 0.0)   # (a press already going is held through)
-            act.fire2 = act.fire2 or s.game == "reach"         # (custom, Nov 15) Reach: boosted out, as the player
+            # (custom, Nov 15) Reach: boosted out, as the player, once a bomb under way is done
+            act.fire2 = act.fire2 or (s.game == "reach" and getattr(s, "rod", None) is None)
             if jinking:
                 act.yaw += AIR_JINK * jink[1]
                 act.fire2 = act.fire2 or s.game == "reach"
@@ -5231,15 +5245,17 @@ class Bot:
                 act.forward, act.fire2 = AIR_TIGHT_THROTTLE, False
                 act.fire = False
                 s.note("air: pulled back, turning tight")
-            elif d > CANNON_R and off_nose < TRAVEL_BOOST_CONE:
-                act.fire2 = True
+            elif d > CANNON_R and off_nose < TRAVEL_BOOST_CONE and getattr(s, "rod", None) is None:
+                act.fire2 = True                     # (not while the bomb is up: its shot goes first)
         rb = math.atan2(BOMB_GUN_R, max(d, 1.0))     # (custom, Nov 13: the bomb's wider window, its blast)
         bomb_on = on or (abs(wrap(ya - act.yaw)) < rb and abs(pa - act.pitch) < rb)
         if (getattr(s, "can_cycle", s.game == "reach") and getattr(s, "veh_kind", "banshee") == "banshee" and bomb_on
                 and FUELROD_R[0] <= d <= FUELROD_R[1] and getattr(s, "rod", None) is None
                 and now >= getattr(s, "rod_next", 0.0) and (s.game == "reach" or me.pos.z - b.pos.z >= 2.0)):
             # (the bomb from over him; Reach's fuel rod straight on) fuel_rod() from drive does the cycle, shot, cycle
-            s.rod, s.rod_next = ["to", now], now + FUELROD_EVERY
+            s.rod, s.rod_next = ["to", now], now + fuelrod_times(s.game)[0]
+            if s.game == "reach":
+                act.fire2 = False                    # (custom, Nov 15: no boost into the bomb's shot)
         s.boost(act)
         s.att = ["run", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
 
@@ -5352,6 +5368,17 @@ class Bot:
                 s.note("vehicle: boost into him")
         s.boost(act)
 
+    def reach_shot_speed(s, kind):
+        """(custom, Nov 15) A Reach driver's own shot speed where it is not its gun's: the Ghost's bolts, the Banshee's
+        bomb while it is selected (Bot.fuel_rod); None elsewhere."""
+        if s.game != "reach":
+            return None
+        if kind == "ghost":
+            return REACH_GHOST_BOLT
+        if kind == "banshee" and getattr(s, "rod", None) is not None:
+            return REACH_BOMB_SPEED
+        return None
+
     def fuel_rod(s, now, act):
         """A Banshee's bomb (Reach's fuel rod), cycled to like a secondary (can_cycle: Halo 4, Reach): the cycle press,
         then one shot of the main trigger, then the cycle back to the cannons, timed as a player's (Reach's key 1 pairs;
@@ -5364,16 +5391,17 @@ class Bot:
             return
         k = now - r[1]
         act.fire = False
+        _, fire_at, shot, back = fuelrod_times(s.game)     # (custom, Nov 15: Reach's controller rhythm)
         if r[0] == "to":
             act.cycle = k < 1e-6                     # (the press, on the tick it started)
-            if k >= FUELROD_FIRE:
+            if k >= fire_at:
                 r[:] = ["shot", now]
                 act.fire = True
         elif r[0] == "shot":
-            act.fire = k < FUELROD_SHOT
-            if k >= FUELROD_SHOT:
+            act.fire = k < shot
+            if k >= shot:
                 r[:] = ["back", now]
-        elif k >= FUELROD_BACK:
+        elif k >= back:
             act.cycle, s.rod = True, None            # back on the cannons
 
     def patrol_point(s, me):
