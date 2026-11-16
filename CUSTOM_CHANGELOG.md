@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Service Record: sharper rank insignia, one 91 x 91 picture a rank, 2026-11-15
+
+The cuts from the owner's chart were 24 px across and soft at 56 px. Asked for a larger copy, he gave the Halopedia page of Reach's ranks, which shows each rank's own picture, and said to download them.
+
+- Downloaded once, with his OK (by hand, not by a tool: no address is in the repo): the page's 50 rank pictures, 310,677 bytes in all, into `native/bin/service_record/art/rank_icons` as `<step>_<the page's file name>`, the step being the page's table row. Game art: not in git.
+- `tools/service_record_art.py` `ranks <folder>` (new form): one picture a step, each file's name starting with its step's number, 0 to 49, each once (else nothing is written). A picture keeps its own see-through parts and is centred on a square (three of the 50 are 91 x 88). `ranks <chart picture>` still works; the owner's chart is kept as `art/rank_chart.jpg`.
+- **For the owner to settle**: the page's table agrees with `ranks.json` on all 50 names and their order and on 49 of the credits. It gives Major Grade 2 as 370,000 cR; the brief, and so `ranks.json`, has 375,000. Left as the brief has it.
+- Validation: `tools/test_service_record_art.py` +1 (6: a folder's pictures written by step with their see-through parts, one not square centred, a missing and a doubled number refused with nothing written, a big picture made smaller). All 77 `tools/test_*.py` files pass. Every one of the 50 looked at on one labelled sheet beside the cuts from his chart: the same insignia at every step. The site rebuilt: its 50 `ranks/<step>.png` are the store's, 91 x 91; a bot's page opened from the folder in headless Edge draws the Recruit picture. **Untested**: a rank above Recruit on a live page.
+
 ### Reach Banshee: the air guards let go of the boost and turn the way out, 2026-11-15
 
 The owner's F9 on Boneyard (`logs/bug_reports/reach_70_boneyard_20261115-195851`, 20:02:28): "Oreo driving banshee weird stuck on back wall. Jumping out, not shooting bomb correctly".

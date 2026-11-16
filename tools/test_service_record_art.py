@@ -85,6 +85,46 @@ def test_a_chart_that_is_not_the_tables_is_refused():
             raise AssertionError("a black picture was cut")
 
 
+def test_ranks_from_a_folder_of_numbered_pictures():
+    """One picture a step, named by its number: written by step with its own see-through parts kept, one that is
+    not square centred on a square; a missing or a doubled number refused with nothing written."""
+    from PIL import Image
+    steps = sum(art.rank_rows())
+    with tempfile.TemporaryDirectory() as tmp:
+        src, out = os.path.join(tmp, "icons"), os.path.join(tmp, "art")
+        os.makedirs(src)
+        for n in range(steps):
+            size = (91, 88) if n == 39 else (91, 91)
+            img = Image.new("RGBA", size, (0, 0, 0, 0))
+            img.paste((10 + 4 * n, 90, 200, 255), (20, 20, 70, 70))
+            img.save(os.path.join(src, f"{n:02d}_HR_Rank_{n}_Icon.png"))
+        open(os.path.join(src, "notes.txt"), "w").close()                  # (not a picture: left alone)
+        assert art.ranks(src, out) == steps == 50
+        assert not os.path.exists(os.path.join(out, "rank_chart.png"))
+        for n in (0, 7, 39, 49):
+            tile = Image.open(os.path.join(out, "ranks", f"{n}.png"))
+            assert tile.mode == "RGBA" and tile.size == (91, 91), (n, tile.mode, tile.size)
+            assert tile.getpixel((45, 45)) == (10 + 4 * n, 90, 200, 255) and tile.getpixel((2, 2))[3] == 0, n
+        assert Image.open(os.path.join(out, "ranks", "39.png")).getpixel((20, 21))[3] == 255     # (moved down 1)
+        for break_it in ("missing", "doubled"):
+            bad, bad_out = os.path.join(tmp, break_it), os.path.join(tmp, break_it + "_art")
+            os.makedirs(bad)
+            for n in range(steps):
+                if not (break_it == "missing" and n == 12):
+                    Image.new("RGBA", (8, 8)).save(os.path.join(bad, f"{n:02d}_x.png"))
+            if break_it == "doubled":
+                Image.new("RGBA", (8, 8)).save(os.path.join(bad, "12_again.png"))
+            try:
+                art.ranks(bad, bad_out)
+            except ValueError as e:
+                assert ("not one for each step" in str(e)) == (break_it == "missing"), e
+            else:
+                raise AssertionError(break_it)
+            assert not os.path.exists(bad_out)
+    big = art.squared(Image.new("RGB", (1024, 512), (9, 9, 9)))
+    assert big.size == (256, 256) and big.getpixel((128, 128)) == (9, 9, 9, 255) and big.getpixel((128, 10))[3] == 0
+
+
 def exe(ids):
     """A made-up 64-bit PE whose code looks a name up as MCC's does: ids = [(number, text), ...] in the code's
     order; the first is number 0, the last is coded as MCC codes its last."""

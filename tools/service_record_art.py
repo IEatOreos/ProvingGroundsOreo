@@ -21,8 +21,15 @@ Grade. The tiles are found by their lit frames; their rows must hold exactly the
 its own numbered placeholders. Writes art/ranks/<step>.png (the step's place in the table, 0 = Recruit; the
 tile's black made see-through) and keeps a copy of the picture beside them. Not in git either.
 
+Sharper ones (the owner then gave a page that shows each rank's own 91 x 91 picture; those 50, downloaded once with
+his OK into art/rank_icons as <step>_<the page's file name>): `ranks <folder>` takes a folder of one picture a
+step instead, each file's name starting with its step's number, 0 to the table's last, each once (else nothing is
+written). A picture keeps its own see-through parts and is centred on a square. No address is kept here: this tool
+never downloads.
+
 usage: python -I service_record_art.py medals [MCC folder]
        python -I service_record_art.py ranks <the rank chart picture>
+       python -I service_record_art.py ranks <a folder of one picture a step, each named <step>_...>
 """
 import json
 import os
@@ -267,30 +274,64 @@ def insignia(img, x, y, s, side=INSIGNIA):
     return Image.fromarray(np.dstack([rgb, alpha]).astype(np.uint8), "RGBA")
 
 
-def ranks(picture, out=OUT):
-    """Cut every rank's insignia from the chart picture into <out>/ranks/<step>.png. Returns how many were written;
-    ValueError (nothing written) when the picture's tiles are not the rank table's."""
+def rank_pictures(folder):
+    """The folder's pictures in the rank table's order: each file's name starts with its step's number
+    ("00_...png" is Recruit's). ValueError unless they are numbered 0 to the table's last step, each once."""
+    by_step = {}
+    for name in os.listdir(folder):
+        m = re.match(r"(\d+)(?=\D)", name)
+        if not m or not name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")):
+            continue
+        if int(m.group(1)) in by_step:
+            raise ValueError(f"two pictures are numbered {int(m.group(1))}")
+        by_step[int(m.group(1))] = os.path.join(folder, name)
+    steps = sum(rank_rows())
+    if sorted(by_step) != list(range(steps)):
+        raise ValueError(f"the folder has {len(by_step)} numbered pictures, not one for each step 0 to {steps - 1}")
+    return [by_step[n] for n in range(steps)]
+
+
+def squared(img, most=256):
+    """A picture as RGBA, centred on a see-through square of its longer side (made smaller when over `most`); its
+    own see-through parts kept."""
+    from PIL import Image
+    img = img.convert("RGBA")
+    if max(img.size) > most:
+        k = most / max(img.size)
+        img = img.resize((max(1, round(img.width * k)), max(1, round(img.height * k))), Image.LANCZOS)
+    side = max(img.size)
+    out = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    out.paste(img, ((side - img.width) // 2, (side - img.height) // 2))
+    return out
+
+
+def ranks(source, out=OUT):
+    """Every rank's insignia into <out>/ranks/<step>.png, from the chart picture (cut tile by tile) or from a folder
+    of one picture a step (rank_pictures). Returns how many were written; ValueError, with nothing written, when
+    the picture's tiles or the folder's pictures are not the rank table's."""
     import numpy as np
     from PIL import Image
-    img = Image.open(picture).convert("RGB")
-    rows = find_tiles(np.asarray(img.convert("L")))
-    want, got = rank_rows(), [len(r) for r in rows]
-    if got != want:
-        raise ValueError(f"the picture's rows of tiles {got} are not the rank table's {want}")
+    if os.path.isdir(source):
+        made = [squared(Image.open(p)) for p in rank_pictures(source)]
+    else:
+        img = Image.open(source).convert("RGB")
+        rows = find_tiles(np.asarray(img.convert("L")))
+        want, got = rank_rows(), [len(r) for r in rows]
+        if got != want:
+            raise ValueError(f"the picture's rows of tiles {got} are not the rank table's {want}")
+        made = [insignia(img, x, y, s) for row in rows for x, y, s in row]
     folder = os.path.join(out, "ranks")
     os.makedirs(folder, exist_ok=True)
-    step = 0
-    for row in rows:
-        for x, y, s in row:
-            path = os.path.join(folder, f"{step}.png")
-            insignia(img, x, y, s).save(path + ".tmp", "PNG")
-            os.replace(path + ".tmp", path)
-            step += 1
-    keep = os.path.join(out, "rank_chart" + os.path.splitext(picture)[1].lower())
-    if os.path.abspath(picture) != os.path.abspath(keep):
-        shutil.copyfile(picture, keep)
-    print(f"ranks: {step} insignia -> {folder}")
-    return step
+    for step, picture in enumerate(made):
+        path = os.path.join(folder, f"{step}.png")
+        picture.save(path + ".tmp", "PNG")
+        os.replace(path + ".tmp", path)
+    if not os.path.isdir(source):
+        keep = os.path.join(out, "rank_chart" + os.path.splitext(source)[1].lower())
+        if os.path.abspath(source) != os.path.abspath(keep):
+            shutil.copyfile(source, keep)
+    print(f"ranks: {len(made)} insignia -> {folder}")
+    return len(made)
 
 
 if __name__ == "__main__":
