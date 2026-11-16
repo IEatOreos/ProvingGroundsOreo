@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Reach ranks: one copy, so the site and the game cannot drift, 2026-11-15
+
+The owner, asked whether Major Grade 2 is 375,000 cR (his brief) or 370,000 (the page the insignia came from): "Either just make sure it stays flush if we end up adding ranks into the game for bots."
+
+- Major Grade 2 stays 375,000 (`tools/service_record_site/ranks.json` unchanged).
+- `CUSTOMIZATIONS.md`: the rule. The rank table and the credit formula are `ranks.json`; a bot's credits are the site build's. If the game ever shows a bot's Reach rank it takes both from there (a file the site build writes for it), never its own list or its own sum. Today's in-game badges are MCC's account ranks by difficulty, a different thing.
+- `tools/test_reach_ranks_one_copy.py` (new, 2): fails when a source file under `brain/`, `tools/`, `tools/service_record_site/` or `native/` other than `ranks.json` holds three or more of the table's telling credit figures (those with three or more digits before their zeros: 26,250, 1,180,000, 5,650,000 ...), however written (`1180000`, `1,180,000`, `1_180_000`); a file whose first lines name `ranks.json` (a generated header) may hold them.
+- Validation: passes on today's tree; with a made-up header holding four of the figures planted in `native/` it failed and named the file, and passed again once it was removed. `tools/test_service_record.py` and `tools/test_service_record_art.py` pass. Nothing in the game shows a Reach rank yet, so there is no second side to compare.
+
 ### Service Record: sharper rank insignia, one 91 x 91 picture a rank, 2026-11-15
 
 The cuts from the owner's chart were 24 px across and soft at 56 px. Asked for a larger copy, he gave the Halopedia page of Reach's ranks, which shows each rank's own picture, and said to download them.
