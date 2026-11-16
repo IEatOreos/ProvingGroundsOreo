@@ -1,7 +1,7 @@
 """tools/service_record.py: the leaderboard equals bot_career's totals, the bots' restart, who is listed, the rates and
 their formats, the rank table and credits, game type families, a report kept in full after the rotation, bad reports;
 the kill rows (tools/kill_record.py) summed per weapon, per opponent and per map, kept after the rotation, a match
-without them, bad rows, a long recording's trim, a map picture's frame."""
+without them, bad rows, a long recording's trim, a map picture's frame; the bots' home states."""
 import importlib.util
 import json
 import os
@@ -131,6 +131,34 @@ def test_zero_deaths_and_rate_formats():
     third = sr.blank() | {"games": 3, "kills": 10, "deaths": 3, "seconds": 0}
     assert sr.rates(third)["kd"] == 3.33 and sr.rates(third)["kph"] is None, sr.rates(third)
     assert sr.rates(sr.blank())["kd"] == 0.0 and sr.rates(sr.blank())["kpg"] is None
+
+
+def test_home_states():
+    """Each bot's home state (the state leaderboards) comes from its name alone: the same name always lands in the same
+    state (pinned, so a change to states.json or the picking that would move the bots fails here), the picks follow
+    the population weights, every state has one of the four regions, and the site names every bot's state and the
+    vehicle damage types."""
+    regions, states = sr.load_states()
+    assert [r[0] for r in regions] == ["northeast", "midwest", "south", "west"] and len(states) == 50, regions
+    assert len({s[0] for s in states}) == 50 and {s[2] for s in states} == {r[0] for r in regions}
+    pinned = {"Oreo": "CO", "OutlawMarine": "AZ", "LilWraith": "KY", "Lord117": "CA", "Ice": "IL", "V4nt4R1ot": "IA"}
+    assert {n: sr.home_state(n, states) for n in pinned} == pinned
+    picks = [sr.home_state(f"Bot{i}", states) for i in range(20000)]
+    total = sum(s[3] for s in states)
+    for code, weight in (("CA", 39538), ("TX", 29146), ("WY", 577)):
+        share = picks.count(code) / len(picks)
+        assert abs(share - weight / total) < 0.012, (code, share, weight / total)
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600), row(bot(2), "Oreo", 1, 0, 7, 0, 3, 600)]))
+        w.career()
+        data = w.build()
+        assert player(data, "Oreo")["state"] == "CO" and data["states"]["CO"] == ["Colorado", "west"], data["states"]["CO"]
+        assert all(p["state"] in data["states"] for p in data["players"])
+        assert data["regions"] == regions and "reach:29" in data["vehicles"] and "reach:6" not in data["vehicles"]
+    names = sr.load_weapons()["reach"][0]
+    assert all(k.split(":")[1] in names for k in sr.vehicle_keys()), sr.vehicle_keys()
 
 
 def test_bots_restart_and_roster():

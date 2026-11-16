@@ -43,7 +43,7 @@
   const catName = new Map(D.cats);
   const RING = ["slayer", "ctf", "koth", "territories", "oddball", "infection", "assault", "invasion"];
   const PAGES = [
-    ["Service Record", [["overview", "Overview"], ["history", "Game History"], ["commendations", "Commendations"],
+    ["Service Record", [["overview", "Overview"], ["placements", "State Placements"], ["history", "Game History"], ["commendations", "Commendations"],
       ["heatmaps", "Heatmaps"], ["achievements", "Achievements"], ["profile", "Profile"]]],
     ["Career Stats", [["summary", "Summary"], ["types", "By Game Type"], ["maps", "By Map"], ["medals", "Medals"],
       ["weapons", "Weapons"], ["enemies", "Enemies"]]],
@@ -80,7 +80,7 @@
     return el("div", { class: "empty" }, el("strong", null, strong), text);
   }
   const noGames = () => empty("No counted matches yet",
-    "Nothing has been recorded here for " + gameName.get(game()) + ". This fills in after the bot's next match: " +
+    "Nothing has been recorded here for " + gameName.get(game()) + ". This fills in after the next match: " +
     "the site rebuilds itself when a match starts.");
 
   function emblem(p, small) {
@@ -114,7 +114,7 @@
         : "Highest rank reached (" + int(p.cr) + " cR)"));
   }
   function banner(p) {
-    const chips = [p.roster ? "Roster bot" : "Matchmaking pool bot",
+    const chips = [p.roster ? "Roster" : "Matchmaking pool", D.states && D.states[p.state] && "Home: " + D.states[p.state][0],
       p.difficulty && "Difficulty: " + title(p.difficulty), p.style && "Play style: " + title(p.style)].filter(Boolean);
     return el("div", { class: "banner" }, emblem(p),
       el("div", { class: "who" }, el("h1", null, p.name), p.clan && el("div", { class: "tag" }, "Clan tag: " + p.clan),
@@ -235,13 +235,13 @@
   }
   function killNote(g, s) {
     if (g.kill_games >= s.games) {
-      return "From the mod's record of every kill in " + (s.games === 1 ? "this bot's 1 counted match." : "all " + int(s.games) + " of this bot's counted matches.");
+      return "From the mod's record of every kill in " + (s.games === 1 ? "the 1 counted match." : "all " + int(s.games) + " counted matches.");
     }
-    return "From the mod's record of every kill, kept for " + int(g.kill_games) + " of this bot's " + int(s.games) +
+    return "From the mod's record of every kill, kept for " + int(g.kill_games) + " of " + int(s.games) +
       " counted matches: the others were played before it was written.";
   }
   const NO_KILLS = "The mod writes a record of every kill (who the game credits, with what, where) for Reach matches " +
-    "recorded from 15 November 2026 on. None of this bot's counted matches here has one yet: it fills in after its next recorded match.";
+    "recorded from 15 November 2026 on. None of the counted matches here has one yet: it fills in after the next recorded match.";
 
   // ---------------------------------------------------------------- the leaderboard (the player picker)
   const SORTS = { name: (p) => p.name.toLowerCase(), rank: (p) => p.cr, games: (p) => bucket(p).games,
@@ -267,8 +267,8 @@
             p.clan && el("span", { class: "tag hide-s" }, p.clan)), "l"),
           td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
           td(int(s.games)), td(int(s.wins), "hide-s"), td(int(s.kills)), td(int(s.deaths)), td(int(s.assists), "hide-s"), td(dec(s.r.kd)));
-      }) : [el("tr", null, el("td", { class: "l", colspan: 9 }, "No bot matches “" + find + "”."))]));
-      count.textContent = rows.length + " of " + D.players.length + " bots";
+      }) : [el("tr", null, el("td", { class: "l", colspan: 9 }, "Nothing matches “" + find + "”."))]));
+      count.textContent = rows.length + " of " + D.players.length + " shown";
     }
     const head = (k, label, cls) => {
       const on = k === key;
@@ -279,18 +279,120 @@
     draw();
     const played = D.players.filter((p) => bucket(p).games).length;
     return [
-      el("h1", null, "Leaderboard"),
+      el("h1", null, "Bot Tracker"), boardTabs(""),
       el("p", { class: "note" }, played
-        ? int(played) + " of " + int(D.players.length) + " bots have a counted match in " + gameName.get(game()) + ". Choose a bot to open its Service Record."
-        : "No bot has a counted match in " + gameName.get(game()) + " yet. Every bot starts at 0; the numbers fill in after the next match."),
-      panel("Bots", el("div", { class: "scroll" }, el("table", null,
-        el("thead", null, el("tr", null, el("th", { scope: "col" }, "#"), head("name", "Bot", "l"), head("rank", "Rank", "l hide-s"),
+        ? int(played) + " of " + int(D.players.length) + " have a counted match in " + gameName.get(game()) + ". Choose a name to open its Service Record."
+        : "Nobody has a counted match in " + gameName.get(game()) + " yet. Everyone starts at 0; the numbers fill in after the next match."),
+      panel("Standings", el("div", { class: "scroll" }, el("table", null,
+        el("thead", null, el("tr", null, el("th", { scope: "col" }, "#"), head("name", "Name", "l"), head("rank", "Rank", "l hide-s"),
           head("games", "Games"), head("wins", "Wins", "hide-s"), head("kills", "Kills"), head("deaths", "Deaths"),
           head("assists", "Assists", "hide-s"), head("kd", "K/D"))), body)),
         el("div", { class: "toolbar" }, count,
-          el("label", null, "Find a bot", el("input", { type: "search", value: find, autocomplete: "off",
+          el("label", null, "Find a name", el("input", { type: "search", value: find, autocomplete: "off",
             oninput: (e) => { find = e.target.value; draw(); } })))),
     ];
+  }
+
+  // ---------------------------------------------------------------- state leaderboards
+  // Every bot has a home state, picked by the build from its name alone (states.json), so it never moves. A board
+  // ranks the bots of one area (nationwide, a census region or a state) by one number; a bot with none of that number
+  // is left off the board, never shown at 0. Equal numbers share a place.
+  const REGIONS = new Map(D.regions || []);
+  const STATES = D.states || {};
+  const VEHICLES = new Set(D.vehicles || []);
+  const BOARDS = [["overall", "Overall"], ["mode", "Mode"], ["weapon", "Weapon"], ["vehicle", "Vehicle"]];
+  const crOf = (s) => { const w = D.credits; return s.games * w.game + s.wins * w.win + s.kills * w.kill + s.assists * w.assist + s.medals * w.medal; };
+  const stateName = (code) => (STATES[code] || [code || "Unknown"])[0];
+  const regionOf = (p) => (STATES[p.state] || [])[1];
+  const areaName = (a) => (!a ? "Nationwide" : REGIONS.has(a) ? REGIONS.get(a) : stateName(a));
+  const inArea = (p, a) => !a || p.state === a || regionOf(p) === a;
+  const validArea = (a) => (a && (REGIONS.has(a) || STATES[a]) ? a : "");
+  function killsWith(p, key) {   // [kills, deaths] with one damage type, or with every vehicle ("all"); null: no kill rows
+    const g = side(p);
+    if (!recorded(g)) return null;
+    if (key !== "all") return g.weapons[key] || [0, 0];
+    return Object.entries(g.weapons).filter(([k]) => VEHICLES.has(k)).reduce((n, [, v]) => [n[0] + v[0], n[1] + v[1]], [0, 0]);
+  }
+  // a board's choices in the game shown: the modes some bot played, the weapons and vehicles some bot has a kill with
+  function boardKeys(kind) {
+    if (kind === "overall") return [];
+    if (kind === "mode") return D.cats.filter(([k]) => D.players.some((p) => bucket(p, k).games));
+    const mine = (k) => (game() === "all" || k.startsWith(game() + ":")) && VEHICLES.has(k) === (kind === "vehicle");
+    const keys = Object.keys(D.weapons || {}).filter(mine)
+      .filter((k) => D.players.some((p) => { const n = killsWith(p, k); return n && n[0]; }))
+      .map((k) => [k, weaponName(k)[0]]).sort((a, b) => a[1].localeCompare(b[1]));
+    return kind === "vehicle" && keys.length ? [["all", "All vehicles"]].concat(keys) : keys;
+  }
+  function board(kind, key) {
+    if (kind === "overall" || kind === "mode") {
+      const cat = kind === "mode" ? key : "all";
+      return { kind, key, label: kind === "mode" ? catName.get(key) || key : "Overall", unit: "cR",
+        value: (p) => { const s = bucket(p, cat); return s.games ? crOf(s) : null; },
+        cols: [["Games"], ["Wins", "hide-s"], ["K/D", "hide-s"]],
+        cells: (p) => { const s = bucket(p, cat); return [td(int(s.games)), td(int(s.wins), "hide-s"), td(dec(s.r.kd), "hide-s")]; } };
+    }
+    return { kind, key, label: key === "all" ? "All vehicles" : weaponName(key)[0], unit: "Kills",
+      value: (p) => { const n = killsWith(p, key); return n && n[0] ? n[0] : null; },
+      cols: [["Deaths to it", "hide-s"]], cells: (p) => [td(int(killsWith(p, key)[1]), "hide-s")] };
+  }
+  function standings(b, area) {
+    const rows = D.players.filter((p) => inArea(p, area)).map((p) => ({ p, v: b.value(p) })).filter((r) => r.v != null);
+    rows.sort((x, y) => y.v - x.v || x.p.name.localeCompare(y.p.name));
+    rows.forEach((r, i) => { r.place = i && r.v === rows[i - 1].v ? rows[i - 1].place : i + 1; });
+    return rows;
+  }
+  const boardHref = (b, area) => href(["states"], { board: b.kind === "overall" ? null : b.kind,
+    key: b.kind === "overall" ? null : b.key, area: area || null });
+  function boardTabs(on) {
+    return el("ul", { class: "tabs" }, [["", "Leaderboard", []], ["states", "By state", ["states"]]].map(([k, label, parts]) =>
+      el("li", null, el("a", { href: href(parts), "aria-current": k === on ? "true" : null }, label))));
+  }
+  function statesPage() {
+    const kind = BOARDS.some(([k]) => k === route.q.board) ? route.q.board : "overall";
+    const keys = boardKeys(kind);
+    const key = kind === "overall" ? "all" : keys.some(([k]) => k === route.q.key) ? route.q.key : (keys[0] || [null])[0];
+    const area = validArea(route.q.area);
+    const b = key ? board(kind, key) : null;
+    const go = (q) => { location.hash = href(["states"], Object.assign({ board: kind === "overall" ? null : kind, key: kind === "overall" ? null : key, area: area || null }, q)); };
+    const counted = (a) => D.players.filter((p) => inArea(p, a)).length;
+    const homes = [...new Set(D.players.map((p) => p.state).filter((c) => STATES[c]))].sort((x, y) => stateName(x).localeCompare(stateName(y)));
+    const kinds = el("ul", { class: "seg", "aria-label": "Board" }, BOARDS.map(([k, label]) => el("li", null,
+      el("a", { href: href(["states"], { board: k === "overall" ? null : k, area: area || null }), "aria-current": k === kind ? "true" : null }, label))));
+    const keyPick = keys.length ? el("label", null, kind === "mode" ? "Mode" : title(kind),
+      el("select", { onchange: (e) => go({ key: e.target.value }) }, keys.map(([k, label]) => el("option", { value: k, selected: k === key }, label)))) : null;
+    const areaPick = el("label", null, "Area", el("select", { onchange: (e) => go({ area: e.target.value || null }) },
+      el("option", { value: "", selected: !area }, "Nationwide (" + D.players.length + ")"),
+      el("optgroup", { label: "Regions" }, [...REGIONS].map(([k, n]) => el("option", { value: k, selected: k === area }, n + " (" + counted(k) + ")"))),
+      el("optgroup", { label: "States" }, homes.map((c) => el("option", { value: c, selected: c === area }, stateName(c) + " (" + counted(c) + ")")))));
+    const tools = el("div", { class: "toolbar picks" }, kinds, keyPick, areaPick);
+    let body;
+    if (!b) {
+      body = empty("Nothing to rank yet", kind === "mode" ? "Nobody has a counted match in " + gameName.get(game()) + " yet."
+        : "No kill with a " + kind + " is recorded in " + gameName.get(game()) + " yet. The mod's kill record fills this board after each recorded match.");
+    } else {
+      const rows = standings(b, area);
+      body = table(null, [["#"], ["Name", "l"], ["State", "l"], ["Region", "l hide-s"], [b.unit]].concat(b.cols),
+        rows.map((r) => el("tr", null, td(r.place, r.place <= 3 ? "pos lead" : "pos"),
+          td(el("span", { class: "cell" }, emblem(r.p, true), el("a", { href: href(["p", r.p.name, "placements"]) }, r.p.name)), "l"),
+          td(el("a", { href: boardHref(b, r.p.state) }, stateName(r.p.state)), "l"),
+          td(el("a", { href: boardHref(b, regionOf(r.p)) }, areaName(regionOf(r.p))), "l hide-s"),
+          td(int(r.v)), b.cells(r.p))),
+        { none: "Nobody in " + areaName(area) + " is on this board yet." });
+    }
+    // each state of the area, its bots and its leader on this board (not when one state is shown)
+    const inside = b && !STATES[area] ? homes.filter((c) => !area || STATES[c][1] === area)
+      .map((c) => [c, standings(b, c)]).filter(([, rows]) => rows.length) : [];
+    const leaders = inside.length ? panel("Leaders by state", table(null, [["State", "l"], ["Region", "l hide-s"], ["On the board"], ["Leader", "l"], [b.unit]],
+      inside.map(([c, rows]) => el("tr", null, td(el("a", { href: boardHref(b, c) }, stateName(c)), "l"), td(areaName(STATES[c][1]), "l hide-s"),
+        td(int(rows.length) + " of " + int(counted(c))),
+        td(rows.filter((r) => r.place === 1).map((r, i) => [i ? ", " : null, el("a", { href: href(["p", r.p.name, "placements"]) }, r.p.name)]), "l"),
+        td(int(rows[0].v)))))) : null;
+    const what = !b ? "" : b.unit === "cR" ? "credits earned in " + (kind === "mode" ? b.label + " matches" : "every counted match") : "kills with " + (key === "all" ? "any vehicle" : "the " + b.label);
+    return [el("h1", null, "Bot Tracker"), boardTabs("states"),
+      el("p", { class: "note" }, "Every name has a home state, picked from the name the first time it is listed, so it never moves (it is not where anyone lives). " +
+        "Each board ranks one area" + (what ? " by " + what : "") + " in " + gameName.get(game()) + "; anyone with none is left off, and equal numbers share a place."),
+      panel(b ? b.label + ": " + areaName(area) : "State leaderboards", el("div", null, el("div", { class: "body" }, tools), body)),
+      leaders];
   }
 
   // ---------------------------------------------------------------- a bot's pages
@@ -300,7 +402,7 @@
     const armor = panel("Armor", looks && looks.pieces.length
       ? el("dl", { class: "stats" }, el("dt", null, "Species"), el("dd", null, looks.species),
         looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
-      : empty("No Reach look on file", "This bot has no line in the mod's looks file yet (it is written when the bot is rolled)."));
+      : empty("No Reach look on file", "No line in the mod's looks file yet (it is written when the look is rolled)."));
     const facts = panel("Service Record", el("dl", { class: "stats" },
       el("dt", null, "Last played"), el("dd", null, g ? day(g.last) : "-"),
       el("dt", null, "Games played"), el("dd", null, int(s.games)),
@@ -350,13 +452,13 @@
 
   function match(p, id) {
     const m = D.matches.find((x) => x.id === id);
-    if (!m) return [banner(p), panel("Match", empty("Match not found", "This match is not in the record (it may be from before the bots' stats were reset)."))];
+    if (!m) return [banner(p), panel("Match", empty("Match not found", "This match is not in the record (it may be from before the stats were reset)."))];
     const full = m.report;
     const heads = [["Place"], ["Player", "l"]].concat(full ? [["Score", "hide-s"]] : [], [["Kills"], ["Deaths"], ["Assists"]],
       full ? [["Betrayals", "hide-s"], ["Medals", "hide-s"]] : [], [["Time", "hide-s"]]);
     const line = (r) => el("tr", null, td(ordinal(r.st + 1)),
       td(el("span", { class: "cell" }, r.listed && players.has(r.n) ? el("a", { href: href(["p", r.n, "overview"]) }, r.n) : r.n,
-        r.n === p.name && el("span", { class: "tag" }, "this bot"), !r.bot && el("span", { class: "tag" }, "player")), "l"),
+        r.n === p.name && el("span", { class: "tag" }, "this record"), !r.bot && el("span", { class: "tag" }, "player")), "l"),
       full ? td(int(r.score), "hide-s") : null, td(int(r.k)), td(int(r.d)), td(int(r.a)),
       full ? [td(int(r.bt), "hide-s"), td(int(r.md), "hide-s")] : null,
       td(Math.floor(r.sec / 60) + ":" + String(r.sec % 60).padStart(2, "0"), "hide-s"));
@@ -412,7 +514,7 @@
           : el("p", { class: "note" }, "No kills in the recorded matches yet."),
           el("p", { class: "note" }, killNote(g, bucket(p))))
         : el("div", { class: "body" },
-          el("p", { class: "note" }, "Kills and deaths per weapon are not recorded yet for this bot: MCC's report only splits its kills by type."),
+          el("p", { class: "note" }, "Kills and deaths per weapon are not recorded yet here: MCC's report only splits kills by type."),
           bucket(p).detailed ? hbars(killTypes(bucket(p))) : null),
         el("a", { class: "more", href: href(["p", p.name, "weapons"]) }, "View weapons"))];
   }
@@ -453,7 +555,7 @@
     const unchecked = list.some(([key]) => !weaponName(key)[1]);
     return [banner(p),
       panel("Weapons", el("div", { class: "body" },
-        el("p", { class: "note" }, killNote(g, s) + " Kills are the ones the game credits to this bot against players of the other team; deaths are every way it died."),
+        el("p", { class: "note" }, killNote(g, s) + " Kills are the ones the game credits to " + p.name + " against players of the other team; deaths are every way it died."),
         weaponCards(list, list),
         unchecked && el("p", { class: "note" },
           "* Named from the game's own list of damage types. This name has not yet been matched to a kill seen live.")),
@@ -471,14 +573,14 @@
       panel("Killed most by (MCC's report)", list(g && g.killed_by, "top killer")));
     if (!recorded(g)) {
       return [banner(p), panel("Enemies", empty("Full versus table not recorded yet", NO_KILLS +
-        " MCC's report names only two rivals per match, below: who this bot killed most and who killed it most.")), rivals];
+        " MCC's report names only two rivals per match, below: who " + p.name + " killed most and who killed them most.")), rivals];
     }
     const rows = Object.entries(g.versus).sort((a, b) => (b[1][0] + b[1][1]) - (a[1][0] + a[1][1]) || b[1][0] - a[1][0] || a[0].localeCompare(b[0]))
       .map(([n, v]) => el("tr", null,
         td(players.has(n) ? el("a", { href: href(["p", n, "overview"]) }, n) : n, "l wrap"), td(int(v[0])), td(int(v[1])),
         td((v[0] > v[1] ? "+" : "") + int(v[0] - v[1])), td(v[1] ? dec(v[0] / v[1]) : dec(v[0]), "hide-s")));
     return [banner(p),
-      panel("Enemies", table(killNote(g, bucket(p)) + " Every opponent this bot killed or was killed by.",
+      panel("Enemies", table(killNote(g, bucket(p)) + " Every opponent " + p.name + " killed or was killed by.",
         [["Opponent", "l"], ["Kills on"], ["Deaths to"], ["Difference"], ["K/D", "hide-s"]], rows,
         { none: "No kills either way in the recorded matches yet." })),
       rivals];
@@ -493,7 +595,7 @@
     if (!recorded(g)) return [banner(p), panel("Heatmaps", empty("Not recorded yet", NO_KILLS))];
     const count = (m) => (g.heat[m].k.length + g.heat[m].d.length) / 2;
     const ids = Object.keys(g.heat).filter(count).sort((a, b) => count(b) - count(a) || mapName(a).localeCompare(mapName(b)));
-    if (!ids.length) return [banner(p), panel("Heatmaps", empty("Nothing to plot yet", killNote(g, bucket(p)) + " No kill or death of this bot is in them."))];
+    if (!ids.length) return [banner(p), panel("Heatmaps", empty("Nothing to plot yet", killNote(g, bucket(p)) + " No kill or death of " + p.name + " is in them."))];
     const id = ids.includes(route.q.map) ? route.q.map : ids[0];
     const show = ["kills", "deaths"].includes(route.q.show) ? route.q.show : "both";
     const spots = g.heat[id], pic = (D.heat_maps || {})[id];
@@ -570,7 +672,7 @@
     return [banner(p), mapTabs,
       panel(mapName(id), el("div", { class: "body" }, figure, viewLink,
         el("ul", { class: "key" },
-          el("li", null, el("span", { class: "sw kill" }), int(nk) + (nk === 1 ? " kill" : " kills") + ": a dot where this bot stood"),
+          el("li", null, el("span", { class: "sw kill" }), int(nk) + (nk === 1 ? " kill" : " kills") + ": a dot where " + p.name + " stood"),
           el("li", null, el("span", { class: "sw death" }), int(nd) + (nd === 1 ? " death" : " deaths") + ": a cross where it died")),
         el("p", { class: "note" }, killNote(g, bucket(p)) + (pic ? "" : " This PC has no top-down picture of this map, so the spots are plotted on their own."))),
         showTabs)];
@@ -585,28 +687,72 @@
       panel("Profile", el("dl", { class: "stats" },
         el("dt", null, "Name"), el("dd", null, p.name),
         el("dt", null, "Clan tag"), el("dd", null, p.clan || "-"),
-        el("dt", null, "Listed as"), el("dd", null, p.roster ? "Roster bot" : "Matchmaking pool bot"),
+        el("dt", null, "Listed as"), el("dd", null, p.roster ? "Roster" : "Matchmaking pool"),
+        el("dt", null, "Home state"), el("dd", null, STATES[p.state]
+          ? el("a", { href: href(["states"], { area: p.state }) }, stateName(p.state) + " (" + areaName(regionOf(p)) + ")") : "-"),
         el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? title(p.difficulty) : "Not saved"),
         el("dt", null, "Play style"), el("dd", null, p.style ? title(p.style) : "Not saved"),
         el("dt", null, "Species (Reach)"), el("dd", null, looks ? looks.species : "-"))),
       panel("Armor (Reach)", looks && looks.pieces.length
         ? el("dl", { class: "stats" }, looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
-        : empty("No Reach look on file", "This bot has no line in the mod's looks file yet."))),
+        : empty("No Reach look on file", "No line in the mod's looks file yet."))),
       panel("How the rank is earned", el("div", null,
-        table("Credits (cR) come from this bot's counted " + gameName.get(D.default_game) + " matches only, so the rank can always be rebuilt from the record.",
+        table("Credits (cR) come from counted " + gameName.get(D.default_game) + " matches only, so the rank can always be rebuilt from the record.",
           [["Earned for", "l"], ["Count"], ["cR each"], ["cR"]],
           earn.map(([k, n, each]) => el("tr", null, td(k, "l"), td(int(n)), td(int(each)), td(int(n * each))))
             .concat(el("tr", null, el("th", { scope: "row", class: "l" }, "Total"), td(""), td(""), td(int(p.cr)))))))];
   }
 
+  // where this bot places on every board it is on: in its state, its region and nationwide
+  function placements(p) {
+    const areas = [[p.state, stateName(p.state)], [regionOf(p), areaName(regionOf(p))], ["", "Nationwide"]];
+    const g = side(p);
+    const place = (b, a) => {
+      const rows = standings(b, a), mine = rows.find((r) => r.p === p);
+      return mine ? { place: mine.place, of: rows.length } : null;
+    };
+    const cell = (b, a, cls) => {
+      const x = place(b, a);
+      return td(x ? el("a", { href: boardHref(b, a), class: x.place === 1 ? "first" : null }, "#" + x.place, el("small", null, " of " + x.of)) : "-", cls);
+    };
+    const section = (heading, boards, none) => {
+      const on = boards.filter((b) => b.value(p) != null);
+      return panel(heading, on.length
+        ? table(null, [[heading === "Modes" ? "Mode" : heading === "Weapons" ? "Weapon" : heading === "Vehicles" ? "Vehicle" : "Board", "l"], [on[0].unit],
+          [areas[0][1]], [areas[1][1], "hide-s"], ["Nationwide"]],
+          on.map((b) => el("tr", null, td(el("a", { href: boardHref(b, "") }, b.label), "l"), td(int(b.value(p))),
+            cell(b, areas[0][0]), cell(b, areas[1][0], "hide-s"), cell(b, ""))))
+        : empty("Not on these boards yet", none));
+    };
+    const overall = board("overall", "all");
+    const hero = el("ul", { class: "hero" }, areas.map(([a, name]) => {
+      const x = place(overall, a);
+      return el("li", null, el("span", { class: "v" }, x ? "#" + x.place : "-"),
+        el("span", { class: "k" }, (!a ? "" : REGIONS.has(a) ? "In the " : "In ") + name + (x ? " (of " + x.of + ")" : "")));
+    }).concat(el("li", null, el("span", { class: "v" }, int(overall.value(p) || 0)), el("span", { class: "k" }, "cR in " + gameName.get(game())))));
+    const kills = recorded(g) ? weaponList(g).filter(([k, n]) => n[0]) : [];
+    const guns = kills.filter(([k]) => !VEHICLES.has(k)).map(([k]) => board("weapon", k));
+    const rides = kills.filter(([k]) => VEHICLES.has(k)).map(([k]) => board("vehicle", k));
+    const noRows = recorded(g) ? null : NO_KILLS;
+    return [banner(p), el("p", { class: "note" }, p.name + "'s home state is " + stateName(p.state) + ", in the " + areaName(regionOf(p)) +
+      " region: picked from its name, so it never moves. Each place counts only the names of that area with a number on the board; equal numbers share a place. ",
+      el("a", { href: href(["states"], { area: p.state }) }, "Open the " + stateName(p.state) + " leaderboard"), "."),
+      hero,
+      section("Overall", [overall], "No counted match in " + gameName.get(game()) + " yet."),
+      section("Modes", D.cats.map(([k]) => board("mode", k)), "No counted match in " + gameName.get(game()) + " yet."),
+      section("Weapons", guns, noRows || "No kill with a weapon recorded in " + gameName.get(game()) + " yet."),
+      section("Vehicles", rides.length ? [board("vehicle", "all")].concat(rides) : [], noRows || "No kill with a vehicle recorded in " + gameName.get(game()) + " yet.")];
+  }
+
   const missing = {
     commendations: ["Commendations", "Not recorded", "MCC's post-game report does not include commendations, so there is nothing to total here. Medals are recorded: see Career Stats, Medals."],
-    achievements: ["Achievements", "Not recorded", "Achievements belong to MCC accounts, and the bots have none. Nothing is recorded for them."],
+    achievements: ["Achievements", "Not recorded", "Achievements belong to MCC accounts; none are recorded here."],
   };
 
   function playerPage(p, page, arg) {
     switch (page) {
       case "overview": return overview(p);
+      case "placements": return placements(p);
       case "history": return history(p);
       case "match": return match(p, arg);
       case "summary": return summary(p);
@@ -629,7 +775,7 @@
     if (!p) { nav.replaceChildren(); shell.classList.add("wide"); return; }
     shell.classList.remove("wide");
     const on = page === "match" ? "history" : page;
-    nav.replaceChildren(el("a", { class: "back", href: href([]) }, "All bots"),
+    nav.replaceChildren(el("a", { class: "back", href: href([]) }, "Leaderboard"),
       ...PAGES.map(([group, items]) => el("section", null, el("h2", null, group),
         el("ul", null, items.map(([k, label]) => el("li", null,
           el("a", { href: href(["p", p.name, k]), "aria-current": k === on ? "page" : null }, label)))))));
@@ -641,8 +787,9 @@
     route = parse();
     gamePick.value = game();
     const [kind, name, page, arg] = route.parts;
-    let nodes = null, label = "Leaderboard", p = null;
+    let nodes = null, label = "Bot Tracker", p = null;
     if (!kind) nodes = leaderboard();
+    else if (kind === "states" && !name) { nodes = statesPage(); label = "State leaderboards"; }
     else if (kind === "p" && players.has(name)) {
       p = players.get(name);
       nodes = playerPage(p, page || "overview", arg);

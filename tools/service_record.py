@@ -628,6 +628,31 @@ def rank_index(cr, steps):
     return i
 
 
+# ---------------------------------------------------------------- home states (the state leaderboards)
+
+def load_states(path=os.path.join(SITE, "states.json")):
+    """(regions [[key, name], ...], states [[code, name, region, weight], ...]) from the site's table."""
+    table = load_json(path, {})
+    regions = [list(r) for r in table.get("regions", [])]
+    states = [list(s) for s in table.get("states", [])]
+    keys = {r[0] for r in regions}
+    if not states or any(s[2] not in keys or not isinstance(s[3], int) or s[3] <= 0 for s in states):
+        raise ValueError("states.json: every state needs a listed region and a weight above 0")
+    return regions, states
+
+
+def home_state(name, states):
+    """A bot's home state: picked from its name alone (sha256), weighted by population, so it never moves and a new
+    bot gets one the first time it is listed. Procedural, not where anyone lives."""
+    total = sum(s[3] for s in states)
+    at = int.from_bytes(hashlib.sha256(name.encode("utf-8")).digest()[:8], "big") % total
+    for s in states:
+        if at < s[3]:
+            return s[0]
+        at -= s[3]
+    return states[-1][0]
+
+
 # ---------------------------------------------------------------- the numbers
 
 SUMS = ("games", "wins", "kills", "deaths", "assists", "seconds",            # the ledger: every counted match
@@ -783,6 +808,7 @@ def collect(ledger, store_matches, roster, kills=None):
 def site_data(ledger, store_matches, paths, now=None, kills=None):
     """Everything the pages show, as one dict (data.js)."""
     worth, steps = load_ranks()
+    regions, states = load_states()
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
     looks = read_looks(paths.looks, read_look_names(paths.look_names))
@@ -806,7 +832,8 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
             "name": html.unescape(name), "roster": name in roster,
             "clan": roster.get(name) or clans.get(html.unescape(name), ""),
             "difficulty": diff, "style": style, "emblem": export_emblem(name, paths),
-            "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps), "g": rec["g"],
+            "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps),
+            "state": home_state(html.unescape(name), states), "g": rec["g"],
         })
     medals = {}
     for i in sorted(used, key=int):
@@ -852,7 +879,16 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "medal_art": bool(medal_names),
         "weapons": weapons, "heat_maps": {k: v for k, v in heat_maps.items() if v},
         "weapon_art": weapon_pictures(weapons, paths),
+        "vehicles": vehicle_keys(),
+        "regions": regions, "states": {s[0]: [s[1], s[2]] for s in states},
     }
+
+
+def vehicle_keys(path=os.path.join(SITE, "weapons.json")):
+    """["reach:24", ...]: the damage types that are a vehicle (its gun, its bomb or the vehicle itself), from the
+    site's table; the state leaderboards rank these on a board of their own."""
+    table = load_json(path, {})
+    return sorted(f"{g}:{k}" for g, t in table.items() if isinstance(t, dict) for k in t.get("vehicles", []))
 
 
 def weapon_pictures(keys, paths):

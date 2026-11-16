@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Service Record: a Bot Tracker front page; home states and state leaderboards per weapon, vehicle and mode, 2026-11-16
+
+The owner: "Region leaderboards per weapon, vehicle, mode, procedural state placement for every bot."; while it was built: "You don't have to include that they're bots everywhere. Just put it on the front page something like "Bot Tracker"".
+
+- Home states (`tools/service_record_site/states.json`, `service_record.py` `load_states`, `home_state`): every listed name gets one of the 50 states, picked from the name alone (sha256), weighted by 2020 census population, so it never moves and a new bot gets one the first time it is listed. Regions are the Census Bureau's four. Today's 55: 26 states (California 7, Texas 5); South 19, West 16, Midwest 13, Northeast 7.
+- `weapons.json` `reach.vehicles`: the damage types that are a vehicle (24-40, 59). `data.js` gets `vehicles`, `regions`, `states` and each player's `state`.
+- Front page (`app.js`): the heading is "Bot Tracker", with tabs Leaderboard | By state. By state has four boards: Overall and Mode (cR by the rank's formula, Mode within that mode's matches), Weapon and Vehicle (kills with it from the kill record, plus All vehicles). Each board is shown for Nationwide, a region or a state; a name with none of the number is left off; equal numbers share a place; a Leaders by state table follows. Follows the Game picker.
+- Each record: a State Placements page (its place in its state, its region and nationwide on every board it is on); its home state on the banner and Profile.
+- The pages say "bot" only on the front page now: "Roster" / "Matchmaking pool", Name, Standings, "Find a name", the kill notes name the player, the footer drops "for our own bots".
+- Validation: `tools/test_service_record.py` +1 (16): six names pinned to their states (a table change that would move them fails), the picks follow the weights over 20,000 names, every state has a region, the site names every player's state and the vehicle types. All 79 `tools/test_*.py` passed before the rewording; the site, art and one-copy tests again after it. In the browser pane at 1280 px and 375 px (no sideways scroll), no console errors: Overall cR equals the rank's cR for all 55; ties share places on the DMR board. No vehicle kill is recorded yet, so the Vehicle board shows only its empty note.
+
 ### Service Record: every weapon has its picture; a blueprint theme, 2026-11-15
 
 The owner: "Make all the weapons have their png picture like the original website nice and neat. I think the website also needs a little more flare and theme".

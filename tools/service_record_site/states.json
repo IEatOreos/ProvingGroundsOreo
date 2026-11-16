@@ -1,0 +1,23 @@
+{
+  "note": "Each bot's home state for the Service Record's state leaderboards (tools/service_record.py home_state). A bot's state is picked from its name alone, weighted by each state's 2020 census population in thousands, so the same name always lands in the same state and a new bot gets one the first time it is listed. Changing a weight or the order moves bots; add a state only at the end. Regions are the Census Bureau's four.",
+  "regions": [["northeast", "Northeast"], ["midwest", "Midwest"], ["south", "South"], ["west", "West"]],
+  "states": [
+    ["AL", "Alabama", "south", 5024], ["AK", "Alaska", "west", 733], ["AZ", "Arizona", "west", 7152],
+    ["AR", "Arkansas", "south", 3012], ["CA", "California", "west", 39538], ["CO", "Colorado", "west", 5774],
+    ["CT", "Connecticut", "northeast", 3606], ["DE", "Delaware", "south", 990], ["FL", "Florida", "south", 21538],
+    ["GA", "Georgia", "south", 10712], ["HI", "Hawaii", "west", 1455], ["ID", "Idaho", "west", 1839],
+    ["IL", "Illinois", "midwest", 12813], ["IN", "Indiana", "midwest", 6786], ["IA", "Iowa", "midwest", 3190],
+    ["KS", "Kansas", "midwest", 2938], ["KY", "Kentucky", "south", 4506], ["LA", "Louisiana", "south", 4658],
+    ["ME", "Maine", "northeast", 1362], ["MD", "Maryland", "south", 6177], ["MA", "Massachusetts", "northeast", 7030],
+    ["MI", "Michigan", "midwest", 10077], ["MN", "Minnesota", "midwest", 5706], ["MS", "Mississippi", "south", 2961],
+    ["MO", "Missouri", "midwest", 6155], ["MT", "Montana", "west", 1084], ["NE", "Nebraska", "midwest", 1962],
+    ["NV", "Nevada", "west", 3105], ["NH", "New Hampshire", "northeast", 1378], ["NJ", "New Jersey", "northeast", 9289],
+    ["NM", "New Mexico", "west", 2118], ["NY", "New York", "northeast", 20201], ["NC", "North Carolina", "south", 10439],
+    ["ND", "North Dakota", "midwest", 779], ["OH", "Ohio", "midwest", 11799], ["OK", "Oklahoma", "south", 3959],
+    ["OR", "Oregon", "west", 4237], ["PA", "Pennsylvania", "northeast", 13003], ["RI", "Rhode Island", "northeast", 1097],
+    ["SC", "South Carolina", "south", 5118], ["SD", "South Dakota", "midwest", 887], ["TN", "Tennessee", "south", 6911],
+    ["TX", "Texas", "south", 29146], ["UT", "Utah", "west", 3272], ["VT", "Vermont", "northeast", 643],
+    ["VA", "Virginia", "south", 8631], ["WA", "Washington", "west", 7705], ["WV", "West Virginia", "south", 1794],
+    ["WI", "Wisconsin", "midwest", 5894], ["WY", "Wyoming", "west", 577]
+  ]
+}
