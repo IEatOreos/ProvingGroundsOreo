@@ -4,9 +4,14 @@ folder of static pages, logs/service_record/index.html, that opens straight from
 
 Read, never written: the career ledger (native/bin/career/ledger.json, tools/bot_career.py: which matches count, who
 won, the bots' restart), MCC's post-game reports (logs/trace_*.carnage.xml and MCC's own current one), the bots'
-profiles, looks, saved difficulties and emblems (native/bin). Written: this tool's own store, native/bin/service_record
-/matches.json (each report's detail kept once by its GameUniqueId, because the recording rotation deletes the reports),
-and the site in logs/service_record. Both are game data: not in git.
+profiles, looks, saved difficulties and emblems (native/bin), each recorded match's kill rows (logs/trace_*.jsonl,
+tools/kill_record.py: who the game credits with each death, with what, where both stood) and the maps' top-down
+pictures (maps/<id>/topdown.png, heightmap.npz). Written: this tool's own store, native/bin/service_record/matches.json
+(each report's detail kept once by its GameUniqueId, because the recording rotation deletes the reports) and kills.json
+(each recording's kill rows, for the same reason), and the site in logs/service_record. All game data: not in git.
+
+Weapons, Enemies and Heatmaps come from the kill rows only. A match recorded before they were written has none and
+adds nothing to those pages (they say so; they never show a zero for it).
 
 Who is listed (the owner, Nov 15): the bots only. Every bot of bot_profiles.ini, at 0 from the start, and any other
 bot once it has a match that counts. People are never listed; a match's scoreboard still shows every gamertag.
@@ -19,6 +24,7 @@ matches (each game, win, kill, assist and medal is worth what "credits" says), s
 usage: python -I service_record.py                    build, then print what was built
        python -I service_record.py --quiet            build only (tools/play.py, in the background, as a match starts)
        python -I service_record.py --wait-ledger 20   first wait up to 20 s for bot_career.py to add the reports on disk
+       python -I service_record.py --check-kills      also print each recorded match's kill rows against MCC's report
        --ledger FILE --logs DIR --store DIR --out DIR  other places (tests, a preview from another ledger)
 """
 import glob
@@ -32,6 +38,7 @@ import shutil
 import struct
 import sys
 import time
+import zipfile
 import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +57,7 @@ def _load(name):
 
 
 career = _load("bot_career")      # (the counting rules live there: one copy)
+kill_record = _load("kill_record")   # (what a kill row counts as: one reading, the recorder's own)
 
 
 class Paths:
@@ -65,6 +73,7 @@ class Paths:
         s.pool = os.path.join(BIN, "bot_pool_saved.ini")
         s.emblems = os.path.join(BIN, "emblems")
         s.look_names = os.path.join(ROOT, "native", "look_names.h")
+        s.maps = os.path.join(ROOT, "maps")
         s.mcc_report = career.MCC_REPORT
         for k, v in kw.items():
             if not hasattr(s, k):
@@ -178,9 +187,14 @@ def read_report(path):
     players = []
     for m in PLAYER.finditer(x):
         a = dict(ATTR.findall(m.group(1)))
+        is_bot = bool(career.BOT_ID.match(a.get("mXboxUserId", "")))
+        try:                                             # (a bot's made-up Xbox id ends in its index in the game: the
+            index = int(a.get("mXboxUserId", ""), 16) & 0xFFFFFFFF if is_bot else None   # id the kill rows know it by)
+        except ValueError:
+            index = None
         players.append({
             "name": a.get("mGamertagText", ""),
-            "bot": bool(career.BOT_ID.match(a.get("mXboxUserId", ""))),
+            "bot": is_bot, "idx": index,
             "clan": a.get("ClantagText", ""),
             "team": _int(a, "mTeamId"), "standing": _int(a, "mStanding"), "score": _int(a, "Score"),
             "kills": _int(a, "mKills"), "deaths": _int(a, "mDeaths"), "assists": _int(a, "mAssists"),
@@ -254,6 +268,140 @@ def update_store(store, paths):
         del files[key]
         changed += 1
     return changed
+
+
+# ---------------------------------------------------------------- the kill rows of each recording
+
+TRACE_NAME = re.compile(r"^trace_(.+_\d{8}-\d{6})\.jsonl$")
+
+
+def read_kills(path):
+    """One recording's kill rows ([{..., "t": seconds into the match}], as written: tools/kill_record.py), or None
+    when it was recorded without them (no kill_record line among its first lines) or cannot be read. Read-only."""
+    try:
+        with open(path, "rb") as f:
+            if b'"kill_record": ' not in f.read(1 << 18):
+                return None
+            f.seek(0)
+            rows = []
+            for line in f:
+                if b'"kill": ' not in line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except ValueError:
+                    continue                                # (a line cut short: the brain was stopped mid-write)
+                k = d.get("kill") if isinstance(d, dict) else None
+                if isinstance(k, dict):
+                    rows.append(dict(k, t=d.get("t")))
+            return rows
+    except OSError:
+        return None
+
+
+def update_kills(store, paths):
+    """Every finished recording's kill rows not kept yet, added to the store under its map and start time
+    ("reach_70_boneyard_20261115-195851", as its report's file is named). Finished: its report stands beside it.
+    Returns how many recordings were read or dropped from the list of files."""
+    files, kills = store.setdefault("files", {}), store.setdefault("kills", {})
+    changed, names = 0, set()
+    for rep in sorted(glob.glob(os.path.join(paths.logs, "trace_*.carnage.xml"))):
+        path = rep[:-len(".carnage.xml")] + ".jsonl"
+        m = TRACE_NAME.match(os.path.basename(path))
+        try:
+            st = os.stat(path)
+        except OSError:
+            continue
+        if not m:
+            continue
+        key, sig = os.path.basename(path), [int(st.st_mtime), st.st_size]
+        names.add(key)
+        if files.get(key) == sig:
+            continue
+        files[key] = sig
+        changed += 1
+        rows = read_kills(path)
+        if rows is not None:
+            kills[m.group(1)] = rows
+    for key in [k for k in files if k not in names]:         # (rotated away: its rows stay)
+        del files[key]
+        changed += 1
+    return changed
+
+
+def kill_names(detail, rows):
+    """{player id: the name in MCC's report} for a match's kill rows, which know players by their index in the game.
+    A bot: the report row whose made-up Xbox id ends in that index. A person: the one report row of a person on their
+    team whose kills and deaths are nearest the rows'; left out when two fit as well."""
+    names = {p["idx"]: p["name"] for p in detail["players"] if p.get("bot") and p.get("idx") is not None}
+    seen = {}                                               # person id -> [team, kills, deaths] by the rows
+    for k in rows:
+        f = kill_record.read(k, detail.get("teams", True))
+        if not f:
+            continue
+        if not k.get("vb"):
+            seen.setdefault(k["v"], [k.get("vt"), 0, 0])[2] += 1
+        if f[0] == "kill" and not k.get("kb"):
+            seen.setdefault(f[1], [k.get("kt"), 0, 0])[1] += 1
+    people = [p for p in detail["players"] if not p.get("bot")]
+    for pid, (team, kills, deaths) in sorted(seen.items()):
+        fits = [p for p in people if team is None or p["team"] == team] or people
+        ranked = sorted(fits, key=lambda p: abs(p["kills"] - kills) + abs(p["deaths"] - deaths))
+        if len(ranked) == 1 or (len(ranked) > 1 and abs(ranked[0]["kills"] - kills) + abs(ranked[0]["deaths"] - deaths)
+                                < abs(ranked[1]["kills"] - kills) + abs(ranked[1]["deaths"] - deaths)):
+            names[pid] = ranked[0]["name"]
+            people = [p for p in people if p is not ranked[0]]
+    return names
+
+
+UNNAMED = "Unknown player"
+
+
+def kill_tally(detail, rows):
+    """{name: {"weapons": {damage type: [kills, deaths]}, "versus": {name: [kills on, deaths to]}, "k": [x, y, ...],
+    "d": [x, y, ...]}} for one match: every row that counts, summed for both players of it. A kill is one the game
+    credits to a player of the other team (kill_record.read); a death is any way of dying."""
+    who, out = kill_names(detail, rows), {}
+
+    def side(name):
+        return out.setdefault(name, {"weapons": {}, "versus": {}, "k": [], "d": []})
+
+    for k in rows:
+        f = kill_record.read(k, detail.get("teams", True))
+        if not f:
+            continue                                        # (not a row, or written after the match was over)
+        kind, killer, weapon = f
+        key = "?" if weapon is None else str(weapon)
+        victim, by = who.get(k["v"]), who.get(killer) if killer is not None else None
+        if victim is not None:
+            s = side(victim)
+            s["weapons"].setdefault(key, [0, 0])[1] += 1
+            s["d"] += [round(k["vp"][0], 1), round(k["vp"][1], 1)]
+            if kind == "kill":
+                s["versus"].setdefault(by or UNNAMED, [0, 0])[1] += 1
+        if kind == "kill" and by is not None:
+            s = side(by)
+            s["weapons"].setdefault(key, [0, 0])[0] += 1
+            s["versus"].setdefault(victim or UNNAMED, [0, 0])[0] += 1
+            if k.get("kp"):
+                s["k"] += [round(k["kp"][0], 1), round(k["kp"][1], 1)]
+    return out
+
+
+def kill_check(detail, rows):
+    """[(name, kills by the rows, kills in MCC's report, deaths by the rows, deaths in the report)] for every player
+    of a match's report: how its kill rows compare with MCC's own numbers (--check-kills)."""
+    who, kills, deaths = kill_names(detail, rows), {}, {}
+    for k in rows:
+        f = kill_record.read(k, detail.get("teams", True))
+        if not f:
+            continue
+        if k["v"] in who:
+            deaths[who[k["v"]]] = deaths.get(who[k["v"]], 0) + 1
+        if f[0] == "kill" and f[1] in who:
+            kills[who[f[1]]] = kills.get(who[f[1]], 0) + 1
+    return [(html.unescape(p["name"]), kills.get(p["name"], 0), p["kills"], deaths.get(p["name"], 0), p["deaths"])
+            for p in detail["players"]]
 
 
 # ---------------------------------------------------------------- the bots' own files
@@ -371,6 +519,66 @@ def export_emblem(name, paths):
         return None
 
 
+def map_frame(path):
+    """[x0, y0, width, height]: the part of the level a map's top-down picture shows, in the level's units, from its
+    heightmap.npz (tools/heightmap.py draws the picture from that grid: x0, y0 its corner, cell its step, north up);
+    None when the file is not there or not one. Read without numpy: only the arrays' headers and three numbers."""
+    def head(z, name):
+        f = z.open(name + ".npy")
+        if f.read(6) != b"\x93NUMPY":
+            raise ValueError(name)
+        major = f.read(2)[0]
+        n = struct.unpack("<H" if major == 1 else "<I", f.read(2 if major == 1 else 4))[0]
+        text = f.read(n).decode("latin-1")
+        descr = re.search(r"'descr':\s*'([^']+)'", text).group(1)
+        shape = [int(x) for x in re.search(r"'shape':\s*\(([^)]*)\)", text).group(1).split(",") if x.strip()]
+        return f, descr, shape
+
+    def number(z, name):
+        f, descr, shape = head(z, name)
+        fmt = {"<f8": "<d", "<f4": "<f", "<i8": "<q", "<i4": "<i"}[descr]
+        if shape:
+            raise ValueError(name)
+        return float(struct.unpack(fmt, f.read(struct.calcsize(fmt)))[0])
+
+    try:
+        with zipfile.ZipFile(path) as z:
+            rows, cols = head(z, "top")[2]
+            x0, y0, cell = number(z, "x0"), number(z, "y0"), number(z, "cell")
+        if not (rows > 0 and cols > 0 and cell > 0):
+            return None
+        return [round(x0, 3), round(y0, 3), round(cols * cell, 3), round(rows * cell, 3)]
+    except (OSError, KeyError, ValueError, AttributeError, struct.error, zipfile.BadZipFile):
+        return None
+
+
+def export_map(map_id, paths):
+    """A map's top-down picture for the Heatmaps page: {"img": site path, "frame": [x0, y0, width, height]}, the
+    picture copied into the site (maps/<id>.png: game-derived, never in git). None when this PC has no picture of the
+    map or its frame cannot be read: the page then plots on a plain panel."""
+    if not re.fullmatch(r"[A-Za-z0-9_]+", map_id or ""):
+        return None
+    src = os.path.join(paths.maps, map_id, "topdown.png")
+    frame = map_frame(os.path.join(paths.maps, map_id, "heightmap.npz"))
+    if not frame or not os.path.isfile(src):
+        return None
+    dst = os.path.join(paths.out, "maps", map_id + ".png")
+    try:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+            shutil.copyfile(src, dst)
+    except OSError:
+        return None
+    return {"img": "maps/" + map_id + ".png", "frame": frame}
+
+
+def load_weapons(path=os.path.join(SITE, "weapons.json")):
+    """{game: ({damage type: name}, {types matched live})} from the site's table of what each number is."""
+    table = load_json(path, {})
+    return {g: ({str(k): str(v) for k, v in t.get("names", {}).items()}, {str(k) for k in t.get("checked", [])})
+            for g, t in table.items() if isinstance(t, dict)}
+
+
 # ---------------------------------------------------------------- credits and ranks
 
 def load_ranks(path=os.path.join(SITE, "ranks.json")):
@@ -442,9 +650,11 @@ def match_time(detail, ledger_match):
     return t, time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
 
 
-def collect(ledger, store_matches, roster):
+def collect(ledger, store_matches, roster, kills=None):
     """(players {name: record}, matches [newest first]) for the site: every counted row of a listed name summed by
-    game and family. Listed: the roster and every name bot_career's totals call a bot."""
+    game and family. Listed: the roster and every name bot_career's totals call a bot. kills: the store's kill rows
+    by recording ({"<map>_<start>": [rows]}); a match with none adds nothing to weapons, versus and heat, and
+    kill_games says how many of a player's matches had them."""
     totals = career.totals(ledger)
     listed = set(roster) | {n for n, t in totals.items() if t["bot"]}
     players = {n: {"name": n, "g": {}} for n in listed}
@@ -480,6 +690,9 @@ def collect(ledger, store_matches, roster):
                  "type": (detail or {}).get("type", ""), "cat": family((detail or {}).get("type", "")),
                  "teams": bool(detail and detail["teams"]), "report": bool(detail), "rows": out_rows}
         matches.append(match)
+        rows = (kills or {}).get(f"{map_id}_{detail['start']}") if detail and map_id and detail.get("start") else None
+        tally = kill_tally(detail, rows) if rows is not None else None
+        match["kills"] = tally is not None
         for p in counting:
             if p["name"] not in listed:
                 continue
@@ -487,8 +700,22 @@ def collect(ledger, store_matches, roster):
             won = p["standing"] == 0 and not draw
             for gkey in ("all", game):
                 g = players[p["name"]]["g"].setdefault(gkey, {"cats": {}, "types": {}, "maps": {}, "medals": {},
-                                                               "killed": {}, "killed_by": {}, "results": []})
+                                                               "killed": {}, "killed_by": {}, "results": [],
+                                                               "weapons": {}, "versus": {}, "heat": {}, "kill_games": 0})
                 g["results"].append((t, gid, won))
+                if tally is not None:                       # (this match has its kill rows)
+                    g["kill_games"] += 1
+                    mine = tally.get(p["name"])
+                    if mine:
+                        for key, n in mine["weapons"].items():      # a damage type is a number of its own game's
+                            e = g["weapons"].setdefault(f"{game}:{key}", [0, 0])
+                            e[0], e[1] = e[0] + n[0], e[1] + n[1]
+                        for name, n in mine["versus"].items():
+                            e = g["versus"].setdefault(html.unescape(name), [0, 0])
+                            e[0], e[1] = e[0] + n[0], e[1] + n[1]
+                        spots = g["heat"].setdefault(map_id, {"k": [], "d": []})
+                        spots["k"] += mine["k"]
+                        spots["d"] += mine["d"]
                 buckets = [g["cats"].setdefault("all", blank()), g["cats"].setdefault(match["cat"], blank()),
                            g["types"].setdefault(match["type"] or "Unknown", blank()),
                            g["maps"].setdefault(map_id or "unknown", blank())]
@@ -533,13 +760,13 @@ def collect(ledger, store_matches, roster):
     return players, matches
 
 
-def site_data(ledger, store_matches, paths, now=None):
+def site_data(ledger, store_matches, paths, now=None, kills=None):
     """Everything the pages show, as one dict (data.js)."""
     worth, steps = load_ranks()
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
     looks = read_looks(paths.looks, read_look_names(paths.look_names))
-    players, matches = collect(ledger, store_matches, roster)
+    players, matches = collect(ledger, store_matches, roster, kills)
     clans = {}
     for m in reversed(matches):                             # (a pool bot's clan tag: its newest report's)
         for r in m["rows"]:
@@ -574,6 +801,19 @@ def site_data(ledger, store_matches, paths, now=None):
                     shutil.copyfile(src, dst)
                 icon = "medals/" + info["icon"]
         medals[i] = {"name": info.get("name") or f"Medal {i}", "icon": icon}
+    # what killed, by name: [name, matched live] for every damage type a listed player's rows have; a map's picture
+    # for every map they have a spot on
+    table, weapons, heat_maps = load_weapons(), {}, {}
+    for rec in players.values():
+        for g in rec["g"].values():
+            for key in g["weapons"]:
+                game_key, _, kind = key.partition(":")
+                names, checked = table.get(game_key, ({}, set()))
+                weapons[key] = ["Not read" if kind == "?" else names.get(kind) or f"Damage type {kind}",
+                                kind == "?" or kind in checked or kind not in names]
+            for map_id in g["heat"]:
+                if map_id not in heat_maps:
+                    heat_maps[map_id] = export_map(map_id, paths)
     games = sorted({m["game"] for m in matches} | {DEFAULT_GAME}, key=list(GAME_NAMES).index)
     cats = sorted({m["cat"] for m in matches}, key=FAMILY_ORDER.index)
     now = time.time() if now is None else now
@@ -590,6 +830,7 @@ def site_data(ledger, store_matches, paths, now=None):
         "maps": {m["map"]: map_name(m["map"]) for m in matches if m["map"]},
         "players": out_players, "matches": matches, "medals": medals,
         "medal_art": bool(medal_names),
+        "weapons": weapons, "heat_maps": {k: v for k, v in heat_maps.items() if v},
     }
 
 
@@ -653,7 +894,13 @@ def build(paths):
     store = load_json(store_path, {})
     if update_store(store, paths):
         save_json(store_path, store)
-    data = site_data(ledger, store.get("matches", {}), paths)
+    kills_path = os.path.join(paths.store, "kills.json")
+    kills = load_json(kills_path, {})
+    if not isinstance(kills, dict):
+        kills = {}
+    if update_kills(kills, paths):
+        save_json(kills_path, kills)
+    data = site_data(ledger, store.get("matches", {}), paths, kills=kills.get("kills", {}))
     write_site(data, paths)
     return data
 
@@ -675,10 +922,24 @@ def main(argv):
             sys.exit("--wait-ledger needs a number of seconds")
     t0 = time.time()
     data = build(paths)
+    if "--check-kills" in argv:              # each recorded match's kill rows against MCC's report, player by player
+        matches = load_json(os.path.join(paths.store, "matches.json"), {}).get("matches", {})
+        kills = load_json(os.path.join(paths.store, "kills.json"), {}).get("kills", {})
+        for m in sorted(matches.values(), key=lambda m: m.get("start", "")):
+            rows = kills.get(f"{m.get('map')}_{m.get('start')}")
+            if rows is None:
+                continue
+            lines = kill_check(m, rows)
+            off = [x for x in lines if x[1] != x[2] or x[3] != x[4]]
+            print(f"{m['map']} {m['start']} ({m.get('type', '')}): {len(rows)} rows, "
+                  + ("every player's kills and deaths equal MCC's report" if not off else f"{len(off)} of {len(lines)} players differ"))
+            for name, k, rk, d, rd in off:
+                print(f"    {name}: kills {k} (report {rk}), deaths {d} (report {rd})")
     if "--quiet" in argv:
         return 0
     played = sum(1 for p in data["players"] if p["g"])
-    print(f"{NAME}: {len(data['players'])} bots ({played} with a counted match), {len(data['matches'])} matches, "
+    print(f"{NAME}: {len(data['players'])} bots ({played} with a counted match), {len(data['matches'])} matches "
+          f"({sum(1 for m in data['matches'] if m['kills'])} with kill rows), "
           f"{len(data['medals'])} medals named; built in {time.time() - t0:.1f} s")
     print(os.path.join(paths.out, "index.html"))
     return 0

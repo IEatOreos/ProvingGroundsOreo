@@ -1678,6 +1678,49 @@ class LiveReach(LiveH3):
             d["tracker"] = s.tracker(base + d["index"] * size)
         return out
 
+    # (custom, Nov 15) Who killed whom, as the game keeps it (tools/kill_record.py: one row a death in the match's
+    # recording, for the Service Record's Weapons, Enemies and Heatmaps pages). Found live with a read-only probe of
+    # every player's row, each body and the engine block 30 times a second (Boneyard 20261115-195851, TU Team Slayer
+    # DMR, 9 players, 21 deaths from 81 s in; every one of them a death in MCC's report, none missed):
+    #   player +0x3AC  the handle of the player the game credits with his last death, written the tick he dies; left
+    #                  as it was when nobody is credited. Not always who hit last: a teammate's frag finished Ice 1.07 s
+    #                  after an enemy's chaingun, +0x3AC named the enemy, and MCC's report gave the teammate no betrayal
+    #   player +0x2C   his dead body (unit handle), set the tick he dies; not set when he leaves the game (his unit
+    #                  goes, +0x2C stays: 3 bots at the match's end)
+    #   unit +0x290    the damage type that killed it (byte), then a modifier (byte). 6, 8, 11, 29 and 34 were a DMR,
+    #                  a sniper rifle, a frag grenade, a Banshee and a Warthog's chaingun in the killer's hands or seat
+    #                  at each of 20 typed deaths; 43 came with no damage entry (a melee kill, by the list of
+    #                  tools/service_record_site/weapons.json)
+    #   unit +0xF0     the player who damaged it last (handle), +0xF4 his unit
+    #   unit +0x4DC    4 x 0x18, who damaged it lately: int32 game tick, float body damage, float shield damage, unit,
+    #                  player, byte damage type, byte modifier (unused: tick -1, unit and player none)
+    #   TLS +0x20 block +0xD8  1 while the match is played, 2 from the tick the person ended it (4 deaths after that
+    #                  were not in MCC's report)
+    KILLER_AT, BODY_AT, DEATH_AT, OWNER_AT, HITS_AT, HITS, HIT_SIZE, ENGINE_STATE = 0x3AC, 0x2C, 0x290, 0xF0, 0x4DC, 4, 0x18, 0xD8
+
+    def kill_watch(s):
+        """(the engine's state, {index: (salt, unit, dead body, credited killer's handle)}) for every player in the
+        game: one read of the players, for tools/kill_record.py every tick."""
+        base, mx, size = s._array(0x18)
+        blob = s.g.read(base, mx * size)
+        out = {}
+        for i in range(mx):
+            salt = struct.unpack_from("<H", blob, i * size)[0]
+            if salt:
+                out[i] = (salt,) + struct.unpack_from("<II", blob, i * size + 0x28) + \
+                    struct.unpack_from("<I", blob, i * size + s.KILLER_AT)
+        eng = s.g.u64(s._blk + 0x20)
+        state = struct.unpack("<i", s.g.read(eng + s.ENGINE_STATE, 4))[0] if eng else None
+        return state, out
+
+    def death_bytes(s, body):
+        """(the game's tick, a dead body's bytes up to the end of its damage entries), or (tick, None) when the body
+        is gone already."""
+        gg = s.g.u64(s._blk + 0x48)
+        tick = struct.unpack("<i", s.g.read(gg + s.REACH_TICKS, 4))[0]
+        o = s.object(body)
+        return tick, (s.g.read(o, s.HITS_AT + s.HITS * s.HIT_SIZE) if o else None)
+
     def firefight(s):
         # (the DLC Firefight maps lie elsewhere: levels\dlc\ff_unearthed\ff_unearthed and levels\dlc\cex_ff_halo\cex_ff_halo
         # (Installation 04), live Nov 6: read as not Firefight, so no bots joined there, GitHub #12. The game mode byte reads

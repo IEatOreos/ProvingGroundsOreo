@@ -37,7 +37,8 @@ DEFAULTS = dict(games=5, minutes=15)
 LIMITS = dict(games=(2, 50), minutes=(1, 600))     # (2 games at least: Scaling reads the last match back at the next)
 PART = re.compile(r"^(?:trace|collect|critique)_.+_(\d{8}-\d{6})(?:\.carnage\.xml|\.jsonl|\.md)$")
 T_AT = re.compile(rb'\{"t": (-?[0-9.eE+-]+)[,}]')
-HEADS = (b'"meta": ', b'"scaling": ', b'"collect": "start"')
+# (custom, Nov 15: and the kill rows, tools/kill_record.py: a long match keeps every kill, a hundred short lines)
+HEADS = (b'"meta": ', b'"scaling": ', b'"collect": "start"', b'"kill_record": ', b'"kill": ')
 
 
 # ---------------------------------------------------------------- settings
@@ -231,7 +232,8 @@ def header_lines(f, lo, hi):
                 d = json.loads(found[s])
             except ValueError:
                 continue
-            if isinstance(d, dict) and ("meta" in d or "scaling" in d or d.get("collect") == "start"):
+            if isinstance(d, dict) and ("meta" in d or "scaling" in d or d.get("collect") == "start"
+                                        or "kill_record" in d or "kill" in d):
                 out.append(found[s])
     return b"".join(out)
 

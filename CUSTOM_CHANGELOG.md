@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Service Record: every kill recorded in Reach, so Weapons, Enemies and Heatmaps fill in, 2026-11-15
+
+The site shipped with those three pages saying "not recorded yet"; the owner asked for the per-kill record as the follow-up. Python only: no botcore change, no DLL build, no MCC restart.
+
+- **Found** (a read-only probe of a live match, Boneyard 20261115-195851, the owner and 8 bots: every player's row, each body and the engine block read 30 times a second from 81 s in until the end): the game keeps each kill itself, and the brain can read it.
+  - The dead player's row names the player the game credits (`+0x3AC`), written the tick he dies. His body holds the damage type that killed (`+0x290`) and who damaged it lately (4 entries at `+0x4DC`: tick, body and shield damage, player, type).
+  - Deaths: all 21 in the probe's window are deaths in MCC's report. With the 12 before it (counted from the recording's world rows) they equal the report for all 9 players, 33 of 33.
+  - Kills per killer equal the report for the three players whose kills all fell in the window. For the rest the rows are short by the first 81 s, so a whole match is still to be checked. The report itself has 28 kills by one team against 27 deaths of the other; not explained.
+  - The credit is not always the last hit. A teammate's frag finished a bot 1.07 s after an enemy's chaingun; the game credited the enemy, and MCC's report gave the teammate no betrayal.
+  - Damage types 6, 8, 9, 11, 29 and 34 were a DMR, a sniper rifle, a rocket launcher, a frag grenade, a Banshee and a Warthog's chaingun in the killer's hands or seat every time (20 typed deaths and one own-rocket death). 43 came with no damage entry, the owner on foot beside the victim: Melee by Reach's list of damage types, not confirmed by anything else.
+  - After the owner ended the match the engine block's `+0xD8` read 2 (1 before); the 4 deaths after that are not in MCC's report. A bot removed from the game leaves no body.
+- `brain/live.py` `LiveReach.kill_watch`, `death_bytes` (new): the reads, with the fields and how each was found. One read of the players a pass; a body only when someone dies.
+- `tools/kill_record.py` (new): `Watch` writes one row a death: who died, who the game credits, whether that credit was written at this death, what killed, the body's damage entries, teams, bots, where both stood, the game's tick, the engine's state. Players are ids; no gamertag goes into the recording. `read` says what a row counts as: a kill (the credited player is on the other team), a betrayal, or a death nobody is credited with. The weapon is the credited player's own last damage on him, else what killed. A credit left over from an earlier death counts only with that player's damage on the body. A row from after the match was over does not count.
+- `tools/live_bots.py`: a recorded Reach match's trace starts with `{"kill_record": 1}` and gets a `{"t", "kill": {...}}` row a death. A read that fails is tried again the next pass; 30 in a row turn the record off for the match. It never stops the bots.
+- `tools/recording.py`: the trim of a long match keeps the kill rows, as it keeps the bots' meta lines.
+- `tools/service_record.py`:
+  - `native/bin/service_record/kills.json` (new, game data, not in Git): each finished recording's kill rows by map and start time, read once and kept after the rotation. A recording without the first line is not read past its first 256 KB.
+  - Per bot and game: kills and deaths per weapon, every opponent both ways, the spots of its kills and deaths per map, and how many of its matches have kill rows.
+  - A bot is named by the index in its report id. A person is named from the report row of their team that their kills and deaths fit, and is "Unknown player" when two fit as well.
+  - A map's picture: `maps/<id>/topdown.png` copied into the built site with the part of the level it shows, read from `heightmap.npz` without numpy.
+  - `--check-kills` (new) prints each recorded match's rows against MCC's report, player by player.
+- `tools/service_record_site/app.js`, `style.css`, `weapons.json` (new):
+  - Weapons: kills, deaths and their shares per weapon. Enemies: kills on, deaths to, difference and K/D per opponent. Heatmaps: a tab per map, kills / deaths / both, a dot where the bot stood for a kill and a cross where it died, over the dimmed picture (on a plain panel when this PC has no picture of the map).
+  - Each says how many of the bot's matches it comes from. A bot with no recorded match still says "not recorded yet"; no page shows a zero for a match without kill rows. MCC's kills by type and two rivals stay below, named as the report's.
+  - `weapons.json` names the damage types by Reach's list. A name not yet matched to a kill seen live is marked with a star on the page.
+- Validation:
+  - `tools/test_service_record.py` +3 (14): made-up kill rows summed per weapon, opponent and map; a betrayal, a death with a left-over credit, a row after the match, three bad rows; a match recorded without kill rows; the rows kept after the rotation; two people named or left unnamed; a long recording's trim; a map picture's frame.
+  - `tools/kill_record.py` self-check: a made-up game through `Watch` and `read`. All 78 `tools/test_*.py` files pass.
+  - The probe's frames replayed through `Watch` give the 21 rows above and leave out the bots removed at the end.
+  - `map_frame` equals numpy's reading on all 144 maps with a heightmap, and each picture's shape fits its grid.
+  - A preview site built from those real rows and that match's report (scratch folders, not the real store): the three pages opened in a browser at desktop and phone width, no console errors, no sideways scroll. The real site rebuilt in 0.1 s: 50 recordings looked at, none with kill rows yet, the three pages unchanged.
+- **Untested**: the recorder inside a live match (it runs from the next recorded Reach match: the brain starts fresh each match). Kills per killer against MCC's report over a whole match (`--check-kills` after it). Suicides, falls, splatters and assassinations; Firefight (an AI's kill has no credited player); free for all; a round-based mode (whether the engine's state reads 2 between rounds); a second person in the match. The modifier byte is stored and not read. Other games write no kill rows.
+
 ### Reach ranks: one copy, so the site and the game cannot drift, 2026-11-15
 
 The owner, asked whether Major Grade 2 is 375,000 cR (his brief) or 370,000 (the page the insignia came from): "Either just make sure it stays flush if we end up adding ranks into the game for bots."

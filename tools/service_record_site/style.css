@@ -25,6 +25,9 @@
   --c-assault: #9085e9;
   --c-invasion: #e66767;
   --c-rest: #8499ae;
+  /* the Heatmaps page: where this bot stood for a kill, where it died (told apart by shape too: a dot, a cross) */
+  --kill: #f2b84b;
+  --death: #6cb8ff;
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -183,6 +186,21 @@ th[aria-sort="descending"] button::after { content: " \25BC"; color: var(--accen
 .vbars line { stroke: var(--line); }
 .vbars text { font: 11px var(--font); fill: var(--ink-2); }
 .tip { position: fixed; z-index: 20; pointer-events: none; background: var(--panel-3); color: var(--ink); border: 1px solid var(--accent); border-radius: var(--radius); padding: var(--s-1) var(--s-2); font-size: var(--t-sm); max-width: 16rem; }
+
+/* heatmaps: the map's picture dimmed under the spots; without one, the spots on a plain panel */
+.heat { position: relative; max-width: 900px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.heat img { width: 100%; height: auto; filter: grayscale(0.9) brightness(0.5) contrast(1.1); }
+.heat canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+.heat.plain canvas { position: static; height: auto; }
+.key { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); list-style: none; margin: 0; padding: 0; color: var(--ink-2); font-size: var(--t-sm); }
+.key .sw { display: inline-block; width: 12px; height: 12px; margin-right: var(--s-2); vertical-align: -1px; }
+.key .kill { background: var(--kill); border-radius: 50%; }
+.key .death { background: linear-gradient(45deg, transparent 42%, var(--death) 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, var(--death) 42% 58%, transparent 58%); }
+.seg { display: flex; flex-wrap: wrap; gap: var(--s-1); list-style: none; margin: 0; padding: 0; }
+.seg a { display: block; padding: var(--s-1) var(--s-3); min-height: 32px; line-height: 24px; color: var(--ink-2); border: 1px solid var(--line); border-radius: var(--radius); text-transform: uppercase; letter-spacing: 0.05em; font-size: var(--t-xs); }
+.seg a:hover { color: var(--ink); text-decoration: none; }
+.seg a[aria-current="true"] { background: var(--panel-3); color: var(--ink); border-color: var(--accent); }
+.mark { color: var(--accent); cursor: help; }
 
 /* medals */
 .medals { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }

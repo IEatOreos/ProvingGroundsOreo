@@ -1,5 +1,7 @@
 """tools/service_record.py: the leaderboard equals bot_career's totals, the bots' restart, who is listed, the rates and
-their formats, the rank table and credits, game type families, a report kept in full after the rotation, bad reports."""
+their formats, the rank table and credits, game type families, a report kept in full after the rotation, bad reports;
+the kill rows (tools/kill_record.py) summed per weapon, per opponent and per map, kept after the rotation, a match
+without them, bad rows, a long recording's trim, a map picture's frame."""
 import importlib.util
 import json
 import os
@@ -56,7 +58,8 @@ class World:
                            store=os.path.join(tmp, "store"), out=os.path.join(tmp, "site"),
                            profiles=os.path.join(tmp, "bot_profiles.ini"), looks=os.path.join(tmp, "bot_looks.ini"),
                            pool=os.path.join(tmp, "bot_pool_saved.ini"), emblems=os.path.join(tmp, "emblems"),
-                           look_names=os.path.join(tmp, "look_names.h"), mcc_report=os.path.join(tmp, "none.xml"))
+                           look_names=os.path.join(tmp, "look_names.h"), mcc_report=os.path.join(tmp, "none.xml"),
+                           maps=os.path.join(tmp, "maps"))
 
     def write(s, name, text):
         with open(os.path.join(s.logs, name), "w", encoding="utf-8") as f:
@@ -289,6 +292,137 @@ def test_looks_by_piece_name():
         looks = sr.read_looks(w.paths.looks, names)
         assert looks["LilWraith"] == {"species": "Spartan", "pieces": [["Helmet", "EVA[C] / CNM"], ["Visor colour", "Blue"]]}
         assert looks["Zealot"] == {"species": "Elite", "pieces": [["Armor", "General"]]}, looks
+
+
+def kill(v, k, cause, vp, kp=None, t=10.0, **more):
+    """One line of a recording as tools/kill_record.py writes it: bot k of team 0 kills bot v of team 1."""
+    row = dict(v=v, k=k, new=True, o=k, c=cause, m=0, hits=[], vt=1, kt=0, vb=1, kb=1, vp=list(vp),
+               kp=list(kp) if kp else None, gt=600, st=1)
+    row.update(more)
+    return json.dumps({"t": t, "kill": row})
+
+
+def npy(descr, shape, data):
+    head = f"{{'descr': '{descr}', 'fortran_order': False, 'shape': {shape!r}, }}"
+    head += " " * ((64 - (10 + len(head) + 1) % 64) % 64) + "\n"
+    return b"\x93NUMPY\x01\x00" + struct.pack("<H", len(head)) + head.encode("latin-1") + data
+
+
+def test_kills_by_weapon_opponent_and_map():
+    """A match's kill rows summed for each bot: kills and deaths per weapon (the credited player's own weapon, not the
+    last hit's), every opponent both ways, where it stood for each kill and where it died. A betrayal is a death, not
+    a kill; a death nobody is credited with has no killer; a person is named from the report; a row after the match
+    was over, a row that is not one and a line cut short are skipped. A match recorded without kill rows adds
+    nothing (a bot with only that match has no numbers at all, not zeros). The rows outlive the rotation."""
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g0", [      # before the kill rows
+            row(ME, "Me", 0, 0, 5, 1, 0, 600), row(bot(1), "Wheezy", 1, 1, 1, 4, 0, 600),
+            row(bot(4), "Old", 1, 1, 0, 1, 0, 600)]))
+        w.write("trace_reach_forge_halo_20261115-180000.jsonl",
+                '{"t": 0.1, "meta": {"map": "reach_forge_halo"}}\n{"t": 1.0, "id": 1, "notes": ["a \\"kill\\": no"]}\n')
+        name = "trace_reach_70_boneyard_20261115-190000"
+        w.write(name + ".carnage.xml", report("g1", [
+            row(ME, "Me", 0, 0, 1, 1, 0, 600), row(bot(1), "Wheezy", 1, 1, 3, 5, 0, 600),
+            row(bot(2), "Oreo", 0, 0, 2, 2, 0, 600), row(bot(3), "Ice", 1, 1, 0, 0, 0, 600, betrayals=1)]))
+        w.write(name + ".jsonl", "\n".join([
+            '{"t": 0.0, "kill_record": 1}',
+            '{"t": 0.5, "meta": {"map": "reach_70_boneyard", "bot": {"id": 1, "name": "Wheezy"}}}',
+            kill(1, 2, 6, (10, 20, 0), (30, 40, 0)),                                # Oreo's DMR
+            kill(1, 2, 11, (12, 22, 0), (31, 41, 0), hits=[[3, 11, 0, 1.0, 0.1, 1], [2, 8, 1, 0.0, 0.9, 40]]),
+            kill(2, 1, 6, (50, 60, 0), (11, 21, 0), vt=0, kt=1),                    # Wheezy's DMR on Oreo
+            kill(1, 0, 43, (13, 23, 0), (14, 24, 0), kb=0),                         # the person's melee
+            kill(1, 3, 11, (15, 25, 0), (16, 26, 0), kt=1),                         # a teammate's grenade: a betrayal
+            kill(1, 2, 41, (17, 27, 0), (32, 42, 0), new=False, o=None),            # a fall: Oreo's old credit left
+            kill(0, 1, 6, (70, 80, 0), (18, 28, 0), vb=0, vt=0, kt=1),              # Wheezy's DMR on the person
+            kill(2, 1, 99, (51, 61, 0), (19, 29, 0), vt=0, kt=1),                   # a damage type with no name
+            kill(1, 2, 6, (1, 1, 0), (2, 2, 0), st=2),                              # after the match was over
+            '{"t": 9, "kill": {"v": "x"}}', '{"t": 9, "kill": 7}', '{"t": 9.5, "kill": {"v": 1, "k": 2, "vp": [1, 2']) + "\n")
+        os.makedirs(os.path.join(w.paths.maps, "reach_70_boneyard"))
+        with sr.zipfile.ZipFile(os.path.join(w.paths.maps, "reach_70_boneyard", "heightmap.npz"), "w") as z:
+            z.writestr("top.npy", npy("<f4", (4, 6), bytes(96)))
+            z.writestr("x0.npy", npy("<f8", (), struct.pack("<d", 100.0)))
+            z.writestr("y0.npy", npy("<f4", (), struct.pack("<f", 200.0)))
+            z.writestr("cell.npy", npy("<f8", (), struct.pack("<d", 0.5)))
+        with open(os.path.join(w.paths.maps, "reach_70_boneyard", "topdown.png"), "wb") as f:
+            f.write(sr.png(1, 1, bytes(4)))
+        w.career()
+        data = w.build()
+        assert [(m["id"], m["kills"]) for m in data["matches"]] == [("g1", True), ("g0", False)], data["matches"]
+        g = player(data, "Wheezy")["g"]["reach"]
+        assert g["kill_games"] == 1 and g["cats"]["all"]["games"] == 2, g["kill_games"]
+        assert g["weapons"] == {"reach:6": [2, 1], "reach:8": [0, 1], "reach:43": [0, 1], "reach:11": [0, 1],
+                                "reach:41": [0, 1], "reach:99": [1, 0]}, g["weapons"]
+        assert g["versus"] == {"Oreo": [2, 2], "Me": [1, 1]}, g["versus"]
+        assert g["heat"] == {"reach_70_boneyard": {"k": [11, 21, 18, 28, 19, 29],
+                                                   "d": [10, 20, 12, 22, 13, 23, 15, 25, 17, 27]}}, g["heat"]
+        assert player(data, "Wheezy")["g"]["all"]["weapons"] == g["weapons"]
+        oreo = player(data, "Oreo")["g"]["reach"]
+        assert oreo["weapons"] == {"reach:6": [1, 1], "reach:8": [1, 0], "reach:99": [0, 1]}, oreo["weapons"]
+        assert oreo["versus"] == {"Wheezy": [2, 2]} and oreo["heat"]["reach_70_boneyard"]["k"] == [30, 40, 31, 41], oreo
+        ice = player(data, "Ice")["g"]["reach"]                # (its grenade killed a teammate: no kill, no opponent)
+        assert (ice["kill_games"], ice["weapons"], ice["versus"], ice["heat"]) == (1, {}, {}, {}), ice
+        old = player(data, "Old")["g"]["reach"]                # (only the match from before the kill rows)
+        assert (old["kill_games"], old["weapons"], old["versus"], old["heat"]) == (0, {}, {}, {}), old
+        assert data["weapons"]["reach:6"] == ["DMR", True] and data["weapons"]["reach:99"] == ["Damage type 99", True]
+        assert data["weapons"]["reach:43"] == ["Melee", False], data["weapons"]      # (named by the list, not seen live)
+        assert data["heat_maps"] == {"reach_70_boneyard": {"img": "maps/reach_70_boneyard.png",
+                                                           "frame": [100.0, 200.0, 3.0, 2.0]}}, data["heat_maps"]
+        assert os.path.getsize(os.path.join(w.paths.out, "maps", "reach_70_boneyard.png")) > 0
+        for gone in (name + ".carnage.xml", name + ".jsonl"):   # (the recording rotation took the match)
+            os.remove(os.path.join(w.logs, gone))
+        w.career()
+        again = w.build()
+        assert player(again, "Wheezy")["g"]["reach"] == g and again["matches"] == data["matches"]
+    assert sr.map_frame(os.path.join(tmp, "nothing.npz")) is None
+    assert sr.read_kills(os.path.join(tmp, "nothing.jsonl")) is None
+
+
+def test_two_people_named_by_their_report_rows():
+    """Kill rows know a player by index only. A person gets the report row of their team that their kills and deaths
+    fit; two people the rows cannot tell apart are left unnamed, never guessed."""
+    detail = {"teams": True, "players": [
+        {"name": "Me", "bot": False, "idx": None, "team": 0, "kills": 2, "deaths": 0},
+        {"name": "A Friend", "bot": False, "idx": None, "team": 0, "kills": 0, "deaths": 1},
+        {"name": "Wheezy", "bot": True, "idx": 5, "team": 1, "kills": 1, "deaths": 2}]}
+    rows = [json.loads(x)["kill"] for x in (
+        kill(5, 0, 6, (1, 1, 0), (2, 2, 0), kb=0), kill(5, 0, 6, (1, 1, 0), (2, 2, 0), kb=0),
+        kill(9, 5, 6, (3, 3, 0), (4, 4, 0), vb=0, vt=0, kt=1))]
+    assert sr.kill_names(detail, rows) == {5: "Wheezy", 0: "Me", 9: "A Friend"}, sr.kill_names(detail, rows)
+    assert sr.kill_check(detail, rows) == [("Me", 2, 2, 0, 0), ("A Friend", 0, 0, 1, 1), ("Wheezy", 1, 1, 2, 2)]
+    tally = sr.kill_tally(detail, rows)
+    assert tally["Wheezy"]["versus"] == {"Me": [0, 2], "A Friend": [1, 0]}, tally["Wheezy"]
+    same = dict(detail, players=[dict(p, kills=1, deaths=1) if not p["bot"] else p for p in detail["players"]])
+    assert sr.kill_names(same, rows) == {5: "Wheezy"}, sr.kill_names(same, rows)
+    assert sr.kill_tally(same, rows)["Wheezy"]["versus"] == {sr.UNNAMED: [1, 2]}
+
+
+def test_a_long_recording_keeps_its_kill_rows():
+    """The recording's time window (tools/recording.py) trims a long match's oldest rows; the kill rows and the line
+    that says the recording has them stay, once each."""
+    spec = importlib.util.spec_from_file_location("recording", os.path.join(HERE, "recording.py"))
+    rec = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rec)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "trace_reach_70_boneyard_20261115-190000.jsonl")
+        r = rec.RollingFile(path, 10.0)
+        r.slack, r.due = 5.0, 15.0
+        r.write('{"t": 0.0, "kill_record": 1}\n')
+        for k in range(400):
+            now = k / 10
+            if k in (5, 120, 395):
+                r.write(kill(1, 2, 6, (k, 0, 0), (0, k, 0), t=now) + "\n")
+            r.write(json.dumps(dict(t=now, id=9, pos=[k, 0, 0], notes=["no kill here"])) + "\n")
+            r.tick(now)
+            if r.job is not None:
+                r.job.join()
+                r.tick(now)
+        r.close()
+        with open(path, encoding="utf-8") as f:
+            times = [json.loads(x)["t"] for x in f if '"pos"' in x]
+        assert times[0] > 20.0, times[0]                       # (the oldest rows are gone)
+        rows = sr.read_kills(path)
+        assert [(k["t"], k["vp"][0]) for k in rows] == [(0.5, 5), (12.0, 120), (39.5, 395)], rows
 
 
 def test_png():

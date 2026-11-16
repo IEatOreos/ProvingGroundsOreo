@@ -906,6 +906,14 @@ def main():
     trace = recording.RollingFile(o.trace, rec_s) if o.trace else None
     if trace and SCALE is not None:          # the match ran on Scaling: brain/scaling.py counts it after (and its settings)
         trace.write(json.dumps(dict(t=0.0, scaling=round(SCALE, 5))) + chr(10))
+    # (custom, Nov 15) every kill as the game itself keeps it, into the recording: who the game credits, with what,
+    # where both stood (tools/kill_record.py; Reach's fields: brain/live.py LiveReach.kill_watch). For the Service
+    # Record's Weapons, Enemies and Heatmaps pages; the first line says this recording has them
+    kills, kill_fails = None, 0
+    if trace and type(live).__name__ == "LiveReach":
+        import kill_record
+        kills = kill_record.Watch(live)
+        trace.write(json.dumps(dict(t=0.0, kill_record=kill_record.VERSION)) + chr(10))
     last_wp = {}
 
     def nav(a, b, **kw):                      # remember each bot's waypoint for the trace
@@ -1168,6 +1176,18 @@ def main():
                         print(f"data collector stopped: {type(e).__name__}: {e}", flush=True)
                         collector.close()
                         collector = None
+                if kills is not None:                # (custom, Nov 15) who died this pass, and to whom
+                    try:
+                        for row in kills.tick(snap):
+                            trace.write(json.dumps(dict(t=round(now, 3), kill=row)) + chr(10))
+                        kill_fails = 0
+                    except Exception as e:           # never stops the bots; a read racing the game is tried again,
+                        kill_fails += 1              # a second of them and it is off for the rest of the match
+                        if kill_fails in (1, 30):
+                            print(f"{now:6.1f}s kill record {'stopped' if kill_fails == 30 else 'missed a pass'}: "
+                                  f"{type(e).__name__}: {e}", flush=True)
+                        if kill_fails >= 30:
+                            kills = None
                 events(bots, directors, before, snap, now)
                 flag_events(directors, flag_before, snap, now)
                 flag_before = {t: f.state for t, f in snap.flags.items()}

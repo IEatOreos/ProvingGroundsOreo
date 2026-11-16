@@ -202,6 +202,22 @@
   }
   const killTypes = (s) => [["Weapon", s.kw], ["Grenade", s.kg], ["Melee", s.km], ["Other", s.ko]];
 
+  // The kill record (tools/kill_record.py): who the game credits with each death, with what, where both stood. Only
+  // matches recorded with it count here; a bot with none says "not recorded yet", never a zero.
+  const recorded = (g) => !!(g && g.kill_games);
+  const weaponName = (key) => (D.weapons && D.weapons[key]) || ["Damage type " + key.split(":").pop(), true];
+  const weaponList = (g) => Object.entries((g && g.weapons) || {})
+    .sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1] || weaponName(a[0])[0].localeCompare(weaponName(b[0])[0]));
+  function killNote(g, s) {
+    if (g.kill_games >= s.games) {
+      return "From the mod's record of every kill in " + (s.games === 1 ? "this bot's 1 counted match." : "all " + int(s.games) + " of this bot's counted matches.");
+    }
+    return "From the mod's record of every kill, kept for " + int(g.kill_games) + " of this bot's " + int(s.games) +
+      " counted matches: the others were played before it was written.";
+  }
+  const NO_KILLS = "The mod writes a record of every kill (who the game credits, with what, where) for Reach matches " +
+    "recorded from 15 November 2026 on. None of this bot's counted matches here has one yet: it fills in after its next recorded match.";
+
   // ---------------------------------------------------------------- the leaderboard (the player picker)
   const SORTS = { name: (p) => p.name.toLowerCase(), rank: (p) => p.cr, games: (p) => bucket(p).games,
     wins: (p) => bucket(p).wins, kills: (p) => bucket(p).kills, deaths: (p) => bucket(p).deaths,
@@ -358,9 +374,14 @@
       panel("Top medals", top.length ? el("div", { class: "body" }, el("ul", { class: "medals" }, top.map(([id, n]) => medalTile(id, n))))
         : empty("No medals yet", "Medals come from MCC's post-game report of each counted match."),
         el("a", { class: "more", href: href(["p", p.name, "medals"]) }, "View all medals")),
-      panel("Top weapons", el("div", { class: "body" },
-        el("p", { class: "note" }, "Kills and deaths per weapon are not recorded yet: MCC's report only splits a bot's kills by type."),
-        bucket(p).detailed ? hbars(killTypes(bucket(p))) : null),
+      panel("Top weapons", recorded(g)
+        ? el("div", { class: "body" }, weaponList(g).some((w) => w[1][0])
+          ? hbars(weaponList(g).filter((w) => w[1][0]).slice(0, 5).map(([key, n]) => [weaponName(key)[0], n[0]]))
+          : el("p", { class: "note" }, "No kills in the recorded matches yet."),
+          el("p", { class: "note" }, killNote(g, bucket(p))))
+        : el("div", { class: "body" },
+          el("p", { class: "note" }, "Kills and deaths per weapon are not recorded yet for this bot: MCC's report only splits its kills by type."),
+          bucket(p).detailed ? hbars(killTypes(bucket(p))) : null),
         el("a", { class: "more", href: href(["p", p.name, "weapons"]) }, "View weapons"))];
   }
 
@@ -389,11 +410,28 @@
     const s = bucket(p);
     const rows = s.detailed ? killTypes(s).map(([label, n]) => el("tr", null, td(label, "l"), td(int(n)),
       td(s.kills ? Math.round((100 * n) / s.kills) + "%" : "-"))) : [];
+    const g = side(p);
+    const byType = panel("Kills by type (MCC's report)", el("div", null, table(null, [["Type", "l"], ["Kills"], ["Share of kills"]], rows,
+      { none: "No report recorded yet for " + gameName.get(game()) + "." }), reportNote(s) && el("div", { class: "body" }, reportNote(s))));
+    if (!recorded(g)) {
+      return [banner(p), panel("Weapons", empty("Not recorded yet", NO_KILLS + " MCC's own report only splits kills by type, below.")), byType];
+    }
+    const list = weaponList(g);
+    const kills = list.reduce((n, w) => n + w[1][0], 0), deaths = list.reduce((n, w) => n + w[1][1], 0);
+    const unchecked = list.some(([key]) => !weaponName(key)[1]);
+    const lines = list.map(([key, n]) => {
+      const [name, sure] = weaponName(key);
+      return el("tr", null, td(sure ? name : [name, el("span", { class: "mark", title: "Named from the game's list of damage types; not yet matched to a kill seen live" }, " *")], "l wrap"),
+        td(int(n[0])), td(int(n[1])), td(kills ? Math.round((100 * n[0]) / kills) + "%" : "-", "hide-s"),
+        td(deaths ? Math.round((100 * n[1]) / deaths) + "%" : "-", "hide-s"));
+    }).concat(el("tr", null, el("th", { scope: "row", class: "l" }, "Total"), td(int(kills)), td(int(deaths)), td("", "hide-s"), td("", "hide-s")));
     return [banner(p),
-      panel("Weapons", empty("Not recorded yet", "Kills and deaths per weapon need a record of every kill (killer, victim, weapon), " +
-        "which the mod does not write yet. MCC's own report only splits kills by type, below.")),
-      panel("Kills by type", el("div", null, table(null, [["Type", "l"], ["Kills"], ["Share of kills"]], rows,
-        { none: "No report recorded yet for " + gameName.get(game()) + "." }), reportNote(s) && el("div", { class: "body" }, reportNote(s))))];
+      panel("Weapons", el("div", null,
+        table(killNote(g, s) + " Kills are the ones the game credits to this bot against players of the other team; deaths are every way it died.",
+          [["Weapon", "l"], ["Kills"], ["Deaths"], ["Share of kills", "hide-s"], ["Share of deaths", "hide-s"]], lines),
+        unchecked && el("div", { class: "body" }, el("p", { class: "note" },
+          "* Named from the game's own list of damage types. This name has not yet been matched to a kill seen live.")))),
+      byType];
   }
 
   function enemies(p) {
@@ -402,11 +440,91 @@
       Object.entries(obj || {}).sort((a, b) => b[1][1] - a[1][1] || a[0].localeCompare(b[0])).map(([n, v]) =>
         el("tr", null, td(players.has(n) ? el("a", { href: href(["p", n, "overview"]) }, n) : n, "l wrap"), td(int(v[0])), td(int(v[1])))),
       { none: "No report recorded yet for " + gameName.get(game()) + "." });
+    const rivals = el("div", { class: "grid" }, panel("Killed most (MCC's report)", list(g && g.killed, "top victim")),
+      panel("Killed most by (MCC's report)", list(g && g.killed_by, "top killer")));
+    if (!recorded(g)) {
+      return [banner(p), panel("Enemies", empty("Full versus table not recorded yet", NO_KILLS +
+        " MCC's report names only two rivals per match, below: who this bot killed most and who killed it most.")), rivals];
+    }
+    const rows = Object.entries(g.versus).sort((a, b) => (b[1][0] + b[1][1]) - (a[1][0] + a[1][1]) || b[1][0] - a[1][0] || a[0].localeCompare(b[0]))
+      .map(([n, v]) => el("tr", null,
+        td(players.has(n) ? el("a", { href: href(["p", n, "overview"]) }, n) : n, "l wrap"), td(int(v[0])), td(int(v[1])),
+        td((v[0] > v[1] ? "+" : "") + int(v[0] - v[1])), td(v[1] ? dec(v[0] / v[1]) : dec(v[0]), "hide-s")));
     return [banner(p),
-      panel("Enemies", empty("Full versus table not recorded yet", "MCC's report names only two rivals per match: who this bot killed most " +
-        "and who killed it most. A table of every opponent needs a record of every kill, which the mod does not write yet.")),
-      el("div", { class: "grid" }, panel("Killed most", list(g && g.killed, "top victim")),
-        panel("Killed most by", list(g && g.killed_by, "top killer")))];
+      panel("Enemies", table(killNote(g, bucket(p)) + " Every opponent this bot killed or was killed by.",
+        [["Opponent", "l"], ["Kills on"], ["Deaths to"], ["Difference"], ["K/D", "hide-s"]], rows,
+        { none: "No kills either way in the recorded matches yet." })),
+      rivals];
+  }
+
+  // Kills and deaths on a map's top-down picture (maps/<id>.png, copied in by the build with the part of the level it
+  // shows). Each spot is a soft glow, so places fought over often grow bright, with a mark on top: a dot where this
+  // bot stood for a kill, a cross where it died. Without a picture of the map the spots are plotted on a plain panel.
+  function heatmaps(p) {
+    const g = side(p);
+    if (!recorded(g)) return [banner(p), panel("Heatmaps", empty("Not recorded yet", NO_KILLS))];
+    const count = (m) => (g.heat[m].k.length + g.heat[m].d.length) / 2;
+    const ids = Object.keys(g.heat).filter(count).sort((a, b) => count(b) - count(a) || mapName(a).localeCompare(mapName(b)));
+    if (!ids.length) return [banner(p), panel("Heatmaps", empty("Nothing to plot yet", killNote(g, bucket(p)) + " No kill or death of this bot is in them."))];
+    const id = ids.includes(route.q.map) ? route.q.map : ids[0];
+    const show = ["kills", "deaths"].includes(route.q.show) ? route.q.show : "both";
+    const spots = g.heat[id], pic = (D.heat_maps || {})[id];
+    const link = (q) => href(["p", p.name, "heatmaps"], Object.assign({ map: id === ids[0] ? null : id, show: show === "both" ? null : show }, q));
+    const mapTabs = el("ul", { class: "tabs" }, ids.map((m) => el("li", null,
+      el("a", { href: link({ map: m === ids[0] ? null : m }), "aria-current": m === id ? "true" : null }, mapName(m) + " (" + int(count(m)) + ")"))));
+    const showTabs = el("ul", { class: "seg", "aria-label": "Show" }, [["both", "Kills and deaths"], ["kills", "Kills"], ["deaths", "Deaths"]].map(([k, label]) =>
+      el("li", null, el("a", { href: link({ show: k === "both" ? null : k }), "aria-current": k === show ? "true" : null }, label))));
+    const nk = spots.k.length / 2, nd = spots.d.length / 2;
+    const canvas = el("canvas", { role: "img", "aria-label": p.name + " on " + mapName(id) + ": " + int(nk) + " kills, " + int(nd) + " deaths plotted" });
+    let frame = pic && pic.frame;
+    if (!frame) {                                   // no picture: the spots' own bounds, a tenth of margin, square units
+      const all = spots.k.concat(spots.d), xs = all.filter((_, i) => i % 2 === 0), ys = all.filter((_, i) => i % 2 === 1);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      const pad = Math.max(4, 0.1 * Math.max(x1 - x0, y1 - y0));
+      frame = [x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad];
+    }
+    const draw = () => {
+      const W = 1200, H = Math.max(1, Math.round((W * frame[3]) / frame[2]));
+      canvas.width = W;
+      canvas.height = H;
+      const c = canvas.getContext("2d"), css = getComputedStyle(document.documentElement);
+      const at = (list, i) => [((list[i] - frame[0]) / frame[2]) * W, (1 - (list[i + 1] - frame[1]) / frame[3]) * H];
+      const layers = [["deaths", spots.d, css.getPropertyValue("--death").trim() || "#6cb8ff"],
+        ["kills", spots.k, css.getPropertyValue("--kill").trim() || "#f2b84b"]].filter((x) => show === "both" || show === x[0]);
+      c.globalCompositeOperation = "lighter";
+      for (const [, list, color] of layers) {
+        for (let i = 0; i < list.length; i += 2) {
+          const [x, y] = at(list, i), glow = c.createRadialGradient(x, y, 0, x, y, 44);
+          glow.addColorStop(0, color + "70");
+          glow.addColorStop(1, color + "00");
+          c.fillStyle = glow;
+          c.fillRect(x - 44, y - 44, 88, 88);
+        }
+      }
+      c.globalCompositeOperation = "source-over";
+      c.lineWidth = 3.5;
+      c.lineCap = "round";
+      for (const [kind, list, color] of layers) {
+        c.fillStyle = c.strokeStyle = color;
+        for (let i = 0; i < list.length; i += 2) {
+          const [x, y] = at(list, i);
+          c.beginPath();
+          if (kind === "kills") c.arc(x, y, 7, 0, 2 * Math.PI);
+          else { c.moveTo(x - 7, y - 7); c.lineTo(x + 7, y + 7); c.moveTo(x + 7, y - 7); c.lineTo(x - 7, y + 7); }
+          if (kind === "kills") c.fill(); else c.stroke();
+        }
+      }
+    };
+    draw();
+    const figure = el("div", { class: "heat" + (pic ? "" : " plain") },
+      pic && el("img", { src: pic.img, alt: "", onerror: (e) => { e.target.remove(); figure.classList.add("plain"); } }), canvas);
+    return [banner(p), mapTabs,
+      panel(mapName(id), el("div", { class: "body" }, figure,
+        el("ul", { class: "key" },
+          el("li", null, el("span", { class: "sw kill" }), int(nk) + (nk === 1 ? " kill" : " kills") + ": a dot where this bot stood"),
+          el("li", null, el("span", { class: "sw death" }), int(nd) + (nd === 1 ? " death" : " deaths") + ": a cross where it died")),
+        el("p", { class: "note" }, killNote(g, bucket(p)) + (pic ? "" : " This PC has no top-down picture of this map, so the spots are plotted on their own."))),
+        showTabs)];
   }
 
   function profile(p) {
@@ -434,7 +552,6 @@
 
   const missing = {
     commendations: ["Commendations", "Not recorded", "MCC's post-game report does not include commendations, so there is nothing to total here. Medals are recorded: see Career Stats, Medals."],
-    heatmaps: ["Heatmaps", "Not recorded yet", "A heatmap needs the position of every kill and death. The mod does not write a record of each kill to the match trace yet."],
     achievements: ["Achievements", "Not recorded", "Achievements belong to MCC accounts, and the bots have none. Nothing is recorded for them."],
   };
 
@@ -449,6 +566,7 @@
       case "medals": return medals(p);
       case "weapons": return weapons(p);
       case "enemies": return enemies(p);
+      case "heatmaps": return heatmaps(p);
       case "profile": return profile(p);
       default: {
         const m = missing[page];

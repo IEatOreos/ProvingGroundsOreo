@@ -1,0 +1,25 @@
+{
+  "note": "What killed, by the number the game writes into a dead player's body (tools/kill_record.py, brain/live.py LiveReach.kill_watch). reach.checked: numbers matched live to what the killer held or rode (Boneyard 20261115-195851: DMR, sniper rifle, rocket launcher, frag grenade, Banshee, Warthog chaingun; 1 took the bots removed at the match's end). The other names follow the order of Reach's own list of damage types and are marked on the site until a kill seen live confirms them. A number not listed shows as 'Damage type N'.",
+  "reach": {
+    "checked": [1, 6, 8, 9, 11, 29, 34],
+    "names": {
+      "0": "Guardians", "1": "Guardians", "2": "Guardians", "3": "Suicide",
+      "4": "Magnum", "5": "Assault Rifle", "6": "DMR", "7": "Shotgun", "8": "Sniper Rifle",
+      "9": "Rocket Launcher", "10": "Spartan Laser", "11": "Frag Grenade", "12": "Grenade Launcher",
+      "13": "Plasma Pistol", "14": "Needler", "15": "Plasma Rifle", "16": "Plasma Repeater",
+      "17": "Needle Rifle", "18": "Spiker", "19": "Plasma Launcher", "20": "Gravity Hammer",
+      "21": "Energy Sword", "22": "Plasma Grenade", "23": "Concussion Rifle",
+      "24": "Ghost", "25": "Revenant", "26": "Revenant gunner", "27": "Wraith", "28": "Wraith turret",
+      "29": "Banshee", "30": "Banshee bomb", "31": "Seraph", "32": "Mongoose", "33": "Warthog",
+      "34": "Warthog chaingun", "35": "Warthog gauss cannon", "36": "Warthog rockets",
+      "37": "Scorpion", "38": "Scorpion turret", "39": "Falcon", "40": "Falcon gunner",
+      "41": "Fall", "42": "Collision", "43": "Melee", "44": "Explosion", "45": "Birthday explosion",
+      "46": "Flag", "47": "Bomb", "48": "Bomb explosion", "49": "Ball", "50": "Teleporter",
+      "51": "Transfer damage", "52": "Armor Lock", "53": "Target Locator", "54": "Machine gun turret",
+      "55": "Plasma cannon", "56": "Plasma mortar", "57": "Plasma turret", "58": "Shade turret",
+      "59": "Sabre", "60": "SMG", "61": "Carbine", "62": "Battle Rifle", "63": "Focus Rifle",
+      "64": "Fuel Rod Gun", "65": "Missile Pod", "66": "Brute Shot", "67": "Flamethrower",
+      "68": "Sentinel gun", "69": "Sentinel beam", "70": "Sentinel RPG", "71": "Tripmine"
+    }
+  }
+}
