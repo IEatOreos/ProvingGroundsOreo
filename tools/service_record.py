@@ -14,7 +14,9 @@ Weapons, Enemies and Heatmaps come from the kill rows only. A match recorded bef
 adds nothing to those pages (they say so; they never show a zero for it).
 
 Who is listed (the owner, Nov 15): the bots only. Every bot of bot_profiles.ini, at 0 from the start, and any other
-bot once it has a match that counts. People are never listed; a match's scoreboard still shows every gamertag.
+bot once it has a match that counts. People are listed only when named in native/bin/service_record/people.json (Nov 17,
+the owner: "Yes just me for now"; this PC only, never in git); anyone else is not, though a match's scoreboard still
+shows every gamertag.
 A match counts by bot_career's rules (its person played 60 s or more; a bot's row of a match from before the bots'
 restart does not), so with every game shown the leaderboard equals native/bin/career/totals.txt.
 
@@ -1095,13 +1097,27 @@ def match_time(detail, ledger_match):
     return t, time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
 
 
-def collect(ledger, store_matches, roster, kills=None, paths=None):
+def load_people(paths):
+    """The people the owner lists (native/bin/service_record/people.json: a list of gamertags, this PC only): {name}."""
+    data = load_json(os.path.join(paths.store, "people.json"), [])
+    return {n.strip() for n in data if isinstance(n, str) and n.strip()} if isinstance(data, list) else set()
+
+
+def person_names(ledger, people):
+    """The ledger's names of people (a row not a bot's, in any match, counted or not) that `people` names."""
+    return {p["name"] for m in ledger.values() for p in m.get("players", [])
+            if p.get("name") and not p.get("bot") and html.unescape(p["name"]) in people}
+
+
+def collect(ledger, store_matches, roster, kills=None, paths=None, people=()):
     """(players {name: record}, matches [newest first]) for the site: every counted row of a listed name summed by
-    game and family. Listed: the roster and every name bot_career's totals call a bot. kills: the store's kill rows
+    game and family. Listed: the roster, every name bot_career's totals call a bot, and the people named in `people`
+    (load_people) that the ledger has as people. kills: the store's kill rows
     by recording ({"<map>_<start>": [rows]}); a match with none adds nothing to weapons, versus and heat, and
     kill_games says how many of a player's matches had them."""
     totals = career.totals(ledger)
     listed = set(roster) | {n for n, t in totals.items() if t["bot"]}
+    listed |= person_names(ledger, people)                  # (at 0 too, after --reset-all)
     players = {n: {"name": n, "g": {}} for n in listed}
     matches = []
     for gid, m in ledger.items():
@@ -1109,6 +1125,8 @@ def collect(ledger, store_matches, roster, kills=None, paths=None):
         if not career.counts(rows):
             continue
         reset = bool(m.get("bots_reset"))
+        if m.get("all_reset"):
+            continue                                        # (bot_career --reset-all, Nov 17: nobody's counts)
         counting = [p for p in rows if p["name"] and not (p["bot"] and reset)]
         if not any(p["name"] in listed for p in counting):
             continue                                        # (nobody listed has this match: not on the site)
@@ -1227,7 +1245,9 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     regions, states = load_states()
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
-    players, matches = collect(ledger, store_matches, roster, kills, paths)
+    people = load_people(paths)
+    players, matches = collect(ledger, store_matches, roster, kills, paths, people)
+    persons = person_names(ledger, people)
     looks_file = all_looks(paths, [html.unescape(n) for n in players])   # (pool bots' looks worked out too)
     looks = read_looks(looks_file, read_look_names(paths.look_names))
     clans = {}
@@ -1252,7 +1272,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
             used.update(g["medals"])
         diff, style = pool.get(name, ("", ""))
         out_players.append({
-            "name": html.unescape(name), "roster": name in roster,
+            "name": html.unescape(name), "roster": name in roster, "person": name in persons,   # (a person: people.json)
             "clan": roster[name] if name in roster else clans.get(html.unescape(name), ""),   # (its profile's, "" too)
             "difficulty": diff, "style": style, "emblem": export_emblem(name, paths),
             "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps), "comm": counts, "comm_cr": comm_cr,
@@ -1461,6 +1481,22 @@ def save_clan_about(paths, key, text):
 
 BOT_CLAN = re.compile(r"[^\s,;=\[\]|]{1,4}")      # (the bots panel's Clan tag box: 4 at most, no blanks, none of ,;=[]|)
 MCC_EXE = "MCC-Win64-Shipping.exe"
+
+
+def reset_everyone(running=None):
+    """The edit mode's Reset all (Nov 17, the owner: "a reset all button so I don't ask you everytime"): bot_career
+    --reset-all, everyone's numbers (people's too) from 0, the matches kept and marked. A copy of the ledger as it was is
+    kept beside it first (ledger.before_reset_all_<date-time>.json). Refused while MCC runs (tools/play.py runs
+    bot_career as a match starts; two writers of the ledger at once could lose the mark). Returns how many matches were
+    marked."""
+    if (mcc_running() if running is None else running):
+        raise PermissionError("close MCC first: the game updates the stats while it runs")
+    ledger = os.path.join(career.OUT, "ledger.json")
+    if os.path.exists(ledger):
+        shutil.copyfile(ledger, os.path.join(career.OUT, time.strftime("ledger.before_reset_all_%Y-%m-%d_%H%M%S.json")))
+    if career.main(["--reset-all", "--quiet"]) != 0:
+        raise OSError("the reset did not finish")
+    return len(load_json(ledger, {}))
 
 
 def mcc_running():

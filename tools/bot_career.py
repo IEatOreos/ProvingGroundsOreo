@@ -16,9 +16,14 @@ totals kept). --reset-bots marks every match known so far (the ledger, after rea
 the bots' rows of those matches no longer count, the person's still do. The matches stay in the ledger so the reports
 still in logs/ are not counted again.
 
+(custom, Nov 17) The owner: "purge the stats. Including mine ... I want everyone to start at zero". --reset-all marks
+every match known so far "all_reset": no row of it counts, a person's included. The matches stay in the ledger, as with
+--reset-bots, so nothing is counted again and taking the mark off would bring them back.
+
 usage: python -I bot_career.py               update, then print the leaderboard (by K/D; --by kills|deaths|assists|games)
        python -I bot_career.py --quiet       update only (tools/play.py, in the background, as a match starts)
        python -I bot_career.py --reset-bots  update, then every bot's numbers start again from 0
+       python -I bot_career.py --reset-all   update, then everyone's numbers (people's too) start again from 0
 """
 import glob
 import json
@@ -89,7 +94,7 @@ def totals(ledger):
     out = {}
     for match in ledger.values():
         players = match["players"]
-        if not counts(players):
+        if not counts(players) or match.get("all_reset"):       # (--reset-all: before everyone's restart)
             continue
         draw = all(p["standing"] == 0 for p in players)
         for p in players:
@@ -118,10 +123,11 @@ def main(argv):
         ledger = {}
     added = update(ledger)
     reset = "--reset-bots" in argv
-    if reset:
+    reset_all = "--reset-all" in argv
+    if reset or reset_all:
         for match in ledger.values():
-            match["bots_reset"] = True
-    if added or reset:
+            match["all_reset" if reset_all else "bots_reset"] = True
+    if added or reset or reset_all:
         tmp = ledger_path + ".tmp"
         json.dump(ledger, open(tmp, "w", encoding="utf-8"))
         os.replace(tmp, ledger_path)
@@ -133,6 +139,8 @@ def main(argv):
     os.replace(tmp, os.path.join(OUT, "totals.txt"))
     if reset:
         print(f"bots' numbers reset: {len(ledger)} matches so far no longer count for any bot")
+    if reset_all:
+        print(f"everyone's numbers reset: {len(ledger)} matches so far no longer count for anyone")
     if "--quiet" in argv:
         return 0
     by = argv[argv.index("--by") + 1] if "--by" in argv and argv.index("--by") + 1 < len(argv) else "kd"

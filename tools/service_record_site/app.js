@@ -190,7 +190,7 @@
       el("div", { class: "id" },
         el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), cardBadges(p)),
         cardClan(p),
-        editing() ? botClanForm(p) : null,
+        editing() && !p.person ? botClanForm(p) : null,   // (a person's tag is their own, set in the game's settings)
         el("div", { class: "rk" }, el("span", null, cur[0]),
           el("span", { class: "nx" }, next ? "Next: " + next[0] + " (" + int(p.cr) + " / " + int(next[1]) + " cR)" : "Highest rank reached (" + int(p.cr) + " cR)")),
         next ? el("progress", { max: next[1] - cur[1], value: p.cr - cur[1], "aria-label": "Progress to " + next[0] })
@@ -369,7 +369,7 @@
     draw();
     const played = D.players.filter((p) => bucket(p).games).length;
     return [
-      el("h1", null, "Bot Tracker"), boardTabs(""), podium(),
+      el("h1", null, "Bot Tracker"), boardTabs(""), editing() ? resetAllForm() : null, podium(),
       el("p", { class: "note" }, played
         ? int(played) + " of " + int(D.players.length) + " have a counted match in " + gameName.get(game()) + ". Choose a name to open its Service Record."
         : "Nobody has a counted match in " + gameName.get(game()) + " yet. Everyone starts at 0; the numbers fill in after the next match."),
@@ -455,9 +455,10 @@
   }
   // ---------------------------------------------------------------- the owner's edit mode
   // Only when the site is served by the owner's editor on this PC (tools/service_record_edit.py answers /api/editor);
-  // switched on from the footer, remembered for this browser tab. Saves go to the editor, which rebuilds the site.
+  // switched on from the footer, remembered in this browser until switched off (Nov 17, the owner: "a permanent edit
+  // button"). Saves go to the editor, which rebuilds the site.
   let editorHere = false;
-  const editing = () => { try { return editorHere && sessionStorage.getItem("sr-edit") === "1"; } catch (e) { return false; } };
+  const editing = () => { try { return editorHere && localStorage.getItem("sr-edit") === "1"; } catch (e) { return false; } };
   function clanNameForm(c) {
     const input = el("input", { type: "text", value: c.name, maxlength: 40, placeholder: "Full clan name", "aria-label": "Clan name for " + c.tag });
     const about = el("textarea", { maxlength: 280, rows: 3, placeholder: "A short description of the clan", "aria-label": "Description of " + c.tag });
@@ -518,13 +519,42 @@
       el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save"),
         p.clan ? el("button", { type: "button", onclick: () => save("") }, "Leave clan") : null), msg);
   }
+  // Reset all (Nov 17, the owner: "a reset all button so I don't ask you everytime"): everyone's stats from 0, the
+  // owner's too, after a second, explicit yes. The editor keeps a copy of the ledger first and refuses while MCC runs.
+  function resetAllForm() {
+    const msg = el("span", { class: "note", "aria-live": "polite" }, "Every bot and listed player back to 0. Close MCC first.");
+    const box = el("div", { class: "edit-actions" });
+    const ask = () => {
+      msg.textContent = "Start everyone, you included, at 0? Old matches stop counting and leave the site; a copy of the stats is kept on this PC.";
+      box.replaceChildren(
+        el("button", { type: "button", class: "danger", onclick: go }, "Yes, reset everyone"),
+        el("button", { type: "button", onclick: () => render() }, "Cancel"));
+      box.firstChild.focus();
+    };
+    async function go() {
+      box.replaceChildren();
+      msg.textContent = "Resetting…";
+      try {
+        const r = await fetch("/api/reset-all", { method: "POST", headers: { "Content-Type": "application/json", "X-Service-Record-Edit": "1" },
+          body: JSON.stringify({ confirm: "reset all" }) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "error");
+        msg.textContent = "Done: everyone starts at 0. The page reloads with the new build.";
+      } catch (e) {
+        msg.textContent = e instanceof TypeError ? "Not reset: the editor is not running." : "Not reset: " + e.message;
+        box.replaceChildren(el("button", { type: "button", class: "danger", onclick: ask }, "Reset all stats"));
+      }
+    }
+    box.append(el("button", { type: "button", class: "danger", onclick: ask }, "Reset all stats"));
+    return el("div", { class: "edit-form reset-all" }, el("strong", null, "Reset all stats"), box, msg);
+  }
   function editToggle() {
     const foot = document.querySelector(".foot");
     if (!foot || !editorHere || foot.querySelector(".edit-toggle")) return;
     const b = el("button", { type: "button", class: "edit-toggle" });
     const show = () => { b.textContent = editing() ? "Edit mode: on" : "Edit mode"; b.setAttribute("aria-pressed", String(editing())); };
     b.addEventListener("click", () => {
-      try { sessionStorage.setItem("sr-edit", editing() ? "0" : "1"); } catch (e) { /* (not kept) */ }
+      try { localStorage.setItem("sr-edit", editing() ? "0" : "1"); } catch (e) { /* (not kept) */ }
       document.body.classList.toggle("editing", editing());
       show();
       render();
@@ -1390,10 +1420,10 @@
       panel("Profile", el("dl", { class: "stats" },
         el("dt", null, "Name"), el("dd", null, p.name),
         el("dt", null, "Clan tag"), el("dd", null, p.clan || "-"),
-        el("dt", null, "Listed as"), el("dd", null, p.roster ? "Roster" : "Matchmaking pool"),
+        el("dt", null, "Listed as"), el("dd", null, p.person ? "Player" : p.roster ? "Roster" : "Matchmaking pool"),
         el("dt", null, "Home state"), el("dd", null, STATES[p.state]
           ? el("a", { href: href(["states"], { area: p.state }) }, stateName(p.state) + " (" + areaName(regionOf(p)) + ")") : "-"),
-        el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? title(p.difficulty) : "Not saved"),
+        p.person ? null : [el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? title(p.difficulty) : "Not saved")],
         el("dt", null, "Species (Reach)"), el("dd", null, looks ? looks.species : "-"))),
       panel("Armor (Reach)", looks && looks.pieces.length
         ? el("dl", { class: "stats" }, looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))

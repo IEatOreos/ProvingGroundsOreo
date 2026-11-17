@@ -772,6 +772,12 @@ a.clan:hover { color: var(--accent-strong); }
 /* (Nov 16) a bot's clan tag on its player card in edit mode */
 .edit-form.bot-clan input.tag { width: 6rem; text-transform: none; }
 .edit-form.bot-clan .note { flex-basis: 100%; font-size: 11px; margin: 0; }
+/* the edit mode's Reset all (Nov 17): red, apart from the gold saves */
+.edit-form.reset-all { border-color: var(--bad, #d8323a); }
+.edit-form.reset-all strong { color: var(--bad, #d8323a); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.edit-form.reset-all .note { flex-basis: 100%; max-width: none; font-size: 11px; margin: 0; }
+.edit-form button.danger { border-color: var(--bad, #d8323a); background: rgba(216, 50, 58, 0.15); }
+.edit-form button.danger:hover { background: rgba(216, 50, 58, 0.35); }
 
 /* (Nov 17) a weapon or vehicle the bot has no kill or death with: listed, quieter */
 .weapons li.unused { opacity: 0.5; }

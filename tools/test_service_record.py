@@ -2,6 +2,7 @@
 their formats, the rank table and credits, game type families, a report kept in full after the rotation, bad reports;
 the kill rows (tools/kill_record.py) summed per weapon, per opponent and per map, kept after the rotation, a match
 without them, bad rows, a long recording's trim, a map picture's frame; the bots' home states."""
+import glob
 import importlib.util
 import json
 import os
@@ -428,6 +429,72 @@ def test_people_stay_off_the_lists():
         assert set(rows) == {"Me", "A Friend", "Wheezy"}, rows
         assert rows["Wheezy"]["listed"] and not rows["Me"]["listed"] and not rows["A Friend"]["listed"], rows
         assert rows["Me"]["won"] and not rows["Wheezy"]["won"]
+
+
+def test_a_person_the_owner_lists():
+    """(Nov 17) A gamertag named in the store's people.json is listed like a bot, as a person; anyone else is not, and
+    the editor never takes a person for a bot (its clan editing writes bot_profiles.ini)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 0, 10, 4, 2, 600, clan="ME"), row(FRIEND, "A Friend", 0, 0, 2, 2, 2, 600),
+            row(bot(1), "Wheezy", 1, 1, 4, 10, 1, 600)]))
+        w.career()
+        os.makedirs(w.paths.store, exist_ok=True)
+        with open(os.path.join(w.paths.store, "people.json"), "w", encoding="utf-8") as f:
+            json.dump(["Me", "Nobody Here"], f)
+        data = w.build()
+        assert [p["name"] for p in data["players"]] == ["Me", "Wheezy"]
+        me = player(data, "Me")
+        assert me["person"] and not player(data, "Wheezy")["person"] and me["clan"] == "ME"
+        s = me["g"]["reach"]["cats"]["all"]
+        assert (s["games"], s["wins"], s["kills"], s["deaths"]) == (1, 1, 10, 4) and me["cr"] > 0
+        assert {r["n"]: r["listed"] for r in data["matches"][0]["rows"]} == {"Me": True, "A Friend": False, "Wheezy": True}
+        spec = importlib.util.spec_from_file_location("service_record_edit", os.path.join(HERE, "service_record_edit.py"))
+        ed = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ed)
+        assert ed.listed_bots(w.paths) == {"Wheezy"}
+
+
+def test_everyone_restarts_at_zero():
+    """(Nov 17) bot_career --reset-all: no row of a match from before counts, a listed person's neither; the roster and
+    the listed person stay on the site at 0, the totals game file empties, and a new match counts again."""
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        with open(w.paths.profiles, "w", encoding="utf-8") as f:
+            f.write("bot=Wheezy,123,AYS\n")
+        os.makedirs(w.paths.store, exist_ok=True)
+        with open(os.path.join(w.paths.store, "people.json"), "w", encoding="utf-8") as f:
+            json.dump(["Me"], f)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 0, 10, 4, 2, 600), row(bot(1), "Wheezy", 1, 1, 4, 10, 1, 600),
+            row(bot(7), "PoolBot", 1, 1, 2, 2, 0, 600)]))
+        w.career("--reset-all")
+        assert w.totals() == {}
+        data = w.build()
+        assert [p["name"] for p in data["players"]] == ["Me", "Wheezy"] and data["matches"] == [], data
+        for p in data["players"]:
+            assert p["g"] == {} and p["cr"] == 0 and p["rank"] == 0, p
+        assert player(data, "Me")["person"]
+        w.write("trace_reach_70_boneyard_20261115-190000.carnage.xml", report("g2", [
+            row(ME, "Me", 0, 0, 3, 5, 0, 300), row(bot(1), "Wheezy", 1, 1, 5, 3, 2, 300)]))
+        w.career()
+        data = w.build()
+        assert w.totals()["Me"][:3] == [1, 1, 3] and w.totals()["Wheezy"][:3] == [1, 0, 5]
+        s = player(data, "Me")["g"]["all"]["cats"]["all"]
+        assert (s["games"], s["kills"]) == (1, 3) and len(data["matches"]) == 1
+        # the edit mode's Reset all: refused while MCC runs, else a copy of the ledger kept and everyone at 0 again
+        try:
+            sr.reset_everyone(running=True)
+            assert False, "reset while MCC runs"
+        except PermissionError:
+            pass
+        assert w.totals()["Me"][0] == 1
+        assert sr.reset_everyone(running=False) == 2 and w.totals() == {}
+        copies = glob.glob(os.path.join(w.career_out, "ledger.before_reset_all_*.json"))
+        assert len(copies) == 1 and len(json.load(open(copies[0], encoding="utf-8"))) == 2
+        assert not json.load(open(copies[0], encoding="utf-8"))["g2"].get("all_reset")
+        assert w.build()["matches"] == []
 
 
 def test_rank_table_and_credits():

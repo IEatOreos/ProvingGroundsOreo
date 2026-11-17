@@ -62,6 +62,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.reply(403, {"error": "edits come from the site on this PC only"})
         if self.path == "/api/bot-clan":
             return self.bot_clan()
+        if self.path == "/api/reset-all":
+            return self.reset_all()
         edits = {"/api/clan-name": ("name", sr.save_clan_name), "/api/clan-about": ("about", sr.save_clan_about)}
         if self.path not in edits:
             return self.reply(404, {"error": "no such edit"})
@@ -100,13 +102,31 @@ class Handler(SimpleHTTPRequestHandler):
         rebuild()
         return self.reply(200, {"name": name, "clan": clan})
 
+    def reset_all(self):
+        """Everyone's stats from 0 (service_record.py reset_everyone): only with the body {"confirm": "reset all"},
+        which the page sends after the owner confirms, and only while MCC is closed."""
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+            if not 0 < size <= MAX_BODY or "application/json" not in (self.headers.get("Content-Type") or ""):
+                raise ValueError("bad request")
+            if json.loads(self.rfile.read(size).decode("utf-8")).get("confirm") != "reset all":
+                raise ValueError("not confirmed")
+            marked = sr.reset_everyone()
+        except PermissionError as e:
+            return self.reply(409, {"error": str(e)})
+        except (ValueError, UnicodeDecodeError, AttributeError, OSError) as e:
+            return self.reply(400, {"error": str(e) or "bad request"})
+        print(f"reset all: {marked} matches no longer count", flush=True)
+        rebuild()
+        return self.reply(200, {"matches": marked})
+
 
 def listed_bots(paths):
-    """The names the built site lists (its data.js): the only bots the editor will touch."""
+    """The bots the built site lists (its data.js, its people left out): the only bots the editor will touch."""
     try:
         with open(os.path.join(paths.out, "data.js"), encoding="utf-8") as f:
             text = f.read()
-        return {p["name"] for p in json.loads(text[text.index("{"):text.rindex("}") + 1])["players"]}
+        return {p["name"] for p in json.loads(text[text.index("{"):text.rindex("}") + 1])["players"] if not p.get("person")}
     except (OSError, ValueError, KeyError):
         return set()
 
