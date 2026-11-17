@@ -301,13 +301,27 @@
     return el("ul", { class: "weapons" + (cls ? " " + cls : "") }, shown.map(([key, n]) => {
       const [name, sure] = weaponName(key);
       const shares = pc(n[0], kills) + " of kills, " + pc(n[1], deaths) + " of deaths";
-      return el("li", null,
+      const used = !!(n[0] || n[1]);
+      return el("li", { class: used ? null : "unused" },
         el("div", { class: "pic" }, weaponPicture(key)),
-        el("div", { class: "nm" }, name, !sure && el("span", { class: "mark", title: "Named from the game's list of damage types; not yet matched to a kill seen live" }, " *")),
+        el("div", { class: "nm" }, name, !sure && used && el("span", { class: "mark", title: "Named from the game's list of damage types; not yet matched to a kill seen live" }, " *")),
         el("div", { class: "kd" }, "Kills: ", el("b", null, int(n[0])), el("span", { class: "sep", "aria-hidden": "true" }, "|"), "Deaths: ", el("b", null, int(n[1]))),
         el("div", { class: "share", "data-tip": name + ": " + shares }, el("span", { style: "width:" + (kills ? (100 * n[0]) / kills : 0) + "%" })),
         el("div", { class: "pc" }, shares));
     }));
+  }
+  // Every weapon and vehicle of the game shown (D.arsenal, weapons.json), used or not (the owner, Nov 17: "even if the
+  // player has no kills with it"), with the bot's kills and deaths, 0 where none; any other way it killed or died (a
+  // fall, the Guardians...) with the weapons. Most kills first, then most deaths, then by name.
+  const inShownGame = (k) => game() === "all" || k.startsWith(game() + ":");
+  function arsenalLists(g) {
+    const own = (g && g.weapons) || {};
+    const A = D.arsenal || { weapons: [], vehicles: [] };
+    const wk = new Set(A.weapons.filter(inShownGame)), vk = new Set(A.vehicles.filter(inShownGame));
+    for (const k of Object.keys(own)) (VEHICLES.has(k) ? vk : wk).add(k);
+    const order = (keys) => [...keys].map((k) => [k, own[k] || [0, 0]])
+      .sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1] || weaponName(a[0])[0].localeCompare(weaponName(b[0])[0]));
+    return [order(wk), order(vk)];
   }
   function killNote(g, s) {
     if (g.kill_games >= s.games) {
@@ -636,8 +650,9 @@
     if (kind === "overall") return [];
     if (kind === "mode") return D.cats.filter(([k]) => D.players.some((p) => bucket(p, k).games));
     const mine = (k) => (game() === "all" || k.startsWith(game() + ":")) && VEHICLES.has(k) === (kind === "vehicle");
-    const keys = Object.keys(D.weapons || {}).filter(mine)
-      .filter((k) => D.players.some((p) => { const n = killsWith(p, k); return n && n[0]; }))
+    const A = D.arsenal || { weapons: [], vehicles: [] };
+    const used = (k) => D.players.some((p) => { const n = killsWith(p, k); return n && n[0]; });
+    const keys = [...new Set(A.weapons.concat(A.vehicles).filter(mine).concat(Object.keys(D.weapons || {}).filter((k) => mine(k) && used(k))))]
       .map((k) => [k, weaponName(k)[0]]).sort((a, b) => a[1].localeCompare(b[1]));
     return kind === "vehicle" && keys.length ? [["all", "All vehicles"]].concat(keys) : keys;
   }
@@ -668,7 +683,8 @@
   function statesPage() {
     const kind = BOARDS.some(([k]) => k === route.q.board) ? route.q.board : "overall";
     const keys = boardKeys(kind);
-    const key = kind === "overall" ? "all" : keys.some(([k]) => k === route.q.key) ? route.q.key : (keys[0] || [null])[0];
+    const firstUsed = keys.find(([k]) => k === "all" || D.players.some((p) => { const n = killsWith(p, k); return n && n[0]; }));
+    const key = kind === "overall" ? "all" : keys.some(([k]) => k === route.q.key) ? route.q.key : (firstUsed || keys[0] || [null])[0];
     const area = validArea(route.q.area);
     const b = key ? board(kind, key) : null;
     const go = (q) => { location.hash = href(["states"], Object.assign({ board: kind === "overall" ? null : kind, key: kind === "overall" ? null : key, area: area || null }, q)); };
@@ -695,7 +711,8 @@
           td(el("a", { href: boardHref(b, r.p.state) }, stateName(r.p.state)), "l"),
           td(el("a", { href: boardHref(b, regionOf(r.p)) }, areaName(regionOf(r.p))), "l hide-s"),
           td(int(r.v)), b.cells(r.p))),
-        { none: "Nobody in " + areaName(area) + " is on this board yet." });
+        { none: b.unit === "Kills" ? "No kill with " + (key === "all" ? "a vehicle" : "the " + b.label) + " is recorded" + (area ? " in " + areaName(area) : "") + " yet."
+          : "Nobody in " + areaName(area) + " is on this board yet." });
     }
     // each state of the area, its bots and its leader on this board (not when one state is shown)
     const inside = b && !STATES[area] ? homes.filter((c) => !area || STATES[c][1] === area)
@@ -1229,19 +1246,21 @@
     const g = side(p);
     const byType = panel("Kills by type (MCC's report)", el("div", null, table(null, [["Type", "l"], ["Kills"], ["Share of kills"]], rows,
       { none: "No report recorded yet for " + gameName.get(game()) + "." }), reportNote(s) && el("div", { class: "body" }, reportNote(s))));
-    if (!recorded(g)) {
-      return [banner(p), panel("Weapons", empty("Not recorded yet", NO_KILLS + " MCC's own report only splits kills by type, below.")), byType];
-    }
-    const list = weaponList(g);
-    const kills = list.reduce((n, w) => n + w[1][0], 0), deaths = list.reduce((n, w) => n + w[1][1], 0);
-    const unchecked = list.some(([key]) => !weaponName(key)[1]);
+    const rec = recorded(g);
+    const [wl, vl] = arsenalLists(rec ? g : null);
+    const all = wl.concat(vl);
+    const kills = all.reduce((n, w) => n + w[1][0], 0), deaths = all.reduce((n, w) => n + w[1][1], 0);
+    const unchecked = all.some(([key, n]) => (n[0] || n[1]) && !weaponName(key)[1]);
+    const count = (list) => { const k = list.filter((w) => w[1][0] || w[1][1]).length; return int(k) + " of " + int(list.length) + " used"; };
     return [banner(p),
       panel("Weapons", el("div", { class: "body" },
-        el("p", { class: "note" }, killNote(g, s) + " Kills are the ones the game credits to " + p.name + " against players of the other team; deaths are every way it died."),
-        weaponCards(list, list),
+        el("p", { class: "note" }, rec ? killNote(g, s) + " Kills are the ones the game credits to " + p.name + " against players of the other team; deaths are every way it died."
+          : "Not recorded yet. " + NO_KILLS + " Every weapon is listed at 0 until then; MCC's own report splits kills by type, below."),
+        wl.length ? weaponCards(wl, all) : null,
         unchecked && el("p", { class: "note" },
           "* Named from the game's own list of damage types. This name has not yet been matched to a kill seen live.")),
-        el("span", { class: "note" }, int(kills) + (kills === 1 ? " kill, " : " kills, ") + int(deaths) + (deaths === 1 ? " death" : " deaths"))),
+        el("span", { class: "note" }, rec ? int(kills) + (kills === 1 ? " kill, " : " kills, ") + int(deaths) + (deaths === 1 ? " death" : " deaths") + " \u00b7 " + count(wl) : count(wl))),
+      vl.length ? panel("Vehicles", el("div", { class: "body" }, weaponCards(vl, all, "vehicles")), el("span", { class: "note" }, count(vl))) : null,
       byType];
   }
 

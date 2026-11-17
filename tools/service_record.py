@@ -1277,6 +1277,8 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     table, weapons, heat_maps = load_weapons(), {}, {}
     keys = {key for rec in players.values() for g in rec["g"].values() for key in g["weapons"]}
     keys |= {r[3] for m in matches for r in m.get("feed", [])}     # (a carnage report's kill feed names its own)
+    arsenal = arsenal_keys()
+    keys |= {k for kind in arsenal.values() for k in kind}         # (Nov 17: every weapon and vehicle, used or not)
     for key in keys:
         game_key, _, kind = key.partition(":")
         names, checked = table.get(game_key, ({}, set()))
@@ -1329,6 +1331,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "map_art": {m: f for m in {x["map"] for x in matches if x["map"]}
                     for f in [menu_pictures("maps", {preview_name(m)}, paths).get(preview_name(m))] if f},
         "vehicles": vehicle_keys(),
+        "arsenal": arsenal,
         "regions": regions, "states": {s[0]: [s[1], s[2]] for s in states},
         "clan_names": load_clan_names(paths),        # (the owner's full names for the clans, by clan_key)
         "clan_about": load_clan_about(paths),        # (and his short description of each)
@@ -1650,6 +1653,20 @@ def vehicle_keys(path=os.path.join(SITE, "weapons.json")):
     site's table; the state leaderboards rank these on a board of their own."""
     table = load_json(path, {})
     return sorted(f"{g}:{k}" for g, t in table.items() if isinstance(t, dict) for k in t.get("vehicles", []))
+
+
+def arsenal_keys(path=os.path.join(SITE, "weapons.json")):
+    """{"weapons": ["reach:4", ...], "vehicles": [...]}: everything a game's multiplayer kills with, in the table's
+    order (its "arsenal" and "vehicles"). The owner (Nov 17): "all weapons and vehicles to be on the site pages
+    correlating to them even if the player has no kills with it": the Weapons page and the state boards list these
+    whether or not any bot has a kill with one."""
+    table = load_json(path, {})
+    out = {"weapons": [], "vehicles": []}
+    for g, t in table.items():
+        if isinstance(t, dict):
+            out["weapons"] += [f"{g}:{k}" for k in t.get("arsenal", [])]
+            out["vehicles"] += [f"{g}:{k}" for k in t.get("vehicles", [])]
+    return out
 
 
 MEDAL_GROUPS = ("multikill", "spree", "kill", "style", "assist", "objective", "legendary", "other")

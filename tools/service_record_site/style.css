@@ -772,3 +772,8 @@ a.clan:hover { color: var(--accent-strong); }
 /* (Nov 16) a bot's clan tag on its player card in edit mode */
 .edit-form.bot-clan input.tag { width: 6rem; text-transform: none; }
 .edit-form.bot-clan .note { flex-basis: 100%; font-size: 11px; margin: 0; }
+
+/* (Nov 17) a weapon or vehicle the bot has no kill or death with: listed, quieter */
+.weapons li.unused { opacity: 0.5; }
+.weapons li.unused .pic img { filter: grayscale(1); }
+.weapons li.unused:hover { opacity: 0.8; }

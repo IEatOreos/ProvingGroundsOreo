@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Service Record: every weapon and vehicle listed, used or not, 2026-11-17
+
+The owner: "I would like all weapons and vehicles to be on the site pages correlating to them even if the player has no kills with it."
+
+- `weapons.json`: Reach's `arsenal`, the multiplayer weapons by damage type (Magnum to Fuel Rod Gun, both grenades, Melee, the Target Locator and both turrets); its `vehicles` as before. Damage types that are not Reach weapons (SMG, Battle Rifle, Brute Shot, the Sentinels' guns) and the other ways to die (a fall, the Guardians...) are left out of it.
+- `service_record.py arsenal_keys`: the site's `arsenal` {weapons, vehicles}; every one named and given MCC's picture whether or not a bot has used it.
+- `app.js` / `style.css`: a player's Weapons page has a Weapons and a Vehicles panel listing the whole arsenal, most kills first, the ones never used at Kills 0 | Deaths 0, faded and grey; "N of M used" in each panel's corner; another way the bot killed or died (a fall...) still listed with the weapons. A bot with no kill record yet sees the whole list at 0 with the note why. The "not matched live" mark only on a card with numbers. The state boards' Weapon and Vehicle menus list every one (opened on the first with a kill); one nobody has a kill with says so.
+- Validation: `tools/test_service_record.py` passed (new `test_whole_arsenal_listed`); 26 weapons and 18 vehicles in the built site, all with MCC's pictures. Browser: 12ab34cd's Weapons page shows its 10 used first, the rest at 0 (a stray "0" after an unused card's name found and fixed); the boards list 28 weapons and 19 vehicle choices; Scorpion board: "No kill with the Scorpion is recorded yet."
 ### Service Record: clan tags set from the edit mode, saved in game; the clan on its own line of the player card, 2026-11-16
 
 The owner: "add to the edit mode my ability to effectively change their clan tags on a player page basis ... add them to clans through the edit mode on the website so I dont have to ingame but it saves in game"; then, of "Gamertag -Clan" on the player page, "Make it more professional. Find a better spot for clan that keeps it relevant but not dirty".

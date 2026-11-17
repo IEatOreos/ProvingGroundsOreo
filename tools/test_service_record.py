@@ -720,6 +720,20 @@ def test_a_long_recording_keeps_its_kill_rows():
         assert [(k["t"], k["vp"][0]) for k in rows] == [(0.5, 5), (12.0, 120), (39.5, 395)], rows
 
 
+def test_whole_arsenal_listed():
+    """Every Reach weapon and vehicle is on the site (the Weapons page, the state boards) used or not: the table's
+    arsenal and vehicles, named, none of them both, no vehicle among the weapons."""
+    arsenal = sr.arsenal_keys()
+    weapons, vehicles = arsenal["weapons"], arsenal["vehicles"]
+    names, _ = sr.load_weapons()["reach"]
+    assert len(weapons) >= 20 and len(vehicles) >= 10 and not set(weapons) & set(vehicles)
+    assert vehicles == [k for k in sr.vehicle_keys() if k in vehicles] and set(vehicles) == set(sr.vehicle_keys())
+    assert all(k.split(":")[1] in names for k in weapons + vehicles)
+    by_name = {names[k.split(":")[1]] for k in weapons}
+    assert {"DMR", "Magnum", "Energy Sword", "Focus Rifle", "Fuel Rod Gun"} <= by_name
+    assert not by_name & {"Fall", "Suicide", "Guardians", "SMG", "Battle Rifle", "Brute Shot"}   # (not Reach weapons)
+
+
 def test_png():
     data = sr.png(2, 1, bytes([255, 0, 0, 255, 0, 0, 255, 128]))
     assert data[:8] == b"\x89PNG\r\n\x1a\n" and struct.unpack(">II", data[16:24]) == (2, 1)
