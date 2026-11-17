@@ -297,6 +297,38 @@ def test_forge_layouts_and_tier_banners():
         assert out.getpixel((p + 143, 2)) == sr.TIER_RGB["gold"]                                                  # (the gold outline)
 
 
+def test_clan_names_and_the_editor():
+    """The owner's clan names: kept by the clan's tag whatever its case, tidied, cut to 40 characters, blank clears one;
+    a key that is not a tag is refused. The editor takes a save only from the site on this PC (its Origin)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = sr.Paths(store=os.path.join(tmp, "store"))
+        assert sr.save_clan_name(paths, "XvX", "  Xtreme \t Velocity ") == {"xvx": "Xtreme Velocity"}
+        assert sr.save_clan_name(paths, "cod", "C" * 60)["cod"] == "C" * 40
+        assert sr.save_clan_name(paths, "COD", "Call\x07 of Duty")["cod"] == "Call of Duty"
+        assert sr.save_clan_name(paths, "xvx", "   ") == {"cod": "Call of Duty"}
+        assert sr.load_clan_names(paths) == {"cod": "Call of Duty"}
+        for bad in ("", "a|b", "x" * 17):
+            try:
+                sr.save_clan_name(paths, bad, "name")
+                raise AssertionError(f"{bad!r} taken")
+            except ValueError:
+                pass
+        with open(os.path.join(paths.store, "clan_names.json"), "w", encoding="utf-8") as f:
+            json.dump({"ok": "Fine", "bad|key": "x", "n": 5}, f)
+        assert sr.load_clan_names(paths) == {"ok": "Fine"}
+        # a description: line breaks kept (two in a row at most), spaces tidied, cut to 280, blank clears it
+        assert sr.save_clan_about(paths, "COD", "  Slayers   only.\n\n\n\nNo  mercy. ") == {"cod": "Slayers only.\n\nNo mercy."}
+        assert len(sr.save_clan_about(paths, "cod", "x" * 400)["cod"]) == 280
+        assert sr.save_clan_about(paths, "cod", " \n ") == {} and sr.load_clan_about(paths) == {}
+    spec2 = importlib.util.spec_from_file_location("service_record_edit", os.path.join(HERE, "service_record_edit.py"))
+    ed = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(ed)
+    assert ed.allowed_origin("http://localhost:8766", 8766) and ed.allowed_origin("http://127.0.0.1:8766", 8766)
+    assert ed.allowed_origin(None, 8766)
+    assert not ed.allowed_origin("https://evil.example", 8766) and not ed.allowed_origin("http://localhost:9999", 8766)
+    assert not ed.allowed_origin("null", 8766)                       # (a page from a file or a sandbox)
+
+
 def test_mode_icons():
     """Each family modes.json names gets its icon from the art store, copied into the site; a number this PC has no
     picture for, or one that is not a number, is left out (the page keeps its drawn badge)."""

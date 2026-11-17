@@ -188,7 +188,7 @@
     return [
       el("div", { class: "em" }, emblem(p)),
       el("div", { class: "id" },
-        el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), p.clan && el("span", { class: "clan" }, "- " + p.clan),
+        el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), p.clan && el("a", { class: "clan", href: href(["clans", clanKey(p.clan)]), title: "Clan " + ((D.clan_names && D.clan_names[clanKey(p.clan)]) || p.clan) }, "- " + p.clan),
           cardBadges(p)),
         el("div", { class: "rk" }, el("span", null, cur[0]),
           el("span", { class: "nx" }, next ? "Next: " + next[0] + " (" + int(p.cr) + " / " + int(next[1]) + " cR)" : "Highest rank reached (" + int(p.cr) + " cR)")),
@@ -332,7 +332,7 @@
         const s = bucket(p);
         return el("tr", null, td(i + 1, i < 3 && s.games && !want ? "pos lead" : "pos"),
           td(el("span", { class: "cell" }, emblem(p, true), el("a", { href: href(["p", p.name, "overview"]) }, p.name),
-            p.clan && el("span", { class: "tag hide-s" }, p.clan)), "l"),
+            p.clan && el("a", { class: "tag hide-s", href: href(["clans", clanKey(p.clan)]) }, p.clan)), "l"),
           td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
           td(int(s.games)), td(int(s.wins), "hide-s"), td(int(s.kills)), td(int(s.deaths)), td(int(s.assists), "hide-s"), td(dec(s.r.kd)));
       }) : [el("tr", null, el("td", { class: "l", colspan: 9 }, "Nothing matches “" + find + "”."))]));
@@ -388,6 +388,157 @@
   }
   // every rank of Reach in order, its Grades with their credits, and which bots hold it now (credits come from counted
   // Reach matches only: ranks.json)
+  // ---------------------------------------------------------------- clans
+  // A clan is its tag (the bots' clan tags: the roster's, else the newest report's), letters alike whatever their case.
+  // Its credits are all its members' (each member's own cR, the rank's formula), its rank the players' ladder with
+  // every step x10 (D.ranks: the one table, ranks.json).
+  const CLAN_SCALE = 10;
+  const clanKey = (tag) => String(tag).trim().toLowerCase();
+  let clanCache = null;
+  function clanList() {
+    if (clanCache) return clanCache;
+    const by = new Map();
+    for (const p of D.players) {
+      if (!p.clan || !String(p.clan).trim()) continue;
+      const k = clanKey(p.clan);
+      if (!by.has(k)) by.set(k, { key: k, tags: new Map(), members: [] });
+      const c = by.get(k);
+      c.members.push(p);
+      c.tags.set(p.clan, (c.tags.get(p.clan) || 0) + 1);
+    }
+    clanCache = [...by.values()].map((c) => {
+      const cr = c.members.reduce((n, p) => n + (p.cr || 0), 0);
+      const tag = [...c.tags].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];   // (its most worn spelling)
+      c.members.sort((a, b) => (b.cr || 0) - (a.cr || 0) || a.name.localeCompare(b.name));
+      const games = c.members.reduce((n, p) => n + ((p.g[D.default_game] && p.g[D.default_game].cats.all) || ZERO).games, 0);
+      const name = (D.clan_names && D.clan_names[c.key]) || "";
+      const about = (D.clan_about && D.clan_about[c.key]) || "";
+      return { key: c.key, tag, name, about, title: name || tag, members: c.members, cr, games, rank: clanRank(cr) };
+    }).sort((a, b) => b.cr - a.cr || b.members.length - a.members.length || a.tag.localeCompare(b.tag));
+    clanCache.forEach((c, i) => { c.place = i && c.cr === clanCache[i - 1].cr ? clanCache[i - 1].place : i + 1; });
+    return clanCache;
+  }
+  function clanRank(cr) {
+    let i = 0;
+    while (i + 1 < D.ranks.length && cr >= D.ranks[i + 1][1] * CLAN_SCALE) i++;
+    return i;
+  }
+  function clanRankBlock(c) {
+    const cur = D.ranks[c.rank], next = D.ranks[c.rank + 1];
+    return el("div", { class: "clan-rank" }, insignia(c.rank),
+      el("div", null, el("div", { class: "rk-name" }, cur[0]),
+        next ? el("progress", { max: (next[1] - cur[1]) * CLAN_SCALE, value: c.cr - cur[1] * CLAN_SCALE, "aria-label": "Clan progress to " + next[0] })
+          : el("progress", { max: 1, value: 1, "aria-label": "Highest clan rank reached" }),
+        el("div", { class: "rk-next" }, next ? "Next: " + next[0] + " (" + int(c.cr) + " / " + int(next[1] * CLAN_SCALE) + " cR)" : "Highest rank reached (" + int(c.cr) + " cR)")));
+  }
+  // ---------------------------------------------------------------- the owner's edit mode
+  // Only when the site is served by the owner's editor on this PC (tools/service_record_edit.py answers /api/editor);
+  // switched on from the footer, remembered for this browser tab. Saves go to the editor, which rebuilds the site.
+  let editorHere = false;
+  const editing = () => { try { return editorHere && sessionStorage.getItem("sr-edit") === "1"; } catch (e) { return false; } };
+  function clanNameForm(c) {
+    const input = el("input", { type: "text", value: c.name, maxlength: 40, placeholder: "Full clan name", "aria-label": "Clan name for " + c.tag });
+    const about = el("textarea", { maxlength: 280, rows: 3, placeholder: "A short description of the clan", "aria-label": "Description of " + c.tag });
+    about.value = c.about;
+    const left = el("small", { class: "left" });
+    const count = () => { left.textContent = (280 - about.value.length) + " left"; };
+    about.addEventListener("input", count);
+    count();
+    const msg = el("span", { class: "note", "aria-live": "polite" });
+    const post = (path, field, value) => fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Service-Record-Edit": "1" },
+      body: JSON.stringify({ key: c.key, [field]: value }) }).then((r) => r.json().then((d) => { if (!r.ok) throw new Error(d.error || "error"); return d[field]; }));
+    const save = async (name, text) => {
+      msg.textContent = "Saving\u2026";
+      try {
+        D.clan_names = D.clan_names || {};
+        D.clan_about = D.clan_about || {};
+        if (name !== c.name) { const v = await post("/api/clan-name", "name", name); if (v) D.clan_names[c.key] = v; else delete D.clan_names[c.key]; }
+        if (text !== c.about) { const v = await post("/api/clan-about", "about", text); if (v) D.clan_about[c.key] = v; else delete D.clan_about[c.key]; }
+        clanCache = null;
+        render();
+      } catch (e) {
+        msg.textContent = e instanceof TypeError ? "Not saved: the editor is not running." : "Not saved: " + e.message;
+      }
+    };
+    return el("form", { class: "edit-form", onsubmit: (e) => { e.preventDefault(); save(input.value, about.value); } },
+      el("label", null, "Clan name", input),
+      el("label", { class: "wide" }, "Description", about, left),
+      el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save"),
+        c.name || c.about ? el("button", { type: "button", onclick: () => save("", "") }, "Clear both") : null, msg));
+  }
+  function editToggle() {
+    const foot = document.querySelector(".foot");
+    if (!foot || !editorHere || foot.querySelector(".edit-toggle")) return;
+    const b = el("button", { type: "button", class: "edit-toggle" });
+    const show = () => { b.textContent = editing() ? "Edit mode: on" : "Edit mode"; b.setAttribute("aria-pressed", String(editing())); };
+    b.addEventListener("click", () => {
+      try { sessionStorage.setItem("sr-edit", editing() ? "0" : "1"); } catch (e) { /* (not kept) */ }
+      document.body.classList.toggle("editing", editing());
+      show();
+      render();
+    });
+    show();
+    foot.prepend(b);
+    document.body.classList.toggle("editing", editing());
+  }
+  if (location.protocol.startsWith("http")) {
+    fetch("/api/editor", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && d.edit) { editorHere = true; editToggle(); if (editing()) render(); } }).catch(() => {});
+  }
+
+  let clanFind = "";
+  function clansPage() {
+    const list = clanList();
+    const body = el("ol", { class: "clans" });
+    const count = el("span", { class: "note", "aria-live": "polite" });
+    const draw = () => {
+      const want = clanFind.trim().toLowerCase();
+      const shown = list.filter((c) => !want || c.tag.toLowerCase().includes(want) || c.name.toLowerCase().includes(want) || c.about.toLowerCase().includes(want) ||
+        c.members.some((p) => p.name.toLowerCase().includes(want)));
+      body.replaceChildren(...(shown.length ? shown.map((c) => el("li", null, el("a", { class: "clan-card", href: href(["clans", c.key]) },
+        el("span", { class: "place" + (c.cr && c.place <= 3 ? " lead" : "") }, c.cr ? c.place : "-"),
+        el("span", { class: "ins" }, insignia(c.rank)),
+        el("span", { class: "who" }, el("b", null, c.title), el("small", null, c.name ? el("span", { class: "clan-abbr" }, c.tag) : null, D.ranks[c.rank][0]),
+          c.about ? el("span", { class: "clan-blurb" }, c.about.replace(/\s+/g, " ")) : null),
+        el("span", { class: "crew" }, c.members.slice(0, 6).map((p) => emblem(p, true)), c.members.length > 6 ? el("small", null, "+" + (c.members.length - 6)) : null),
+        el("span", { class: "nums" }, el("b", null, int(c.cr) + " cR"), el("small", null, c.members.length + (c.members.length === 1 ? " member" : " members")))))) :
+        [el("li", { class: "none" }, "No clan or member matches \u201C" + clanFind + "\u201D.")]));
+      count.textContent = shown.length + " of " + list.length + " clans";
+    };
+    draw();
+    return [el("h1", null, "Bot Tracker"), boardTabs("clans"),
+      el("p", { class: "note" }, "Every clan the bots wear a tag of. A clan's credits are all its members' cR added up, and its rank is the same ladder as a player's with every step \u00D7" + CLAN_SCALE + "."),
+      panel("Clans", el("div", { class: "body" },
+        el("div", { class: "toolbar" }, count, el("label", null, "Find a clan or member", el("input", { type: "search", value: clanFind, autocomplete: "off",
+          oninput: (e) => { clanFind = e.target.value; draw(); } }))),
+        list.length ? body : empty("No clans yet", "A clan shows here once a bot wears its tag.")))];
+  }
+  function clanPage(key) {
+    const c = clanList().find((x) => x.key === key);
+    const total = c.cr || 1;
+    const rows = c.members.map((p, i) => {
+      const s = (p.g[D.default_game] && p.g[D.default_game].cats.all) || ZERO;
+      return el("tr", null, td(i + 1, i < 3 && p.cr ? "pos lead" : "pos"),
+        td(el("span", { class: "cell" }, emblem(p, true), el("a", { href: href(["p", p.name, "overview"]) }, p.name)), "l"),
+        td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
+        td(int(p.cr)), td(Math.round((100 * (p.cr || 0)) / total) + "%", "hide-s"), td(int(s.games)), td(dec(s.r.kd), "hide-s"));
+    });
+    return [el("h1", null, "Bot Tracker"), boardTabs("clans"),
+      el("p", null, el("a", { class: "more back-link", href: href(["clans"]) }, "All clans")),
+      el("section", { class: "panel clan-head" }, el("div", { class: "body" },
+        el("div", { class: "clan-title" }, c.cr ? el("span", { class: "place-big" }, "#" + c.place) : null,
+          el("div", null, el("h2", null, c.title), c.name ? el("span", { class: "clan-abbr big" }, c.tag) : null, editing() ? clanNameForm(c) : null)),
+        clanRankBlock(c),
+        el("ul", { class: "clan-facts" },
+          el("li", null, el("b", null, int(c.cr)), el("span", null, "Clan cR")),
+          el("li", null, el("b", null, int(c.members.length)), el("span", null, c.members.length === 1 ? "Member" : "Members")),
+          el("li", null, el("b", null, int(c.games)), el("span", null, "Games (members' Reach)"))),
+        c.about ? el("p", { class: "clan-about" }, c.about) : null,
+        // (a placeholder: applying to a clan is not decided yet, the owner, Nov 16)
+        el("button", { type: "button", class: "apply-btn", disabled: true, title: "Clan applications are coming soon" }, "Apply", el("small", null, "Coming soon")))),
+      panel("Members", table(null, [["#"], ["Member", "l"], ["Rank", "l hide-s"], ["cR"], ["Share", "hide-s"], ["Games"], ["K/D", "hide-s"]], rows))];
+  }
+
   function ranksPage() {
     const groups = [];
     D.ranks.forEach((s, i) => { if (s[3] === 0 || !groups.length) groups.push({ name: s[0], steps: [] }); groups[groups.length - 1].steps.push(i); });
@@ -473,7 +624,7 @@
   const boardHref = (b, area) => href(["states"], { board: b.kind === "overall" ? null : b.kind,
     key: b.kind === "overall" ? null : b.key, area: area || null });
   function boardTabs(on) {
-    return el("ul", { class: "tabs" }, [["", "Leaderboard", []], ["states", "By state", ["states"]], ["ranks", "Ranks", ["ranks"]]].map(([k, label, parts]) =>
+    return el("ul", { class: "tabs" }, [["", "Leaderboard", []], ["states", "By state", ["states"]], ["ranks", "Ranks", ["ranks"]], ["clans", "Clans", ["clans"]]].map(([k, label, parts]) =>
       el("li", null, el("a", { href: href(parts), "aria-current": k === on ? "true" : null }, label))));
   }
   function statesPage() {
@@ -1289,6 +1440,8 @@
     if (!kind) nodes = leaderboard();
     else if (kind === "states" && !name) { nodes = statesPage(); label = "State leaderboards"; }
     else if (kind === "ranks" && !name) { nodes = ranksPage(); label = "Ranks"; }
+    else if (kind === "clans" && !name) { nodes = clansPage(); label = "Clans"; }
+    else if (kind === "clans" && clanList().some((c) => c.key === name)) { nodes = clanPage(name); label = "Clan " + clanList().find((c) => c.key === name).title; }
     else if (kind === "p" && players.has(name)) {
       p = players.get(name);
       nodes = playerPage(p, page || "overview", arg);
@@ -1303,6 +1456,7 @@
     }
     drawNav(p, page || "overview");
     document.body.classList.toggle("landing", !p && !!bgVideo);
+    document.body.classList.toggle("record-page", !!p);         // (its own backdrop, when the owner's player.jpg is here)
     main.replaceChildren(...nodes.flat(Infinity).filter(Boolean));
     document.title = label + " | " + D.site;
     if (!first) { main.focus({ preventScroll: true }); window.scrollTo(0, 0); }
@@ -1346,7 +1500,7 @@
   })();
 
   // the owner's header and sidebar pictures, when this PC has them (style.css falls back to backdrop.svg)
-  for (const [file, prop] of [["header.jpg", "--header-art"], ["sidebar.jpg", "--side-art"]]) {
+  for (const [file, prop] of [["header.jpg", "--header-art"], ["sidebar.jpg", "--side-art"], ["player.jpg", "--player-art"]]) {
     const src = D.backdrops && D.backdrops[file];
     if (src) document.documentElement.style.setProperty(prop, 'url("' + src + '")');
   }

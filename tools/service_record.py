@@ -1227,15 +1227,16 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     regions, states = load_states()
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
-    looks = read_looks(paths.looks, read_look_names(paths.look_names))
     players, matches = collect(ledger, store_matches, roster, kills, paths)
+    looks_file = all_looks(paths, [html.unescape(n) for n in players])   # (pool bots' looks worked out too)
+    looks = read_looks(looks_file, read_look_names(paths.look_names))
     clans = {}
     for m in reversed(matches):                             # (a pool bot's clan tag: its newest report's)
         for r in m["rows"]:
             if r.get("clan"):
                 clans[r["n"]] = r["clan"]
     medal_names = load_json(os.path.join(paths.store, "art", "medals.json"), {})
-    figures = bot_figures(paths)
+    figures = bot_figures(paths, looks_file)
     tiers, comms = load_commendations()
     badges = load_badges()
     with_comms = bool(load_json(os.path.join(SITE, "ranks.json"), {}).get("commendation_credits"))
@@ -1317,7 +1318,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "weapons": weapons, "heat_maps": {k: v for k, v in heat_maps.items() if v},
         "weapon_art": weapon_pictures(weapons, paths),
         # the owner's own header and sidebar pictures (Nov 16), kept on this PC only; the site's drawing without them
-        "backdrops": menu_pictures("backdrops", {"header.jpg", "sidebar.jpg"}, paths),
+        "backdrops": menu_pictures("backdrops", {"header.jpg", "sidebar.jpg", "player.jpg"}, paths),   # (player.jpg: the player pages's own, Nov 16)
         # the landing page's background: MCC's Noble main-menu movie as MP4 and its still (service_record_art.py video)
         "video": menu_pictures("video", {"noble.mp4", "noble.png"}, paths),
         # the owner's neon icons (Nov 16), cut from his two sheets into art/icons; the site's own drawn ones without them
@@ -1329,6 +1330,8 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
                     for f in [menu_pictures("maps", {preview_name(m)}, paths).get(preview_name(m))] if f},
         "vehicles": vehicle_keys(),
         "regions": regions, "states": {s[0]: [s[1], s[2]] for s in states},
+        "clan_names": load_clan_names(paths),        # (the owner's full names for the clans, by clan_key)
+        "clan_about": load_clan_about(paths),        # (and his short description of each)
     }
 
 
@@ -1370,7 +1373,130 @@ FIGURE_SIZE = ("480", "640", "0.35", "24")   # each drawing's width, height, fir
                                              # 0.35) and its angles round the turntable
 
 
-def bot_figures(paths):
+CLAN_KEY = re.compile(r"[^\x00-\x1f|]{1,16}")
+CLAN_NAME_MAX = 40
+
+
+def clan_key(tag):
+    """A clan's key: its tag, its letters alike whatever their case (app.js clanKey)."""
+    return str(tag).strip().lower()
+
+
+def load_clan_names(paths):
+    """{clan key: the full name the owner gave it} (native/bin/service_record/clan_names.json, written by the site's edit
+    mode through tools/service_record_edit.py; never in git), bad entries left out."""
+    raw = load_json(os.path.join(paths.store, "clan_names.json"), {})
+    out = {}
+    for k, v in (raw.items() if isinstance(raw, dict) else []):
+        name = clean_clan_name(v)
+        if isinstance(k, str) and CLAN_KEY.fullmatch(k) and name:
+            out[k] = name
+    return out
+
+
+def clean_clan_name(name):
+    """A clan name as kept: text, its spaces tidied, no control characters, at most CLAN_NAME_MAX characters; "" for
+    anything else (which clears the name)."""
+    if not isinstance(name, str):
+        return ""
+    name = " ".join("".join(ch for ch in name if ch.isprintable()).split())
+    return name[:CLAN_NAME_MAX]
+
+
+def save_clan_name(paths, key, name):
+    """Give a clan its full name ("" or blank clears it): the edit mode's one write. Returns the names as kept. Raises
+    ValueError for a key that is not a clan tag's."""
+    key = clan_key(key)
+    if not CLAN_KEY.fullmatch(key):
+        raise ValueError("not a clan tag")
+    names = load_clan_names(paths)
+    name = clean_clan_name(name)
+    if name:
+        names[key] = name
+    else:
+        names.pop(key, None)
+    save_json(os.path.join(paths.store, "clan_names.json"), names)
+    return names
+
+
+CLAN_ABOUT_MAX = 280
+
+
+def clean_clan_about(text):
+    """A clan description as kept: text, line breaks kept (two at most in a row), no other control characters, its
+    spaces tidied, at most CLAN_ABOUT_MAX characters; "" for anything else (which clears it)."""
+    if not isinstance(text, str):
+        return ""
+    lines = [" ".join("".join(ch for ch in ln if ch.isprintable()).split()) for ln in text.replace("\r", "").split("\n")]
+    out = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    return out[:CLAN_ABOUT_MAX].rstrip()
+
+
+def load_clan_about(paths):
+    """{clan key: the owner's short description of it} (native/bin/service_record/clan_about.json, the edit mode's;
+    never in git), bad entries left out."""
+    raw = load_json(os.path.join(paths.store, "clan_about.json"), {})
+    return {k: clean_clan_about(v) for k, v in (raw.items() if isinstance(raw, dict) else [])
+            if isinstance(k, str) and CLAN_KEY.fullmatch(k) and clean_clan_about(v)}
+
+
+def save_clan_about(paths, key, text):
+    """Give a clan its description ("" clears it). Returns the descriptions as kept; ValueError for a key that is not
+    a clan tag's."""
+    key = clan_key(key)
+    if not CLAN_KEY.fullmatch(key):
+        raise ValueError("not a clan tag")
+    about = load_clan_about(paths)
+    text = clean_clan_about(text)
+    if text:
+        about[key] = text
+    else:
+        about.pop(key, None)
+    save_json(os.path.join(paths.store, "clan_about.json"), about)
+    return about
+
+
+def all_looks(paths, names):
+    """The looks file the site draws from: bot_looks.ini (the bots panel's: the profile bots) and, for every listed bot
+    that has no Reach look there (a matchmaking pool bot with no profile), the Reach look it wears in game, worked out
+    the mod's own way (brain/looks.py armory_view: a bot's look comes from its name alone, the seed native/pool_test.cpp
+    holds botcore to). Written to this tool's store (service_record/bot_looks_site.ini) only when it changes, so the
+    figures are redrawn only then; bot_looks.ini itself is only read. Falls back to bot_looks.ini when the looks code
+    cannot be loaded."""
+    try:
+        with open(paths.looks, encoding="utf-8", errors="replace") as f:
+            base = f.read()
+    except OSError:
+        base = ""
+    have = {line.split("|", 1)[0] for line in base.splitlines() if "|reach|own|" in line}
+    missing = [n for n in names if n and n not in have and "|" not in n and "\n" not in n]
+    extra = []
+    if missing:
+        try:
+            if ROOT not in sys.path:
+                sys.path.insert(0, ROOT)
+            from brain import looks as brain_looks
+            for n in sorted(missing):
+                views = brain_looks.armory_view(n, "reach", path=paths.profiles)
+                extra += [f"{n}|reach|{view}|{kv}" for view, kv in zip(("own", "other"), views) if kv]
+        except (ImportError, OSError, ValueError, KeyError, TypeError):
+            return paths.looks
+    text = base.rstrip("\n") + "\n" + "".join(line + "\n" for line in extra)
+    out = os.path.join(paths.store, "bot_looks_site.ini")
+    try:
+        with open(out, encoding="utf-8") as f:
+            if f.read() == text:
+                return out
+    except OSError:
+        pass
+    os.makedirs(paths.store, exist_ok=True)
+    with open(out + ".tmp", "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    os.replace(out + ".tmp", out)
+    return out
+
+
+def bot_figures(paths, looks_file=None):
     """{bot: {"src": "figures/bots/<file>.webp", "n": angles, "w": an angle's width, "h": height}}: each bot's Reach
     figure as the bots panel draws it, its own armor pieces and colours, turned round in 24 steps (native/
     figure_snap.exe, the panel's model_view.cpp on a device of its own: MCC need not run), the angles side by side in
@@ -1379,17 +1505,48 @@ def bot_figures(paths):
     Reach look is missing (its page shows MCC's drawing instead)."""
     folder = os.path.join(paths.store, "art", "figures", "bots")
     index = os.path.join(folder, "figures.tsv")
+    drawn_file = os.path.join(folder, "drawn.json")      # {bot: the Reach look line its figure was drawn from}
+    looks_file = looks_file or paths.looks
     try:
-        stale = not os.path.exists(index) or max(os.path.getmtime(paths.looks), os.path.getmtime(paths.snap)) > os.path.getmtime(index)
+        with open(looks_file, encoding="utf-8", errors="replace") as f:
+            lines = {ln.split("|", 1)[0]: ln.rstrip("\r\n") for ln in f if "|reach|own|" in ln}
+        program = os.path.getmtime(paths.snap)
     except OSError:
-        stale = False
-    if stale and os.path.isdir(paths.models):
-        os.makedirs(folder, exist_ok=True)
+        lines, program = {}, None
+    drawn = load_json(drawn_file, {}) if os.path.exists(index) else {}
+    if program and drawn.get("_program") != program:
+        drawn = {}                                      # (a new figure_snap: every figure again)
+    todo = {n: ln for n, ln in lines.items() if drawn.get(n) != ln}
+    if todo and program and os.path.isdir(paths.models):
+        # only the bots that are new or whose look changed, drawn into a folder of their own, then merged
+        tmp = os.path.join(folder, "_new")
+        os.makedirs(tmp, exist_ok=True)
+        part = os.path.join(tmp, "looks.ini")
+        with open(part, "w", encoding="utf-8", newline="\n") as f:
+            f.write("".join(ln + "\n" for ln in todo.values()))
         try:
-            subprocess.run([paths.snap, paths.looks, paths.models, folder, *FIGURE_SIZE], capture_output=True, timeout=180,
+            subprocess.run([paths.snap, part, paths.models, tmp, *FIGURE_SIZE], capture_output=True, timeout=600,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        except (OSError, subprocess.SubprocessError):
+            with open(os.path.join(tmp, "figures.tsv"), encoding="utf-8", errors="replace") as f:
+                new_rows = [line.rstrip("\r\n").split("\t") for line in f if line.strip()]
+            old_rows = []
+            if os.path.exists(index):
+                with open(index, encoding="utf-8", errors="replace") as f:
+                    old_rows = [line.rstrip("\r\n").split("\t") for line in f if line.strip()]
+            done = {r[0] for r in new_rows}
+            for r in new_rows:
+                if len(r) >= 2 and re.fullmatch(r"[a-z0-9_]+\.png", r[1]):
+                    os.replace(os.path.join(tmp, r[1]), os.path.join(folder, r[1]))
+            rows = [r for r in old_rows if r[0] not in done] + new_rows
+            with open(index + ".tmp", "w", encoding="utf-8", newline="\n") as f:
+                f.write("".join("\t".join(r) + "\n" for r in rows))
+            os.replace(index + ".tmp", index)
+            drawn.update({n: todo[n] for n in done if n in todo})
+            drawn["_program"] = program
+            save_json(drawn_file, drawn)
+        except (OSError, subprocess.SubprocessError, ValueError):
             pass
+        shutil.rmtree(tmp, ignore_errors=True)
     out = {}
     try:
         with open(index, encoding="utf-8", errors="replace") as f:

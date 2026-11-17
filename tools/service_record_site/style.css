@@ -70,6 +70,11 @@ body {
   color: var(--ink);
   font: var(--t-md)/1.45 var(--font);
 }
+/* the player pages' own backdrop (the owner's player.jpg, Nov 16): the whole page, held still as it scrolls, a little
+   darker at the foot so the lower panels read; the header picture where it is not on this PC */
+:root[style*="--player-art"] body.record-page {
+  background: linear-gradient(180deg, rgba(5, 11, 20, 0.2), rgba(5, 11, 20, 0.45) 70%, rgba(5, 11, 20, 0.7)) fixed,
+    var(--player-art) center / cover fixed no-repeat, var(--bg); }
 /* the landing pages: MCC's Noble menu movie behind everything, darkened toward the bottom so the tables read */
 .bgvideo { position: fixed; inset: 0; z-index: -1; overflow: hidden; display: none; background: var(--bg); }
 .bgvideo video, .bgvideo img { width: 100%; height: 100%; object-fit: cover; filter: brightness(1.45) contrast(1.08) saturate(1.1); }
@@ -82,7 +87,7 @@ body.landing .bgvideo { display: block; }
 .video-btn:hover { color: var(--ink); border-color: var(--accent); }
 body.landing .video-btn { display: block; }
 body.landing { background: transparent; }
-body.landing .panel { background: rgba(9, 20, 34, 0.9); }
+
 h1, h2, h3 { margin: 0; font-family: var(--font-head); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.2; }
 h1 { font-size: var(--t-xl); }
 h2 { font-size: var(--t-lg); }
@@ -596,6 +601,107 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .top-comms li.has-banner { grid-template-columns: minmax(0, 1fr); align-items: start; }
 .top-comms li.has-banner .comm-art.banner { width: 100%; height: auto; }
 
+/* the player pages' boxes (the owner, Nov 16: "more transparent", "the neon glow ... similar to the one from the header
+   player card"): see-through over the backdrop, a stronger blur behind so the text still reads, and the card's cyan
+   outline and glow */
+.shell:not(.wide) main .panel, .shell:not(.wide) main .hero li {
+  background: rgba(9, 20, 34, 0.5);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 14px var(--glow), 0 8px 24px var(--shade), inset 0 0 18px rgba(56, 182, 238, 0.07);
+  backdrop-filter: blur(7px);
+}
+.shell:not(.wide) main .panel > header { border-bottom-color: rgba(56, 182, 238, 0.35); }
+.shell:not(.wide) main .hero li { border-top-width: 2px; }
+.shell:not(.wide) .side {
+  background:
+    linear-gradient(180deg, rgba(11, 24, 40, 0.62) 0, rgba(11, 24, 40, 0.55) 50%, rgba(11, 24, 40, 0.25) 62%, rgba(11, 24, 40, 0) 74%),
+    var(--side-art, url("backdrop.svg")) center bottom / var(--side-size, 900px) auto no-repeat,
+    rgba(11, 24, 40, 0.45);
+  border-color: var(--accent);
+  box-shadow: 0 0 14px var(--glow), 0 8px 24px var(--shade), inset 0 0 18px rgba(56, 182, 238, 0.07);
+  backdrop-filter: blur(7px);
+}
+.shell:not(.wide) main th { background: rgba(15, 33, 53, 0.55); }
+@media (forced-colors: active) { .shell:not(.wide) main .panel, .shell:not(.wide) .side { backdrop-filter: none; } }
+
+/* (Nov 16, "make all of the backgrounds to the panel be see through"): clear panels, only the neon outline; the cards
+   inside them light, the text shaded so it reads over the backdrop */
+.shell:not(.wide) main .panel, .shell:not(.wide) main .hero li { background: transparent; backdrop-filter: none; }
+.shell:not(.wide) .side { background:
+    var(--side-art, url("backdrop.svg")) center bottom / var(--side-size, 900px) auto no-repeat, transparent; backdrop-filter: none; }
+.shell:not(.wide) main th { background: rgba(15, 33, 53, 0.25); }
+.shell:not(.wide) main :is(.comm, .badge-card, .top-comms li, .runs, .box, .medals li, .weapons li, .mgroups a, .rank-card, .games .thumb, .slots li) {
+  background-color: rgba(9, 20, 34, 0.28); }
+.shell:not(.wide) main, .shell:not(.wide) .side { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.6); }
+.shell:not(.wide) main .ring svg text, .shell:not(.wide) main .donut svg text { paint-order: stroke; stroke: rgba(0, 0, 0, 0.6); stroke-width: 2px; }
+/* the front pages (Leaderboard, By state, Ranks) the same as the player pages (Nov 16): clear boxes over the Noble
+   movie, the player card's neon outline, the small boxes lightly tinted, the text shaded */
+.shell.wide main .panel, .shell.wide main .hero li {
+  background: transparent; backdrop-filter: none;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 14px var(--glow), 0 8px 24px var(--shade), inset 0 0 18px rgba(56, 182, 238, 0.07);
+}
+.shell.wide main .panel > header { border-bottom-color: rgba(56, 182, 238, 0.35); }
+.shell.wide main th { background: rgba(15, 33, 53, 0.25); }
+.shell.wide main tbody tr:hover { background: rgba(56, 182, 238, 0.08); }
+.shell.wide main :is(.rank-card, .tabs a) { background-color: rgba(9, 20, 34, 0.28); }
+.shell.wide main .tabs a[aria-current="true"] { background: linear-gradient(180deg, var(--wash), rgba(9, 20, 34, 0.2)); }
+.shell.wide main { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.6); }
+.shell.wide main select, .shell.wide main input[type="search"] { background: rgba(4, 10, 18, 0.55); }
+/* ---- Clans: a card each (place, clan rank insignia, tag, a few members' emblems, cR), and a clan's own page */
+.clans { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.clans .none { color: var(--ink-2); padding: var(--s-3); }
+.clan-card { display: grid; grid-template-columns: 2.4em 48px minmax(0, 1fr) auto auto; gap: var(--s-3); align-items: center; padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line-2); border-radius: var(--radius); background: rgba(9, 20, 34, 0.28); color: var(--ink); }
+.clan-card:hover { text-decoration: none; border-color: var(--accent); box-shadow: 0 0 12px var(--glow); }
+.clan-card .place { color: var(--ink-3); font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.clan-card .place.lead { color: var(--gold); font-size: var(--t-lg); }
+.clan-card .ins .insignia { width: 44px; height: 44px; }
+.clan-card .who { display: grid; min-width: 0; }
+.clan-card .who b { font: 700 var(--t-lg) var(--font-head); letter-spacing: 0.06em; overflow-wrap: anywhere; }
+.clan-card .who small, .clan-card .nums small { color: var(--ink-2); font-size: var(--t-xs); }
+.clan-card .crew { display: flex; align-items: center; gap: 3px; }
+.clan-card .crew .emblem.sm { width: 24px; height: 24px; border-radius: 50%; }
+.clan-card .crew small { color: var(--ink-3); font-size: var(--t-xs); margin-left: 2px; }
+.clan-card .nums { display: grid; text-align: right; font-variant-numeric: tabular-nums; }
+.clan-head .body { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-4) var(--s-5); align-items: center; }
+.clan-head .body > * + * { margin-top: 0; }
+.clan-title { display: flex; align-items: baseline; gap: var(--s-3); }
+.clan-title h2 { font-size: var(--t-2xl); letter-spacing: 0.08em; }
+.place-big { color: var(--gold); font: 700 var(--t-xl) var(--font-head); }
+.clan-rank { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s-3); align-items: center; }
+.clan-rank .insignia { width: 64px; height: 64px; }
+.clan-rank .rk-name { font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.clan-rank .rk-next { color: var(--ink-2); font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+.clan-facts { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--s-5); }
+.clan-facts li { display: grid; text-align: center; }
+.clan-facts b { font: 700 var(--t-xl) var(--font-head); font-variant-numeric: tabular-nums; }
+.clan-facts span { color: var(--ink-2); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.apply-btn { display: grid; justify-items: center; gap: 1px; font: 600 var(--t-md) var(--font); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); background: rgba(9, 20, 34, 0.35); border: 1px dashed var(--line-2); border-radius: var(--radius); padding: var(--s-2) var(--s-5); cursor: not-allowed; }
+.apply-btn small { font: 400 var(--t-xs) var(--font); text-transform: none; letter-spacing: 0; color: var(--ink-3); }
+.clan-head .body { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.clan-abbr { display: inline-block; margin-right: var(--s-2); padding: 0 6px; border: 1px solid var(--line-2); border-radius: 3px; font: 600 var(--t-xs) var(--font); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.clan-abbr.big { margin-top: var(--s-1); font-size: var(--t-sm); }
+/* the owner's edit mode (tools/service_record_edit.py): the footer's switch, an edit box where something can be changed */
+.edit-toggle { font: inherit; font-size: var(--t-xs); color: var(--ink-3); background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: 2px var(--s-2); cursor: pointer; }
+.edit-toggle:hover { color: var(--ink); border-color: var(--accent); }
+.edit-toggle[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+.edit-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-top: var(--s-2); padding: var(--s-2); border: 1px dashed var(--gold); border-radius: var(--radius); }
+.edit-form label { display: flex; align-items: center; gap: var(--s-2); color: var(--gold); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.edit-form input { font: inherit; color: var(--ink); background: rgba(4, 10, 18, 0.7); border: 1px solid var(--line-2); border-radius: var(--radius); padding: var(--s-1) var(--s-2); min-height: 34px; width: 16rem; max-width: 100%; }
+.edit-form button { font: inherit; font-size: var(--t-sm); color: var(--ink); background: rgba(232, 178, 60, 0.15); border: 1px solid var(--gold); border-radius: var(--radius); padding: var(--s-1) var(--s-3); min-height: 34px; cursor: pointer; }
+.edit-form button:hover { background: rgba(232, 178, 60, 0.3); }
+/* a clan's description: on its page a quiet line across the header under its name and numbers, on the list one line */
+.clan-about { grid-column: 1 / -1; order: 9; margin: 0; padding: var(--s-2) 0 0 var(--s-3); border-top: 1px solid rgba(56, 182, 238, 0.25);
+  border-left: 2px solid var(--accent); color: var(--ink-2); font-style: italic; line-height: 1.5; white-space: pre-line; max-width: 80ch; }
+.clan-card .who .clan-blurb { color: var(--ink-3); font-size: var(--t-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60ch; }
+.edit-form label.wide { flex-basis: 100%; align-items: flex-start; }
+.edit-form textarea { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--ink); background: rgba(4, 10, 18, 0.7); border: 1px solid var(--line-2);
+  border-radius: var(--radius); padding: var(--s-1) var(--s-2); min-height: 70px; resize: vertical; text-transform: none; letter-spacing: 0; }
+.edit-form .left { color: var(--ink-3); font-size: 11px; text-transform: none; letter-spacing: 0; align-self: flex-end; white-space: nowrap; }
+.edit-actions { display: flex; align-items: center; gap: var(--s-2); }
+a.clan { color: var(--ink-2); }
+a.clan:hover { color: var(--accent-strong); }
 @media (max-width: 1000px) {
   .ov { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .ov .figure { grid-row: auto; grid-column: 1 / -1; min-height: 360px; }
@@ -622,6 +728,10 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   .brand-name { font-size: var(--t-md); letter-spacing: 0.08em; }
   .hide-s { display: none; }
   .top-comms { grid-template-columns: minmax(0, 1fr); }
+  .clan-card { grid-template-columns: 2em 40px minmax(0, 1fr) auto; }
+  .clan-card .crew { display: none; }
+  .clan-head .body { grid-template-columns: minmax(0, 1fr); }
+  .clan-facts { justify-content: space-between; }
   .podium ol { gap: var(--s-2); }
   .podium .still { height: 170px; }
   .podium .p1 .still { height: 210px; }

@@ -58,6 +58,31 @@ def test_site_reads_the_index():
         assert sr.bot_figures(sr.Paths(store=os.path.join(tmp, "empty"), out=site, snap=os.path.join(tmp, "none.exe"))) == {}
 
 
+def test_pool_bots_get_their_in_game_look():
+    """A listed bot with no Reach look in bot_looks.ini (a pool bot with no profile) gets the one it wears in game,
+    worked out from its name by brain/looks.py; a bot that has one keeps it; the file is rewritten only on a change."""
+    spec = importlib.util.spec_from_file_location("service_record", os.path.join(HERE, "service_record.py"))
+    sr = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sr)
+    with tempfile.TemporaryDirectory() as tmp:
+        prof, looks = os.path.join(tmp, "bot_profiles.ini"), os.path.join(tmp, "bot_looks.ini")
+        with open(prof, "w", encoding="utf-8") as f:
+            f.write("experience=original\neffects=none\nbot=Alpha,111,TBK\n")
+        with open(looks, "w", encoding="utf-8") as f:
+            f.write("; looks\nAlpha|reach|own|species=0;pieces=body:default\n")
+        paths = sr.Paths(store=os.path.join(tmp, "store"), looks=looks, profiles=prof)
+        out = sr.all_looks(paths, ["Alpha", "MadPistol"])
+        text = open(out, encoding="utf-8").read()
+        assert "Alpha|reach|own|species=0;pieces=body:default\n" in text
+        mine = [ln for ln in text.splitlines() if ln.startswith("MadPistol|reach|own|")]
+        assert len(mine) == 1 and ";pieces=" in mine[0] and "primary=" in mine[0], text
+        sys.path.insert(0, os.path.join(HERE, ".."))
+        from brain import looks as bl
+        assert mine[0] == "MadPistol|reach|own|" + bl.armory_view("MadPistol", "reach", path=prof)[0]   # (the game's roll)
+        when = os.path.getmtime(out)
+        assert sr.all_looks(paths, ["Alpha", "MadPistol"]) == out and os.path.getmtime(out) == when      # (unchanged: kept)
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:
