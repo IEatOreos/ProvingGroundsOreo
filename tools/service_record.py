@@ -1253,7 +1253,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         diff, style = pool.get(name, ("", ""))
         out_players.append({
             "name": html.unescape(name), "roster": name in roster,
-            "clan": roster.get(name) or clans.get(html.unescape(name), ""),
+            "clan": roster[name] if name in roster else clans.get(html.unescape(name), ""),   # (its profile's, "" too)
             "difficulty": diff, "style": style, "emblem": export_emblem(name, paths),
             "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps), "comm": counts, "comm_cr": comm_cr,
             "badges": badge_counts(rec["g"][DEFAULT_GAME], badges) if DEFAULT_GAME in rec["g"] else {},
@@ -1454,6 +1454,65 @@ def save_clan_about(paths, key, text):
         about.pop(key, None)
     save_json(os.path.join(paths.store, "clan_about.json"), about)
     return about
+
+
+BOT_CLAN = re.compile(r"[^\s,;=\[\]|]{1,4}")      # (the bots panel's Clan tag box: 4 at most, no blanks, none of ,;=[]|)
+MCC_EXE = "MCC-Win64-Shipping.exe"
+
+
+def mcc_running():
+    """Whether MCC is running on this PC (tasklist). While it runs, botcore holds the bots' profiles in memory and
+    writes the whole file back when its panel saves: an edit to bot_profiles.ini then would be lost."""
+    try:
+        out = subprocess.run(["tasklist", "/FI", f"IMAGENAME eq {MCC_EXE}", "/NH", "/FO", "CSV"], capture_output=True,
+                             text=True, timeout=15, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+    except (OSError, subprocess.SubprocessError):
+        return True                                     # (cannot tell: treat it as running, write nothing)
+    return MCC_EXE.lower() in out.lower()
+
+
+def set_bot_clan(paths, name, clan, running=None):
+    """The owner's edit mode (Nov 16: "add them to clans through the edit mode on the website ... it saves in game"): a
+    bot's clan tag written where the game reads it, its line in native/bin/bot_profiles.ini (bot=<name>,<seed>,<clan>
+    [,<looks set by hand>], as native/bots_panel.cpp profiles_save writes it; brain/looks.py and botcore read it), the
+    rest of the file as it was. A bot with no line gets one as the panel's profile_ensure makes it: the look seed it
+    already wears (brain/looks.py seed_of), so its look is unchanged. "" takes it out of its clan. Refused while MCC
+    runs (botcore reads the file at MCC's start and would write over it); worn in game from MCC's next start. A copy
+    of the file as it was is kept beside it (bot_profiles.ini.before_site_edit). Returns the tag as written."""
+    clan = (clan or "").strip()
+    if clan and not BOT_CLAN.fullmatch(clan):
+        raise ValueError("a clan tag is up to 4 letters or numbers, no spaces or , ; = [ ] |")
+    if not isinstance(name, str) or not re.fullmatch(r"[^,\r\n=]{1,15}", name):
+        raise ValueError("not a bot's name")
+    if (mcc_running() if running is None else running):
+        raise PermissionError("close MCC first: it holds the bots' profiles while it runs and would write over the change")
+    try:
+        with open(paths.profiles, encoding="utf-8", errors="strict", newline="") as f:
+            text = f.read()
+    except FileNotFoundError:
+        raise ValueError("this PC has no bot_profiles.ini yet (MCC with the mod makes it)")
+    nl = "\r\n" if "\r\n" in text else "\n"
+    lines = text.split(nl)
+    for i, line in enumerate(lines):
+        if not line.startswith("bot="):
+            continue
+        fields = line[4:].split(",", 3)
+        if len(fields) >= 2 and fields[0].lower() == name.lower():
+            fields = (fields + [""])[:max(3, len(fields))]
+            fields[2] = clan
+            if len(fields) == 4 and not fields[3]:
+                fields = fields[:3]
+            lines[i] = "bot=" + ",".join(fields)
+            break
+    else:
+        seed = zlib.crc32(name.lower().encode("utf-8")) or 1    # (brain/looks.py seed_of, botcore name_look_seed)
+        at = len(lines) - 1 if lines and lines[-1] == "" else len(lines)
+        lines.insert(at, f"bot={name},{seed},{clan}")
+    shutil.copyfile(paths.profiles, paths.profiles + ".before_site_edit")
+    with open(paths.profiles + ".tmp", "w", encoding="utf-8", newline="") as f:
+        f.write(nl.join(lines))
+    os.replace(paths.profiles + ".tmp", paths.profiles)
+    return clan
 
 
 def all_looks(paths, names):

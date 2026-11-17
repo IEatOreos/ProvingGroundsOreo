@@ -1,6 +1,6 @@
 """The Service Record's editor (custom, Nov 16; the owner: "Allow me to be the only one to edit the site from my end.
 Like an edit mode", "Let me edit the clan Names whenever I want"). Serves the built site (logs/service_record) like a
-plain web server, and is the one way to change what the owner may edit: today the clans' full names and short descriptions
+plain web server, and is the one way to change what the owner may edit: today the clans' full names and short descriptions, and a bot's clan tag (written to bot_profiles.ini, the game's own, only while MCC is closed)
 (native/bin/service_record/clan_names.json, clan_about.json: service_record.py save_clan_name, save_clan_about), the site rebuilt after each change.
 
 Only the owner can edit: it listens on this PC alone (127.0.0.1), and a save must come from the site itself on this
@@ -60,6 +60,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if not self.local() or not allowed_origin(self.headers.get("Origin"), self.port) or self.headers.get(HEADER) != "1":
             return self.reply(403, {"error": "edits come from the site on this PC only"})
+        if self.path == "/api/bot-clan":
+            return self.bot_clan()
         edits = {"/api/clan-name": ("name", sr.save_clan_name), "/api/clan-about": ("about", sr.save_clan_about)}
         if self.path not in edits:
             return self.reply(404, {"error": "no such edit"})
@@ -76,6 +78,37 @@ class Handler(SimpleHTTPRequestHandler):
         print(f"clan {field}: {key} -> {kept.get(key, '(cleared)')!r}", flush=True)
         rebuild()
         return self.reply(200, {"key": key, field: kept.get(key, "")})
+
+
+    def bot_clan(self):
+        """A bot's clan tag, written where the game reads it (service_record.py set_bot_clan): only while MCC is
+        closed, and only for a bot the site lists."""
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+            if not 0 < size <= MAX_BODY or "application/json" not in (self.headers.get("Content-Type") or ""):
+                raise ValueError("bad request")
+            data = json.loads(self.rfile.read(size).decode("utf-8"))
+            name = data.get("name", "")
+            if not isinstance(name, str) or name not in listed_bots(self.paths):
+                raise ValueError("not a bot on the site")
+            clan = sr.set_bot_clan(self.paths, name, data.get("clan", ""))
+        except PermissionError as e:
+            return self.reply(409, {"error": str(e)})
+        except (ValueError, UnicodeDecodeError, AttributeError, OSError) as e:
+            return self.reply(400, {"error": str(e) or "bad request"})
+        print(f"bot clan: {name} -> {clan or '(no clan)'}", flush=True)
+        rebuild()
+        return self.reply(200, {"name": name, "clan": clan})
+
+
+def listed_bots(paths):
+    """The names the built site lists (its data.js): the only bots the editor will touch."""
+    try:
+        with open(os.path.join(paths.out, "data.js"), encoding="utf-8") as f:
+            text = f.read()
+        return {p["name"] for p in json.loads(text[text.index("{"):text.rindex("}") + 1])["players"]}
+    except (OSError, ValueError, KeyError):
+        return set()
 
 
 def rebuild():

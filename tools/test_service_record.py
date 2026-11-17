@@ -329,6 +329,43 @@ def test_clan_names_and_the_editor():
     assert not ed.allowed_origin("null", 8766)                       # (a page from a file or a sandbox)
 
 
+def test_bot_clan_saved_in_game():
+    """A bot's clan tag from the edit mode goes into bot_profiles.ini as the bots panel writes it: the bot's own line
+    (its seed and looks set by hand kept), a new line for a bot without one (the seed it already wears), every other
+    line as it was (line ends too), a copy of the file kept; a bad tag refused, and nothing written while MCC runs."""
+    import zlib
+    with tempfile.TemporaryDirectory() as tmp:
+        prof = os.path.join(tmp, "bot_profiles.ini")
+        before = "; note\r\nexperience=original\r\nbot=Ace,123,WAVE\r\nbot=Bo,9,,h3.model=1;reach.seed=2\r\n"
+        with open(prof, "w", encoding="utf-8", newline="") as f:
+            f.write(before)
+        paths = sr.Paths(profiles=prof)
+        assert sr.set_bot_clan(paths, "ace", " AYS ", running=False) == "AYS"
+        assert sr.set_bot_clan(paths, "Bo", "Q", running=False) == "Q"
+        assert sr.set_bot_clan(paths, "Newbie", "XvX", running=False) == "XvX"
+        text = open(prof, encoding="utf-8", newline="").read()
+        seed = zlib.crc32(b"newbie")
+        assert text == ("; note\r\nexperience=original\r\nbot=Ace,123,AYS\r\nbot=Bo,9,Q,h3.model=1;reach.seed=2\r\n"
+                        f"bot=Newbie,{seed},XvX\r\n"), text
+        assert open(prof + ".before_site_edit", encoding="utf-8", newline="").read().count("bot=") == 2   # (as it was before the last edit)
+        assert sr.set_bot_clan(paths, "Ace", "", running=False) == ""
+        assert "bot=Ace,123,\r\n" in open(prof, encoding="utf-8", newline="").read()
+        assert sr.read_profiles(prof)["Ace"] == "" and sr.read_profiles(prof)["Bo"] == "Q"
+        for bad in ("TOOLONG", "a b", "x,y", "[q]", "a|b", "a=b", "a;b"):
+            try:
+                sr.set_bot_clan(paths, "Ace", bad, running=False)
+                raise AssertionError(f"{bad!r} taken")
+            except ValueError:
+                pass
+        kept = open(prof, encoding="utf-8", newline="").read()
+        try:
+            sr.set_bot_clan(paths, "Ace", "UNC", running=True)
+            raise AssertionError("written while MCC runs")
+        except PermissionError:
+            pass
+        assert open(prof, encoding="utf-8", newline="").read() == kept
+
+
 def test_mode_icons():
     """Each family modes.json names gets its icon from the art store, copied into the site; a number this PC has no
     picture for, or one that is not a number, is left out (the page keeps its drawn badge)."""

@@ -188,8 +188,9 @@
     return [
       el("div", { class: "em" }, emblem(p)),
       el("div", { class: "id" },
-        el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), p.clan && el("a", { class: "clan", href: href(["clans", clanKey(p.clan)]), title: "Clan " + ((D.clan_names && D.clan_names[clanKey(p.clan)]) || p.clan) }, "- " + p.clan),
-          cardBadges(p)),
+        el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), cardBadges(p)),
+        cardClan(p),
+        editing() ? botClanForm(p) : null,
         el("div", { class: "rk" }, el("span", null, cur[0]),
           el("span", { class: "nx" }, next ? "Next: " + next[0] + " (" + int(p.cr) + " / " + int(next[1]) + " cR)" : "Highest rank reached (" + int(p.cr) + " cR)")),
         next ? el("progress", { max: next[1] - cur[1], value: p.cr - cur[1], "aria-label": "Progress to " + next[0] })
@@ -200,6 +201,13 @@
           el("span", null, BADGE_LABEL[k] || title(k)), modeBadge(k));
       })),
     ];
+  }
+  // the bot's clan on its card: a quiet line of its own under the name (label, tag, the clan's full name), the clan's page
+  function cardClan(p) {
+    if (!p.clan || !String(p.clan).trim()) return null;
+    const full = (D.clan_names && D.clan_names[clanKey(p.clan)]) || "";
+    return el("a", { class: "card-clan", href: href(["clans", clanKey(p.clan)]), "aria-label": "Clan: " + (full ? full + " (" + p.clan + ")" : p.clan) },
+      el("span", { class: "lbl" }, "Clan"), el("span", { class: "clan-abbr" }, p.clan), full ? el("span", { class: "full" }, full) : null);
   }
   // a page's own title, under the card (the card itself is drawn once by render)
   function banner() {
@@ -465,6 +473,36 @@
       el("label", { class: "wide" }, "Description", about, left),
       el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save"),
         c.name || c.about ? el("button", { type: "button", onclick: () => save("", "") }, "Clear both") : null, msg));
+  }
+  // a bot's clan tag, saved where the game reads it (bot_profiles.ini, by the editor; only while MCC is closed, and worn
+  // from MCC's next start): the clans already on the site to pick from, or a new tag
+  const CLAN_TAG = /^[^\s,;=\[\]|]{1,4}$/;
+  function botClanForm(p) {
+    const list = el("datalist", { id: "clan-tags" }, clanList().map((c) => el("option", { value: c.tag }, c.title)));
+    const input = el("input", { type: "text", value: p.clan || "", maxlength: 4, list: "clan-tags", class: "tag", placeholder: "None",
+      spellcheck: "false", autocomplete: "off", "aria-label": "Clan tag for " + p.name });
+    const msg = el("span", { class: "note", "aria-live": "polite" }, "Saved to the game: close MCC first; worn from its next start.");
+    const save = async (tag) => {
+      tag = tag.trim();
+      if (tag && !CLAN_TAG.test(tag)) { msg.textContent = "Up to 4 letters or numbers, no spaces or , ; = [ ] |"; input.focus(); return; }
+      if (tag === (p.clan || "")) { msg.textContent = "No change."; return; }
+      msg.textContent = "Saving\u2026";
+      try {
+        const r = await fetch("/api/bot-clan", { method: "POST", headers: { "Content-Type": "application/json", "X-Service-Record-Edit": "1" },
+          body: JSON.stringify({ name: p.name, clan: tag }) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "error");
+        p.clan = d.clan;
+        clanCache = null;
+        render();
+      } catch (e) {
+        msg.textContent = e instanceof TypeError ? "Not saved: the editor is not running." : "Not saved: " + e.message;
+      }
+    };
+    return el("form", { class: "edit-form bot-clan", onsubmit: (e) => { e.preventDefault(); save(input.value); } },
+      el("label", null, "Clan tag", input), list,
+      el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save"),
+        p.clan ? el("button", { type: "button", onclick: () => save("") }, "Leave clan") : null), msg);
   }
   function editToggle() {
     const foot = document.querySelector(".foot");
