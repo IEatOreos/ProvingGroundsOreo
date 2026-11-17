@@ -13,8 +13,8 @@ pictures (maps/<id>/topdown.png, heightmap.npz). Written: this tool's own store,
 Weapons, Enemies and Heatmaps come from the kill rows only. A match recorded before they were written has none and
 adds nothing to those pages (they say so; they never show a zero for it).
 
-Who is listed (the owner, Nov 15): the bots only. Every bot of bot_profiles.ini, at 0 from the start, and any other
-bot once it has a match that counts. People are listed only when named in native/bin/service_record/people.json (Nov 17,
+Who is listed (the owner, Nov 15): the bots only. Every bot of bot_profiles.ini and of Bot Matchmaking's pool
+(bot_pool.txt, Nov 17), at 0 from the start, and any other bot once it has a match that counts. People are listed only when named in native/bin/service_record/people.json (Nov 17,
 the owner: "Yes just me for now"; this PC only, never in git); anyone else is not, though a match's scoreboard still
 shows every gamertag.
 A match counts by bot_career's rules (its person played 60 s or more; a bot's row of a match from before the bots'
@@ -74,6 +74,7 @@ class Paths:
         s.profiles = os.path.join(BIN, "bot_profiles.ini")
         s.looks = os.path.join(BIN, "bot_looks.ini")
         s.pool = os.path.join(BIN, "bot_pool_saved.ini")
+        s.bot_pool = os.path.join(BIN, "bot_pool.txt")           # Bot Matchmaking's pool: every bot listed (Nov 17)
         s.emblems = os.path.join(BIN, "emblems")
         s.look_names = os.path.join(ROOT, "native", "look_names.h")
         s.maps = os.path.join(ROOT, "maps")
@@ -494,6 +495,22 @@ def read_pool(path):
                     parts = line[6:].rstrip("\r\n").split(",", 2)
                     if len(parts) == 3 and parts[2]:
                         out[parts[2]] = (parts[0], parts[1])
+    except OSError:
+        pass
+    return out
+
+
+def read_pool_names(path):
+    """[name] of Bot Matchmaking's pool (bot_pool.txt, BOTS panel > Settings): one a line in queue order, cut to 15,
+    a repeat (or Name*N, one clan member however many times it is queued) once, # and ; lines notes."""
+    out, seen = [], set()
+    try:
+        with open(path, encoding="utf-8-sig", errors="replace") as f:
+            for line in f:
+                name = re.sub(r"\*\s*\d+\s*$", "", line.strip()).strip()[:15]
+                if name and name[0] not in "#;" and name not in seen:
+                    seen.add(name)
+                    out.append(name)
     except OSError:
         pass
     return out
@@ -1109,15 +1126,17 @@ def person_names(ledger, people):
             if p.get("name") and not p.get("bot") and html.unescape(p["name"]) in people}
 
 
-def collect(ledger, store_matches, roster, kills=None, paths=None, people=()):
+def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bots=()):
     """(players {name: record}, matches [newest first]) for the site: every counted row of a listed name summed by
-    game and family. Listed: the roster, every name bot_career's totals call a bot, and the people named in `people`
-    (load_people) that the ledger has as people. kills: the store's kill rows
+    game and family. Listed: the roster, every bot of `bots` (the matchmaking pool, read_pool_names: at 0 until it
+    plays, Nov 17 the owner: every pool bot), every name bot_career's totals call a bot, and the people named in
+    `people` (load_people) that the ledger has as people. kills: the store's kill rows
     by recording ({"<map>_<start>": [rows]}); a match with none adds nothing to weapons, versus and heat, and
     kill_games says how many of a player's matches had them."""
     totals = career.totals(ledger)
     listed = set(roster) | {n for n, t in totals.items() if t["bot"]}
     listed |= person_names(ledger, people)                  # (at 0 too, after --reset-all)
+    listed |= set(bots) - person_names(ledger, set(bots))   # (the pool's bots, at 0 too; never a person's name)
     players = {n: {"name": n, "g": {}} for n in listed}
     matches = []
     for gid, m in ledger.items():
@@ -1246,7 +1265,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
     people = load_people(paths)
-    players, matches = collect(ledger, store_matches, roster, kills, paths, people)
+    players, matches = collect(ledger, store_matches, roster, kills, paths, people, read_pool_names(paths.bot_pool))
     persons = person_names(ledger, people)
     looks_file = all_looks(paths, [html.unescape(n) for n in players])   # (pool bots' looks worked out too)
     looks = read_looks(looks_file, read_look_names(paths.look_names))

@@ -772,6 +772,18 @@ a.clan:hover { color: var(--accent-strong); }
 /* (Nov 16) a bot's clan tag on its player card in edit mode */
 .edit-form.bot-clan input.tag { width: 6rem; text-transform: none; }
 .edit-form.bot-clan .note { flex-basis: 100%; font-size: 11px; margin: 0; }
+/* long lists a page of 100 at a time (Nov 17): Top 100, 101-200 ... */
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); margin: var(--s-2) 0; }
+.pager ul { display: flex; flex-wrap: wrap; gap: var(--s-1); list-style: none; margin: 0; padding: 0; }
+.pager button { font: inherit; font-size: var(--t-xs); color: var(--ink-2); background: transparent; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: var(--s-1) var(--s-2); min-height: 32px; min-width: 44px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pager button:hover:not(:disabled) { color: var(--ink); border-color: var(--accent); }
+.pager button[aria-current="page"] { background: var(--wash); color: var(--ink); border-color: var(--accent); }
+.pager button:disabled { opacity: 0.4; cursor: default; }
+.pager-slot { padding: 0 var(--s-3); }
+.paged > .paged-find { padding: 0 var(--s-3); }
+.holders + .pager-slot, .clans + .pager-slot { padding: 0; }
+.paged-find { margin: var(--s-2) 0; justify-content: space-between; }
 /* the edit mode's Reset all (Nov 17): red, apart from the gold saves */
 .edit-form.reset-all { border-color: var(--bad, #d8323a); }
 .edit-form.reset-all strong { color: var(--bad, #d8323a); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; }

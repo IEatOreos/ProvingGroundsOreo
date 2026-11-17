@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Service Record: every pool bot listed, long lists in pages of 100, 2026-11-17
+
+The owner: "why is it when reset all the bots list reset to 47? why isnt every bot on here", then (of listing every pool bot, 753) "we seperate it to top 100 and then it goes to pages. And we do top 100 for anything that has categories. With player search still in".
+
+- Found: the site listed the bots of `bot_profiles.ini` (46) always, any other bot only once it had a counted match, so the reset dropped every matchmaking pool bot.
+- `service_record.py read_pool_names`, `Paths.bot_pool`: every bot of Bot Matchmaking's pool (`native/bin/bot_pool.txt`, BOTS panel > Settings) is listed, at 0 until it plays: one entry a name (cut to 15, a repeat or `Name*N` once, `#`/`;` notes skipped), never a person's name. 753 bots on this PC, 754 names with the owner.
+- `app.js` / `style.css` (`pager`, `pagedTable`, `holders`): the leaderboard, the state boards, each Ranks card's holders, the clans list and a clan's members show a page of 100 at a time: Top 100, 101-200 ... with Prev and Next; a page's numbers count from the top of the whole list. The leaderboard's and the state boards' Find a name searches every name, not the page, and a found name keeps its place.
+- Validation: `tools/test_service_record.py` 29 passed in the working tree and 26 in this commit's own tree (the other sessions' new tests are not in it), `tools/test_bot_career.py` passed (`test_everyone_restarts_at_zero` adds the pool: a repeat, `Name*3`, a note and a long name read right, pool bots listed at 0 and not as people). The first build with the pool drew each new bot's figure once (541 s), later builds 2 s; `data.js` 0.4 MB. Browser: 754 names in 8 pages (701-754 last), "TheNoble" found from any page; a state board with numbers put in the page only (reload clears them) paged the same and searched with places kept (181st); an empty board shows its message (a stray "null" there found and fixed); a clan's members; phone width without sideways scroll. Not seen: a state board with real numbers past 100 (nobody has a counted match since the reset).
+
 ### Service Record: the owner listed, everyone's stats reset, a Reset all button, an edit mode that stays, 2026-11-17
 
 The owner: "Are humans allocated to the website? I see myself in carnage reports but not on the board", then "Yes just me for now and also my ability to edit is gone?"; "purge the stats. Including mine from the website I want everyone to start at zero"; "add the Website owner (me) to have a permanent edit button"; "a reset all button so I don't ask you everytime? And store it the same as the edit".

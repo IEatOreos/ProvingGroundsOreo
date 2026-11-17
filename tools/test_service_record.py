@@ -58,7 +58,8 @@ class World:
         s.paths = sr.Paths(logs=s.logs, ledger=os.path.join(s.career_out, "ledger.json"),
                            store=os.path.join(tmp, "store"), out=os.path.join(tmp, "site"),
                            profiles=os.path.join(tmp, "bot_profiles.ini"), looks=os.path.join(tmp, "bot_looks.ini"),
-                           pool=os.path.join(tmp, "bot_pool_saved.ini"), emblems=os.path.join(tmp, "emblems"),
+                           pool=os.path.join(tmp, "bot_pool_saved.ini"), bot_pool=os.path.join(tmp, "bot_pool.txt"),
+                           emblems=os.path.join(tmp, "emblems"),
                            look_names=os.path.join(tmp, "look_names.h"), mcc_report=os.path.join(tmp, "none.xml"),
                            maps=os.path.join(tmp, "maps"), snap=os.path.join(tmp, "no_figure_snap.exe"))
 
@@ -483,6 +484,13 @@ def test_everyone_restarts_at_zero():
         assert w.totals()["Me"][:3] == [1, 1, 3] and w.totals()["Wheezy"][:3] == [1, 0, 5]
         s = player(data, "Me")["g"]["all"]["cats"]["all"]
         assert (s["games"], s["kills"]) == (1, 3) and len(data["matches"]) == 1
+        # (Nov 17) every bot of the matchmaking pool listed, at 0 until it plays: one line each however it is queued
+        with open(w.paths.bot_pool, "w", encoding="utf-8") as f:
+            f.write("# Bot Matchmaking's pool\nWheezy\nQuietRider\nQuietRider\nClanMate*3\n; a note\nAVeryLongBotNameIndeed\n\n")
+        assert sr.read_pool_names(w.paths.bot_pool) == ["Wheezy", "QuietRider", "ClanMate", "AVeryLongBotNam"]
+        data = w.build()
+        assert [p["name"] for p in data["players"]] == ["AVeryLongBotNam", "ClanMate", "Me", "QuietRider", "Wheezy"]
+        assert player(data, "QuietRider")["g"] == {} and not player(data, "QuietRider")["person"]
         # the edit mode's Reset all: refused while MCC runs, else a copy of the ledger kept and everyone at 0 again
         try:
             sr.reset_everyone(running=True)

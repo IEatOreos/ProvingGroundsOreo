@@ -224,6 +224,46 @@
   }
   const td = (v, cls) => el("td", { class: cls || null }, v);
 
+  // Long lists in pages of 100 (Nov 17, the owner, with every pool bot listed: "top 100 and then it goes to pages. And
+  // we do top 100 for anything that has categories. With player search still in"). The first page is the Top 100.
+  const PAGE = 100;
+  const span = (total, page) => int(page * PAGE + 1) + "–" + int(Math.min(total, (page + 1) * PAGE));
+  function pager(total, page, go, what) {
+    const pages = Math.ceil(total / PAGE);
+    if (pages <= 1) return null;
+    return el("nav", { class: "pager", "aria-label": what || "Pages" },
+      el("button", { type: "button", disabled: page === 0, onclick: () => go(page - 1) }, "‹ Prev"),
+      el("ul", null, Array.from({ length: pages }, (_, i) => el("li", null,
+        el("button", { type: "button", "aria-current": i === page ? "page" : null, onclick: () => go(i) }, i ? span(total, i) : "Top " + PAGE)))),
+      el("button", { type: "button", disabled: page >= pages - 1, onclick: () => go(page + 1) }, "Next ›"));
+  }
+  // a table of `items` (in their order) shown a page at a time, with a name search over all of them; rowFn(item, i)
+  // makes item i's row (i counts from the top of the whole list)
+  function pagedTable(heads, items, rowFn, o) {
+    o = o || {};
+    let page = 0, want = "";
+    const body = el("tbody"), slot = el("div", { class: "pager-slot" });
+    const count = el("span", { class: "note", "aria-live": "polite" });
+    const box = el("div", { class: "paged" });
+    function draw() {
+      const w = want.trim().toLowerCase();
+      const list = w ? items.filter((x) => o.find(x).toLowerCase().includes(w)) : items;
+      page = Math.min(page, Math.max(0, Math.ceil(list.length / PAGE) - 1));
+      const shown = list.slice(page * PAGE, (page + 1) * PAGE);
+      body.replaceChildren(...(shown.length ? shown.map((x, i) => rowFn(x, page * PAGE + i))
+        : [el("tr", null, el("td", { class: "l", colspan: heads.length }, w ? "Nothing matches “" + want.trim() + "”." : o.none || "Nothing recorded yet."))]));
+      slot.replaceChildren(pager(list.length, page, (n) => { page = n; draw(); box.scrollIntoView({ block: "start" }); }) || "");
+      count.textContent = !list.length ? "" : (list.length > PAGE ? span(list.length, page) + " of " : "") + int(list.length) +
+        (w ? " found (" + int(items.length) + " in all)" : list.length > PAGE ? "" : " shown");
+    }
+    draw();
+    return fill(box, null, [
+      o.find && items.length ? el("div", { class: "toolbar paged-find" }, count, el("label", null, "Find a name",
+        el("input", { type: "search", autocomplete: "off", oninput: (e) => { want = e.target.value; page = 0; draw(); } }))) : null,
+      el("div", { class: "scroll" }, el("table", null, el("thead", null, el("tr", null, heads.map((x) => el("th", { scope: "col", class: x[1] || null }, x[0])))), body)),
+      slot]);
+  }
+
   // the Games Played ring: one segment per game type family, 2px apart; the legend carries every value
   function ring(cats) {
     const order = RING.filter((k) => cats[k] && cats[k].games);
@@ -343,6 +383,8 @@
     const dir = route.q.dir === "asc" || (route.q.dir !== "desc" && key === "name") ? 1 : -1;
     const body = el("tbody");
     const count = el("span", { class: "note", "aria-live": "polite" });
+    const slot = el("div", { class: "pager-slot" });
+    let page = 0;
     function draw() {
       const want = find.trim().toLowerCase();
       const rows = D.players.filter((p) => !want || p.name.toLowerCase().includes(want) || (p.clan || "").toLowerCase().includes(want));
@@ -350,7 +392,11 @@
         const x = SORTS[key](a), y = SORTS[key](b);
         return (x < y ? -1 : x > y ? 1 : 0) * dir || bucket(b).kills - bucket(a).kills || a.name.localeCompare(b.name);
       });
-      body.replaceChildren(...(rows.length ? rows.map((p, i) => {
+      page = Math.min(page, Math.max(0, Math.ceil(rows.length / PAGE) - 1));
+      const top = page * PAGE;
+      slot.replaceChildren(pager(rows.length, page, (n) => { page = n; draw(); body.closest(".panel").scrollIntoView({ block: "start" }); }, "Standings pages") || "");
+      body.replaceChildren(...(rows.length ? rows.slice(top, top + PAGE).map((p, j) => {
+        const i = top + j;
         const s = bucket(p);
         return el("tr", null, td(i + 1, i < 3 && s.games && !want ? "pos lead" : "pos"),
           td(el("span", { class: "cell" }, emblem(p, true), el("a", { href: href(["p", p.name, "overview"]) }, p.name),
@@ -358,7 +404,8 @@
           td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
           td(int(s.games)), td(int(s.wins), "hide-s"), td(int(s.kills)), td(int(s.deaths)), td(int(s.assists), "hide-s"), td(dec(s.r.kd)));
       }) : [el("tr", null, el("td", { class: "l", colspan: 9 }, "Nothing matches “" + find + "”."))]));
-      count.textContent = rows.length + " of " + D.players.length + " shown";
+      count.textContent = rows.length > PAGE ? span(rows.length, page) + " of " + int(rows.length) + (want ? " found (" + int(D.players.length) + " in all)" : "")
+        : int(rows.length) + " of " + int(D.players.length) + " shown";   // (Top 100 first, the rest a page at a time)
     }
     const head = (k, label, cls) => {
       const on = k === key;
@@ -373,13 +420,13 @@
       el("p", { class: "note" }, played
         ? int(played) + " of " + int(D.players.length) + " have a counted match in " + gameName.get(game()) + ". Choose a name to open its Service Record."
         : "Nobody has a counted match in " + gameName.get(game()) + " yet. Everyone starts at 0; the numbers fill in after the next match."),
-      panel("Standings", el("div", { class: "scroll" }, el("table", null,
+      panel("Standings", el("div", null, el("div", { class: "scroll" }, el("table", null,
         el("thead", null, el("tr", null, el("th", { scope: "col" }, "#"), head("name", "Name", "l"), head("rank", "Rank", "l hide-s"),
           head("games", "Games"), head("wins", "Wins", "hide-s"), head("kills", "Kills"), head("deaths", "Deaths"),
-          head("assists", "Assists", "hide-s"), head("kd", "K/D"))), body)),
+          head("assists", "Assists", "hide-s"), head("kd", "K/D"))), body)), slot),
         el("div", { class: "toolbar" }, count,
           el("label", null, "Find a name", el("input", { type: "search", value: find, autocomplete: "off",
-            oninput: (e) => { find = e.target.value; draw(); } })))),
+            oninput: (e) => { find = e.target.value; page = 0; draw(); } })))),
     ];
   }
 
@@ -573,11 +620,15 @@
     const list = clanList();
     const body = el("ol", { class: "clans" });
     const count = el("span", { class: "note", "aria-live": "polite" });
+    const slot = el("div", { class: "pager-slot" });
+    let page = 0;
     const draw = () => {
       const want = clanFind.trim().toLowerCase();
       const shown = list.filter((c) => !want || c.tag.toLowerCase().includes(want) || c.name.toLowerCase().includes(want) || c.about.toLowerCase().includes(want) ||
         c.members.some((p) => p.name.toLowerCase().includes(want)));
-      body.replaceChildren(...(shown.length ? shown.map((c) => el("li", null, el("a", { class: "clan-card", href: href(["clans", c.key]) },
+      page = Math.min(page, Math.max(0, Math.ceil(shown.length / PAGE) - 1));
+      slot.replaceChildren(pager(shown.length, page, (n) => { page = n; draw(); body.scrollIntoView({ block: "start" }); }, "Clan pages") || "");
+      body.replaceChildren(...(shown.length ? shown.slice(page * PAGE, (page + 1) * PAGE).map((c) => el("li", null, el("a", { class: "clan-card", href: href(["clans", c.key]) },
         el("span", { class: "place" + (c.cr && c.place <= 3 ? " lead" : "") }, c.cr ? c.place : "-"),
         el("span", { class: "ins" }, insignia(c.rank)),
         el("span", { class: "who" }, el("b", null, c.title), el("small", null, c.name ? el("span", { class: "clan-abbr" }, c.tag) : null, D.ranks[c.rank][0]),
@@ -592,19 +643,19 @@
       el("p", { class: "note" }, "Every clan the bots wear a tag of. A clan's credits are all its members' cR added up, and its rank is the same ladder as a player's with every step \u00D7" + CLAN_SCALE + "."),
       panel("Clans", el("div", { class: "body" },
         el("div", { class: "toolbar" }, count, el("label", null, "Find a clan or member", el("input", { type: "search", value: clanFind, autocomplete: "off",
-          oninput: (e) => { clanFind = e.target.value; draw(); } }))),
-        list.length ? body : empty("No clans yet", "A clan shows here once a bot wears its tag.")))];
+          oninput: (e) => { clanFind = e.target.value; page = 0; draw(); } }))),
+        list.length ? [body, slot] : empty("No clans yet", "A clan shows here once a bot wears its tag.")))];
   }
   function clanPage(key) {
     const c = clanList().find((x) => x.key === key);
     const total = c.cr || 1;
-    const rows = c.members.map((p, i) => {
+    const memberRow = (p, i) => {
       const s = (p.g[D.default_game] && p.g[D.default_game].cats.all) || ZERO;
       return el("tr", null, td(i + 1, i < 3 && p.cr ? "pos lead" : "pos"),
         td(el("span", { class: "cell" }, emblem(p, true), el("a", { href: href(["p", p.name, "overview"]) }, p.name)), "l"),
         td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
         td(int(p.cr)), td(Math.round((100 * (p.cr || 0)) / total) + "%", "hide-s"), td(int(s.games)), td(dec(s.r.kd), "hide-s"));
-    });
+    };
     return [el("h1", null, "Bot Tracker"), boardTabs("clans"),
       el("p", null, el("a", { class: "more back-link", href: href(["clans"]) }, "All clans")),
       el("section", { class: "panel clan-head" }, el("div", { class: "body" },
@@ -618,9 +669,22 @@
         c.about ? el("p", { class: "clan-about" }, c.about) : null,
         // (a placeholder: applying to a clan is not decided yet, the owner, Nov 16)
         el("button", { type: "button", class: "apply-btn", disabled: true, title: "Clan applications are coming soon" }, "Apply", el("small", null, "Coming soon")))),
-      panel("Members", table(null, [["#"], ["Member", "l"], ["Rank", "l hide-s"], ["cR"], ["Share", "hide-s"], ["Games"], ["K/D", "hide-s"]], rows))];
+      panel("Members", pagedTable([["#"], ["Member", "l"], ["Rank", "l hide-s"], ["cR"], ["Share", "hide-s"], ["Games"], ["K/D", "hide-s"]], c.members, memberRow,
+        { find: c.members.length > PAGE ? (p) => p.name : null }))];
   }
 
+  // a rank's holders, most credits first, a page of 100 at a time (Recruit holds every bot with none)
+  function holders(here, rankName) {
+    let page = 0;
+    const ul = el("ul", { class: "holders" }), slot = el("div", { class: "pager-slot" });
+    const draw = () => {
+      ul.replaceChildren(...here.slice(page * PAGE, (page + 1) * PAGE).map((p) => el("li", null,
+        el("a", { href: href(["p", p.name, "profile"]), "data-tip": D.ranks[p.rank][0] + ", " + int(p.cr) + " cR" }, emblem(p, true), p.name))));
+      slot.replaceChildren(pager(here.length, page, (n) => { page = n; draw(); }, rankName + " pages") || "");
+    };
+    draw();
+    return el("div", null, ul, slot);
+  }
   function ranksPage() {
     const groups = [];
     D.ranks.forEach((s, i) => { if (s[3] === 0 || !groups.length) groups.push({ name: s[0], steps: [] }); groups[groups.length - 1].steps.push(i); });
@@ -640,9 +704,7 @@
         gr.steps.length > 1 ? el("ol", { class: "grades", "aria-label": gr.name + "'s grades" }, gr.steps.map((i) =>
           el("li", { "data-tip": D.ranks[i][0] + ": " + int(D.ranks[i][1]) + " cR" }, insignia(i, true),
             el("span", null, D.ranks[i][3] ? "Grade " + D.ranks[i][3] : "Base"), el("small", null, int(D.ranks[i][1]))))) : null,
-        here.length ? el("ul", { class: "holders" }, here.map((p) => el("li", null,
-          el("a", { href: href(["p", p.name, "profile"]), "data-tip": D.ranks[p.rank][0] + ", " + int(p.cr) + " cR" }, emblem(p, true), p.name))))
-          : el("p", { class: "none" }, "No bot here yet"));
+        here.length ? holders(here, gr.name) : el("p", { class: "none" }, "No bot here yet"));
     }));
     return [el("h1", null, "Bot Tracker"), boardTabs("ranks"),
       el("p", { class: "note" }, "Reach's ranks, lowest first. A bot's credits (cR) come from its counted Reach matches: " + int(w.game) + " a game, " +
@@ -735,13 +797,14 @@
         : "No kill with a " + kind + " is recorded in " + gameName.get(game()) + " yet. The mod's kill record fills this board after each recorded match.");
     } else {
       const rows = standings(b, area);
-      body = table(null, [["#"], ["Name", "l"], ["State", "l"], ["Region", "l hide-s"], [b.unit]].concat(b.cols),
-        rows.map((r) => el("tr", null, td(r.place, r.place <= 3 ? "pos lead" : "pos"),
+      body = pagedTable([["#"], ["Name", "l"], ["State", "l"], ["Region", "l hide-s"], [b.unit]].concat(b.cols), rows,
+        (r) => el("tr", null, td(r.place, r.place <= 3 ? "pos lead" : "pos"),
           td(el("span", { class: "cell" }, emblem(r.p, true), el("a", { href: href(["p", r.p.name, "placements"]) }, r.p.name)), "l"),
           td(el("a", { href: boardHref(b, r.p.state) }, stateName(r.p.state)), "l"),
           td(el("a", { href: boardHref(b, regionOf(r.p)) }, areaName(regionOf(r.p))), "l hide-s"),
-          td(int(r.v)), b.cells(r.p))),
-        { none: b.unit === "Kills" ? "No kill with " + (key === "all" ? "a vehicle" : "the " + b.label) + " is recorded" + (area ? " in " + areaName(area) : "") + " yet."
+          td(int(r.v)), b.cells(r.p)),
+        { find: (r) => r.p.name + " " + (r.p.clan || ""),
+          none: b.unit === "Kills" ? "No kill with " + (key === "all" ? "a vehicle" : "the " + b.label) + " is recorded" + (area ? " in " + areaName(area) : "") + " yet."
           : "Nobody in " + areaName(area) + " is on this board yet." });
     }
     // each state of the area, its bots and its leader on this board (not when one state is shown)
