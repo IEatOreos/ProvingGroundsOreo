@@ -59,7 +59,7 @@ class World:
                            profiles=os.path.join(tmp, "bot_profiles.ini"), looks=os.path.join(tmp, "bot_looks.ini"),
                            pool=os.path.join(tmp, "bot_pool_saved.ini"), emblems=os.path.join(tmp, "emblems"),
                            look_names=os.path.join(tmp, "look_names.h"), mcc_report=os.path.join(tmp, "none.xml"),
-                           maps=os.path.join(tmp, "maps"))
+                           maps=os.path.join(tmp, "maps"), snap=os.path.join(tmp, "no_figure_snap.exe"))
 
     def write(s, name, text):
         with open(os.path.join(s.logs, name), "w", encoding="utf-8") as f:
@@ -159,6 +159,159 @@ def test_home_states():
         assert data["regions"] == regions and "reach:29" in data["vehicles"] and "reach:6" not in data["vehicles"]
     names = sr.load_weapons()["reach"][0]
     assert all(k.split(":")[1] in names for k in sr.vehicle_keys()), sr.vehicle_keys()
+
+
+def test_match_medals_and_groups():
+    """Each row of a match keeps the medals its player earned in it (the carnage report's strip), and every medal the
+    site names carries the old service record's group: Spree's multikills apart from its sprees, MCC's types else."""
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600, medals={8: 1}), row(bot(2), "Oreo", 1, 0, 7, 0, 3, 600, medals={62: 2, 111: 3})]))
+        os.makedirs(os.path.join(w.paths.store, "art"))
+        with open(os.path.join(w.paths.store, "art", "medals.json"), "w", encoding="utf-8") as f:
+            json.dump({"62": {"name": "Double Kill", "icon": "", "kind": "Spree", "key": "medal_double_kill"},
+                       "111": {"name": "Headshot", "icon": "", "kind": "Kill", "key": "medal_headshot"},
+                       "8": {"name": "Assist", "icon": "", "kind": "AssistSupport", "key": "medal_assist"}}, f)
+        w.career()
+        data = w.build()
+        rows = {r["n"]: r for r in data["matches"][0]["rows"]}
+        assert rows["Oreo"]["medals"] == {"62": 2, "111": 3} and rows["Me"]["medals"] == {"8": 1}, rows
+        assert data["medals"]["62"]["cat"] == "multikill" and data["medals"]["111"]["cat"] == "kill", data["medals"]
+    group = sr.medal_group
+    assert group({"kind": "Spree", "key": "medal_killing_spree"}) == "spree"
+    assert group({"kind": "Spree", "key": "medal_killionaire"}) == "multikill"
+    assert group({"kind": "KillStreak"}) == "spree" and group({"kind": "ModeSpecific"}) == "objective"
+    assert group({"kind": "Style"}) == "style" and group({}) == "other" and group({"kind": "Legendary"}) == "legendary"
+
+
+def test_commendations():
+    """The 14 multiplayer commendations: the table reads whole (six tiers rising, six credits), a bot's counts come
+    from its medals (by MCC's id and by group), its report numbers and its kill rows (None, not 0, without them),
+    each tier reached adds its credits, and the rank counts them when ranks.json says so."""
+    tiers, comms = sr.load_commendations()
+    mp = [c for c in comms if c.get("set", "mp") == "mp"]
+    assert tiers == ["Iron", "Bronze", "Silver", "Gold", "Onyx", "Max"] and len(mp) == 14, (tiers, len(mp))
+    assert {c["key"] for c in comms} >= {"any_spree", "assistant", "crack_shot", "jack_of_all_trades", "one_shot", "trigger_man"}
+    by = {c["key"]: c for c in comms}
+    assert by["crack_shot"]["need"] == [100, 500, 4000, 10000, 20000, 32000] and by["crack_shot"]["cr"] == [300, 1000, 2000, 3000, 3000, 0]
+    info = {"62": {"key": "medal_double_kill", "kind": "Spree"}, "136": {"key": "medal_killing_spree", "kind": "Spree"},
+            "111": {"key": "medal_headshot", "kind": "Kill"}, "114": {"key": "medal_hijack", "kind": "Style"},
+            "184": {"key": "medal_revenge", "kind": "Style"}}
+    g = {"medals": {"62": 12, "136": 7, "111": 60, "114": 2, "184": 3},
+         "cats": {"all": sr.blank() | {"assists": 55, "kg": 30}},
+         "weapons": {"reach:6": [80, 3], "reach:8": [25, 1], "reach:5": [4, 9], "reach:29": [26, 0]}, "kill_games": 2}
+    n = sr.commendation_counts(g, comms, info)
+    assert (n["multikill"], n["any_spree"], n["one_shot"], n["jack_of_all_trades"]) == (12, 7, 60, 5), n
+    assert (n["assistant"], n["grenadier"], n["crack_shot"], n["trigger_man"], n["mobile_asset"]) == (55, 30, 105, 4, 26), n
+    assert sr.commendation_tier(105, by["crack_shot"]["need"]) == 1 and sr.commendation_tier(99, by["crack_shot"]["need"]) == 0
+    assert sr.commendation_tier(32000, by["crack_shot"]["need"]) == 6
+    # Iron for: Multikill (250), Any Spree (250), One Shot (150), Assistant (150), Grenadier (100), Crack Shot (300),
+    # Mobile Asset (100)
+    assert sr.commendation_credits(n, comms) == 250 + 250 + 150 + 150 + 100 + 300 + 100, sr.commendation_credits(n, comms)
+    none = sr.commendation_counts(dict(g, kill_games=0), comms, {})
+    assert none["crack_shot"] is None and none["one_shot"] is None and none["assistant"] == 55, none   # (not recorded: None)
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600), row(bot(2), "Oreo", 1, 0, 7, 0, 60, 600, medals={111: 50})]))
+        os.makedirs(os.path.join(w.paths.store, "art"))
+        with open(os.path.join(w.paths.store, "art", "medals.json"), "w", encoding="utf-8") as f:
+            json.dump({"111": {"name": "Headshot", "icon": "", "kind": "Kill", "key": "medal_headshot"}}, f)
+        w.career()
+        data = w.build()
+        oreo = player(data, "Oreo")
+        worth, _ = sr.load_ranks()
+        base = sr.credits(oreo["g"]["reach"]["cats"]["all"], worth)
+        # One Shot (50 headshots) and Assistant (60 assists) reach Iron: 150 + 150
+        assert oreo["comm"]["one_shot"] == 50 and oreo["comm"]["assistant"] == 60 and oreo["comm_cr"] == 300, oreo["comm"]
+        assert oreo["cr"] == base + 300 and data["commendations"]["credits"] is True, (oreo["cr"], base)
+        assert len(data["commendations"]["list"]) == 19 and data["commendations"]["list"][0]["from"] in ("report", "matches", "kills")
+        assert sum(c["set"] == "mp" for c in data["commendations"]["list"]) == 14 and len(data["commendations"]["badges"]) == 2
+
+
+def test_proving_grounds_commendations():
+    """First Blood: the match's first kill; Closer: its last kill when the killer's side won; Grudge Match: each enemy
+    one player killed 5 times or more in the match. Betrayals, deaths and unnamed killers never count. Map Master
+    counts the maps of its list won on. The five tiered ones are in the table with the 14 of Reach."""
+    U = sr.UNNAMED
+    feed = [[1, "A", "B", "reach:6", "kill"], [2, "B", "A", "reach:6", "kill"]] + [[3 + i, "A", "C", "reach:6", "kill"] for i in range(5)] + \
+           [[9, "C", "A", "reach:11", "betrayal"], [10, None, "B", "reach:41", "death"], [11, "B", "C", "reach:5", "kill"]]
+    assert sr.feed_feats(feed, {"B"}) == {"A": {"first": 1, "grudge": 1}, "B": {"closer": 1}}, sr.feed_feats(feed, {"B"})
+    assert sr.feed_feats(feed, {"A"}) == {"A": {"first": 1, "grudge": 1}}                 # (B's last kill: B lost)
+    assert sr.feed_feats([[1, U, "B", "reach:6", "kill"], [2, "B", "A", "reach:6", "kill"]], {"B"}) == {"B": {"first": 1, "closer": 1}}
+    assert sr.feed_feats([], {"A"}) == {}
+    _, comms = sr.load_commendations()
+    keys = [c["key"] for c in comms]
+    assert len(comms) == 19 and keys[-5:] == ["victor", "first_blood", "closer", "grudge_match", "medal_collector"], keys
+    g = {"medals": {"8": 2, "9": 0, "111": 5}, "cats": {"all": sr.blank() | {"wins": 12}}, "weapons": {}, "kill_games": 1,
+         "feats": {"first": 6, "closer": 0, "grudge": 2}, "maps": {"reach_70_boneyard": {"wins": 2}, "reach_forge_halo": {"wins": 0}, "x": {"wins": 1}}}
+    n = sr.commendation_counts(g, comms, {})
+    assert (n["victor"], n["first_blood"], n["closer"], n["grudge_match"], n["medal_collector"]) == (12, 6, 0, 2, 2), n
+    assert sr.commendation_counts(dict(g, kill_games=0), comms, {})["first_blood"] is None
+    badges = sr.load_badges()
+    assert [b["key"] for b in badges] == ["map_master", "hometown_hero"] and len(badges[0]["maps"]) == 20
+    assert set(badges[0]["maps"]) == set(sr.MAP_NAMES)
+    assert sr.badge_counts(g, badges) == {"map_master": ["reach_70_boneyard"]}
+
+
+def test_forge_layouts_and_tier_banners():
+    """A match on a map with Forge layouts gets the one seen around its start whose window holds its spots (not one
+    seen only at other times, not one elsewhere on the map); layouts are named by their own name, else their file,
+    else when first seen. A commendation banner's grey emblem is swapped for the owner's tier emblem."""
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = sr.Paths(maps=os.path.join(tmp, "maps"), store=os.path.join(tmp, "store"), out=os.path.join(tmp, "site"))
+        def layout(vid, first, last, window, name="", mvar=None):
+            d = os.path.join(tmp, "maps", "m", "variants", vid)
+            os.makedirs(d)
+            with open(os.path.join(d, "variant.json"), "w", encoding="utf-8") as f:
+                json.dump({"first_seen": first, "last_seen": last, "window": window, "name": name, "mvar": mvar or {},
+                           "pieces": [["block_1x1", 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]]}, f)
+        layout("v00000001", "2026-11-01 10:00", "2026-11-16 18:30", [0, 0, 50, 50], "$Title", {"file": "hr_forgeWorld_pinnacle.mvar"})
+        layout("v00000002", "2026-11-10 09:00", "2026-11-16 18:30", [100, 100, 150, 150], "HEMORRHAGE btb")
+        layout("v00000003", "2026-11-01 10:00", "2026-11-02 10:00", [0, 0, 50, 50], "$X")
+        assert sr.match_variant("m", "20261116-181500", [10, 10, 20, 30, 40, 40], paths) == "v00000001"
+        assert sr.match_variant("m", "20261116-181500", [110, 120, 140, 130], paths) == "v00000002"
+        assert sr.match_variant("m", "20261101-120000", [10, 10], paths) == "v00000001"          # (both seen then: v1 newer)
+        assert sr.match_variant("m", "20261020-120000", [10, 10], paths) is None                  # (none seen yet)
+        assert sr.match_variant("m", "20261116-181500", [300, 300], paths) is None                # (no window holds it)
+        assert sr.match_variant("other", "20261116-181500", [10, 10], paths) is None
+        assert sr.variant_title("m", "v00000001", paths) == "Pinnacle"
+        assert sr.variant_title("m", "v00000002", paths) == "HEMORRHAGE btb"
+        assert sr.variant_title("m", "v00000003", paths) == "Forge layout from Nov 1"
+        # a banner: flat blue, a grey square emblem on its blue end; the owner's gold emblem: a solid gold disc
+        art = os.path.join(paths.store, "art", "commendations")
+        os.makedirs(os.path.join(art, "tiers", "gold"))
+        banner = Image.new("RGBA", (286, 90), sr.BANNER_BLUE + (255,))
+        banner.paste((120, 120, 120, 255), (40, 20, 90, 70))
+        banner.paste((50, 50, 50, 255), (140, 0, 286, 90))
+        banner.save(os.path.join(art, "x_test.png"))
+        Image.new("RGBA", (448, 448), (232, 178, 60, 255)).save(os.path.join(art, "tiers", "gold", "x_test_gold.png"))
+        got = sr.tier_banners(["x_test", "missing"], paths)
+        assert got == {"x_test": [None, None, None, None, "commendations/x_test_gold.png", None, None]}, got
+        out = Image.open(os.path.join(paths.out, "commendations", "x_test_gold.png")).convert("RGB")
+        assert out.size == (286, 90) and out.getpixel((65, 45)) == (232, 178, 60), out.getpixel((65, 45))     # (the new emblem)
+        assert out.getpixel((10, 45)) == sr.BANNER_BLUE and out.getpixel((200, 45)) == (50, 50, 50)          # (the rest kept)
+
+
+def test_mode_icons():
+    """Each family modes.json names gets its icon from the art store, copied into the site; a number this PC has no
+    picture for, or one that is not a number, is left out (the page keeps its drawn badge)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        store, site = os.path.join(tmp, "store"), os.path.join(tmp, "site")
+        os.makedirs(os.path.join(store, "art", "modes"))
+        for n in (12, 13):
+            with open(os.path.join(store, "art", "modes", f"{n}.png"), "wb") as f:
+                f.write(sr.png(1, 1, bytes(4)))
+        table = os.path.join(tmp, "modes.json")
+        with open(table, "w", encoding="utf-8") as f:
+            json.dump({"icons": {"ctf": 12, "slayer": 13, "koth": 8, "oddball": "x"}}, f)
+        got = sr.mode_pictures(sr.Paths(store=store, out=site), table)
+        assert got == {"ctf": "modes/12.png", "slayer": "modes/13.png"}, got
+        assert sorted(os.listdir(os.path.join(site, "modes"))) == ["12.png", "13.png"]
+    real = json.load(open(os.path.join(HERE, "service_record_site", "modes.json"), encoding="utf-8"))
+    assert set(real["icons"]) <= set(sr.FAMILY_NAMES) and set(real["sure"]) <= set(real["icons"]), real
 
 
 def test_bots_restart_and_roster():
@@ -277,7 +430,7 @@ def test_report_kept_after_the_rotation():
         assert g["medals"] == {"8": 1, "111": 4} and g["killed"] == {"Me": [1, 6]} and g["killed_by"] == {"Me": [1, 2]}, g
         assert g["maps"]["reach_70_boneyard"]["games"] == 1 and g["types"]["TU CRAZY KING"]["wins"] == 1
         assert g["streak"] == {"best": 1, "current": 1, "runs": [1]} and g["matches"] == [0], g["streak"]
-        assert set(data["medals"]) == {"8", "111"} and data["medals"]["8"] == {"name": "Medal 8", "icon": None}
+        assert set(data["medals"]) == {"8", "111"} and data["medals"]["8"] == {"name": "Medal 8", "icon": None, "cat": "other"}
 
 
 def test_bad_reports_and_no_ledger():
@@ -312,14 +465,17 @@ def test_looks_by_piece_name():
                     'static const piece ED_REACH_ELITE_ARMOR[] = { {5, "General"} };\n')
         with open(w.paths.looks, "w", encoding="utf-8") as f:
             f.write("; looks\nLilWraith|ce|own|color=2\n"
-                    "LilWraith|reach|own|species=0;helmet=62;visor=2;chest=99;pieces=arms:female\n"
+                    "LilWraith|reach|own|species=0;gender=1;helmet=62;visor=2;chest=99;pieces=arms:female\n"
                     "LilWraith|reach|other|species=1;helmet=4;elite_armor=5\n"
-                    "Zealot|reach|own|species=1;helmet=4;elite_armor=5\n")
+                    "Zealot|reach|own|species=1;gender=1;helmet=4;elite_armor=5\n"
+                    "Plain|reach|own|species=0;gender=0\n")
         names = sr.read_look_names(w.paths.look_names)
         assert names["ED_REACH_HELMET"] == {0: "Mark V [B]", 62: "EVA[C] / CNM", 4: "CQC / CBRN"}, names
         looks = sr.read_looks(w.paths.looks, names)
-        assert looks["LilWraith"] == {"species": "Spartan", "pieces": [["Helmet", "EVA[C] / CNM"], ["Visor colour", "Blue"]]}
-        assert looks["Zealot"] == {"species": "Elite", "pieces": [["Armor", "General"]]}, looks
+        assert looks["LilWraith"] == {"species": "Spartan", "pieces": [["Helmet", "EVA[C] / CNM"], ["Visor colour", "Blue"]],
+                                      "body": "spartan_female"}
+        assert looks["Zealot"] == {"species": "Elite", "pieces": [["Armor", "General"]], "body": "elite"}, looks
+        assert looks["Plain"]["body"] == "spartan", looks
 
 
 def kill(v, k, cause, vp, kp=None, t=10.0, **more):
@@ -395,6 +551,14 @@ def test_kills_by_weapon_opponent_and_map():
         assert data["weapons"]["reach:6"] == ["DMR", True] and data["weapons"]["reach:99"] == ["Damage type 99", True]
         assert data["weapons"]["reach:43"] == ["Melee", True], data["weapons"]
         assert data["weapons"]["reach:41"] == ["Fall", False], data["weapons"]       # (named by the list, not seen live)
+        # the carnage report's kill feed: every row that counts, in order, the person named, a death without a killer
+        feed = next(m for m in data["matches"] if m["id"] == "g1")["feed"]
+        assert feed == [[10.0, "Oreo", "Wheezy", "reach:6", "kill"], [10.0, "Oreo", "Wheezy", "reach:8", "kill"],
+                        [10.0, "Wheezy", "Oreo", "reach:6", "kill"], [10.0, "Me", "Wheezy", "reach:43", "kill"],
+                        [10.0, "Ice", "Wheezy", "reach:11", "betrayal"], [10.0, None, "Wheezy", "reach:41", "death"],
+                        [10.0, "Wheezy", "Me", "reach:6", "kill"], [10.0, "Wheezy", "Oreo", "reach:99", "kill"]], feed
+        assert all(r[3] in data["weapons"] for r in feed)
+        assert "feed" not in next(m for m in data["matches"] if m["id"] == "g0")     # (recorded before the kill rows)
         assert data["heat_maps"] == {"reach_70_boneyard": {"img": "maps/reach_70_boneyard.png",
                                                            "frame": [100.0, 200.0, 3.0, 2.0]}}, data["heat_maps"]
         assert os.path.getsize(os.path.join(w.paths.out, "maps", "reach_70_boneyard.png")) > 0

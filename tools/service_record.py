@@ -36,6 +36,7 @@ import os
 import re
 import shutil
 import struct
+import subprocess
 import sys
 import time
 import zipfile
@@ -75,6 +76,8 @@ class Paths:
         s.look_names = os.path.join(ROOT, "native", "look_names.h")
         s.maps = os.path.join(ROOT, "maps")
         s.mcc_report = career.MCC_REPORT
+        s.snap = os.path.join(BIN, "figure_snap.exe")         # native/build_figure_snap.bat: each bot's Reach figure
+        s.models = os.path.join(BIN, "models")                # tools/make_models.py: the game's own models
         for k, v in kw.items():
             if not hasattr(s, k):
                 raise TypeError(f"no such path: {k}")
@@ -408,6 +411,44 @@ def kill_tally(detail, rows):
     return out
 
 
+def kill_feed(detail, rows, game):
+    """[[seconds into the match, killer, victim, "<game>:<damage type>", kind], ...] oldest first: a match's carnage
+    report's kill feed, every row that counts (kill_record.read; kind "kill", "betrayal" or "death", a death having no
+    killer). A player the rows cannot name is "Unknown player"; a seconds the recording lacks is None."""
+    who, feed = kill_names(detail, rows), []
+    for k in rows:
+        f = kill_record.read(k, detail.get("teams", True))
+        if not f:
+            continue
+        kind, killer, weapon = f
+        t = k.get("t")
+        feed.append([round(t, 1) if isinstance(t, (int, float)) and not isinstance(t, bool) else None,
+                     html.unescape(who.get(killer, UNNAMED)) if killer is not None else None,
+                     html.unescape(who.get(k["v"], UNNAMED)), f"{game}:{'?' if weapon is None else weapon}", kind])
+    feed.sort(key=lambda r: (r[0] is None, r[0] or 0))
+    return feed
+
+
+def feed_feats(feed, winners):
+    """{name: {"first": 1, "closer": 1, "grudge": n}} from one match's kill feed (kill_feed, oldest first): who got its
+    first kill, who got its last kill when that player's side won the match (winners: the names that won), and for
+    each player how many enemies they killed 5 times or more (the Proving Grounds commendations). Kills only: a
+    betrayal or a death with no killer is not one."""
+    kills = [r for r in feed if r[4] == "kill" and r[1] and r[1] != UNNAMED]
+    out = {}
+    if kills:
+        out.setdefault(kills[0][1], {})["first"] = 1
+        if kills[-1][1] in winners:
+            out.setdefault(kills[-1][1], {})["closer"] = 1
+    pairs = {}
+    for r in kills:
+        pairs[(r[1], r[2])] = pairs.get((r[1], r[2]), 0) + 1
+    for (killer, _), n in pairs.items():
+        if n >= 5:
+            out.setdefault(killer, {})["grudge"] = out.get(killer, {}).get("grudge", 0) + 1
+    return out
+
+
 def kill_check(detail, rows):
     """[(name, kills by the rows, kills in MCC's report, deaths by the rows, deaths in the report)] for every player
     of a match's report: how its kill rows compare with MCC's own numbers (--check-kills)."""
@@ -502,7 +543,8 @@ def read_looks(path, names):
             v = names.get("ED_REACH_ARMOR_EFFECT", {}).get(int(kv["armor_effect"]))
             if v:
                 pieces.append(["Armor effect", v])
-        out[parts[0]] = {"species": "Elite" if elite else "Spartan", "pieces": pieces}
+        body = "elite" if elite else "spartan_female" if kv.get("gender") == "1" else "spartan"
+        out[parts[0]] = {"species": "Elite" if elite else "Spartan", "pieces": pieces, "body": body}
     return out
 
 
@@ -572,24 +614,183 @@ def map_frame(path):
         return None
 
 
-def export_map(map_id, paths):
-    """A map's top-down picture for the Heatmaps page: {"img": site path, "frame": [x0, y0, width, height]}, the
-    picture copied into the site (maps/<id>.png: game-derived, never in git). None when this PC has no picture of the
-    map or its frame cannot be read: the page then plots on a plain panel."""
-    if not re.fullmatch(r"[A-Za-z0-9_]+", map_id or ""):
+PIECES_DRAWN = 2                  # (the overlay's own version: a change to how pieces are drawn redraws every picture)
+
+
+def map_pieces(map_id, variant, paths):
+    """[(pos, (forward, left, up), lo, hi, name, faces or None)]: the solid things the level's own top-down picture
+    lacks. A Forge layout (variant: its id under maps/<map>/variants): every piece the mod read in its match
+    (variant.json "pieces", brain/forge.block: energy, holograms and markers left out). The base map: its scenario's
+    placed objects, crates, barriers and the like (objects.json, brain/placed.static_boxes). Each with its collision
+    faces when the editing kit has them (maps/_shapes/reach_faces.json), else its box. [] when nothing can be read."""
+    try:
+        if ROOT not in sys.path:
+            sys.path.insert(0, ROOT)
+        from brain import forge, placed
+    except ImportError:
+        return []
+    out = []
+    try:
+        if variant:
+            v = load_json(os.path.join(paths.maps, map_id, "variants", variant, "variant.json"), {})
+            for p in v.get("pieces", []):
+                if not (isinstance(p, list) and len(p) == 13 and isinstance(p[0], str)):
+                    continue
+                b = forge.block(p[0], tuple(p[1:4]), (tuple(p[4:7]), tuple(p[7:10]), tuple(p[10:13])))
+                if b:
+                    out.append(b if len(b) == 6 else b + (None,))
+        else:
+            objs = load_json(os.path.join(paths.maps, map_id, "objects.json"), {})
+            faces = forge._faces("reach")
+            seen = set()
+            for b in placed.static_boxes(objs):
+                key = (b[4], b[0])                          # (a rolled object comes twice, once per roll sense)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(b + (faces.get(b[4]),))
+    except (OSError, ValueError, TypeError, KeyError, IndexError):
+        return []
+    return out
+
+
+def draw_pieces(img, frame, pieces):
+    """The pieces drawn from above onto a top-down picture (a PIL image showing `frame` [x0, y0, width, height], north
+    up): every face that is not a wall filled, lighter the higher it stands, walls as their edge, low first so a piece's
+    top covers what is under it; a piece with no faces known is its box's top."""
+    from PIL import ImageDraw
+    W, H = img.size
+    x0, y0, fw, fh = frame
+
+    def px(x, y):
+        return ((x - x0) / fw * W, (1 - (y - y0) / fh) * H)
+
+    polys = []
+    for pos, (f, l, u), lo, hi, name, faces in pieces:
+        def world(a, b, c):
+            return (pos[0] + a * f[0] + b * l[0] + c * u[0], pos[1] + a * f[1] + b * l[1] + c * u[1], pos[2] + a * f[2] + b * l[2] + c * u[2])
+        shapes = []
+        if faces:
+            for mat, flat in faces:
+                if any(m in mat for m in ("energy", "hologram")) or len(flat) < 9:
+                    continue
+                shapes.append([world(*flat[k:k + 3]) for k in range(0, len(flat) - 2, 3)])
+        else:
+            shapes.append([world(a, b, hi[2]) for a, b in ((lo[0], lo[1]), (hi[0], lo[1]), (hi[0], hi[1]), (lo[0], hi[1]))])
+        for pts in shapes:
+            (ax, ay, az), (bx, by, bz), (cx, cy, cz) = pts[0], pts[1], pts[2]
+            nz = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)       # (twice the face's area seen from above)
+            area = abs(sum(pts[k][0] * pts[(k + 1) % len(pts)][1] - pts[(k + 1) % len(pts)][0] * pts[k][1] for k in range(len(pts))))
+            wall = area < 0.02 or abs(nz) < 1e-6
+            polys.append((sum(p[2] for p in pts) / len(pts), wall, [px(p[0], p[1]) for p in pts]))
+    if not polys:
+        return img
+    zs = sorted(z for z, wall, _ in polys if not wall) or [0.0]
+    lo_z, hi_z = zs[len(zs) // 20], zs[-1 - len(zs) // 20]           # (the colours over the middle 90% of heights)
+    layer = img.copy()
+    d = ImageDraw.Draw(layer)
+    for z, wall, pts in sorted(polys, key=lambda q: q[0]):
+        if wall:
+            d.line(pts + [pts[0]], fill=(20, 32, 44, 255), width=1)
+            continue
+        t = 0.0 if hi_z <= lo_z else min(1.0, max(0.0, (z - lo_z) / (hi_z - lo_z)))
+        fill = tuple(int(a + (b - a) * t) for a, b in zip((96, 112, 132), (226, 234, 244))) + (255,)
+        d.polygon(pts, fill=fill, outline=(28, 40, 54, 255))
+    return layer
+
+
+def variant_title(map_id, variant, paths):
+    """A Forge layout's name for the page: its own name, else its map variant file's (hr_forgeWorld_pinnacle.mvar ->
+    Pinnacle), else its id."""
+    v = load_json(os.path.join(paths.maps, map_id, "variants", variant, "variant.json"), {})
+    name = v.get("name") or ""
+    if name and not name.startswith("$"):
+        return name
+    stem = os.path.splitext((v.get("mvar") or {}).get("file") or "")[0]
+    stem = re.sub(r"^(hr_)?(forge_?world_?|forgeworld_?)", "", stem, flags=re.I)
+    if stem:
+        return stem.replace("_", " ").strip().title()
+    seen = v.get("first_seen", "")
+    try:
+        return "Forge layout from " + time.strftime("%b %d", time.strptime(seen[:10], "%Y-%m-%d")).replace(" 0", " ")
+    except ValueError:
+        return "Forge layout"
+
+
+def match_variant(map_id, start, spots, paths):
+    """The Forge layout (its id) a match was played on, or None for the map itself: of the layouts filed under the map
+    (maps/<map>/variants/*/variant.json) the ones seen around the match's start (first_seen ... last_seen, to the
+    minute), and of those the one whose window holds most of the match's kill and death spots (spots: [x, y, ...])."""
+    folder = os.path.join(paths.maps, map_id or "", "variants")
+    if not map_id or not start or not os.path.isdir(folder):
+        return None
+    try:
+        when = time.strftime("%Y-%m-%d %H:%M", time.strptime(start, "%Y%m%d-%H%M%S"))
+    except ValueError:
+        return None
+    pts = list(zip(spots[0::2], spots[1::2]))
+    best = None
+    for vid in sorted(os.listdir(folder)):
+        v = load_json(os.path.join(folder, vid, "variant.json"), {})
+        if not v.get("pieces") or not (v.get("first_seen", "9") <= when <= v.get("last_seen", "")):
+            continue
+        w = v.get("window") or [0, 0, 0, 0]
+        inside = sum(1 for x, y in pts if w[0] <= x <= w[2] and w[1] <= y <= w[3])
+        score = (inside, v.get("last_seen", ""))
+        if pts and inside < 0.6 * len(pts):
+            continue                                        # (its window is elsewhere on the map)
+        if best is None or score > best[0]:
+            best = (score, vid)
+    return best[1] if best else None
+
+
+def export_map(map_id, paths, variant=None):
+    """A map's top-down picture for the Heatmaps page: {"img": site path, "frame": [x0, y0, width, height]}, written into
+    the site (maps/<id>.png, game-derived, never in git) with what the level's own picture lacks drawn on: the base
+    map's placed objects, or a Forge layout's pieces (variant: then the picture is cut to the layout's window, at the
+    picture's own sharpness). None when this PC has no picture of the map or its frame cannot be read: the page then
+    plots on a plain panel."""
+    if not re.fullmatch(r"[A-Za-z0-9_]+", map_id or "") or (variant and not re.fullmatch(r"v[0-9a-f]{8}", variant)):
         return None
     src = os.path.join(paths.maps, map_id, "topdown.png")
     frame = map_frame(os.path.join(paths.maps, map_id, "heightmap.npz"))
     if not frame or not os.path.isfile(src):
         return None
-    dst = os.path.join(paths.out, "maps", map_id + ".png")
+    name = map_id + ("__" + variant if variant else "")
+    dst = os.path.join(paths.out, "maps", name + ".png")
+    extra = os.path.join(paths.maps, map_id, "variants", variant, "variant.json") if variant else os.path.join(paths.maps, map_id, "objects.json")
+    stamp = os.path.join(paths.out, "maps", name + ".drawn")
     try:
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
-            shutil.copyfile(src, dst)
-    except OSError:
+        newest = max(os.path.getmtime(p) for p in (src, extra, os.path.abspath(__file__)) if os.path.exists(p))
+        fresh = os.path.exists(dst) and os.path.getmtime(dst) >= newest and load_json(stamp, {}).get("v") == PIECES_DRAWN
+        if variant:
+            w = load_json(extra, {}).get("window") or []
+            if len(w) != 4:
+                return None
+            m = 12.0                                        # (room round the layout's window, inside the level's picture)
+            fx1, fy1 = frame[0] + frame[2], frame[1] + frame[3]
+            x0, y0 = max(frame[0], w[0] - m), max(frame[1], w[1] - m)
+            x1, y1 = min(fx1, w[2] + m), min(fy1, w[3] + m)
+            if x1 - x0 < 4 or y1 - y0 < 4:
+                return None
+            frame = [round(v, 3) for v in (x0, y0, x1 - x0, y1 - y0)]
+        if not fresh:
+            from PIL import Image
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with Image.open(src) as im:
+                img = im.convert("RGBA")
+            full = map_frame(os.path.join(paths.maps, map_id, "heightmap.npz"))
+            if variant:                                     # (the layout's part of the level's picture)
+                W, H = img.size
+                box = (int((frame[0] - full[0]) / full[2] * W), int((1 - (frame[1] + frame[3] - full[1]) / full[3]) * H),
+                       int((frame[0] + frame[2] - full[0]) / full[2] * W), int((1 - (frame[1] - full[1]) / full[3]) * H))
+                img = img.crop(box)
+            img = draw_pieces(img, frame, map_pieces(map_id, variant, paths))
+            img.convert("RGB").save(dst + ".tmp.png", "PNG", optimize=True)
+            os.replace(dst + ".tmp.png", dst)
+            save_json(stamp, {"v": PIECES_DRAWN})
+    except (OSError, ValueError, ImportError):
         return None
-    return {"img": "maps/" + map_id + ".png", "frame": frame}
+    return {"img": "maps/" + name + ".png", "frame": frame}
 
 
 def load_weapons(path=os.path.join(SITE, "weapons.json")):
@@ -612,6 +813,158 @@ def load_ranks(path=os.path.join(SITE, "ranks.json")):
     if any(b[3] <= a[3] for a, b in zip(steps, steps[1:])) or steps[0][3] != 0:
         raise ValueError("ranks.json: the credits must start at 0 and rise")
     return table["credits"], steps
+
+
+def load_commendations(path=os.path.join(SITE, "commendations.json")):
+    """(tier names, [commendation, ...]) from the site's table; a commendation whose tiers do not rise is left out."""
+    table = load_json(path, {})
+    tiers = table.get("tiers") or ["Iron", "Bronze", "Silver", "Gold", "Onyx", "Max"]
+    good = []
+    for c in table.get("commendations", []):
+        need, cr = c.get("need", []), c.get("cr", [])
+        if (len(need) == len(cr) == len(tiers) and all(isinstance(x, int) and x >= 0 for x in need + cr)
+                and all(b > a for a, b in zip(need, need[1:])) and isinstance(c.get("count"), dict)):
+            good.append(c)
+    return tiers, good
+
+
+def commendation_counts(g, comms, medal_info):
+    """{commendation key: its count, or None when it cannot be counted yet}: one player's Reach record (g: its "reach"
+    game of collect) against the table. Medals by MCC's id (medal_info: art/medals.json; without it, medal ones are
+    None); report numbers over every counted match; weapon and vehicle kills from the kill record (None when no match of
+    the player has kill rows: not recorded, never 0)."""
+    medals, s, weapons = g.get("medals", {}), g.get("cats", {}).get("all") or blank(), g.get("weapons", {})
+    ids = {info.get("key"): str(i) for i, info in medal_info.items() if isinstance(info, dict)}
+    group = {str(i): medal_group(info) for i, info in medal_info.items() if isinstance(info, dict)}
+    vehicles = set(vehicle_keys())
+    out = {}
+    for c in comms:
+        how = c["count"]
+        n = None
+        if "group" in how and medal_info:
+            n = sum(v for i, v in medals.items() if group.get(str(i)) == how["group"])
+        elif "medals" in how and medal_info:
+            n = sum(medals.get(ids[k], 0) for k in how["medals"] if k in ids)
+        elif "stat" in how:
+            n = int(s.get(how["stat"], 0))
+        elif "feed" in how and g.get("kill_games"):            # (first kills, closers, grudges: the kill record)
+            n = int(g.get("feats", {}).get(how["feed"], 0))
+        elif how.get("distinct_medals"):                         # (kinds of medal earned at least once)
+            n = sum(1 for v in medals.values() if v)
+        elif ("weapons" in how or "vehicles" in how) and g.get("kill_games"):
+            keys = vehicles if how.get("vehicles") else {f"reach:{w}" for w in how.get("weapons", [])}
+            n = sum(v[0] for k, v in weapons.items() if k in keys)
+        out[c["key"]] = n
+    return out
+
+
+TIER_FILES = ("iron", "bronze", "silver", "gold", "onyx", "max")
+BANNER_BLUE = (64, 95, 128)        # the commendation banners' flat blue
+
+
+def tier_banners(keys, paths):
+    """{commendation: [None, iron banner, bronze ..., max]}: each Reach banner (art/commendations/<key>.png) with its
+    grey emblem swapped for the owner's emblem of that tier (art/commendations/tiers/<tier>/<key>_<tier>.png, 448 x 448
+    on transparency, Nov 16), written into the site (commendations/<key>_<tier>.png, not in git) and redrawn when either
+    picture is newer. The old emblem is found as the banner's not-blue pixels on its blue end and painted over with the
+    blue; the new one goes where it stood, at its size. A tier with no emblem of the owner's is left out (the page keeps
+    the banner as it is)."""
+    out = {}
+    art = os.path.join(paths.store, "art", "commendations")
+    for key in keys:
+        base = os.path.join(art, key + ".png")
+        if not os.path.exists(base) or not re.fullmatch(r"[a-z0-9_]+", key):
+            continue
+        row = [None] * (len(TIER_FILES) + 1)
+        banner = box = None
+        for i, tier in enumerate(TIER_FILES, 1):
+            emb = os.path.join(art, "tiers", tier, f"{key}_{tier}.png")
+            dst = os.path.join(paths.out, "commendations", f"{key}_{tier}.png")
+            if not os.path.exists(emb):
+                continue
+            try:
+                if not os.path.exists(dst) or os.path.getmtime(dst) < max(os.path.getmtime(emb), os.path.getmtime(base)):
+                    from PIL import Image, ImageFilter
+                    if banner is None:
+                        banner, box = clean_banner(base)
+                    with Image.open(emb) as e:
+                        e = e.convert("RGBA")
+                        e = e.crop(e.getbbox() or (0, 0, e.width, e.height))
+                    bw, bh = box[2] - box[0], box[3] - box[1]
+                    s = min(bw / e.width, bh / e.height) * 1.04
+                    e = e.resize((max(1, round(e.width * s)), max(1, round(e.height * s))), Image.LANCZOS)
+                    img = banner.copy()
+                    img.alpha_composite(e, (box[0] + (bw - e.width) // 2, box[1] + (bh - e.height) // 2))
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    img.save(dst + ".tmp.png")
+                    os.replace(dst + ".tmp.png", dst)
+                row[i] = f"commendations/{key}_{tier}.png"
+            except (OSError, ValueError):
+                continue
+        if any(row):
+            out[key] = row
+    return out
+
+
+def clean_banner(path):
+    """(banner without its emblem, the emblem's box (x0, y0, x1, y1)): a Reach commendation banner whose emblem (the
+    not-blue pixels of its blue end) is painted over with its blue."""
+    import numpy as np
+    from PIL import Image, ImageFilter
+    with Image.open(path) as im:
+        img = im.convert("RGBA")
+    a = np.asarray(img).astype(np.float32)
+    rgb = a[:, :140, :3]
+    blue = rgb[..., 2] - (rgb[..., 0] + rgb[..., 1]) / 2
+    near = np.linalg.norm(rgb - np.array(BANNER_BLUE, np.float32), axis=2)
+    mask = (blue < 30) & (near > 30)
+    ys, xs = np.nonzero(mask[6:-6, 6:134])
+    if not len(xs):
+        return img, (20, 6, 120, 84)
+    box = (int(xs.min()) + 6, int(ys.min()) + 6, int(xs.max()) + 7, int(ys.max()) + 7)
+    grown = np.asarray(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5))) > 0
+    region = np.zeros(a.shape[:2], bool)
+    region[box[1] - 3:box[3] + 3, max(0, box[0] - 3):box[2] + 3] = True
+    paint = np.zeros(a.shape[:2], bool)
+    paint[:, :140] = grown
+    paint &= region
+    a[paint, :3] = BANNER_BLUE
+    return Image.fromarray(a.astype(np.uint8), "RGBA"), box
+
+
+def commendation_source(how):
+    """Where a commendation's count comes from, as its card says: "kills" (the kill record, from 15 November 2026),
+    "report" (MCC's post-game reports) or "matches" (every counted match)."""
+    if "weapons" in how or "vehicles" in how or "feed" in how:
+        return "kills"
+    return "matches" if how.get("stat") in ("assists", "wins") else "report"
+
+
+def load_badges(path=os.path.join(SITE, "commendations.json")):
+    """The one-time badges of the commendations table (no tiers, no credits)."""
+    return [b for b in load_json(path, {}).get("badges", []) if isinstance(b, dict) and b.get("key")]
+
+
+def badge_counts(g, badges):
+    """{badge key: progress} for one player's Reach record: Map Master, how many of its maps the player has won a game
+    on (unlocked at all of them). Hometown Hero is worked out by the page, from the state leaderboards."""
+    out = {}
+    for b in badges:
+        if b.get("maps"):
+            won = {m for m, s in g.get("maps", {}).items() if s.get("wins")}
+            out[b["key"]] = sorted(m for m in b["maps"] if m in won)
+    return out
+
+
+def commendation_tier(n, need):
+    """How many of the tiers a count reaches (0: not Iron yet, len(need): Max)."""
+    return sum(1 for x in need if n is not None and n >= x)
+
+
+def commendation_credits(counts, comms):
+    """The credits a player's commendation tiers award: each tier reached, its cr."""
+    by = {c["key"]: c for c in comms}
+    return sum(sum(by[k]["cr"][:commendation_tier(n, by[k]["need"])]) for k, n in counts.items() if k in by)
 
 
 def credits(s, worth):
@@ -695,7 +1048,7 @@ def match_time(detail, ledger_match):
     return t, time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
 
 
-def collect(ledger, store_matches, roster, kills=None):
+def collect(ledger, store_matches, roster, kills=None, paths=None):
     """(players {name: record}, matches [newest first]) for the site: every counted row of a listed name summed by
     game and family. Listed: the roster and every name bot_career's totals call a bot. kills: the store's kill rows
     by recording ({"<map>_<start>": [rows]}); a match with none adds nothing to weapons, versus and heat, and
@@ -728,7 +1081,8 @@ def collect(ledger, store_matches, roster, kills=None):
                    "sec": p["seconds"], "won": p["standing"] == 0 and not draw}
             if d:
                 row.update(score=d["score"], bt=d["betrayals"], su=d["suicides"], md=d["medal_total"],
-                           spree=d["spree"], clan=html.unescape(d["clan"]))
+                           spree=d["spree"], clan=html.unescape(d["clan"]),
+                           medals={str(i): n for i, n in d["medals"].items()})   # (this match's, by MCC's number)
             out_rows.append(row)
         out_rows.sort(key=lambda r: (r["st"], -r.get("score", 0), -r["k"]))
         match = {"id": gid, "t": t, "when": when, "game": game, "map": map_id,
@@ -738,6 +1092,18 @@ def collect(ledger, store_matches, roster, kills=None):
         entry = (kills or {}).get(f"{map_id}_{detail['start']}") if detail and map_id and detail.get("start") else None
         tally = kill_tally(detail, kill_rows(entry)) if entry is not None else None
         match["kills"] = tally is not None
+        feats = {}                                          # (name -> {"first", "closer", "grudge"} in this match)
+        if entry is not None:
+            match["feed"] = kill_feed(detail, kill_rows(entry), game)
+            feats = feed_feats(match["feed"], {html.unescape(p["name"]) for p in rows if p["standing"] == 0 and not draw})
+        # its heatmap: the map itself, or the Forge layout it was played on ("<map>@<layout id>", export_map)
+        heat_key = map_id
+        if tally:
+            spots_all = [c for t in tally.values() for c in t["k"] + t["d"]]
+            variant = match_variant(map_id, (detail or {}).get("start"), spots_all, paths) if paths else None
+            if variant:
+                heat_key = f"{map_id}@{variant}"
+        match["heat"] = heat_key
         for p in counting:
             if p["name"] not in listed:
                 continue
@@ -746,10 +1112,13 @@ def collect(ledger, store_matches, roster, kills=None):
             for gkey in ("all", game):
                 g = players[p["name"]]["g"].setdefault(gkey, {"cats": {}, "types": {}, "maps": {}, "medals": {},
                                                                "killed": {}, "killed_by": {}, "results": [],
-                                                               "weapons": {}, "versus": {}, "heat": {}, "kill_games": 0})
+                                                               "weapons": {}, "versus": {}, "heat": {}, "kill_games": 0,
+                                                               "feats": {"first": 0, "closer": 0, "grudge": 0}})
                 g["results"].append((t, gid, won))
                 if tally is not None:                       # (this match has its kill rows)
                     g["kill_games"] += 1
+                    for k, n in feats.get(html.unescape(p["name"]), {}).items():
+                        g["feats"][k] += n
                     mine = tally.get(p["name"])
                     if mine:
                         for key, n in mine["weapons"].items():      # a damage type is a number of its own game's
@@ -758,7 +1127,7 @@ def collect(ledger, store_matches, roster, kills=None):
                         for name, n in mine["versus"].items():
                             e = g["versus"].setdefault(html.unescape(name), [0, 0])
                             e[0], e[1] = e[0] + n[0], e[1] + n[1]
-                        spots = g["heat"].setdefault(map_id, {"k": [], "d": []})
+                        spots = g["heat"].setdefault(heat_key, {"k": [], "d": []})
                         spots["k"] += mine["k"]
                         spots["d"] += mine["d"]
                 buckets = [g["cats"].setdefault("all", blank()), g["cats"].setdefault(match["cat"], blank()),
@@ -812,19 +1181,25 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
     looks = read_looks(paths.looks, read_look_names(paths.look_names))
-    players, matches = collect(ledger, store_matches, roster, kills)
+    players, matches = collect(ledger, store_matches, roster, kills, paths)
     clans = {}
     for m in reversed(matches):                             # (a pool bot's clan tag: its newest report's)
         for r in m["rows"]:
             if r.get("clan"):
                 clans[r["n"]] = r["clan"]
     medal_names = load_json(os.path.join(paths.store, "art", "medals.json"), {})
+    figures = bot_figures(paths)
+    tiers, comms = load_commendations()
+    badges = load_badges()
+    with_comms = bool(load_json(os.path.join(SITE, "ranks.json"), {}).get("commendation_credits"))
     used = set()
     out_players = []
     for name in sorted(players, key=str.lower):
         rec = players[name]
         reach = rec["g"].get(DEFAULT_GAME, {}).get("cats", {}).get("all") or blank()
-        cr = credits(reach, worth)
+        counts = commendation_counts(rec["g"][DEFAULT_GAME], comms, medal_names) if DEFAULT_GAME in rec["g"] else {}
+        comm_cr = commendation_credits(counts, comms) if with_comms else 0
+        cr = credits(reach, worth) + comm_cr                # (the rank: its matches, and its commendations' tiers)
         for g in rec["g"].values():
             used.update(g["medals"])
         diff, style = pool.get(name, ("", ""))
@@ -832,8 +1207,9 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
             "name": html.unescape(name), "roster": name in roster,
             "clan": roster.get(name) or clans.get(html.unescape(name), ""),
             "difficulty": diff, "style": style, "emblem": export_emblem(name, paths),
-            "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps),
-            "state": home_state(html.unescape(name), states), "g": rec["g"],
+            "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps), "comm": counts, "comm_cr": comm_cr,
+            "badges": badge_counts(rec["g"][DEFAULT_GAME], badges) if DEFAULT_GAME in rec["g"] else {},
+            "state": home_state(html.unescape(name), states), "figure": figures.get(name), "g": rec["g"],
         })
     medals = {}
     for i in sorted(used, key=int):
@@ -847,20 +1223,23 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
                 if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
                     shutil.copyfile(src, dst)
                 icon = "medals/" + info["icon"]
-        medals[i] = {"name": info.get("name") or f"Medal {i}", "icon": icon}
+        medals[i] = {"name": info.get("name") or f"Medal {i}", "icon": icon, "cat": medal_group(info)}
     # what killed, by name: [name, matched live] for every damage type a listed player's rows have; a map's picture
     # for every map they have a spot on
     table, weapons, heat_maps = load_weapons(), {}, {}
+    keys = {key for rec in players.values() for g in rec["g"].values() for key in g["weapons"]}
+    keys |= {r[3] for m in matches for r in m.get("feed", [])}     # (a carnage report's kill feed names its own)
+    for key in keys:
+        game_key, _, kind = key.partition(":")
+        names, checked = table.get(game_key, ({}, set()))
+        weapons[key] = ["Not read" if kind == "?" else names.get(kind) or f"Damage type {kind}",
+                        kind == "?" or kind in checked or kind not in names]
     for rec in players.values():
         for g in rec["g"].values():
-            for key in g["weapons"]:
-                game_key, _, kind = key.partition(":")
-                names, checked = table.get(game_key, ({}, set()))
-                weapons[key] = ["Not read" if kind == "?" else names.get(kind) or f"Damage type {kind}",
-                                kind == "?" or kind in checked or kind not in names]
             for map_id in g["heat"]:
                 if map_id not in heat_maps:
-                    heat_maps[map_id] = export_map(map_id, paths)
+                    base, _, variant = map_id.partition("@")          # (a Forge layout: "<map>@<layout id>")
+                    heat_maps[map_id] = export_map(base, paths, variant or None)
     games = sorted({m["game"] for m in matches} | {DEFAULT_GAME}, key=list(GAME_NAMES).index)
     cats = sorted({m["cat"] for m in matches}, key=FAMILY_ORDER.index)
     now = time.time() if now is None else now
@@ -874,14 +1253,133 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "games": [["all", "All games"]] + [[g, GAME_NAMES[g]] for g in games],
         "cats": [[c, FAMILY_NAMES[c]] for c in cats],
         "ranks": ranks, "credits": worth,
-        "maps": {m["map"]: map_name(m["map"]) for m in matches if m["map"]},
+        "commendations": {"tiers": tiers, "credits": with_comms, "list": [
+            {k: c[k] for k in ("key", "name", "what", "need", "cr")} | {"from": commendation_source(c["count"]), "set": c.get("set", "mp")}
+            for c in comms],
+            "badges": [{k: b[k] for k in ("key", "name", "what", "maps") if k in b} for b in badges],
+            "tier_art": tier_banners([c["key"] for c in comms], paths),
+            # (a badge's own emblem, the owner's, Nov 16: art/badges/<key>.png, never in git)
+            "badge_art": {n[:-4]: src for n, src in menu_pictures("badges", {b["key"] + ".png" for b in badges}, paths).items()},
+            "art": {name[:-4]: src for name, src in menu_pictures(
+                "commendations", {c["key"] + ".png" for c in comms} | {b["key"] + ".png" for b in badges}, paths).items()}},
+        "maps": dict(MAP_NAMES) | {m["map"]: map_name(m["map"]) for m in matches if m["map"]}   # (every Reach map: Map Master)
+                | {m["heat"]: map_name(m["map"]) + ": " + variant_title(m["map"], m["heat"].split("@")[1], paths)
+                   for m in matches if "@" in (m.get("heat") or "")},
         "players": out_players, "matches": matches, "medals": medals,
         "medal_art": bool(medal_names),
         "weapons": weapons, "heat_maps": {k: v for k, v in heat_maps.items() if v},
         "weapon_art": weapon_pictures(weapons, paths),
+        # the owner's own header and sidebar pictures (Nov 16), kept on this PC only; the site's drawing without them
+        "backdrops": menu_pictures("backdrops", {"header.jpg", "sidebar.jpg"}, paths),
+        # the landing page's background: MCC's Noble main-menu movie as MP4 and its still (service_record_art.py video)
+        "video": menu_pictures("video", {"noble.mp4", "noble.png"}, paths),
+        # the owner's neon icons (Nov 16), cut from his two sheets into art/icons; the site's own drawn ones without them
+        "icons": menu_pictures("icons", {n + ".png" for n in ICON_NAMES}, paths),
+        # the game type families' icons (the owner's sheet, cut into art/modes; service_record_site/modes.json says which)
+        "mode_art": mode_pictures(paths),
+        "figure_art": menu_pictures("figures", {(x.get("body") or "spartan") + ".png" for x in looks.values()} | {"spartan.png"}, paths),
+        "map_art": {m: f for m in {x["map"] for x in matches if x["map"]}
+                    for f in [menu_pictures("maps", {preview_name(m)}, paths).get(preview_name(m))] if f},
         "vehicles": vehicle_keys(),
         "regions": regions, "states": {s[0]: [s[1], s[2]] for s in states},
     }
+
+
+ICON_NAMES = ("home", "clock", "share", "bars", "star", "helmet", "rising", "controller",
+              "pin", "medal", "rifle", "skull", "folder", "film", "picture", "camera",
+              # his second set (Nov 16): the Overview's stat list, Achievements, the kills box
+              "s_clock", "s_skull", "s_medal", "s_crosshair", "s_layers", "s_star", "s_hex", "s_calendar", "s_controller",
+              # (Nov 16: his DMR drawing for Weapons, his Perfection medal for Medals)
+              "s_dmr", "s_perfection")
+
+
+def preview_name(map_id):
+    """A map's preview picture in the art store (tools/service_record_art.py pictures): its name, lower-case, without
+    spaces or signs. "Forge World" -> forgeworld.jpg."""
+    return re.sub(r"[^a-z0-9]", "", map_name(map_id).lower()) + ".jpg"
+
+
+def menu_pictures(kind, names, paths):
+    """{file: "<kind>/<file>"} for each of `names` the art store has under art/<kind> (MCC's own pictures, made on
+    this PC by service_record_art.py pictures, never in git), copied into the site; a missing one is left out and
+    the page draws its own."""
+    out = {}
+    for name in names:
+        if not re.fullmatch(r"[a-z0-9_]+\.(png|jpg|webp|mp4)", name):
+            continue
+        src = os.path.join(paths.store, "art", kind, name)
+        dst = os.path.join(paths.out, kind, name)
+        try:
+            if not os.path.exists(dst) or os.path.getmtime(dst) < os.path.getmtime(src):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copyfile(src, dst)
+        except OSError:
+            continue
+        out[name] = kind + "/" + name
+    return out
+
+
+FIGURE_SIZE = ("480", "640", "0.35", "24")   # each drawing's width, height, first turn (radians; the bots panel's own
+                                             # 0.35) and its angles round the turntable
+
+
+def bot_figures(paths):
+    """{bot: {"src": "figures/bots/<file>.webp", "n": angles, "w": an angle's width, "h": height}}: each bot's Reach
+    figure as the bots panel draws it, its own armor pieces and colours, turned round in 24 steps (native/
+    figure_snap.exe, the panel's model_view.cpp on a device of its own: MCC need not run), the angles side by side in
+    one picture. Drawn again into the art store when bot_looks.ini or the program is newer than the last drawing,
+    kept as WebP (a twentieth of the PNG), then copied into the site; nothing when the program, the models or a bot's
+    Reach look is missing (its page shows MCC's drawing instead)."""
+    folder = os.path.join(paths.store, "art", "figures", "bots")
+    index = os.path.join(folder, "figures.tsv")
+    try:
+        stale = not os.path.exists(index) or max(os.path.getmtime(paths.looks), os.path.getmtime(paths.snap)) > os.path.getmtime(index)
+    except OSError:
+        stale = False
+    if stale and os.path.isdir(paths.models):
+        os.makedirs(folder, exist_ok=True)
+        try:
+            subprocess.run([paths.snap, paths.looks, paths.models, folder, *FIGURE_SIZE], capture_output=True, timeout=180,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.SubprocessError):
+            pass
+    out = {}
+    try:
+        with open(index, encoding="utf-8", errors="replace") as f:
+            rows = [line.rstrip("\r\n").split("\t") for line in f]
+    except OSError:
+        return out
+    files = {}
+    for r in rows:
+        if len(r) < 6 or not re.fullmatch(r"[a-z0-9_]+\.png", r[1]) or not all(x.isdigit() and int(x) > 0 for x in r[3:6]):
+            continue
+        png_path, web = os.path.join(folder, r[1]), r[1][:-4] + ".webp"
+        web_path = os.path.join(folder, web)
+        try:                                            # (the PNG, 4 MB a bot, goes once its WebP is written)
+            if os.path.exists(png_path) and (not os.path.exists(web_path) or os.path.getmtime(web_path) < os.path.getmtime(png_path)):
+                from PIL import Image
+                with Image.open(png_path) as im:
+                    im.save(web_path + ".tmp", "WEBP", quality=84, method=4)
+                os.replace(web_path + ".tmp", web_path)
+            if os.path.exists(png_path) and os.path.exists(web_path):
+                os.remove(png_path)
+        except (OSError, ImportError, ValueError):
+            pass
+        if not os.path.exists(web_path):
+            continue
+        files[r[0]] = (web, int(r[3]), int(r[4]), int(r[5]))
+    got = menu_pictures(os.path.join("figures", "bots"), {f[0] for f in files.values()}, paths)
+    return {name: {"src": got[f[0]].replace("\\", "/"), "n": f[1], "w": f[2], "h": f[3]}
+            for name, f in files.items() if f[0] in got}
+
+
+def mode_pictures(paths, table=os.path.join(SITE, "modes.json")):
+    """{family: "modes/<n>.png"}: each game type family's icon from the owner's sheet, for the ones modes.json names and
+    this PC has (never in git); a family without one keeps the site's drawn badge."""
+    icons = load_json(table, {}).get("icons", {})
+    files = {k: f"{n}.png" for k, n in icons.items() if isinstance(n, int) and 1 <= n <= 99}
+    got = menu_pictures("modes", set(files.values()), paths)
+    return {k: got[f] for k, f in files.items() if f in got}
 
 
 def vehicle_keys(path=os.path.join(SITE, "weapons.json")):
@@ -889,6 +1387,22 @@ def vehicle_keys(path=os.path.join(SITE, "weapons.json")):
     site's table; the state leaderboards rank these on a board of their own."""
     table = load_json(path, {})
     return sorted(f"{g}:{k}" for g, t in table.items() if isinstance(t, dict) for k in t.get("vehicles", []))
+
+
+MEDAL_GROUPS = ("multikill", "spree", "kill", "style", "assist", "objective", "legendary", "other")
+MULTIKILL = re.compile(r"medal_(double|triple|overkill|killtacular|killtrocity|killimanjaro|killtastrophe|killpocalypse"
+                       r"|killionaire)")
+
+
+def medal_group(info):
+    """A medal's group on the Medals page, as the old service record grouped them, from MCC's own type for it
+    (careerdb.xml, service_record_art.py): Spree's multikills (double ... killionaire) apart from its sprees, kill
+    streaks and role sprees with the sprees, mode medals as objective. "other" when MCC's type is not known."""
+    kind, key = info.get("kind", ""), info.get("key", "")
+    if kind == "Spree" and MULTIKILL.match(key):
+        return "multikill"
+    return {"Spree": "spree", "KillStreak": "spree", "RoleKillSpree": "spree", "Kill": "kill", "Style": "style",
+            "AssistSupport": "assist", "ModeSpecific": "objective", "Legendary": "legendary"}.get(kind, "other")
 
 
 def weapon_pictures(keys, paths):
@@ -917,7 +1431,7 @@ def weapon_pictures(keys, paths):
 def write_site(data, paths):
     """The pages (copied as they are) and data.js; stamp.js last, the sign an open page watches for a new build."""
     os.makedirs(paths.out, exist_ok=True)
-    for name in ("index.html", "style.css", "app.js"):
+    for name in ("index.html", "style.css", "app.js", "backdrop.svg"):
         shutil.copyfile(os.path.join(SITE, name), os.path.join(paths.out, name))
     art = os.path.join(paths.store, "art", "ranks")
     if os.path.isdir(art):                                  # (rank insignia made on this PC, when there are any)

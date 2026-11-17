@@ -1,0 +1,6 @@
+{
+  "note": "Which of the owner's Reach game-type icons (his sheet, Nov 16, cut into native/bin/service_record/art/modes/<n>.png, numbered 1 to 36 left to right, top to bottom; not in git) stands for each game type family of the site (service_record.py FAMILIES). sure: matched by what the icon shows; the others are guesses waiting for the owner's word.",
+  "icons": {"ctf": 12, "koth": 8, "infection": 4, "headhunter": 3, "race": 11, "juggernaut": 10,
+            "slayer": 13, "oddball": 7, "territories": 14, "assault": 30, "invasion": 15, "stockpile": 16, "firefight": 6},
+  "sure": ["ctf", "koth", "infection", "headhunter", "race", "juggernaut"]
+}

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 640" preserveAspectRatio="xMidYMax slice">
+  <!-- Proving Grounds Service Record: the pages' backdrop, drawn for this site (no game art). A dusk sky, a range of
+       snowed peaks, far spires on the right, a dark ridge in front; its foot fades into the page. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07111e"/>
+      <stop offset="0.45" stop-color="#16304b"/>
+      <stop offset="0.72" stop-color="#3d5a78"/>
+      <stop offset="0.86" stop-color="#8a6f6a"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.74" cy="0.78" r="0.42">
+      <stop offset="0" stop-color="#f3a35b" stop-opacity="0.85"/>
+      <stop offset="0.35" stop-color="#c8744a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#c8744a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fb6cc"/>
+      <stop offset="0.5" stop-color="#4e6a86"/>
+      <stop offset="1" stop-color="#22374f"/>
+    </linearGradient>
+    <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f4864"/>
+      <stop offset="1" stop-color="#121f31"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.6" stop-color="#fff"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <mask id="foot"><rect width="1600" height="640" fill="url(#fade)"/></mask>
+    <filter id="soft" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="haze"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  <g mask="url(#foot)">
+    <rect width="1600" height="640" fill="url(#sky)"/>
+    <rect width="1600" height="640" fill="url(#sun)"/>
+    <g fill="#c9d6e6" opacity="0.13" filter="url(#soft)">
+      <ellipse cx="300" cy="150" rx="320" ry="34"/>
+      <ellipse cx="820" cy="110" rx="380" ry="28"/>
+      <ellipse cx="1320" cy="190" rx="300" ry="36"/>
+      <ellipse cx="1060" cy="300" rx="420" ry="22"/>
+    </g>
+    <g fill="#f0b07a" opacity="0.18" filter="url(#soft)">
+      <ellipse cx="1180" cy="380" rx="360" ry="20"/>
+    </g>
+    <!-- far range, snowed -->
+    <path fill="url(#far)" opacity="0.9" d="M0 430 L70 390 120 404 190 340 236 366 300 300 352 344 410 318 470 360 540 286 600 330 650 312 720 368 790 330 860 372 930 340 1000 384 1080 350 1150 392 1220 360 1300 398 1380 362 1460 400 1530 376 1600 404 V640 H0Z"/>
+    <path fill="#dfe8f2" opacity="0.55" filter="url(#haze)" d="M190 340 L214 354 202 358 236 366 222 372 190 360 168 368Z M300 300 L326 322 312 324 352 344 330 346 300 326 280 334Z M540 286 L566 306 552 308 600 330 572 330 540 310 520 318Z"/>
+    <!-- far spires -->
+    <g fill="#1b2c42" opacity="0.85">
+      <path d="M1226 392 L1238 150 1246 140 1252 152 1262 392Z"/>
+      <path d="M1268 392 L1276 214 1282 206 1288 216 1296 392Z"/>
+      <path d="M1196 392 L1203 262 1209 256 1214 264 1221 392Z"/>
+      <path d="M1238 180 L1252 180 1270 200 1220 200Z" opacity="0.8"/>
+    </g>
+    <g fill="#f3c08e" opacity="0.5">
+      <rect x="1243" y="168" width="2" height="2"/><rect x="1281" y="230" width="2" height="2"/><rect x="1207" y="280" width="2" height="2"/>
+    </g>
+    <!-- middle range -->
+    <path fill="url(#mid)" d="M0 470 L60 446 130 470 210 420 280 452 350 410 430 450 520 404 600 446 680 420 760 462 840 430 930 470 1010 440 1100 476 1180 446 1270 482 1350 452 1440 488 1520 462 1600 480 V640 H0Z"/>
+    <!-- the ridge in front -->
+    <path fill="#0a1422" d="M0 540 L90 506 170 528 250 494 330 520 400 500 470 534 560 512 650 540 760 520 860 548 960 526 1060 552 1160 530 1250 556 1340 536 1440 560 1520 544 1600 556 V640 H0Z"/>
+  </g>
+</svg>

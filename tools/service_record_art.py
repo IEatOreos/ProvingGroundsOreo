@@ -33,8 +33,15 @@ every damage type of careerdb.xml's Weapons list, kept in globaluitexturepack an
 service_record_site/weapon_art.json says which damage type each recorded number is. Writes art/weapons/<picture>
 .png, cut to what is drawn, and art/weapons.json ({game: {number: file}}). Not in git either.
 
+The player pages' pictures (the owner, Nov 16, a mockup of the old service record): `pictures` reads MCC's own
+body-type drawings (mainmenutexturepack BODYTYPE_MALE, _FEMALE, _ELITE: the figure on a record's Overview, by the
+bot's species and body) and Reach's map previews (levelstexturepack HREACHMP_<map>LARGE, 668 x 292: the recent
+games' pictures). MCC has no picture of each armor piece: its armory draws the 3D model. Not in git either.
+
 usage: python -I service_record_art.py medals [MCC folder]
        python -I service_record_art.py weapons [MCC folder]
+       python -I service_record_art.py pictures [MCC folder]
+       python -I service_record_art.py video [MCC folder]      (needs native\build_bink_to_mp4.bat first)
        python -I service_record_art.py ranks <the rank chart picture>
        python -I service_record_art.py ranks <a folder of one picture a step, each named <step>_...>
 """
@@ -185,13 +192,89 @@ def icons(mcc, pack=PACK):
     return out
 
 
-def bc3(w, h, data):
-    """A BC3 (DXT5) picture as PIL RGBA, through a DDS header (as tools/emblems.py)."""
+def bc3(w, h, data, fourcc=0x35545844):
+    """A BC3 (DXT5) picture as PIL RGBA, through a DDS header (as tools/emblems.py); fourcc DXT1 for a BC1 one."""
     import io
     from PIL import Image
     hdr = struct.pack("<4sIIIIIII44sIII20sIIIII", b"DDS ", 124, 0x81007, h, w, len(data), 0, 1, b"\0" * 44,
-                      32, 4, 0x35545844, b"\0" * 20, 0x1000, 0, 0, 0, 0)
+                      32, 4, fourcc, b"\0" * 20, 0x1000, 0, 0, 0, 0)
     return Image.open(io.BytesIO(hdr + data)).convert("RGBA")
+
+
+def textures(mcc, pack, wanted):
+    """{TEXTURE NAME: PIL RGBA} for the names `wanted(name)` accepts, from one of MCC's texture packs (the layout of
+    icons()); a picture whose data is half its pixel count is BC1, one byte a pixel BC3; others are passed over."""
+    out = {}
+    with open(os.path.join(mcc, pack + ".perm.bin"), "rb") as f:
+        perm = f.read()
+    with open(os.path.join(mcc, pack + ".temp.bin"), "rb") as temp:
+        for k in range(len(perm) // 480):
+            e = perm[k * 480:(k + 1) * 480]
+            name = e[0x44:0x64].split(b"\0")[0].decode("latin1").upper()
+            if not name or name in out or not wanted(name):
+                continue
+            w, h = struct.unpack_from("<HH", e, 0x74)
+            size, at = struct.unpack_from("<QQ", e, 0x88)
+            fourcc = {w * h: 0x35545844, w * h // 2: 0x31545844}.get(size)
+            if fourcc and w and h:
+                temp.seek(at)
+                out[name] = bc3(w, h, temp.read(size), fourcc)
+    return out
+
+
+MOVIE = os.path.join("MCC", "Content", "Movies", "NOBLE.bk2")
+MOVIE_STILL = os.path.join("data", "ui", "BackgroundVideos", "Images", "Noble.png")
+BINK = os.path.join("MCC", "Binaries", "Win64", "bink2w64.dll")
+
+
+def video(mcc, out=OUT, tool=os.path.join(ROOT, "native", "bin", "bink_to_mp4.exe")):
+    """The landing page's background: MCC's Noble main-menu movie (a Bink 2 file) as <out>/video/noble.mp4, decoded by
+    MCC's own bink2w64.dll and encoded by Windows (native/bink_to_mp4.exe, native/build_bink_to_mp4.bat), and its
+    still from MCC's menu, noble.png. Returns True when the movie was written."""
+    os.makedirs(os.path.join(out, "video"), exist_ok=True)
+    still = os.path.join(mcc, MOVIE_STILL)
+    if os.path.exists(still):
+        shutil.copyfile(still, os.path.join(out, "video", "noble.png"))
+    need = [os.path.join(mcc, BINK), os.path.join(mcc, MOVIE), tool]
+    lost = [p for p in need if not os.path.exists(p)]
+    if lost:
+        print("video skipped: no " + lost[0])
+        return False
+    import subprocess
+    r = subprocess.run([tool, need[0], need[1], os.path.join(out, "video", "noble.mp4"), "1280"], capture_output=True, text=True)
+    print((r.stdout or r.stderr).strip().splitlines()[-1] if (r.stdout or r.stderr) else "video: no output")
+    return r.returncode == 0
+
+
+FIGURES = {"BODYTYPE_MALE": "spartan.png", "BODYTYPE_FEMALE": "spartan_female.png", "BODYTYPE_ELITE": "elite.png"}
+MAP_PREVIEW = re.compile(r"HREACHMP_([A-Z0-9]+)LARGE")
+
+
+def pictures(mcc, out=OUT):
+    """The player pages' pictures from MCC's own menus: its body-type drawings (a Spartan, a female Spartan, an
+    Elite: <out>/figures/*.png, cut to what is drawn) and Reach's map previews (<out>/maps/<map>.jpg, the map's
+    name lower-case without spaces: forgeworld.jpg). Returns (figures, maps) written."""
+    menus = os.path.join("data", "ui", "texturepacks", "mainmenutexturepack")
+    levels = os.path.join("data", "ui", "texturepacks", "levelstexturepack")
+    need = [os.path.join(mcc, p + x) for p in (menus, levels) for x in (".perm.bin", ".temp.bin")]
+    lost = [p for p in need if not os.path.exists(p)]
+    if lost:
+        print("pictures skipped: this copy of MCC has no " + lost[0])
+        return 0, 0
+    figs = textures(mcc, menus, FIGURES.__contains__)
+    os.makedirs(os.path.join(out, "figures"), exist_ok=True)
+    for name, img in figs.items():
+        path = os.path.join(out, "figures", FIGURES[name])
+        trimmed(img).save(path + ".tmp", "PNG")
+        os.replace(path + ".tmp", path)
+    maps = textures(mcc, levels, lambda n: bool(MAP_PREVIEW.fullmatch(n)))
+    os.makedirs(os.path.join(out, "maps"), exist_ok=True)
+    for name, img in maps.items():
+        path = os.path.join(out, "maps", MAP_PREVIEW.fullmatch(name).group(1).lower() + ".jpg")
+        img.convert("RGB").save(path + ".tmp", "JPEG", quality=86)
+        os.replace(path + ".tmp", path)
+    print(f"pictures: {len(figs)} figures, {len(maps)} map previews -> {out}")
+    return len(figs), len(maps)
 
 
 def medals(mcc, out=OUT):
@@ -416,14 +499,14 @@ if __name__ == "__main__":
             ranks(sys.argv[2])
         except (ValueError, OSError) as e:
             sys.exit(f"ranks not cut: {e}")
-    elif sys.argv[1:2] in (["medals"], ["weapons"]):
+    elif sys.argv[1:2] in (["medals"], ["weapons"], ["pictures"], ["video"]):
         sys.path.insert(0, ROOT)
         from brain import paths                                 # (where MCC is)
         folder = sys.argv[2] if len(sys.argv) > 2 else paths.mcc()
         if not folder:
             sys.exit("MCC was not found: give its folder")
         try:
-            (medals if sys.argv[1] == "medals" else weapons)(folder)
+            {"medals": medals, "weapons": weapons, "pictures": pictures, "video": video}[sys.argv[1]](folder)
         except (ValueError, struct.error, OSError) as e:
             sys.exit(f"{sys.argv[1]} not read: {e}")
     else:

@@ -7,6 +7,7 @@
   const main = document.getElementById("main");
   const nav = document.getElementById("nav");
   const shell = document.querySelector(".shell");
+  const card = document.getElementById("card");
   const gamePick = document.getElementById("game");
   if (!D) {
     main.replaceChildren(el("p", { class: "note" },
@@ -102,29 +103,114 @@
       svg("text", { x: 24, y: grade ? 29 : 31, "text-anchor": "middle", "font-size": 17, "font-weight": 700, fill: "currentColor", "font-family": "inherit" }, number),
       pips);
   }
-  function rankBlock(p) {
-    const cur = D.ranks[p.rank], next = D.ranks[p.rank + 1];
-    return el("div", { class: "rank" }, insignia(p.rank),
-      el("div", { class: "name" }, cur[0]),
-      next
-        ? el("progress", { max: next[1] - cur[1], value: p.cr - cur[1], "aria-label": "Progress to " + next[0] })
-        : el("progress", { max: 1, value: 1, "aria-label": "Highest rank reached" }),
-      el("div", { class: "next" }, next
-        ? "Next: " + next[0] + " (" + int(p.cr) + " of " + int(next[1]) + " cR)"
-        : "Highest rank reached (" + int(p.cr) + " cR)"));
+  // Line icons, drawn for this site (24 x 24, stroked in the text's colour).
+  const ICONS = {
+    overview: "M3 11l9-7 9 7v9h-6v-6H9v6H3z",
+    placements: "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
+    history: "M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4M12 7v5l3 3",
+    commendations: "M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z",
+    heatmaps: "M12 21c-4 0-6.5-2.6-6.5-6 0-4 3.5-5.5 4-9 2.5 1.5 4 4 4 6 1-.5 1.6-1.6 1.8-3 1.7 1.6 3.2 3.8 3.2 6 0 3.4-2.5 6-6.5 6z",
+    achievements: "M12 3l7 4v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V7zM9 12l2 2 4-4",
+    profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5",
+    summary: "M5 20v-8M10 20V5M15 20v-6M20 20V9M3 20h18",
+    types: "M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4zM8 11v3M6.5 12.5h3M15.5 11.5h.01M17.5 13.5h.01",
+    maps: "M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14",
+    medals: "M8 3l2.2 5.5M16 3l-2.2 5.5M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 12.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z",
+    weapons: "M2.5 9.5h15l2-2h2v4h-4.5l-1.5 1.5h-3l-2.5 4H6.5l1.5-4H4.5l-2-1.5zM10.5 13l.5 2",
+    enemies: "M12 3a8 8 0 0 0-8 8c0 2.6 1.2 4.4 3 5.5V20h10v-3.5c1.8-1.1 3-2.9 3-5.5a8 8 0 0 0-8-8zM9 11.5h.01M15 11.5h.01M10 20v-2M14 20v-2",
+    back: "M15 5l-7 7 7 7",
+    trophy: "M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5v1.5A3 3 0 0 0 8 10.5M16 6h3.5v1.5A3 3 0 0 1 16 10.5M12 13v4M8.5 20h7M10 17h4",
+    film: "M4 5h16v14H4zM4 9h16M4 15h16M8 5v4M8 15v4M16 5v4M16 15v4",
+    arrow: "M5 12h14M13 6l6 6-6 6",
+    calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+    games: "M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4z",
+    win: "M8 4h8v5a4 4 0 0 1-8 0zM12 13v4M8.5 20h7M10 17h4",
+    kills: "M12 3v4M12 17v4M3 12h4M17 12h4M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z",
+    deaths: "M12 3a8 8 0 0 0-8 8c0 2.6 1.2 4.4 3 5.5V20h10v-3.5c1.8-1.1 3-2.9 3-5.5a8 8 0 0 0-8-8zM9 11.5h.01M15 11.5h.01",
+    assists: "M4 13l4 4 3-1.5 3 2.5 6-6M4 13l5-5 3 2 3-3 5 5",
+    spree: "M13 3L5 13h6l-1 8 8-10h-6z",
+    since: "M5 21V4M5 4h11l-2 4 2 4H5",
+    scoreboard: "M4 5h16v14H4zM4 10h16M10 10v9",
+  };
+  // the owner's neon icons (art/icons, cut from his sheets) for the sections and panel headings that have one; the
+  // drawn ones below otherwise
+  const NEON = { overview: "home", placements: "rising", history: "clock", commendations: "star", heatmaps: "picture",
+    profile: "helmet", summary: "bars", types: "s_controller", maps: "pin", medals: "s_perfection", weapons: "s_dmr",
+    enemies: "skull", film: "film", achievements: "s_hex",
+    // the Overview's stat list and the kills box (his second set); Assists keeps the drawn one
+    calendar: "s_calendar", games: "s_controller", win: "s_star", kills: "s_crosshair", deaths: "s_skull",
+    "stat-medals": "s_medal", spree: "s_layers", since: "s_clock" };
+  function neon(name, size) {
+    const src = NEON[name] && D.icons && D.icons[NEON[name] + ".png"];
+    if (!src) return icon(name === "stat-medals" ? "medals" : name, size);
+    return el("img", { class: "ic neon", src, alt: "", width: size || 22, height: size || 22 });
   }
-  function banner(p) {
-    const chips = [p.roster ? "Roster" : "Matchmaking pool", D.states && D.states[p.state] && "Home: " + D.states[p.state][0],
-      p.difficulty && "Difficulty: " + title(p.difficulty), p.style && "Play style: " + title(p.style)].filter(Boolean);
-    return el("div", { class: "banner" }, emblem(p),
-      el("div", { class: "who" }, el("h1", null, p.name), p.clan && el("div", { class: "tag" }, "Clan tag: " + p.clan),
-        el("ul", { class: "chips" }, chips.map((c) => el("li", null, c)))),
-      rankBlock(p));
+  function icon(name, size) {
+    return svg("svg", { class: "ic", viewBox: "0 0 24 24", width: size || 20, height: size || 20, "aria-hidden": "true" },
+      svg("path", { d: ICONS[name] || ICONS.overview, fill: "none", stroke: "currentColor", "stroke-width": 1.7, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  }
+  // A game type family's badge: a shield outline with the mode's sign in it (our own drawing).
+  const MODE_SIGNS = {
+    slayer: "M24 15v5M24 30v5M15 25h5M28 25h5M24 29a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+    ctf: "M19 35V15M19 16h11l-2.5 4 2.5 4H19",
+    koth: "M16 31h16M16 31l-1-11 5 4 4-7 4 7 5-4-1 11",
+    territories: "M16 17h16v16H16zM24 17v16M16 25h16",
+    oddball: "M24 33a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 24h.01M27 24h.01M22 29h4",
+    infection: "M24 25a3 3 0 1 0 0-.01M24 22v-6M21.5 26.5l-5 3M26.5 26.5l5 3",
+    assault: "M23 33a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM28 20l3-3M31 17l2 0",
+    invasion: "M17 30l7-6 7 6M17 23l7-6 7 6",
+    rest: "M24 15l2.5 6.5 7 .5-5.4 4.4 1.8 6.8L24 29.4l-5.9 3.8 1.8-6.8-5.4-4.4 7-.5z",
+  };
+  // a family's icon from the owner's Reach game-type sheet (modes.json), when this PC has it; null otherwise
+  const modeIcon = (cat, size) => (D.mode_art && D.mode_art[cat]
+    ? el("img", { class: "mode-ic", src: D.mode_art[cat], alt: "", width: size || 18, height: size || 18, loading: "lazy" }) : null);
+  // the game type each recorded game type name falls in (its matches say)
+  const typeCat = new Map(D.matches.map((m) => [m.type || "Unknown", m.cat]));
+  function modeBadge(cat) {
+    if (D.mode_art && D.mode_art[cat]) return el("img", { class: "badge", src: D.mode_art[cat], alt: "", width: 52, height: 52 });
+    return svg("svg", { class: "badge", viewBox: "0 0 48 48", width: 48, height: 48, "aria-hidden": "true" },
+      svg("path", { d: "M24 3 41 9.5v13C41 33 33.5 40.5 24 45 14.5 40.5 7 33 7 22.5v-13z", fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linejoin": "round" }),
+      svg("path", { d: MODE_SIGNS[cat] || MODE_SIGNS.rest, fill: "none", stroke: "currentColor", "stroke-width": 1.8, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  }
+  const BADGE_LABEL = { ctf: "CTF", koth: "KOTH", rest: "Other" };
+  const FAMILY_LABEL = { ctf: "Capture the Flag", koth: "King of the Hill" };
+  const result = (m, me) => (me.won ? "Won" : m.rows.every((r) => r.st === 0) ? "Tied" : "Lost");
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const dotted = (t) => { const d = new Date(t * 1000); return pad2(d.getMonth() + 1) + "." + pad2(d.getDate()) + "." + d.getFullYear(); };
+
+  // The record's card across the top of every one of its pages: the emblem, the name and clan tag, the rank and its
+  // progress, and the three game type families it has played most.
+  function recordCard(p) {
+    const cur = D.ranks[p.rank], next = D.ranks[p.rank + 1];
+    const g = side(p), cats = (g && g.cats) || {};
+    const fams = RING.concat(["rest"]).filter((k) => cats[k] && cats[k].games).sort((a, b) => cats[b].games - cats[a].games);
+    for (const k of ["slayer", "ctf", "koth"]) if (fams.length < 3 && !fams.includes(k)) fams.push(k);
+    return [
+      el("div", { class: "em" }, emblem(p)),
+      el("div", { class: "id" },
+        el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), p.clan && el("span", { class: "clan" }, "- " + p.clan),
+          cardBadges(p)),
+        el("div", { class: "rk" }, el("span", null, cur[0]),
+          el("span", { class: "nx" }, next ? "Next: " + next[0] + " (" + int(p.cr) + " / " + int(next[1]) + " cR)" : "Highest rank reached (" + int(p.cr) + " cR)")),
+        next ? el("progress", { max: next[1] - cur[1], value: p.cr - cur[1], "aria-label": "Progress to " + next[0] })
+          : el("progress", { max: 1, value: 1, "aria-label": "Highest rank reached" })),
+      el("ul", { class: "modes", "aria-label": "Most played game types" }, fams.slice(0, 3).map((k) => {
+        const n = (cats[k] || {}).games || 0;
+        return el("li", { class: n ? null : "off", "data-tip": (catName.get(k) || FAMILY_LABEL[k] || title(k)) + ": " + int(n) + (n === 1 ? " game" : " games") },
+          el("span", null, BADGE_LABEL[k] || title(k)), modeBadge(k));
+      })),
+    ];
+  }
+  // a page's own title, under the card (the card itself is drawn once by render)
+  function banner() {
+    const page = route.parts[2] || "overview";
+    const found = PAGES.flatMap((x) => x[1]).find((x) => x[0] === page);
+    return el("h1", { class: "page-title" }, found ? found[1] : page === "match" ? "Carnage Report" : "");
   }
 
   function table(caption, heads, rows, opts) {
     const o = opts || {};
-    return el("div", { class: "scroll" }, el("table", null, caption && el("caption", null, caption),
+    return el("div", { class: o.fit ? "fit" : "scroll" }, el("table", null, caption && el("caption", null, caption),
       el("thead", null, el("tr", null, heads.map((x) => el("th", { scope: "col", class: x[1] || null }, x[0])))),
       el("tbody", null, rows.length ? rows : el("tr", null, el("td", { class: "l", colspan: heads.length }, o.none || "Nothing recorded yet.")))));
   }
@@ -165,24 +251,6 @@
       el("span", { class: "lab" }, label),
       el("span", { class: "trk", "data-tip": label + ": " + int(value) }, el("span", { class: "fill", style: "width:" + (100 * value) / max + "%" })),
       el("span", { class: "val" }, int(value))]));
-  }
-  // one thin bar per run of wins, oldest on the left; the longest is labelled
-  function streakBars(runs) {
-    const step = 16, w = 8, H = 120, base = 100, top = 16;
-    const max = Math.max(...runs), width = Math.max(runs.length * step + 8, 160);
-    let labelled = false;
-    const marks = runs.map((n, i) => {
-      const x = 8 + i * step, hgt = Math.max(4, ((base - top) * n) / max), y = base - hgt, r = Math.min(4, hgt);
-      const bar = svg("path", { class: "b", d: `M${x} ${base}V${y + r}a${r} ${r} 0 0 1 ${r} ${-r}h${w - 2 * r}a${r} ${r} 0 0 1 ${r} ${r}V${base}z`,
-        fill: "var(--bar)", "data-tip": n + (n === 1 ? " win" : " wins") + " in a row" });
-      const lab = n === max && !labelled ? svg("text", { x: x + w / 2, y: y - 4, "text-anchor": "middle" }, n) : null;
-      labelled = labelled || n === max;
-      return [bar, lab];
-    });
-    return svg("svg", { class: "vbars", viewBox: `0 0 ${width} ${H}`, preserveAspectRatio: "xMinYMid meet", role: "img",
-      "aria-label": "Runs of wins, oldest first: " + runs.join(", ") },
-      svg("line", { x1: 0, x2: width, y1: base + 0.5, y2: base + 0.5 }), marks,
-      svg("text", { x: 8, y: H - 4 }, "Oldest"), svg("text", { x: width - 4, y: H - 4, "text-anchor": "end" }, "Newest"));
   }
   function medalTile(id, n) {
     const m = D.medals[id] || { name: "Medal " + id, icon: null };
@@ -279,7 +347,7 @@
     draw();
     const played = D.players.filter((p) => bucket(p).games).length;
     return [
-      el("h1", null, "Bot Tracker"), boardTabs(""),
+      el("h1", null, "Bot Tracker"), boardTabs(""), podium(),
       el("p", { class: "note" }, played
         ? int(played) + " of " + int(D.players.length) + " have a counted match in " + gameName.get(game()) + ". Choose a name to open its Service Record."
         : "Nobody has a counted match in " + gameName.get(game()) + " yet. Everyone starts at 0; the numbers fill in after the next match."),
@@ -293,6 +361,65 @@
     ];
   }
 
+  // ---------------------------------------------------------------- the front page's podium and the Ranks page
+  // a bot's figure standing still (the first angle of its turntable, native/figure_snap.exe), else its emblem
+  function figureStill(p) {
+    const f = p.figure;
+    return f ? el("span", { class: "still", role: "img", "aria-label": p.name + " in its armor",
+      style: `background-image:url("${f.src}");background-size:${f.n * 100}% 100%;aspect-ratio:${f.w} / ${f.h}` })
+      : el("span", { class: "still none" }, emblem(p));
+  }
+  // the top three by credits (cR, the rank's own formula) in the game shown: second, first, third, on lit rings
+  function podium() {
+    const top = D.players.filter((p) => bucket(p).games).map((p) => ({ p, v: crOf(bucket(p)) + commCr(p) }))
+      .sort((x, y) => y.v - x.v || x.p.name.localeCompare(y.p.name)).slice(0, 3);
+    if (!top.length) return null;
+    return el("section", { class: "podium", "aria-label": "The top three by credits in " + gameName.get(game()) },
+      el("ol", null, [1, 0, 2].filter((i) => top[i]).map((i) => {
+        const { p, v } = top[i];
+        const link = href(["p", p.name, "overview"]);
+        return el("li", { class: "place p" + (i + 1) },
+          el("a", { class: "figure-link ringed", href: link, "aria-label": p.name + ", " + ordinal(i + 1) }, figureStill(p)),
+          el("span", { class: "plinth" }, el("span", { class: "num" }, ordinal(i + 1))),
+          el("a", { class: "nm", href: link }, p.name),
+          el("span", { class: "rk" }, insignia(p.rank, true), D.ranks[p.rank][0]),
+          el("span", { class: "cr" }, int(v) + " cR"));
+      })));
+  }
+  // every rank of Reach in order, its Grades with their credits, and which bots hold it now (credits come from counted
+  // Reach matches only: ranks.json)
+  function ranksPage() {
+    const groups = [];
+    D.ranks.forEach((s, i) => { if (s[3] === 0 || !groups.length) groups.push({ name: s[0], steps: [] }); groups[groups.length - 1].steps.push(i); });
+    const at = new Map();
+    for (const p of D.players) { if (!at.has(p.rank)) at.set(p.rank, []); at.get(p.rank).push(p); }
+    const ranked = D.players.filter((p) => p.cr > 0);
+    const best = ranked.slice().sort((x, y) => y.cr - x.cr || x.name.localeCompare(y.name))[0];
+    const held = groups.filter((gr) => gr.steps.some((i) => at.has(i))).length;
+    const w = D.credits;
+    const cards = el("ol", { class: "ranks" }, groups.map((gr) => {
+      const first = gr.steps[0], last = gr.steps[gr.steps.length - 1], next = D.ranks[last + 1];
+      const here = gr.steps.flatMap((i) => at.get(i) || []).sort((x, y) => y.cr - x.cr || x.name.localeCompare(y.name));
+      return el("li", { class: "rank-card" + (here.length ? " held" : "") + (here.length > 9 ? " many" : "") },
+        el("div", { class: "ins" }, insignia(first)),
+        el("div", { class: "rn" }, el("h3", null, gr.name),
+          el("span", { class: "crs" }, int(D.ranks[first][1]) + (next ? " to " + int(next[1] - 1) : " and up") + " cR")),
+        gr.steps.length > 1 ? el("ol", { class: "grades", "aria-label": gr.name + "'s grades" }, gr.steps.map((i) =>
+          el("li", { "data-tip": D.ranks[i][0] + ": " + int(D.ranks[i][1]) + " cR" }, insignia(i, true),
+            el("span", null, D.ranks[i][3] ? "Grade " + D.ranks[i][3] : "Base"), el("small", null, int(D.ranks[i][1]))))) : null,
+        here.length ? el("ul", { class: "holders" }, here.map((p) => el("li", null,
+          el("a", { href: href(["p", p.name, "profile"]), "data-tip": D.ranks[p.rank][0] + ", " + int(p.cr) + " cR" }, emblem(p, true), p.name))))
+          : el("p", { class: "none" }, "No bot here yet"));
+    }));
+    return [el("h1", null, "Bot Tracker"), boardTabs("ranks"),
+      el("p", { class: "note" }, "Reach's ranks, lowest first. A bot's credits (cR) come from its counted Reach matches: " + int(w.game) + " a game, " +
+        int(w.win) + " a win, " + int(w.kill) + " a kill, " + int(w.assist) + " an assist and " + int(w.medal) + " a medal, so its rank can always be rebuilt from the record."),
+      el("ul", { class: "hero" }, [["Highest rank", best ? D.ranks[best.rank][0] : "-", best ? best.name : ""], ["Bots with credits", int(ranked.length), "of " + int(D.players.length)],
+        ["Ranks held", int(held), "of " + int(groups.length)], ["Credits earned", int(D.players.reduce((n, p) => n + p.cr, 0)), "cR in all"]]
+        .map(([k, v, sub]) => el("li", null, el("span", { class: "v" }, v), el("span", { class: "k" }, k), sub ? el("span", { class: "sub" }, sub) : null))),
+      panel("Ranks", el("div", { class: "body" }, cards))];
+  }
+
   // ---------------------------------------------------------------- state leaderboards
   // Every bot has a home state, picked by the build from its name alone (states.json), so it never moves. A board
   // ranks the bots of one area (nationwide, a census region or a state) by one number; a bot with none of that number
@@ -302,6 +429,8 @@
   const VEHICLES = new Set(D.vehicles || []);
   const BOARDS = [["overall", "Overall"], ["mode", "Mode"], ["weapon", "Weapon"], ["vehicle", "Vehicle"]];
   const crOf = (s) => { const w = D.credits; return s.games * w.game + s.wins * w.win + s.kills * w.kill + s.assists * w.assist + s.medals * w.medal; };
+  // the credits its commendations' tiers add (Reach's, so in Reach and in all games; none by mode)
+  const commCr = (p) => ((game() === D.default_game || game() === "all") && D.commendations && D.commendations.credits ? p.comm_cr || 0 : 0);
   const stateName = (code) => (STATES[code] || [code || "Unknown"])[0];
   const regionOf = (p) => (STATES[p.state] || [])[1];
   const areaName = (a) => (!a ? "Nationwide" : REGIONS.has(a) ? REGIONS.get(a) : stateName(a));
@@ -327,7 +456,7 @@
     if (kind === "overall" || kind === "mode") {
       const cat = kind === "mode" ? key : "all";
       return { kind, key, label: kind === "mode" ? catName.get(key) || key : "Overall", unit: "cR",
-        value: (p) => { const s = bucket(p, cat); return s.games ? crOf(s) : null; },
+        value: (p) => { const s = bucket(p, cat); return s.games ? crOf(s) + (kind === "overall" ? commCr(p) : 0) : null; },
         cols: [["Games"], ["Wins", "hide-s"], ["K/D", "hide-s"]],
         cells: (p) => { const s = bucket(p, cat); return [td(int(s.games)), td(int(s.wins), "hide-s"), td(dec(s.r.kd), "hide-s")]; } };
     }
@@ -344,7 +473,7 @@
   const boardHref = (b, area) => href(["states"], { board: b.kind === "overall" ? null : b.kind,
     key: b.kind === "overall" ? null : b.key, area: area || null });
   function boardTabs(on) {
-    return el("ul", { class: "tabs" }, [["", "Leaderboard", []], ["states", "By state", ["states"]]].map(([k, label, parts]) =>
+    return el("ul", { class: "tabs" }, [["", "Leaderboard", []], ["states", "By state", ["states"]], ["ranks", "Ranks", ["ranks"]]].map(([k, label, parts]) =>
       el("li", null, el("a", { href: href(parts), "aria-current": k === on ? "true" : null }, label))));
   }
   function statesPage() {
@@ -395,87 +524,437 @@
       leaders];
   }
 
+  // ---------------------------------------------------------------- commendations
+  // Reach's multiplayer commendations (commendations.json): each bot's count (service_record.py commendation_counts),
+  // the tier it has reached (Iron ... Onyx, then Max), its way to the next tier and the credits its tiers award.
+  const TIER_CLASS = ["none", "iron", "bronze", "silver", "gold", "onyx", "max"];
+  function commState(p, c) {
+    const n = p.comm ? p.comm[c.key] : null;
+    const tier = n == null ? 0 : c.need.filter((x) => n >= x).length;
+    const next = tier < c.need.length ? tier : null;
+    const from = tier ? c.need[tier - 1] : 0;
+    const share = n == null ? 0 : next == null ? 1 : Math.min(1, (n - from) / (c.need[next] - from));
+    const earned = c.cr.slice(0, tier).reduce((a, b) => a + b, 0);
+    return { n, tier, next, share, earned, whole: n == null ? 0 : Math.min(1, n / c.need[c.need.length - 1]) };
+  }
+  const tierName = (i) => (i ? D.commendations.tiers[i - 1] : "Not started");
+  function commArt(c, tier) {
+    // the banner of the tier reached (the owner's emblem of that tier on it: service_record.py tier_banners), else
+    // Reach's own 286 x 90 banner (its grey emblem, then the bar)
+    const tiered = tier && D.commendations && D.commendations.tier_art && D.commendations.tier_art[c.key];
+    const src = (tiered && tiered[tier]) || (D.commendations && D.commendations.art[c.key]);
+    if (src) return el("img", { class: "comm-art banner", src, alt: "", width: 286, height: 90, loading: "lazy" });
+    return svg("svg", { class: "comm-art drawn", viewBox: "0 0 64 64", "aria-hidden": "true" },
+      svg("path", { d: "M32 4 56 14v20c0 13-10 22-24 27C18 56 8 47 8 34V14z", fill: "none", stroke: "currentColor", "stroke-width": 3, "stroke-linejoin": "round" }),
+      svg("path", { d: "M32 18l4.4 9 9.9 1.4-7.2 7 1.7 9.8L32 40.6l-8.8 4.6 1.7-9.8-7.2-7 9.9-1.4z", fill: "currentColor", opacity: tier ? 0.9 : 0.35 }));
+  }
+  function commBar(st, c) {
+    return el("div", { class: "comm-bar", role: "img", "aria-label": tierName(st.tier) + (st.next != null ? ", " + int(st.n || 0) + " of " + int(c.need[st.next]) + " to " + tierName(st.next + 1) : "") },
+      c.need.map((x, i) => el("span", { class: "seg " + TIER_CLASS[i + 1] + (i < st.tier ? " on" : i === st.next ? " now" : ""),
+        style: i === st.next ? "--fill:" + (100 * st.share).toFixed(1) + "%" : null, "data-tip": tierName(i + 1) + ": " + int(x) + (c.cr[i] ? " (+" + int(c.cr[i]) + " cR)" : "") })));
+  }
+  const commSource = { kills: "From the kill record (matches since 15 Nov 2026)", report: "From MCC's post-game reports", matches: "From every counted match" };
+  function commCard(p, c) {
+    const st = commState(p, c);
+    const banner = !!(D.commendations && D.commendations.art[c.key]);
+    return el("li", { class: "comm t-" + TIER_CLASS[st.tier] + (st.n == null ? " unknown" : "") + (banner ? " has-banner" : "") },
+      el("div", { class: "comm-pic" }, commArt(c, st.tier)),
+      el("div", { class: "comm-body" },
+        el("div", { class: "comm-head" }, el("h3", null, c.name), el("span", { class: "chip " + TIER_CLASS[st.tier] }, tierName(st.tier))),
+        el("p", { class: "what" }, c.what),
+        commBar(st, c),
+        el("p", { class: "comm-nums" }, st.n == null
+          ? "Not recorded yet: " + (c.from === "kills" ? "no match of this bot has the kill record." : "MCC's medal list has not been read on this PC.")
+          : st.next == null ? int(st.n) + ": every tier reached."
+            : int(st.n) + " of " + int(c.need[st.next]) + " for " + tierName(st.next + 1) + (c.cr[st.next] ? " (+" + int(c.cr[st.next]) + " cR)" : "")),
+        el("p", { class: "comm-src" }, commSource[c.from] + (st.earned ? " \u00B7 " + int(st.earned) + " cR earned" : ""))));
+  }
+  function commProgress(p) {
+    const list = (D.commendations && D.commendations.list) || [];
+    const known = list.map((c) => commState(p, c)).filter((s) => s.n != null);
+    return known.length ? (100 * known.reduce((a, s) => a + s.whole, 0)) / list.length : 0;
+  }
+  // Hometown Hero: the boards this bot leads in its home state, each with at least one other bot of the state on it
+  function hometownBoards(p) {
+    if (!STATES[p.state]) return [];
+    const boards = [board("overall", "all")]
+      .concat(boardKeys("mode").map(([k]) => board("mode", k)), boardKeys("weapon").map(([k]) => board("weapon", k)),
+        boardKeys("vehicle").map(([k]) => board("vehicle", k)));
+    return boards.filter((bd) => { const rows = standings(bd, p.state); return rows.length >= 2 && rows.some((r) => r.p === p && r.place === 1); });
+  }
+  const badgeOpen = (p, bd) => (bd.maps ? ((p.badges && p.badges[bd.key]) || []).length >= bd.maps.length : bd.key === "hometown_hero" && hometownBoards(p).length > 0);
+  // the badges a bot has unlocked, on its player card: each its emblem, a link to it on the Commendations page
+  function cardBadges(p) {
+    const list = ((D.commendations && D.commendations.badges) || []).filter((bd) => badgeOpen(p, bd));
+    if (!list.length) return null;
+    return el("ul", { class: "card-badges", "aria-label": "Badges" }, list.map((bd) => {
+      const art = D.commendations.badge_art && D.commendations.badge_art[bd.key];
+      return el("li", null, el("a", { href: href(["p", p.name, "commendations"], { badge: bd.key }), "data-tip": bd.name + ": " + bd.what, "aria-label": bd.name },
+        art ? el("img", { src: art, alt: "" }) : el("span", { class: "card-badge-name" }, bd.name)));
+    }));
+  }
+  function badgeCard(p, bd) {
+    const art = D.commendations.art[bd.key];
+    let open = false, line = "", extra = null;
+    if (bd.maps) {
+      const won = new Set((p.badges && p.badges[bd.key]) || []);
+      open = won.size >= bd.maps.length;
+      line = int(won.size) + " of " + int(bd.maps.length) + " maps won";
+      extra = el("ul", { class: "map-chips" }, bd.maps.map((m) => el("li", { class: won.has(m) ? "on" : null, "data-tip": mapName(m) + (won.has(m) ? ": won" : ": no win yet") }, mapName(m))));
+    } else if (bd.key === "hometown_hero") {
+      const led = hometownBoards(p);
+      open = led.length > 0;
+      line = open ? "#1 in " + stateName(p.state) + " on " + led.length + (led.length === 1 ? " board" : " boards")
+        : STATES[p.state] ? "Not #1 in " + stateName(p.state) + " on any board yet" : "No home state";
+      extra = open ? el("ul", { class: "map-chips" }, led.map((x) => el("li", { class: "on" }, el("a", { href: boardHref(x, p.state) }, x.label)))) : null;
+    }
+    const emblemArt = D.commendations.badge_art && D.commendations.badge_art[bd.key];   // (its own emblem, large)
+    return el("li", { id: "badge-" + bd.key, class: "badge-card" + (open ? " open" : "") + (art || emblemArt ? " has-banner" : "") },
+      el("div", { class: "comm-pic" }, emblemArt ? el("img", { class: "badge-art", src: emblemArt, alt: "", loading: "lazy" })
+        : art ? el("img", { class: "comm-art banner", src: art, alt: "", width: 286, height: 90, loading: "lazy" })
+        : svg("svg", { class: "comm-art drawn", viewBox: "0 0 64 64", "aria-hidden": "true" },
+          svg("circle", { cx: 32, cy: 32, r: 26, fill: "none", stroke: "currentColor", "stroke-width": 3 }),
+          svg("path", { d: open ? "M21 33l7 7 15-16" : "M24 30v-5a8 8 0 0 1 16 0v5M21 30h22v14H21z", fill: "none", stroke: "currentColor", "stroke-width": 3, "stroke-linecap": "round", "stroke-linejoin": "round" }))),
+      el("div", { class: "comm-body" },
+        el("div", { class: "comm-head" }, el("h3", null, bd.name), el("span", { class: "chip " + (open ? "gold" : "none") }, open ? "Unlocked" : "Locked")),
+        el("p", { class: "what" }, bd.what), el("p", { class: "comm-nums" }, line), extra));
+  }
+  function commendations(p) {
+    const list = (D.commendations && D.commendations.list) || [];
+    if (!list.length) return [banner(p), panel("Commendations", empty("No commendation list", "tools/service_record_site/commendations.json was not read."))];
+    const states = list.map((c) => [c, commState(p, c)]);
+    const tiers = states.reduce((a, [, s]) => a + s.tier, 0), most = Math.max(...states.map(([, s]) => s.tier));
+    const earned = states.reduce((a, [, s]) => a + s.earned, 0);
+    const badges = D.commendations.badges || [];
+    const opened = badges.filter((bd) => badgeOpen(p, bd)).length;
+    const show = ["", "started", "unknown"].includes(route.q.show) ? route.q.show : "";
+    const part = (set) => {
+      const shown = states.filter(([c, s]) => c.set === set && (!show || (show === "started" ? s.n : s.n == null)));
+      shown.sort((x, y) => y[1].tier - x[1].tier || y[1].share - x[1].share || x[0].name.localeCompare(y[0].name));
+      return shown.length ? el("ul", { class: "comms" }, shown.map(([c]) => commCard(p, c))) : el("p", { class: "note" }, "None here.");
+    };
+    const count = (set) => list.filter((c) => c.set === set).length;
+    return [banner(p),
+      el("ul", { class: "hero" }, [["Tiers reached", int(tiers), "of " + int(list.length * D.commendations.tiers.length)],
+        ["Highest tier", most ? tierName(most) : "None yet", ""], ["Badges", int(opened) + " of " + int(badges.length), "unlocked"],
+        ["Credits from them", int(earned) + " cR", D.commendations.credits ? "counted in the rank" : "not counted in the rank"]]
+        .map(([k, v, sub]) => el("li", null, el("span", { class: "v" }, v), el("span", { class: "k" }, k), sub ? el("span", { class: "sub" }, sub) : null))),
+      el("ul", { class: "seg", "aria-label": "Show" }, [["", "All"], ["started", "Started"], ["unknown", "Not recorded yet"]].map(([k, label]) =>
+        el("li", null, el("a", { href: href(["p", p.name, "commendations"], { show: k || null }), "aria-current": k === show ? "true" : null }, label)))),
+      panel("Multiplayer Commendations", el("div", { class: "body" }, part("mp"),
+        el("p", { class: "note" }, "Reach's " + count("mp") + " multiplayer commendations. Campaign and Firefight ones are left out: the bots play multiplayer only.")),
+        el("span", { class: "note" }, count("mp") + " in all")),
+      count("pg") ? panel("Proving Grounds Commendations", el("div", { class: "body" }, part("pg"),
+        el("p", { class: "note" }, "Our own, counted the same way: first kills, game-winning kills and grudges come from the kill record (games since 15 Nov 2026).")),
+        el("span", { class: "note" }, count("pg") + " in all")) : null,
+      badges.length ? panel("Badges", el("div", { class: "body" }, el("ul", { class: "comms" }, badges.map((bd) => badgeCard(p, bd))),
+        el("p", { class: "note" }, "One-time unlocks: no tiers, no credits.")), el("span", { class: "note" }, opened + " of " + badges.length + " unlocked")) : null,
+      el("p", { class: "note" }, "Counted over this bot's counted Reach matches. Each tier reached adds its credits " +
+        (D.commendations.credits ? "to the bot's rank, as in Reach." : "(not counted in the rank: ranks.json commendation_credits)."))];
+  }
+
   // ---------------------------------------------------------------- a bot's pages
+  // The figure, on a lit ring. Its own (native/figure_snap.exe: the bots panel's 3D view, its own armor pieces and
+  // colours) turns: the angles round a turntable side by side in one picture, one shown at a time; drag it, or the
+  // arrows (or the keyboard's) turn it a step. Else MCC's drawing of the body it wears in Reach (service_record_art.py
+  // pictures), else our own outline. The corner button shows its armor list instead.
+  let figureTurn = 0, figureArmor = false;
+  function figureCard(p) {
+    const looks = p.looks, f = p.figure;
+    const body = (looks && looks.body) || "spartan";
+    const drawing = D.figure_art && (D.figure_art[body + ".png"] || D.figure_art["spartan.png"]);
+    const stage = el("div", { class: "stage" });
+    const label = el("span", { class: "view", "aria-live": "polite" });
+    let table = null;
+    const at = () => ((figureTurn % f.n) + f.n) % f.n;
+    const paint = () => {
+      if (!table) return;
+      const k = at();
+      table.style.backgroundPositionX = (f.n > 1 ? (100 * k) / (f.n - 1) : 0) + "%";
+      table.setAttribute("aria-label", p.name + " in its armor, turned " + Math.round((360 * k) / f.n) + " degrees");
+    };
+    const step = (d) => { figureTurn += d; paint(); };
+    const figure = () => {
+      if (f) {
+        table = el("div", { class: "turntable", role: "img", tabindex: 0, title: "Drag to turn",
+          style: `background-image:url("${f.src}");background-size:${f.n * 100}% 100%;aspect-ratio:${f.w} / ${f.h}`,
+          onkeydown: (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { step(e.key === "ArrowLeft" ? -1 : 1); e.preventDefault(); } } });
+        let x0 = null, t0 = 0;
+        table.addEventListener("pointerdown", (e) => { x0 = e.clientX; t0 = figureTurn; table.setPointerCapture(e.pointerId); });
+        table.addEventListener("pointermove", (e) => { if (x0 !== null) { figureTurn = t0 + Math.round((x0 - e.clientX) / 14); paint(); } });
+        const stop = () => { x0 = null; };
+        table.addEventListener("pointerup", stop);
+        table.addEventListener("pointercancel", stop);
+        paint();
+        return el("div", { class: "fig real" }, el("span", { class: "stand ringed" }, table));
+      }
+      table = null;
+      return el("div", { class: "fig" }, drawing ? el("img", { src: drawing, alt: (looks ? looks.species : "Spartan") + " figure" })
+        : svg("svg", { viewBox: "0 0 120 240", "aria-hidden": "true" }, svg("path", { d: "M60 10c12 0 20 9 20 21s-8 19-20 19-20-7-20-19 8-21 20-21zM34 58h52l14 70-14 4-6-40-4 70 6 64H66l-6-60-6 60H38l6-64-4-70-6 40-14-4z", fill: "none", stroke: "currentColor", "stroke-width": 2.5, "stroke-linejoin": "round" })));
+    };
+    const armor = () => looks && looks.pieces.length
+      ? el("dl", { class: "armor" }, el("dt", null, "Species"), el("dd", null, looks.species), looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
+      : el("p", { class: "note" }, "No Reach look on file yet (it is written when the look is rolled).");
+    const toggle = el("button", { type: "button", class: "armor-btn", "aria-pressed": "false" });
+    const arrows = [el("button", { type: "button", "aria-label": "Turn left", onclick: () => step(-1) }, "\u2190"), label,
+      el("button", { type: "button", "aria-label": "Turn right", onclick: () => step(1) }, "\u2192")];
+    const turnBar = el("div", { class: "turn" }, arrows);
+    const show = () => {
+      stage.replaceChildren(figureArmor ? armor() : figure());
+      stage.classList.toggle("own", !figureArmor && !!f);   // its own figure brings its own ring
+      toggle.textContent = figureArmor ? "Figure" : "Armor";
+      toggle.setAttribute("aria-pressed", String(figureArmor));
+      label.textContent = f ? "360\u00B0" : figureArmor ? "Armor" : "Figure";
+      turnBar.hidden = !f || figureArmor;
+    };
+    toggle.addEventListener("click", () => { figureArmor = !figureArmor; show(); });
+    show();
+    return el("section", { class: "panel figure", "aria-label": "Figure" }, toggle, stage, turnBar);
+  }
+  // the Games Played ring: one segment per game type family, every family listed under it (0 too)
+  function donut(cats) {
+    const fams = RING.map((k) => [k, (cats[k] || {}).games || 0]);
+    const rest = Object.keys(cats).filter((k) => k !== "all" && !RING.includes(k)).reduce((n, k) => n + cats[k].games, 0);
+    if (rest) fams.push(["rest", rest]);
+    const total = fams.reduce((n, x) => n + x[1], 0);
+    const R = 56, C = 2 * Math.PI * R, live = fams.filter((x) => x[1]), gap = live.length > 1 ? 2 : 0;
+    let at = 0;
+    const marks = live.map(([k, n]) => {
+      const len = (n / total) * C;
+      const m = svg("circle", { cx: 80, cy: 80, r: R, fill: "none", stroke: "var(--c-" + k + ")", "stroke-width": 20,
+        "stroke-dasharray": Math.max(len - gap, 1) + " " + C, "stroke-dashoffset": -at, transform: "rotate(-90 80 80)",
+        "data-tip": (catName.get(k) || (k === "rest" ? "Other modes" : title(k))) + ": " + int(n) + (n === 1 ? " game" : " games") });
+      at += len;
+      return m;
+    });
+    return el("div", { class: "donut" },
+      svg("svg", { viewBox: "0 0 160 160", role: "img", "aria-label": "Games played by game type: " + int(total) + " in all" },
+        svg("circle", { cx: 80, cy: 80, r: R, fill: "none", stroke: "var(--track)", "stroke-width": 20 }), marks,
+        svg("circle", { cx: 80, cy: 80, r: 44, fill: "var(--panel-2)" }),
+        svg("text", { class: "total", x: 80, y: 84, "text-anchor": "middle" }, int(total)),
+        svg("text", { class: "unit", x: 80, y: 101, "text-anchor": "middle" }, "Total")),
+      el("ul", { class: "legend" }, fams.map(([k, n]) => el("li", null,
+        el("span", { class: "dot", style: "background:var(--c-" + k + ")" }),
+        el("span", { class: "lbl" }, modeIcon(k, 16), catName.get(k) || (k === "rest" ? "Other modes" : FAMILY_LABEL[k] || title(k))), el("span", { class: "v" }, int(n))))));
+  }
+  // won or lost, every match oldest first (the newest 40): a bar for a win, a small block for a loss, each run of wins
+  // numbered under its last bar
+  function streakChart(p, g) {
+    const list = g.matches.slice(0, 40).map((i) => D.matches[i]).reverse();
+    const won = list.map((m) => !!(m.rows.find((r) => r.n === p.name) || {}).won);
+    const step = 22, w = 16, top = 10, base = 96, H = 124, width = Math.max(list.length * step + 8, 240);
+    const marks = [];
+    let run = 0;
+    won.forEach((x, i) => {
+      const m = list[i], cx = 4 + i * step;
+      const tip = result(m, { won: x }) + ": " + mapName(m.map) + ", " + m.when;
+      if (x) {
+        run++;
+        marks.push(svg("rect", { class: "w", x: cx, y: top, width: w, height: base - top, rx: 2, "data-tip": tip }));
+        if (!won[i + 1]) marks.push(svg("text", { x: cx + w / 2, y: base + 18, "text-anchor": "middle" }, run));
+      } else {
+        run = 0;
+        marks.push(svg("rect", { class: "l", x: cx, y: base - 8, width: w, height: 8, rx: 1.5, "data-tip": tip }));
+      }
+    });
+    return svg("svg", { class: "streak", viewBox: `0 0 ${width} ${H}`, preserveAspectRatio: "xMinYMid meet", role: "img",
+      "aria-label": "Matches oldest first: " + won.map((x) => (x ? "won" : "lost")).join(", ") },
+      svg("line", { x1: 0, x2: width, y1: base + 0.5, y2: base + 0.5 }), marks);
+  }
+  // a match as a card (Recent Games, Game History): the map's picture (MCC's own preview, read on this PC) with the
+  // match's length, the map, the game type and when, how this player did, the carnage report and heatmap links, and
+  // its kills
+  const clock = (s) => (s == null ? "" : Math.floor(s / 60) + ":" + pad2(Math.floor(s % 60)));
+  function gameCard(p, m) {
+    const me = m.rows.find((r) => r.n === p.name) || {};
+    const pic = D.map_art && D.map_art[m.map];
+    const link = href(["p", p.name, "match", m.id]);
+    const secs = Math.max(...m.rows.map((r) => r.sec || 0));
+    const heatKey = m.heat || m.map;                                   // (a Forge layout's own heatmap: "<map>@<layout>")
+    const heat = side(p) && side(p).heat && side(p).heat[heatKey];
+    return el("li", null,
+      el("a", { class: "thumb", href: link, "aria-label": mapName(m.map) + " carnage report" },
+        pic ? el("img", { src: pic, alt: "", loading: "lazy" }) : el("span", { class: "noimg" }, mapName(m.map)),
+        el("span", { class: "len" }, "\u25B8 " + clock(secs))),
+      el("div", { class: "what" },
+        el("a", { class: "t", href: link }, mapName(m.map)),
+        el("div", { class: "by" }, modeIcon(m.cat, 16), (m.type || "Unknown game type") + " on ", el("b", null, dotted(m.t))),
+        el("div", { class: "res" + (me.won ? " won" : "") }, result(m, me), ", placed " + ordinal((me.st || 0) + 1) + ": " +
+          int(me.k) + " kills, " + int(me.d) + " deaths, " + int(me.a) + " assists"),
+        el("div", { class: "acts" }, el("a", { href: link }, icon("scoreboard", 18), "Carnage report"),
+          heat ? el("a", { href: href(["p", p.name, "heatmaps"], { map: heatKey }) }, icon("heatmaps", 18), "Heatmap") : null)),
+      el("div", { class: "box" }, neon("kills", 22), el("b", null, int(me.k)), el("span", null, me.k === 1 ? "Kill" : "Kills")));
+  }
+  function recentGames(p, g) {
+    return el("ul", { class: "games" }, g.matches.slice(0, 5).map((i) => gameCard(p, D.matches[i])));
+  }
+
   function overview(p) {
     const g = side(p), s = bucket(p);
-    const looks = p.looks;
-    const armor = panel("Armor", looks && looks.pieces.length
-      ? el("dl", { class: "stats" }, el("dt", null, "Species"), el("dd", null, looks.species),
-        looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
-      : empty("No Reach look on file", "No line in the mod's looks file yet (it is written when the look is rolled)."));
-    const facts = panel("Service Record", el("dl", { class: "stats" },
-      el("dt", null, "Last played"), el("dd", null, g ? day(g.last) : "-"),
-      el("dt", null, "Games played"), el("dd", null, int(s.games)),
-      el("dt", null, "Wins"), el("dd", null, int(s.wins), s.r.win != null && el("small", null, dec(s.r.win) + "%")),
-      el("dt", null, "Kills"), el("dd", null, int(s.kills), el("small", null, "K/D " + dec(s.r.kd))),
-      el("dt", null, "Deaths"), el("dd", null, int(s.deaths)),
-      el("dt", null, "Assists"), el("dd", null, int(s.assists)),
-      el("dt", null, "Medals"), el("dd", null, int(s.medals)),
-      el("dt", null, "Betrayals"), el("dd", null, int(s.betrayals)),
-      el("dt", null, "Most kills in a row"), el("dd", null, int(s.spree)),
-      el("dt", null, "Playing since"), el("dd", null, g ? day(g.first) : "-")),
-      el("a", { class: "more", href: href(["p", p.name, "summary"]) }, "Career stats"));
-    const runs = g ? g.streak.runs : [];
-    // the four numbers a record is read for first, large; then the bot's three deadliest weapons, when kills are recorded
-    const hero = el("ul", { class: "hero" }, [["Kills", int(s.kills)], ["Kill/Death", dec(s.r.kd)],
-      ["Wins", int(s.wins) + (s.games ? " of " + int(s.games) : "")], ["Medals", int(s.medals)]]
-      .map(([k, v]) => el("li", null, el("span", { class: "v" }, v), el("span", { class: "k" }, k))));
-    const best = recorded(g) ? weaponList(g).filter((w) => w[1][0]).slice(0, 3) : [];
-    return [banner(p), hero, el("div", { class: "grid" }, armor, facts),
-      best.length ? panel("Top weapons", el("div", { class: "body" }, weaponCards(best, weaponList(g), "best")),
-        el("a", { class: "more", href: href(["p", p.name, "weapons"]) }, "View weapons")) : null,
-      el("div", { class: "grid" },
-        panel("Games played", el("div", { class: "body" }, ring(g ? g.cats : {}))),
-        panel("Kills by type", s.detailed ? el("div", { class: "body" }, hbars(killTypes(s)), reportNote(s))
-          : empty("Nothing recorded yet", "Weapon, grenade and melee kills come from MCC's post-game report.")),
-        panel("Victory streaks", runs.length
-          ? el("div", { class: "body" }, streakBars(runs), el("p", { class: "note" }, "Best: " + g.streak.best + " in a row. Current: " + g.streak.current + "."))
-          : empty("No wins yet", "Each run of wins in a row shows here as a bar.")))];
+    const row = (ic, label, value, small) => el("li", null, neon(ic, 18), el("span", { class: "k" }, label),
+      el("span", { class: "v" }, value, small && el("small", null, " (" + small + ")")));
+    const facts = el("section", { class: "panel facts", "aria-label": "Service record" }, el("ul", { class: "list" },
+      row("calendar", "Last Played", g ? dotted(g.last) : "-"),
+      row("games", "Games Played", int(s.games)),
+      row("win", "Wins", int(s.wins), s.r.win != null ? dec(s.r.win) + "%" : null),
+      row("kills", "Kills", int(s.kills), dec(s.r.kd) + " K/D"),
+      row("deaths", "Deaths", int(s.deaths)),
+      row("assists", "Assists", int(s.assists)),
+      row("stat-medals", "Medals", int(s.medals)),
+      row("spree", "Most Kills in a Row", int(s.spree)),
+      row("since", "Playing Since", g ? dotted(g.first) : "-")));
+    const played = el("section", { class: "panel played" }, el("header", null, el("h2", null, "Games Played")),
+      el("div", { class: "body" }, donut(g ? g.cats : {})));
+    const clist = (D.commendations && D.commendations.list) || [];
+    const top3 = clist.map((c) => [c, commState(p, c)]).filter(([, s]) => s.n)
+      .sort((x, y) => y[1].tier - x[1].tier || y[1].share - x[1].share).slice(0, 3);
+    const commend = el("section", { class: "panel commend" },
+      el("header", null, el("h2", null, "Top Commendations"), el("span", { class: "prog" }, "Commendation Progress ", el("b", null, commProgress(p).toFixed(1) + "%"))),
+      el("div", { class: "body" }, top3.length
+        ? el("ul", { class: "top-comms" }, top3.map(([c, st]) => el("li", { class: "t-" + TIER_CLASS[st.tier] + (D.commendations.art[c.key] ? " has-banner" : ""), "data-tip": c.what },
+          commArt(c, st.tier), el("div", null, el("b", null, c.name), el("span", { class: "chip " + TIER_CLASS[st.tier] }, tierName(st.tier)), commBar(st, c)))))
+        : el("p", { class: "note" }, "No commendation started yet."),
+        el("a", { class: "more", href: href(["p", p.name, "commendations"]) }, "All commendations")));
+    const streak = g ? g.streak : { current: 0, best: 0 };
+    const plural = (n) => int(n) + (n === 1 ? " Win" : " Wins");
+    const streaks = el("section", { class: "panel streaks" },
+      el("header", null, el("h2", null, icon("trophy", 22), "Victory Streaks"),
+        el("a", { class: "go", href: href(["p", p.name, "history"]) }, "View Game History", icon("arrow", 16))),
+      el("div", { class: "body" },
+        el("div", { class: "runs" },
+          el("div", null, el("span", { class: "k" }, "Current Streak"), el("span", { class: "v" }, plural(streak.current))),
+          el("div", null, icon("trophy", 18), el("span", { class: "k" }, "Longest Streak"), el("span", { class: "v" }, plural(streak.best)))),
+        el("div", { class: "chart" }, el("div", { class: "axis" }, el("span", null, "Won"), el("span", null, "Lost")),
+          el("div", { class: "scroll" }, g && g.matches.length ? streakChart(p, g) : el("p", { class: "note" }, "No counted matches yet.")))));
+    const games = el("section", { class: "panel recent" },
+      el("header", null, el("h2", null, neon("film", 24), "Recent Games"),
+        el("a", { class: "go", href: href(["p", p.name, "history"]) }, "View All Games", icon("arrow", 16))),
+      g && g.matches.length ? el("div", { class: "body" }, recentGames(p, g),
+        el("a", { class: "wide-btn", href: href(["p", p.name, "history"]) }, "See every game in " + gameName.get(game()), icon("arrow", 18)))
+        : noGames());
+    return [banner(p), el("div", { class: "ov" }, figureCard(p), facts, played, commend), streaks, games];
   }
 
+  // Game History: every counted match as a card, newest first, by mode, map and result; 25 at a time
+  let historyShown = 25;
   function history(p) {
     const g = side(p);
-    const list = g ? g.matches.map((i) => D.matches[i]) : [];
-    const rows = list.map((m) => {
-      const me = m.rows.find((r) => r.n === p.name) || {};
-      return el("tr", null,
-        td(el("a", { href: href(["p", p.name, "match", m.id]) }, m.when), "l"),
-        td(mapName(m.map), "l"), td(m.type || "Unknown", "l"),
-        td(me.won ? el("span", { class: "won" }, "Won") : "-", "l hide-s"),
-        td(ordinal((me.st || 0) + 1)), td(int(me.k)), td(int(me.d)), td(int(me.a)));
-    });
-    return [banner(p), panel("Game history",
-      table(list.length ? int(list.length) + (list.length === 1 ? " match" : " matches") + ", newest first. Open a date for the full scoreboard." : null,
-        [["Date", "l"], ["Map", "l"], ["Game type", "l"], ["Result", "l hide-s"], ["Place"], ["Kills"], ["Deaths"], ["Assists"]], rows,
-        { none: "No counted matches yet for " + gameName.get(game()) + "." }))];
+    const all = g ? g.matches.map((i) => D.matches[i]) : [];
+    const mine = (m) => m.rows.find((r) => r.n === p.name) || {};
+    const cats = [...new Set(all.map((m) => m.cat))].sort((x, y) => (catName.get(x) || x).localeCompare(catName.get(y) || y));
+    const maps = [...new Set(all.map((m) => m.map))].sort((x, y) => mapName(x).localeCompare(mapName(y)));
+    const cat = cats.includes(route.q.cat) ? route.q.cat : "";
+    const map = maps.includes(route.q.map) ? route.q.map : "";
+    const res = ["Won", "Lost", "Tied"].includes(route.q.res) ? route.q.res : "";
+    const list = all.filter((m) => (!cat || m.cat === cat) && (!map || m.map === map) && (!res || result(m, mine(m)) === res));
+    const go = (q) => { historyShown = 25; location.hash = href(["p", p.name, "history"], Object.assign({ cat: cat || null, map: map || null, res: res || null }, q)); };
+    const tools = el("div", { class: "toolbar picks" },
+      el("label", null, "Mode", el("select", { onchange: (e) => go({ cat: e.target.value || null }) },
+        el("option", { value: "", selected: !cat }, "All modes"), cats.map((k) => el("option", { value: k, selected: k === cat }, catName.get(k) || title(k))))),
+      el("label", null, "Map", el("select", { onchange: (e) => go({ map: e.target.value || null }) },
+        el("option", { value: "", selected: !map }, "All maps"), maps.map((k) => el("option", { value: k, selected: k === map }, mapName(k))))),
+      el("ul", { class: "seg", "aria-label": "Result" }, [["", "All"], ["Won", "Won"], ["Lost", "Lost"], ["Tied", "Tied"]].map(([k, label]) =>
+        el("li", null, el("a", { href: href(["p", p.name, "history"], { cat: cat || null, map: map || null, res: k || null }), "aria-current": k === res ? "true" : null }, label)))));
+    const k = list.reduce((n, m) => n + (mine(m).k || 0), 0), d = list.reduce((n, m) => n + (mine(m).d || 0), 0);
+    const won = list.filter((m) => mine(m).won).length;
+    const cards = el("ul", { class: "games" }, list.slice(0, historyShown).map((m) => gameCard(p, m)));
+    const more = list.length > historyShown ? el("button", { type: "button", class: "wide-btn", onclick: () => {
+      historyShown += 25;
+      cards.replaceChildren(...list.slice(0, historyShown).map((m) => gameCard(p, m)));
+      if (list.length <= historyShown) more.remove();
+      else more.textContent = "Show more (" + int(list.length - historyShown) + " left)";
+    } }, "Show more (" + int(list.length - historyShown) + " left)") : null;
+    return [banner(p), panel("Games", el("div", { class: "body" }, tools,
+      list.length ? [el("p", { class: "note" }, int(list.length) + (list.length === 1 ? " game" : " games") + ", newest first: " + int(won) + " won, " +
+        int(k) + " kills, " + int(d) + " deaths (" + dec(d ? k / d : k) + " K/D). Open one for its carnage report."), cards, more]
+        : empty(all.length ? "No games match" : "No counted matches yet", all.length ? "Try another mode, map or result." : "Nothing is recorded for " + gameName.get(game()) + " yet.")),
+      el("a", { class: "go", href: href(["p", p.name, "history"], { cat: null, map: null, res: null }) }, "Clear filters", icon("arrow", 16)))];
   }
 
+  // The carnage report: the map's picture across the top with the result, every player's line (team by team, in its
+  // colours) with the medals each earned that game, and, for a match recorded with the kill record, its kill feed.
+  const TEAMS = ["Red", "Blue", "Green", "Orange", "Purple", "Gold", "Brown", "Pink"];
+  const teamOf = (m, name) => { const r = m.rows.find((x) => x.n === name); return r && m.teams ? r.team : null; };
+  function medalStrip(medals, max) {
+    const list = Object.entries(medals || {}).sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+    const shown = list.slice(0, max || 6);
+    return el("ul", { class: "mstrip" }, shown.map(([id, n]) => {
+      const md = D.medals[id] || { name: "Medal " + id, icon: null };
+      return el("li", { "data-tip": md.name + (n > 1 ? " x" + n : "") },
+        md.icon ? el("img", { src: md.icon, alt: md.name, width: 26, height: 26, loading: "lazy" }) : el("span", { class: "mdot", "aria-label": md.name }), n > 1 ? el("b", null, n) : null);
+    }), list.length > shown.length ? el("li", { class: "rest" }, "+" + (list.length - shown.length)) : null);
+  }
+  let feedAll = false, feedMine = false;
+  function killFeed(p, m) {
+    const box = el("div");
+    const draw = () => {
+      const rows = m.feed.filter((r) => !feedMine || r[1] === p.name || r[2] === p.name);
+      const shown = feedAll ? rows : rows.slice(0, 40);
+      const who = (name, end) => {                                 // end: "k" the killer (against the weapon), "v" the victim
+        const tm = name ? teamOf(m, name) : null;
+        return name ? el("span", { class: "who " + end + (tm != null ? " t" + tm : ""), "data-me": name === p.name ? "1" : null }, name) : null;
+      };
+      box.replaceChildren(
+        el("div", { class: "toolbar" }, el("ul", { class: "seg", "aria-label": "Show" }, [[false, "Every kill"], [true, p.name + "'s"]].map(([k, label]) =>
+          el("li", null, el("a", { href: "#", "aria-current": k === feedMine ? "true" : null, onclick: (e) => { e.preventDefault(); feedMine = k; draw(); } }, label)))),
+          el("span", { class: "note" }, int(rows.length) + (rows.length === 1 ? " death" : " deaths"))),
+        el("ol", { class: "feed" }, shown.map(([t, killer, victim, key, kind]) => {
+          const [wname] = weaponName(key);
+          const art = D.weapon_art && D.weapon_art[key];
+          return el("li", { class: kind },
+            el("span", { class: "tm" }, clock(t)),
+            kind === "death" ? [who(victim, "v"), el("span", { class: "how" }, art ? el("img", { src: art, alt: "", loading: "lazy" }) : null, el("span", null, "died: " + wname))]
+              : [who(killer, "k"), el("span", { class: "how", "data-tip": wname }, art ? el("img", { src: art, alt: wname, loading: "lazy" }) : el("span", null, wname)),
+                who(victim, "v"), kind === "betrayal" ? el("span", { class: "tag" }, "betrayal") : null]);
+        })),
+        rows.length > shown.length ? el("button", { type: "button", class: "wide-btn", onclick: () => { feedAll = true; draw(); } }, "Show all " + int(rows.length)) : null);
+    };
+    draw();
+    return box;
+  }
   function match(p, id) {
     const m = D.matches.find((x) => x.id === id);
-    if (!m) return [banner(p), panel("Match", empty("Match not found", "This match is not in the record (it may be from before the stats were reset)."))];
+    if (!m) return [banner(p), panel("Carnage Report", empty("Match not found", "This match is not in the record (it may be from before the stats were reset)."))];
+    const me = m.rows.find((r) => r.n === p.name) || {};
     const full = m.report;
-    const heads = [["Place"], ["Player", "l"]].concat(full ? [["Score", "hide-s"]] : [], [["Kills"], ["Deaths"], ["Assists"]],
-      full ? [["Betrayals", "hide-s"], ["Medals", "hide-s"]] : [], [["Time", "hide-s"]]);
-    const line = (r) => el("tr", null, td(ordinal(r.st + 1)),
-      td(el("span", { class: "cell" }, r.listed && players.has(r.n) ? el("a", { href: href(["p", r.n, "overview"]) }, r.n) : r.n,
-        r.n === p.name && el("span", { class: "tag" }, "this record"), !r.bot && el("span", { class: "tag" }, "player")), "l"),
-      full ? td(int(r.score), "hide-s") : null, td(int(r.k)), td(int(r.d)), td(int(r.a)),
-      full ? [td(int(r.bt), "hide-s"), td(int(r.md), "hide-s")] : null,
-      td(Math.floor(r.sec / 60) + ":" + String(r.sec % 60).padStart(2, "0"), "hide-s"));
-    let rows;
-    if (m.teams) {
-      const teams = [...new Set(m.rows.map((r) => r.team))];
-      rows = teams.map((t) => {
+    const secs = Math.max(...m.rows.map((r) => r.sec || 0));
+    const pic = D.map_art && D.map_art[m.map];
+    const verdict = result(m, me);
+    const teamSum = (t) => m.rows.filter((r) => r.team === t).reduce((n, r) => n + (r.score != null ? r.score : r.k), 0);
+    const teams = m.teams ? [...new Set(m.rows.map((r) => r.team))].sort((x, y) => Math.min(...m.rows.filter((r) => r.team === x).map((r) => r.st)) - Math.min(...m.rows.filter((r) => r.team === y).map((r) => r.st))) : [];
+    const hero = el("section", { class: "report-hero", style: pic ? `background-image:url("${pic}")` : null },
+      el("div", { class: "shade" },
+        el("p", { class: "kicker" }, "Carnage Report"),
+        el("h2", null, mapName(m.map)),
+        el("p", { class: "meta" }, [m.type || "Unknown game type", gameName.get(m.game) || m.game, dotted(m.t) + " " + m.when.slice(11), clock(secs)].join("  \u00B7  ")),
+        el("div", { class: "verdict" },
+          el("span", { class: "big " + verdict.toLowerCase() }, verdict),
+          me.n ? el("span", null, p.name + " placed " + ordinal(me.st + 1) + ": " + int(me.k) + " kills, " + int(me.d) + " deaths, " + int(me.a) + " assists") : null),
+        teams.length ? el("ul", { class: "scores" }, teams.map((t) => el("li", { class: "t" + t }, el("span", null, (TEAMS[t] || "Team " + (t + 1)) + " Team"), el("b", null, int(teamSum(t)))))) : null));
+    const heads = [["#"], ["Player", "l"]].concat(full ? [["Score", "hide-s"]] : [], [["Kills"], ["Deaths"], ["Assists", "hide-s"], ["K/D"]], full ? [["Medals", "l hide-s"]] : []);
+    const line = (r) => el("tr", { class: r.n === p.name ? "me" : null }, td(ordinal(r.st + 1), "pos"),
+      td(el("span", { class: "cell" }, players.has(r.n) ? emblem(players.get(r.n), true) : el("span", { class: "emblem none sm" }),
+        r.listed && players.has(r.n) ? el("a", { href: href(["p", r.n, "overview"]) }, r.n) : el("span", null, r.n),
+        r.clan ? el("span", { class: "tag hide-s" }, r.clan) : null, !r.bot ? el("span", { class: "tag" }, "player") : null), "l"),
+      full ? td(int(r.score), "hide-s") : null, td(int(r.k)), td(int(r.d)), td(int(r.a), "hide-s"), td(dec(r.d ? r.k / r.d : r.k)),
+      full ? td(medalStrip(r.medals, 6), "l hide-s") : null);
+    const boards = teams.length
+      ? teams.map((t) => {
         const mine = m.rows.filter((r) => r.team === t);
         const sum = (k) => mine.reduce((n, r) => n + (r[k] || 0), 0);
-        return [el("tr", { class: "team" }, el("th", { scope: "colgroup", colspan: heads.length },
-          "Team " + (t + 1) + (mine[0].won ? " (won)" : "") + ": " + int(sum("k")) + " kills, " + int(sum("d")) + " deaths")), mine.map(line)];
-      });
-    } else rows = m.rows.map(line);
-    return [banner(p), el("p", null, el("a", { class: "more", href: href(["p", p.name, "history"]) }, "Back to game history")),
-      panel(mapName(m.map) + ": " + (m.type || "Unknown game type"),
-        el("div", null, table(m.when + ", " + (gameName.get(m.game) || m.game) + (full ? "" : ". MCC's full report for this match was not kept, so only kills, deaths and assists remain."),
-          heads, rows.flat(Infinity))))];
+        return el("section", { class: "panel team-board t" + t },
+          el("header", null, el("h2", null, (TEAMS[t] || "Team " + (t + 1)) + " Team", mine.some((r) => r.won) ? el("span", { class: "won-tag" }, "Won") : null),
+            el("span", { class: "note" }, int(sum("k")) + " kills, " + int(sum("d")) + " deaths")),
+          table(null, heads, mine.map(line)));
+      })
+      : [panel("Players", table(null, heads, m.rows.map(line)))];
+    const feed = m.feed && m.feed.length ? panel("Kill Feed", el("div", { class: "body" }, killFeed(p, m),
+      el("p", { class: "note" }, "From the mod's kill record: who the game credits with each death, with what, and when (minutes into the match).")))
+      : panel("Kill Feed", empty("Not recorded for this match", "The kill record started on 15 November 2026; this match was played without it."));
+    return [banner(p),
+      el("p", null, el("a", { class: "more back-link", href: href(["p", p.name, "history"]) }, "Back to Game History")),
+      hero, boards, feed,
+      full ? null : el("p", { class: "note" }, "MCC's full report for this match was not kept, so only kills, deaths and assists remain.")];
   }
 
   function summary(p) {
@@ -522,19 +1001,33 @@
   function breakdown(p, heading, group, label, first) {
     const g = side(p);
     const rows = Object.entries((g && g[group]) || {}).sort((a, b) => b[1].games - a[1].games || label(a[0]).localeCompare(label(b[0])))
-      .map(([k, s]) => el("tr", null, td(label(k), "l wrap"), td(int(s.games)), td(int(s.wins)), td(int(s.kills)), td(int(s.deaths)),
+      .map(([k, s]) => el("tr", null, td(group === "types" && modeIcon(typeCat.get(k))
+        ? el("span", { class: "cell" }, modeIcon(typeCat.get(k), 20), label(k)) : label(k), "l wrap"), td(int(s.games)), td(int(s.wins)), td(int(s.kills)), td(int(s.deaths)),
         td(int(s.assists), "hide-s"), td(dec(s.r.kd)), td(dec(s.r.kpg), "hide-s"), td(s.r.playtime, "hide-s")));
     return [banner(p), panel(heading, table(null,
       [[first, "l"], ["Games"], ["Wins"], ["Kills"], ["Deaths"], ["Assists", "hide-s"], ["K/D"], ["Kills/Game", "hide-s"], ["Playtime", "hide-s"]],
       rows, { none: "No counted matches yet for " + gameName.get(game()) + "." }))];
   }
 
+  // Medals by group, as the old service record sorted them (service_record.py medal_group: MCC's own type of each)
+  const MEDAL_GROUPS = [["multikill", "Multikills"], ["spree", "Sprees"], ["kill", "Kills"], ["style", "Style"],
+    ["assist", "Assists & Support"], ["objective", "Objective"], ["legendary", "Legendary"], ["other", "Other"]];
   function medals(p) {
     const list = medalList(side(p));
-    return [banner(p), panel("Medals", list.length
-      ? el("div", { class: "body" }, el("ul", { class: "medals" }, list.map(([id, n]) => medalTile(id, n))))
-      : empty("No medals yet", "Medals come from MCC's post-game report of each counted match."),
-      list.length ? el("span", { class: "note" }, int(bucket(p).medals) + " in all") : null),
+    const groupOf = (id) => (D.medals[id] && D.medals[id].cat) || "other";
+    const groups = MEDAL_GROUPS.map(([k, label]) => [k, label, list.filter(([id]) => groupOf(id) === k)]).filter((x) => x[2].length);
+    const want = groups.some((x) => x[0] === route.q.group) ? route.q.group : "";
+    const total = (items) => items.reduce((n, x) => n + x[1], 0);
+    const tiles = el("ul", { class: "mgroups" }, groups.map(([k, label, items]) => el("li", null,
+      el("a", { href: href(["p", p.name, "medals"], { group: want === k ? null : k }), "aria-current": want === k ? "true" : null },
+        el("span", { class: "v" }, int(total(items))), el("span", { class: "k" }, label), el("span", { class: "n" }, items.length + (items.length === 1 ? " kind" : " kinds"))))));
+    const shown = groups.filter((x) => !want || x[0] === want);
+    return [banner(p),
+      list.length ? [tiles, shown.map(([k, label, items]) => panel(label,
+        el("div", { class: "body" }, el("ul", { class: "medals" }, items.map(([id, n]) => medalTile(id, n)))),
+        el("span", { class: "note" }, int(total(items)) + " earned")))]
+        : panel("Medals", empty("No medals yet", "Medals come from MCC's post-game report of each counted match.")),
+      list.length ? el("p", { class: "note" }, int(bucket(p).medals) + " medals in all, " + list.length + " kinds. Pick a group to see it alone.") : null,
       !D.medal_art && list.length ? el("p", { class: "note" },
         "Medals show by MCC's number because their names and icons have not been read from this PC's MCC yet: " +
         "python\\python.exe -I tools\\service_record_art.py medals") : null];
@@ -565,10 +1058,12 @@
 
   function enemies(p) {
     const g = side(p);
-    const list = (obj, what) => table(null, [["Opponent", "l"], ["Matches as " + what], ["Kills in those matches"]],
+    // (short headers, columns that wrap: the tables fit their panel, never scroll sideways)
+    const list = (obj, what) => table("Matches: how often they were " + p.name + "'s " + what + "; Kills: in those matches.",
+      [["Opponent", "l"], ["Matches"], ["Kills"]],
       Object.entries(obj || {}).sort((a, b) => b[1][1] - a[1][1] || a[0].localeCompare(b[0])).map(([n, v]) =>
         el("tr", null, td(players.has(n) ? el("a", { href: href(["p", n, "overview"]) }, n) : n, "l wrap"), td(int(v[0])), td(int(v[1])))),
-      { none: "No report recorded yet for " + gameName.get(game()) + "." });
+      { none: "No report recorded yet for " + gameName.get(game()) + ".", fit: true });
     const rivals = el("div", { class: "grid" }, panel("Killed most (MCC's report)", list(g && g.killed, "top victim")),
       panel("Killed most by (MCC's report)", list(g && g.killed_by, "top killer")));
     if (!recorded(g)) {
@@ -578,11 +1073,11 @@
     const rows = Object.entries(g.versus).sort((a, b) => (b[1][0] + b[1][1]) - (a[1][0] + a[1][1]) || b[1][0] - a[1][0] || a[0].localeCompare(b[0]))
       .map(([n, v]) => el("tr", null,
         td(players.has(n) ? el("a", { href: href(["p", n, "overview"]) }, n) : n, "l wrap"), td(int(v[0])), td(int(v[1])),
-        td((v[0] > v[1] ? "+" : "") + int(v[0] - v[1])), td(v[1] ? dec(v[0] / v[1]) : dec(v[0]), "hide-s")));
+        td((v[0] > v[1] ? "+" : "") + int(v[0] - v[1])), td(v[1] ? dec(v[0] / v[1]) : dec(v[0]))));
     return [banner(p),
       panel("Enemies", table(killNote(g, bucket(p)) + " Every opponent " + p.name + " killed or was killed by.",
-        [["Opponent", "l"], ["Kills on"], ["Deaths to"], ["Difference"], ["K/D", "hide-s"]], rows,
-        { none: "No kills either way in the recorded matches yet." })),
+        [["Opponent", "l"], ["Kills"], ["Deaths"], ["+/-"], ["K/D"]], rows,
+        { none: "No kills either way in the recorded matches yet.", fit: true })),
       rivals];
   }
 
@@ -691,16 +1186,17 @@
         el("dt", null, "Home state"), el("dd", null, STATES[p.state]
           ? el("a", { href: href(["states"], { area: p.state }) }, stateName(p.state) + " (" + areaName(regionOf(p)) + ")") : "-"),
         el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? title(p.difficulty) : "Not saved"),
-        el("dt", null, "Play style"), el("dd", null, p.style ? title(p.style) : "Not saved"),
         el("dt", null, "Species (Reach)"), el("dd", null, looks ? looks.species : "-"))),
       panel("Armor (Reach)", looks && looks.pieces.length
         ? el("dl", { class: "stats" }, looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
         : empty("No Reach look on file", "No line in the mod's looks file yet."))),
       panel("How the rank is earned", el("div", null,
-        table("Credits (cR) come from counted " + gameName.get(D.default_game) + " matches only, so the rank can always be rebuilt from the record.",
+        table("Credits (cR) come from counted " + gameName.get(D.default_game) + " matches" + (D.commendations && D.commendations.credits ? " and the commendation tiers they earn" : " only") + ", so the rank can always be rebuilt from the record.",
           [["Earned for", "l"], ["Count"], ["cR each"], ["cR"]],
           earn.map(([k, n, each]) => el("tr", null, td(k, "l"), td(int(n)), td(int(each)), td(int(n * each))))
-            .concat(el("tr", null, el("th", { scope: "row", class: "l" }, "Total"), td(""), td(""), td(int(p.cr)))))))];
+            .concat(D.commendations && D.commendations.credits ? el("tr", null, td(el("a", { href: href(["p", p.name, "commendations"]) }, "Commendation tiers"), "l"),
+              td(int((D.commendations.list || []).reduce((a, c) => a + commState(p, c).tier, 0))), td("varies"), td(int(p.comm_cr || 0))) : [])
+            .concat(el("tr", null, el("th", { scope: "row", class: "l" }, "Total"), td(""), td(""), td(int(p.cr)))), { fit: true })))];
   }
 
   // where this bot places on every board it is on: in its state, its region and nationwide
@@ -745,7 +1241,6 @@
   }
 
   const missing = {
-    commendations: ["Commendations", "Not recorded", "MCC's post-game report does not include commendations, so there is nothing to total here. Medals are recorded: see Career Stats, Medals."],
     achievements: ["Achievements", "Not recorded", "Achievements belong to MCC accounts; none are recorded here."],
   };
 
@@ -756,6 +1251,7 @@
       case "history": return history(p);
       case "match": return match(p, arg);
       case "summary": return summary(p);
+      case "commendations": return commendations(p);
       case "types": return breakdown(p, "By game type", "types", (k) => k, "Game type");
       case "maps": return breakdown(p, "By map", "maps", mapName, "Map");
       case "medals": return medals(p);
@@ -772,13 +1268,15 @@
 
   // ---------------------------------------------------------------- draw
   function drawNav(p, page) {
-    if (!p) { nav.replaceChildren(); shell.classList.add("wide"); return; }
+    if (!p) { nav.replaceChildren(); card.replaceChildren(); card.hidden = true; shell.classList.add("wide"); return; }
     shell.classList.remove("wide");
+    card.hidden = false;
+    card.replaceChildren(...recordCard(p));
     const on = page === "match" ? "history" : page;
-    nav.replaceChildren(el("a", { class: "back", href: href([]) }, "Leaderboard"),
+    nav.replaceChildren(el("a", { class: "back", href: href([]) }, icon("back", 16), "Leaderboard"),
       ...PAGES.map(([group, items]) => el("section", null, el("h2", null, group),
         el("ul", null, items.map(([k, label]) => el("li", null,
-          el("a", { href: href(["p", p.name, k]), "aria-current": k === on ? "page" : null }, label)))))));
+          el("a", { href: href(["p", p.name, k]), "aria-current": k === on ? "page" : null }, neon(k, 22), el("span", null, label))))))));
     const cur = nav.querySelector("[aria-current]");            // (the phone layout's strip: keep the open page in view)
     if (cur && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = cur.offsetLeft - (nav.clientWidth - cur.offsetWidth) / 2;
   }
@@ -790,11 +1288,12 @@
     let nodes = null, label = "Bot Tracker", p = null;
     if (!kind) nodes = leaderboard();
     else if (kind === "states" && !name) { nodes = statesPage(); label = "State leaderboards"; }
+    else if (kind === "ranks" && !name) { nodes = ranksPage(); label = "Ranks"; }
     else if (kind === "p" && players.has(name)) {
       p = players.get(name);
       nodes = playerPage(p, page || "overview", arg);
       const found = PAGES.flatMap((x) => x[1]).find((x) => x[0] === (page || "overview"));
-      label = (found ? found[1] : page === "match" ? "Match" : "Page") + " - " + p.name;
+      label = (found ? found[1] : page === "match" ? "Carnage Report" : "Page") + " - " + p.name;
     }
     if (!nodes) {
       p = null;
@@ -803,12 +1302,54 @@
         el("a", { href: href([]) }, "Go to the leaderboard"), ".")];
     }
     drawNav(p, page || "overview");
+    document.body.classList.toggle("landing", !p && !!bgVideo);
     main.replaceChildren(...nodes.flat(Infinity).filter(Boolean));
     document.title = label + " | " + D.site;
     if (!first) { main.focus({ preventScroll: true }); window.scrollTo(0, 0); }
+    const pick = route.q.badge && document.getElementById("badge-" + route.q.badge);   // (a badge on the player card: its card)
+    if (pick) {
+      setTimeout(() => pick.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
+      pick.classList.add("flash");
+    }
     first = false;
   }
 
+  // The landing pages' background (the leaderboards and Ranks): MCC's Noble main-menu movie, muted and looping, its
+  // still while it loads. It plays even when the system asks for less motion (the owner asked for the movie, and this
+  // PC has Windows' animations off); a button in the corner pauses it, and the page remembers. render shows it on
+  // those pages only.
+  let videoPaused = false;
+  try { videoPaused = localStorage.getItem("sr-video") === "paused"; } catch (e) { /* (storage off: it plays) */ }
+  const bgVideo = (() => {
+    const v = D.video || {};
+    if (!v["noble.mp4"] && !v["noble.png"]) return null;
+    const box = el("div", { class: "bgvideo", "aria-hidden": "true" },
+      v["noble.mp4"]
+        ? el("video", { src: v["noble.mp4"], poster: v["noble.png"] || null, autoplay: !videoPaused, muted: true, loop: true, playsinline: true, preload: "auto" })
+        : el("img", { src: v["noble.png"], alt: "" }));
+    document.body.prepend(box);
+    const vid = box.querySelector("video");
+    if (!vid) return box;
+    vid.muted = true;
+    const btn = el("button", { type: "button", class: "video-btn" });
+    const show = () => { btn.textContent = videoPaused ? "▶ Play background" : "❚❚ Pause background"; btn.setAttribute("aria-pressed", String(videoPaused)); };
+    btn.addEventListener("click", () => {
+      videoPaused = !videoPaused;
+      try { localStorage.setItem("sr-video", videoPaused ? "paused" : "playing"); } catch (e) { /* (not kept) */ }
+      if (videoPaused) vid.pause(); else vid.play().catch(() => {});
+      show();
+    });
+    show();
+    document.body.append(btn);
+    if (!videoPaused) vid.play().catch(() => {});
+    return box;
+  })();
+
+  // the owner's header and sidebar pictures, when this PC has them (style.css falls back to backdrop.svg)
+  for (const [file, prop] of [["header.jpg", "--header-art"], ["sidebar.jpg", "--side-art"]]) {
+    const src = D.backdrops && D.backdrops[file];
+    if (src) document.documentElement.style.setProperty(prop, 'url("' + src + '")');
+  }
   gamePick.replaceChildren(...D.games.map(([k, label]) => el("option", { value: k }, label)));
   gamePick.addEventListener("change", () => {
     const q = Object.assign({}, route.q, { game: gamePick.value === D.default_game ? null : gamePick.value });

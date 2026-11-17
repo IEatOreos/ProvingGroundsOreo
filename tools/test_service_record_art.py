@@ -195,6 +195,45 @@ def test_weapon_pictures_from_mcc():
     assert art.weapons(os.path.join(tempfile.gettempdir(), "no_such_mcc_folder"), "unused") == 0
 
 
+def test_menu_pictures_from_mcc():
+    """`pictures`: MCC's body-type drawings (BC3) and Reach's large map previews (BC1, half a byte a pixel) are
+    written by their own names, other pictures passed over; the site copies the ones it names, by safe names only,
+    and finds a map's preview by its name."""
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as tmp:
+        mcc, out = os.path.join(tmp, "mcc"), os.path.join(tmp, "art")
+        tp = os.path.join(mcc, "data", "ui", "texturepacks")
+        texture_pack(os.path.join(tp, "mainmenutexturepack"), {"BODYTYPE_MALE": (16, 16, {(1, 1)}), "BODYTYPE_ELITE": (8, 8, {(0, 0)}),
+                                                               "SOMETHING_ELSE": (8, 8, {(0, 0)})})
+        perm, temp = b"", b""
+        for name, w, h in (("HREACHMP_BONEYARDLARGE", 16, 8), ("HREACHMP_FORGEWORLDLARGE", 8, 4), ("HREACHMP_SPIRE", 8, 4)):
+            data = struct.pack("<HHI", 0xF800, 0xF800, 0) * (w * h // 16)       # BC1: solid red
+            e = bytearray(480)
+            e[0x44:0x44 + len(name)] = name.encode()
+            struct.pack_into("<I", e, 0x68, 3)
+            struct.pack_into("<HH", e, 0x74, w, h)
+            struct.pack_into("<QQ", e, 0x88, len(data), len(temp))
+            perm, temp = perm + bytes(e), temp + data
+        for x, b in ((".perm.bin", perm), (".temp.bin", temp)):
+            with open(os.path.join(tp, "levelstexturepack" + x), "wb") as f:
+                f.write(b)
+        assert art.pictures(mcc, out) == (2, 2)
+        assert sorted(os.listdir(os.path.join(out, "figures"))) == ["elite.png", "spartan.png"]
+        assert sorted(os.listdir(os.path.join(out, "maps"))) == ["boneyard.jpg", "forgeworld.jpg"]
+        board = Image.open(os.path.join(out, "maps", "boneyard.jpg"))
+        assert board.size == (16, 8) and board.getpixel((8, 4))[0] > 200 and board.getpixel((8, 4))[1] < 40, board.getpixel((8, 4))
+        spec2 = importlib.util.spec_from_file_location("service_record", os.path.join(HERE, "service_record.py"))
+        sr = importlib.util.module_from_spec(spec2)
+        spec2.loader.exec_module(sr)
+        assert sr.preview_name("reach_70_boneyard") == "boneyard.jpg" and sr.preview_name("reach_forge_halo") == "forgeworld.jpg"
+        store, site = os.path.join(tmp, "store"), os.path.join(tmp, "site")
+        os.makedirs(store)
+        os.rename(out, os.path.join(store, "art"))
+        got = sr.menu_pictures("figures", {"spartan.png", "spartan_female.png", "../x.png"}, sr.Paths(store=store, out=site))
+        assert got == {"spartan.png": "figures/spartan.png"} and os.listdir(os.path.join(site, "figures")) == ["spartan.png"], got
+    assert art.pictures(os.path.join(tempfile.gettempdir(), "no_such_mcc_folder")) == (0, 0)
+
+
 def test_every_reach_damage_type_has_a_picture_entry():
     """weapon_art.json names a picture for every number weapons.json names, and nothing else."""
     import json
