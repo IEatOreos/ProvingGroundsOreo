@@ -588,6 +588,10 @@ tr.me td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .comm.has-banner { grid-template-columns: minmax(0, 1fr); }
 .comm.has-banner .comm-pic { place-items: stretch; }
 .comm-art.banner { width: 100%; height: auto; aspect-ratio: 286 / 90; border-radius: 3px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45); }
+.comm-art.banner.framed { aspect-ratio: auto; border-radius: 0; box-shadow: none; }   /* (its outline is in the picture) */
+/* a card of a tier reached: outlined all round in the tier's colour */
+.comm:not(.t-none) { border-color: var(--tc); box-shadow: 0 0 10px color-mix(in srgb, var(--tc) 30%, transparent); }
+.top-comms li:not(.t-none) { border-color: var(--tc); }
 .comm.unknown .comm-art.banner { filter: grayscale(0.6) brightness(0.8); }
 .top-comms li.has-banner { grid-template-columns: minmax(0, 1fr); align-items: start; }
 .top-comms li.has-banner .comm-art.banner { width: 100%; height: auto; }

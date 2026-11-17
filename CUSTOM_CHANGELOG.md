@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Service Record: commendation banners outlined in their tier's colour, 2026-11-16
+
+The owner: "You didnt update the website to inclue the commendation banner outlines. The colored outlines for each rank?", then sent his six tier frames (Iron to Max, Max with flames).
+
+- `service_record.py framed`: a tier banner gets its progress strip in the tier colour and an outline: the owner's frame of that tier when this PC has it (`native/bin/service_record/art/commendations/frames/<tier>.png` and `frames.json`, the opening the banner sits in), else a glowing outline of the tier colour drawn round it. Tier banners are redrawn when the emblem, the banner, a frame or this tool changes.
+- `service_record_art.py frames <sheet>`: cuts the owner's frame sheet (six frames on black, three a row) into the six frames on transparency and finds the opening on the Iron frame.
+- `style.css`: a card of a tier reached is outlined all round in the tier colour; framed banners keep their own shape.
+- Not done yet: the owner's frame sheet arrived only as a picture in chat, not saved to disk, so the drawn outlines are what shows until it is saved and `frames` is run.
+- Validation: `tools/test_service_record.py` 21 (the tier banner test now checks the outline), `tools/test_service_record_art.py` 10 (+1: frames from a made-up sheet), all 80 `tools/test_*.py` pass. Looked at a real Iron card (AimAssistPriest's Medal Collector) and, with made-up counts in the page, Iron, Bronze and Gold cards.
+
 ### Service Record: player pages like the old service record; turning figures; carnage reports; commendations and badges, 2026-11-16
 
 The owner's mockup of the old service record ("I want our site to look like this once you click on any players page", "almost perfectly identical"), then: Game History and carnage reports, a Ranks page, a front-page podium, medals by group ("Do 1, 3, 4, and 5"); the commendations from his list with his tier art; his own commendations and badges; Forge objects on the heatmaps; and "reset everyones stats. Not models".

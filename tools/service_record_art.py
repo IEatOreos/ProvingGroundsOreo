@@ -41,6 +41,7 @@ games' pictures). MCC has no picture of each armor piece: its armory draws the 3
 usage: python -I service_record_art.py medals [MCC folder]
        python -I service_record_art.py weapons [MCC folder]
        python -I service_record_art.py pictures [MCC folder]
+       python -I service_record_art.py frames <the owner's tier frame sheet>
        python -I service_record_art.py video [MCC folder]      (needs native\build_bink_to_mp4.bat first)
        python -I service_record_art.py ranks <the rank chart picture>
        python -I service_record_art.py ranks <a folder of one picture a step, each named <step>_...>
@@ -244,6 +245,46 @@ def video(mcc, out=OUT, tool=os.path.join(ROOT, "native", "bin", "bink_to_mp4.ex
     r = subprocess.run([tool, need[0], need[1], os.path.join(out, "video", "noble.mp4"), "1280"], capture_output=True, text=True)
     print((r.stdout or r.stderr).strip().splitlines()[-1] if (r.stdout or r.stderr) else "video: no output")
     return r.returncode == 0
+
+
+FRAME_TIERS = ("iron", "bronze", "silver", "gold", "onyx", "max")
+
+
+def frames(sheet, out=OUT):
+    """The owner's commendation tier frames (Nov 16: one sheet, glowing frames on black, three a row, Iron Bronze
+    Silver / Gold Onyx Max) cut into art/commendations/frames/<tier>.png on transparency (each pixel's alpha from its
+    brightest channel, its colour unmixed from the black) and frames.json {tier: the opening [x0, y0, x1, y1]}, where
+    the banner goes (service_record.py framed). The opening is found on the Iron frame (the dark inside around its
+    middle) and used for all six: the frames share their shape. Returns how many were cut."""
+    import numpy as np
+    from PIL import Image
+    from scipy import ndimage
+    a = np.asarray(Image.open(sheet).convert("RGB")).astype(np.float32)
+    bright = a.max(axis=2) > 60
+    lab, n = ndimage.label(ndimage.binary_dilation(bright, iterations=6))
+    boxes = [b for b in ndimage.find_objects(lab) if (b[0].stop - b[0].start) * (b[1].stop - b[1].start) > a.size / 3 / 60]
+    if len(boxes) != 6:
+        raise ValueError(f"expected 6 frames on the sheet, found {len(boxes)}")
+    rows = sorted(boxes, key=lambda b: b[0].start)
+    boxes = sorted(rows[:3], key=lambda b: b[1].start) + sorted(rows[3:], key=lambda b: b[1].start)
+    folder = os.path.join(out, "commendations", "frames")
+    os.makedirs(folder, exist_ok=True)
+    opening = None
+    for tier, (ys, xs) in zip(FRAME_TIERS, boxes):
+        part = a[ys, xs]
+        alpha = np.clip((part.max(axis=2) - 8) / 120, 0, 1)
+        rgb = np.where(alpha[..., None] > 0.01, np.clip(part / np.maximum(alpha[..., None], 0.01), 0, 255), 0)
+        Image.fromarray(np.dstack([rgb, alpha * 255]).astype(np.uint8), "RGBA").save(os.path.join(folder, tier + ".png"))
+        if opening is None:                                     # (the Iron frame: its dark middle)
+            dark = part.max(axis=2) < 40
+            lab2, _ = ndimage.label(dark)
+            mid = lab2[part.shape[0] // 2, part.shape[1] // 2]
+            yy, xx = np.nonzero(lab2 == mid)
+            opening = [int(xx.min()) + 3, int(yy.min()) + 3, int(xx.max()) - 3, int(yy.max()) - 3]
+    with open(os.path.join(folder, "frames.json"), "w", encoding="utf-8") as f:
+        json.dump({t: opening for t in FRAME_TIERS}, f)
+    print(f"frames: 6 cut, opening {opening} -> {folder}")
+    return 6
 
 
 FIGURES = {"BODYTYPE_MALE": "spartan.png", "BODYTYPE_FEMALE": "spartan_female.png", "BODYTYPE_ELITE": "elite.png"}
@@ -494,7 +535,12 @@ def ranks(source, out=OUT):
 
 
 if __name__ == "__main__":
-    if sys.argv[1:2] == ["ranks"] and len(sys.argv) == 3:
+    if sys.argv[1:2] == ["frames"] and len(sys.argv) == 3:
+        try:
+            frames(sys.argv[2])
+        except (ValueError, OSError) as e:
+            sys.exit(f"frames not cut: {e}")
+    elif sys.argv[1:2] == ["ranks"] and len(sys.argv) == 3:
         try:
             ranks(sys.argv[2])
         except (ValueError, OSError) as e:

@@ -882,8 +882,10 @@ def tier_banners(keys, paths):
             dst = os.path.join(paths.out, "commendations", f"{key}_{tier}.png")
             if not os.path.exists(emb):
                 continue
+            frame_pic = os.path.join(art, "frames", tier + ".png")
             try:
-                if not os.path.exists(dst) or os.path.getmtime(dst) < max(os.path.getmtime(emb), os.path.getmtime(base)):
+                newest = max(os.path.getmtime(p) for p in (emb, base, os.path.abspath(__file__), frame_pic) if os.path.exists(p))
+                if not os.path.exists(dst) or os.path.getmtime(dst) < newest:
                     from PIL import Image, ImageFilter
                     if banner is None:
                         banner, box = clean_banner(base)
@@ -895,6 +897,7 @@ def tier_banners(keys, paths):
                     e = e.resize((max(1, round(e.width * s)), max(1, round(e.height * s))), Image.LANCZOS)
                     img = banner.copy()
                     img.alpha_composite(e, (box[0] + (bw - e.width) // 2, box[1] + (bh - e.height) // 2))
+                    img = framed(img, tier, art)
                     os.makedirs(os.path.dirname(dst), exist_ok=True)
                     img.save(dst + ".tmp.png")
                     os.replace(dst + ".tmp.png", dst)
@@ -903,6 +906,50 @@ def tier_banners(keys, paths):
                 continue
         if any(row):
             out[key] = row
+    return out
+
+
+TIER_RGB = {"iron": (142, 149, 157), "bronze": (192, 132, 76), "silver": (207, 219, 230), "gold": (232, 178, 60),
+            "onyx": (155, 92, 217), "max": (216, 50, 58)}     # (style.css --tier-*: the owner's tier colours)
+STRIP = (238, 77, 274, 86)         # the banner's small blue progress strip (x0, y0, x1, y1)
+
+
+def framed(img, tier, art):
+    """A tier banner in its tier's outline (the owner asked for "the colored outlines for each rank", Nov 16): its
+    progress strip in the tier colour, then the owner's frame of that tier around it (art/commendations/frames/<tier>.png
+    with frames.json {tier: [x0, y0, x1, y1]}, the frame's opening, made by cutting his frame sheet), else a glowing
+    outline of the tier colour drawn round it."""
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+    col = TIER_RGB.get(tier, (142, 149, 157))
+    a = np.asarray(img).copy()
+    x0, y0, x1, y1 = STRIP
+    part = a[y0:y1, x0:x1].astype(np.int16)
+    blue = (part[..., 2] - (part[..., 0] + part[..., 1]) // 2) > 20
+    part[blue, :3] = col
+    a[y0:y1, x0:x1] = part.astype(np.uint8)
+    img = Image.fromarray(a, "RGBA")
+    pic = os.path.join(art, "frames", tier + ".png")
+    box = load_json(os.path.join(art, "frames", "frames.json"), {}).get(tier)
+    if os.path.exists(pic) and isinstance(box, list) and len(box) == 4:
+        with Image.open(pic) as f:
+            frame = f.convert("RGBA")
+        ow, oh = box[2] - box[0], box[3] - box[1]
+        s = min(ow / img.width, oh / img.height)
+        inner = img.resize((max(1, round(img.width * s)), max(1, round(img.height * s))), Image.LANCZOS)
+        out = Image.new("RGBA", frame.size, (0, 0, 0, 0))
+        out.alpha_composite(inner, (box[0] + (ow - inner.width) // 2, box[1] + (oh - inner.height) // 2))
+        out.alpha_composite(frame)
+        if out.width > 420:
+            out = out.resize((420, round(out.height * 420 / out.width)), Image.LANCZOS)
+        return out
+    pad = 7
+    out = Image.new("RGBA", (img.width + 2 * pad, img.height + 2 * pad), (0, 0, 0, 0))
+    glow = Image.new("RGBA", out.size, (0, 0, 0, 0))
+    ImageDraw.Draw(glow).rounded_rectangle((3, 3, out.width - 4, out.height - 4), radius=6, outline=col + (220,), width=3)
+    out.alpha_composite(glow.filter(ImageFilter.GaussianBlur(3)))
+    out.alpha_composite(img, (pad, pad))
+    ImageDraw.Draw(out).rounded_rectangle((2, 2, out.width - 3, out.height - 3), radius=6, outline=col + (255,), width=2)
     return out
 
 

@@ -543,7 +543,7 @@
     // Reach's own 286 x 90 banner (its grey emblem, then the bar)
     const tiered = tier && D.commendations && D.commendations.tier_art && D.commendations.tier_art[c.key];
     const src = (tiered && tiered[tier]) || (D.commendations && D.commendations.art[c.key]);
-    if (src) return el("img", { class: "comm-art banner", src, alt: "", width: 286, height: 90, loading: "lazy" });
+    if (src) return el("img", { class: "comm-art banner" + (tiered && tiered[tier] ? " framed" : ""), src, alt: "", loading: "lazy" });
     return svg("svg", { class: "comm-art drawn", viewBox: "0 0 64 64", "aria-hidden": "true" },
       svg("path", { d: "M32 4 56 14v20c0 13-10 22-24 27C18 56 8 47 8 34V14z", fill: "none", stroke: "currentColor", "stroke-width": 3, "stroke-linejoin": "round" }),
       svg("path", { d: "M32 18l4.4 9 9.9 1.4-7.2 7 1.7 9.8L32 40.6l-8.8 4.6 1.7-9.8-7.2-7 9.9-1.4z", fill: "currentColor", opacity: tier ? 0.9 : 0.35 }));

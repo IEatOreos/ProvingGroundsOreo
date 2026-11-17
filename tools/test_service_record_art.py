@@ -234,6 +234,37 @@ def test_menu_pictures_from_mcc():
     assert art.pictures(os.path.join(tempfile.gettempdir(), "no_such_mcc_folder")) == (0, 0)
 
 
+def test_tier_frames_from_a_sheet():
+    """Six glowing frames on black, three a row, are cut in tier order with their black made see-through, and the
+    opening (the Iron frame's dark middle) is written for every tier; a sheet without six frames is refused."""
+    import json
+    from PIL import Image, ImageDraw
+    with tempfile.TemporaryDirectory() as tmp:
+        sheet = Image.new("RGB", (660, 280), (0, 0, 0))
+        d = ImageDraw.Draw(sheet)
+        cols = [(150, 150, 150), (200, 120, 60), (180, 200, 230), (230, 180, 50), (160, 80, 220), (220, 40, 40)]
+        for i, c in enumerate(cols):
+            x, y = 20 + (i % 3) * 220, 20 + (i // 3) * 130
+            d.rectangle((x, y, x + 180, y + 100), outline=c, width=6)
+        path = os.path.join(tmp, "frames.png")
+        sheet.save(path)
+        assert art.frames(path, tmp) == 6
+        folder = os.path.join(tmp, "commendations", "frames")
+        meta = json.load(open(os.path.join(folder, "frames.json"), encoding="utf-8"))
+        x0, y0, x1, y1 = meta["gold"]
+        assert set(meta) == set(art.FRAME_TIERS) and 6 < x0 < 20 and 6 < y0 < 20 and 160 < x1 < 180 and 80 < y1 < 100, meta
+        gold = Image.open(os.path.join(folder, "gold.png"))
+        assert gold.getpixel((gold.width // 2, gold.height // 2))[3] == 0                  # (the middle see-through)
+        edge = gold.getpixel((gold.width // 2, 9))                                         # (6 px of margin, then the line)
+        assert edge[3] > 200 and edge[0] > 200 and edge[2] < 120, edge                       # (the gold line kept)
+        Image.new("RGB", (300, 100)).save(path)
+        try:
+            art.frames(path, tmp)
+            raise AssertionError("an empty sheet was cut")
+        except ValueError:
+            pass
+
+
 def test_every_reach_damage_type_has_a_picture_entry():
     """weapon_art.json names a picture for every number weapons.json names, and nothing else."""
     import json

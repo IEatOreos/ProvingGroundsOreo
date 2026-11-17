@@ -291,8 +291,10 @@ def test_forge_layouts_and_tier_banners():
         got = sr.tier_banners(["x_test", "missing"], paths)
         assert got == {"x_test": [None, None, None, None, "commendations/x_test_gold.png", None, None]}, got
         out = Image.open(os.path.join(paths.out, "commendations", "x_test_gold.png")).convert("RGB")
-        assert out.size == (286, 90) and out.getpixel((65, 45)) == (232, 178, 60), out.getpixel((65, 45))     # (the new emblem)
-        assert out.getpixel((10, 45)) == sr.BANNER_BLUE and out.getpixel((200, 45)) == (50, 50, 50)          # (the rest kept)
+        p = 7                                                   # (the drawn tier outline round it: no frame picture here)
+        assert out.size == (286 + 2 * p, 90 + 2 * p) and out.getpixel((65 + p, 45 + p)) == (232, 178, 60), out.size  # (the new emblem)
+        assert out.getpixel((10 + p, 45 + p)) == sr.BANNER_BLUE and out.getpixel((200 + p, 45 + p)) == (50, 50, 50)  # (the rest kept)
+        assert out.getpixel((p + 143, 2)) == sr.TIER_RGB["gold"]                                                  # (the gold outline)
 
 
 def test_mode_icons():
