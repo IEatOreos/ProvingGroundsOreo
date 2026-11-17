@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### A Banshee's bomb goes at his feet, 2026-11-17
+
+The owner: "Before boost bombing I want them to just play correctly inside the banshee first. Does a driver of a banshee try to flick the banshee bomb at them? It should try to shoot it similarly like a rocket or fuel rod. At their legs or ground below them?"
+
+- Found: with the bomb selected (`Bot.rod`), the pilot's aim stayed the cannons' (`plasma_rifle`, not an explosive): Reach at his chest (his place + 0.35), Halo 4 at its chest point. Only the lead was the bomb's (Reach's `REACH_BOMB_SPEED`). A bomb that went over his shoulder flew on past him.
+- `brain/bot.py` `drive`: while the bomb is selected, from the cycle press through the shot, the aim is an explosive's (`Aim.step` gun `fuelrod`, `SPLASH`): Reach his feet (his place + 0.05); Halo 4 the floor under him (its place less `H2A_FEET`, + 0.05), a rider his vehicle's body. The lead stays the bomb's own (Reach 20 u/s; Halo 4 the cannons', as before). The cannons keep his chest. The nose swings down onto his feet in the 0.25 s between the cycle press and the shot (Reach).
+- Validation: `tools/test_banshee_bomb_aim.py` (new, 2: a Demon pilot 15 u off and 9 u up, the bomb selected or not, Reach and Halo 4: lower with the bomb, on his feet within 0.05 rad, the same heading). All 778 regression tests pass. Untested in a match.
+
 ### Service Record: every pool bot listed, long lists in pages of 100, 2026-11-17
 
 The owner: "why is it when reset all the bots list reset to 47? why isnt every bot on here", then (of listing every pool bot, 753) "we seperate it to top 100 and then it goes to pages. And we do top 100 for anything that has categories. With player search still in".

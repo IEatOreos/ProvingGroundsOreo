@@ -4755,11 +4755,19 @@ class Bot:
             foe = snap.player(tid)
             chest_shot = scorpion and foe is not None and foe.vehicle in (None, -1)
             origin, tp = (me.pos + Vec(0.0, 0.0, cam) if cam else None), None
+            # (custom, Nov 17, the owner: "It should try to shoot it similarly like a rocket or fuel rod. At their legs or
+            # ground below them?") a Banshee's bomb, while it is selected (Bot.fuel_rod), goes at his feet like any
+            # explosive (Aim.step SPLASH): the cannons' chest aim let a near miss fly on past him
+            bombing = kind == "banshee" and getattr(s, "rod", None) is not None
             if s.game == "h4" and not cam and v is not None:
                 # (custom: Halo 4, every tier at the wheel of a gun (a Ghost): from the seat's view, the vehicle's camera
                 # point, to the real point on him (h4_aim_point); a tank keeps its camera view (vehicles.DRIVER_VIEW))
                 view = h4_origin(me, snap, "driver")
                 tp = h4_aim_point(foe, snap, st.get("gun"), False, me) if view is not None else None
+                if tp is not None and bombing:
+                    # (his feet: Halo 4's place is H2A_FEET over the floor; a rider: his vehicle's body, an explosive's)
+                    tp = (h4_aim_point(foe, snap, "fuelrod", False, me) if foe.vehicle not in (None, -1) else None) \
+                        or foe.pos - Vec(0.0, 0.0, H2A_FEET - 0.05)
                 if tp is not None:
                     origin, aim_at = view, tp
             elif s.game == "h4" and chest_shot:
@@ -4768,11 +4776,15 @@ class Bot:
                 tp = h4_aim_point(foe, snap, st.get("gun"), False, me)
                 if tp is not None:
                     aim_at = tp
-            act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=st.get("gun"),
+            # (bombing: "fuelrod" for its feet aim only; its lead stays the bomb's own speed, Reach's REACH_BOMB_SPEED,
+            # else the cannons' as before)
+            act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False,
+                                            gun="fuelrod" if bombing else st.get("gun"),
                                             origin=origin, target_point=tp,
                                             crouched=crouched(foe), protected=profiles.fixed_high(s.p),
                                             splash_at_feet=not chest_shot,
-                                            shot_speed=s.reach_shot_speed(kind))
+                                            shot_speed=s.reach_shot_speed(kind) or (
+                                                PROJECTILE_SPEED.get(st.get("gun"), 360.0) if bombing else None))
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             d = dist(me.pos, b.pos)
             lo, hi = st["rng"]
