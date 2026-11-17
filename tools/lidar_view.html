@@ -251,7 +251,7 @@
       <div class="row"><span>Jumps shown: two-way / one-way</span><b id="nways">0</b></div>
       <div class="row"><span>Crouch paths you walked</span><b id="ncrawl">0</b></div>
       <div class="row"><span>Recorded paths</span><b id="nroute">0</b></div>
-      <div class="row"><span>Vehicle drives: people / bots (cells)</span><b id="ndrive">0 / 0</b></div>
+      <div class="row"><span>Vehicle drives: your routes (orange) / people / bots (cells)</span><b id="ndrive">0 / 0 / 0</b></div>
     </div>
     <div class="grp"><h3>Map</h3>
       <div class="row"><span>Weapons / objectives / usable</span><b id="nfeat">0</b></div>
@@ -531,7 +531,7 @@ const recBuf = new Buf();   // the path being recorded now (F6)
 let recording = null;
 // vehicle drives and flights (maps/<map>/rides.json and, live, tools/lidar.py RideWatch): kinds 0 a person's drive,
 // 1 bots only, 2 flown air
-const driveBufs = [new Buf(), new Buf(), new Buf()], driveSeen = new Set();
+const driveBufs = [new Buf(), new Buf(), new Buf(), new Buf()], driveSeen = new Set();   // people, bots, air, your routes
 let rseq = 0;
 function addRides(list) {
   for (const r of list || []) {
@@ -544,7 +544,8 @@ function addRides(list) {
     if (!bounds) bounds = [r[0], r[1], r[0], r[1]];
     else { bounds[0] = Math.min(bounds[0], r[0]); bounds[1] = Math.min(bounds[1], r[1]); bounds[2] = Math.max(bounds[2], r[0]); bounds[3] = Math.max(bounds[3], r[1]); }
   }
-  $("ndrive").textContent = driveBufs[0].n.toLocaleString() + " / " + driveBufs[1].n.toLocaleString();
+  $("ndrive").textContent = driveBufs[3].n.toLocaleString() + " / " + driveBufs[0].n.toLocaleString() + " / " +
+    driveBufs[1].n.toLocaleString();
 }
 function setRides(rd) {
   if (!rd) return;
@@ -1319,6 +1320,7 @@ function frame() {
     points(driveBufs[0], cell * 1.2, [0.18, 0.9, 0.63, 1], 0, false);
     points(driveBufs[1], cell * 1.0, [0.18, 0.9, 0.63, 0.4], 0, false);
     points(driveBufs[2], -4, [0.62, 0.85, 1, 0.55], 1, false);
+    points(driveBufs[3], cell * 1.4, [1, 0.62, 0.11, 1], 0, false);   // (custom) the owner's routes: LiDAR mode's drives
   }
   if (show.dead) { lines(fallLines, [1, 0.29, 0.29, 0.28]); points(falls, -13, RED, 2, false); points(otherDeaths, -9, [1, 0.55, 0.35, 0.8], 2, false); }
   points(bots, -11, [0.91, 0.94, 1, 1], 1, false);

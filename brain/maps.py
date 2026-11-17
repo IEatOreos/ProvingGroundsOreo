@@ -448,13 +448,20 @@ def rides_layers(names, T, files=None):
     Flown cells go to the layer their height is in (low under the middle of the two heights, high over it, both when
     flown at both)."""
     drive, hist, cells, marks = [], {"human": {}, "bot": {}}, {}, {"takeoff": [], "landing": [], "turnback": []}
-    if T is not None:
-        T.people_drive = []                      # (filled below, file by file: called again on every rides save)
+    people, owner = [], []
     for f in files or [os.path.join(ROOT, nm, "rides.json") for nm in names]:
         d = read_json(f) if os.path.exists(f) else {}
-        drive += [tuple(r[:3]) for r in d.get("drive", []) if r[3] >= 1 or r[4] >= 2]
-        if T is not None:                         # people's own driving lines: the vehicles' roads (Terrain._build_vnav)
-            T.people_drive = getattr(T, "people_drive", []) + [tuple(r[:3]) for r in d.get("drive", []) if r[3] >= 1]
+        rows = [r for r in d.get("drive", []) if len(r) >= 5]
+        drive += [tuple(r[:3]) for r in rows if r[3] >= 1 or r[4] >= 2 or (len(r) > 5 and r[5] >= 1)]
+        people += [tuple(r[:3]) for r in rows if r[3] >= 1]
+        owner += [tuple(r[:3]) for r in rows if len(r) > 5 and r[5] >= 1]
+    if T is not None:                             # (called again on every rides save: set whole)
+        # (custom, Nov 17) the owner's routes, his drives in LiDAR mode (tools/lidar.py RideWatch owner): the bots'
+        # roads (Terrain._build_vnav OWNER_ROAD_COST). Once a map has them, people's drives in matches stay drivable
+        # ground but are no roads (the owner: "sometimes my routes wouldn't be ideal for bots that's why I created the
+        # lidar driving routes"); a map without them keeps people's drives as its roads (ROAD_COST)
+        T.owner_drive = owner
+        T.people_drive = [] if owner else people
         for r in d.get("air", []):
             c = cells.get((r[0], r[1]))
             cells[(r[0], r[1])] = list(r[2:]) if c is None else [c[0], c[1] + r[3], c[2] + r[4], min(c[3], r[5]),

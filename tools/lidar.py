@@ -2335,11 +2335,15 @@ class RideWatch:
     DRIVE_STEP, AIR_STEP = 0.25, 1.0    # u travelled between samples (a drive sample: a nav cell, 0.25 u)
     UP, DOWN = 1.5, 0.8                 # over the floor: airborne once above UP, landed once under DOWN
     FEED_MAX = 300000                   # samples kept for the live view (about 2 hours of driving)
-    # the live view's sample kinds (rides_view uses the same): a person's drive, a bots-only drive, flown air
-    FEED_DRIVE, FEED_BOT_DRIVE, FEED_AIR = 0, 1, 2
+    # the live view's sample kinds (rides_view uses the same): a person's drive, a bots-only drive, flown air, and
+    # (custom, Nov 17) the owner's route: a person's drive in LiDAR mode
+    FEED_DRIVE, FEED_BOT_DRIVE, FEED_AIR, FEED_OWNER_DRIVE = 0, 1, 2, 3
 
-    def __init__(s, map_name, T=None, path=None):
-        s.map, s.T = map_name, T
+    def __init__(s, map_name, T=None, path=None, owner=False):
+        # owner: LiDAR mode (main). (custom, Nov 17, the owner: "sometimes my routes wouldn't be ideal for bots that's
+        # why I created the lidar driving routes. So bots would try to always stick to those"): a person's drive here
+        # is counted as an owner route (the drive row's sixth number), the bots' road (brain/maps.py rides_layers)
+        s.map, s.T, s.owner = map_name, T, owner
         s.path = path or os.path.join(ROOT, "maps", map_name, "rides.json")
         s.v = {}                        # vehicle handle -> its track
         s.new = s._empty()
@@ -2387,9 +2391,10 @@ class RideWatch:
                 s._fly(now, st, x, y, z, src)
             elif st["last"] is None or math.dist((x, y, z), st["last"]) >= s.DRIVE_STEP:
                 st["last"] = (x, y, z)
-                c = s.new["drive"].setdefault((round(x * 4) / 4, round(y * 4) / 4, round(z, 1)), [0, 0])
-                c[src == "bot"] += 1
-                s._feed(x, y, z, s.FEED_BOT_DRIVE if src == "bot" else s.FEED_DRIVE)
+                c = s.new["drive"].setdefault((round(x * 4) / 4, round(y * 4) / 4, round(z, 1)), [0, 0, 0])
+                owner = src == "human" and s.owner
+                c[2 if owner else src == "bot"] += 1
+                s._feed(x, y, z, s.FEED_BOT_DRIVE if src == "bot" else s.FEED_OWNER_DRIVE if owner else s.FEED_DRIVE)
 
     def _fly(s, now, st, x, y, z, src):
         if s.T is None:
@@ -2430,10 +2435,11 @@ class RideWatch:
         if os.path.exists(s.path):
             with open(s.path, encoding="utf-8") as f:
                 d = json.load(f)
-        drive = {tuple(r[:3]): list(r[3:5]) for r in d.get("drive", [])}
-        for k, (hn, bn) in new["drive"].items():
-            c = drive.setdefault(k, [0, 0])
-            c[0], c[1] = c[0] + hn, c[1] + bn
+        # rows [x, y, z, person, bot, owner route] (an older row has no sixth number: none)
+        drive = {tuple(r[:3]): (list(r[3:6]) + [0, 0, 0])[:3] for r in d.get("drive", [])}
+        for k, (hn, bn, on) in new["drive"].items():
+            c = drive.setdefault(k, [0, 0, 0])
+            c[0], c[1], c[2] = c[0] + hn, c[1] + bn, c[2] + on
         air = {tuple(r[:2]): list(r[2:]) for r in d.get("air", [])}
         for k, (gz, sh, n, lo, hi) in new["air"].items():
             c = air.get(k)
@@ -2469,7 +2475,10 @@ def rides_view(map_name, path=None):
     for r in d.get("drive", []):
         if len(r) < 5:
             continue
-        if r[3] >= 1:
+        if len(r) > 5 and r[5] >= 1:              # (custom, Nov 17) the owner's route, LiDAR mode's drives
+            people += 1
+            drive.append([r[0], r[1], r[2], RideWatch.FEED_OWNER_DRIVE])
+        elif r[3] >= 1:
             people += 1
             drive.append([r[0], r[1], r[2], RideWatch.FEED_DRIVE])
         elif r[4] >= 2:
@@ -2877,7 +2886,8 @@ def main(o):
     people = HumanWatch(o.map, rec)
     # every vehicle driven or flown -> the map's drive mesh and airspace (rides.json, as in normal matches: live_bots),
     # drawn live in the view (Hub.live); the bots' vehicles use it from the next match
-    drives = hub.rides = RideWatch(o.map, T=T)       # (rides above: the map's lifts and man cannons, another thing)
+    # (rides above: the map's lifts and man cannons, another thing). owner: a person's drive here is an owner route
+    drives = hub.rides = RideWatch(o.map, T=T, owner=True)
     rides_err = [False]
 
     def save_rides():

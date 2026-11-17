@@ -25,6 +25,7 @@ LIFT_DROP = 1.0   # u: ... from more than this over its floor (a step down onto 
 RAIL = (0.35, 0.45)  # heights over a ledge's floor where a wall is a handrail (0.25 u wall bins: clear of the step below)
 NAV_CELL = 0.25  # path grid spacing = heightmap cell (the base ramps are 0.83 wide, doors about 1)
 ROAD_COST = 0.4  # a vehicle edge on floor a person drove costs this much of its length: their lines are the roads
+OWNER_ROAD_COST = 0.12  # (custom, Nov 17) one on the owner's routes (his LiDAR-mode drives): the bots keep to them
 MAX_RISE = 0.18   # most a path may climb per grid edge, straight or diagonal: the base ramps rise
                   # 0.15 per cell; the 0.2-0.43 lips beside them stop a biped in game
 MAX_DROP = 3.0    # dropping off a ledge is fine (no climbing back), up to this height
@@ -2193,6 +2194,33 @@ class Terrain:
         s._vblock_ids = {(l * s.nh + j) * s.nw + i for l, j, i in out}
         return out
 
+    OWNER_ROUTE_R = 2                    # (custom, Nov 17) cells round each owner-route sample (0.5 u: a 1.25 u band)
+
+    def owner_route_nodes(s, shape):
+        """(custom, Nov 17) A flat bool array over the nodes of the owner's routes (T.owner_drive, his LiDAR-mode
+        drives: maps.rides_layers), each sample's floor and the cells OWNER_ROUTE_R round it; None when the map has
+        none."""
+        pts = getattr(s, "owner_drive", ())
+        if not pts:
+            return None
+        got = s.__dict__.get("_owner_nodes")
+        if got is not None and got[0] == (id(pts), len(pts), shape):
+            return got[1]
+        r = s.OWNER_ROUTE_R
+        foot = [(dj, di) for dj in range(-r, r + 1) for di in range(-r, r + 1) if dj * dj + di * di <= r * r + 1]
+        own = np.zeros(shape, dtype=bool)
+        for x, y, z in pts:
+            n = s._node_at(x, y, z, tol=1.0) if s.inside(x, y) else None
+            if n is None:
+                continue
+            l, j, i = n
+            for dj, di in foot:
+                jj, ii = j + dj, i + di
+                if 0 <= jj < shape[1] and 0 <= ii < shape[2] and abs(float(s.lz[l, jj, ii]) - z) <= 0.6:
+                    own[l, jj, ii] = True
+        s._owner_nodes = ((id(pts), len(pts), shape), own.ravel())
+        return s._owner_nodes[1]
+
     def _build_vnav(s):
         """The ground a vehicle can drive: the walking graph's edges between nodes VEH_ROOM cells clear of any wall
         (doors, corridors, stair wells are out), no step up of more than VEH_RISE a cell (a ramp, not a stair),
@@ -2210,7 +2238,10 @@ class Terrain:
         # where bot drivers wedged, live, the floor round it no person drove (tools/wedges.py, maps.terrain T.nodrive:
         # half-unit points, each with the cells round it): off the vehicles' ground, never the walking ground. Spire:
         # people drove up to (-143, -354) and turned west, the ground ran on south and three bots wedged there
-        hand = getattr(s, "hand_drive", set())
+        hand = set(getattr(s, "hand_drive", set()))
+        own = s.owner_route_nodes(roomy.shape)   # (custom, Nov 17) the owner's routes: never left off for a wedge
+        if own is not None:
+            hand |= {tuple(int(c) for c in n) for n in zip(*np.unravel_index(np.flatnonzero(own), roomy.shape))}
         blocked = set()
         for x, y, z in getattr(s, "nodrive", ()):
             n = s._node_at(x, y, z, tol=1.5) if s.inside(x, y) else None
@@ -2235,7 +2266,14 @@ class Terrain:
             if n is not None:
                 road[np.ravel_multi_index(n, roomy.shape)] = True
         g.data = np.where(road[g.row] & road[g.col], g.data * ROAD_COST, g.data)
-        near = np.stack([ndimage.distance_transform_edt(~s.near_wall[l]) * NAV_CELL for l in range(s.L)]).ravel()
+        # (custom, Nov 17) the owner's routes (maps.rides_layers T.owner_drive: his drives in LiDAR mode), a band a
+        # vehicle's width round each sample: an edge on one costs OWNER_ROAD_COST, so a bot drives to the nearest and
+        # along it however much shorter the open ground is (up to about 8 times), and off it near the goal. The owner:
+        # "So bots would try to always stick to those"
+        own = s.owner_route_nodes(roomy.shape)
+        if own is not None:
+            g.data = np.where(own[g.row] & own[g.col], g.data * OWNER_ROAD_COST, g.data)
+        near =np.stack([ndimage.distance_transform_edt(~s.near_wall[l]) * NAV_CELL for l in range(s.L)]).ravel()
         g.data = g.data * (1.0 + s.VEH_WALL_COST * np.clip(1.0 - near[g.col] / s.VEH_PREF, 0.0, 1.0))
         del near
         s.graph_v = csr_matrix((g.data[keep], (g.row[keep], g.col[keep])), shape=g.shape)

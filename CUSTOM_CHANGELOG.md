@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### The owner's LiDAR driving routes: the bots keep to them, 2026-11-17
+
+The owner: "sometimes my routes wouldn't be ideal for bots that's why I created the lidar driving routes. So bots would try to always stick to those", then "Do all 4 options if possible".
+
+- Found: a drive in LiDAR mode and one in a match went into `rides.json` alike, and a person's drive cost a bot 0.4 of its length (`ROAD_COST`): on open ground a cut under about 2.5 times shorter won. The paint tool's drive layers only make ground drivable, and no map has any.
+- `tools/lidar.py` `RideWatch(owner=True)` (LiDAR mode, `main`): a person's drive there is an owner route, the drive row's sixth number (`[x, y, z, person, bot, owner]`; an older row reads as none). A bot's drive in LiDAR mode stays a bot's. `rides_view` and `tools/lidar_view.html` draw the routes orange; the Vehicle drives count reads "your routes / people / bots".
+- `brain/maps.py` `rides_layers`: the owner's routes are `T.owner_drive`. On a map that has any, people's match drives stay drivable ground but are no roads (`T.people_drive` empty); a map without them keeps people's drives as its roads, as before (the drives saved so far cannot be told apart).
+- `brain/terrain.py` `_build_vnav`, `owner_route_nodes`: an edge in a 1.25 u band round the route costs `OWNER_ROAD_COST` 0.12 of its length (people's roads 0.4), so a bot drives to the nearest route and along it unless the open ground is about 8 times shorter, and off it near its goal. The band is never left off the vehicles' ground for a wedge mark (the owner's vehicle blockers still win). `tools/wedges.py` counts the routes as driven.
+- Fights unchanged: the run-over, a tank's or Ghost's gun run, the artillery's range and aircraft steer at the man, not along the vehicles' ground; a Warthog in a fight drives its way on, now along the routes.
+- Validation: `tools/test_owner_routes.py` (new, 6: LiDAR-mode drives saved as routes and a LiDAR bot's as a bot's, a match's drive and an older row kept; the layers with and without routes; on Blood Gulch a route bent 0.45 of the way off the line between two open spots is driven round its bend and on to the goal, the plain drive about straight). All 776 regression tests pass. Untested in a match; the live view's orange layer not opened. No map has a route yet: each needs its routes driven once in LiDAR mode.
+
 ### Service Record: every weapon and vehicle listed, used or not, 2026-11-17
 
 The owner: "I would like all weapons and vehicles to be on the site pages correlating to them even if the player has no kills with it."

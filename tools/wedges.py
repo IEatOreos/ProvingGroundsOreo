@@ -92,9 +92,10 @@ def blocked(k, veh, p, world):
 
 
 def driven(name):
-    """Where people drove on the map and its variants (rides.json "drive" rows with a person's count)."""
+    """Where people drove on the map and its variants (rides.json "drive" rows with a person's count, or the owner's
+    route count, the sixth: custom, Nov 17)."""
     return [r[:3] for f in glob.glob(os.path.join(ROOT, "maps", name, "**", "rides.json"), recursive=True)
-            for r in json.load(open(f)).get("drive", []) if r[3] >= 1]
+            for r in json.load(open(f)).get("drive", []) if r[3] >= 1 or (len(r) > 5 and r[5] >= 1)]
 
 
 def near(p, pts, r):
