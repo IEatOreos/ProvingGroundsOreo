@@ -266,6 +266,10 @@ DEMON_FULL = 0.95                  # the shield it waits for (REPEEK_SHIELD's)
 DEMON_RECHARGE_ARM = 0.5           # s out of every enemy's sight before the hold starts (a man blinking behind a post is no break)
 DEMON_RECHARGE_SCORE = 3.5         # over hunts (3.2-3.42), a trade (3.4), guns (3.15) and pushes; under a losing break (3.6)
 DEMON_RECHARGE_HIT = 1.0           # s: shot this lately, it is not hidden: the usual rules (turn on him, other cover)
+# (custom, Nov 18, owner: "Only start fights at full shield") hurt, a Demon opens no new fight: into cover from a man in
+# view it is not fighting yet (Bot.demon_no_new_fight), then demon_recharge's hold. tools/death_autopsy.py, the 4 Reach
+# traces with kill rows (Nov 15-17): 6 of 48 Demon deaths began under full shield (median 0.89), 32 of 48 had 2+ shooters
+DEMON_FRESH_COVER_R = 10.0         # u: the farthest cover it walks to off a new man (hidden_spot's reach); none: it fights
 # (custom, Nov 8) Demon leaves a Ghost with this much of its body left or less (may_drive): the owner's 12-20%, the top of
 # it for the 0.8 s the Use hold takes (live Blood Crash 20261108-024522: Camper25's Ghost 100% to 6% in 1.5 s, dead in it)
 DEMON_GHOST_BAIL = 0.20
@@ -2113,6 +2117,50 @@ class Bot:
         scores[("retreat", spot)] = max(scores.get(("retreat", spot), 0.0), DEMON_RECHARGE_SCORE)
         s.note(f"shield {me.shield:.2f}: in cover until full" + (", no re-challenge" if dropped else ""))
 
+    def demon_no_new_fight(s, now, me, snap, scores, seen):
+        """(custom, Nov 18, owner: "Only start fights at full shield") Demon, hurt (within SHIELD_BACK s) with its
+        shield under DEMON_FULL and in view only of men it is not fighting yet: it opens no new fight. No fight and no
+        hunt; into cover from the men in view (DEMON_FRESH_COVER_R at most) at DEMON_RECHARGE_SCORE, and once out of
+        their sight demon_recharge holds it there until the shield is full. The man it fights (its target, the one
+        carried through a hunt or retreat, the last to hurt it) is left to the fight's own rules, as are a man within
+        DEMON_STAND_R, a shot in the last DEMON_RECHARGE_HIT s, and no cover in reach (turning away in the open is a
+        shot in the back). Not in a vehicle, carrying, standing on a loose objective, in Race or Infection, without
+        shields, or while demon_recharge's hold already runs."""
+        hurt = getattr(s.per, "hurt_at", -99.0)
+        if (not seen or not profiles.fixed_demon(s.p) or me.vehicle not in (None, -1) or me.has_flag
+                or snap.shieldless or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
+                or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK or now - hurt < DEMON_RECHARGE_HIT
+                or getattr(s, "recharge_hold", None) is not None):
+            s.fresh_cover = None
+            return
+        mine = {s.goal[1] if s.goal[0] == "fight" else None, getattr(s, "commit_carry", None)}
+        if now - getattr(s.per, "attacker_t", -99.0) <= SHIELD_BACK:
+            mine.add(getattr(s.per, "attacker_id", None))
+        men = [s.per.beliefs[k].pos for k in seen if k in s.per.beliefs]
+        if any(k in mine for k in seen) or not men or any(dist(me.pos, p) < DEMON_STAND_R for p in men):
+            s.fresh_cover = None
+            return
+        T = s.T()
+
+        def open_to(p):
+            try:
+                return any(T.los(q, p) for q in men)
+            except Exception:
+                return False
+        spot = getattr(s, "fresh_cover", None)
+        if spot is None or open_to(spot):
+            spot = s.cover_from(me, men) or s.hidden_spot(me, men)
+            if spot is not None and (dist(me.pos, spot) > DEMON_FRESH_COVER_R or open_to(spot)):
+                spot = None
+            s.fresh_cover = spot
+        if spot is None:
+            return                              # nowhere to go out of his sight: the usual rules
+        dropped = [k for k in scores if k[0] in ("fight", "hunt")]
+        for k in dropped:
+            del scores[k]
+        scores[("retreat", spot)] = max(scores.get(("retreat", spot), 0.0), DEMON_RECHARGE_SCORE)
+        s.note(f"shield {me.shield:.2f}: no new fight until full, into cover")
+
     def hidden_spot(s, me, threats):
         """The nearest walkable place a short walk off that no threat has a line to (maps without LiDAR cover spots:
         cover_from finds none there). Rings out to 10 u."""
@@ -3903,6 +3951,7 @@ class Bot:
                 if key[0] == "fight":
                     scores[key] *= 0.30
         s.demon_recharge(now, me, snap, scores, seen)   # (custom, Nov 17: Demon, out of sight: cover until its shield is full)
+        s.demon_no_new_fight(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, hurt: no new fight, cover first)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         mv = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None) if me.vehicle not in (None, -1) else None

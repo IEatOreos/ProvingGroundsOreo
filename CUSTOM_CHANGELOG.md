@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Death autopsy tool; hurt Demons start no new fight, 2026-11-18
+
+The owner asked for ideas to make a Demon "that puts it staying alive as most important", then: "Let's start by making the tool. And then the full shield bullet also."
+
+- **`tools/death_autopsy.py` (new):** every recorded death of a bot, from the traces with kill rows (`tools/kill_record.py`). For each death it finds:
+  - the fatal fight (the bot's own damage since its last 2 s without any) and the shield and health it went in with;
+  - the enemies whose damage is on the body, and whether it saw the killer by eye before his first damage;
+  - its goal when the fight started and when it died, what killed it, how far off he was, its time alive, and the killer's own shield.
+  - It gives each death one cause (no killer, vehicle, outnumbered, grenade, never saw him, started hurt, power weapon, lost a 1v1), counts every overlapping condition, and gives K/D and deaths per 10 minutes alive. `--tier all` lists the tiers side by side; `--list` prints one line per death.
+- **What it found** in the 4 Reach traces with kill rows (Nov 15-17), 48 Demon deaths (K/D 2.15, 11.5 deaths per 10 minutes alive; the other tiers 18):
+  - 32 of 48 (67%) had 2 or more enemies' damage on the body. For the other tiers it was 23-60%.
+  - 6 went into the fight under full shield (median 0.89), and 8 never saw the killer first.
+  - 16 were caught on their way to something else, not in a fight they took. 9 were lost 1v1s, at a median of 1.3 u (Melee is its second killer).
+- **`Bot.demon_no_new_fight` (new; `DEMON_FRESH_COVER_R`), all games:** a Demon that is hurt (within `SHIELD_BACK`), with its shield under `DEMON_FULL` 0.95 and in view only of men it is not fighting yet, opens no new fight.
+  - It drops its fights and hunts and goes into cover from those men (`cover_from` / `hidden_spot`, at most 10 u off) at `DEMON_RECHARGE_SCORE` 3.5. Once it is out of their sight, `demon_recharge`'s hold keeps it there until the shield is full.
+  - The usual rules still decide in these cases: the man it fights (its target, the one carried through a hunt or retreat, the last to hurt it within 10 s), a man within `DEMON_STAND_R` 6 u, a shot in the last 1 s, and no cover in reach (turning away in the open is a shot in the back).
+  - It does not apply in a vehicle, while carrying, on a loose objective, in Race or Infection, without shields, or while the recharge hold already runs.
+- **Validation:** `tools/test_demon_no_new_fight.py` (9 tests: cover from a new man, out of his sight; full, it fights; its own man, the man who hurt it, a man on it, a fresh hit, and no cover are all left to the usual rules; the recharge hold takes over; other tiers and Race unchanged) and `tools/test_death_autopsy.py` (2: three deaths, three causes; the 0 shield read counts as full). All 834 regression tests pass. Untested in a match.
+
 ### Reach carriers drop the flag to fight when they would die with it, 2026-11-17
 
 The owner: "Sometimes it feels like they just let me kill them for free because they ignore anything but running the flag, but at the same time I feel like they could get less flag caps if they drop to fight", then "Let's try to add that in. Not the strafe and movement on the way home ... everything else we can try".
