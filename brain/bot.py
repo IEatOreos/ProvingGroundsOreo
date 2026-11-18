@@ -850,6 +850,7 @@ def reach_demon_direct_fire(prof, game, me, target):
             and (me.weapon in AUTO or me.weapon in PRECISION or me.weapon == "shotgun")
             and me.vehicle == -1 and target is not None and target.vehicle == -1)
 
+
 # (custom, Nov 14) Halo 2 Demon's Battle Rifle: the trigger goes with the sight of him and the press snaps to his head
 # (head_solution), like Reach's DMR. Parkerr on Midship (20261114-152922) waited on his own capped aim: the trigger was
 # allowed 52% of his fight time (Halo 4 Demon 78%), fights ran 5.1 s (2.3 s) and he went 2-9. Demon only, on foot.
@@ -2036,7 +2037,6 @@ class Bot:
             m["spot"] = spot
         return spot
 
-    def hidden_spot(s, me, threats):
     def demon_recharge(s, now, me, snap, scores, seen):
         """(custom, Nov 17, owner) Demon, hurt (within SHIELD_BACK s: past that its shield is full whatever it reads) with
         its shield under DEMON_FULL, out of every enemy's sight DEMON_RECHARGE_ARM s: it stays in cover until the shield
@@ -2090,6 +2090,7 @@ class Bot:
         scores[("retreat", spot)] = max(scores.get(("retreat", spot), 0.0), DEMON_RECHARGE_SCORE)
         s.note(f"shield {me.shield:.2f}: in cover until full" + (", no re-challenge" if dropped else ""))
 
+    def hidden_spot(s, me, threats):
         """The nearest walkable place a short walk off that no threat has a line to (maps without LiDAR cover spots:
         cover_from finds none there). Rings out to 10 u."""
         T = s.T()
@@ -3765,8 +3766,8 @@ class Bot:
             for key in scores:
                 if key[0] == "fight":
                     scores[key] *= 0.30
-        # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         s.demon_recharge(now, me, snap, scores, seen)   # (custom, Nov 17: Demon, out of sight: cover until its shield is full)
+        # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         mv = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None) if me.vehicle not in (None, -1) else None
         if (mv is not None and getattr(s, "seat", None) == "driver"
                 and (vehicles.spec(mv["kind"]) or {}).get("move") == "air"):
