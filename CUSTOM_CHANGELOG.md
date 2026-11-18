@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+### Reach Demon and Mythic: Halo 4's team play, the other bots' difficulty, the peek as he looks away, 2026-11-18
+
+The owner, on how he plays low bots: "I know if a low level bot won't push, or how long it takes for them to look away. Or I hear gunfights and push to that and usually steal others kills", after "if we could give the daemon bot the ability to always know the attributes of the other bots and the difficulty, I think that could also help it", then "Yea add all of that to reach demons and mythics".
+
+- **Halo 4 Demon's fight odds and team play now run for Reach Demon and Mythic too** (`Bot.team_demon`; Halo 4 Demon as before):
+  - the odds break-off and "not taking on a man it would not beat", and dropping a hunt into a group;
+  - the trade rule, re-peek with a full shield, one-shot callouts, instant trades and third party (`team_play`);
+  - regroup cover, chasing a man out of sight only in a fight it wins (`chase_ok`), the team's sightings as beliefs, the two-in-view press and the retreat juke.
+  - Halo 4's Boltshot swap, melee range and power grab stay Halo 4's (`h4_demon`).
+  - Mythic gets Demon's cover search where a map has no painted cover (`cover_from`), so its break-offs have somewhere to go.
+- **Reach's guns in the odds** (`brain/odds.py REACH_GUNS`, `kill_time(..., game=)`): DMR 1.2 s from full (the fastest quarter of 31 measured one-on-one kills in the 4 Reach traces with kill rows: 1.21 s). The other guns are Halo 4's analogue and not measured yet.
+- **Every bot's difficulty is known to the team** (`BOT_PROFILES`, posted by every bot in `share_sightings`).
+  - In Reach, an enemy bot's share of the odds' pace is set by its difficulty (`odds.acc_of`, `REACH_ACC`), from Easy 0.17 to Demon 0.52; a person is 0.8. These are first estimates, not a replay calibration: each difficulty is scaled by the square root of its K/D against the owner's, from `tools/death_autopsy.py`.
+  - Mythic's own pace is 0.9, Demon's 1.0 (`own_acc`).
+  - **A weak enemy** (`Bot.weak`: under `DANGER_ACC` 0.3, i.e. Normal and below, Blind and Tactician, with a posted profile) does not count as the "second man" in `demon_break_second`, and a hurt Demon may still take on a man in view when every man in view is weak (`demon_no_new_fight`).
+- **`Bot.peek_timing` (new; `PEEK_*`), Reach Demon and Mythic:** when its top choice is a hunt or push onto a man out of its sight, and the team sees him (`TEAM_FACING`, posted by whoever has him in view, under 0.5 s old) facing its way within 35° and within 25 u, it waits where it is (`PEEK_WAIT_SCORE` 3.45) until he looks away, 2 s at most.
+  - It never uses a facing nobody on the team sees (no wallhack).
+  - It doesn't wait for a weak man.
+- **Validation:** `tools/test_reach_team_demon.py` (16 tests):
+  - who has the team play: Reach Demon and Mythic, Halo 4 Demon; not Reach Legendary or Heroic, not Halo 4 Mythic;
+  - Reach's guns, and a difficulty's pace (the same man as an Easy bot gives more than twice the odds of a Legendary);
+  - Reach Demon and Mythic one shot don't peek a full man; Reach Legendary is unchanged;
+  - a weak second man is ignored and a Legendary one is not; a hurt Demon takes on a weak man;
+  - peek: waits while he looks this way, goes when he looks away or after 2 s, not for a weak man, not without a team sighting; Mythic waits; Reach Legendary and Halo 4 do not.
+  - `test_demon_odds.py`'s "Reach Demon unchanged" checks now check Reach Legendary. `test_demon_anticipate.py`'s radar-dot nearness test holds `chase_ok` aside, because the ported "no friend of his near" check would trip on its dot.
+  - All 858 regression tests pass. **Untested in a match;** the odds thresholds are Halo 4's calibration.
+
 ### Demon steps out of a second man's sight; Forge pieces in the analysis line of sight, 2026-11-18
 
 The owner: "a good player knows how to shorten angles, or force an angle that allows them to make a 2v1 their advantage", then "I think we should add line of sight checks to the forge world pieces and then make that rule at the same time".

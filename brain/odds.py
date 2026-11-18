@@ -55,6 +55,48 @@ UNAWARE_S = 0.45                # s: a man not aware of it takes this long to tu
 ODDS_CAP = 9.0
 ONE_SHOT = 0.05                 # shield at or under this: one headshot from dead
 
+# (custom, Nov 18, owner: "add all of that to reach demons and mythics") Reach's guns, by the brain's names (live.py
+# WEAPON_ALIAS), as H4_GUNS: s from full every shot landing at its best range, reach, how it kills. A Spartan's pool is
+# taken as Halo 4's (70 shield, 45 body). Measured where the 4 Reach traces with kill rows have enough (scratchpad
+# reach_ttk.py: one shooter, the victim in at full, first damage to death): DMR fastest quarter 1.21 s (31 kills),
+# sniper median 0.37 s by people (4); the rest Halo 4's analogue, not measured yet
+REACH_GUNS = {
+    "dmr": (1.2, 40.0, "precision"), "magnum": (1.3, 20.0, "precision"), "needle_rifle": (1.3, 35.0, "precision"),
+    "assault_rifle": (1.6, 12.0, "pool"), "plasma_rifle": (1.8, 10.0, "pool"), "plasma_repeater": (1.8, 10.0, "pool"),
+    "spiker": (1.4, 10.0, "pool"), "needler": (1.6, 12.0, "pool"), "plasma_pistol": (2.6, 10.0, "pool"),
+    "concussion_rifle": (1.6, 20.0, "pool"), "focus_rifle": (2.0, 60.0, "pool"),
+    "shotgun": (0.25, 3.0, "fixed"), "sniper": (0.5, 80.0, "fixed"), "rockets": (0.7, 30.0, "fixed"),
+    "spartan_laser": (0.8, 60.0, "fixed"), "grenade_launcher": (0.8, 20.0, "fixed"),
+    "plasma_launcher": (1.0, 25.0, "fixed"), "fuelrod": (0.8, 25.0, "fixed"),
+    "sword": (0.2, 3.0, "fixed"), "gravity_hammer": (0.2, 2.5, "fixed"),
+}
+REACH_FINISH = {"dmr": 0.35, "magnum": 0.25, "needle_rifle": 0.3}
+GUNS = {"reach": (REACH_GUNS, REACH_FINISH)}
+# (custom, Nov 18, owner: "give the daemon bot the ability to always know the attributes of the other bots and the
+# difficulty") Reach: an enemy bot's share of the table's pace by its difficulty (its label, else its tier), for the odds
+# and the rules that weigh how dangerous a man is. First estimates, not a replay calibration: a person 0.8 (ACC's) and
+# each tier scaled by the square root of its K/D over the owner's in the 4 Reach traces with kill rows
+# (tools/death_autopsy.py: the owner 5.00, Demon 2.15, Legendary 1.51, Heroic 0.96, Blind 0.61, Tactician 0.50, Normal
+# 0.42, Easy 0.23; Mythic, not measured, between Legendary and Demon)
+REACH_ACC = {"novice": 0.17, "average": 0.23, "tactician": 0.25, "blind": 0.28, "strong": 0.35, "top": 0.44,
+             "mythic": 0.48, "demon": 0.52}
+OWN_ACC = {"demon": DEMON_ACC, "mythic": 0.9}   # its own pace (Demon's calibrated 1.0; Mythic's hands halfway to it)
+DANGER_ACC = 0.3                # Reach: a man under this share of the pace (Normal and below, Blind, Tactician) is weak
+
+
+def acc_of(e, prof=None, game="h4"):
+    """Man e's share of the table's pace: Reach, a bot by its difficulty (prof: its profile, known to the team: the
+    owner's choice), a person ACC's; elsewhere ACC's person / bot."""
+    person = not getattr(e, "is_bot", True)
+    if game != "reach" or person or prof is None:
+        return ACC[person]
+    return REACH_ACC.get(getattr(prof, "label", None) or prof.tier, ACC[False])
+
+
+def own_acc(prof):
+    """Its own share of the pace: Demon's DEMON_ACC, Mythic's OWN_ACC."""
+    return OWN_ACC.get(getattr(prof, "label", None) or getattr(prof, "tier", None), DEMON_ACC)
+
 
 def remaining(p, shieldless=False):
     """The share of a Spartan's full pool p has left (shield 70, body 45; without shields the body alone): how an
@@ -76,32 +118,37 @@ def one_shot(p, shieldless=False):
     return shield_left(p, shieldless) <= ONE_SHOT
 
 
-def kill_time(weapon, d, victim, shieldless=False):
+def kill_time(weapon, d, victim, shieldless=False, game="h4"):
     """s for `weapon` at d u to kill `victim` as he is now, every shot landing (precision: his shield's share of the
-    strip, then the headshot; pool: his pool's share; fixed: its time). None or unknown gun: never."""
+    strip, then the headshot; pool: his pool's share; fixed: its time). None or unknown gun: never. game: whose gun
+    table (Reach's REACH_GUNS, else Halo 4's)."""
     if weapon in (None, "none", "flag", "ball", "unknown"):
         return math.inf
-    t, r, how = H4_GUNS.get(weapon, GUN_DEFAULT)
+    guns, finish = GUNS.get(game, (H4_GUNS, FINISH))
+    t, r, how = guns.get(weapon, GUN_DEFAULT)
     if d > r:
         if weapon in MELEE:
             return math.inf
         t *= REACH_PENALTY
     if how == "precision":
-        fin = FINISH.get(weapon, 0.3) * (REACH_PENALTY if d > r else 1.0)
+        fin = finish.get(weapon, 0.3) * (REACH_PENALTY if d > r else 1.0)
         return shield_left(victim, shieldless) * max(0.0, t - fin) + fin
     if how == "pool":
         return remaining(victim, shieldless) * t
     return t
 
 
-def threat(me, my_weapon, e, aware, shieldless=False, riding=False, unseen_late=0.0):
-    """One man for simulate(): (s we need to kill him, s he needs to kill us alone, s before he shoots)."""
+def threat(me, my_weapon, e, aware, shieldless=False, riding=False, unseen_late=0.0, game="h4", acc=None,
+           mine=DEMON_ACC):
+    """One man for simulate(): (s we need to kill him, s he needs to kill us alone, s before he shoots). acc: his share
+    of the pace (default ACC's person / bot; acc_of); mine: ours (own_acc)."""
     d = math.dist((me.pos.x, me.pos.y, me.pos.z), (e.pos.x, e.pos.y, e.pos.z))
-    ours = kill_time(my_weapon, d, e, shieldless) / DEMON_ACC
+    ours = kill_time(my_weapon, d, e, shieldless, game) / mine
     if riding and my_weapon not in ANTI_VEHICLE:
         ours *= RIDER_HARD
-    his = RIDER_TTK * remaining(me, shieldless) if riding else kill_time(e.weapon, d, me, shieldless)
-    his = his / ACC[not getattr(e, "is_bot", True)] if math.isfinite(his) else math.inf
+    his = RIDER_TTK * remaining(me, shieldless) if riding else kill_time(e.weapon, d, me, shieldless, game)
+    acc = ACC[not getattr(e, "is_bot", True)] if acc is None else acc
+    his = his / acc if math.isfinite(his) else math.inf
     late = (0.0 if aware else UNAWARE_S) + unseen_late
     return ours, his, late
 

@@ -200,7 +200,8 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(scores, {})
 
     def test_other_tiers_and_games_unchanged(self):
-        for tier, game_map in (("top", "h4_test"), ("demon", "reach_test")):
+        # (Nov 18: Reach Demon and Mythic have the odds too, tools/test_reach_team_demon.py; Reach Legendary does not)
+        for tier, game_map in (("top", "h4_test"), ("top", "reach_test")):
             with self.subTest(tier=tier, game=game_map):
                 b, me = demon(tier, game_map, shield=0.0, health=0.3, wall=-1.0)
                 him = man(1, -10.0, human=True, facing_me=False)
@@ -356,8 +357,8 @@ class PressTests(unittest.TestCase):
         self.assertTrue(self.press(odds_now=0.3))       # (even on the vitals: upstream presses, odds or not)
         self.assertFalse(self.press(my_shield=0.5))
 
-    def test_legendary_and_reach_demon_keep_the_hold(self):
-        for tier, game_map in (("top", "h4_test"), ("demon", "reach_test")):
+    def test_legendary_keeps_the_hold(self):
+        for tier, game_map in (("top", "h4_test"), ("top", "reach_test")):    # (Nov 18: Reach Demon presses too)
             with self.subTest(tier=tier, game=game_map):
                 self.assertFalse(self.press(tier, game_map, two=True))
 
@@ -721,7 +722,7 @@ class RetreatJukeTests(unittest.TestCase):
         self.assertGreater(abs(a[0] - b[0]), 0.5)
 
     def test_other_tiers_and_games_keep_the_mix(self):
-        for tier, game_map in (("top", "h4_test"), ("demon", "reach_test")):
+        for tier, game_map in (("top", "h4_test"), ("top", "reach_test")):    # (Nov 18: Reach Demon jukes too)
             with self.subTest(tier=tier, game=game_map):
                 self.assertEqual(self.walk(tier, game_map, -0.36, -0.93, 1.0), (-0.36, -0.93 * 0.6 + 0.4))
 
@@ -751,8 +752,10 @@ class ChaseTests(unittest.TestCase):
     def test_others_unchanged(self):
         b, me, snap = self.setup(shield=0.1, health=0.7, tier="top")
         self.assertTrue(b.chase_ok(50.0, me, snap, 1))
-        b, me, snap = self.setup(shield=0.1, health=0.7, game_map="reach_test")
+        b, me, snap = self.setup(shield=0.1, health=0.7, tier="top", game_map="reach_test")
         self.assertTrue(b.chase_ok(50.0, me, snap, 1))
+        b, me, snap = self.setup(shield=0.1, health=0.7, game_map="reach_test")   # (Nov 18: Reach Demon: chase_ok)
+        self.assertFalse(b.chase_ok(50.0, me, snap, 1))
 
 
 class TeamSightingTests(unittest.TestCase):

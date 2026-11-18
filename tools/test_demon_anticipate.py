@@ -339,6 +339,9 @@ class CommitTests(unittest.TestCase):
         bot.per.last_seen[1] = 49.5
         bot.per.beliefs[1] = Belief(cur.pos, Vec(), 49.5, False, "eyes")
         snap = Snapshot(50.0, [me, cur, new])
+        # (Nov 18: Reach Demon chases only by chase_ok, whose "no friend of his near where he went" the dot here would
+        # trip; this test is the dot's nearness alone)
+        bot.chase_ok = lambda *a, **k: True
         for d, want in ((6.0, False), (3.0, True)):           # him 10 u off: a dot at 6 u waits, one at 3 u (2x) is checked
             bot.per.beliefs[2] = Belief(Vec(0, d, 0), Vec(), 49.9, False, "radar")
             bot.goal = ("fight", 1)
