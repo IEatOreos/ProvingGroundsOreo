@@ -92,6 +92,19 @@ class AutopsyTests(unittest.TestCase):
         da.report(deaths, [players], da.YOU, 1, out=out.append)
         self.assertTrue(out[0].startswith("you: 1 deaths"), out[0])
 
+    def test_the_trace_names_its_forge_layout(self):
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from brain.tracefmt import meta_line
+        from brain.profiles import make_profile
+        import random
+        prof = make_profile("demon", "rusher", random.Random(1))
+        on = json.loads(meta_line(1.0, "reach_forge_halo", "reach", 3, "D", 1, prof,
+                                  variant="reach_forge_halo/variants/v079e8abd"))["meta"]
+        off = json.loads(meta_line(1.0, "reach_forge_halo", "reach", 3, "D", 1, prof))["meta"]
+        self.assertEqual((on["map"], on["variant"]), ("reach_forge_halo", "reach_forge_halo/variants/v079e8abd"))
+        self.assertNotIn("variant", off)
+        self.assertIsNone(da.variant_of("trace_reach_test_20261117-205817.jsonl", "reach_test"))   # (no variants)
+
     def test_untouched_shield_read_counts_full(self):
         rows = [{"t": 0.0, "kill_record": 2},
                 {"t": 0.1, "meta": {"map": "m", "game": "reach", "bot": {"id": 3, "name": "D", "team": 1,

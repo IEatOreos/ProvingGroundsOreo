@@ -126,10 +126,15 @@ def think_line(now, index, b):
                            beliefs=beliefs)) + chr(10)
 
 
-def meta_line(now, map_name, game, index, name, team, prof):
-    return json.dumps(dict(t=round(now, 3), meta=dict(map=map_name, game=game, bot=dict(
+def meta_line(now, map_name, game, index, name, team, prof, variant=None):
+    """variant: the map variant played ("<base>/variants/<id>", brain/variants.py), whose terrain has its Forge pieces
+    (custom, Nov 18: tools/death_autopsy.py reads the line of sight on it); map stays the base map's name."""
+    meta = dict(map=map_name, game=game, bot=dict(
         id=index, name=name, team=team, tier=getattr(prof, "label", None) or prof.tier,   # (custom: "demon")
-        pers=prof.personality)))) + chr(10)
+        pers=prof.personality))
+    if variant:
+        meta["variant"] = variant
+    return json.dumps(dict(t=round(now, 3), meta=meta)) + chr(10)
 
 
 def blitz_rows(directors):

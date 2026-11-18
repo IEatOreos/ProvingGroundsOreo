@@ -11,7 +11,8 @@ in their sights; brain/tracefmt.py Everyone) give, for each death, measured the 
   Bot.hurt_by counts a hit), and the shield and health he went into it with
 - shooters: the enemies whose damage of that fight is on the body (the game's own list, 4 at most)
 - whether he saw the man who killed him before his first damage: in his field of view (HFOV, the owner's MCC setting)
-  with a line of sight on the map's terrain (Forge pieces of a layout are not in it: those maps read a little "seen")
+  with a line of sight on the map's terrain: a Forge layout's own, with its pieces (the trace's meta "variant", or
+  variant_of for a trace from before it: on the bare canvas 63% of Forge World pairs read clear, 14% with the pieces)
 - whether he took the fight: an enemy in his sights (row 14) in the second before the first damage; else caught
 - what killed him, how far off the killer was, how long he had been alive, the killer's own shield at the death;
   for a bot also its goal when the fight started and at death (its own rows)
@@ -117,11 +118,32 @@ def has_kills(path):
 
 
 _TERRAIN = {}
+_STAMP = re.compile(r"_(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})\d{2}\.jsonl$")
+
+
+def variant_of(path, mp):
+    """The map variant a trace was played on ("<map>/variants/<id>": a Forge layout, its pieces in its terrain), for a
+    trace written before its meta named it: the variant last (or first) seen at the trace's own start minute
+    (variant.json last_seen, written as the match starts). None: not a variant, or not known."""
+    m = _STAMP.search(os.path.basename(path))
+    vd = os.path.join(ROOT, "maps", mp or "", "variants")
+    if not m or not mp or not os.path.isdir(vd):
+        return None
+    stamp = f"{m[1]}-{m[2]}-{m[3]} {m[4]}:{m[5]}"
+    for v in sorted(os.listdir(vd)):
+        try:
+            with open(os.path.join(vd, v, "variant.json"), encoding="utf-8") as fh:
+                d = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if stamp in (d.get("last_seen"), d.get("first_seen")):
+            return f"{mp}/variants/{v}"
+    return None
 
 
 def map_los(name):
-    """A line-of-sight test on map `name`'s terrain, (a, b) -> bool, or None when it cannot be loaded (then "seen" is the
-    field of view alone)."""
+    """A line-of-sight test on map `name`'s terrain (a map variant's: with its Forge pieces), (a, b) -> bool, or None
+    when it cannot be loaded (then "seen" is the field of view alone)."""
     if name not in _TERRAIN:
         try:
             from brain.core import Vec
@@ -131,6 +153,20 @@ def map_los(name):
         except Exception:
             _TERRAIN[name] = None
     return _TERRAIN[name]
+
+
+TERRAIN_USED = {}       # trace basename -> the map or map variant whose terrain its line of sight was read on
+
+
+def terrain_los(path, mp, variant=None):
+    """The trace's line-of-sight test: its map variant's terrain (named in its meta, else variant_of), else the base
+    map's, else none (field of view alone)."""
+    for name in (variant or variant_of(path, mp), mp):
+        if name and map_los(name) is not None:
+            TERRAIN_USED[os.path.basename(path)] = name
+            return map_los(name)
+    TERRAIN_USED[os.path.basename(path)] = None
+    return lambda a, b: True
 
 
 def wrap(a):
@@ -304,6 +340,7 @@ def read_trace(path, los=None):
     """(deaths, players) of one trace: deaths a list of autopsy dicts (each with "map", "group", "who"), players
     {id: Player}. los: a line-of-sight test (default: the trace's map, map_los)."""
     players, deaths, mp, world, expose_t = {}, [], None, collections.deque(), -99.0
+    variant = None
     get = lambda i: players.setdefault(i, Player(i))           # noqa: E731
     with open(path, encoding="utf-8") as fh:
         for line in fh:
@@ -322,6 +359,7 @@ def read_trace(path, los=None):
                 r = json.loads(line)
                 b = r["meta"].get("bot") or {}
                 mp = mp or r["meta"].get("map")
+                variant = variant or r["meta"].get("variant")
                 if "id" in b:
                     get(b["id"]).bot = (b.get("tier", "?"), b.get("name", "?"))
             elif key == "mode":
@@ -333,7 +371,7 @@ def read_trace(path, los=None):
                     get(i).world(t, w)
                 if t - expose_t >= EXPOSE_EVERY:
                     if los is None and mp is not None:
-                        los = map_los(mp) or (lambda a, b: True)
+                        los = terrain_los(path, mp, variant)
                     ex = exposure(W, los)
                     for i, n in ex.items():
                         players[i].seen_by[min(n, 2)] += t - expose_t if t - expose_t < 2 * EXPOSE_EVERY else EXPOSE_EVERY
@@ -354,7 +392,7 @@ def read_trace(path, los=None):
                 v = k.get("v")
                 if isinstance(v, int):
                     if los is None and mp is not None:
-                        los = map_los(mp) or (lambda a, b: True)
+                        los = terrain_los(path, mp, variant)
                     deaths.append(autopsy(get(v), k, t, world, los))
                     get(v).life_from, get(v).was_alive = None, False
     people = [i for i, p in players.items() if p.bot is None and p.last_t is not None]

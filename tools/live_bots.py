@@ -1227,7 +1227,8 @@ def main():
                         bots[index].kit.unread = ABILITY_READ["bad"]   # (the same set: a reader turned off reads off)
                         slots[index] = slot
                         if trace:                          # who is who (tools/observer.py)
-                            trace.write(meta_line(now, o.map, o.game, index, me.name, me.team, prof))
+                            trace.write(meta_line(now, o.map, o.game, index, me.name, me.team, prof,
+                                                  variant=MAP["name"] if MAP["name"] != o.map else None))
                 cur[0] = snap
 
                 def make(k, members):                   # (a director's members changed: rebuilt with them)

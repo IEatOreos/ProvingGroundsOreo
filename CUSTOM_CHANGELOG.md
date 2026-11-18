@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Demon steps out of a second man's sight; Forge pieces in the analysis line of sight, 2026-11-18
+
+The owner: "a good player knows how to shorten angles, or force an angle that allows them to make a 2v1 their advantage", then "I think we should add line of sight checks to the forge world pieces and then make that rule at the same time".
+
+- **Forge pieces:** in a match, the bots already see a Forge layout's pieces. `live_bots` switches to the layout's own terrain once it identifies the layout (`map variant ...: 143 pieces in the nav`). Only the analysis tools read the bare canvas, because a recording never said which layout it was.
+  - **Now the recording says:** `tracefmt.meta_line(..., variant=)` writes `"variant": "<map>/variants/<id>"` into each bot's meta row (`live_bots`), and `"map"` stays the base map's name.
+  - **Older recordings:** `death_autopsy.variant_of` finds the layout whose `variant.json` was last (or first) seen at the recording's start minute. `terrain_los` reads the line of sight on that layout, else on the base map.
+  - **Checked on Forge World 20261117-205817 (`v079e8abd`):** of 2916 pairs of real player positions, 63% were clear on the bare canvas and 14% with the pieces. All 622 moments the live game recorded a man with an enemy in his sights are clear on the layout's terrain too.
+- **The numbers with Forge pieces** (4 Reach traces): the owner was seen by 2+ enemies at once 22.1 times per 10 minutes alive, the Demon 29.5 (it was 33.7 vs 31.9 with the bare canvas). He died in 12% of those moments, the Demon in 26%. A per-moment pass (every world row) gave 17% of his 47 and 24% of the Demon's 157. Through such a moment he was shooting a median 50% of the time, the Demon 100%: it stays in the duel with the second man on it. The earlier "4.3 s" for the Demon's fatal Forge World moments came from the missing pieces.
+- **`Bot.demon_break_second` (new; `DEMON_WATCH_*`, `DEMON_BREAK_*`), all games, on foot:** when two or more men in view have the Demon in their view (within 40 u, facing within 52.5° of it), it drops its fights and hunts. It goes at `DEMON_BREAK_SCORE` 3.55 to the nearest spot within 1-6 u, a short walk off, that no watcher but the man it fights has a line to.
+  - In each ring it takes first a spot the man it fights still sees (the 2-on-1 becomes a 1v1, and the retreat keeps shooting him). Otherwise it takes one nobody sees.
+  - It keeps the spot 1.5 s while that spot stays out of the others' sight.
+  - **The usual rules decide** with a kill about to land (`finishing`), a watcher within 2 u, no such spot, or while the recharge hold runs. It does not apply in a vehicle, while carrying, on a loose objective, or in Race and Infection.
+- **Validation:** `tools/test_demon_break_second.py` (7 tests): it steps 1 u off, out of B's sight, still in A's; the spot is kept; the second man looking away, a kill about to land, a man on it, or no hidden spot leave the fight; Legendary and Race are unchanged. `test_death_autopsy.py` has a new test for the meta's layout. All 842 regression tests pass. Untested in a match.
+
 ### Death autopsy: the owner's deaths beside every bot tier, 2026-11-18
 
 The owner: "Just as you have the demon autopsy report, you also have one for me, and then we can compare the demon difficulties to what I do as well."

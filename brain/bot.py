@@ -270,6 +270,18 @@ DEMON_RECHARGE_HIT = 1.0           # s: shot this lately, it is not hidden: the 
 # view it is not fighting yet (Bot.demon_no_new_fight), then demon_recharge's hold. tools/death_autopsy.py, the 4 Reach
 # traces with kill rows (Nov 15-17): 6 of 48 Demon deaths began under full shield (median 0.89), 32 of 48 had 2+ shooters
 DEMON_FRESH_COVER_R = 10.0         # u: the farthest cover it walks to off a new man (hidden_spot's reach); none: it fights
+# (custom, Nov 18, owner: "a good player knows how to shorten angles, or force an angle that allows them to make a 2v1
+# their advantage") a second man with eyes on it: the Demon steps out of his sight, onto a spot the man it fights still
+# sees if there is one (Bot.demon_break_second). The owner's 2-on-1 moments (2+ enemies within 40 u with him in view,
+# a line of sight on the terrain, Forge World's with its layout's pieces), 4 Reach traces: 22 a 10 minutes alive to
+# the Demon's 29.5; he died in 17% of his 47, the Demon in 24% of 157; he was shooting through a median 50% of such a
+# moment, the Demon 100% (it stays in the duel with the second man on it)
+DEMON_WATCH_R = 40.0               # u: a man farther off is not counted as watching it (tools/death_autopsy.py EXPOSE_R)
+DEMON_WATCH_HALF = math.radians(52.5)   # his facing this near the line to it: it is in his view (a 105 degree field)
+DEMON_BREAK_RINGS = (1.0, 2.0, 3.0, 4.5, 6.0)   # u: where it looks for a spot out of the second man's sight
+DEMON_BREAK_CLOSE = 2.0            # u: a watcher this near: the melee range fight decides, no step away
+DEMON_BREAK_HOLD = 1.5             # s a chosen spot is kept while it stays out of his sight
+DEMON_BREAK_SCORE = 3.55           # over recharge (3.5), hunts, a trade and pushes; under a losing break (3.6)
 # (custom, Nov 8) Demon leaves a Ghost with this much of its body left or less (may_drive): the owner's 12-20%, the top of
 # it for the 0.8 s the Use hold takes (live Blood Crash 20261108-024522: Camper25's Ghost 100% to 6% in 1.5 s, dead in it)
 DEMON_GHOST_BAIL = 0.20
@@ -2161,6 +2173,90 @@ class Bot:
         scores[("retreat", spot)] = max(scores.get(("retreat", spot), 0.0), DEMON_RECHARGE_SCORE)
         s.note(f"shield {me.shield:.2f}: no new fight until full, into cover")
 
+    def watchers(s, me, snap, seen):
+        """The enemies in view that have it in their view: within DEMON_WATCH_R, facing within DEMON_WATCH_HALF of
+        the line to it (we see him, so he has the line of sight)."""
+        out = []
+        for k in seen:
+            e = snap.player(k)
+            if e is None or not e.alive or dist(e.pos, me.pos) > DEMON_WATCH_R:
+                continue
+            yaw, _ = angles_to(eye(e), me.pos + Vec(0.0, 0.0, 0.35))
+            if abs(wrap(yaw - e.yaw)) <= DEMON_WATCH_HALF:
+                out.append(k)
+        return out
+
+    def demon_break_second(s, now, me, snap, scores, seen):
+        """(custom, Nov 18, owner) A second man with eyes on it: the Demon steps out of his sight. Two or more men in
+        view have it in their view (watchers): no fight and no hunt; at DEMON_BREAK_SCORE to the nearest spot within
+        DEMON_BREAK_RINGS no watcher but the man it fights has a line to, one he still sees first (the 2-on-1 made a
+        1v1: the retreat goes on shooting him), else one none sees. Its spot is kept DEMON_BREAK_HOLD s while it stays
+        out of the others' sight. A kill about to land (finishing), a watcher within DEMON_BREAK_CLOSE, no such spot in
+        reach, the recharge hold, a vehicle, carrying, a loose objective under it, Race and Infection: the usual
+        rules."""
+        if (not profiles.fixed_demon(s.p) or len(seen) < 2 or me.vehicle not in (None, -1) or me.has_flag
+                or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
+                or getattr(s, "recharge_hold", None) is not None):
+            s.break_spot = None
+            return
+        w = s.watchers(me, snap, seen)
+        if len(w) < 2 or s.finishing(snap, seen) or any(dist(me.pos, snap.player(k).pos) < DEMON_BREAK_CLOSE for k in w):
+            s.break_spot = None
+            return
+        cur = s.goal[1] if s.goal[0] == "fight" and s.goal[1] in w else None
+        if cur is None:
+            held = getattr(s, "commit_carry", None)
+            cur = held if held in w else None
+        others = [snap.player(k).pos for k in w if k != cur]
+        T = s.T()
+
+        def open_to(p, who):
+            try:
+                return any(T.los(q, p) for q in who)
+            except Exception:
+                return True
+        kept = getattr(s, "break_spot", None)
+        if kept is not None and now < kept[1] and not open_to(kept[0], others):
+            spot = kept[0]
+        else:
+            spot = s.break_point(me, others, snap.player(cur).pos if cur is not None else None)
+            s.break_spot = (spot, now + DEMON_BREAK_HOLD) if spot is not None else None
+        if spot is None:
+            return                              # nowhere out of his sight in a few steps: the usual rules
+        dropped = [k for k in scores if k[0] in ("fight", "hunt")]
+        for k in dropped:
+            del scores[k]
+        scores[("retreat", spot)] = max(scores.get(("retreat", spot), 0.0), DEMON_BREAK_SCORE)
+        alone = cur is not None and open_to(spot, [snap.player(cur).pos])
+        s.note(f"{len(w)} on it: out of the second man's sight" + (f", #{cur} alone" if alone else ""))
+
+    def break_point(s, me, others, cur_pos):
+        """The nearest walkable spot within DEMON_BREAK_RINGS, a short walk off, none of `others` has a line to: in each
+        ring one the man it fights (cur_pos) still sees first, else one nobody sees. None: no such spot."""
+        T = s.T()
+        for r in DEMON_BREAK_RINGS:
+            hidden = None
+            for i in range(16):
+                a = i * math.pi / 8
+                p = Vec(me.pos.x + math.cos(a) * r, me.pos.y + math.sin(a) * r, me.pos.z)
+                try:
+                    if not T.walkable(p) or any(T.los(q, p) for q in others):
+                        continue
+                    steps = T.path_ahead(me.pos, p, n=int((r * 2.0 + 4.0) / 0.25), limit=r * 2.0 + 4.0)
+                    if not steps or dist(steps[-1], p) >= 1.0 or abs(steps[-1].z - me.pos.z) >= 1.5:
+                        continue
+                    q = steps[-1]
+                    if any(T.los(o, q) for o in others):
+                        continue
+                    if cur_pos is not None and T.los(cur_pos, q):
+                        return q                # the 2-on-1 made a 1v1
+                except Exception:
+                    continue
+                hidden = hidden or q
+            if hidden is not None:
+                return hidden
+        return None
+
     def hidden_spot(s, me, threats):
         """The nearest walkable place a short walk off that no threat has a line to (maps without LiDAR cover spots:
         cover_from finds none there). Rings out to 10 u."""
@@ -3952,6 +4048,7 @@ class Bot:
                     scores[key] *= 0.30
         s.demon_recharge(now, me, snap, scores, seen)   # (custom, Nov 17: Demon, out of sight: cover until its shield is full)
         s.demon_no_new_fight(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, hurt: no new fight, cover first)
+        s.demon_break_second(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, a second man on it: out of his sight)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         mv = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None) if me.vehicle not in (None, -1) else None
