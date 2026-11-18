@@ -4,8 +4,10 @@ import random
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from brain import bot as botmod                     # noqa: E402
 from brain.bot import Belief, Bot                   # noqa: E402
 from brain.core import PlayerState, Vec             # noqa: E402
 from brain.profiles import make_profile             # noqa: E402
@@ -20,6 +22,18 @@ def scene(tier="demon", dot=Vec(-10.0, 0.0, 0.0), source="radar", age=0.1, seen=
 
 
 class DotGlanceTests(unittest.TestCase):
+    # (Nov 18) the glance is off while DEMON_RADAR is on (radar_threat, tools/test_demon_radar.py): tested here as it
+    # was, with the switch off
+    def setUp(self):
+        p = mock.patch.object(botmod, "DEMON_RADAR", False)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_off_with_demon_radar(self):
+        b, me = scene()
+        with mock.patch.object(botmod, "DEMON_RADAR", True):
+            self.assertIsNone(b.dot_glance(10.0, me))
+
     def test_glances_at_a_close_dot_behind(self):
         b, me = scene()
         p = b.dot_glance(10.0, me)

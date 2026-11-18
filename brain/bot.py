@@ -283,6 +283,25 @@ DEMON_BREAK_RINGS = (1.0, 2.0, 3.0, 4.5, 6.0)   # u: where it looks for a spot o
 DEMON_BREAK_CLOSE = 2.0            # u: a watcher this near: the melee range fight decides, no step away
 DEMON_BREAK_HOLD = 1.5             # s a chosen spot is kept while it stays out of his sight
 DEMON_BREAK_SCORE = 3.55           # over recharge (3.5), hunts, a trade and pushes; under a losing break (3.6)
+# (custom, Nov 18, owner: "only watch the dot on the radar ... if the bot cant see someone else, or is getting shot or in
+# a fight", and the map in its radar skills: "if one is behind the wall and the other cant see him what happens then?")
+# Demon's radar attention by threat, not by rotation (Bot.radar_threat in look_point; dot_glance off): a man seen, a hit,
+# then the dots ranked by the map: one with an open line to it first, then the one soonest round his corner (where he
+# comes into view, man_appears' way), its aim held there; one behind walls with a long way round is left. In a fight a
+# dot with an open line counts as a second man for demon_break_second. The owner's Forge World 20261118-180057: in all
+# 8 of N1ghtR4ven's deaths shot first his radar had the killer within 0.5 u, and dot_glance's 2 s per man turned him at
+# 88.2 s from TheNobleOreo's dot to PacMan's 14 u off, Oreo's sniper 1 s later from 3.8 u
+DEMON_RADAR = True
+DOT_THREAT_R = 20.0                # u: dots this near are ranked (the DOT_RANKED nearest)
+DOT_RANKED = 3                     # (2 left the killer out, 12.5 u off past dots at 9.8 and 12.0: 176 s of that match)
+DOT_FRESH = 2.5                    # s: a dot (radar or a team callout) at most this old
+DOT_SPEED = 2.5                    # u/s: a man's walk round to his corner (Reach's run; his time to come into view)
+DOT_IGNORE_S = 4.0                 # s: farther than this from coming into view: left, eyes on its own way
+DOT_NEAR_R = 6.0                   # u: a dot this near with no way to him found: the nav's way to him
+DOT_SWITCH = 0.4                   # s: the dot watched stays until another is this much sooner
+DOT_KEEP = 0.5                     # s: a dot's corner kept while he moves under 1.5 u and it under 1 u (man_appears')
+DOT_STALE = 1.0                    # s past that an old corner still stands in while another dot's walk took the tick
+DOT_BREAK_FRESH = 1.0              # s: a dot this fresh with an open line on it is a second man in a fight
 # (custom, Nov 8) Demon leaves a Ghost with this much of its body left or less (may_drive): the owner's 12-20%, the top of
 # it for the 0.8 s the Use hold takes (live Blood Crash 20261108-024522: Camper25's Ghost 100% to 6% in 1.5 s, dead in it)
 DEMON_GHOST_BAIL = 0.20
@@ -2225,6 +2244,28 @@ class Bot:
                 out.append(k)
         return out
 
+    def open_dots(s, now, me, snap, seen):
+        """(custom, Nov 18) {enemy: where it guesses he is} of the radar dots and team callouts (not in view, under
+        DOT_BREAK_FRESH s old, within DEMON_WATCH_R) with an open line to it on the map: a man who can shoot it that it
+        cannot see, the second man of a fight it is in (demon_break_second). Demon with DEMON_RADAR only."""
+        if not DEMON_RADAR or not profiles.fixed_demon(s.p):
+            return {}
+        T, out = s.T(), {}
+        for k, b in s.per.beliefs.items():
+            if (not isinstance(k, int) or k in seen or b.seen or b.source not in ("radar", "team")
+                    or now - b.t > DOT_BREAK_FRESH or dist(me.pos, b.pos) > DEMON_WATCH_R):
+                continue
+            e = snap.player(k)
+            if e is None or not e.alive or e.team == me.team:
+                continue
+            g = s.guess(now, me, k, b) or b.pos
+            try:
+                if T.los(g, me.pos):
+                    out[k] = g
+            except Exception:
+                continue
+        return out
+
     def demon_break_second(s, now, me, snap, scores, seen):
         """(custom, Nov 18, owner) A second man with eyes on it: the Demon steps out of his sight. Two or more men in
         view have it in their view (watchers): no fight and no hunt; at DEMON_BREAK_SCORE to the nearest spot within
@@ -2233,20 +2274,24 @@ class Bot:
         out of the others' sight. A kill about to land (finishing), a watcher within DEMON_BREAK_CLOSE, no such spot in
         reach, the recharge hold, a vehicle, carrying, a loose objective under it, Race and Infection: the usual
         rules."""
-        if (not profiles.fixed_demon(s.p) or len(seen) < 2 or me.vehicle not in (None, -1) or me.has_flag
+        dots = s.open_dots(now, me, snap, seen) if seen else {}   # (Nov 18: a radar dot with a line on it counts too)
+        if (not profiles.fixed_demon(s.p) or len(seen) + len(dots) < 2 or me.vehicle not in (None, -1) or me.has_flag
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or getattr(s, "recharge_hold", None) is not None):
             s.break_spot = None
             return
         w = [k for k in s.watchers(me, snap, seen) if not s.weak(snap.player(k))]   # (Nov 18: a weak man barely counts)
-        if len(w) < 2 or s.finishing(snap, seen) or any(dist(me.pos, snap.player(k).pos) < DEMON_BREAK_CLOSE for k in w):
+        at = {k: snap.player(k).pos for k in w}
+        at.update({k: q for k, q in dots.items() if not s.weak(snap.player(k))})
+        w = list(at)
+        if len(w) < 2 or s.finishing(snap, seen) or any(dist(me.pos, at[k]) < DEMON_BREAK_CLOSE for k in w):
             s.break_spot = None
             return
-        cur = s.goal[1] if s.goal[0] == "fight" and s.goal[1] in w else None
+        cur = s.goal[1] if s.goal[0] == "fight" and s.goal[1] in w and s.goal[1] in seen else None
         if cur is None:
             held = getattr(s, "commit_carry", None)
-            cur = held if held in w else None
-        others = [snap.player(k).pos for k in w if k != cur]
+            cur = held if held in w and held in seen else None
+        others = [at[k] for k in w if k != cur]
         T = s.T()
 
         def open_to(p, who):
@@ -3013,7 +3058,9 @@ class Bot:
             off = abs(math.atan2(act.strafe, act.forward)) if abs(act.forward) + abs(act.strafe) > 0.1 else 0.0
             # (75 degrees before: walking 60+ degrees off the view 16% of the time to the player's 9%, live Spire)
             if (off > math.radians(60) and not s.notes and now >= getattr(s, "exact_until", 0.0) and gate is None
-                    and glance is None):   # (a Demon's glance at a dot: it runs on at full speed, dot_glance)
+                    and glance is None   # (a Demon's glance at a dot: it runs on at full speed, dot_glance)
+                    and not (s.att and s.att[0] == "radar")):   # (and its watch on a radar threat: on its way at full
+                                                                 # speed, its aim held on his corner: radar_threat)
                 act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
             if kind == "hold":
                 act.crouch = s.p.crouchy > 0.5 and dist(me.pos, point) < 1.5
@@ -9612,8 +9659,8 @@ class Bot:
         at full speed), so a man lining it up from behind comes into view and the fight on the way takes him
         (on_way_target). The owner's Gore Valley CTF, Nov 7: 11% of his hits on Demons came on their objective runs
         while they had him only as a radar dot. Where to look, or None."""
-        if not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle not in (None, -1):
-            return None
+        if not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle not in (None, -1) or DEMON_RADAR:
+            return None                     # (DEMON_RADAR: radar_threat in look_point instead)
         g = getattr(s, "glance", None)
         if g is not None and now < g[1]:
             b = s.per.beliefs.get(g[0])
@@ -9640,6 +9687,83 @@ class Bot:
         s.att = ["glance", f"#{k} radar", round(b.pos.x, 1), round(b.pos.y, 1)]
         s.aim.whip = 1.0
         return b.pos + Vec(0, 0, 0.35)
+
+    def dot_corner(s, now, me, k, g):
+        """(corner, way) for enemy k out of sight at g, from one walk down our way to him (man_appears' search):
+        corner where he comes into view (the last point of it still in our sight, 2 u off or more; None: the way turns
+        out of sight right by us, or there is none), way its length in u (None: no way to him found). Kept per man
+        DOT_KEEP s while he moves under 1.5 u and we under 1 u (man_appears keeps one man only)."""
+        cache = s.__dict__.setdefault("_dot_corner", {})
+        c = cache.get(k)
+        if c and now < c[1] and (g - c[0]).flat() < 1.5 and abs(g.z - c[0].z) < 1.0 and (me.pos - c[2]).flat() < 1.0:
+            return c[3]
+        if getattr(s, "_dot_spent", None) == now:
+            # one new walk a tick (3-7 ms each on Forge World): the others keep their last answer a tick or two more
+            return c[3] if c and now - c[1] < DOT_STALE else (None, None, None)
+        s._dot_spent = now
+        d = (g - me.pos).flat()
+        far = min(d * 1.6 + 8.0, 50.0)
+        T, last = s.T(), None
+        try:
+            pts = list(T.path_ahead(me.pos, g, n=int(far / 0.25), limit=d * 1.6 + 8.0) or ())
+        except Exception:
+            pts = []
+        for q in pts[3::4]:
+            if not T.los(me.pos, q):
+                break
+            last = q
+        corner = last if last is not None and (last - me.pos).flat() >= 2.0 else None
+        out = (corner, len(pts) * 0.25 if pts else None, pts[min(8, len(pts) - 1)] if pts else None)
+        cache[k] = (g, now + DOT_KEEP, me.pos, out)
+        return out
+
+    def radar_threat(s, now, me, known, nav=None):
+        """(custom, Nov 18) Demon, nobody in view and not shot at: the radar dot (or team callout) to watch, ranked by
+        the map, as [att, where to look] or None. Of the DOT_RANKED nearest within DOT_THREAT_R under DOT_FRESH s old,
+        where it guesses each is now: one with an open line to us first (looked at), else the one soonest into view on
+        his walk at DOT_SPEED (dot_corner): round his corner (the corner looked at), or down a way that turns out of
+        our sight right by us (down that way: "way"); with no way found, one within DOT_NEAR_R: the nav's way to him.
+        More than DOT_IGNORE_S from view: left. The one watched keeps the eyes until another is DOT_SWITCH s sooner.
+        Only what a person has: the dots, where they went, the map."""
+        if not DEMON_RADAR or not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle not in (None, -1):
+            return None
+        dots = [(k, b) for k, b in known if isinstance(k, int) and not b.seen and b.source in ("radar", "team")
+                and now - b.t < DOT_FRESH and dist(me.pos, b.pos) < DOT_THREAT_R]
+        if not dots:
+            s.dot_watch = None
+            return None
+        dots = sorted(dots, key=lambda kb: dist(me.pos, kb[1].pos))[:DOT_RANKED]
+        T = s.T()
+        ranked = []
+        for k, b in dots:
+            g = s.guess(now, me, k, b) or b.pos
+            d = dist(me.pos, g)
+            try:
+                open_ = T.los(g, me.pos)
+            except Exception:
+                open_ = False
+            if open_:
+                ranked.append((0.0, d, k, "open", g + Vec(0.0, 0.0, 0.35)))
+                continue
+            corner, way, step = s.dot_corner(now, me, k, g)
+            if corner is not None:
+                t = max((way or 0.0) - dist(me.pos, corner), dist(g, corner)) / DOT_SPEED   # his walk to it
+                ranked.append((t, d, k, "corner", corner))
+            elif way is not None:
+                ranked.append((way / DOT_SPEED, d, k, "way", s.ahead(me, step)))      # out of sight right by us
+            elif d < DOT_NEAR_R and nav is not None:
+                ranked.append((d / DOT_SPEED, d, k, "way", s.ahead(me, nav(me.pos, g))))
+        ranked = [r for r in ranked if r[0] <= DOT_IGNORE_S]
+        if not ranked:
+            s.dot_watch = None
+            return None
+        best = min(ranked, key=lambda r: (r[0], r[1]))
+        cur = next((r for r in ranked if r[2] == getattr(s, "dot_watch", None)), None)
+        if cur is not None and cur[0] <= best[0] + DOT_SWITCH:
+            best = cur
+        t, d, k, how, look = best
+        s.dot_watch = k
+        return [["radar", f"#{k} {how}", round(look.x, 1), round(look.y, 1)], look]
 
     def look_point(s, me, point, nav=None, post=None):
         # look at the most recent threat it knows of: what it saw or what hit it, and a radar dot or a callout
@@ -9698,6 +9822,12 @@ class Bot:
                 s.att = ["watch", f"#{hit[0]} hit", round(hit[1].pos.x, 1), round(hit[1].pos.y, 1)]
                 s.aim.whip = max(s.p.aware, HIT_WHIP)   # a quick spin to it (Aim.step), not a walking turn
                 return hit[1].pos
+            # (custom, Nov 18) Demon, nobody in view: the radar dot the map says is the danger, held (radar_threat)
+            rt = None if any(bb.seen for _, bb in known) else s.radar_threat(now, me, known, nav)
+            if rt is not None:
+                s.att = rt[0]
+                s.aim.whip = 1.0
+                return rt[1]
             if nav is None or s.T().los(eye(me), b.pos + Vec(0, 0, 0.35)):
                 s.att = label
                 return b.pos                          # in the open: on him
