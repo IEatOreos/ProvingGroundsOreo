@@ -175,6 +175,9 @@ def load_map(name):
     v = info(name)
     if v is not None:
         m["variant"], m["window"] = v, tuple(v["window"]) if v.get("window") else None
+    # (custom, Nov 18) the base's lifts and cannons this layout lacks: left out, their rides too (_build: off_gone_pads)
+    m["features"], m["lifts_gone"] = layout_lifts(m["features"], m.get("variant"),
+                                                  {it["name"] for it in objs.get("placed", ())})
     m["features"] = owner_ride_pads(m["features"], data_names(m))   # (custom) the owner's lift / man cannon pads
     return m
 
@@ -369,6 +372,50 @@ def owner_ride_pads(features, names):
             out.append(dict(kind="lift" if r["kind"] == "lift" else "launcher", name=r.get("name") or "owner ride",
                             pos=list(p), owner=True))
     return out
+
+
+# (custom, Nov 18) a map variant's lifts: the base scenario's gravity lifts and man cannons (features.json group "crates")
+# its layout has no piece of, within LAYOUT_PAD_SAME, are not there. The owner's bug report, Damnation Anniversary
+# (reach_cex_damnation v08b84b0d), "Bots stuck on damnation": its .mvar has the tall lift, not the short one, and three
+# bots stood in the short one's spot 105-157 s each, waiting for a push (its ride from the base map's simulator rides)
+LAYOUT_PAD_SAME = 1.5    # u, flat and in height: a lift or cannon piece this near a base lift's pad is that lift
+LAYOUT_PAD_R = 2.0       # u: a ride link from this near a gone pad's base (LIFT_COLUMN) is its ride
+_LIFT_PIECE = ("lift", "cannon")
+
+
+def layout_lifts(features, variant, placed=()):
+    """(features kept, pads gone [(name, pos)]): a variant's (variant.json "pieces") base lifts and launchers of the
+    scenario's crates with no lift or cannon piece on their pad (any name: Battle Canyon's blue lift is a
+    gravity_lift_blue on the base's gravity_lift). Only when its pieces carry the base's placed objects (placed: their
+    names, objects.json): a layout read without them says nothing of its lifts. Not a variant: as they are."""
+    pieces = (variant or {}).get("pieces") or []
+    if not pieces or not any(p[0] in placed for p in pieces):
+        return list(features), []
+    pads = [p for p in pieces if any(w in p[0].lower() for w in _LIFT_PIECE) and "door" not in p[0].lower()]
+    keep, gone = [], []
+    for f in features:
+        q = f.get("pos")
+        if (f.get("kind") in ("lift", "launcher") and f.get("group") == "crates" and q
+                and not any(math.hypot(p[1] - q[0], p[2] - q[1]) < LAYOUT_PAD_SAME and abs(p[3] - q[2]) < LAYOUT_PAD_SAME
+                            for p in pads)):
+            gone.append((f.get("name", ""), list(q[:3])))
+            continue
+        keep.append(f)
+    return keep, gone
+
+
+def off_gone_pads(links, gone):
+    """links less the rides from a pad its layout lacks (layout_lifts): flagged ride, or rising LIFT_RISE+, from within
+    LAYOUT_PAD_R of its base and 3 u of its height (no jump climbs 2 u there: something pushed)."""
+    if not gone:
+        return list(links)
+
+    def ride_off(k):
+        to, la = k.get("take_off"), k.get("land")
+        if not (to and la) or not (k.get("ride") or k.get("launch") or la[2] - to[2] >= LIFT_RISE):
+            return False
+        return any(math.hypot(to[0] - p[0], to[1] - p[1]) < LAYOUT_PAD_R and abs(to[2] - p[2]) < 3.0 for _, p in gone)
+    return [k for k in links if not ride_off(k)]
 
 
 VEHICLE_BLOCKS = "vehicle_blocks.json"   # (custom, Nov 13) areas the owner keeps every ground vehicle out of
@@ -593,8 +640,8 @@ def _build(m, window):
         jumps = sorted(data.get("jumps", []))       # apexes LiDAR measured on this map
         T.jump_apex = jumps[len(jumps) // 2] if len(jumps) >= 20 else 0.8
         links = usable_links(data.get("links", []))
-    links = anchor_launches(links + painted, m.get("features", []))
-    links += owner_ride_links(names)     # (custom) the owner's lifts and man cannons (LiDAR view, Edit spots)
+    links = off_gone_pads(anchor_launches(links + painted, m.get("features", [])), m.get("lifts_gone"))
+    links += owner_ride_links(names)    # (custom) the owner's lifts and man cannons (LiDAR view, Edit spots)
     if links:
         T.add_human_links(links)
     if paint:

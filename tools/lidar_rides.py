@@ -302,6 +302,23 @@ def load(map_name):
         return {}
 
 
+def layout(map_name):
+    """load(map_name) less the lifts and cannons a map variant's layout lacks (brain/maps.py layout_lifts, its
+    "lifts_gone"; custom, Nov 18: Damnation Anniversary has no short lift, and LiDAR's and the simulator's bots rode
+    the base's). A built-in map or a map not loadable: load's."""
+    data = load(map_name)
+    try:
+        from brain.maps import get_map
+        gone = get_map(map_name).get("lifts_gone") or []
+    except Exception:                                # (no map data: every object, as before)
+        gone = []
+    if not gone:
+        return data
+    keep = [o for o in data.get("objects", [])
+            if not any(o.get("name") == n and math.dist(o["pos"][:3], p[:3]) < 0.5 for n, p in gone)]
+    return dict(data, objects=keep)
+
+
 def inside(shape, p):
     """Is p (a body's test point) in the shape's box (object-rotated)?"""
     c, r = shape["center"], shape.get("_r") or math.sqrt(sum(h * h for h in shape["half"]))
@@ -396,8 +413,9 @@ def step_in(T, obj):
 
 
 def ride_links(map_name, T, ph):
-    """Every lift / man cannon of the map as a ride link (phantoms.json, solved with this game's physics)."""
-    data = load(map_name)
+    """Every lift / man cannon of the map as a ride link (phantoms.json, solved with this game's physics; a variant's:
+    those its layout has, layout)."""
+    data = layout(map_name)
     shapes = all_shapes(data)
     out = []
     for o in data.get("objects", []):

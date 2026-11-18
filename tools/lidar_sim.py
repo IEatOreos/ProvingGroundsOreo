@@ -352,7 +352,8 @@ def run_map(name, o, switch, k, n, log, ctl=None):
     rec.phys = J.Phys(game, jumps[len(jumps) // 2] if len(jumps) >= 20 else None)
     lidar.PROBE_P, lidar.HZ = 0.0, HZ               # a probe needs the game's own leniency: not here
     lidar.USE_P = 0.0                               # nor can it press switches
-    T.phantoms = lidar_rides.all_shapes(lidar_rides.load(name))   # lifts and man cannons push (their tags' numbers)
+    T.phantoms = lidar_rides.all_shapes(lidar_rides.layout(name))   # lifts and man cannons push (their tags' numbers;
+    # a variant's: those its layout has)
     lidar.RIDE_P = RIDE_P if T.phantoms else 0.0    # (without them rides come from real matches)
     T.rides = [(l["take_off"], l["path"], l.get("air_s") or 1.5) for l in usable_links(rec.links) if l.get("ride")
                and l.get("found_by") != "map"]      # (recorded rides replay their path; map rides are flown)

@@ -114,6 +114,11 @@ GROUND_RISE = 15.0           # u: a goal this far over the bot is no trip for a 
 GETAWAY_PARK_R = 3.0         # u: the getaway ride parks this near its spot (director.vehicle_jobs)
 RIDE_OUT_R = 10.0            # a rider this near his objective gets out (a runner at their flag: director.vehicle_jobs taxi)
 LANDED_OUT_H = 1.5           # u: ... but out of an aircraft only once it is down this low over the floor under it
+# (custom, Nov 18) in a gravity lift's column middle this long and not lifted: no lift there (a layout without it, one
+# off in this mode). Damnation Anniversary has no short lift: three bots stood in its spot 105-157 s, every 12 s the
+# ride over and run again (ride_lift); a working lift lifts at once (its tall one: 0.5 u up the tick a bot was in).
+# Every take-off into that column is then left for LIFT_DEAD_BAN s (jump_blocked)
+LIFT_DEAD_S, LIFT_DEAD_BAN = 3.0, 300.0
 PRESS_ITEM, PRESS_ITEM_R = 0.5, 1.5   # an Invasion core runner's gun on its way more than this off: scaled (keep_role)
 NADE_TEAM_R, NADE_LOOK = 4.0, 1.0   # u, s: no grenade with a teammate this near where it goes, now or this soon (nade_clear)
 CALLED_WAIT_R = 15.0         # a driver waits (8 s at most) for a teammate called aboard while he is this near (crew_coming)
@@ -9296,17 +9301,26 @@ class Bot:
         z0, key = getattr(s, "lift_from", (me.pos.z, None))
         # (beside the column or on a floor over its base: the ledge round Construct's wells is 0.9 u off the middle)
         stalled = now - t0 > 3.0 and me.pos.z < z0 + 1.0 and ((me.pos - base).flat() > 0.6 or me.pos.z > base.z + 1.5)
-        if stalled and key is not None:
+        # (custom, Nov 18) in the column's middle LIFT_DEAD_S and not lifted: no lift here (LIFT_DEAD_S)
+        if (me.pos - base).flat() <= 0.6 and me.pos.z < min(z0, base.z) + 0.5:
+            if getattr(s, "lift_in", (None, 0.0))[0] != t0:
+                s.lift_in = (t0, now)
+        else:
+            s.lift_in = (None, 0.0)
+        lin = getattr(s, "lift_in", (None, 0.0))
+        dead = lin[0] == t0 and now - lin[1] > LIFT_DEAD_S
+        if (stalled or dead) and key is not None:
             # every people's take-off into this column from about this height (Construct: 3-4 a lift off the middle
             # floor, 3 s lost at each in turn)
+            ban = now + (LIFT_DEAD_BAN if dead else 60.0)
             fails = s.__dict__.setdefault("jump_fails", {})
-            fails[key] = (2, now + 60.0)
+            fails[key] = (2, ban)
             for _, _, k, _ in getattr(s.T(), "hjumps", ()):
                 to = k["take_off"]
                 if math.hypot(to[0] - base.x, to[1] - base.y) < 3.0 and abs(to[2] - z0) < 1.0:
-                    fails[(round(to[0], 1), round(to[1], 1))] = (2, now + 60.0)
-            s.note("lift: no way into the column from here")
-        if landed or failed or stalled or now - t0 > 12.0:
+                    fails[(round(to[0], 1), round(to[1], 1))] = (2, ban)
+            s.note("lift: in it and not lifted, no lift here" if dead else "lift: no way into the column from here")
+        if landed or failed or stalled or dead or now - t0 > 12.0:
             s.lift_ride = None
             return False
         if me.pos.z > land.z + 0.3:
