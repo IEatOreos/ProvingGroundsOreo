@@ -1169,6 +1169,13 @@ class LiveReach(LiveH3):
 
     OBJECTS_AT, TYPE_AT, POS_AT, SLOTS_AT, PARENT_AT = 0x10, 4, 0x44, 0x350, 0x14   # LiveH3.flags on Reach's layout
     CHAIN_ATTACHED = False     # (its orientation after POS_AT not checked: LiveH3)
+    # (custom, Nov 17) Stockpile's flags by the map's tag names ("objects\\weapons\\multiplayer\\flag\\flag", _own_name),
+    # as LiveH4F's objectives, not learned off a stand: on a Forge layout whose flag stands sit on weapon spawns the flag
+    # was a gun's tag (LiveH3._placed). The owner's Pinnacle Stockpile 20261117-205817: a rocket launcher 0.15 u and a
+    # plasma pistol 0.12 u from stands; no flag seen in 49 s, then the gun a bot dropped dying on a stand was learned
+    # and up to 17 dropped guns were loose flags the bots stood on for 20 s and more; the one carry (3.7-10.9 s) was
+    # never seen, and 0-0 at both minute collections. CTF (_flag_tags) still learns by stand
+    OBJECTIVE_NAMES = {("_obj_tags", "stockpile"): ("flag",)}
 
     def _unpack(s, v):
         """A packed tag data address: base by the top 4 bits, plus 4 x the whole value (as the game does)."""

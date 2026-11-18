@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Reach Stockpile: the flags found on Forge layouts (Pinnacle), 2026-11-17
+
+The owner's bug reports from Pinnacle Stockpile on Forge World (TU STOCKPILE: 4 flags, random placement, collected every minute; recording 20261117-205817): "Bots all stuck here" (102 s) and "Bots cant play stockpile on pinnacle" (122 s).
+
+- Found in the match's recording: the brain never saw a flag. Its objective list stayed empty for 49 s while the four flags lay on their stands. Bot 1 (blue) picked one up at 3.7 s, 4.5 u from its own goal; not counted as the carrier, it switched to its rifle at 11 s, which dropped the flag, and was killed at 13.2 s. That was the match's only carry.
+- From 49.6 s the gun a bot dropped dying on a stand was taken for the flag's kind, and up to 17 dropped guns were "loose flags". Runners and escorts were sent to them and stood on them: three blue bots on one at (122, 186.5) from 60 to 90 s, below where the owner stood for the first report; a red bot on another at (139, 177) from 66 to 84 s. Around the first report the blue bots waited at the teleporter whose exit red stood on. 0-0 at both collections.
+- Cause: Reach's reader learns the flag's kind from the first object seen lying on a flag stand (LiveH3 `flags_by_stand`), and never from a kind with an object on one of the map's weapon spawns, so that no gun on a stand is taken for a flag. Pinnacle's stands sit on weapon spawns: the rocket launcher's 0.15 u from one, the plasma pistol's 0.12 and 0.15 u from two, the magnum's 0.36 u from another. The flag counted as a gun; and once a wrong kind is learned, no other is.
+- `brain/live.py` `LiveReach.OBJECTIVE_NAMES` (new): Stockpile's flags are named by the map's tag names (`objects\weapons\multiplayer\flag\flag`, `_own_name`), as Halo 4's and H2A's objectives already are (`_name_objectives`). With the flag named, no gun is learned in its place. Only Stockpile's set is named; CTF and Assault on Reach still learn by stand.
+- Validation: `tools/test_reach_stockpile_flags.py` (new, 6 tests). They put Pinnacle's own stands and weapon spawns in a stand-in object table read by the real `LiveReach.objective_items`:
+  - a flag beside the rocket spawn is found, and four flags are all found;
+  - a gun dropped on a stand is no flag, over three reads;
+  - a carried flag (third slot) names its carrier;
+  - CTF's set is untouched;
+  - with the names off, the old way misses the flag and learns the dropped gun (the bug).
+- Against Forge World's own tag list, every index in the flag's block resolves to `flag`, and the DMR, rocket launcher and plasma pistol to their own names. All 798 `tools/test_*.py` pass. Not yet seen in a match: bots carrying flags home and dropping them in the goal on Pinnacle.
+
 ### Demon stays in cover until its shield is full, 2026-11-17
 
 The owner: "They need to stay in cover and fully recharge their sheilds. currently they do break line of sight, but they seem to re challenge when the shields start to recharge, Not at full. Or even 75%".
