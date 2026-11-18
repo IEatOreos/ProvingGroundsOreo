@@ -607,6 +607,16 @@ AUTO = {"assault_rifle", "smg", "smg_silenced", "plasma_rifle", "plasma_rifle_re
         "storm_rifle", "suppressor"}
 BEAM = {"focus_rifle", "sentinel_beam"}   # a continuous beam: held on the man at any range, never in bursts
 NADE_CLEAR, NADE_FUSE = 4.5, 3.0          # u, s: the spot its own grenade went is kept clear of this long
+# (custom, Nov 18) a live grenade by us (snap.grenades, LiveReach.grenades): run out of its blast (Bot.enemy_grenade).
+# Halo Infinite's bots do the same as a fixed reflex (its Avoid behaviour: 0.9 over everything but a vehicle, ODST and
+# Spartan only); here every tier but Easy, after its reaction and a notice time that shrinks with awareness
+NADE_DODGE_R = 4.0       # u, flat: a grenade (or where its flight puts it in NADE_DODGE_LOOK s) this close is run from
+NADE_DODGE_DZ = 2.5      # u: and this near our height (one on a floor above or below is not ours)
+NADE_DODGE_LOOK = 0.4    # s: a grenade still moving: where it will be this soon (its rolls and short arcs)
+NADE_OWN_R = 1.5         # u: one first seen this close to us within NADE_OWN_S of its first sight is our own throw
+NADE_OWN_S = 0.3
+NADE_NOTICE = 0.3        # s, times (1 - aware): the time to notice it, over the tier's reaction (Demon / Legendary 0)
+NADE_REACT_MIN = 0.2     # s: no one moves for one sooner than this after it shows
 SHORT_BAND = 4.0
 CLOSE = 2.5      # inside this a fight is close quarters: the automatic or shotgun comes out, rifles spam
 # the fastest a skilled player fires each semi-automatic (s between presses) when misses cost little:
@@ -3144,6 +3154,7 @@ class Bot:
             # (after the kit's dash, the give-way and the grenade step: live B15 holders still left 1.4-2.4 u fighting
             # with the clamp in the fight alone; the evade and the give-way stepped them out after it)
             s.keep_in_zone(me, snap, act)
+        s.enemy_grenade(now, me, act, snap)    # (custom, Nov 18: after the zone's clamp, a frag outranks the post)
         s.obstacle_guard(now, me, act, snap)
         press = getattr(s.kit, "press", None)
         if act.equipment and press is not None and press[0] == "sprint" and abs(act.strafe) > 0.1:
@@ -7246,6 +7257,64 @@ class Bot:
         mx, my = mx - 2.0 * toward * ux, my - 2.0 * toward * uy       # the step toward it, mirrored away
         act.forward, act.strafe = c * mx + sn * my, -sn * mx + c * my
         s.note("grenade: clear of my own")
+
+    def nade_danger(s, now, me, snap):
+        """(custom, Nov 18) The nearest live grenade it has noticed whose blast would reach it: (the point it runs from,
+        its kind), or None. Noticed: shown NADE_REACT_MIN s, and the tier's reaction plus NADE_NOTICE * (1 - aware);
+        Easy never. A grenade still moving counts where it will be in NADE_DODGE_LOOK s as well. Its own throws (first
+        seen at its hand) are left to own_grenade."""
+        nades = getattr(snap, "grenades", None)
+        if not nades or s.p.tier == "novice" or me.vehicle not in (None, -1):
+            return None
+        mine = s.__dict__.setdefault("own_nades", set())
+        wait = max(NADE_REACT_MIN, s.p.reaction + NADE_NOTICE * (1.0 - s.p.aware))
+        best = None
+        for g in nades:
+            h, since, at = g.get("h"), g.get("since", g.get("t", now)), g.get("pos")
+            if at is None or h in mine:
+                continue
+            first = g.get("from")
+            if first is not None and now - since < NADE_OWN_S and (first - me.pos).flat() < NADE_OWN_R:
+                mine.add(h)
+                continue
+            if now - since < wait:
+                continue
+            pts = [at]
+            v = g.get("vel")
+            if v is not None and v.flat() > 1.0:
+                pts.append(Vec(at.x + v.x * NADE_DODGE_LOOK, at.y + v.y * NADE_DODGE_LOOK, at.z))
+            for p in pts:
+                d = (p - me.pos).flat()
+                if d < NADE_DODGE_R and abs(p.z - me.pos.z) < NADE_DODGE_DZ and (best is None or d < best[0]):
+                    best = (d, p, g.get("kind"))
+        if len(mine) > 32:
+            mine.clear()
+        return (best[1], best[2]) if best is not None else None
+
+    def enemy_grenade(s, now, me, act, snap):
+        """(custom, Nov 18) Out of a live grenade's blast (nade_danger): the move goes straight away from it, or the
+        nearest turn off that line with room (blocked_way); the view and the trigger stay on the fight, so it shoots
+        while it runs. edge_guard after it still keeps it off a drop. The owner's Forge World 20261118-180057: frags
+        killed three of N1ghtR4ven's 13 deaths and he never moved for one; the bots read no grenade live before."""
+        danger = s.nade_danger(now, me, snap)
+        if danger is None:
+            return
+        p, kind = danger
+        off = me.pos - p
+        if off.flat() > 0.2:
+            away = math.atan2(off.y, off.x)
+        else:                              # at its feet: back off the way it faces from
+            away = me.yaw + math.pi
+        T = s.T() if s.map is not None else None
+        way = away
+        if T is not None and getattr(T, "clearance", None) is not None:
+            for turn in (0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5):
+                if s.blocked_way(T, me, snap, away + turn) is None:
+                    way = away + turn
+                    break
+        act.forward, act.strafe = math.cos(way - act.yaw), math.sin(way - act.yaw)   # (strafe + = left)
+        act.crouch = False
+        s.note(f"grenade: out of the blast ({kind or 'grenade'})")
 
     def obstacle_guard(s, now, me, act, snap):
         """What is right in front of the move, seen before the bot runs into it: blocked_way along the way it moves. In a

@@ -477,9 +477,12 @@ class Kit:
                  sniper=next((e for e in seen if e.weapon in SNIPERS and dist(e.pos, me.pos) > 12.0 and facing_me(e, me, 0.15)), None),
                  still=next((e for e in seen if now - s.still_since.get(e.id, now) > 2.0), None),
                  os=next((e for e in seen if e.shield > 1.05), None))
-        # a grenade about to go off by us: one seen landing (snap.grenades: the simulator's; live none are read) or our own
-        # (Bot.own_grenade's spot), any team's (they hurt everyone)
-        nades = [g["pos"] for g in snap.grenades if now - g["t"] < NADE_FUSE_SEEN]
+        # a grenade about to go off by us: one seen landing (snap.grenades: Reach's live ones, LiveReach.grenades, through
+        # Bot.nade_danger: noticed after the tier's reaction, never its own throw at its hand, which would lock or dash
+        # it at every throw) or our own (Bot.own_grenade's spot), any team's (they hurt everyone)
+        nade_danger = getattr(bot, "nade_danger", None)
+        seen_nade = nade_danger(now, me, snap) if nade_danger is not None else None
+        nades = [seen_nade[0]] if seen_nade is not None else []
         own = getattr(bot, "nade_at", None)
         if own is not None and now < own[1]:
             nades.append(own[0])

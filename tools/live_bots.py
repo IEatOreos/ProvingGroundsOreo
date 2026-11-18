@@ -315,6 +315,20 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
             snap.deployed = live.deployed(raw, now)
         except Exception:
             snap.deployed = []
+    if getattr(live, "GRENADE_READ", False):     # (custom, Nov 18) Reach's live hand grenades (LiveReach.grenades), 10 a
+        if now - NADES["t"] >= 0.1:              # second: a frag's flight and fuse are seconds long
+            NADES["t"] = now
+            try:
+                NADES["list"] = live.grenades(now)
+                if NADES["list"] and not NADES["told"]:
+                    NADES["told"] = True
+                    print(f"{now:6.1f}s grenades read live ({NADES['list'][0]['kind']})", flush=True)
+            except Exception as e:               # (an object read raced the game: the next read tries again)
+                NADES["list"] = []
+                if not NADES["warned"]:
+                    NADES["warned"] = True
+                    print(f"grenade read: {type(e).__name__}: {e}", flush=True)
+        snap.grenades = NADES["list"]
     if hasattr(live, "match_state") and now - MATCH["t"] > 0.5:      # score, the variant's limit, time left
         MATCH["t"] = now
         try:
@@ -415,6 +429,7 @@ def vehicle_left(live, handle):
 GROUND = {"t": -1.0, "list": []}     # loose weapons, re-read twice a second
 PICKUP_GAMES = ("ce", "h2", "h3", "reach", "h4")   # games where a bot's Use takes a gun (Bot.can_pickup, main)
 MATCH = {"t": -1.0, "v": None}       # live.match_state(): score, limit, time left, twice a second
+NADES = {"t": -1.0, "list": [], "told": False, "warned": False}   # live hand grenades (LiveReach.grenades), 10 a second
 
 
 def match_sane(v):

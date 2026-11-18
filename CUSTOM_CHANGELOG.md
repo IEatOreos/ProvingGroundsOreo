@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Reach bots read live grenades and run out of them, 2026-11-18
+
+The owner, after Forge World Team Slayer DMR 20261118-180057, where the last-place Demon N1ghtR4ven went 7-13: "make them read enemy grenades".
+
+- **Found** (the match's trace and `tools/death_autopsy.py`): frags killed 3 of N1ghtR4ven's 13 deaths and he never moved for one; grenades were 16% of the Demons' deaths against 5% of the two people's. No bot could react to one live: `snap.grenades` had only ever been filled in a simulator that is gone, so equipment's grenade cue saw only a bot's own throws.
+- `brain/live.py` `LiveReach.grenades`: the hand grenades lying or flying loose, read from the objects of type 5 (the projectiles, which `tools/live_bots.py`'s grenade watch already reads to learn throws) by their own tag name, `objects\weapons\grenade\frag_grenade\frag_grenade` or `...\plasma_grenade\plasma_grenade` (`_grenade_kind`: a tag whose own index names another object, the frag's detonation_hack say, is not taken for the grenade). Each comes with its position, its speed from the last read, and where and when it was first seen. A plasma stuck to someone is left out. `GRENADE_READ` is off for `LiveH4F` (Halo 4 / H2A: not checked there).
+- `tools/live_bots.py`: `snap.grenades` from it 10 times a second in Reach; the console says `grenades read live (frag_grenade)` the first time one is read in a match, and a read error is printed once and never stops the bots.
+- `brain/bot.py` `Bot.nade_danger` / `enemy_grenade`: a grenade within `NADE_DODGE_R` 4 u (flat) and 2.5 u of its height, or one still moving that will be there in 0.4 s, is run from: straight away, or the nearest turn off that line with room (`blocked_way`). The view and the trigger stay on the fight, so it shoots as it goes; `edge_guard` after it still stops it at a drop. It reacts after its tier's reaction plus 0.3 s × (1 − aware), never under 0.2 s (Demon and Legendary 0.2 s, Normal about 0.39 s); Easy never. Its own throw (first seen within 1.5 u of it in the first 0.3 s) is left to `own_grenade`. Called in `plan` after `keep_in_zone` (a frag outranks a post) and before `obstacle_guard` and `edge_guard`. Halo Infinite's bots have the same reflex (its Avoid behaviour, ODST and Spartan only).
+- `brain/equipment.py`: the grenade cue (dash, jetpack, armor lock at its feet) now goes through `Bot.nade_danger`, so it has the same notice time and never locks or dashes at the bot's own throw.
+- Validation: `tools/test_enemy_grenade.py` (new, 11: notice times by tier and Easy never, far, high and in-vehicle grenades left, a flying one counted where it lands, its own throw left, a wall turning the escape, the equipment cue, the order in `plan`, the tag naming, a made-up memory read with speed, first sight and forgetting, Halo 4 off). The tag naming checked on Forge World's own tag names. All 884 regression tests pass. **Untested in a match:** that Reach's live projectiles carry these tag indexes, the 10-a-second read's cost, and how well the escape saves a bot.
+
 ### Reach Assault round two: bot members kept over the round change, 2026-11-18
 
 The owner, after One Bomb (TU) on Pinnacle with Sakallis joined: at round two players were "skating" and the red enemy reticle showed over teammates.

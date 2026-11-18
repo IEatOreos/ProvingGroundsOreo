@@ -1457,6 +1457,73 @@ class LiveReach(LiveH3):
                 out.append(struct.unpack_from("<3f", head, s.POS_AT))
         return out
 
+    # (custom, Nov 18) live hand grenades for the bots to get out of (core.Snapshot.grenades, Bot.enemy_grenade,
+    # equipment's dash / jetpack / lock). Projectiles are objects of type 5 here (tools/live_bots.py's grenade watch
+    # learned Reach throws from them); a frag's and a plasma's own tag is "objects\\weapons\\grenade\\X\\X" (the map's
+    # tag names, _own_name). The owner's Forge World 20261118-180057: 16% of the Demons' deaths were grenades, 5% of the
+    # people's, and none of the bots ever moved for one: snap.grenades had only ever been filled in a simulator
+    GRENADE_READ = True
+    GRENADE_KINDS = ("frag_grenade", "plasma_grenade")
+
+    def grenades(s, now):
+        """[{h, kind, pos, vel, from, since, team, t}] of the hand grenades lying or flying loose: pos and vel (u/s, from
+        the last read) now, from and since where and when first seen, team -1 (whose is not read: a grenade hurts
+        everyone), t now. A grenade stuck to someone (a parent) is left out: its position is its parent's frame."""
+        from .core import Vec
+        if not s.GRENADE_READ:
+            return []
+        ents, mx, _ = s._array(s.OBJECTS_AT)
+        b = s.g.read(ents, mx * 0x18)
+        kinds = s.__dict__.setdefault("_grenade_tags", {})
+        seen = s.__dict__.setdefault("_grenades_seen", {})
+        out, alive = [], set()
+        for i in range(mx):
+            salt = struct.unpack_from("<H", b, i * 0x18)[0]
+            if not salt or b[i * 0x18 + s.TYPE_AT] != 5:
+                continue
+            o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
+            head = s.g.read(o, s.POS_AT + 12)
+            if not head:
+                continue
+            tag, parent = struct.unpack_from("<I", head, 0)[0], struct.unpack_from("<I", head, s.PARENT_AT)[0]
+            if tag not in kinds:
+                kinds[tag] = s._grenade_kind(tag)
+            if kinds[tag] is None or parent != NONE:
+                continue
+            h = (salt << 16) | i
+            pos = Vec(*struct.unpack_from("<3f", head, s.POS_AT))
+            alive.add(h)
+            was = seen.get(h)
+            if was is None:
+                seen[h] = was = dict(from_=pos, since=now, last=pos, last_t=now, vel=Vec())
+            elif now - was["last_t"] > 1e-3:
+                k = 1.0 / (now - was["last_t"])
+                was["vel"] = Vec((pos.x - was["last"].x) * k, (pos.y - was["last"].y) * k, (pos.z - was["last"].z) * k)
+                was["last"], was["last_t"] = pos, now
+            out.append(dict(h=h, kind=kinds[tag], pos=pos, vel=was["vel"], since=was["since"], team=-1, t=now,
+                            **{"from": was["from_"]}))
+        for h in [h for h in seen if h not in alive]:
+            del seen[h]
+        return out
+
+    def _grenade_kind(s, tag):
+        """"frag_grenade" / "plasma_grenade" for a hand grenade's projectile tag, else None. _own_name looks up to 4
+        names back (an index that fell past its own name); a tag whose own index names another object (a grenade's
+        detonation_hack, say: its index sits 2 past the frag's) is not taken for the grenade before it."""
+        own = s._own_name(tag, "grenade")
+        if own not in s.GRENADE_KINDS:
+            return None
+        try:
+            from .forge import _tag_names
+            names = _tag_names(s)
+            here = names[tag & 0xFFFF] if (tag & 0xFFFF) < len(names) else ""
+        except Exception:
+            return None
+        parts = (here or "").split("\\")
+        if parts[0] == "objects" and not (len(parts) >= 2 and parts[-1] == parts[-2] == own):
+            return None
+        return own
+
     def _learn_vehicle(s, tag, pos):
         """On its placement (LiveH3), else by the map's own tag name (the .map file's names in tag-index order,
         brain/forge.py): a vehicle the scenario never places is named too (Forge World: every vehicle is the map
@@ -1899,6 +1966,7 @@ class LiveH4F(LiveReach):
     before health, 0..1)."""
     PATHS = {"halo4.dll": 0x2A30288, "groundhog.dll": 0x1457018}     # the running map's path ('levels\multi\<map>\<map>')
     TRACKER_AT = 0x758         # (LiveH3.tracker; both games: Unchanged 3, Off 1 seen live)
+    GRENADE_READ = False       # (LiveReach.grenades: Reach's object and tag layout only, not checked in these games)
     # (Live.vehicle_dead / vehicle_left: halo4.dll 0x180683124 and groundhog.dll 0x180683e80, object_get_health)
     DEAD_AT, HEALTH_BLOCK = 0x16C, 0x1D0
     # (custom, Nov 8) a Halo 4 gun's reserve +0x5AA and loaded rounds +0x5AE (int16), found live (Blood Crash, every
