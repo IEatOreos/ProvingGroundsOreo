@@ -2338,6 +2338,10 @@ class RideWatch:
     # the live view's sample kinds (rides_view uses the same): a person's drive, a bots-only drive, flown air, and
     # (custom, Nov 17) the owner's route: a person's drive in LiDAR mode
     FEED_DRIVE, FEED_BOT_DRIVE, FEED_AIR, FEED_OWNER_DRIVE = 0, 1, 2, 3
+    # (custom, Nov 18) a drive sample this far over the floor under it is no drive: none is kept. Breakpoint: 1,949 of
+    # the owner's 4,260 LiDAR route cells were 5-19 u up, in one track over the whole map where people fly, his flying
+    # saved as drives; no floor within 1 u of them, so they were never the bots' (Terrain.owner_route_nodes, add_rides)
+    DRIVE_MAX_H = 3.0
 
     def __init__(s, map_name, T=None, path=None, owner=False):
         # owner: LiDAR mode (main). (custom, Nov 17, the owner: "sometimes my routes wouldn't be ideal for bots that's
@@ -2391,6 +2395,8 @@ class RideWatch:
                 s._fly(now, st, x, y, z, src)
             elif st["last"] is None or math.dist((x, y, z), st["last"]) >= s.DRIVE_STEP:
                 st["last"] = (x, y, z)
+                if s.T is not None and s.T.height_over(x, y, z) > s.DRIVE_MAX_H:   # (in the air: DRIVE_MAX_H)
+                    continue
                 c = s.new["drive"].setdefault((round(x * 4) / 4, round(y * 4) / 4, round(z, 1)), [0, 0, 0])
                 owner = src == "human" and s.owner
                 c[2 if owner else src == "bot"] += 1

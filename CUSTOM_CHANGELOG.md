@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### No drive sample high over the floor: flying is no owner route, 2026-11-18
+
+The owner: "Does my new routines in vehicles look good on breakpoint and boneyard?" ("not boneyard, I did renegade"), then "Yea fix it".
+
+- Found (offline, the maps' terrain and `Terrain.vnav`): Renegade (Forge World `vf1ed8bb6`) 1,676 of the 1,686 route cells on the vehicles' ground; 43 drives between its route ends 99% on the routes (66% without them), all arriving. Breakpoint (`veae7463a`): its ground routes one network base to base (2,303 cells), 21 drives between the vehicles' spawns 90% on them (86% without), all arriving; but 1,949 of its 4,260 route cells 5-19 u over the floor, one track over the whole map where people fly (1,556 within 1 u of a flown cell, at its height): the owner's flying saved as drives (which way the flight came in as a drive not found: the kinds read as aircraft). No floor within 1 u of them, so never the bots' roads; drawn orange in the LiDAR view. Also: the Elite Wraith and Ghost on Breakpoint spawn on a 70-cell piece of vehicle ground 3.5-4.7 u off the rest (a bot there drives about 2 u and stops, with or without routes; left to a LiDAR drive off that pad).
+- `tools/lidar.py` `RideWatch`: a drive sample over `DRIVE_MAX_H` 3 u over the floor under it (`Terrain.height_over`) is not kept (live_bots and LiDAR mode alike; a ground vehicle's bump or short jump within it still is). The cells already saved are left in rides.json.
+- Validation: `tools/test_owner_routes.py` (new: a LiDAR-mode drive 11 u up saves nothing; on the ground and a bump within 3 u kept). All 859 regression tests pass. Untested in a LiDAR run.
+
 ### Reach Demon and Mythic: Halo 4's team play, the other bots' difficulty, the peek as he looks away, 2026-11-18
 
 The owner, on how he plays low bots: "I know if a low level bot won't push, or how long it takes for them to look away. Or I hear gunfights and push to that and usually steal others kills", after "if we could give the daemon bot the ability to always know the attributes of the other bots and the difficulty, I think that could also help it", then "Yea add all of that to reach demons and mythics".

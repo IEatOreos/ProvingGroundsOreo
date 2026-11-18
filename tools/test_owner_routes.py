@@ -65,6 +65,22 @@ class RecordTests(unittest.TestCase):
         v = lidar.rides_view("_test", path=self.path)
         self.assertEqual(sum(1 for r in v["drive"] if r[3] == rw.FEED_OWNER_DRIVE), 8)
 
+    def test_high_over_the_floor_is_no_route(self):
+        # (Nov 18, Breakpoint: 1,949 of his route cells 5-19 u up, his flying saved as drives) DRIVE_MAX_H
+        class Flat:
+            def height_over(self, x, y, z):
+                return z
+        rw = lidar.RideWatch("_test", T=Flat(), path=self.path, owner=True)
+        for k in range(8):
+            rw.update(k * 0.1, [dict(handle=1, kind="warthog", pos=(k * 0.3, 0.0, 11.0))], [rider(0, 1)], set())
+        self.assertEqual(rw.since(0), ([], 0))
+        self.assertFalse(rw.save())
+        for k in range(8):                              # on the ground, and over a bump within DRIVE_MAX_H: kept
+            z = 0.6 if k < 4 else rw.DRIVE_MAX_H - 0.2
+            rw.update(1 + k * 0.1, [dict(handle=1, kind="warthog", pos=(k * 0.3, 0.0, z))], [rider(0, 1)], set())
+        feed, _ = rw.since(0)
+        self.assertEqual(sum(1 for f in feed if f[3] == rw.FEED_OWNER_DRIVE), 8)
+
     def test_a_match_drive_is_not_and_old_rows_keep(self):
         with open(self.path, "w") as f:
             json.dump(dict(drive=[[9.0, 9.0, 0.0, 2, 1]]), f)      # an older five-number row
