@@ -510,6 +510,37 @@ def read_pool(path):
     return out
 
 
+def pool_name(name):
+    """A name as the BOTS panel keeps it (bots_panel.cpp pool_clean): leading blanks, characters outside printable
+    ASCII and commas dropped, cut to 15, trailing spaces dropped. The panel matches names without case."""
+    out = "".join(c for c in name.lstrip(" \t") if " " <= c <= "~" and c != ",")[:15]
+    return out.rstrip(" ")
+
+
+LOBBY_DIFFICULTY = ("Easy", "Normal", "Heroic", "Legendary", "Mixed", "Scaling", "Demon", "Blind", "Tactician", "Mythic")
+
+
+def read_lobby(path):
+    """(Nov 18) The BOTS panel's lobby (botcore.ini): its "for everyone" difficulty's name (difficulty=, shared.h:
+    0..3 the ranks, 4 Mixed, 5 Scaling, 6 Demon, 7 Blind, 8 Tactician, 9 Mythic; "" when not read) and {lower name:
+    tier key} of the bots on its lists (bot=<team>,<tier>,<style>,<name>; ffbot= Firefight's, the bot= line first)."""
+    level, tiers = "", {}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.rstrip("\r\n")
+                if line.startswith("difficulty=") and line[11:].strip().isdigit():
+                    d = int(line[11:].strip())
+                    level = LOBBY_DIFFICULTY[d] if d < len(LOBBY_DIFFICULTY) else ""
+                for key in ("bot=", "ffbot="):
+                    parts = line[len(key):].split(",", 3) if line.startswith(key) else []
+                    if len(parts) == 4 and pool_name(parts[3]):
+                        tiers.setdefault(pool_name(parts[3]).lower(), parts[1].strip().lower())
+    except OSError:
+        pass
+    return level, tiers
+
+
 def read_pool_names(path):
     """[name] of Bot Matchmaking's pool (bot_pool.txt, BOTS panel > Settings): one a line in queue order, cut to 15,
     a repeat (or Name*N, one clan member however many times it is queued) once, # and ; lines notes."""
@@ -1714,7 +1745,8 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     regions, states = load_states()
     homes = load_home_states(paths, states)                 # (Nov 18: the states set by hand in edit mode)
     roster = read_profiles(paths.profiles)
-    pool = read_pool(paths.pool)
+    pool = {pool_name(k).lower(): v for k, v in read_pool(paths.pool).items()}   # (as the panel matches: no case)
+    lobby_level, lobby_tiers = read_lobby(paths.botcore)
     people = load_people(paths)
     players, matches = collect(ledger, store_matches, roster, kills, paths, people, read_pool_names(paths.bot_pool),
                                load_matchmaking(paths.matchmaking))
@@ -1746,8 +1778,10 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         cr += chal["cr"] if with_chal else 0                # (and its finished challenges, Nov 17)
         for g in rec["g"].values():
             used.update(g["medals"])
-        diff, style = pool.get(name, ("", ""))
+        key = pool_name(html.unescape(name)).lower()
+        diff, style = pool.get(key, ("", ""))
         out_players.append({
+            "lobby_tier": "" if diff else lobby_tiers.get(key, ""),   # (Nov 18: no saved one: its seat in the lobby list)
             "name": html.unescape(name), "roster": name in roster, "person": name in persons,   # (a person: people.json)
             "clan": roster[name] if name in roster else clans.get(html.unescape(name), ""),   # (its profile's, "" too)
             "difficulty": diff, "style": style, "emblem": export_emblem(name, paths),
@@ -1837,6 +1871,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "vehicles": vehicle_keys(),
         "arsenal": arsenal,
         "regions": regions, "states": {s[0]: [s[1], s[2]] for s in states},
+        "lobby_difficulty": lobby_level,                    # (Nov 18: the BOTS panel's "for everyone" difficulty)
         "clan_names": load_clan_names(paths),        # (the owner's full names for the clans, by clan_key)
         "clan_about": load_clan_about(paths),        # (and his short description of each)
         "challenges": challenge_table(challenges, when, with_chal),   # (Nov 17: today's and this week's)
@@ -2061,12 +2096,14 @@ def set_bot_difficulty(paths, name, tier, running=None):
     its play style kept (Demon never Wheelman: then any), and its tier in the lobby list's bot=/ffbot= lines of
     botcore.ini when it is on that list. "" takes its saved line out (it takes the lobby's difficulty again; the lobby
     list is left as it is). Refused while MCC runs (botcore holds both files and writes them back); in game from MCC's
-    next start. A copy of each file as it was is kept beside it (.before_site_edit). Returns the tier key as saved."""
+    next start. A copy of each file as it was is kept beside it (.before_site_edit). Names match as the panel matches
+    them (pool_name, no case). Returns the tier key as saved."""
     tier = (tier or "").strip().lower()
     if tier and tier not in TIER_KEYS:
         raise ValueError("not a difficulty")
-    if not isinstance(name, str) or not re.fullmatch(r"[\x20-\x2b\x2d-\x7e]{1,15}", name) or name != name.strip():
+    if not isinstance(name, str) or len(name) > 32 or not pool_name(name):
         raise ValueError("not a bot's name")
+    name = pool_name(name)                                  # (as the panel keeps it: "Name " is "Name")
     if (mcc_running() if running is None else running):
         raise PermissionError("close MCC first: it holds the bots' difficulties while it runs and would write over the change")
     try:
@@ -2083,8 +2120,8 @@ def set_bot_difficulty(paths, name, tier, running=None):
     style, at = "any", None
     for i, line in enumerate(lines):
         parts = line[6:].split(",", 2) if line.startswith("saved=") else []
-        if len(parts) == 3 and parts[2].strip().lower() == name.lower():
-            style, at = parts[1], i
+        if len(parts) == 3 and pool_name(parts[2]).lower() == name.lower():
+            style, at, name = parts[1], i, pool_name(parts[2])   # (its line's own spelling kept)
             break
     if tier == "demon" and style == "wheelman":
         style = "any"
@@ -2106,7 +2143,7 @@ def set_bot_difficulty(paths, name, tier, running=None):
         for i, line in enumerate(lines):
             key = "ffbot=" if line.startswith("ffbot=") else "bot=" if line.startswith("bot=") else None
             parts = line[len(key):].split(",", 3) if key else []
-            if len(parts) == 4 and parts[3].strip().lower() == name.lower():
+            if len(parts) == 4 and pool_name(parts[3]).lower() == name.lower():
                 parts[1] = tier
                 if tier == "demon" and parts[2] == "wheelman":
                     parts[2] = "any"

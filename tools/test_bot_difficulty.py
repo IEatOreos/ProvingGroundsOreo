@@ -47,7 +47,7 @@ def test_set():
         except PermissionError:
             pass
         assert read(paths.pool) == POOL and read(paths.botcore) == BOTCORE
-        for name, tier in (("Lone Fox", "hard"), ("Lone,Fox", "top"), ("x" * 16, "top"), ("", "top")):
+        for name, tier in (("Lone Fox", "hard"), ("x" * 33, "top"), ("", "top"), (" ,\t", "top")):
             try:
                 sr.set_bot_difficulty(paths, name, tier, running=False)
                 raise AssertionError((name, tier))
@@ -55,11 +55,15 @@ def test_set():
                 pass
         # an existing line: the difficulty changed, its style kept unless Demon would drive (then any); the lobby list too
         assert sr.set_bot_difficulty(paths, "lone fox", "demon", running=False) == "demon"
-        assert read(paths.pool) == POOL.replace("saved=blind,wheelman,Lone Fox", "saved=demon,any,lone fox")
+        assert read(paths.pool) == POOL.replace("saved=blind,wheelman,Lone Fox", "saved=demon,any,Lone Fox")
         assert read(paths.botcore) == BOTCORE.replace("bot=1,top,wheelman,Lone Fox", "bot=1,demon,any,Lone Fox") \
             .replace("ffbot=0,strong,any,lone fox", "ffbot=0,demon,any,lone fox")
         assert os.path.exists(paths.pool + ".before_site_edit") and os.path.exists(paths.botcore + ".before_site_edit")
-        assert sr.read_pool(paths.pool)["lone fox"] == ("demon", "any")
+        assert sr.read_pool(paths.pool)["Lone Fox"] == ("demon", "any")
+        # a name as the site lists it with a trailing space ("Name "): the panel's own spelling, "Name"
+        assert sr.set_bot_difficulty(paths, "Lone Fox ", "tactician", running=False) == "tactician"
+        assert sr.read_pool(paths.pool)["Lone Fox"] == ("tactician", "any")
+        assert sr.set_bot_difficulty(paths, "lone fox", "demon", running=False) == "demon"
         # a bot with no line gets one at the end (any style); one not on the lobby list leaves botcore.ini alone
         before = read(paths.botcore)
         assert sr.set_bot_difficulty(paths, "New Bot", "mythic", running=False) == "mythic"
@@ -67,7 +71,20 @@ def test_set():
         # "": the saved line out, the lobby list left
         assert sr.set_bot_difficulty(paths, "Wheezy", "", running=False) == ""
         assert "Wheezy" not in read(paths.pool) and read(paths.pool).startswith(sr.POOL_HEADER.replace("\n", "\r\n") + "next4=12\r\n")
-        assert sr.read_pool(paths.pool) == {"lone fox": ("demon", "any"), "New Bot": ("mythic", "any")}
+        assert sr.read_pool(paths.pool) == {"Lone Fox": ("demon", "any"), "New Bot": ("mythic", "any")}
+
+
+def test_shown():
+    """What the site shows: a saved difficulty found as the panel finds it (no case, "Name " is "Name"), else the
+    lobby's (its "for everyone" difficulty's name) and the bot's seat in the lobby list."""
+    assert sr.pool_name("  ii Toxic Moose ") == "ii Toxic Moose" and sr.pool_name("a,béc") == "abc"
+    assert sr.pool_name("x" * 20) == "x" * 15 and sr.pool_name(" ,") == ""
+    with tempfile.TemporaryDirectory() as tmp:
+        p = os.path.join(tmp, "botcore.ini")
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("difficulty=4\nroster=1\nbot=1,top,any,Lone Fox \nffbot=0,strong,any,lone fox\nffbot=0,blind,any,Other\n")
+        assert sr.read_lobby(p) == ("Mixed", {"lone fox": "top", "other": "blind"})
+        assert sr.read_lobby(os.path.join(tmp, "none.ini")) == ("", {})
 
 
 def test_route():

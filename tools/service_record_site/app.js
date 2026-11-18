@@ -826,11 +826,17 @@
   // difficulty, it plays at the lobby's. The keys and names are the BOTS panel's (bots_panel.cpp TIER_KEY, TIER_NAME).
   const TIER_NAMES = { novice: "Easy", average: "Normal", strong: "Heroic", top: "Legendary", scaling: "Scaling", demon: "Demon",
     blind: "Blind", tactician: "Tactician", mythic: "Mythic" };
+  // what the bot plays at: its saved difficulty, else the lobby's (the panel's "for everyone" one, D.lobby_difficulty),
+  // and the one it has in the lobby list now when it is on it (p.lobby_tier)
+  const lobbyName = () => "The lobby's" + (D.lobby_difficulty ? " (" + D.lobby_difficulty + ")" : "");
+  const difficultyText = (p) => (p.difficulty ? TIER_NAMES[p.difficulty] || title(p.difficulty)
+    : lobbyName() + (p.lobby_tier ? "; " + (TIER_NAMES[p.lobby_tier] || title(p.lobby_tier)) + " in the current lobby" : ""));
   function difficultyForm(p) {
     const sel = el("select", { "aria-label": "Difficulty for " + p.name },
-      el("option", { value: "", selected: !p.difficulty }, "The lobby's"),
+      el("option", { value: "", selected: !p.difficulty }, lobbyName()),
       Object.entries(TIER_NAMES).map(([k, n]) => el("option", { value: k, selected: k === p.difficulty }, n)));
-    const msg = el("span", { class: "note", "aria-live": "polite" }, "Saved to the game: close MCC first; played from its next start.");
+    const msg = el("span", { class: "note", "aria-live": "polite" }, (p.difficulty ? "Saved in the game. " : "No saved difficulty: it plays at " +
+      difficultyText(p).replace("The lobby's", "the lobby's") + ". ") + "Close MCC before saving; played from its next start.");
     const save = async () => {
       if (sel.value === (p.difficulty || "")) { msg.textContent = "No change."; return; }
       msg.textContent = "Saving…";
@@ -1822,7 +1828,7 @@
         el("dt", null, "Listed as"), el("dd", null, p.person ? "Player" : p.roster ? "Roster" : "Matchmaking pool"),
         el("dt", null, "Home state"), el("dd", null, STATES[p.state]
           ? el("a", { href: href(["states"], { area: p.state }) }, stateName(p.state) + " (" + areaName(regionOf(p)) + ")") : "-"),
-        p.person ? null : [el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? TIER_NAMES[p.difficulty] || title(p.difficulty) : "The lobby's")],
+        p.person ? null : [el("dt", null, "Difficulty"), el("dd", null, difficultyText(p))],
         el("dt", null, "Species (Reach)"), el("dd", null, looks ? looks.species : "-"))),
       panel("Armor (Reach)", looks && looks.pieces.length
         ? el("dl", { class: "stats" }, looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
