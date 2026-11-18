@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Reach carriers drop the flag to fight when they would die with it, 2026-11-17
+
+The owner: "Sometimes it feels like they just let me kill them for free because they ignore anything but running the flag, but at the same time I feel like they could get less flag caps if they drop to fight", then "Let's try to add that in. Not the strafe and movement on the way home ... everything else we can try".
+
+- Found in four Reach CTF recordings (Launch Station and Aft Ship Nov 17, Forge World and Countdown Nov 13): 15 bot carriers were killed, every one walking on while an enemy came from 6-9 u to 2 u, most of them 6-22 u from home. In 12 of them 2-4 enemies were within 15 u, so a "one man only" rule would have caught 3. From first damage to death took 0.1-3 s. Three died from full health (a melee or an assassination), with no warning at all.
+- The flag melee was already there (`plan`: a man within `MELEE_R` 1.25 u, one swing every 0.6-0.9 s). It does not drop a CTF flag. In these recordings carriers swung 21 times and killed nobody; why (the reach, the aim or the flag's damage) is not known yet.
+- `brain/bot.py` `flag_fight_check` / `flag_fight_phase` / `flag_fight_scores` / `flag_fight_press` (new; `FLAG_FIGHT_*`, `FLAG_BACK_*`), Reach CTF and Stockpile, on foot:
+  - **When:** hurt in the last 1.5 s, at a rate that empties its shield and health within `FLAG_FIGHT_DIE_S` 1.5 s and before it could walk home (`FLAG_FIGHT_SPEED` 2.5 u/s); more than `FLAG_FIGHT_HOME` 4 u from where it scores (CTF its order's point, Stockpile its goal); an enemy known in the last 1.5 s within `FLAG_FIGHT_R` 10 u. It is dying with the flag anyway, so the flag lies where it would have fallen.
+  - **The drop:** the weapon switch (the key the Stockpile drop already uses) tapped 0.3 s, again at 0.8 s only while the weapon read still shows the flag. Still carrying after 1.5 s: the drop failed, and it carries on.
+  - **The fight:** that man at `FLAG_FIGHT_SCORE` 3.3 (over carrying 3.0, regroup 3.0 and a committed fight 2.6-2.9). The flag at its feet is not taken again meanwhile.
+  - **After:** the man dead, unknown for 1.5 s, or 8 s of fighting: back to the flag at `FLAG_BACK_SCORE` 3.1 while it lies within 20 u (12 s at most), taken as before. No new drop for 6 s after.
+  - Not in a vehicle, and not in other games (Halo 4's carriers keep shooting their magnum) or modes.
+- Tuned on the same recordings, replaying the rule at every moment of every carry: it fires before 9 of the 15 deaths at the first moment it could. With the 1.5 s horizon, 7 of its 11 drops came before a death and 4 on carriers that went on to live. A 3 s horizon gave 9 and 12, none gave 10 and 21. So it costs some carries that would have made it home; it should cut the free kills, not every carrier death.
+- Validation: `tools/test_flag_fight.py` (new, 13 tests): dying far from home it taps and fights; it runs on when it would live, 3 u from home, with the man 25 u off, in a vehicle, in Halo 4, Halo 3 or Oddball; the fight, then back for the flag, then the 6 s wait; the man lost or 8 s of fighting; the flag gone home; a failed drop; the second tap only with the flag in hand; Stockpile; and through `Bot.plan` the tap is sent and the flag at its feet is not taken mid-fight, only after. All 811 `tools/test_*.py` pass. Not yet seen in a match: whether the switch drops a CTF flag (it is what drops a Stockpile flag, by the owner's Nov 13 note), how fast the gun comes up, and whether the drops win more than they lose.
+
+### bot.py as it runs, 2026-11-17
+
+`bf01fba` (Demon stays in cover) committed `brain/bot.py` with `def hidden_spot(s, me, threats):` left above `def demon_recharge` and its body after it, so the committed file does not compile. The working copy, saved before that commit and run in every match since, was right. `0515807` commits it as it runs; no behaviour change.
+
 ### Reach Stockpile: the flags found on Forge layouts (Pinnacle), 2026-11-17
 
 The owner's bug reports from Pinnacle Stockpile on Forge World (TU STOCKPILE: 4 flags, random placement, collected every minute; recording 20261117-205817): "Bots all stuck here" (102 s) and "Bots cant play stockpile on pinnacle" (122 s).

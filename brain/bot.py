@@ -227,6 +227,29 @@ STP_DROP_TAPS = ((0.0, "cycle"), (0.8, "action"))
 # ... standing still first (owner, Nov 13: a tap on the run threw the flag past the zone): no move until its speed is
 # under STP_STILL_V u/s, then STP_SETTLE s still before the first tap
 STP_STILL_V, STP_SETTLE = 0.3, 0.2
+# (custom, Nov 17, owner: "it feels like they just let me kill them for free because they ignore anything but running
+# the flag") Reach CTF and Stockpile: a carrier on foot that will die before it gets home drops the flag (the weapon
+# switch) and fights the man, then goes back for it (Bot.flag_fight). The flag lies where it would have fallen dead.
+# Four Reach CTF traces (Launch Station, Aft Ship, Forge World, Countdown; Nov 13-17): 15 bot carriers killed, 12 with
+# 2-4 enemies within 15 u ("one man only" would have caught 3), 0.1-3 s from first damage to death. Hurt within
+# FLAG_FIGHT_HURT_S by losses that empty it within FLAG_FIGHT_DIE_S, a man within FLAG_FIGHT_R, home beyond
+# FLAG_FIGHT_HOME and the walk home (FLAG_FIGHT_SPEED) longer than that: 7 of the drops it would have made were
+# before a death, 4 on carriers that lived (a 3 s horizon: 9 and 12; no horizon: 10 and 21)
+FLAG_FIGHT_R = 10.0                # u: the man this near
+FLAG_FIGHT_HURT_S = 1.5            # s: the losses counted (Perception.losses)
+FLAG_FIGHT_DIE_S = 1.5             # s: at that rate it is empty this soon
+FLAG_FIGHT_HOME = 4.0              # u: this near the capture it runs on
+FLAG_FIGHT_SPEED = 2.5             # u/s: a carrier's walk home, for the time it would take
+FLAG_FIGHT_KNOWN_S = 1.5           # s: a man known this lately (seen, a dot, a hit) is the one to fight
+FLAG_FIGHT_TAP = 0.3               # s: the weapon switch held (a press); again at FLAG_FIGHT_RETAP if still carrying
+FLAG_FIGHT_RETAP = 0.8
+FLAG_FIGHT_DROP_S = 1.5            # s: still carrying after this, the drop failed: it carries on
+FLAG_FIGHT_HOLD = 8.0              # s: the longest fight before it goes back for the flag
+FLAG_FIGHT_LOST = 1.5              # s: the man unknown this long: back for the flag
+FLAG_FIGHT_SCORE = 3.3             # the fight on him: over carrying (3.0), regroup (3.0), a committed fight (2.6-2.9)
+FLAG_BACK_S, FLAG_BACK_R = 12.0, 20.0   # s after the fight it goes back for the flag while it lies this near (u)
+FLAG_BACK_SCORE = 3.1              # over a committed fight on another man: the flag first
+FLAG_FIGHT_AGAIN = 6.0             # s after a fight ends before another drop
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -2716,7 +2739,10 @@ class Bot:
                     s.next_decide, s.item_wait = now, None
             else:
                 s.item_wait = None
-        on_flag = bool(snap.flags) and not me.has_flag and any(
+        # (custom, Nov 17) dropped to fight (flag_fight): not taken again at its feet until the fight is over
+        flag_phase = s.flag_fight_phase(now, me, snap)
+        fighting_for_it = flag_phase in ("drop", "fight")
+        on_flag = bool(snap.flags) and not me.has_flag and not fighting_for_it and any(
             t != me.team and f.state != "carried" and dist(me.pos, f.pos) < 1.2 for t, f in snap.flags.items())
         if me.weapon != getattr(s, "last_wpn", None):
             s.last_wpn, s.wpn_changed = me.weapon, now
@@ -2744,7 +2770,8 @@ class Bot:
                                             # reads "unknown" 0.5 s before the carrier read: Use dropped it)
         elif core_out:
             s.use_quiet_until = 0.0
-        spot = None if me.has_flag else (s.on_loose_objective(me, snap) or s.use_flag_point(me, snap, s.game))
+        spot = None if me.has_flag or fighting_for_it else (s.on_loose_objective(me, snap)
+                                                            or s.use_flag_point(me, snap, s.game))
         if spot is not None and now >= getattr(s, "use_quiet_until", 0.0):
             s.take(me, act, spot)  # on a bomb / stockpile flag / the Invasion core: take it (live: stood on the core)
         # carrying: no gun, but the flag or ball swings: hit a man at arm's length (one press a swing). Not the Invasion
@@ -2813,6 +2840,7 @@ class Bot:
             # retreating, or patrolling, whenever they arent fighting"; reload_check holds it while a man is in view or
             # rounds are coming in)
             s.reload_check(now, me, act)
+        s.flag_fight_press(now, me, act, flag_phase)   # (never within FLAG_FIGHT_HOME of home: the goal's drop is apart)
         s.stockpile_drop(now, me, snap, act)
         return act
 
@@ -2856,6 +2884,114 @@ class Bot:
                 return True
         s.note("stockpile: dropping the flag in our goal (between taps)")
         return True
+
+    def flag_home(s, me, snap):
+        """Where this carrier scores: Stockpile its own goal nearest it (modes.carry_goal), CTF its order's point."""
+        if snap.mode == "stockpile":
+            from .modes import carry_goal
+            return carry_goal("stockpile", snap, me.team, me.pos)
+        return s.order.point
+
+    def flag_man(s, now, me, snap):
+        """The enemy to fight for a flag_fight: the nearest known within FLAG_FIGHT_KNOWN_S (seen, a dot, a hit) within
+        FLAG_FIGHT_R, alive; None."""
+        best = None
+        for k, b in s.per.beliefs.items():
+            p = snap.player(k) if isinstance(k, int) else None
+            if p is None or not p.alive or p.team == me.team or now - b.t >= FLAG_FIGHT_KNOWN_S:
+                continue
+            d = dist(me.pos, b.pos)
+            if d < FLAG_FIGHT_R and (best is None or d < best[0]):
+                best = (d, k)
+        return best[1] if best else None
+
+    def flag_dropped_at(s, me, snap, at):
+        """The flag it dropped, lying loose within FLAG_BACK_R of where it dropped it: CTF the other team's flag, not
+        carried or home; Stockpile the nearest loose flag not in our goal. None (taken, home, gone)."""
+        if snap.mode == "ctf":
+            f = (snap.flags or {}).get(1 - me.team % 2)
+            ok = f is not None and f.state == "dropped" and dist(f.pos, at) < FLAG_BACK_R
+            return f.pos if ok else None
+        goals = (getattr(snap, "obj_goals", None) or {}).get(me.team) or []
+        loose = [it["pos"] for it in (getattr(snap, "obj_items", None) or []) if it.get("carrier") is None
+                 and dist(it["pos"], at) < FLAG_BACK_R and not any(dist(it["pos"], g) < 2.0 for g in goals)]
+        return min(loose, key=lambda q: dist(q, at)) if loose else None
+
+    def flag_fight_check(s, now, me, snap):
+        """(custom, Nov 17, owner: "they just let me kill them for free because they ignore anything but running the
+        flag") Reach CTF and Stockpile, carrying on foot: hurt within FLAG_FIGHT_HURT_S by losses that would empty it
+        within FLAG_FIGHT_DIE_S and before it walks home (FLAG_FIGHT_SPEED), home beyond FLAG_FIGHT_HOME, a man known
+        within FLAG_FIGHT_R: it is dying with the flag anyway, so it drops it and fights him (s.flag_fight; the flag lies
+        where it would have fallen). Not within FLAG_FIGHT_AGAIN of the last."""
+        if (getattr(s, "flag_fight", None) is not None or s.game != "reach" or snap.mode not in ("ctf", "stockpile")
+                or not me.has_flag or not me.alive or me.vehicle not in (None, -1)
+                or now < getattr(s, "flag_fight_next", 0.0)):
+            return False
+        lost = sum(x for t, x in getattr(s.per, "losses", []) if now - t < FLAG_FIGHT_HURT_S)
+        if lost <= 0.0:
+            return False
+        home = s.flag_home(me, snap)
+        far = dist(me.pos, home) if home is not None else 99.0
+        empty = (me.shield + me.health) / (lost / FLAG_FIGHT_HURT_S)
+        if far <= FLAG_FIGHT_HOME or empty >= min(FLAG_FIGHT_DIE_S, far / FLAG_FIGHT_SPEED):
+            return False
+        man = s.flag_man(now, me, snap)
+        if man is None:
+            return False
+        s.flag_fight = dict(man=man, t0=now, at=Vec(me.pos.x, me.pos.y, me.pos.z), dropped=None, back=None)
+        s.note(f"flag: dropping it to fight #{man} (empty in {empty:.1f} s, home {far:.0f} u)")
+        return True
+
+    def flag_fight_phase(s, now, me, snap):
+        """Where a flag_fight stands: "drop" (the switch tapped, the flag still in hand), "fight" (dropped, the man alive
+        and known within FLAG_FIGHT_LOST, under FLAG_FIGHT_HOLD), "back" (going for the flag while it lies there,
+        FLAG_BACK_S), else None: over (taken again, gone, the drop failed after FLAG_FIGHT_DROP_S, dead)."""
+        ff = getattr(s, "flag_fight", None)
+        if ff is None:
+            return None
+        phase = None
+        if not me.alive:
+            pass
+        elif ff["dropped"] is None:
+            if not me.has_flag:
+                ff["dropped"] = now
+            elif now - ff["t0"] <= FLAG_FIGHT_DROP_S:
+                return "drop"
+        if me.alive and ff["dropped"] is not None and not me.has_flag:
+            man, b = snap.player(ff["man"]), s.per.beliefs.get(ff["man"])
+            if (ff["back"] is None and man is not None and man.alive and b is not None
+                    and now - b.t < FLAG_FIGHT_LOST and now - ff["dropped"] < FLAG_FIGHT_HOLD):
+                return "fight"
+            ff["back"] = ff["back"] if ff["back"] is not None else now
+            if now - ff["back"] < FLAG_BACK_S and s.flag_dropped_at(me, snap, ff["at"]) is not None:
+                phase = "back"
+        if phase is None:
+            s.flag_fight, s.flag_fight_next = None, now + FLAG_FIGHT_AGAIN
+        return phase
+
+    def flag_fight_scores(s, now, me, snap, scores):
+        """decide's part of a flag_fight: the man fought at FLAG_FIGHT_SCORE while it drops and fights, the flag gone
+        back for at FLAG_BACK_SCORE after."""
+        s.flag_fight_check(now, me, snap)
+        phase = s.flag_fight_phase(now, me, snap)
+        if phase in ("drop", "fight"):
+            key = ("fight", s.flag_fight["man"])
+            scores[key] = max(scores.get(key, 0.0), FLAG_FIGHT_SCORE)
+        elif phase == "back":
+            key = ("objective", s.flag_dropped_at(me, snap, s.flag_fight["at"]))
+            scores[key] = max(scores.get(key, 0.0), FLAG_BACK_SCORE)
+            s.note("flag: back for it")
+
+    def flag_fight_press(s, now, me, act, phase):
+        """plan's part: while dropping, the weapon switch tapped (FLAG_FIGHT_TAP, again at FLAG_FIGHT_RETAP while the flag
+        is still in hand: the weapon read shows the gun the tick it drops, the carrier read 0.4-0.6 s later), no Use."""
+        if phase != "drop" or not me.has_flag:
+            return
+        k = now - s.flag_fight["t0"]
+        in_hand = me.weapon in ("flag", "unknown")
+        act.cycle = k < FLAG_FIGHT_TAP or (in_hand and FLAG_FIGHT_RETAP <= k < FLAG_FIGHT_RETAP + FLAG_FIGHT_TAP)
+        act.action = False
+        s.note(f"flag: dropped to fight #{s.flag_fight['man']}")
 
     def learn_mags(s, me):
         """Every gun's fullest magazine, learned every tick, fights too (reload_check reads it). Learned between fights
@@ -3767,6 +3903,7 @@ class Bot:
                 if key[0] == "fight":
                     scores[key] *= 0.30
         s.demon_recharge(now, me, snap, scores, seen)   # (custom, Nov 17: Demon, out of sight: cover until its shield is full)
+        s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         mv = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None) if me.vehicle not in (None, -1) else None
         if (mv is not None and getattr(s, "seat", None) == "driver"
