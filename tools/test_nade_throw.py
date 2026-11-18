@@ -131,6 +131,45 @@ class LearnTests(unittest.TestCase):
             w.observe(3.0, [])
             self.assertEqual(nade.load(path), {})
 
+    def test_a_round_fired_with_the_press_is_passed_over_for_the_grenade(self):
+        # (Nov 18 live: about 240 Reach throws, 2 learned) the bot's own DMR round appears at its eye first, the watch
+        # took it, lost it a tick later and never saw the grenade
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "f.json")
+            w = nade.FlightWatch("g", path)
+            w.pressed(1.0, 1, Vec(0, 0, 0.62), 0.0, 0.1)
+            w.observe(1.0, [])
+            dt = 1 / 30
+            w.observe(1.0 + dt, [(7, Vec(0.6, 0, 0.62))])                       # the round, nearest the eye
+            w.observe(1.0 + 2 * dt, [(7, Vec(10.6, 0, 0.62))])                   # 300 u/s: not the throw
+            for tt, q in flight(1.0 + 3 * dt, Vec(0.3, 0, 0.7), Vec(9.0, 0.0, 2.0), 6.5, n=20):
+                w.observe(tt, [(8, q)])
+            w.observe(3.5, [])
+            kept = nade.load(path).get("g", [])
+            self.assertEqual(len(kept), 1)
+            self.assertAlmostEqual(kept[0]["gravity"], 6.5, places=1)
+
+    def test_reach_watches_its_hand_grenades_only(self):
+        class Reach:
+            GRENADE_READ = True
+
+            def grenades(s, now):
+                return [dict(h=5, kind="frag_grenade", pos=Vec(1, 2, 3))]
+
+            def objects(s, types=None):
+                raise AssertionError("every projectile: the bots' own rounds too")
+
+        class Other:
+            def objects(s, types=None):
+                return [(9, 5, "unknown", (4.0, 5.0, 6.0))]
+
+        self.assertEqual(nade.watch_objects(Reach(), 1.0), [(5, Vec(1, 2, 3))])
+        self.assertEqual(nade.watch_objects(Other(), 1.0), [(9, Vec(4.0, 5.0, 6.0))])
+        off = Reach()
+        off.GRENADE_READ = False                       # (Halo 4 / 2A: Reach's layout not checked there)
+        off.objects = lambda types=None: [(9, 5, "unknown", (0.0, 0.0, 0.0))]
+        self.assertEqual(nade.watch_objects(off, 1.0), [(9, Vec(0.0, 0.0, 0.0))])
+
 
 def scene(foe_at=Vec(14, 0, 0), mate_at=None, terrain=None, yaw=0.0):
     b = Bot(0, 0, profiles.make_profile("strong", "rusher", random.Random(1)), {"name": "reach_test"}, random.Random(2))

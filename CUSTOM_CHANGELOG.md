@@ -2,7 +2,25 @@
 
 ## Unreleased
 
-### Reach bots read live grenades and run out of them, 2026-11-18
+### Reach grenade flights: the watch follows grenades, not the bots' rounds, 2026-11-18
+
+The owner, after a few matches: "How does the gernade arc update look?" The solved throws (below, "Grenades thrown on a solved arc") never came on.
+
+- **Found** (today's 7 Reach traces, 17:21-18:00, and `user/grenade_flights.json`):
+  - The bots pressed grenade about 240 times on foot: Damnation 16, Forge World 38, 3, 3, 67, 75, Ivory Tower 37.
+  - `nade.FlightWatch` kept 2 flights, both in the Damnation match. A game needs `MIN_FLIGHTS` (3), so every throw stayed the old one along the aim.
+  - The 2 disagree: 4.8 and 10.7 u/s, 28 and 14 degrees off the view. They are likely not the throws.
+  - The likely cause: the watch was fed every type-5 object (`live.objects((5,))`), and Reach names them all "unknown". At a press it takes the newest projectile at the bot's eye, which is often the DMR or AR round fired that tick. That round is gone or far a tick later, so the press ends unfitted and the grenade after it is never looked at.
+  - The traces do not record projectiles, so this is read from the code and the numbers, not seen.
+- `brain/nade.py`:
+  - `watch_objects(live, now)`: in Reach, the hand grenades only (`LiveReach.grenades`, frag and plasma by their own tag name, from "Reach bots read live grenades" above). Elsewhere every type-5 object, as before.
+  - `FlightWatch.observe`: a followed object that is gone, or moves over `FAST` (60 u/s), before 4 samples is not the throw. It is left out and the watch looks again until `FIRST_S`. This holds in every game.
+- `tools/live_bots.py`: the watch is fed `nade.watch_objects`.
+- `user/grenade_flights.json` (machine data, not in Git) is renamed `grenade_flights.before_nov18_fix.json`, so the 2 doubtful flights are not in Reach's medians.
+- Validation:
+  - `tools/test_nade_throw.py` +2 tests: a round at the eye first, then the grenade, which is learned (the old watch kept 0); and Reach watching its grenades only, other games and `GRENADE_READ` off as before.
+  - 882 of 886 tests pass. The 4 failures are `test_demon_dot_glance`, against another session's uncommitted Demon radar change in `brain/bot.py`, which this change does not touch.
+- **Untested in a match:** whether `LiveReach.grenades` names Reach's frags live (the console's `grenades read live (frag_grenade)`), and the learned numbers. The brain prints `grenade flight learned` for each throw kept. After 3 of them, the next match aims the solved way.
 
 The owner, after Forge World Team Slayer DMR 20261118-180057, where the last-place Demon N1ghtR4ven went 7-13: "make them read enemy grenades".
 

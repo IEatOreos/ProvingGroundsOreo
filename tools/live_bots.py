@@ -1389,7 +1389,7 @@ def main():
                         nade_presses.append((index, me.pos + Vec(0.0, 0.0, 0.62), a.yaw, a.pitch))
                 if nade_watch is not None and (nade_presses or nade_watch.active(now)):
                     try:
-                        projs = [(h, Vec(*q)) for h, t, n, q in live.objects((5,))]
+                        projs = nade.watch_objects(live, now)   # (Reach: its hand grenades only, nade.watch_objects)
                         for index, at, yaw, pitch in nade_presses:
                             nade_watch.pressed(now, index, at, yaw, pitch, known={h for h, _ in projs})
                         kept = nade_watch.kept

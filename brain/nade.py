@@ -185,12 +185,23 @@ def _solve3(A, B):
     return out
 
 
+def watch_objects(live, now):
+    """[(handle, Vec)]: what FlightWatch.observe is given. Reach: its hand grenades only, by their own tag name
+    (LiveReach.grenades). Its type-5 objects are every projectile, and Reach's names them all "unknown", so the watch
+    took the DMR / AR rounds the bots fire as they press: Nov 18, 2 throws learned of about 240 in 7 matches, both
+    doubtful. Elsewhere every projectile object (type 5), as before."""
+    if getattr(live, "GRENADE_READ", False) and hasattr(live, "grenades"):
+        return [(g["h"], g["pos"]) for g in live.grenades(now)]
+    return [(h, Vec(*q)) for h, t, n, q in live.objects((5,))]
+
+
 class FlightWatch:
     """Learns a game's grenade physics from the bots' own throws (tools/live_bots.py): pressed() at a bot's grenade
     press, observe() each tick with the projectile objects; a new projectile first seen within NEAR u of the thrower
     within FIRST_S s is followed until WATCH_S, fitted (fit), and kept (save) when it is a grenade: falling (gravity
-    over 1), slower than 60 u/s."""
-    NEAR, FIRST_S, WATCH_S, FOLLOW_S = 2.5, 0.8, 2.0, 0.6
+    over 1), slower than 60 u/s. One that is gone or moves faster than FAST before 4 samples is not the throw (the bot's
+    own round fired as it pressed) and the watch looks again until FIRST_S. Feed it watch_objects()."""
+    NEAR, FIRST_S, WATCH_S, FOLLOW_S, FAST = 2.5, 0.8, 2.0, 0.6, 60.0
 
     def __init__(s, game, path=FLIGHTS):
         s.game, s.path = game, path
@@ -223,7 +234,15 @@ class FlightWatch:
                     p["known"] |= {h for h, _ in projectiles}
                 continue
             q = next((q for h, q in projectiles if h == p["mine"]), None)
-            if q is not None and now - p["first"] <= s.FOLLOW_S:
+            last_t, last_q = p["track"][-1]
+            fast = q is not None and now > last_t and dist(q, last_q) / (now - last_t) > s.FAST
+            if (q is None or fast) and len(p["track"]) < 4 and now - p["t"] <= s.FIRST_S:
+                # (Nov 18) gone or bullet-fast before it could be fitted: not the throw (a round the bot fired as it
+                # pressed); looked for again, that one left out
+                p["known"].add(p["mine"])
+                p["mine"], p["track"] = None, None
+                continue
+            if q is not None and not fast and now - p["first"] <= s.FOLLOW_S:
                 p["track"].append((now, q))
             else:
                 done.append(p)
