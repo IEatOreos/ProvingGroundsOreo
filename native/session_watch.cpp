@@ -209,10 +209,99 @@ static void add_lobby_bots(uint8_t* msg) {
     }
 }
 
+// (custom, Nov 16) the person's own name, from MCC's list (their node: +0x10 set), for Proving Grounds' lobby rows
+static char g_me_name[64];
+static volatile uint64_t g_me_id;                // (Nov 17) their id (+0x18): report.cpp keeps their emblem and nameplate
+const char* mcc_player_name() { return g_me_name; }
+uint64_t mcc_player_id() { return g_me_id; }
+
+// (custom, Nov 17, the owner: a friend in the lobby, "balance him to a team like normal matchmaking would") the other
+// people in the session, for Proving Grounds. From the logs of real lobbies (two friends who joined, two only on
+// the friends list): a person in the session has +0x12 and +0x13 set (the player 01 01 01 01 00 01, a joined
+// friend 00 00 01 01 01, a friends-list entry only +0x14); +0x6C is the team (the player 0, a friend MCC put on Blue 1,
+// and in a match's list each bot its own team: 0, 1, 1 as dealt; -1 not yet set); +0x64 the machine (the host 0, a
+// friend 1). Bots (ids 0xB07B07B0... in a match, 0xB07B07B1... the mod's lobby rows) are never people. Kept from the
+// last list that holds the player (the list as a match loads holds no one: it changes nothing)
+static const int SW_PEOPLE = 8;
+struct sw_person { uint64_t id; char name[32]; int team; };
+static SRWLOCK g_people_lock = SRWLOCK_INIT;
+static sw_person g_people[SW_PEOPLE];
+static int g_npeople, g_me_team = -1;
+static bool is_bot_id(uint64_t id) { return (id & 0xFFFFFFF000000000ull) == 0xB07B07B000000000ull; }
+int mcc_player_team() {
+    AcquireSRWLockShared(&g_people_lock);
+    int t = g_me_team;
+    ReleaseSRWLockShared(&g_people_lock);
+    return t;
+}
+int mcc_session_people(uint64_t* ids, char (*names)[32], int* teams, int cap) {
+    AcquireSRWLockShared(&g_people_lock);
+    int n = g_npeople < cap ? g_npeople : cap;
+    for (int i = 0; i < n; i++) {
+        if (ids) ids[i] = g_people[i].id;
+        if (names) strcpy_s(names[i], 32, g_people[i].name);
+        if (teams) teams[i] = g_people[i].team;
+    }
+    ReleaseSRWLockShared(&g_people_lock);
+    return n;
+}
+bool mcc_session_has(uint64_t id) {                     // (report.cpp: their emblem and nameplate kept too)
+    AcquireSRWLockShared(&g_people_lock);
+    bool in = false;
+    for (int i = 0; i < g_npeople && !in; i++) in = g_people[i].id == id;
+    ReleaseSRWLockShared(&g_people_lock);
+    return in;
+}
+
+static void note_me(const uint8_t* msg) {
+    const uint8_t* head = msg + 0x38;
+    int n = 0, me_team = -1;
+    bool me = false;
+    sw_person people[SW_PEOPLE];
+    int np = 0;
+    for (const uint8_t* node = *(const uint8_t* const*)(msg + 0x40); node && node != head && n < 40;
+         node = *(const uint8_t* const*)(node + 8), n++) {
+        uint64_t id = *(const uint64_t*)(node + 0x18);
+        if (node[0x10]) {
+            if (me) continue;
+            me = true;
+            char a[64];
+            wstr(node + 0x20, a, sizeof a);
+            if (a[0] && a[0] != '?') strcpy_s(g_me_name, a);
+            if (id && !is_bot_id(id)) g_me_id = id;
+            me_team = *(const int32_t*)(node + 0x6C);
+        } else if (node[0x12] && node[0x13] && id && !is_bot_id(id) && np < SW_PEOPLE) {
+            sw_person& p = people[np];
+            p.id = id;
+            wstr(node + 0x20, p.name, sizeof p.name);
+            if (!p.name[0] || p.name[0] == '?') strcpy_s(p.name, "Player");
+            int t = *(const int32_t*)(node + 0x6C);
+            p.team = t >= 0 && t < 8 ? t : -1;
+            np++;
+        }
+    }
+    if (!me) return;                                      // (not a list with the player in it: nothing learnt)
+    AcquireSRWLockExclusive(&g_people_lock);
+    bool changed = np != g_npeople || (me_team >= 0 && me_team < 8 ? me_team : -1) != g_me_team;
+    for (int i = 0; i < np && !changed; i++)
+        changed = people[i].id != g_people[i].id || people[i].team != g_people[i].team;
+    memcpy(g_people, people, sizeof(sw_person) * np);
+    g_npeople = np;
+    g_me_team = me_team >= 0 && me_team < 8 ? me_team : -1;
+    ReleaseSRWLockExclusive(&g_people_lock);
+    if (changed && InterlockedIncrement(&g_lines) <= 400) {
+        char s[400];
+        int at = sprintf_s(s, "session list: people: you on team %d", g_me_team);
+        for (int i = 0; i < np && at < 340; i++) at += sprintf_s(s + at, sizeof s - at, ", %s on team %d", people[i].name, people[i].team);
+        logf("%s", s);
+    }
+}
+
 static void __fastcall h_roster(void* mgr, uint8_t* msg) {
     __try {
         if (msg && *(const uint32_t*)(msg + 0x28) == SW_MSG_ID) {
             g_listed = 0;
+            note_me(msg);
             add_lobby_bots(msg);
             log_members(msg);
         }
@@ -306,8 +395,11 @@ static DWORD WINAPI refresh_thread(void*) {
 
 void career_hooks();                             // career.cpp (Nov 13: the bots' numbers on MCC's Career page)
 
+void lobby_test_hooks();                         // lobby_test.cpp (Nov 16: Proving Grounds, the lobby's own picks)
+
 void session_watch_hooks() {
     career_hooks();
+    lobby_test_hooks();
     g_mcc = (uint8_t*)GetModuleHandleW(nullptr);
     bool ok = false;
     __try {

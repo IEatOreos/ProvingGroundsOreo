@@ -3,6 +3,8 @@
   "credits": {"game": 1000, "win": 1000, "kill": 100, "assist": 50, "medal": 25},
   "commendation_credits": true,
   "commendation_comment": "commendation_credits: a commendation tier reached adds the credits commendations.json gives it (as in Reach, the owner's list, Nov 16); false leaves the rank to the matches alone.",
+  "challenge_credits": true,
+  "challenge_comment": "challenge_credits: a daily or weekly challenge finished within its day or week adds the cR challenges.json gives it (the owner, Nov 17: \"Yes, count toward rank\"); false shows them without changing the rank.",
   "ranks": [
     {"rank": "Recruit", "cr": [0]},
     {"rank": "Private", "cr": [7500]},

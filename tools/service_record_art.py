@@ -42,6 +42,7 @@ usage: python -I service_record_art.py medals [MCC folder]
        python -I service_record_art.py weapons [MCC folder]
        python -I service_record_art.py pictures [MCC folder]
        python -I service_record_art.py frames <the owner's tier frame sheet>
+       python -I service_record_art.py emblems <the owner's tier emblem sheet> <commendation key>   (e.g. mvp)
        python -I service_record_art.py video [MCC folder]      (needs native\build_bink_to_mp4.bat first)
        python -I service_record_art.py ranks <the rank chart picture>
        python -I service_record_art.py ranks <a folder of one picture a step, each named <step>_...>
@@ -284,6 +285,74 @@ def frames(sheet, out=OUT):
     with open(os.path.join(folder, "frames.json"), "w", encoding="utf-8") as f:
         json.dump({t: opening for t in FRAME_TIERS}, f)
     print(f"frames: 6 cut, opening {opening} -> {folder}")
+    return 6
+
+
+EMBLEM_SIDE = 448                # the tier emblems' square (service_record.py tier_banners)
+
+
+def emblems(sheet, key, out=OUT):
+    """A commendation's tier emblems from the owner's sheet (Nov 17: MVP, Game Changer, Positive Thinking, Loyal
+    Soldier; a title over six emblems in a row, Iron to Max, each named under it, on black or night blue) cut into
+    art/commendations/tiers/<tier>/<key>_<tier>.png: each emblem lifted off the sheet's own background (its alpha from
+    how far its brightest channel stands above it, its colour unmixed, the glow kept), centred on a 448 square. The six
+    are the sheet's six biggest lit shapes that are not much wider than tall, left to right; any other count: nothing
+    is written. Also its "not started" banner (art/commendations/<key>.png) when there is none: Victor's Reach banner
+    (victor.png) with its emblem painted out and the Silver one there in grey, as the earlier ones have. A copy of the
+    sheet is kept (art/commendations/sheets). Returns how many emblems were cut."""
+    import numpy as np
+    from PIL import Image
+    from scipy import ndimage
+    if not re.fullmatch(r"[a-z0-9_]+", key):
+        raise ValueError(f"not a commendation key: {key!r}")
+    a = np.asarray(Image.open(sheet).convert("RGB")).astype(np.float32)
+    edge = np.concatenate([a[:8].reshape(-1, 3), a[-8:].reshape(-1, 3), a[:, :8].reshape(-1, 3), a[:, -8:].reshape(-1, 3)])
+    bg = np.median(edge, axis=0)                                # (the sheet's black or night blue)
+    lift = np.clip(a - bg, 0, 255).max(axis=2)
+    lab, _ = ndimage.label(ndimage.binary_dilation(lift > 45, iterations=5))
+    shapes = []
+    for b in ndimage.find_objects(lab):
+        h, w = b[0].stop - b[0].start, b[1].stop - b[1].start
+        if w <= 1.6 * h and h > a.shape[0] / 8:                 # (not the title, its lines, the names under)
+            shapes.append(b)
+    shapes = sorted(sorted(shapes, key=lambda b: -(b[0].stop - b[0].start) * (b[1].stop - b[1].start))[:6],
+                    key=lambda b: b[1].start)
+    if len(shapes) != 6:
+        raise ValueError(f"expected 6 emblems on the sheet, found {len(shapes)}")
+    art = os.path.join(out, "commendations")
+    made = {}
+    for tier, (ys, xs) in zip(FRAME_TIERS, shapes):
+        part = a[ys, xs]
+        alpha = np.clip((np.clip(part - bg, 0, 255).max(axis=2) - 10) / 90, 0, 1)
+        rgb = np.clip(bg + (part - bg) / np.maximum(alpha[..., None], 0.02), 0, 255)
+        img = Image.fromarray(np.dstack([rgb, alpha * 255]).astype(np.uint8), "RGBA")
+        img = img.crop(img.getbbox() or (0, 0, img.width, img.height))
+        s = EMBLEM_SIDE * 0.94 / max(img.width, img.height)
+        img = img.resize((max(1, round(img.width * s)), max(1, round(img.height * s))), Image.LANCZOS)
+        sq = Image.new("RGBA", (EMBLEM_SIDE, EMBLEM_SIDE), (0, 0, 0, 0))
+        sq.alpha_composite(img, ((EMBLEM_SIDE - img.width) // 2, (EMBLEM_SIDE - img.height) // 2))
+        folder = os.path.join(art, "tiers", tier)
+        os.makedirs(folder, exist_ok=True)
+        sq.save(os.path.join(folder, f"{key}_{tier}.png"))
+        made[tier] = sq
+    os.makedirs(os.path.join(art, "sheets"), exist_ok=True)
+    shutil.copyfile(sheet, os.path.join(art, "sheets", key + os.path.splitext(sheet)[1].lower()))
+    base, victor = os.path.join(art, key + ".png"), os.path.join(art, "victor.png")
+    if not os.path.exists(base) and os.path.exists(victor):
+        sys.path.insert(0, HERE)
+        from service_record import clean_banner                 # (the banners' own emblem box)
+        banner, box = clean_banner(victor)
+        grey = made["silver"].convert("LA").convert("RGBA")
+        g = np.asarray(grey).astype(np.float32)
+        g[..., :3] = np.clip(g[..., :3] * 1.1 + 18, 0, 255)       # (Reach's banners: a light grey emblem)
+        grey = Image.fromarray(g.astype(np.uint8), "RGBA")
+        grey = grey.crop(grey.getbbox() or (0, 0, grey.width, grey.height))
+        bw, bh = box[2] - box[0], box[3] - box[1]
+        s = min(bw / grey.width, bh / grey.height) * 1.04
+        grey = grey.resize((max(1, round(grey.width * s)), max(1, round(grey.height * s))), Image.LANCZOS)
+        banner.alpha_composite(grey, (box[0] + (bw - grey.width) // 2, box[1] + (bh - grey.height) // 2))
+        banner.save(base)
+    print(f"emblems: {key}: 6 tiers cut -> {os.path.join(art, 'tiers')}")
     return 6
 
 
@@ -540,6 +609,11 @@ if __name__ == "__main__":
             frames(sys.argv[2])
         except (ValueError, OSError) as e:
             sys.exit(f"frames not cut: {e}")
+    elif sys.argv[1:2] == ["emblems"] and len(sys.argv) == 4:
+        try:
+            emblems(sys.argv[2], sys.argv[3])
+        except (ValueError, OSError) as e:
+            sys.exit(f"emblems not cut: {e}")
     elif sys.argv[1:2] == ["ranks"] and len(sys.argv) == 3:
         try:
             ranks(sys.argv[2])

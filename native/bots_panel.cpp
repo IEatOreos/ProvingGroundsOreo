@@ -669,11 +669,15 @@ bool profiles_reroll(const wchar_t* path, int experience, int effects, uint32_t 
 // line.
 // bot_pool_saved.ini lines: next=<queue position>, saved=<tier key>,<style key>,<name>.
 uint32_t hb_matchmaking = 1;
+uint32_t hb_pool_format = 4;                             // (custom, Nov 16) 4: bot_pool_4v4.txt, 8: bot_pool_8v8.txt
 static const int POOL_SEED_N = 60;                       // a new pool: the 15 profiles first, then made-up names
 struct pool_saved { char name[16]; uint8_t tier, style; };
 static std::vector<std::string> g_pool;
 static std::vector<pool_saved> g_pool_saved;
 static int g_pool_next = 0;
+static int g_pool_next_fmt[2];                           // (Nov 16) each format's queue position (4v4, 8v8)
+static uint32_t g_pool_salt = 0;                         // (Nov 16) "Reshuffle clans": a new spread of the parties
+static int pool_fmt_ix() { return hb_pool_format >= 8 ? 1 : 0; }
 static wchar_t g_pool_dir[260];
 static int g_humans[HB_TEAMS_MAX];                       // (Nov 13) the people by team, for the team points
 
@@ -735,11 +739,188 @@ static void pool_write_new(const wchar_t* path) {
     fclose(f);
 }
 
+// ---- (custom, Nov 16) the 4v4 and 8v8 files. The owner: "a bot text file formatted for 4v4 or 8v8", "clan parties to
+// be up to 4 or up to 8", "Distance clans in the text file, but add variety so teams can play". bot_pool.txt stays the
+// file the owner edits; bot_pool_4v4.txt / bot_pool_8v8.txt are made from it (again whenever it, a bot's clan tag or the
+// reshuffle changes: their "# source=" line): the lines of bots in no clan (or a clan of one) in their own order, notes
+// with them; each clan's lines in rounds (a round: each of its bots' next line, as Group parties did), cut into parties
+// of up to 4 / 8; the clans' parties taken round by round in a shuffled clan order (one clan's parties apart), about 1 in
+// 4 with the next party of another clan beside it (the two clans meet), and the parties spread evenly through the file
+static uint32_t pool_mix(uint32_t h, uint32_t v) { return (h ^ v) * 16777619u; }
+
+static bool pool_note(const char* c) {
+    while (*c == ' ' || *c == '\t') c++;
+    return *c == '#' || *c == ';';
+}
+
+static bool pool_blank(const char* c) {
+    while (*c == ' ' || *c == '\t' || *c == '\r' || *c == '\n') c++;
+    return !*c;
+}
+
+// the file's lines (no line ends) and their hash, with the clans and the reshuffle mixed in; false: no file
+static bool pool_master(const wchar_t* p, std::vector<std::string>& lines, uint32_t& sig) {
+    lines.clear();
+    sig = 2166136261u;
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"rb") != 0 || !f) return false;
+    char line[512];
+    while (fgets(line, sizeof line, f)) {
+        size_t n = strlen(line);
+        while (n && (line[n - 1] == '\r' || line[n - 1] == '\n')) line[--n] = 0;
+        lines.push_back(line);
+        for (const char* c = line; *c; c++) sig = pool_mix(sig, (uint8_t)*c);
+        sig = pool_mix(sig, '\n');
+    }
+    fclose(f);
+    for (int k = 0; k < g_nprof; k++) {
+        for (const char* c = g_prof[k]; *c; c++) sig = pool_mix(sig, (uint8_t)tolower((unsigned char)*c));
+        sig = pool_mix(sig, ',');
+        for (const char* c = g_prof_clan[k]; *c; c++) sig = pool_mix(sig, (uint8_t)tolower((unsigned char)*c));
+        sig = pool_mix(sig, ';');
+    }
+    sig = pool_mix(sig, g_pool_salt);
+    return true;
+}
+
+// one format's file from bot_pool.txt's lines: the clans with 2+ bots in it, -1 not written
+static int pool_write_format(const std::vector<std::string>& lines, int party, uint32_t sig, const wchar_t* out) {
+    // the clans with two or more bots in the file (one alone is no party: a line like any other)
+    std::unordered_map<std::string, std::unordered_set<std::string>> bots_of;
+    std::vector<std::string> clan_of(lines.size()), key_of(lines.size());
+    char name[16];
+    for (size_t i = 0; i < lines.size(); i++) {
+        if (pool_note(lines[i].c_str()) || pool_blank(lines[i].c_str())) continue;
+        const char* c = lines[i].c_str();
+        while (*c == ' ' || *c == '\t') c++;
+        if (!pool_line(c, name, nullptr)) continue;
+        const char* cl = profile_clan_of(name);
+        if (!cl[0]) continue;
+        clan_of[i] = pool_key(cl);
+        key_of[i] = pool_key(name);
+        bots_of[clan_of[i]].insert(key_of[i]);
+    }
+    size_t start = 0;                                    // (the file's own opening notes: ours instead)
+    while (start < lines.size() && (pool_note(lines[start].c_str()) || pool_blank(lines[start].c_str()))) start++;
+    std::vector<int> solo;                               // line indexes, in order
+    std::vector<std::string> clans;                      // first-seen order
+    std::unordered_map<std::string, std::vector<std::string>> members;      // a clan's bots, first-seen order
+    std::unordered_map<std::string, std::vector<int>> lines_of;             // a bot's lines
+    for (size_t i = start; i < lines.size(); i++) {
+        if (pool_blank(lines[i].c_str())) continue;
+        if (clan_of[i].empty() || bots_of[clan_of[i]].size() < 2) { solo.push_back((int)i); continue; }
+        std::vector<std::string>& m = members[clan_of[i]];
+        if (m.empty()) clans.push_back(clan_of[i]);
+        if (!lines_of.count(key_of[i])) m.push_back(key_of[i]);
+        lines_of[key_of[i]].push_back((int)i);
+    }
+    // each clan's parties: round by round, each round cut to the party size
+    struct pparty { std::vector<int> line; int clan; };
+    std::vector<std::vector<pparty>> per(clans.size());
+    for (size_t c = 0; c < clans.size(); c++)
+        for (size_t round = 0;; round++) {
+            std::vector<int> g;
+            for (const std::string& b : members[clans[c]]) if (round < lines_of[b].size()) g.push_back(lines_of[b][round]);
+            if (g.empty()) break;
+            for (size_t k = 0; k < g.size(); k += (size_t)party) {
+                pparty pp; pp.clan = (int)c;
+                for (size_t j = k; j < g.size() && j < k + (size_t)party; j++) pp.line.push_back(g[j]);
+                per[c].push_back(pp);
+            }
+        }
+    // the order: a round of every clan's next party, the clans shuffled each round
+    uint32_t rng = sig | 1;
+    std::vector<pparty> order;
+    std::vector<size_t> next(clans.size(), 0);
+    for (;;) {
+        std::vector<int> left;
+        for (size_t c = 0; c < clans.size(); c++) if (next[c] < per[c].size()) left.push_back((int)c);
+        if (left.empty()) break;
+        for (int j = (int)left.size() - 1; j > 0; j--) std::swap(left[j], left[rint(rng, j + 1)]);
+        for (int c : left) order.push_back(per[c][next[c]++]);
+    }
+    // the places: one or two parties (two clans meeting, about 1 in 4) each, spread evenly through the other lines
+    std::vector<std::vector<int>> slot;
+    for (size_t k = 0; k < order.size(); k++) {
+        std::vector<int> s = order[k].line;
+        if (k + 1 < order.size() && order[k + 1].clan != order[k].clan && rint(rng, 100) < 25) {
+            s.insert(s.end(), order[k + 1].line.begin(), order[k + 1].line.end());
+            k++;
+        }
+        slot.push_back(s);
+    }
+    int ns = (int)slot.size(), nsolo = (int)solo.size();
+    std::vector<int> at(ns, 0);
+    double gap = ns ? (double)nsolo / ns : 0.0;
+    for (int k = 0; k < ns; k++) {
+        int a = (int)(k * gap + gap * (0.25 + 0.5 * rint(rng, 1000) / 1000.0));
+        at[k] = a < 0 ? 0 : a > nsolo ? nsolo : a;
+    }
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, out, L"wb") != 0 || !f) return -1;
+    fprintf(f, "# Made by Bot Matchmaking from bot_pool.txt for %dv%d lobbies: each clan's bots together in parties of up to\n"
+               "# %d, the parties spread out (some beside another clan's, so the clans meet). Edit bot_pool.txt, not this file:\n"
+               "# this one is made again whenever bot_pool.txt or a bot's clan tag changes.\n"
+               "# source=%08x\n", party, party, party, sig);
+    for (int i = 0, k = 0; i <= nsolo; i++) {
+        for (; k < ns && at[k] <= i; k++)
+            for (int l : slot[k]) fprintf(f, "%s\n", lines[l].c_str());
+        if (i < nsolo) fprintf(f, "%s\n", lines[solo[i]].c_str());
+    }
+    fclose(f);
+    return (int)clans.size();
+}
+
+static void pool_format_path(wchar_t* out, size_t cap, int ix) {
+    swprintf_s(out, cap, L"%sbot_pool_%s.txt", g_pool_dir, ix ? L"8v8" : L"4v4");
+}
+
+// that format's file made again when bot_pool.txt (or a clan tag, or the reshuffle) changed since, or always (force):
+// the clans, -1 not written, -2 nothing to do
+static int pool_ensure_format(int ix, bool force) {
+    wchar_t p[300], out[300];
+    swprintf_s(p, L"%sbot_pool.txt", g_pool_dir);
+    pool_format_path(out, 300, ix);
+    std::vector<std::string> lines;
+    uint32_t sig;
+    if (!pool_master(p, lines, sig)) return -1;
+    sig = pool_mix(sig, ix ? 8u : 4u);
+    if (!force) {
+        FILE* f = nullptr;
+        uint32_t had = 0;
+        bool found = false;
+        if (_wfopen_s(&f, out, L"rb") == 0 && f) {
+            char line[512];
+            for (int k = 0; k < 8 && fgets(line, sizeof line, f); k++)
+                if (sscanf_s(line, "# source=%x", &had) == 1) { found = true; break; }
+            fclose(f);
+        }
+        if (found && had == sig) return -2;
+    }
+    return pool_write_format(lines, ix ? 8 : 4, sig, out);
+}
+
 void bot_pool_load(const wchar_t* dir) {
     if (dir != g_pool_dir) wcsncpy_s(g_pool_dir, dir, _TRUNCATE);
     wchar_t p[300];
     swprintf_s(p, L"%sbot_pool.txt", g_pool_dir);
     if (GetFileAttributesW(p) == INVALID_FILE_ATTRIBUTES) pool_write_new(p);
+    // (Nov 16) the format's file, made from bot_pool.txt when that changed; it cannot be written: bot_pool.txt itself.
+    // The reshuffle's salt first (it is part of the file's source line)
+    {
+        wchar_t sp[300];
+        swprintf_s(sp, L"%sbot_pool_saved.ini", g_pool_dir);
+        FILE* sf = nullptr;
+        if (_wfopen_s(&sf, sp, L"r") == 0 && sf) {
+            char sl[512];
+            unsigned u;
+            while (fgets(sl, sizeof sl, sf)) if (sscanf_s(sl, "salt=%u", &u) == 1) g_pool_salt = u;
+            fclose(sf);
+        }
+    }
+    wchar_t fp[300];
+    pool_format_path(fp, 300, pool_fmt_ix());
+    if (pool_ensure_format(pool_fmt_ix(), false) != -1) wcscpy_s(p, fp);
     g_pool.clear();
     FILE* f = nullptr;
     char line[512], name[16];
@@ -770,10 +951,15 @@ void bot_pool_load(const wchar_t* dir) {
     swprintf_s(p, L"%sbot_pool_saved.ini", g_pool_dir);
     g_pool_saved.clear();
     g_pool_next = 0;
+    g_pool_next_fmt[0] = g_pool_next_fmt[1] = 0;
     if (_wfopen_s(&f, p, L"r") == 0 && f) {
         while (fgets(line, sizeof line, f)) {
             int v;
-            if (sscanf_s(line, "next=%d", &v) == 1) { g_pool_next = v; continue; }
+            unsigned u;
+            // (Nov 16) each format's own position; next= (before the formats) is the 4v4 file's
+            if (sscanf_s(line, "next4=%d", &v) == 1 || sscanf_s(line, "next=%d", &v) == 1) { g_pool_next_fmt[0] = v; continue; }
+            if (sscanf_s(line, "next8=%d", &v) == 1) { g_pool_next_fmt[1] = v; continue; }
+            if (sscanf_s(line, "salt=%u", &u) == 1) { g_pool_salt = u; continue; }
             if (strncmp(line, "saved=", 6) != 0) continue;
             char buf[512]; strcpy_s(buf, line + 6);
             char* ctx = nullptr;
@@ -789,6 +975,7 @@ void bot_pool_load(const wchar_t* dir) {
         }
         fclose(f);
     }
+    g_pool_next = g_pool_next_fmt[pool_fmt_ix()];
     if (g_pool_next < 0 || g_pool_next >= (int)g_pool.size()) g_pool_next = 0;
     // (custom, Nov 13) the people in the last match, by team (tools/play.py writes bot_pool_humans.txt at each team match's
     // start: a human=<team> line each); none known yet: you alone on Red
@@ -813,13 +1000,34 @@ bool bot_pool_save() {
     swprintf_s(p, L"%sbot_pool_saved.ini", g_pool_dir);
     FILE* f = nullptr;
     if (_wfopen_s(&f, p, L"w") != 0 || !f) return false;
-    fprintf(f, "; Bot Matchmaking (BOTS panel): the queue position in bot_pool.txt, and each bot's saved difficulty and\n"
-               "; play style (saved=<difficulty>,<style>,<name>). A bot with no line here takes the defaults.\n");
-    fprintf(f, "next=%d\n", g_pool_next);
+    fprintf(f, "; Bot Matchmaking (BOTS panel): the queue positions in bot_pool_4v4.txt and bot_pool_8v8.txt, the clans'\n"
+               "; reshuffle, and each bot's saved difficulty and play style (saved=<difficulty>,<style>,<name>). A bot with\n"
+               "; no line here takes the defaults.\n");
+    g_pool_next_fmt[pool_fmt_ix()] = g_pool_next;        // (Nov 16) each format its own place in its own file
+    fprintf(f, "next4=%d\nnext8=%d\nsalt=%u\n", g_pool_next_fmt[0], g_pool_next_fmt[1], g_pool_salt);
     for (const pool_saved& sv : g_pool_saved)
         fprintf(f, "saved=%s,%s,%s\n", tier_key(sv.tier), style_name(sv.style), sv.name);
     fclose(f);
     return true;
+}
+
+// (custom, Nov 16) the 4v4 or 8v8 file: the place in this one kept, that one read from its own
+void bot_pool_set_format(uint32_t fmt) {
+    fmt = fmt >= 8 ? 8u : 4u;
+    if (fmt == hb_pool_format) return;
+    if (g_pool_dir[0]) bot_pool_save();
+    hb_pool_format = fmt;
+    if (g_pool_dir[0]) bot_pool_load(g_pool_dir);
+}
+
+// (custom, Nov 16) the Settings tab's "Reshuffle clans": both files made again with a new spread
+int bot_pool_reshuffle() {
+    if (!g_pool_dir[0]) return -1;
+    g_pool_salt = g_pool_salt * 2654435761u + 0x9E3779B9u + (uint32_t)GetTickCount();
+    if (!bot_pool_save()) return -1;
+    int a = pool_ensure_format(0, true), b = pool_ensure_format(1, true);
+    bot_pool_load(g_pool_dir);
+    return a < 0 || b < 0 ? -1 : a;
 }
 
 int bot_pool_size() { return (int)g_pool.size(); }
@@ -919,6 +1127,46 @@ unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w
     for (const std::string& w : g_emb_none) if (_stricmp(w.c_str(), name) == 0) return 0;
     if (!strchr(name, '"')) g_emb_want.push_back(name);
     return 0;
+}
+
+// (custom, Nov 17, the owner: "add my nameplate and emblem") the person's own emblem picture from the five numbers MCC
+// keeps for it (report.cpp mcc_player_look): native\bin\emblems\_player_<numbers>.rgba, drawn once by brain/emblems.py
+// --draw in the background (a new file when they change their emblem), picked up once it is there
+unsigned long long player_emblem(const int32_t ids[5], unsigned long long (*make)(int w, int h, const unsigned char* rgba)) {
+    if (!g_make_texture) g_make_texture = make;
+    wchar_t ef[96]; swprintf_s(ef, L"emblems\\_player_%d_%d_%d_%d_%d.rgba", ids[0], ids[1], ids[2], ids[3], ids[4]);
+    char ek[64]; sprintf_s(ek, "emblem:@me:%d.%d.%d.%d.%d", ids[0], ids[1], ids[2], ids[3], ids[4]);
+    bool miss = false;
+    for (int i = 0; i < g_ntex; i++)
+        if (!strcmp(g_tex[i].key, ek)) { if (g_tex[i].id) return (unsigned long long)g_tex[i].id; miss = true; break; }
+    wchar_t path[300]; bin_file(path, 300, ef);
+    if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) {
+        static char asked[64];
+        if (strcmp(asked, ek) == 0) return 0;               // (asked once for these numbers)
+        strcpy_s(asked, ek);
+        wchar_t root[260], py[MAX_PATH + 2], cmd[1200];
+        if (!repo_root(root, 260)) return 0;
+        hb_python(root, py, MAX_PATH + 2);
+        swprintf_s(cmd, L"%s -I \"%s\\brain\\emblems.py\" --draw \"%s\" %d %d %d %d %d", py, root, path, ids[0], ids[1], ids[2],
+                   ids[3], ids[4]);
+        STARTUPINFOW si{}; si.cb = sizeof si;
+        PROCESS_INFORMATION pi{};
+        if (CreateProcessW(nullptr, cmd, nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+        }
+        return 0;
+    }
+    if (miss) {                                            // (tried before the file came: again, once a second)
+        static ULONGLONG last;
+        ULONGLONG now = GetTickCount64();
+        if (now - last < 1000) return 0;
+        last = now;
+        texture_forget(ek);
+    }
+    if (g_ntex >= COUNT(g_tex)) { texture_forget("np:"); texture_forget("emblem:"); }
+    const tex_entry* t = texture(ek, ef);
+    return t ? (unsigned long long)t->id : 0;
 }
 
 // ---- MCC's nameplates (custom, Nov 11). The owner: "would you be able to locate the games files and give them actual
@@ -1219,11 +1467,76 @@ void bot_emblems_frame() {
 }
 
 // seat i takes the next pool name no other seat holds, and that bot's saved settings; false: none free
-static bool pool_take(hb_roster& r, int i) {
+// ---- (custom, Nov 16) clans fit whole. The owner: clans "trump team balance", "the teams have to always remained
+// balanced", "I don't want a clan member of theirs on my team". A party: a clan's bots in the lobby (any of its bots,
+// seated or not by a pull)
+static int pool_teams(const hb_roster& r) { return r.teams < 2 ? 2 : r.teams > HB_TEAMS_MAX ? HB_TEAMS_MAX : r.teams; }
+
+// each party (a clan with its bots counted) onto one team, every party whole: room is each team's bot seats left
+static bool parties_place(std::vector<int>& sizes, size_t k, std::vector<int>& room) {
+    if (k == sizes.size()) return true;
+    for (size_t t = 0; t < room.size(); t++) {
+        if (room[t] < sizes[k]) continue;
+        bool same = false;                               // (two teams with the same room left: one tried is enough)
+        for (size_t u = 0; u < t; u++) if (room[u] == room[t]) { same = true; break; }
+        if (same) continue;
+        room[t] -= sizes[k];
+        if (parties_place(sizes, k + 1, room)) return true;
+        room[t] += sizes[k];
+    }
+    return false;
+}
+
+static bool parties_fit(std::vector<int> sizes, std::vector<int> room) {
+    std::sort(sizes.begin(), sizes.end(), [](int a, int b) { return a > b; });
+    while (!sizes.empty() && sizes.back() < 2) sizes.pop_back();   // (one bot of a clan goes anywhere)
+    return parties_place(sizes, 0, room);
+}
+
+// the parties among the seats named (seat skip left out, name added), each clan's count
+static std::vector<int> seated_parties(const hb_roster& r, int skip, const char* name) {
+    std::unordered_map<std::string, int> n;
+    for (int i = 0; i < r.n; i++) {
+        if (i == skip || !r.bot[i].name[0]) continue;
+        const char* c = profile_clan_of(r.bot[i].name);
+        if (c[0]) n[pool_key(c)]++;
+    }
+    if (name && name[0]) { const char* c = profile_clan_of(name); if (c[0]) n[pool_key(c)]++; }
+    std::vector<int> s;
+    for (auto& kv : n) s.push_back(kv.second);
+    return s;
+}
+
+static std::vector<int> team_seats(const hb_roster& r) {
+    std::vector<int> room(pool_teams(r), 0);
+    for (int i = 0; i < r.n; i++) if (r.bot[i].team < room.size()) room[r.bot[i].team]++;
+    return room;
+}
+
+// seat i may take this name: every clan in the lobby still fits whole on one team
+static bool pool_fits(const hb_roster& r, int i, const char* name) {
+    return parties_fit(seated_parties(r, i, name), team_seats(r));
+}
+
+// the biggest party a lobby takes: the format's (4 or 8), and no more than the seats of the biggest team without people
+// on it (the team a party lines up on), else of the biggest team
+static int party_cap(const hb_roster& r) {
+    std::vector<int> room = team_seats(r);
+    int free_most = 0, most = 0;
+    for (size_t t = 0; t < room.size(); t++) {
+        if (room[t] > most) most = room[t];
+        if (!g_humans[t] && room[t] > free_most) free_most = room[t];
+    }
+    int cap = free_most > 0 ? free_most : most, f = hb_pool_format >= 8 ? 8 : 4;
+    return cap < f ? cap : f;
+}
+
+static bool pool_take(hb_roster& r, int i, bool fit = false) {
     int n = (int)g_pool.size();
     for (int k = 0; k < n; k++) {
         int j = (g_pool_next + k) % n;
         if (name_taken(r, g_pool[j].c_str(), i)) continue;
+        if (fit && !pool_fits(r, i, g_pool[j].c_str())) continue;   // (Nov 16: one clan too many: passed over)
         strcpy_s(r.bot[i].name, g_pool[j].c_str());
         g_pool_next = (j + 1) % n;
         int t, st;
@@ -1272,51 +1585,104 @@ static const char* pool_clanmate(const hb_roster& r, int i, const char* clan) {
     return nullptr;
 }
 
-struct pb_block { int seat[HB_ROSTER_MAX]; int n, pts, demons; };
+struct pb_block { int seat[HB_ROSTER_MAX]; int n, pts, demons, pin; };   // pin: its team kept (-1 none)
 
-void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng) {
+static char g_balance_note[200];                         // (Nov 16) the last deal's split or swap
+const char* roster_balance_note() { return g_balance_note; }
+
+void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng, const uint8_t* pinned) {
     int nt = r.teams < 2 ? 2 : r.teams > HB_TEAMS_MAX ? HB_TEAMS_MAX : r.teams;
-    int cap[HB_TEAMS_MAX] = {}, total[HB_TEAMS_MAX] = {}, most = 0;
+    int cap[HB_TEAMS_MAX] = {}, total[HB_TEAMS_MAX] = {};
     for (int i = 0; i < r.n; i++) if (r.bot[i].team < nt) cap[r.bot[i].team]++;   // (team sizes as seated: kept)
     std::vector<int> tl;
     for (int t = 0; t < nt; t++) {
         total[t] = humans[t] * HB_HUMAN_POINTS;
-        if (cap[t]) { tl.push_back(t); if (cap[t] > most) most = cap[t]; }
+        if (cap[t]) tl.push_back(t);
     }
     if (tl.size() < 2) return;
-    // the blocks: a party (one clan tag) moves as one, cut to the biggest team's size; everyone else alone
+    // the blocks: a party (one clan tag) moves as one, whole (Nov 16: it was cut to the biggest team's size); everyone
+    // else alone. (Nov 16, Proving Grounds) pinned seats (the person's invited party) are one block that keeps its team
     std::vector<pb_block> bl;
     std::vector<std::string> clans;
     for (int i = 0; i < r.n; i++) {
         if (r.bot[i].team >= nt) continue;
-        const char* c = profile_clan_of(r.bot[i].name);
+        bool pin = pinned && pinned[i];
+        const char* c = pin ? "\x01party" : profile_clan_of(r.bot[i].name);
         int k = -1;
         if (c[0]) for (int j = 0; j < (int)bl.size(); j++)
-            if (!clans[j].empty() && _stricmp(clans[j].c_str(), c) == 0 && bl[j].n < most) { k = j; break; }
-        if (k < 0) { bl.push_back(pb_block{}); clans.push_back(c); k = (int)bl.size() - 1; }
+            if (!clans[j].empty() && _stricmp(clans[j].c_str(), c) == 0) { k = j; break; }
+        if (k < 0) {
+            pb_block nb{};
+            nb.pin = pin ? r.bot[i].team : -1;
+            bl.push_back(nb); clans.push_back(c); k = (int)bl.size() - 1;
+        }
         pb_block& b = bl[k];
         b.seat[b.n++] = i;
         b.pts += tier_points(r.bot[i].tier);
         b.demons += r.bot[i].tier == HB_TIER_DEMON;
     }
-    for (int j = (int)bl.size() - 1; j > 0; j--) std::swap(bl[j], bl[rint(rng, j + 1)]);   // (ties broken at random)
+    // (Nov 16) parties that cannot all go whole onto a team each (a lobby made by hand: Bot Matchmaking never deals one):
+    // the biggest gives its last bots up, one at a time, until they fit; the note says which clan was split
+    {
+        std::vector<int> room;
+        for (int t : tl) {
+            int pinned_n = 0;                            // (the pinned party's seats are not room for a clan)
+            for (const pb_block& b : bl) if (b.pin == t) pinned_n += b.n;
+            room.push_back(cap[t] - pinned_n);
+        }
+        for (int guard = 0; guard < HB_ROSTER_MAX; guard++) {
+            std::vector<int> sizes;
+            int big = -1;
+            for (int j = 0; j < (int)bl.size(); j++) if (bl[j].pin < 0 && !clans[j].empty() && bl[j].n >= 2) {
+                sizes.push_back(bl[j].n);
+                if (big < 0 || bl[j].n > bl[big].n) big = j;
+            }
+            if (big < 0 || parties_fit(sizes, room)) break;
+            pb_block& b = bl[big];
+            int s = b.seat[--b.n];
+            b.pts -= tier_points(r.bot[s].tier);
+            b.demons -= r.bot[s].tier == HB_TIER_DEMON;
+            pb_block one{};
+            one.pin = -1;
+            one.seat[one.n++] = s;
+            one.pts = tier_points(r.bot[s].tier);
+            one.demons = r.bot[s].tier == HB_TIER_DEMON;
+            bl.push_back(one); clans.push_back("");
+            sprintf_s(g_balance_note, "[%s] had more bots than fit on one team: %s and any more were split off.",
+                      profile_clan_of(r.bot[s].name), r.bot[s].name);
+        }
+    }
+    // a party is a block of a clan's 2+ bots; it lines up on a team without people when it can (the owner: no clan
+    // member of theirs on his team)
+    std::vector<uint8_t> party(bl.size());
+    for (size_t j = 0; j < bl.size(); j++) party[j] = bl[j].pin < 0 && !clans[j].empty() && bl[j].n >= 2;
+    for (int j = (int)bl.size() - 1; j > 0; j--) {        // (ties broken at random)
+        int k = rint(rng, j + 1);
+        std::swap(bl[j], bl[k]);
+        std::swap(party[j], party[k]);
+    }
     int nb = (int)bl.size();
     std::vector<int> at(nb, tl[0]);
     if (tl.size() == 2 && nb <= 20) {
-        // two teams: every split of the blocks that keeps the team sizes; the smallest gap in points; of those, A style
-        // (the Demons 2+ apart) 60% of the time, B style (spread) 40%, one at random; one style missing: the other
-        int a = tl[0], b2 = tl[1], best = 1 << 30, all_d = 0;
+        // two teams: every split of the blocks that keeps the team sizes; the fewest party bots on a team with people
+        // (Nov 16), then the smallest gap in points; of those, A style (the Demons 2+ apart) 60% of the time, B style
+        // (spread) 40%, one at random; one style missing: the other
+        int a = tl[0], b2 = tl[1], best = 1 << 30, best_with = 1 << 30, all_d = 0;
         for (const pb_block& b : bl) all_d += b.demons;
         std::vector<uint32_t> stacked, spread;
         for (uint32_t m = 0; m < (1u << nb); m++) {
-            int n = 0, p = 0, d = 0;
+            int n = 0, p = 0, d = 0, with = 0;
+            bool pin_ok = true;                          // (the pinned party on its own team)
+            for (int j = 0; j < nb && pin_ok; j++) if (bl[j].pin >= 0) pin_ok = (m >> j & 1 ? a : b2) == bl[j].pin;
+            if (!pin_ok) continue;
             for (int j = 0; j < nb; j++) if (m >> j & 1) { n += bl[j].n; p += bl[j].pts; d += bl[j].demons; }
             if (n != cap[a]) continue;
+            for (int j = 0; j < nb; j++) if (party[j] && humans[m >> j & 1 ? a : b2]) with += bl[j].n;
             int pa = total[a] + p, pb = total[b2];
             for (int j = 0; j < nb; j++) if (!(m >> j & 1)) pb += bl[j].pts;
             int gap = abs(pa - pb);
-            if (gap > best) continue;
-            if (gap < best) { best = gap; stacked.clear(); spread.clear(); }
+            if (with > best_with || (with == best_with && gap > best)) continue;
+            if (with < best_with || gap < best) { best_with = with; best = gap; stacked.clear(); spread.clear(); }
             (abs(d - (all_d - d)) >= 2 ? stacked : spread).push_back(m);
         }
         if (stacked.empty() && spread.empty()) return;
@@ -1329,12 +1695,16 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
         // swapped between teams while that brings the totals closer
         std::vector<int> order(nb);
         for (int j = 0; j < nb; j++) order[j] = j;
-        std::stable_sort(order.begin(), order.end(), [&](int x, int y) { return bl[x].pts > bl[y].pts; });
+        std::stable_sort(order.begin(), order.end(), [&](int x, int y) {
+            return (bl[x].pin >= 0) != (bl[y].pin >= 0) ? bl[x].pin >= 0 : bl[x].pts > bl[y].pts; });   // (pinned first)
         int room[HB_TEAMS_MAX];
         for (int t = 0; t < nt; t++) room[t] = cap[t];
         for (int j : order) {
-            int to = -1;
-            for (int t : tl) if (room[t] >= bl[j].n && (to < 0 || total[t] < total[to])) to = t;
+            int to = bl[j].pin >= 0 && bl[j].pin < nt ? bl[j].pin : -1;
+            if (to < 0 && party[j])                              // (Nov 16: a party to a team without people first)
+                for (int t : tl) if (!humans[t] && room[t] >= bl[j].n && (to < 0 || total[t] < total[to])) to = t;
+            if (to < 0)
+                for (int t : tl) if (room[t] >= bl[j].n && (to < 0 || total[t] < total[to])) to = t;
             if (to < 0) for (int t : tl) if (to < 0 || room[t] > room[to]) to = t;   // (a party too big for any room left)
             at[j] = to; room[to] -= bl[j].n; total[to] += bl[j].pts;
         }
@@ -1343,7 +1713,8 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
             bool better = false;
             for (int x = 0; x < nb && !better; x++)
                 for (int y = x + 1; y < nb && !better; y++) {
-                    if (at[x] == at[y] || bl[x].n != bl[y].n || bl[x].pts == bl[y].pts) continue;
+                    if (at[x] == at[y] || bl[x].n != bl[y].n || bl[x].pts == bl[y].pts || bl[x].pin >= 0 || bl[y].pin >= 0)
+                        continue;
                     long long was = spread_of();
                     int tx = at[x], ty = at[y], dp = bl[x].pts - bl[y].pts;
                     total[tx] -= dp; total[ty] += dp;
@@ -1356,69 +1727,6 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
     }
     for (int j = 0; j < nb; j++)
         for (int k = 0; k < bl[j].n; k++) r.bot[bl[j].seat[k]].team = (uint8_t)at[j];
-}
-
-// (custom, Nov 13) the Settings tab's "Group parties": bot_pool.txt rewritten with each clan's bots next to each other,
-// every line, repeat and note kept (bot_pool.txt.bak the file as it was). Each round takes every clanmate's next line
-// and puts them together where the first of them stood. Returns the clans grouped, -1 when the file could not be written
-int bot_pool_group_parties() {
-    if (!g_pool_dir[0]) return -1;
-    wchar_t p[300], tmp[310], bak[310];
-    swprintf_s(p, L"%sbot_pool.txt", g_pool_dir);
-    swprintf_s(tmp, L"%s.tmp", p);
-    swprintf_s(bak, L"%s.bak", p);
-    std::vector<std::string> lines;
-    std::vector<std::string> clan_of;                    // per line: its bot's clan ("" notes and bots in no clan)
-    std::vector<std::string> key_of;
-    FILE* f = nullptr;
-    if (_wfopen_s(&f, p, L"rb") != 0 || !f) return -1;
-    char line[512], name[16];
-    while (fgets(line, sizeof line, f)) {
-        lines.push_back(line);
-        const char* c = line;
-        while (*c == ' ' || *c == '\t') c++;
-        bool bot = *c != '#' && *c != ';' && pool_line(c, name, nullptr);
-        clan_of.push_back(bot ? profile_clan_of(name) : "");
-        key_of.push_back(bot ? pool_key(name) : "");
-    }
-    fclose(f);
-    if (!lines.empty() && lines.back().back() != '\n') lines.back() += strstr(lines[0].c_str(), "\r\n") ? "\r\n" : "\n";
-    int nl = (int)lines.size(), grouped = 0;
-    std::vector<int> lead(nl, -1);                       // a line's group: the line it is written with (-1: itself)
-    std::vector<std::vector<int>> group_at(nl);
-    std::unordered_map<std::string, std::vector<int>> by_clan;
-    for (int i = 0; i < nl; i++) if (!clan_of[i].empty()) by_clan[pool_key(clan_of[i].c_str())].push_back(i);
-    for (auto& kv : by_clan) {
-        std::vector<std::string> members;                // its bots in first-seen order, each with its lines
-        std::unordered_map<std::string, std::vector<int>> lines_of;
-        for (int i : kv.second) {
-            if (!lines_of.count(key_of[i])) members.push_back(key_of[i]);
-            lines_of[key_of[i]].push_back(i);
-        }
-        if (members.size() < 2) continue;
-        grouped++;
-        for (size_t round = 0;; round++) {
-            std::vector<int> g;
-            for (const std::string& mbr : members) if (round < lines_of[mbr].size()) g.push_back(lines_of[mbr][round]);
-            if (g.empty()) break;
-            std::sort(g.begin(), g.end());
-            for (int i : g) lead[i] = g[0];
-            group_at[g[0]] = g;
-        }
-    }
-    if (!grouped) return 0;
-    if (_wfopen_s(&f, tmp, L"wb") != 0 || !f) return -1;
-    for (int i = 0; i < nl; i++) {
-        if (lead[i] < 0) { fputs(lines[i].c_str(), f); continue; }
-        if (lead[i] != i) continue;                      // (written with its group)
-        for (int k : group_at[i]) fputs(lines[k].c_str(), f);
-    }
-    fclose(f);
-    CopyFileW(p, bak, FALSE);
-    if (!MoveFileExW(tmp, p, MOVEFILE_REPLACE_EXISTING)) return -1;
-    bot_pool_save();
-    bot_pool_load(g_pool_dir);
-    return grouped;
 }
 
 int bot_pool_rotate(hb_roster& r, uint32_t difficulty) {
@@ -1434,25 +1742,33 @@ int bot_pool_rotate(hb_roster& r, uint32_t difficulty) {
         else if (shared != r.bot[i].tier) one = false;
     }
     for (int i = 0; i < r.n; i++) r.bot[i].name[0] = 0;
-    // (Nov 13) a party loads in together: a bot in a clan brings its free clanmates into the next seats 70% of the time
-    // (from anywhere in the queue, the queue position kept), as many as the biggest team holds
-    int cap[HB_TEAMS_MAX] = {}, most = 1;
-    for (int i = 0; i < r.n; i++) if (r.bot[i].team < HB_TEAMS_MAX && ++cap[r.bot[i].team] > most) most = cap[r.bot[i].team];
+    // (Nov 13) a party loads in together: a bot in a clan brings its free clanmates into the next seats (from anywhere in
+    // the queue, the queue position kept). (Nov 16, the owner: parties "up to 4 or up to 8 depending on which format",
+    // "for the clans with more members, usually include the max party size") 85% of the time, up to the format's party
+    // size and the seats of the team it lines up on (party_cap); a lobby never takes more of a clan than fit whole on one
+    // team (pool_fits: that bot passed over)
     uint32_t& rng = pool_rng();
+    g_balance_note[0] = 0;
     char clan[16] = "";
     int pull = 0, filled = 0;
+    std::unordered_set<std::string> rolled;              // (one roll a clan a lobby: its first bot's)
     for (int i = 0; i < r.n; i++) {
         r.bot[i].tier = (uint8_t)(one && shared >= 0 ? shared : roster_difficulty_tier(difficulty, i));
         r.bot[i].style = HB_STYLE_ANY;
         if (pull > 0) {
             const char* mate = pool_clanmate(r, i, clan);
-            if (mate) { pool_take_name(r, i, mate); filled++; pull--; continue; }
+            if (mate && pool_fits(r, i, mate)) { pool_take_name(r, i, mate); filled++; pull--; continue; }
             pull = 0;
         }
-        if (pool_take(r, i)) {
+        if (pool_take(r, i, true)) {
             filled++;
             const char* c = profile_clan_of(r.bot[i].name);
-            if (c[0] && rint(rng, 100) < 70) { strcpy_s(clan, c); pull = most - 1; }
+            if (c[0] && rolled.insert(pool_key(c)).second && rint(rng, 100) < 85) {
+                int have = 0;
+                for (int k = 0; k <= i; k++) have += _stricmp(profile_clan_of(r.bot[k].name), c) == 0;
+                strcpy_s(clan, c);
+                pull = party_cap(r) - have;
+            }
         }
         else roster_name_own(r, i, (uint32_t)GetTickCount() + 7919u * (uint32_t)i);   // (a pool smaller than the seats)
     }
@@ -1481,13 +1797,127 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty) {
         r.bot[i].name[0] = 0;
         r.bot[i].tier = tier;
         r.bot[i].style = HB_STYLE_ANY;
-        if (!pool_take(r, i)) break;
+        if (!pool_take(r, i, true)) break;           // (Nov 16: never a clan too many for one team)
         if (_stricmp(r.bot[i].name, keep.name) != 0) { bot_pool_save(); return true; }
     }
     r.bot[i] = keep;
     g_pool_next = start;
     return false;
 }
+
+// (custom, Nov 16, Proving Grounds: proving_grounds.cpp) a matchmade lobby: two teams of `size` players, the person on
+// party_team (a seat less of bots there). The person's invited party first, pinned to their team; then of the last
+// lobby's other bots each clan (or bot alone) stays keep_pct% of the time; the seats left take the pool's next bots as
+// bot_pool_rotate takes them (a clan's first bot pulls its clanmates 85% of the time, a lobby never more of a clan than
+// fit whole on one team). Teams dealt by points with the person counted, the party kept on their team. pinned[i]: seat
+// i is the party's. Returns the bots new to the lobby
+int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int nparty, int party_team, int keep_pct,
+                       uint32_t difficulty, uint8_t pinned[HB_ROSTER_MAX], int* people, int npeople) {
+    bot_pool_load(g_pool_dir);
+    size = size >= 8 ? 8 : 4;
+    party_team = party_team == 1 ? 1 : 0;
+    int other = 1 - party_team, want[2], have[2] = {0, 0};
+    memset(g_humans, 0, sizeof g_humans);
+    g_humans[party_team] = 1;                            // (the person: the clans line up on the other team)
+    // (Nov 17) the friends who joined: each on the team MCC has them on, a seat of bots fewer there; one whose team is
+    // not known yet on the team with fewer people
+    for (int p = 0; people && p < npeople; p++) {
+        int t = people[p];
+        if (t != 0 && t != 1) t = g_humans[1] < g_humans[0] ? 1 : 0;
+        people[p] = t;
+        g_humans[t]++;
+    }
+    for (int t = 0; t < 2; t++) want[t] = size - g_humans[t] > 0 ? size - g_humans[t] : 0;
+    hb_roster old = r;
+    uint32_t& rng = pool_rng();
+    g_balance_note[0] = 0;
+    memset(pinned, 0, HB_ROSTER_MAX);
+    r.n = 0; r.teams = 2;
+    auto seat = [&](const char* name, int team, const hb_bot* was) {
+        hb_bot& b = r.bot[r.n];
+        memset(&b, 0, sizeof b);
+        strcpy_s(b.name, name);
+        b.team = (uint8_t)team;
+        b.tier = (uint8_t)(was ? was->tier : roster_difficulty_tier(difficulty, r.n));
+        b.style = (uint8_t)(was ? was->style : HB_STYLE_ANY);
+        int t, st;
+        if (name[0] && bot_pool_saved_of(name, &t, &st)) { b.tier = (uint8_t)t; b.style = (uint8_t)st; }
+        have[team]++;
+        return r.n++;
+    };
+    auto in_party = [&](const char* name) {
+        for (int p = 0; p < nparty; p++) if (party[p][0] && !_stricmp(party[p], name)) return true;
+        return false;
+    };
+    for (int p = 0; p < nparty && have[party_team] < want[party_team]; p++) {   // the party, pinned
+        if (!party[p][0] || name_taken(r, party[p], -1)) continue;
+        const hb_bot* was = nullptr;
+        for (int i = 0; i < old.n; i++) if (!_stricmp(old.bot[i].name, party[p])) was = &old.bot[i];
+        pinned[seat(party[p], party_team, was)] = 1;
+    }
+    // the last lobby's others: a clan stays or goes together
+    std::vector<uint8_t> done(old.n, 0);
+    for (int i = 0; i < old.n; i++) {
+        if (done[i] || !old.bot[i].name[0] || in_party(old.bot[i].name)) continue;
+        const char* c = profile_clan_of(old.bot[i].name);
+        std::vector<int> group;
+        for (int k = i; k < old.n; k++)
+            if (!done[k] && !in_party(old.bot[k].name) && (k == i || (c[0] && !_stricmp(profile_clan_of(old.bot[k].name), c))))
+                group.push_back(k);
+        for (int k : group) done[k] = 1;
+        if (rint(rng, 100) >= keep_pct) continue;
+        for (int k : group) {
+            const hb_bot& b = old.bot[k];
+            if (name_taken(r, b.name, -1)) continue;
+            int t = b.team == party_team || b.team == other ? b.team : other;
+            if (have[t] >= want[t]) t = 1 - t;
+            if (have[t] >= want[t]) break;
+            seat(b.name, t, &b);
+        }
+    }
+    int kept = r.n;
+    for (int t : { party_team, other })                  // the seats left, empty, each team's
+        while (have[t] < want[t] && r.n < HB_ROSTER_MAX) seat("", t, nullptr);
+    char clan[16] = "";
+    int pull = 0, filled = 0;
+    std::unordered_set<std::string> rolled;
+    for (int i = kept; i < r.n; i++) {
+        if (pull > 0) {
+            const char* mate = pool_clanmate(r, i, clan);
+            if (mate && pool_fits(r, i, mate)) { pool_take_name(r, i, mate); filled++; pull--; continue; }
+            pull = 0;
+        }
+        if (pool_take(r, i, true)) {
+            filled++;
+            const char* c = profile_clan_of(r.bot[i].name);
+            if (c[0] && rolled.insert(pool_key(c)).second && rint(rng, 100) < 85) {
+                int got = 0;
+                for (int k = 0; k <= i; k++) got += _stricmp(profile_clan_of(r.bot[k].name), c) == 0;
+                strcpy_s(clan, c);
+                pull = party_cap(r) - got;
+            }
+        } else roster_name_own(r, i, (uint32_t)GetTickCount() + 7919u * (uint32_t)i);
+    }
+    roster_point_balance(r, g_humans, rng, pinned);
+    bot_pool_save();
+    return filled;
+}
+
+// (custom, Nov 16, Proving Grounds' invites) the pool's bots, each once, in the file's order
+int bot_pool_names(char (*out)[16], int cap) {
+    bot_pool_load(g_pool_dir);
+    std::unordered_set<std::string> seen;
+    int n = 0;
+    for (const std::string& s : g_pool) {
+        if (n >= cap) break;
+        if (!seen.insert(pool_key(s.c_str())).second) continue;
+        strcpy_s(out[n++], s.c_str());
+    }
+    return n;
+}
+
+// (custom, Nov 16) a picture as RGBA (PNG or JPEG, Windows' decoder), malloc'd (free it); nullptr when unreadable
+unsigned char* hb_image_rgba(const wchar_t* path, int* w, int* h) { return png_rgba(path, w, h); }
 
 void roster_name(hb_roster& r, int i, uint32_t seed) {
     if (hb_matchmaking && !hb_panel_firefight && pool_take(r, i)) return;
@@ -1555,6 +1985,46 @@ void roster_fill(hb_roster& r, int teams, int per_team, int tier, int style, uin
 }
 
 void roster_balance(hb_roster& r) {
+    g_balance_note[0] = 0;
+    if (!hb_panel_firefight) {
+        // (custom, Nov 16) the owner: the teams "always remained balanced", clans "trump team balance". The sizes even
+        // with the people counted (the last match's, bot_pool_humans.txt): each bot in turn to the team with the fewest
+        // players so far; the teams with too many give their last bots to the ones short
+        int nt = pool_teams(r), want[HB_TEAMS_MAX] = {}, have[HB_TEAMS_MAX] = {};
+        for (int k = 0; k < r.n; k++) {
+            int to = 0;
+            for (int t = 1; t < nt; t++) if (g_humans[t] + want[t] < g_humans[to] + want[to]) to = t;
+            want[to]++;
+        }
+        for (int i = 0; i < r.n; i++) if (r.bot[i].team < nt) have[r.bot[i].team]++; else { r.bot[i].team = 0; have[0]++; }
+        for (int i = r.n - 1; i >= 0; i--) {
+            int t = r.bot[i].team;
+            if (have[t] <= want[t]) continue;
+            for (int u = 0; u < nt; u++) if (have[u] < want[u]) { r.bot[i].team = (uint8_t)u; have[t]--; have[u]++; break; }
+        }
+        // a clan too big for any team (a lobby made by hand): with Bot Matchmaking on, its last bots swapped for the next
+        // pool bots that fit (roster_point_balance splits what is left and says so)
+        for (int guard = 0; hb_matchmaking && guard < HB_ROSTER_MAX; guard++) {
+            if (parties_fit(seated_parties(r, -1, nullptr), team_seats(r))) break;
+            std::unordered_map<std::string, int> n;
+            std::string big;
+            for (int i = 0; i < r.n; i++) {
+                const char* c = profile_clan_of(r.bot[i].name);
+                if (c[0] && ++n[pool_key(c)] > (big.empty() ? 0 : n[big])) big = pool_key(c);
+            }
+            int seat = -1;
+            for (int i = 0; i < r.n; i++) if (pool_key(profile_clan_of(r.bot[i].name)) == big) seat = i;
+            if (seat < 0) break;
+            char was[16];
+            strcpy_s(was, r.bot[seat].name);
+            r.bot[seat].name[0] = 0;
+            if (!pool_take(r, seat, true)) { strcpy_s(r.bot[seat].name, was); break; }
+            sprintf_s(g_balance_note, "[%s] had more bots than fit on one team: %s swapped for %s.",
+                      profile_clan_of(was), was, r.bot[seat].name);
+        }
+        roster_point_balance(r, g_humans, pool_rng());
+        return;
+    }
     // teams with the most bots give their last bots to the ones with the fewest, until within one
     for (int guard = 0; guard < 64; guard++) {
         int hi = 0, lo = 0;
@@ -1566,9 +2036,6 @@ void roster_balance(hb_roster& r) {
         for (int i = r.n - 1; i >= 0; i--)
             if (r.bot[i].team == hi) { r.bot[i].team = (uint8_t)lo; break; }
     }
-    // (custom, Nov 14) then dealt by points like Bot Matchmaking's lobbies (the owner: "balancing in the sense of how
-    // our matchmaking works", clanmates "on the same team"): parties together, the people counted, the sizes kept
-    if (!hb_panel_firefight) roster_point_balance(r, g_humans, pool_rng());
 }
 
 void roster_shuffle(hb_roster& r, uint32_t seed) {
@@ -3784,6 +4251,58 @@ bool bot_card(bots_panel_env& e, const hb_bot& b) {
     return true;
 }
 
+// (Nov 17, the owner's Halo: Reach roster pictures: a player picked in the list shows their Spartan) a bot's own Reach
+// figure for Proving Grounds' player card, drawn as bot_card draws it: its Armory roll's pieces and colours, the whole
+// figure, turned to yaw. A bot with no profile gets one (profile_ensure), as on the card. 0: no look yet or no 3D view
+unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, int w, int h) {
+    g_make_texture = e.make_texture;
+    g_env = &e;
+    int prof = profile_ensure(name);
+    looks_load();
+    if (prof < 0 || !look_field(g_prof[prof], ED_GAMES[3].key, false, "pieces")) return 0;
+    int keep_edit = g_edit, keep_view = g_edit_view;
+    g_edit = prof;
+    g_edit_view = -1;
+    if (e.model_zoom) e.model_zoom(0.0f);
+    if (e.model_headroom) e.model_headroom(0.0f);
+    unsigned long long mv = ed_model(&e, 3, ED_GAMES[3].species ? ed_species(3) : 0, yaw, w, h);
+    g_edit = keep_edit;
+    g_edit_view = keep_view;
+    return mv;
+}
+
+// a person's Spartan for the same card: MCC does not give the mod a player's armor, so Reach's default Spartan (each
+// region's "default" piece, as the bots' looks name it) in Steel with the gold visor
+unsigned long long person_figure(bots_panel_env& e, float yaw, int w, int h) {
+    if (!e.render_model || !e.model_has) return 0;
+    wchar_t path[300];
+    bin_file(path, 300, L"models\\reach_spartan.mdl");
+    if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) {   // beside the program (the preview), as ed_model
+        GetModuleFileNameW(nullptr, path, 300);
+        if (wchar_t* sl = wcsrchr(path, L'\\')) sl[1] = 0;
+        wcscat_s(path, L"models\\reach_spartan.mdl");
+    }
+    static const char* PCS[8][2] = { {"arms", "default"}, {"body", "default"}, {"head", "default"}, {"decals", "default"},
+                                     {"flair_left_shoulder", "default"}, {"flair_right_shoulder", "default"},
+                                     {"flair_chest_a", "default"}, {"flair_knees", "default"} };
+    mv_pick picks[8];
+    int n = 0;
+    for (auto& p : PCS) {
+        if (e.model_has(path, p[0], p[1])) picks[n++] = { p[0], p[1] };
+        else if (e.model_has(path, p[0], "base")) picks[n++] = { p[0], "base" };
+    }
+    if (!n) return 0;
+    mv_colors c{};
+    ImVec4 steel = pal_rgb(REACH_COL, 30, 0);
+    float under[3] = { 0.07f + 0.10f * steel.x, 0.07f + 0.10f * steel.y, 0.08f + 0.10f * steel.z };
+    float skin[3] = { 0.24f, 0.21f, 0.19f };
+    memcpy(c.armor, &steel, 12); memcpy(c.secondary, &steel, 12); memcpy(c.lights, &steel, 12);
+    memcpy(c.undersuit, under, 12); memcpy(c.skin, skin, 12); memcpy(c.visor, REACH_VISOR[0], 12);
+    if (e.model_zoom) e.model_zoom(0.0f);
+    if (e.model_headroom) e.model_headroom(0.0f);
+    return e.render_model(path, picks, n, c, yaw, w, h);
+}
+
 // the tab's page: the 15 bots, how they suit up, the re-roll ---- the Advanced tab: Scaling difficulty.
 // native\bin\scaling.ini, read by brain/scaling.py settings: lock=, rating= (percent, while locked), use= (0 Standard,
 // k the k-th profile), then profile=<name>|<key>=<percent>|... A profile weights each hand setting against the rating.
@@ -4082,6 +4601,16 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
             ImGui::SetTooltip("On: after each match the next bots from your pool take the seats.\n"
                               "Off: the same bots every match, as you set them.");
+        if (*e.matchmaking) {                                // (custom, Nov 16) the pool's 4v4 or 8v8 file
+            ImGui::SameLine(0, px(12));
+            static const char* FMT[2] = { "4v4", "8v8" };
+            int fi = hb_pool_format >= 8 ? 1 : 0;
+            if (segmented("pool_fmt", FMT, 2, &fi, px(130))) { bot_pool_set_format(fi ? 8u : 4u); changed = true; }
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
+                ImGui::SetTooltip("Which pool file the queue reads: bot_pool_4v4.txt or bot_pool_8v8.txt, both made from\n"
+                                  "bot_pool.txt. Clans join in parties of up to 4 (4v4) or 8 (8v8), spread out through\n"
+                                  "the file; each file keeps its own place in the queue.");
+        }
         char st[200];
         if (bot_pool_size())
             sprintf_s(st, "%d names in your pool, %d bots with saved settings. After each match the next %d take the seats.",
@@ -4100,21 +4629,22 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
         muted("Add names any time to native\\bin\\bot_pool.txt, one per line, in the order they should join. "
               "A bot you change in the Bots tab keeps its difficulty and play style when it comes back.");
         muted("Name*5 on one line brings that bot 5 times, spread through the queue. Bots with the same clan tag are a "
-              "party: they play on one team and often join together. Teams are dealt by points: Easy 1, Normal 2, "
-              "Heroic 3, Tactician 5, Legendary, Blind and Scaling 8, Mythic 10, Demon 12, you 20.");
+              "party: they usually join together, up to 4 in 4v4 or 8 in 8v8, and always play on one team, the one "
+              "without you when they fit. Teams are even, then dealt by points: Easy 1, Normal 2, Heroic 3, Tactician 5, "
+              "Legendary, Blind and Scaling 8, Mythic 10, Demon 12, you 20.");
         if (button("Reload pool", GHOST, ImVec2(0, 0), true) && g_pool_dir[0]) bot_pool_load(g_pool_dir);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Read bot_pool.txt again (it is also read after every match)");
-        static char grouped_msg[96] = "";
+        static char grouped_msg[120] = "";
         ImGui::SameLine();
-        if (button("Group parties", GHOST, ImVec2(0, 0), true)) {
-            int g = bot_pool_group_parties();
-            if (g < 0) strcpy_s(grouped_msg, "Couldn't rewrite bot_pool.txt. Check it isn't read-only or open elsewhere.");
-            else if (g == 0) strcpy_s(grouped_msg, "No clan has two or more bots in your pool: nothing to group.");
-            else sprintf_s(grouped_msg, "%d %s grouped. The old file is saved as bot_pool.txt.bak.", g, g == 1 ? "party" : "parties");
+        if (button("Reshuffle clans", GHOST, ImVec2(0, 0), true)) {   // (custom, Nov 16: was Group parties)
+            int g = bot_pool_reshuffle();
+            if (g < 0) strcpy_s(grouped_msg, "Couldn't write bot_pool_4v4.txt or bot_pool_8v8.txt. Check they aren't read-only or open elsewhere.");
+            else if (g == 0) strcpy_s(grouped_msg, "No clan has two or more bots in your pool: nothing to spread.");
+            else sprintf_s(grouped_msg, "%d %s spread out again in both files. bot_pool.txt is unchanged.", g, g == 1 ? "clan" : "clans");
         }
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
-            ImGui::SetTooltip("Rewrites bot_pool.txt with bots of the same clan tag next to each other.\n"
-                              "Every line and repeat is kept; the old file is saved as bot_pool.txt.bak.");
+            ImGui::SetTooltip("Makes bot_pool_4v4.txt and bot_pool_8v8.txt again with the clans' parties in new places\n"
+                              "(each clan apart, some beside another clan so they meet). bot_pool.txt is not changed.");
         if (grouped_msg[0]) muted(grouped_msg);
         ImGui::PopTextWrapPos();
     }
@@ -4365,7 +4895,8 @@ bool bots_panel(bots_panel_env& e) {
         if (!hb_panel_firefight) {                          // (Firefight: one team, nothing to balance)
             ImGui::BeginDisabled(r.n < 2);
             if (button("Balance teams", GHOST, ImVec2(0, 0), true)) { roster_balance(r); changed = true; }
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even out the team sizes, then the team points (like Bot Matchmaking): clanmates stay together");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even teams counting you, each clan whole on one team (the one without you when it fits),\n"
+                                                                                                                "then the team points (like Bot Matchmaking)");
             ImGui::SameLine(0, px(2));
             if (button("Shuffle teams", GHOST, ImVec2(0, 0), true)) { roster_shuffle(r, seed()); changed = true; }
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("New teams for everyone, same team sizes");
@@ -4420,9 +4951,10 @@ bool bots_panel(bots_panel_env& e) {
         banner = btxt;
     } else if (!*e.enabled) banner = "Bots are off: nobody on this list joins. Switch Bots on at the top.";
     else if (e.title == 1 && r.teams > 2) banner = "Halo: CE has two teams: bots on Green and later teams play as Red or Blue.";
+    else if (!hb_panel_firefight && roster_balance_note()[0]) banner = roster_balance_note();   // (Nov 16: a clan split)
     else if (e.matchmaking && *e.matchmaking && !hb_panel_firefight && bot_pool_size() && r.n) {
-        sprintf_s(btxt, "Bot Matchmaking is on: after this match the next %d of your %d pool bots take these seats.",
-                  r.n < bot_pool_size() ? r.n : bot_pool_size(), bot_pool_size());
+        sprintf_s(btxt, "Bot Matchmaking is on (%s): after this match the next %d of your %d pool bots take these seats.",
+                  hb_pool_format >= 8 ? "8v8" : "4v4", r.n < bot_pool_size() ? r.n : bot_pool_size(), bot_pool_size());
         banner = btxt;
     }
     else if (e.collector && *e.collector)                   // (not in LiDAR mode: that banner comes first)

@@ -17,8 +17,12 @@ Who is listed (the owner, Nov 15): the bots only. Every bot of bot_profiles.ini 
 (bot_pool.txt, Nov 17), at 0 from the start, and any other bot once it has a match that counts. People are listed only when named in native/bin/service_record/people.json (Nov 17,
 the owner: "Yes just me for now"; this PC only, never in git); anyone else is not, though a match's scoreboard still
 shows every gamertag.
-A match counts by bot_career's rules (its person played 60 s or more; a bot's row of a match from before the bots'
-restart does not), so with every game shown the leaderboard equals native/bin/career/totals.txt.
+Which matches (Nov 17, the owner: "Matchmaking only"): the ones Proving Grounds started, named by MCC's GameUniqueId
+in native/bin/service_record/matchmaking.txt (native/proving_grounds.cpp writes a line once each match's report is
+written). A custom game played without Proving Grounds is not on the site; bot_career still counts it in totals.txt
+(the bots' MCC Career pages).
+Of those, a match counts by bot_career's rules (its person played 60 s or more; a bot's row of a match from before the
+bots' restart does not), so over the same matches the leaderboard equals native/bin/career/totals.txt.
 
 Credits and ranks: service_record_site/ranks.json. A player's credits are a pure function of their counted Reach
 matches (each game, win, kill, assist and medal is worth what "credits" says), so a rank can always be rebuilt.
@@ -29,12 +33,14 @@ usage: python -I service_record.py                    build, then print what was
        python -I service_record.py --check-kills      also print each recorded match's kill rows against MCC's report
        --ledger FILE --logs DIR --store DIR --out DIR  other places (tests, a preview from another ledger)
 """
+import datetime
 import glob
 import hashlib
 import html
 import importlib.util
 import json
 import os
+import random
 import re
 import shutil
 import struct
@@ -75,6 +81,9 @@ class Paths:
         s.looks = os.path.join(BIN, "bot_looks.ini")
         s.pool = os.path.join(BIN, "bot_pool_saved.ini")
         s.bot_pool = os.path.join(BIN, "bot_pool.txt")           # Bot Matchmaking's pool: every bot listed (Nov 17)
+        s.botcore = os.path.join(BIN, "botcore.ini")             # the BOTS panel's lobby list (bot= lines, Nov 18)
+        # Proving Grounds' matches, the only ones on the site (Nov 17); None: every match (the tests of what counts)
+        s.matchmaking = os.path.join(BIN, "service_record", "matchmaking.txt")
         s.emblems = os.path.join(BIN, "emblems")
         s.look_names = os.path.join(ROOT, "native", "look_names.h")
         s.maps = os.path.join(ROOT, "maps")
@@ -170,11 +179,11 @@ PLAYER = re.compile(r"<Player ([^>]*)>(.*?)</Player>", re.S)
 MEDAL = re.compile(r'<Medal mId="(\d+)" mCount="(\d+)"')
 
 
-def _int(a, key):
+def _int(a, key, missing=0):
     try:
-        return int(a.get(key, "0"))
+        return int(a.get(key, str(missing)))
     except ValueError:
-        return 0
+        return missing
 
 
 def read_report(path):
@@ -207,6 +216,7 @@ def read_report(path):
             "betrayals": _int(a, "mBetrayals"), "suicides": _int(a, "mSuicides"),
             "spree": _int(a, "mMostKillsInARow"), "alive": _int(a, "mSecondsAlive"),
             "seconds": _int(a, "mSecondsPlayed"),
+            "completed": _int(a, "mCompletedGame", 1),   # (Nov 17: played to the end; kept reports before it: 1)
             "kw": _int(a, "mKillsWeapon"), "kg": _int(a, "mKillsGrenade"), "km": _int(a, "mKillsMelee"),
             "ko": _int(a, "mKillsOther"),
             "medal_total": _int(a, "mTotalMedalCount"),
@@ -834,6 +844,23 @@ def load_ranks(path=os.path.join(SITE, "ranks.json")):
     return table["credits"], steps
 
 
+DEEDS = ("mvp", "game_changer", "positive", "loyal")
+OBJECTIVE_FAMILIES = {"ctf", "assault", "koth", "oddball", "headhunter", "stockpile", "territories"}
+
+
+def match_deeds(p, d, cat, top):
+    """(Nov 17, the owner's four: "Mvp, Game Changer, Positive thinking, Loyal soldier") what one player's match counts
+    towards them: MVP, the most points (MCC's Score; ties too) in a Slayer game; Game Changer, the same in an objective
+    game (CTF, Assault, King, Oddball, Headhunter, Stockpile, Territories: its Score is the objective's points);
+    Positive Thinking, more kills than deaths in a game played to the end; Loyal Soldier, a game played to the end.
+    p: the ledger's row, d: MCC's report's row (None: no report kept; the points ones need it, a game then counts as
+    played to the end), cat: the match's family, top: its highest Score."""
+    finished = not d or d.get("completed", 1) != 0
+    best = bool(d) and top > 0 and d.get("score", 0) == top
+    return {"mvp": int(best and cat == "slayer"), "game_changer": int(best and cat in OBJECTIVE_FAMILIES),
+            "positive": int(finished and p["kills"] > p["deaths"]), "loyal": int(finished)}
+
+
 def load_commendations(path=os.path.join(SITE, "commendations.json")):
     """(tier names, [commendation, ...]) from the site's table; a commendation whose tiers do not rise is left out."""
     table = load_json(path, {})
@@ -868,6 +895,8 @@ def commendation_counts(g, comms, medal_info):
             n = int(s.get(how["stat"], 0))
         elif "feed" in how and g.get("kill_games"):            # (first kills, closers, grudges: the kill record)
             n = int(g.get("feats", {}).get(how["feed"], 0))
+        elif "deed" in how:                                      # (Nov 17: MVP, Game Changer, Positive, Loyal)
+            n = int(g.get("deeds", {}).get(how["deed"], 0))
         elif how.get("distinct_medals"):                         # (kinds of medal earned at least once)
             n = sum(1 for v in medals.values() if v)
         elif ("weapons" in how or "vehicles" in how) and g.get("kill_games"):
@@ -1003,6 +1032,8 @@ def commendation_source(how):
     "report" (MCC's post-game reports) or "matches" (every counted match)."""
     if "weapons" in how or "vehicles" in how or "feed" in how:
         return "kills"
+    if how.get("deed") in ("positive", "loyal"):
+        return "matches"
     return "matches" if how.get("stat") in ("assists", "wins") else "report"
 
 
@@ -1031,6 +1062,17 @@ def commendation_credits(counts, comms):
     """The credits a player's commendation tiers award: each tier reached, its cr."""
     by = {c["key"]: c for c in comms}
     return sum(sum(by[k]["cr"][:commendation_tier(n, by[k]["need"])]) for k, n in counts.items() if k in by)
+
+
+def commendation_progress(counts, comms):
+    """(Nov 17) a player's Overall Commendation Progress, percent: each commendation's count against its last tier
+    (at most whole), summed over the table; one not countable yet adds 0. The site's Commendations page and the game's
+    player card both show this one number."""
+    if not comms:
+        return 0.0
+    whole = sum(min(1.0, counts[c["key"]] / c["need"][-1]) for c in comms
+                if counts.get(c["key"]) is not None and c["need"][-1] > 0)
+    return round(100.0 * whole / len(comms), 1)
 
 
 def credits(s, worth):
@@ -1070,6 +1112,30 @@ def home_state(name, states):
             return s[0]
         at -= s[3]
     return states[-1][0]
+
+
+def load_home_states(paths, states):
+    """(Nov 18, the owner) the home states set by hand in edit mode (native/bin/service_record/home_states.json):
+    {name: state code}, only codes the table lists. Everyone else keeps the state its name picks (home_state)."""
+    raw = load_json(os.path.join(paths.store, "home_states.json"), {})
+    codes = {s[0] for s in states}
+    return {n: c for n, c in raw.items() if isinstance(n, str) and c in codes} if isinstance(raw, dict) else {}
+
+
+def save_home_state(paths, name, code):
+    """A bot's or player's home state set by hand ("" goes back to the one its name picks). Returns its state now."""
+    _, states = load_states()
+    if not isinstance(name, str) or not name or len(name) > 64:
+        raise ValueError("not a name on the site")
+    if not isinstance(code, str) or (code and code not in {s[0] for s in states}):
+        raise ValueError("not a state")
+    picks = load_home_states(paths, states)
+    if code:
+        picks[name] = code
+    else:
+        picks.pop(name, None)
+    save_json(os.path.join(paths.store, "home_states.json"), picks)
+    return picks.get(name) or home_state(name, states)
 
 
 # ---------------------------------------------------------------- the numbers
@@ -1120,28 +1186,99 @@ def load_people(paths):
     return {n.strip() for n in data if isinstance(n, str) and n.strip()} if isinstance(data, list) else set()
 
 
+def load_matchmaking(path):
+    """(Nov 17, the owner: "Matchmaking only") {GameUniqueId} of the matches Proving Grounds started: its list
+    (native/bin/service_record/matchmaking.txt, native/proving_grounds.cpp), one a line, the id first, # lines notes.
+    No file yet: none. path None: None, every match counts."""
+    if path is None:
+        return None
+    out = set()
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                gid = line.split("\t", 1)[0].strip()
+                if gid and not gid.startswith("#"):
+                    out.add(gid)
+    except OSError:
+        pass
+    return out
+
+
+def load_matchmaking_playlists(path):
+    """{GameUniqueId: playlist title} from matchmaking.txt's third column ("ARENA", "BIG TEAM BATTLE")."""
+    out = {}
+    if not path:
+        return out
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                parts = line.rstrip("\r\n").split("\t")
+                if len(parts) >= 3 and parts[0] and not parts[0].startswith("#"):
+                    out[parts[0]] = parts[2]
+    except OSError:
+        pass
+    return out
+
+
+def today_block(matches, worth, playlists, now):
+    """(Nov 17, the owner's site extras with the bot simulation: "Daily Top 5, Playlist activity") today's five best
+    games by the credits each earned (ranks.json's worth: the game, the win, kills, assists, medals), yours included,
+    and how busy the playlists were: today's games by playlist, who played most, the last seven days. matches: collect's,
+    newest first; playlists: load_matchmaking_playlists."""
+    day = time.strftime("%Y-%m-%d", time.localtime(now))
+    week = [time.strftime("%Y-%m-%d", time.localtime(now - 86400 * i)) for i in range(6, -1, -1)]
+    per_day = dict.fromkeys(week, 0)
+    games, by_pl, busy = [], {}, {}
+    for m in matches:
+        d = (m.get("when") or "")[:10]
+        if d in per_day:
+            per_day[d] += 1
+        if d != day or m.get("game") != DEFAULT_GAME:
+            continue
+        pl = playlists.get(m["id"], "")
+        by_pl[pl] = by_pl.get(pl, 0) + 1
+        for r in m["rows"]:
+            if not r.get("listed"):
+                continue
+            busy[r["n"]] = busy.get(r["n"], 0) + 1
+            md = int(r.get("md", 0))
+            cr = worth["game"] + worth["win"] * int(r["won"]) + worth["kill"] * r["k"] + worth["assist"] * r["a"] \
+                + worth["medal"] * md
+            games.append({"n": r["n"], "id": m["id"], "map": m["map"], "type": m.get("type", ""), "k": r["k"],
+                          "d": r["d"], "a": r["a"], "md": md, "won": bool(r["won"]), "cr": cr, "pl": pl})
+    games.sort(key=lambda g: (-g["cr"], -g["k"], g["d"], g["n"].lower()))
+    return {"day": day, "top": games[:5], "games": sum(by_pl.values()),
+            "playlists": sorted(([k or "Other", v] for k, v in by_pl.items()), key=lambda x: -x[1]),
+            "players": len(busy), "busiest": sorted(busy.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:5],
+            "week": [[d, per_day[d]] for d in week]}
+
+
 def person_names(ledger, people):
     """The ledger's names of people (a row not a bot's, in any match, counted or not) that `people` names."""
     return {p["name"] for m in ledger.values() for p in m.get("players", [])
             if p.get("name") and not p.get("bot") and html.unescape(p["name"]) in people}
 
 
-def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bots=()):
+def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bots=(), matchmaking=None):
     """(players {name: record}, matches [newest first]) for the site: every counted row of a listed name summed by
     game and family. Listed: the roster, every bot of `bots` (the matchmaking pool, read_pool_names: at 0 until it
     plays, Nov 17 the owner: every pool bot), every name bot_career's totals call a bot, and the people named in
     `people` (load_people) that the ledger has as people. kills: the store's kill rows
     by recording ({"<map>_<start>": [rows]}); a match with none adds nothing to weapons, versus and heat, and
-    kill_games says how many of a player's matches had them."""
+    kill_games says how many of a player's matches had them. matchmaking: the ids of the only matches shown
+    (load_matchmaking: Proving Grounds' own), None every match."""
+    every = ledger
+    if matchmaking is not None:                             # (Nov 17, "Matchmaking only": a custom game adds nobody)
+        ledger = {gid: m for gid, m in ledger.items() if gid in matchmaking}
     totals = career.totals(ledger)
     listed = set(roster) | {n for n, t in totals.items() if t["bot"]}
-    listed |= person_names(ledger, people)                  # (at 0 too, after --reset-all)
-    listed |= set(bots) - person_names(ledger, set(bots))   # (the pool's bots, at 0 too; never a person's name)
-    players = {n: {"name": n, "g": {}} for n in listed}
+    listed |= person_names(every, people)                   # (at 0 too, after --reset-all)
+    listed |= set(bots) - person_names(every, set(bots))    # (the pool's bots, at 0 too; never a person's name)
+    players = {n: {"name": n, "g": {}, "chal": []} for n in listed}   # (chal: challenge_row, each Reach match)
     matches = []
     for gid, m in ledger.items():
         rows = m.get("players", [])
-        if not career.counts(rows):
+        if not (career.counts(rows) or m.get("sim")):       # (a simulated match has no person: it counts anyway)
             continue
         reset = bool(m.get("bots_reset"))
         if m.get("all_reset"):
@@ -1176,6 +1313,9 @@ def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bo
         entry = (kills or {}).get(f"{map_id}_{detail['start']}") if detail and map_id and detail.get("start") else None
         tally = kill_tally(detail, kill_rows(entry)) if entry is not None else None
         match["kills"] = tally is not None
+        # (Nov 17, the owner's MVP, Game Changer, Positive Thinking, Loyal Soldier) this match's top score: MCC's own
+        # Score, an objective game's objective points
+        top = max((x["score"] for x in detail["players"]), default=0) if detail else 0
         feats = {}                                          # (name -> {"first", "closer", "grudge"} in this match)
         if entry is not None:
             match["feed"] = kill_feed(detail, kill_rows(entry), game)
@@ -1184,7 +1324,8 @@ def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bo
         heat_key = map_id
         if tally:
             spots_all = [c for t in tally.values() for c in t["k"] + t["d"]]
-            variant = match_variant(map_id, (detail or {}).get("start"), spots_all, paths) if paths else None
+            variant = (detail or {}).get("layout") or (   # (a simulated match names its layout: bot_sim.py)
+                match_variant(map_id, (detail or {}).get("start"), spots_all, paths) if paths else None)
             if variant:
                 heat_key = f"{map_id}@{variant}"
         match["heat"] = heat_key
@@ -1193,12 +1334,17 @@ def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bo
                 continue
             d = by_name.get(p["name"])
             won = p["standing"] == 0 and not draw
+            if game == DEFAULT_GAME:                        # (Nov 17: this Reach match's numbers for the challenges)
+                players[p["name"]]["chal"].append(challenge_row(p, d, t, match["cat"], map_id, won, detail, tally))
             for gkey in ("all", game):
                 g = players[p["name"]]["g"].setdefault(gkey, {"cats": {}, "types": {}, "maps": {}, "medals": {},
                                                                "killed": {}, "killed_by": {}, "results": [],
                                                                "weapons": {}, "versus": {}, "heat": {}, "kill_games": 0,
-                                                               "feats": {"first": 0, "closer": 0, "grudge": 0}})
+                                                               "feats": {"first": 0, "closer": 0, "grudge": 0},
+                                                               "deeds": dict.fromkeys(DEEDS, 0)})
                 g["results"].append((t, gid, won))
+                for k, n in match_deeds(p, d, match["cat"], top).items():
+                    g["deeds"][k] += n
                 if tally is not None:                       # (this match has its kill rows)
                     g["kill_games"] += 1
                     for k, n in feats.get(html.unescape(p["name"]), {}).items():
@@ -1258,14 +1404,320 @@ def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bo
     return players, matches
 
 
+# ---------------------------------------------------------------- challenges (Nov 17)
+# The owner: "Add these to the achievements page, But rename it to challenges. And we will make a plethora of daily and
+# weekly challenges"; their cR counts toward the rank (ranks.json challenge_credits), 4 dailies and 1 weekly at a time.
+# service_record_site/challenges.json is the list. A day is local midnight to midnight, a week Monday to Monday; which
+# challenges a day or week has is decided by its date alone (challenge_pick), so every past day's can be worked out
+# again from the record and the credits are a pure function of the counted matches.
+CHALLENGE_STATS = {"medals": "medals_n"}                     # (a stat named apart from the row's medal counts)
+
+
+def load_challenges(path=os.path.join(SITE, "challenges.json")):
+    """The table: {"daily": [...], "weekly": [...], "daily_count", "weekly_count"} (challenges.json)."""
+    data = load_json(path, {})
+    return {"daily": data.get("daily", []), "weekly": data.get("weekly", []),
+            "daily_count": int(data.get("daily_count", 4)), "weekly_count": int(data.get("weekly_count", 1))}
+
+
+def challenge_row(p, d, t, cat, map_id, won, detail, tally):
+    """What one counted Reach match of a player gives the challenges: p its ledger row, d its report row (None: no
+    report kept), tally the match's kill record by name (None: not recorded)."""
+    top = max((x["score"] for x in detail["players"]), default=0) if detail else 0
+    mine = (tally or {}).get(p["name"])
+    return {"t": t, "cat": cat, "map": map_id or "", "games": 1, "wins": int(won), "kills": p["kills"],
+            "deaths": p["deaths"], "assists": p["assists"], "plus": p["kills"] - p["deaths"],
+            "medals_n": d["medal_total"] if d else 0, "kg": d["kg"] if d else 0, "km": d["km"] if d else 0,
+            "score": d["score"] if d else 0, "spree": d["spree"] if d else 0,
+            "top": int(bool(d) and top > 0 and d["score"] == top),
+            "medal": {str(i): n for i, n in d["medals"].items()} if d else {},
+            "weapons": {f"{DEFAULT_GAME}:{k}": n[0] for k, n in mine["weapons"].items()} if mine else {}}
+
+
+def challenge_value(c, row, ids, groups, vehicles):
+    """What one match row adds to challenge c (challenges.json count)."""
+    how = c["count"]
+    if (how.get("cat") and row["cat"] not in how["cat"]) or (how.get("map") and row["map"] not in how["map"]):
+        return 0
+    if "stat" in how:
+        n = row.get(CHALLENGE_STATS.get(how["stat"], how["stat"]), 0)
+    elif "medals" in how:
+        n = sum(row["medal"].get(ids[k], 0) for k in how["medals"] if k in ids)
+    elif "group" in how:
+        n = sum(v for i, v in row["medal"].items() if groups.get(i) == how["group"])
+    elif "weapons" in how:
+        keys = {f"{DEFAULT_GAME}:{w}" for w in how["weapons"]}
+        n = sum(v for k, v in row["weapons"].items() if k in keys)
+    elif how.get("vehicles"):
+        n = sum(v for k, v in row["weapons"].items() if k in vehicles)
+    else:
+        n = 0
+    return int(n >= how["at_least"]) if "at_least" in how else int(n)
+
+
+def challenge_starts(t):
+    """(the day, the week) a moment falls in, as their first dates: "2026-11-17", "2026-11-16" (local time)."""
+    day = datetime.date.fromtimestamp(t)
+    return day.isoformat(), (day - datetime.timedelta(days=day.weekday())).isoformat()
+
+
+def challenge_pick(period, start, pool, n):
+    """The keys of the challenges a day or week has ("daily"/"weekly", its first date): drawn from its list by the date
+    alone, the same for everyone and every build."""
+    seed = int(hashlib.sha256(f"{period}:{start}".encode("utf-8")).hexdigest(), 16)
+    return random.Random(seed).sample([c["key"] for c in pool], min(n, len(pool)))
+
+
+def challenge_progress(rows, table, medal_info, now):
+    """One player's challenges: {"cr": credits of every one finished, "daily_done", "weekly_done": how many,
+    "now": {key: progress} for today's and this week's}."""
+    ids = {info.get("key"): str(i) for i, info in medal_info.items() if isinstance(info, dict)}
+    groups = {str(i): medal_group(info) for i, info in medal_info.items() if isinstance(info, dict)}
+    vehicles = set(vehicle_keys())
+    windows = {}
+    for r in rows:
+        day, week = challenge_starts(r["t"])
+        windows.setdefault(("daily", day), []).append(r)
+        windows.setdefault(("weekly", week), []).append(r)
+    today, this_week = challenge_starts(now)
+    out = {"cr": 0, "daily_done": 0, "weekly_done": 0, "now": {}}
+    for (period, start), rs in windows.items():
+        pool = table[period]
+        by_key = {c["key"]: c for c in pool}
+        for key in challenge_pick(period, start, pool, table[period + "_count"]):
+            c = by_key[key]
+            n = sum(challenge_value(c, r, ids, groups, vehicles) for r in rs)
+            if n >= c["need"]:
+                out["cr"] += int(c["cr"])
+                out[period + "_done"] += 1
+            if start == (today if period == "daily" else this_week):
+                out["now"][key] = n
+    return out
+
+
+def challenge_table(table, now, credits_on):
+    """The page's side: every challenge, and today's and this week's with when they end (seconds since 1970)."""
+    today, this_week = challenge_starts(now)
+    ends = lambda start, days: datetime.datetime.combine(datetime.date.fromisoformat(start) + datetime.timedelta(days=days),
+                                                         datetime.time.min).timestamp()
+    return {"credits": credits_on,
+            "daily": {"start": today, "ends": ends(today, 1), "keys": challenge_pick("daily", today, table["daily"], table["daily_count"])},
+            "weekly": {"start": this_week, "ends": ends(this_week, 7),
+                       "keys": challenge_pick("weekly", this_week, table["weekly"], table["weekly_count"])},
+            "list": [{k: c[k] for k in ("key", "name", "what", "need", "cr", "icon")} | {"period": period}
+                     for period in ("daily", "weekly") for c in table[period]]}
+
+
+# ---------------------------------------------------------------- clan rewards (Nov 18)
+# The owner: make people and bots want to join a big clan (a clan's cR stays its members' added up), "add everything",
+# each one changeable in edit mode to test. service_record_site/clan_rewards.json: the rewards with the clan ranks that
+# unlock them, and the clan weekly challenges; the owner's changes in native/bin/service_record/clan_settings.json
+# (rewards on or off and their unlocks, a week's challenge picked by hand, each clan's emblem). Everything else is
+# worked out from the counted Reach matches at each build, so a reset takes it away too.
+CLAN_SCALE = 10                         # (app.js CLAN_SCALE: a clan's ladder is the players' with every step x10)
+CLAN_GAMES = (100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000)   # (the history's games played milestones)
+
+
+def load_clan_table(path=os.path.join(SITE, "clan_rewards.json")):
+    """{"rewards": [...], "challenges": [...]} (clan_rewards.json)."""
+    data = load_json(path, {})
+    return {"rewards": list(data.get("rewards", [])), "challenges": list(data.get("challenges", []))}
+
+
+def load_clan_settings(paths):
+    """The owner's changes (clan_settings.json): {"rewards": {key: {"on", "at"}}, "weeks": {week: challenge key},
+    "emblems": {clan key: member name}}, each part a dict."""
+    raw = load_json(os.path.join(paths.store, "clan_settings.json"), {})
+    raw = raw if isinstance(raw, dict) else {}
+    return {k: raw[k] if isinstance(raw.get(k), dict) else {} for k in ("rewards", "weeks", "emblems")}
+
+
+def rank_names(steps):
+    """The ladder's rank names, lowest first (load_ranks steps)."""
+    return [s[1] for s in steps if s[2] == 0]
+
+
+def clan_rewards(table, settings, steps):
+    """Every reward with the owner's change laid over it: "on" a bool, "at" (the ranks unlocking each level) the same
+    number of rank names, none lower than the one before. A change that is not that is left out."""
+    names = rank_names(steps)
+    out = []
+    for r in table["rewards"]:
+        r = {k: r[k] for k in ("key", "group", "name", "what", "on", "at", "levels") if k in r}
+        mine = settings["rewards"].get(r["key"])
+        if isinstance(mine, dict):
+            if isinstance(mine.get("on"), bool):
+                r["on"] = mine["on"]
+            at = mine.get("at")
+            if "at" in r and isinstance(at, list) and len(at) == len(r["at"]) and all(a in names for a in at) \
+                    and all(names.index(a) <= names.index(b) for a, b in zip(at, at[1:])):
+                r["at"] = list(at)
+        out.append(r)
+    return out
+
+
+def save_clan_rewards(paths, changes, steps=None):
+    """The edit mode's reward settings ({key: {"on", "at"}}; {} puts every reward back as clan_rewards.json has it).
+    Returns the rewards as they now are. ValueError for anything that is not a reward or a good change."""
+    steps = steps or load_ranks()[1]
+    table = load_clan_table()
+    known = {r["key"]: r for r in table["rewards"]}
+    if not isinstance(changes, dict) or any(k not in known or not isinstance(v, dict) for k, v in changes.items()):
+        raise ValueError("not a reward")
+    settings = load_clan_settings(paths)
+    kept = {}
+    for key, v in changes.items():
+        change = {}
+        if isinstance(v.get("on"), bool):
+            change["on"] = v["on"]
+        if "at" in v:
+            change["at"] = v["at"]
+        got = clan_rewards({"rewards": [known[key]]}, {"rewards": {key: change}}, steps)[0]
+        if "at" in change and got.get("at") != change["at"]:
+            raise ValueError(f"{known[key]['name']}: each unlock a rank, none lower than the one before")
+        kept[key] = change
+    settings["rewards"] = kept
+    save_json(os.path.join(paths.store, "clan_settings.json"), settings)
+    return clan_rewards(table, settings, steps)
+
+
+def save_clan_week(paths, key, now=None):
+    """This week's clan challenge picked by hand ("" goes back to the one its date draws). Returns this week's key."""
+    table = load_clan_table()
+    if key and key not in {c["key"] for c in table["challenges"]}:
+        raise ValueError("not a clan challenge")
+    week = challenge_starts(time.time() if now is None else now)[1]
+    settings = load_clan_settings(paths)
+    if key:
+        settings["weeks"][week] = key
+    else:
+        settings["weeks"].pop(week, None)
+    save_json(os.path.join(paths.store, "clan_settings.json"), settings)
+    return clan_week_pick(table["challenges"], settings, week)
+
+
+def save_clan_emblem(paths, clan, name):
+    """A clan's emblem: one of its members' (the editor checks the member), "" its top member's again."""
+    key = clan_key(clan)
+    if not CLAN_KEY.fullmatch(key) or not isinstance(name, str) or len(name) > 32:
+        raise ValueError("not a clan member")
+    settings = load_clan_settings(paths)
+    if name:
+        settings["emblems"][key] = name
+    else:
+        settings["emblems"].pop(key, None)
+    save_json(os.path.join(paths.store, "clan_settings.json"), settings)
+    return name
+
+
+def clan_week_pick(pool, settings, week):
+    """A week's clan challenge: the owner's pick for it, else one drawn by its date (challenge_pick)."""
+    mine = settings["weeks"].get(week)
+    if mine in {c["key"] for c in pool}:
+        return mine
+    return (challenge_pick("clan", week, pool, 1) or [None])[0]
+
+
+def match_credits(r, worth):
+    """One match row's credits (challenge_row's numbers; ranks.json worth): the game, the win, kills, assists, medals."""
+    return (worth["game"] + worth["win"] * r["wins"] + worth["kill"] * r["kills"] + worth["assist"] * r["assists"]
+            + worth["medal"] * r["medals_n"])
+
+
+def clan_block(out_players, rows_by_name, table, settings, rewards, medal_info, worth, steps, now):
+    """({clan key: {"bonus", "done", "now", "mvp", "history", "emblem"}}, the week's clan challenge for the page).
+    out_players: site_data's (name, clan, cr, emblem); rows_by_name: each player's challenge_row rows.
+    bonus: the cR of every week's clan challenge the clan finished (the owner's "challenge" reward on), added to its cR;
+    mvp: [the member with the most credits from this week's matches, those credits]; history: [[t, kind, value]] newest
+    first: "first" (its first match), "rank" (a rank reached), "games" (a games played milestone), "top" (the week it
+    earned the most credits of every clan). A rank's date: the clan's cR as it grew match by match, the commendations'
+    and members' challenges' share spread over the matches alike, so its last step is the rank it has now."""
+    on = {r["key"]: r.get("on", True) for r in rewards}
+    pool = table["challenges"]
+    by_key = {c["key"]: c for c in pool}
+    ids = {info.get("key"): str(i) for i, info in medal_info.items() if isinstance(info, dict)}
+    groups = {str(i): medal_group(info) for i, info in medal_info.items() if isinstance(info, dict)}
+    vehicles = set(vehicle_keys())
+    this_week = challenge_starts(now)[1]
+    week_end = lambda w: datetime.datetime.combine(datetime.date.fromisoformat(w) + datetime.timedelta(days=7),
+                                                   datetime.time.min).timestamp()
+    named = [(s[1], s[3] * CLAN_SCALE) for s in steps if s[2] == 0][1:]
+    members = {}
+    for p in out_players:
+        if str(p.get("clan") or "").strip():
+            members.setdefault(clan_key(p["clan"]), []).append(p)
+    out, week_cr = {}, {}
+    for key, ms in members.items():
+        events, by_week, mvp = [], {}, {}
+        for p in ms:
+            for r in rows_by_name.get(p["name"], []):
+                cr = match_credits(r, worth)
+                events.append((r["t"], cr))
+                w = challenge_starts(r["t"])[1]
+                by_week.setdefault(w, []).append(r)
+                week_cr.setdefault(w, {})[key] = week_cr.get(w, {}).get(key, 0) + cr
+                if w == this_week:
+                    mvp[p["name"]] = mvp.get(p["name"], 0) + cr
+        bonus, done, progress, extra = 0, 0, 0, []
+        for w, rs in by_week.items():
+            c = by_key.get(clan_week_pick(pool, settings, w)) if on.get("challenge") else None
+            if not c:
+                continue
+            n = 0
+            for r in sorted(rs, key=lambda x: x["t"]):
+                n += challenge_value(c, r, ids, groups, vehicles)
+                if n >= c["need"]:
+                    bonus += int(c["cr"])
+                    done += 1
+                    extra.append((r["t"], int(c["cr"])))           # (finished in this match)
+                    week_cr[w][key] += int(c["cr"])
+                    break
+            if w == this_week:
+                progress = sum(challenge_value(c, r, ids, groups, vehicles) for r in rs)
+        total = sum(p.get("cr") or 0 for p in ms) + bonus
+        timeline = sorted(events + extra)
+        base = sum(c for _, c in timeline)
+        scale = total / base if base else 0
+        history = [[timeline[0][0], "first", ""]] if events else []
+        run, i = 0.0, 0
+        for t, c in timeline:
+            run += c * scale
+            while i < len(named) and run >= named[i][1] - 0.5:
+                history.append([t, "rank", named[i][0]])
+                i += 1
+        for n, (t, _) in enumerate(sorted(events), 1):
+            if n in CLAN_GAMES:
+                history.append([t, "games", n])
+        best = max(mvp.items(), key=lambda kv: (kv[1], kv[0].lower()), default=None)
+        names = {p["name"] for p in ms if p.get("emblem")}
+        pick = settings["emblems"].get(key)
+        out[key] = {"bonus": bonus, "done": done, "now": progress, "mvp": list(best) if best and best[1] > 0 else None,
+                    "history": history, "emblem": pick if pick in names else None}
+    for w, by in week_cr.items():                           # (each week gone by: the clan that earned the most)
+        if w >= this_week or not by:
+            continue
+        key, cr = sorted(by.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+        if cr > 0:
+            out[key]["history"].append([week_end(w) - 1, "top", w])
+    for c in out.values():
+        c["history"] = [e for _, e in sorted(enumerate(c["history"]), key=lambda ie: (ie[1][0], ie[1][1] != "first", ie[0]),
+                                                reverse=True)][:60]      # (newest first; a match's ranks highest first)
+    pick = clan_week_pick(pool, settings, this_week) if pool else None
+    week = {"start": this_week, "ends": week_end(this_week), "key": pick, "picked": settings["weeks"].get(this_week) == pick and pick is not None,
+            "list": [{k: c[k] for k in ("key", "name", "what", "need", "cr", "icon")} for c in pool]}
+    return out, week
+
+
 def site_data(ledger, store_matches, paths, now=None, kills=None):
     """Everything the pages show, as one dict (data.js)."""
     worth, steps = load_ranks()
     regions, states = load_states()
+    homes = load_home_states(paths, states)                 # (Nov 18: the states set by hand in edit mode)
     roster = read_profiles(paths.profiles)
     pool = read_pool(paths.pool)
     people = load_people(paths)
-    players, matches = collect(ledger, store_matches, roster, kills, paths, people, read_pool_names(paths.bot_pool))
+    players, matches = collect(ledger, store_matches, roster, kills, paths, people, read_pool_names(paths.bot_pool),
+                               load_matchmaking(paths.matchmaking))
     persons = person_names(ledger, people)
     looks_file = all_looks(paths, [html.unescape(n) for n in players])   # (pool bots' looks worked out too)
     looks = read_looks(looks_file, read_look_names(paths.look_names))
@@ -1279,6 +1731,9 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     tiers, comms = load_commendations()
     badges = load_badges()
     with_comms = bool(load_json(os.path.join(SITE, "ranks.json"), {}).get("commendation_credits"))
+    challenges = load_challenges()                          # (Nov 17: the dailies and weeklies, their cR in the rank)
+    with_chal = bool(load_json(os.path.join(SITE, "ranks.json"), {}).get("challenge_credits"))
+    when = time.time() if now is None else now
     used = set()
     out_players = []
     for name in sorted(players, key=str.lower):
@@ -1287,6 +1742,8 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         counts = commendation_counts(rec["g"][DEFAULT_GAME], comms, medal_names) if DEFAULT_GAME in rec["g"] else {}
         comm_cr = commendation_credits(counts, comms) if with_comms else 0
         cr = credits(reach, worth) + comm_cr                # (the rank: its matches, and its commendations' tiers)
+        chal = challenge_progress(rec["chal"], challenges, medal_names, when)
+        cr += chal["cr"] if with_chal else 0                # (and its finished challenges, Nov 17)
         for g in rec["g"].values():
             used.update(g["medals"])
         diff, style = pool.get(name, ("", ""))
@@ -1295,9 +1752,16 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
             "clan": roster[name] if name in roster else clans.get(html.unescape(name), ""),   # (its profile's, "" too)
             "difficulty": diff, "style": style, "emblem": export_emblem(name, paths),
             "looks": looks.get(name), "cr": cr, "rank": rank_index(cr, steps), "comm": counts, "comm_cr": comm_cr,
+            "chal": chal,                                   # (Nov 17: cr, daily_done, weekly_done, now {key: n})
+            "comm_pct": commendation_progress(counts, comms),
             "badges": badge_counts(rec["g"][DEFAULT_GAME], badges) if DEFAULT_GAME in rec["g"] else {},
-            "state": home_state(html.unescape(name), states), "figure": figures.get(name), "g": rec["g"],
+            "state": homes.get(html.unescape(name)) or home_state(html.unescape(name), states),
+            "state_set": html.unescape(name) in homes, "figure": figures.get(name), "g": rec["g"],
         })
+    clan_table, clan_settings = load_clan_table(), load_clan_settings(paths)   # (Nov 18: the clan rewards)
+    rewards = clan_rewards(clan_table, clan_settings, steps)
+    clans_out, clan_week = clan_block(out_players, {html.unescape(n): r["chal"] for n, r in players.items()}, clan_table,
+                                      clan_settings, rewards, medal_names, worth, steps, when)
     medals = {}
     for i in sorted(used, key=int):
         info = medal_names.get(i) or {}
@@ -1355,6 +1819,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
                 | {m["heat"]: map_name(m["map"]) + ": " + variant_title(m["map"], m["heat"].split("@")[1], paths)
                    for m in matches if "@" in (m.get("heat") or "")},
         "players": out_players, "matches": matches, "medals": medals,
+        "today": today_block(matches, worth, load_matchmaking_playlists(paths.matchmaking), now),   # (Nov 17)
         "medal_art": bool(medal_names),
         "weapons": weapons, "heat_maps": {k: v for k, v in heat_maps.items() if v},
         "weapon_art": weapon_pictures(weapons, paths),
@@ -1374,6 +1839,8 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
         "regions": regions, "states": {s[0]: [s[1], s[2]] for s in states},
         "clan_names": load_clan_names(paths),        # (the owner's full names for the clans, by clan_key)
         "clan_about": load_clan_about(paths),        # (and his short description of each)
+        "challenges": challenge_table(challenges, when, with_chal),   # (Nov 17: today's and this week's)
+        "clans": clans_out, "clan_week": clan_week, "clan_rewards": rewards,   # (Nov 18: the clan rewards)
     }
 
 
@@ -1573,6 +2040,82 @@ def set_bot_clan(paths, name, clan, running=None):
     return clan
 
 
+# the bots panel's difficulty keys (native/bots_panel.cpp TIER_KEY, in its order)
+TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician", "mythic")
+POOL_HEADER = ("; Bot Matchmaking (BOTS panel): the queue positions in bot_pool_4v4.txt and bot_pool_8v8.txt, the clans'\n"
+               "; reshuffle, and each bot's saved difficulty and play style (saved=<difficulty>,<style>,<name>). A bot with\n"
+               "; no line here takes the defaults.\n")
+
+
+def _rewrite(path, lines, nl):
+    shutil.copyfile(path, path + ".before_site_edit")
+    with open(path + ".tmp", "w", encoding="utf-8", newline="") as f:
+        f.write(nl.join(lines))
+    os.replace(path + ".tmp", path)
+
+
+def set_bot_difficulty(paths, name, tier, running=None):
+    """(Nov 18, the owner: "edit a bot's difficulty on the website and have it change in the game") a bot's saved
+    difficulty, written as the BOTS panel writes it when its difficulty is changed (bots_panel.cpp bot_pool_remember):
+    its saved=<difficulty>,<style>,<name> line in native/bin/bot_pool_saved.ini, which Bot Matchmaking seats it with,
+    its play style kept (Demon never Wheelman: then any), and its tier in the lobby list's bot=/ffbot= lines of
+    botcore.ini when it is on that list. "" takes its saved line out (it takes the lobby's difficulty again; the lobby
+    list is left as it is). Refused while MCC runs (botcore holds both files and writes them back); in game from MCC's
+    next start. A copy of each file as it was is kept beside it (.before_site_edit). Returns the tier key as saved."""
+    tier = (tier or "").strip().lower()
+    if tier and tier not in TIER_KEYS:
+        raise ValueError("not a difficulty")
+    if not isinstance(name, str) or not re.fullmatch(r"[\x20-\x2b\x2d-\x7e]{1,15}", name) or name != name.strip():
+        raise ValueError("not a bot's name")
+    if (mcc_running() if running is None else running):
+        raise PermissionError("close MCC first: it holds the bots' difficulties while it runs and would write over the change")
+    try:
+        with open(paths.pool, encoding="utf-8", errors="strict", newline="") as f:
+            text = f.read()
+    except FileNotFoundError:
+        if not tier:
+            return ""
+        with open(paths.pool, "w", encoding="utf-8", newline="") as f:
+            f.write(POOL_HEADER)
+        text = POOL_HEADER
+    nl = "\r\n" if "\r\n" in text else "\n"
+    lines = text.split(nl)
+    style, at = "any", None
+    for i, line in enumerate(lines):
+        parts = line[6:].split(",", 2) if line.startswith("saved=") else []
+        if len(parts) == 3 and parts[2].strip().lower() == name.lower():
+            style, at = parts[1], i
+            break
+    if tier == "demon" and style == "wheelman":
+        style = "any"
+    if tier:
+        new = f"saved={tier},{style},{name}"
+        if at is None:
+            lines.insert(len(lines) - 1 if lines and lines[-1] == "" else len(lines), new)
+        else:
+            lines[at] = new
+    elif at is not None:
+        del lines[at]
+    if tier or at is not None:
+        _rewrite(paths.pool, lines, nl)
+    if tier and os.path.exists(paths.botcore):
+        with open(paths.botcore, encoding="utf-8", errors="strict", newline="") as f:
+            text = f.read()
+        nl = "\r\n" if "\r\n" in text else "\n"
+        lines, hit = text.split(nl), False
+        for i, line in enumerate(lines):
+            key = "ffbot=" if line.startswith("ffbot=") else "bot=" if line.startswith("bot=") else None
+            parts = line[len(key):].split(",", 3) if key else []
+            if len(parts) == 4 and parts[3].strip().lower() == name.lower():
+                parts[1] = tier
+                if tier == "demon" and parts[2] == "wheelman":
+                    parts[2] = "any"
+                lines[i], hit = key + ",".join(parts), True
+        if hit:
+            _rewrite(paths.botcore, lines, nl)
+    return tier
+
+
 def all_looks(paths, names):
     """The looks file the site draws from: bot_looks.ini (the bots panel's: the profile bots) and, for every listed bot
     that has no Reach look there (a matchmaking pool bot with no profile), the Reach look it wears in game, worked out
@@ -1763,6 +2306,145 @@ def weapon_pictures(keys, paths):
     return out
 
 
+def write_game_ranks(data, paths):
+    """(Nov 17, the owner: "add whatever rank we are from our service record website to beside our names like in the
+    original halo reach") <out>/ranks.txt, each player's Reach rank as the site shows it, for the game's own rows
+    (native/proving_grounds.cpp reads it and the site's ranks/<step>.png beside it). The one rank table stays
+    ranks.json and the credits stay this file's: the game reads the result, never a sum of its own.
+    (Nov 17, the owner's Reach roster pictures: a player picked in the list shows their card) then the card's numbers,
+    the site's own: Reach games played, kills per death, the share won, Overall Commendation Progress, the credits, and
+    the daily and weekly challenges completed (as Reach's card listed them); empty where the site has none (the card
+    shows "...")."""
+    lines = ["# made from tools/service_record_site/ranks.json by tools/service_record.py; do not edit",
+             "# name<TAB>rank step (0 = Recruit, the site's ranks/<step>.png)<TAB>rank<TAB>games<TAB>K/D<TAB>win %"
+             "<TAB>commendation progress %<TAB>credits<TAB>daily challenges completed<TAB>weekly"]
+    for p in data["players"]:
+        step = int(p.get("rank") or 0)
+        label = data["ranks"][step][0] if 0 <= step < len(data["ranks"]) else ""
+        name = str(p["name"]).replace("\t", " ").replace("\n", " ")
+        s = (p["g"].get(DEFAULT_GAME, {}).get("cats", {}).get("all") or blank()) if isinstance(p.get("g"), dict) else blank()
+        games = int(s["games"])
+        kd = f"{career.kd(s):.2f}" if games else ""
+        win = str(round(100 * s["wins"] / games)) if games else ""
+        chal = p.get("chal") if isinstance(p.get("chal"), dict) else {}
+        daily, weekly = chal.get("daily_done", ""), chal.get("weekly_done", "")
+        lines.append(f"{name}\t{step}\t{label}\t{games}\t{kd}\t{win}\t{p.get('comm_pct', 0.0):.1f}\t{int(p.get('cr') or 0)}"
+                     f"\t{daily}\t{weekly}")
+    tmp = os.path.join(paths.out, "ranks.txt.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, os.path.join(paths.out, "ranks.txt"))
+
+
+def write_game_challenges(data, paths):
+    """(Nov 17, docs: the challenges in game, and the owner's Bungie.net Reach Challenges picture) <out>/challenges.txt,
+    the live challenges as this build drew them (challenge_table) and each listed person's progress on them
+    (challenge_progress), for Proving Grounds' Challenges page (native/proving_grounds.cpp). The game reads this and
+    works nothing out: the site and the game show the same numbers."""
+    C = data.get("challenges") or {}
+    by = {c["key"]: c for c in C.get("list", [])}
+    clean = lambda s: str(s).replace("\t", " ").replace("\n", " ")
+    lines = ["# made by tools/service_record.py with the site (challenge_table, challenge_progress); do not edit",
+             "# period<TAB>daily|weekly<TAB>its first date<TAB>when it ends (seconds since 1970)",
+             "# challenge<TAB>period<TAB>key<TAB>name<TAB>what to do<TAB>need<TAB>cR<TAB>icon (the live ones, in order)",
+             "# person<TAB>name<TAB>daily completed<TAB>weekly completed<TAB>challenge cR; progress<TAB>name<TAB>key<TAB>n"]
+    for period in ("weekly", "daily"):
+        w = C.get(period)
+        if not w:
+            continue
+        lines.append(f"period\t{period}\t{w['start']}\t{int(w['ends'])}")
+        for k in w["keys"]:
+            c = by.get(k)
+            if c:
+                lines.append(f"challenge\t{period}\t{k}\t{clean(c['name'])}\t{clean(c['what'])}\t{int(c['need'])}"
+                             f"\t{int(c['cr'])}\t{clean(c.get('icon', ''))}")
+    for p in data["players"]:
+        if not p.get("person"):
+            continue
+        ch = p.get("chal") if isinstance(p.get("chal"), dict) else {}
+        name = clean(p["name"])
+        lines.append(f"person\t{name}\t{int(ch.get('daily_done', 0))}\t{int(ch.get('weekly_done', 0))}\t{int(ch.get('cr', 0))}")
+        lines += [f"progress\t{name}\t{k}\t{int(n)}" for k, n in (ch.get("now") or {}).items()]
+    tmp = os.path.join(paths.out, "challenges.txt.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, os.path.join(paths.out, "challenges.txt"))
+
+
+def write_last_match(data, paths):
+    """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
+    report) <out>/last_match.txt: what the newest match on the site (a Proving Grounds match) earned each listed person
+    in it, for Proving Grounds' credits screen when its lobby comes back (native/proving_grounds.cpp). Their credits
+    before and after; a line for each kind of credit by ranks.json's worth (the game played, the win, kills, assists,
+    medals), then the rest of the difference: Challenges (as their credits grew since the last build) and Commendations
+    (tiers reached); the rank steps the bar runs through.
+    "Before" is what the last build had (<store>/credits_seen.json), so the bar starts where the site stood; a match
+    already reported is not reported again (the file keeps its last report). A newest match no listed person played
+    gets its match line alone, so the game does not wait for a report that will not come."""
+    matches = data.get("matches") or []
+    seen_path = os.path.join(paths.store, "credits_seen.json")
+    seen = load_json(seen_path, {})
+    seen = seen if isinstance(seen, dict) else {}
+    persons = {p["name"]: p for p in data["players"] if p.get("person")}
+    ranks, worth = data["ranks"], data["credits"]
+    # (Nov 17, the bot simulation) the newest match a person played: simulated ones beside it have bots alone
+    m = next((x for x in matches if any(not r["bot"] for r in x["rows"])), matches[0] if matches else None)
+    lines = []
+    for r in (m["rows"] if m else []):
+        p = persons.get(r["n"])
+        prev = seen.get(r["n"]) if isinstance(seen.get(r["n"]), dict) else {}
+        if not p or not r.get("listed") or prev.get("match") == m["id"]:
+            continue
+        after = int(p.get("cr") or 0)
+        parts = []
+        if m["game"] == DEFAULT_GAME:                       # (credits come from Reach matches only)
+            md = int(r.get("md", 0))
+            parts = [("Game Completed", 1, worth["game"]), ("Victory", int(r["won"]), int(r["won"]) * worth["win"]),
+                     ("Kills", r["k"], r["k"] * worth["kill"]), ("Assists", r["a"], r["a"] * worth["assist"]),
+                     ("Medals", md, md * worth["medal"])]
+            parts = [x for x in parts if x[0] == "Game Completed" or x[1]]
+        earned = sum(x[2] for x in parts)
+        before = prev.get("cr") if isinstance(prev.get("cr"), int) else after - earned
+        rest = after - before - earned
+        if rest < 0:                                        # (a reset since, or no last build: the match's own only)
+            before, rest = after - earned, 0
+        chal = 0                                            # (the rest: challenges finished, by how their credits grew
+        if rest and isinstance(prev.get("chal"), int):      # since the last build; commendation tiers the remainder)
+            chal = max(0, min(rest, int((p.get("chal") or {}).get("cr", 0)) - prev["chal"]))
+        if rest - chal:
+            parts.append(("Commendations", "", rest - chal))
+        if chal:
+            parts.append(("Challenges", "", chal))
+        lo, hi = rank_index(max(before, 0), [[0, 0, 0, x[1]] for x in ranks]), int(p.get("rank") or 0)
+        name = str(r["n"]).replace("\t", " ")
+        lines.append(f"person\t{name}\t{before}\t{after}")
+        lines += [f"line\t{name}\t{label}\t{n}\t{cr}" for label, n, cr in parts]
+        lines += [f"step\t{name}\t{s}\t{ranks[s][0]}\t{ranks[s][1]}" for s in range(lo, min(hi + 2, len(ranks)))]
+    for name, p in persons.items():                         # (where each person's credits stand now)
+        in_m = bool(m) and any(r["n"] == name for r in m["rows"])
+        old = seen.get(name) if isinstance(seen.get(name), dict) else {}
+        seen[name] = {"match": m["id"] if in_m else old.get("match"), "cr": int(p.get("cr") or 0),
+                      "chal": int((p.get("chal") or {}).get("cr", 0))}
+    os.makedirs(paths.store, exist_ok=True)
+    save_json(seen_path, seen)
+    path = os.path.join(paths.out, "last_match.txt")
+    try:
+        with open(path, encoding="utf-8") as f:
+            had = next((l.rstrip("\n").split("\t")[1] for l in f if l.startswith("match\t")), None)
+    except OSError:
+        had = None
+    if lines or (m and had != m["id"]):                    # (a match nobody listed played: its line alone, so the
+                                                            # game knows there is nothing to show)
+        text = ["# made by tools/service_record.py with the site: what the newest Proving Grounds match earned; do not edit",
+                "# match<TAB>id; person<TAB>name<TAB>credits before<TAB>after; line<TAB>name<TAB>what<TAB>count<TAB>credits;",
+                "# step<TAB>name<TAB>rank step<TAB>rank<TAB>its credits (the steps the bar runs through, and the next)",
+                f"match\t{m['id']}"] + lines
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("\n".join(text) + "\n")
+        os.replace(tmp, path)
+
+
 def write_site(data, paths):
     """The pages (copied as they are) and data.js; stamp.js last, the sign an open page watches for a new build."""
     os.makedirs(paths.out, exist_ok=True)
@@ -1777,6 +2459,9 @@ def write_site(data, paths):
                 shutil.copyfile(os.path.join(art, f), os.path.join(paths.out, "ranks", f))
                 have.append(int(f[:-4]))
         data["rank_art"] = sorted(have)
+    write_game_ranks(data, paths)
+    write_last_match(data, paths)
+    write_game_challenges(data, paths)
     for name, text in (("data.js", "window.SR_DATA = " + json.dumps(data, separators=(",", ":")) + ";\n"),
                        ("stamp.js", f'window.SR_STAMP && window.SR_STAMP("{data["stamp"]}");\n')):
         tmp = os.path.join(paths.out, name + ".tmp")
@@ -1829,7 +2514,17 @@ def build(paths):
         kills = {}
     if update_kills(kills, paths):
         save_json(kills_path, kills)
-    data = site_data(ledger, store.get("matches", {}), paths, kills=kills.get("kills", {}))
+    matches, kill_rows_all = store.get("matches", {}), kills.get("kills", {})
+    try:                                                    # (Nov 17, the bot simulation: tools/bot_sim.py's matches,
+        import bot_sim                                      # shown as the real ones are; never saved into these files)
+        sim_ledger, sim_matches, sim_kills = bot_sim.site_entries(paths)
+    except Exception:
+        sim_ledger = sim_matches = sim_kills = {}
+    if sim_ledger:
+        ledger = {**ledger, **sim_ledger}
+        matches = {**matches, **sim_matches}
+        kill_rows_all = {**kill_rows_all, **sim_kills}
+    data = site_data(ledger, matches, paths, kills=kill_rows_all)
     write_site(data, paths)
     return data
 

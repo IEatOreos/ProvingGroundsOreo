@@ -233,7 +233,13 @@ static void ce_rows(uint8_t* results) {
     }
 }
 
+// (custom, Nov 18) MCC's post-game results built so far, once at each match's end (never between an Assault's rounds:
+// botcore_pg14.log, One Bomb on Pinnacle). reach.cpp's member guard reads it: -1 while the build is not hooked
+static volatile LONG g_builds, g_build_hooked;
+long report_results_built() { return g_build_hooked ? g_builds : -1; }
+
 static void __fastcall h_build(int* report, uint8_t* results) {
+    InterlockedIncrement(&g_builds);
     __try {
         if (g_rows_game == 1 && results) ce_rows(results);        // (the game the bots were added in: 1 = Halo CE)
         char line[640];
@@ -340,9 +346,61 @@ static int64_t rank_xp(int tour, int level) {
     return -1;
 }
 
+// (custom, Nov 17, the owner: "add my nameplate and emblem" to Proving Grounds' rows) the person's own, as MCC's lookup
+// answers for their id (session_watch.cpp mcc_player_id): the emblem's five at +0x00 and the nameplate at +0x18, kept
+// each time MCC asks (its roster and cards do, every lobby). Nothing is called that MCC does not call itself
+uint64_t mcc_player_id();                                  // session_watch.cpp
+bool mcc_session_has(uint64_t id);                         // session_watch.cpp: another person in the session
+// (Nov 17, a friend in Proving Grounds' lobby) the people's looks by id: the player's and any joined friend's
+struct person_look { uint64_t id; int32_t v[6]; };         // v: the emblem's five, the nameplate
+static SRWLOCK g_look_lock = SRWLOCK_INIT;
+static person_look g_looks[9];
+static int g_nlooks, g_looks_logged;
+bool mcc_person_look(uint64_t id, int32_t emblem[5], int* nameplate) {
+    if (!id) return false;
+    bool ok = false;
+    AcquireSRWLockShared(&g_look_lock);
+    for (int i = 0; i < g_nlooks; i++)
+        if (g_looks[i].id == id && (g_looks[i].v[0] > 0 || g_looks[i].v[5] > 0)) {
+            memcpy(emblem, g_looks[i].v, 5 * sizeof(int32_t));
+            *nameplate = g_looks[i].v[5];
+            ok = true;
+            break;
+        }
+    ReleaseSRWLockShared(&g_look_lock);
+    return ok;
+}
+bool mcc_player_look(int32_t emblem[5], int* nameplate) { return mcc_person_look(mcc_player_id(), emblem, nameplate); }
+
+static void keep_look(uint64_t xuid, const int32_t* out) {
+    int32_t v[6] = { out[0], out[1], out[2], out[3], out[4], out[6] };
+    bool news = false;
+    AcquireSRWLockExclusive(&g_look_lock);
+    int k = 0;
+    while (k < g_nlooks && g_looks[k].id != xuid) k++;
+    if (k == g_nlooks) {
+        if (g_nlooks < 9) g_nlooks++;
+        else k = 1 + (int)(xuid % 8);                      // (full: a friend's place, never the player's first)
+        g_looks[k].id = xuid;
+        memset(g_looks[k].v, 0, sizeof g_looks[k].v);
+    }
+    if (memcmp(v, g_looks[k].v, sizeof v)) { memcpy(g_looks[k].v, v, sizeof v); news = true; }
+    ReleaseSRWLockExclusive(&g_look_lock);
+    if (news && g_looks_logged++ < 12)
+        logf("report: %s look: emblem %d %d %d %d %d, nameplate %d", xuid == mcc_player_id() ? "the player's" : "a person's",
+             v[0], v[1], v[2], v[3], v[4], v[5]);
+}
+
 static char __fastcall h_profile(void* mgr, uint64_t xuid, int32_t* out) {
     int rn = out ? row_number(xuid) : -1;
-    if (rn < 0) return o_profile(mgr, xuid, out);
+    if (rn < 0) {
+        char ok = o_profile(mgr, xuid, out);
+        uint64_t me = mcc_player_id();
+        if (ok && out && xuid && ((me && xuid == me) || mcc_session_has(xuid))) {
+            __try { keep_look(xuid, out); } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        return ok;
+    }
     const bot_row& r = row_at(rn);
     ((defaults_fn)(g_mcc + MR_DEFAULTS))(out);
     if (r.emblem[0] > 0) memcpy(out, r.emblem, sizeof r.emblem);   // foreground, background, primary, secondary, back
@@ -386,6 +444,7 @@ void report_hooks() {
         logf("report: hooks failed");
         return;
     }
+    g_build_hooked = 1;
     __try {
         // the table's manager: mov rbx,[rip+disp] at FUN_140499908 +0x43, and the level lookup's head
         if (g_mcc[MR_RANKS_AT] == 0x48 && g_mcc[MR_RANKS_AT + 1] == 0x8B && g_mcc[MR_RANKS_AT + 2] == 0x1D &&

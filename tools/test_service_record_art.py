@@ -265,6 +265,49 @@ def test_tier_frames_from_a_sheet():
             pass
 
 
+def test_tier_emblems_from_a_sheet():
+    """(Nov 17) A title over six emblems in a row, each named under it, on night blue: the six are cut left to right as
+    Iron to Max on 448 squares, the blue made see-through and each emblem's own colour kept; a grey "not started"
+    banner is made from Victor's when there is none; a sheet without six emblems is refused."""
+    from PIL import Image, ImageDraw
+    with tempfile.TemporaryDirectory() as tmp:
+        bg = (4, 12, 19)
+        sheet = Image.new("RGB", (1200, 400), bg)
+        d = ImageDraw.Draw(sheet)
+        d.rectangle((300, 20, 900, 50), fill=(220, 225, 230))                          # (the title: wide, low)
+        d.line((40, 370, 1160, 370), fill=(150, 150, 150), width=3)                     # (a rule under it all)
+        cols = [(150, 150, 150), (200, 120, 60), (190, 205, 230), (230, 180, 50), (160, 80, 220), (220, 40, 40)]
+        for i, c in enumerate(cols):
+            x = 40 + i * 190
+            d.ellipse((x, 90, x + 150, 240), outline=c, width=10)
+            d.rectangle((x + 60, 120, x + 90, 210), fill=c)
+            d.rectangle((x + 40, 300, x + 110, 318), fill=(200, 200, 200))           # (its name under it)
+        path = os.path.join(tmp, "sheet.png")
+        sheet.save(path)
+        comm = os.path.join(tmp, "commendations")
+        os.makedirs(comm)
+        banner = Image.new("RGBA", (286, 90), (64, 95, 128, 255))                       # (Victor's: a grey emblem on blue)
+        ImageDraw.Draw(banner).ellipse((40, 15, 100, 75), fill=(200, 200, 200, 255))
+        banner.save(os.path.join(comm, "victor.png"))
+        assert art.emblems(path, "test_award", tmp) == 6
+        for tier, c in zip(art.FRAME_TIERS, cols):
+            e = Image.open(os.path.join(comm, "tiers", tier, f"test_award_{tier}.png"))
+            assert e.size == (art.EMBLEM_SIDE, art.EMBLEM_SIDE) and e.mode == "RGBA"
+            assert e.getpixel((2, 2))[3] == 0                                           # (the blue see-through)
+            mid = e.getpixel((e.width // 2, e.height // 2))                            # (the bar in its middle)
+            assert mid[3] > 200 and all(abs(mid[k] - c[k]) < 25 for k in range(3)), (tier, mid, c)
+        grey = Image.open(os.path.join(comm, "test_award.png")).convert("RGB")
+        r, g, b = grey.getpixel((70, 45))
+        assert abs(r - g) < 12 and abs(g - b) < 12 and r > 120, (r, g, b)               # (a grey emblem where Victor's was)
+        assert os.path.exists(os.path.join(comm, "sheets", "test_award.png"))
+        Image.new("RGB", (600, 200), bg).save(path)
+        try:
+            art.emblems(path, "test_award", tmp)
+            raise AssertionError("an empty sheet was cut")
+        except ValueError:
+            pass
+
+
 def test_every_reach_damage_type_has_a_picture_entry():
     """weapon_art.json names a picture for every number weapons.json names, and nothing else."""
     import json

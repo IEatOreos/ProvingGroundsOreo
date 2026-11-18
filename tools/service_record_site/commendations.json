@@ -48,7 +48,15 @@
     {"key": "grudge_match", "set": "pg", "name": "Grudge Match", "what": "Kill the same enemy 5 times in one game (each enemy counts once a game).", "count": {"feed": "grudge"},
      "need": [5, 25, 100, 400, 1000, 2000], "cr": [150, 375, 1000, 1600, 1600, 0]},
     {"key": "medal_collector", "set": "pg", "name": "Medal Collector", "what": "Earn a kind of medal you have not earned before.", "count": {"distinct_medals": true},
-     "need": [10, 25, 40, 60, 80, 100], "cr": [200, 500, 1000, 1500, 2000, 0]}
+     "need": [10, 25, 40, 60, 80, 100], "cr": [200, 500, 1000, 1500, 2000, 0]},
+    {"key": "mvp", "set": "pg", "name": "MVP", "what": "Finish a Slayer game with the most points in it (ties count).", "count": {"deed": "mvp"},
+     "need": [5, 25, 100, 400, 1000, 2000], "cr": [250, 600, 1500, 2500, 2500, 0]},
+    {"key": "game_changer", "set": "pg", "name": "Game Changer", "what": "Finish an objective game (CTF, Assault, King of the Hill, Oddball, Headhunter, Stockpile or Territories) with the most points in it (ties count).", "count": {"deed": "game_changer"},
+     "need": [5, 25, 100, 400, 1000, 2000], "cr": [250, 600, 1500, 2500, 2500, 0]},
+    {"key": "positive_thinking", "set": "pg", "name": "Positive Thinking", "what": "Finish a game with more kills than deaths.", "count": {"deed": "positive"},
+     "need": [10, 50, 250, 1000, 2500, 5000], "cr": [200, 500, 1200, 2000, 2000, 0]},
+    {"key": "loyal_soldier", "set": "pg", "name": "Loyal Soldier", "what": "Play a game to the end.", "count": {"deed": "loyal"},
+     "need": [25, 100, 500, 1500, 4000, 8000], "cr": [150, 400, 1000, 2000, 2000, 0]}
   ],
   "badges_note": "Badges: one-time unlocks, no tiers and no credits (the owner, Nov 16: Map Master 'a badge they unlock once they get a win on each map'; Hometown Hero his special badge). Hometown Hero is worked out on the page from the state leaderboards: #1 in the bot's home state on any board that has at least two bots of the state on it.",
   "badges": [

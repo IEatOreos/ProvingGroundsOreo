@@ -143,9 +143,12 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty);   // seat i: the n
 // (custom, Nov 11) the lobby's bot card, full screen: MCC's Player Details for a bot (its name, emblem, difficulty, play
 // style, team, its armor in 3D in the lobby's game). False once closed (Back, Esc, the pad's B)
 bool bot_card(bots_panel_env& e, const hb_bot& b);
+// (custom, Nov 17) a bot's Reach figure in 3D, its own look, for Proving Grounds' player card (0: none yet)
+unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, int w, int h);
+unsigned long long person_figure(bots_panel_env& e, float yaw, int w, int h);   // Reach's default Spartan (a person)
 void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt line and saved settings follow (the editor)
 // (custom, Nov 13) bot_pool.txt "Name*5": one bot, 5 turns spread through the queue. Parties: bots whose profiles share a
-// clan tag; bot_pool_rotate pulls a seated bot's clanmates into the next seats 70% of the time, then deals the seats'
+// clan tag; bot_pool_rotate pulls a seated bot's clanmates into the next seats 85% of the time, then deals the seats'
 // bots to teams by points (the team sizes kept, a party as one block, the people of the last match counted: tools/play.py
 // writes native\bin\bot_pool_humans.txt, human=<team> lines; none: one on Red). Two teams: the smallest gap, then the
 // Demons stacked (2+ apart) 60%, spread 40%; more teams: as close as a quick deal and swaps get
@@ -154,10 +157,32 @@ int  tier_points(int tier);                             // Easy 1, Normal 2, Her
                                                         // Scaling 8, Mythic 10, Demon 12
 int  bot_pool_humans(int team);                         // the people on that team in the last match
 int  roster_team_points(const hb_roster& r, int team);  // its bots' points and its people's
-void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng);
+// (Nov 16) pinned[i]: seat i keeps its team (Proving Grounds' invited party, all on the person's team); null: none
+void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng, const uint8_t* pinned = nullptr);
 void bot_pool_seed(uint32_t s);                         // (tests) the parties' and the deal's random draws
-int  bot_pool_group_parties();                          // Settings "Group parties": clanmates' lines together (.bak kept);
-                                                        // the clans grouped, -1 the file not written
+// (custom, Nov 16) the owner: "choose between a bot text file formatted for 4v4 or 8v8", "clan parties to be up to 4 or
+// up to 8", clans "trump team balance" with the teams "always balanced", no clan member of theirs on his team. The pool
+// is read from bot_pool_4v4.txt or bot_pool_8v8.txt, both made from bot_pool.txt (the file the owner edits) whenever it
+// changes: each clan's bots kept together in parties of up to 4 / 8, the parties spread out through the file (about 1 in
+// 4 placed next to another clan's, so clans meet). Each format keeps its own queue position. botcore.ini pool_format=4|8.
+// A lobby never takes more of a clan than fit whole on one team; Balance teams evens the sizes counting the people, keeps
+// each clan on one team (the team without people first), then deals the points; a clan too big for any team: Bot
+// Matchmaking swaps its extra bots for the next pool bots, else it is split and roster_balance_note says so
+extern uint32_t hb_pool_format;                         // 4 or 8
+void bot_pool_set_format(uint32_t fmt);                 // read that format's file (its own queue position)
+int  bot_pool_reshuffle();                              // Settings "Reshuffle clans": both files made again, a new spread;
+                                                        // the clans, -1 the files not written
+const char* roster_balance_note();                      // the last balance's split or swap, "" none
+// (custom, Nov 16) Proving Grounds (proving_grounds.cpp): a matchmade lobby of two teams of size (4 or 8) players, the
+// person on party_team: their invited party pinned there, keep_pct% of the last lobby's clans and lone bots kept, the
+// rest from the pool (clans whole), teams dealt by points. pinned[i]: seat i is the party's. Returns the new bots.
+// (Nov 17) people: the other people in the lobby (friends who joined), npeople of them, each the team MCC has them on
+// (0 / 1) or -1 not known: each takes a bot's seat on their team, counted in the points; a -1 is counted on the team
+// with fewer people (as matchmaking would put them) and written back
+int  bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int nparty, int party_team, int keep_pct,
+                        uint32_t difficulty, uint8_t pinned[HB_ROSTER_MAX], int* people = nullptr, int npeople = 0);
+int  bot_pool_names(char (*out)[16], int cap);          // the pool's bots, each once, in its order
+unsigned char* hb_image_rgba(const wchar_t* path, int* w, int* h);   // PNG / JPEG as RGBA, malloc'd; nullptr: unreadable
 
 // (custom, Nov 11) every bot can be dressed: the Settings tab's profiles are the lobby's bots, any of them opened in the
 // bot editor gets a profile (bot_profiles.ini, after the install's 15; up to 1024; the re-roll keeps them)
@@ -169,6 +194,9 @@ uint32_t name_look_seed(const char* name);              // brain/looks.py seed_o
 // there yet: drawn in the background, tools/looks_export.py --emblems); bot_emblems_frame once a frame
 unsigned long long bot_emblem(const char* name, unsigned long long (*make)(int w, int h, const unsigned char* rgba));
 void bot_emblems_frame();
+// (custom, Nov 17) the person's own emblem from MCC's five numbers for it (brain/emblems.py --draw in the background); 0
+// until drawn
+unsigned long long player_emblem(const int32_t ids[5], unsigned long long (*make)(int w, int h, const unsigned char* rgba));
 
 // (custom, Nov 11) MCC's nameplates (the card behind a player's name): its catalog and PNGs from MCC's own folder
 // (<MCC>\Data\UI\playercustomization.xml, NamePlates\Images); mcc_root nullptr: the running MCC's (botcore at start)

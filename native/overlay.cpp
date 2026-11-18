@@ -13,6 +13,7 @@
 #include "shared.h"
 #include "model_view.h"
 #include "bots_panel.h"
+#include "proving_grounds.h"
 #include "ui_layout.h"
 #include "third_party/minhook/include/MinHook.h"
 #include "third_party/imgui/imgui.h"
@@ -121,6 +122,8 @@ static HANDLE WINAPI h_createfile(LPCWSTR name, DWORD a, DWORD s, LPSECURITY_ATT
     }
     return o_createfile(name, a, s, sa, c, f, t);
 }
+
+int mcc_lobby_title() { return (int)g_session; }   // (custom, Nov 16) the last lobby's title (lobby_test.cpp)
 
 int mcc_menu_state() {               // 0 menus, 1 in a game, -1 unknown (used by botcore.cpp)
     __try { return g_exe ? g_exe[0x4000B8C + 0x11] : -1; }
@@ -415,6 +418,47 @@ static void draw_tile(float t) {
     if (g_hover_tile && ImGui::IsMouseClicked(0)) g_panel = true;
 }
 
+// (custom, Nov 16) Proving Grounds (proving_grounds.cpp): its tile in Halo: Reach's custom game lobby, the slot right
+// of BOTS, drawn as the stock tiles are; a click or P opens it
+static void play_sound(int kind, uint32_t volume);
+static bool g_hover_pg;                  // the mouse is on the PROVING GROUNDS tile (its clicks are ours)
+static volatile bool g_pg_open_req;      // P pressed (wndproc): opened on the next frame
+static bool reach_lobby() { return g_session == 5 && !g_ff_lobby; }
+static void draw_pg_tile(float t) {
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 bb = bb_size();
+    ImVec4 r = to_ui(pg_tile_rect(bb.x, bb.y));
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    ImVec2 a(r.x, r.y), b(r.z, r.w), m = io.MousePos;
+    g_hover_pg = m.x >= a.x && m.x <= b.x && m.y >= a.y && m.y <= b.y;
+    float h = b.y - a.y, w = b.x - a.x;
+    const ImU32 frame = g_hover_pg ? IM_COL32(150, 215, 250, 255) : IM_COL32(78, 132, 168, 230);
+    const ImU32 icon = g_hover_pg ? IM_COL32(150, 215, 250, 255) : IM_COL32(96, 168, 220, 255);
+    dl->AddRectFilled(a, b, g_hover_pg ? IM_COL32(24, 44, 62, 225) : IM_COL32(14, 26, 38, 200));
+    dl->AddRect(a, b, frame, 0, 0, g_hover_pg ? 2.5f : 1.2f);
+    dl->AddRectFilled(ImVec2(a.x, b.y + h * 0.035f), ImVec2(b.x, b.y + h * 0.065f),
+                      g_hover_pg ? IM_COL32(120, 205, 250, 255) : IM_COL32(70, 120, 150, 200));
+    // our own mark: a ring, a chevron over a bar (no game art), a slow pulse
+    ImVec2 c(a.x + w * 0.5f, a.y + h * 0.40f);
+    float rr = h * 0.25f, pulse = 0.5f + 0.5f * sinf(t * 2.0f);
+    dl->AddCircle(c, rr, icon, 40, h * 0.02f);
+    dl->AddCircle(c, rr * (1.08f + 0.06f * pulse), IM_COL32(150, 215, 250, (int)(60 * pulse)), 40, h * 0.012f);
+    ImVec2 chev[3] = { ImVec2(c.x - rr * 0.55f, c.y + rr * 0.05f), ImVec2(c.x, c.y - rr * 0.5f), ImVec2(c.x + rr * 0.55f, c.y + rr * 0.05f) };
+    dl->AddPolyline(chev, 3, icon, 0, h * 0.03f);
+    dl->AddLine(ImVec2(c.x - rr * 0.45f, c.y + rr * 0.38f), ImVec2(c.x + rr * 0.45f, c.y + rr * 0.38f), icon, h * 0.025f);
+    float fs = h * 0.105f;
+    dl->AddRectFilled(ImVec2(a.x + 1, b.y - fs * 1.55f), ImVec2(b.x - 1, b.y - 1), IM_COL32(4, 8, 12, 200));
+    dl->AddText(g_font_label, fs, ImVec2(a.x + fs * 0.35f, b.y - fs * 1.35f), IM_COL32(112, 178, 222, 255), "PROVING GROUNDS");
+    float ks = h * 0.115f * 0.85f, ky = b.y + h * 0.10f;
+    if (!g_pad_last) {
+        float kw = g_font_label->CalcTextSizeA(ks, 1e9f, 0, "P").x + ks * 0.66f;
+        dl->AddRect(ImVec2(a.x, ky), ImVec2(a.x + kw, ky + ks * 1.2f), IM_COL32(170, 200, 215, 220), 2.0f, 0, 1.2f);
+        dl->AddText(g_font_label, ks, ImVec2(a.x + ks * 0.33f, ky + ks * 0.1f), IM_COL32(200, 220, 230, 240), "P");
+        dl->AddText(g_font_label, ks, ImVec2(a.x + kw + ks * 0.4f, ky + ks * 0.1f), IM_COL32(170, 200, 215, 230), "Matchmaking");
+    }
+    if (g_hover_pg && ImGui::IsMouseClicked(0)) { pg_open(); play_sound(PS_OPEN, g_sounds); }
+}
+
 static unsigned long long make_texture(int w, int h, const unsigned char* rgba);
 
 // (custom, Nov 11) the lobby's bots as players in MCC's "MY GAME SESSION" list, under the player's own row (always the
@@ -640,6 +684,29 @@ static void panel_env(bots_panel_env& e) {
     e.f_title = e.f_head = e.f_body = e.f_small = g_font_small;
     e.open = &g_panel;
 }
+// (custom, Nov 17) a bot's Reach figure for Proving Grounds' player card (bots_panel.cpp bot_figure, on MCC's device)
+static unsigned long long pg_figure(const char* name, bool bot, float yaw, int w, int h) {
+    bots_panel_env e{};
+    panel_env(e);
+    return bot ? bot_figure(e, name, yaw, w, h) : person_figure(e, yaw, w, h);
+}
+// (custom, Nov 16) what Proving Grounds' screens work with
+static void pg_env_fill(pg_env& e, bool lobby_visible) {
+    e.roster = &g_roster;
+    e.difficulty = g_shm->difficulty;
+    e.scale = ui_scale();
+    ImVec2 d = ImGui::GetIO().DisplaySize;
+    e.W = d.x; e.H = d.y;
+    e.f_label = g_font_label; e.f_small = g_font_small;
+    e.make_texture = make_texture;
+    e.play_sound = play_sound; e.sounds = g_sounds;
+    e.pad = g_pad_last;
+    e.lobby_visible = lobby_visible;
+    e.in_game = mcc_menu_state() == 1;
+    e.bots_enabled = &g_shm->bots_enabled; e.lidar_mode = &g_shm->lidar_mode;
+    e.figure = pg_figure;
+}
+
 static void draw_panel() {
     // the BOTS panel (bots_panel.cpp): the exact bots of the next match, saved in botcore.ini
     bots_panel_env e{};
@@ -659,6 +726,11 @@ static void draw_card() {
 extern volatile LONG g_pool_due;
 static void pool_after_match() {
     if (!InterlockedExchange(&g_pool_due, 0)) return;
+    // (custom, Nov 16) a Proving Grounds session: its own lobby between matches (some stay, new ones come, teams again)
+    if (pg_running() && !g_ff_lobby && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode) {
+        if (pg_after_match(g_roster, g_shm->difficulty)) { g_shm->settings_seq++; save_settings(); }
+        return;
+    }
     if (!hb_matchmaking || g_ff_lobby || !g_shm || !g_shm->bots_enabled || g_shm->lidar_mode) return;
     int k = bot_pool_rotate(g_roster, g_shm->difficulty);
     if (!k) return;
@@ -763,7 +835,7 @@ static void pad_frame() {
     bool any = false;
     for (int k = ImGuiKey_GamepadStart; k <= ImGuiKey_GamepadRStickDown; k++) any |= ImGui::IsKeyDown((ImGuiKey)k);
     if (any) g_pad_last = true;
-    if (g_show_tile) {
+    if (g_show_tile && !pg_visible()) {                  // (Proving Grounds' screens take the pad themselves)
         bool l3 = ImGui::IsKeyDown(ImGuiKey_GamepadL3), r3 = ImGui::IsKeyDown(ImGuiKey_GamepadR3);
         if ((l3 && ImGui::IsKeyPressed(ImGuiKey_GamepadR3, false)) || (r3 && ImGui::IsKeyPressed(ImGuiKey_GamepadL3, false))) {
             if (g_panel) play_sound(PS_BACK, g_sounds);
@@ -773,7 +845,9 @@ static void pad_frame() {
             play_sound(PS_BACK, g_sounds);
         }
     }
-    g_pad_held = (g_show_tile && g_panel) || bot_ui() || (g_pad_held && any);   // (a bot's menu or card too)
+    // (a bot's menu, card, PG; the button that closed one stays held from MCC till let go, in the menus only, Nov 18: in a
+    // match MCC's pad is never ours)
+    g_pad_held = (g_show_tile && g_panel) || bot_ui() || pg_visible() || (g_pad_held && any && mcc_menu_state() == 0);
 }
 
 static DWORD g_esc_eat;              // Esc closed the panel at this tick: its release (and repeats) stay ours
@@ -785,13 +859,30 @@ static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     // MCC backs out of the lobby on Esc's release: closing the panel with Esc left the lobby too (live Nov 6), as the
     // pad's B would without g_pad_held
     if (g_esc_eat && (msg == WM_KEYUP || msg == WM_KEYDOWN) && wp == VK_ESCAPE && GetTickCount() - g_esc_eat < 3000) {
-        if (msg == WM_KEYUP) g_esc_eat = 0;
+        if (msg == WM_KEYUP) {
+            g_esc_eat = 0;
+            if (g_ready) ImGui_ImplWin32_WndProcHandler(h, msg, wp, lp);   // (Nov 16: ImGui sees Esc let go, so the next counts)
+        }
         return WP_OURS;
     }
     // (custom, Nov 11) the session list's bots in a lobby (the slide-out too, where the tile row is out of sight): the
     // mouse goes to our frame, a click on a bot row is ours; a bot's menu or card open takes every key and click, and Esc
     // closes it (the card first) without reaching MCC (its release too: g_esc_eat)
     bool bots_ui = g_ready && bot_ui();
+    // (custom, Nov 16) Proving Grounds' screens up: every key, click and the raw mouse are theirs (Esc too: its release
+    // kept from MCC, which would back out of the lobby on it)
+    if (g_ready && pg_visible()) {
+        if (msg == WM_KEYDOWN && wp == VK_ESCAPE) g_esc_eat = GetTickCount() | 1;
+        ImGui_ImplWin32_WndProcHandler(h, msg, wp, lp);
+        if (msg == WM_INPUT) return WP_DEFAULT;
+        bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
+        bool keys = msg >= WM_KEYFIRST && msg <= WM_KEYLAST;
+        return mouse || keys ? WP_OURS : WP_MCC;
+    }
+    if (g_ready && g_show_tile && reach_lobby() && !bots_ui && !g_panel && msg == WM_KEYDOWN && wp == 'P' && !(lp & (1 << 30))) {
+        g_pg_open_req = true;                                  // (opened on the next frame, ImGui's own thread)
+        return WP_OURS;
+    }
     if (g_ready && (g_show_tile || g_sess_drawn || bots_ui)) {
         if (bots_ui && msg == WM_KEYDOWN && wp == VK_ESCAPE) {
             if (g_bot_card) g_bot_card = false;
@@ -812,7 +903,7 @@ static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         bool keys = msg >= WM_KEYFIRST && msg <= WM_KEYLAST;
         if ((g_panel || bots_ui) && msg == WM_INPUT) return WP_DEFAULT;   // (raw input: not passed on)
         if (((g_panel || bots_ui) && (mouse || keys)) ||
-            ((g_hover_tile || g_sess_hover >= 0) && mouse && msg != WM_MOUSEMOVE)) return WP_OURS;   // ours
+            ((g_hover_tile || g_hover_pg || g_sess_hover >= 0) && mouse && msg != WM_MOUSEMOVE)) return WP_OURS;   // ours
     } else if (g_ready && in_match()) {                         // the bug report over a match
         bool typing = g_bug_open && ImGui::GetIO().WantTextInput;
         if (!typing && msg == WM_KEYDOWN && wp == VK_F9 && !(lp & (1 << 30))) { g_bug_open = !g_bug_open; return WP_OURS; }
@@ -956,7 +1047,29 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             g_show_tile = in_ce_menus();
             if (!g_show_tile) g_panel = false;
             if (!lobby || g_panel) { g_bot_menu = -1; g_bot_card = false; }   // (a bot's menu, card: the lobby's only)
-            bool ours = (g_show_tile && g_panel) || bot_ui();     // (MCC's cursor held where it was under our UI)
+            // (custom, Nov 16) Proving Grounds: its screens over Halo: Reach's lobby; away from it (a match, the carnage
+            // report) its session still moves on (the launch, the match's end), with nothing drawn
+            // (custom, Nov 18) the launch: MCC's countdown greys its OPTIONS tile (probe_lobby "not seen"), so Proving
+            // Grounds' launch screen is kept up over the countdown by this, in Reach's menus, till the game
+            bool pg_hold = pg_launching() && reach_lobby() && bots_title(g_session) && mcc_menu_state() == 0 && !g_playback;
+            // (custom, Nov 18) a joined PC friend's copy follows the host's Proving Grounds (pg_link.cpp): its screens in
+            // MCC's menus here, whether or not this PC's lobby probe or title read sees a guest's lobby (the host's state
+            // comes only while the two share its Reach lobby: 4 s without it, the following ends)
+            EnterCriticalSection(&g_imgui_lock); held = true;
+            pg_follow_poll();
+            held = false; LeaveCriticalSection(&g_imgui_lock);
+            bool pg_follow = pg_following() && mcc_menu_state() == 0 && !g_playback;
+            bool pg_lobby = (g_show_tile && reach_lobby()) || pg_hold || pg_follow;
+            if (pg_running() && !pg_lobby) {
+                EnterCriticalSection(&g_imgui_lock); held = true;
+                pg_env pe{};
+                pg_env_fill(pe, false);
+                if (pg_frame(pe)) { g_shm->settings_seq++; save_settings(); }
+                held = false; LeaveCriticalSection(&g_imgui_lock);
+            }
+            bool pg_up = pg_lobby && pg_visible();
+            if (pg_up) { g_panel = false; g_bot_menu = -1; g_bot_card = false; }
+            bool ours = (g_show_tile && g_panel) || bot_ui() || pg_up;   // (MCC's cursor held where it was under our UI)
             if (ours && !g_parked && o_getcursorpos) { o_getcursorpos(&g_park_at); g_parked = true; }
             else if (!ours) g_parked = false;                     // (closed: the lobby sees the cursor again)
             bool notice = notice_active();
@@ -967,11 +1080,11 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             g_bug_ui = bug;
             if (!bug) g_bug_hover = false;
             // (custom, Nov 13: sessionbots= puts a bot in MCC's own list; the drawn rows step aside so MCC's shows alone)
-            bool sess = lobby && !g_panel && !g_bot_card && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode &&
-                        !g_sessionbots;
+            bool sess = lobby && !g_panel && !g_bot_card && !pg_up && g_sess_x1 > 0 && g_shm && g_shm->bots_enabled &&
+                        !g_shm->lidar_mode && !g_sessionbots;
             g_sess_drawn = sess;
             if (!sess) g_sess_hover = -1;
-            if (g_show_tile || notice || bug || sess || bot_ui()) {
+            if (g_show_tile || notice || bug || sess || bot_ui() || pg_hold || pg_follow) {
                 EnterCriticalSection(&g_imgui_lock); held = true;  // (custom, Nov 12: MCC's window thread feeds ImGui too)
                 ImGuiIO& gio = ImGui::GetIO();
                 if (bug && g_bug_open && !g_bug_was_open) {          // F9 opened the window: nothing typed before is its text
@@ -1015,20 +1128,30 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 if (g_shm) g_shm->ui_up = (bug && g_bug_open) ? 1u : 0u;
                 // the tile draws on the foreground layer, over every window: with the panel open it is
                 // left out (it drew over the panel's header), and takes no clicks
-                if (g_show_tile && !g_panel && !bot_ui()) draw_tile((float)ImGui::GetTime());   // (a bot's menu: over it)
+                if (g_show_tile && !g_panel && !bot_ui() && !pg_up) draw_tile((float)ImGui::GetTime());   // (a bot's menu: over it)
                 else g_hover_tile = false;
+                if (pg_lobby && !g_panel && !bot_ui() && !pg_up) draw_pg_tile((float)ImGui::GetTime());
+                else g_hover_pg = false;
                 if (sess) draw_session((float)ImGui::GetTime());     // (the bots in MY GAME SESSION, where it stands)
                 if (g_bot_card) draw_card();                         // (a picked bot: its card, else its menu)
                 else if (g_bot_menu >= 0) draw_bot_menu();
                 bot_emblems_frame();
                 if (g_show_tile && g_panel) draw_panel();
+                if (pg_lobby && g_pg_open_req && !g_panel && !bot_ui()) { pg_open(); play_sound(PS_OPEN, g_sounds); }
+                g_pg_open_req = false;
+                if (pg_lobby && pg_running()) {                      // (Proving Grounds over everything of ours)
+                    pg_env pe{};
+                    pg_env_fill(pe, true);
+                    if (pg_frame(pe)) { g_shm->settings_seq++; save_settings(); }
+                }
                 g_popup_before = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
                 if (notice) draw_notice();
                 ImGui::Render();
                 g_ctx->OMSetRenderTargets(1, &g_rtv, nullptr);
                 ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
                 held = false; LeaveCriticalSection(&g_imgui_lock);
-            }
+            } else g_pad_held = false;   // (custom, Nov 18) none of ours up: the pad is MCC's (pad_frame runs in the frame
+                                         // only; a joined friend's pad stayed held from the launch screen into the match)
         }
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         // (custom, Nov 12) said in the log (none was: a fault left no trace), the lock let go, the overlay made again;

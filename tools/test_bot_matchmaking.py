@@ -105,7 +105,7 @@ class LobbyProfileTests(unittest.TestCase):
         self.assertIn("if (bot_pool_swap(g_roster, i, g_shm->difficulty))", overlay)
         self.assertIn("if (g_bot_card) draw_card();", overlay)
         self.assertIn("if (((g_panel || bots_ui) && (mouse || keys)) ||", overlay)
-        self.assertIn("bool ours = (g_show_tile && g_panel) || bot_ui();", overlay)
+        self.assertIn("bool ours = (g_show_tile && g_panel) || bot_ui() || pg_up;", overlay)   # (Nov 16: Proving Grounds too)
         self.assertIn("bool ImGui::GetFrameCount() != g_menu_frame".split(" ", 1)[1], overlay)   # (its opening click)
         self.assertIn("bool bot_card(bots_panel_env& e, const hb_bot& b) {", panel)
         self.assertIn("mv = ed_model(&e, G, sp, g_card_yaw,", panel)

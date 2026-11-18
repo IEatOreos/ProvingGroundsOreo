@@ -772,6 +772,33 @@ a.clan:hover { color: var(--accent-strong); }
 /* (Nov 16) a bot's clan tag on its player card in edit mode */
 .edit-form.bot-clan input.tag { width: 6rem; text-transform: none; }
 .edit-form.bot-clan .note { flex-basis: 100%; font-size: 11px; margin: 0; }
+/* challenges (Nov 17): a row per challenge, its icon, name, time left and cR, what to do, then the progress bar */
+.hero.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.chal-count { color: var(--ink-2); font-size: var(--t-sm); }
+.chal-count b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.chals { list-style: none; margin: 0; padding: var(--s-3); display: grid; gap: var(--s-3); }
+.chal { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--s-4); align-items: center; padding: var(--s-3) var(--s-4);
+  background: rgba(4, 10, 18, 0.55); border: 1px solid var(--line); border-radius: var(--radius); }
+.chal-ic { display: grid; place-items: center; width: 88px; height: 88px; border-radius: 50%; background: rgba(255, 255, 255, 0.04); }
+.chal-ic .ic { width: 64px; height: 64px; }
+.chal-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-1) var(--s-4); }
+.chal-top h3 { margin: 0; font-size: var(--t-md); font-weight: 600; }
+.chal-meta { display: flex; gap: var(--s-4); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chal-time .sec { color: var(--bad, #d8323a); }
+.chal-cr { font-weight: 700; }
+.chal-what { margin: var(--s-1) 0 var(--s-3); color: var(--ink-2); font-size: var(--t-sm); font-style: italic; }
+.chal-bar { position: relative; height: 20px; border-radius: 2px; background: var(--track, rgba(255, 255, 255, 0.12)); overflow: hidden; }
+.chal-bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); opacity: 0.55; border-right: 2px solid var(--ink); }
+.chal-bar .num { position: absolute; right: var(--s-2); top: 50%; transform: translateY(-50%); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
+.chal.done { border-color: var(--accent); }
+.chal.done .fill { opacity: 0.8; border-right: 0; }
+.chal.done .num { font-weight: 700; }
+@media (max-width: 760px) {
+  .hero.three { grid-template-columns: minmax(0, 1fr); }
+  .chal { grid-template-columns: 56px minmax(0, 1fr); gap: var(--s-3); padding: var(--s-3); }
+  .chal-ic { width: 56px; height: 56px; }
+  .chal-ic .ic { width: 40px; height: 40px; }
+}
 /* long lists a page of 100 at a time (Nov 17): Top 100, 101-200 ... */
 .pager { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); margin: var(--s-2) 0; }
 .pager ul { display: flex; flex-wrap: wrap; gap: var(--s-1); list-style: none; margin: 0; padding: 0; }
@@ -795,3 +822,122 @@ a.clan:hover { color: var(--accent-strong); }
 .weapons li.unused { opacity: 0.5; }
 .weapons li.unused .pic img { filter: grayscale(1); }
 .weapons li.unused:hover { opacity: 0.8; }
+
+/* (Nov 17, the bot simulation) the Bot Tracker's Today's Top 5 and Playlist Activity, side by side when there is room */
+.today { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) { .today { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.today .week { list-style: none; margin: var(--s-3) var(--s-4) var(--s-4); padding: 0; display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s-2); align-items: end; }
+.today .week li { display: grid; justify-items: center; gap: 2px; font-size: var(--t-xs); color: var(--ink-2); }
+.today .week .bar { display: block; width: 70%; min-height: 4px; border-radius: 3px 3px 0 0; background: var(--accent); opacity: 0.85; }
+.today .week .n { color: var(--ink); font-variant-numeric: tabular-nums; }
+.edit-form.simulate { align-items: center; }
+.edit-form.simulate strong { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); }
+.edit-form.simulate input.rounds { width: 5em; }
+.edit-form.simulate .note { flex-basis: 100%; max-width: none; font-size: 11px; margin: 0; }
+/* ---- clan rewards (Nov 18): card frames, tag colours, banners (drawn here, no art), the ribbon, the clan emblem, the
+   crown, and the clan page's challenge, hall of fame, rivals and history; the owner's tools for them in edit mode */
+.clan-card.frame-1 { border: 2px solid var(--accent); }
+.clan-card.frame-2 { border: 2px solid var(--accent-strong); box-shadow: 0 0 10px var(--glow), inset 0 0 12px rgba(56, 182, 238, 0.14); }
+.clan-card.frame-3 { border: 2px solid transparent; box-shadow: 0 0 14px rgba(232, 178, 60, 0.35);
+  background: linear-gradient(rgba(9, 20, 34, 0.9), rgba(9, 20, 34, 0.9)) padding-box,
+    linear-gradient(90deg, var(--gold), var(--accent-strong), var(--gold), var(--accent-strong)) border-box;
+  background-size: auto, 300% 100%; animation: frame-move 3s ease-in-out infinite alternate; }
+@keyframes frame-move { from { background-position: 0 0, 0% 0; } to { background-position: 0 0, 100% 0; } }
+@media (prefers-reduced-motion: reduce) { .clan-card.frame-3 { animation: none; } }
+.ct.ct-1, .record .card-clan .clan-abbr.ct-1 { color: var(--accent-strong); border-color: var(--accent); }
+.ct.ct-2, .record .card-clan .clan-abbr.ct-2 { color: var(--gold); border-color: var(--gold); }
+.ct.ct-3, .record .card-clan .clan-abbr.ct-3 { color: #ffd77a; border-color: var(--gold); text-shadow: 0 0 6px rgba(232, 178, 60, 0.85); box-shadow: 0 0 6px rgba(232, 178, 60, 0.45); }
+.crown { color: var(--gold); margin-right: 4px; vertical-align: -1px; flex: none; }
+.clan-title h2 .crown { width: 26px; height: 18px; vertical-align: 2px; }
+.clan-ribbon { display: inline-block; margin-left: var(--s-2); padding: 1px 14px 1px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: #1d1405; text-shadow: none; background: linear-gradient(90deg, var(--gold), #f6d98c); clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%); }
+.clan-emblem .emblem { border-radius: 50%; border: 2px solid var(--gold); box-shadow: 0 0 8px rgba(232, 178, 60, 0.4); }
+.clan-title .clan-emblem .emblem { width: 64px; height: 64px; }
+.clan-title { align-items: center; }
+.clan-card .ins { position: relative; }
+.clan-card .ins .clan-emblem { position: absolute; right: -8px; bottom: -6px; }
+.clan-card .ins .clan-emblem .emblem.sm { width: 24px; height: 24px; border-width: 1px; }
+.preview-flag { display: inline-block; margin-left: var(--s-2); padding: 0 6px; border: 1px dashed var(--gold); border-radius: 3px; color: var(--gold); font-size: var(--t-xs); }
+/* the clan page's banner, one look a step: stripes, chevrons, a grid, a sunrise, a starfield (a dark wash on the left keeps
+   the text readable) */
+.panel.clan-head[class*="banner-"] { overflow: hidden; }
+main .panel.clan-head.banner-1 { background: linear-gradient(90deg, rgba(5, 11, 20, 0.92) 30%, rgba(5, 11, 20, 0.55)),
+  repeating-linear-gradient(135deg, rgba(56, 182, 238, 0.28) 0 10px, transparent 10px 28px), var(--panel-solid); }
+main .panel.clan-head.banner-2 { background: linear-gradient(90deg, rgba(5, 11, 20, 0.92) 30%, rgba(5, 11, 20, 0.5)) 0 0 / auto,
+  linear-gradient(135deg, rgba(56, 182, 238, 0.3) 25%, transparent 25%) -20px 0 / 40px 40px,
+  linear-gradient(225deg, rgba(56, 182, 238, 0.3) 25%, transparent 25%) -20px 0 / 40px 40px,
+  linear-gradient(315deg, rgba(56, 182, 238, 0.3) 25%, transparent 25%) 0 0 / 40px 40px,
+  linear-gradient(45deg, rgba(56, 182, 238, 0.3) 25%, transparent 25%) 0 0 / 40px 40px, var(--panel-solid); }
+main .panel.clan-head.banner-3 { background: linear-gradient(90deg, rgba(5, 11, 20, 0.9) 25%, rgba(5, 11, 20, 0.35)) 0 0 / auto,
+  radial-gradient(ellipse at 80% 50%, rgba(56, 182, 238, 0.35), transparent 60%) 0 0 / auto,
+  linear-gradient(rgba(143, 216, 255, 0.22) 1px, transparent 1px) 0 0 / 22px 22px,
+  linear-gradient(90deg, rgba(143, 216, 255, 0.22) 1px, transparent 1px) 0 0 / 22px 22px, var(--panel-solid); }
+main .panel.clan-head.banner-4 { background: linear-gradient(90deg, rgba(5, 11, 20, 0.92) 25%, rgba(5, 11, 20, 0.3)),
+  radial-gradient(ellipse at 85% 125%, rgba(246, 196, 84, 0.7), rgba(217, 89, 38, 0.35) 35%, transparent 70%),
+  repeating-conic-gradient(from 270deg at 85% 115%, rgba(246, 196, 84, 0.16) 0 5deg, transparent 5deg 13deg),
+  linear-gradient(#0b1828, #2a1a2e); }
+main .panel.clan-head.banner-5 { background: linear-gradient(90deg, rgba(5, 11, 20, 0.88) 25%, rgba(5, 11, 20, 0.2)) 0 0 / auto,
+  radial-gradient(circle, rgba(255, 255, 255, 0.9) 1px, transparent 1.6px) 0 0 / 37px 41px,
+  radial-gradient(circle, rgba(200, 230, 255, 0.7) 1px, transparent 1.4px) 13px 19px / 53px 47px,
+  radial-gradient(circle, rgba(255, 230, 180, 0.8) 1.2px, transparent 1.8px) 29px 7px / 71px 67px,
+  radial-gradient(ellipse at 75% 40%, rgba(144, 133, 233, 0.45), transparent 55%) 0 0 / auto,
+  radial-gradient(ellipse at 95% 90%, rgba(56, 182, 238, 0.35), transparent 50%) 0 0 / auto, #050913; }
+/* this week's clan challenge on the Clans page */
+.clan-week { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-3); align-items: center; }
+.clan-week h3 { margin: 0; font: 700 var(--t-lg) var(--font-head); letter-spacing: 0.05em; }
+.clan-week .chal-what { margin: 2px 0 0; }
+.clan-week .chal-meta { display: grid; justify-items: end; gap: 2px; color: var(--ink-2); font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+/* the rewards a clan earns, for everyone; the hall of fame and rivals; the history */
+.rewards-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: var(--s-2); }
+.rewards-list li { display: grid; align-content: start; gap: 4px; padding: var(--s-2) var(--s-3); border: 1px solid var(--line); border-radius: var(--radius); background: rgba(9, 20, 34, 0.35); }
+.rewards-list .rw-what { color: var(--ink-2); font-size: var(--t-sm); }
+.rewards-list .rw-at { display: flex; flex-wrap: wrap; gap: 4px; }
+.rw-step { display: inline-grid; padding: 2px 8px; border: 1px solid var(--line-2); border-radius: 3px; font-size: var(--t-xs); color: var(--ink); }
+.rw-step small { color: var(--gold); font-size: 11px; }
+.hall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--s-2); }
+.hall li { display: grid; align-content: start; gap: 4px; padding: var(--s-2) var(--s-3); border: 1px solid var(--line); border-radius: var(--radius); background: rgba(9, 20, 34, 0.35); min-width: 0; }
+.hall .k { color: var(--ink-3); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.hall .who { display: flex; align-items: center; gap: var(--s-2); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.hall .who.none { color: var(--ink-3); font-weight: 400; }
+.hall .who .insignia.sm { flex: none; }
+.hall .v { color: var(--ink-2); font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+.timeline { list-style: none; margin: 0; padding: 0 0 0 var(--s-4); border-left: 2px solid var(--line-2); display: grid; gap: var(--s-2); }
+.timeline li { position: relative; display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: var(--s-3); }
+.timeline li::before { content: ""; position: absolute; left: calc(-1 * var(--s-4) - 6px); top: 0.4em; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.timeline li.tl-rank::before { background: var(--accent-strong); box-shadow: 0 0 6px var(--glow); }
+.timeline li.tl-top::before { background: var(--gold); }
+.timeline time { color: var(--ink-3); font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+/* the owner's tools: every reward with its unlocks; the preview */
+.edit-form select { font: inherit; color: var(--ink); background: rgba(4, 10, 18, 0.7); border: 1px solid var(--line-2); border-radius: var(--radius); padding: var(--s-1) var(--s-2); min-height: 34px; max-width: 100%; }
+.clan-tool > strong { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold); }
+.clan-tool > .note { flex-basis: 100%; max-width: none; margin: 0; }
+.clan-tool label { min-width: 0; max-width: 100%; }
+.clan-week-form label { flex: 1 1 18rem; }
+.clan-week-form select { flex: 1 1 auto; width: 100%; min-width: 0; }
+.clan-rewards-form > ul { flex-basis: 100%; list-style: none; margin: 0; padding: 0; display: grid; }
+.clan-rewards-form > ul > li { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: var(--s-1) var(--s-3); align-items: center; padding: var(--s-2) 0; border-top: 1px solid var(--line); }
+.clan-rewards-form .rw-on input { width: auto; min-height: 0; accent-color: var(--gold); }
+.clan-rewards-form .rw-on b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: var(--t-sm); }
+.clan-rewards-form .rw-what { color: var(--ink-2); font-size: var(--t-sm); }
+.clan-rewards-form .rw-at { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.clan-rewards-form .rw-at small { color: var(--ink-3); }
+/* the clan page's header: its title (name, emblem, edit boxes) on a row of its own when the edit boxes are open or the
+   window is narrow, so the rank and numbers keep their room */
+body.editing .clan-head .body { grid-template-columns: minmax(0, 1fr) auto auto; }
+body.editing .clan-head .clan-title { grid-column: 1 / -1; }
+@media (max-width: 1100px) {
+  .clan-head .body { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .clan-head .clan-title { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  body.editing .clan-head .body, .clan-head .body { grid-template-columns: minmax(0, 1fr); }
+  .clan-title { flex-wrap: wrap; }
+  .clan-title > div { flex: 1 1 100%; min-width: 0; }
+  .clan-title .clan-emblem .emblem { width: 48px; height: 48px; }
+  .clan-rewards-form > ul > li { grid-template-columns: 1fr; }
+  .clan-rewards-form .rw-at { grid-column: 1; }
+  .timeline li { grid-template-columns: 1fr; gap: 0; }
+  .clan-week { grid-template-columns: auto minmax(0, 1fr); }
+  .clan-week .chal-meta { grid-column: 1 / -1; justify-items: start; }
+}

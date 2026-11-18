@@ -2,6 +2,168 @@
 
 ## Unreleased
 
+### Reach Assault round two: bot members kept over the round change, 2026-11-18
+
+The owner, after One Bomb (TU) on Pinnacle with Sakallis joined: at round two players were "skating" and the red enemy reticle showed over teammates.
+
+- **Cause** (`native\bin\botcore_pg14.log`, the match's last ~1,700 lines). The netbots member guard (`h_hr_localdrop`) took Assault's round change for the match's end.
+  - The guard kept the bot members only while a players update had run in the last 3 s.
+  - At the round change that pause reached 3 s. The log then shows `netmembers: the match is over: bot member 2 (user slot 1) dropped by the game`, `netpeers: stand-in peer 16 removed`, `removed all 6 bot member(s) and 1 stand-in machine(s)`, while round two was still to be played.
+  - On the host: bots 2-4 (AtomicKiwi, MoonCheeseAttor, MtnDewMarauder) were marked gone (`player update ... type 0 ... team -1/-1 -> applied`), had no unit for the rest of the match, and never respawned.
+  - On the friend's screen: with no bot members, no bot input was relayed (`hr_net_relay` relays members only). That is the same "skate, red reticle over his team's bots" picture as before members and netrelay existed. The host's log has no record of the friend's screen, so this is inferred, not seen.
+  - It happened only here. In every other netbots match in pg13, pg14 and standin1, `report: results` came before the drop; in this one the drop came first and the results came at the real end.
+- **Fix**:
+  - `native/report.cpp`: `report_results_built()` counts MCC's post-game results builds (`h_build`). It returns -1 while that hook is off.
+  - `native/reach.cpp`:
+    - `hr_mb_add` notes that count when it makes a bot member.
+    - The guard still keeps the members while a players update ran in the last 3 s. With no results built since then, it now also keeps them over a pause of up to 30 s, and logs `kept the bot members over a N s pause: no post-game results yet (a round change)`.
+    - A real match end is unchanged: the results come first, then the 3 s rule.
+    - With the results hook off, the guard works as before.
+    - The drop line now gives the pause and whether the results were built.
+
+Validation:
+- `native\build.bat pg16` built `botcore_pg16.dll`. A `/W3` syntax pass of `reach.cpp` and `report.cpp` shows no warnings. `tools/panel_art.py` failed in that build (no PIL in the system Python); that step is not part of this change.
+- No Python changed.
+
+Not tested:
+- Nothing of this is tested in game yet. The next multi-round Reach match with a joined friend on `botcore_pg16` should show the new "kept ... pause" line at each round change and no "match is over" line before `report: results`. Round two should have all bots on both screens.
+- A host quitting mid-match (no results) keeps the bot members up to 30 s after the last tick instead of 3 s. The next match's `hr_mb_add` sweeps any left over.
+
+### Proving Grounds on a joined PC friend's screen, 2026-11-18
+
+The owner, after the link test worked live ("Yes, start it"): build Proving Grounds' screens for a PC friend on the link. The friend's copy shows the host's search, vote and loading screens, following the host, and votes in the host's vote.
+
+- `native/pg_link.cpp` (new, in botcore) is the link test's tested channel cut down: MCC's Party text chat.
+  - **Hiding.** `PartyStartProcessingStateChanges` and `PartyFinishProcessingStateChanges` are hooked, and texts starting `pgl2 ` are kept from MCC.
+  - **Messages.**
+    - `hello` and `ok` make the handshake.
+    - `st` carries the host's state as a data buffer, sent on a change (at most 5 a second) and once a second.
+    - `vote` carries the friend's vote to the host.
+  - **Safety, from the live crash.** No text ever goes to an MCC without the hook.
+    - Only `pglink=2` speaks first. It does so only when this PC joined someone's Party network (connected to it, did not make it), with exactly one other player in the lobby, 3 hellos at most, 20 s apart.
+    - `pglink=1` (the default) only answers. `pglink=0` hooks nothing.
+    - Each chat control's PlayFab entity id is checked every poll, so a handle MCC hands to the next player who joins never inherits a link.
+- `native/proving_grounds.cpp`:
+  - **The host's copy** fills a `pgs_state` (about 2 KB) each frame:
+    - stage, playlist size, round, None of the Above;
+    - the three options;
+    - each bot seat's name, clan, team, tier, party flag, arrival time and scheduled vote;
+    - the people and their teams and votes;
+    - its own vote and the vote round's key;
+    - the clock.
+  - **A friend's vote** is counted in `counts()`, so it is in the tally. It is accepted only for the current round's key.
+  - **The friend's copy follows** (`follow_update`). Its screens are drawn from the host's state with a roster of its own (`g_f_roster`), and its own bot list is never touched.
+    - Nothing of its own runs: no search, deal, vote count or MCC launch, and no `pg_after_match`.
+    - Its own vote goes back on a change and every 2 s.
+    - The host is shown as a person, with a look from MCC's list by name and none if it is not there.
+    - Its own settings (size, vote length) come back when the following ends.
+    - Following ends after 4 s without word, or when the host leaves a match's stages.
+  - **After a followed match**, the friend's own credits screen comes first (its own MCC report, marked when the host's launch became a game).
+  - **Esc / B** put the host's screens away until its next stage; the PROVING GROUNDS tile brings them back.
+- `native/overlay.cpp`: `pg_follow_poll()` every frame. The following draws in MCC's menus (`mcc_menu_state() == 0`), without the lobby probe or title read, which may not see a guest's lobby.
+- `native/botcore.cpp`: `pglink=` in botcore.ini (default 1), and `pg_link_watch()` in the main loop. `native/build.bat` builds `pg_link.cpp`.
+- `native/pg_preview.cpp`: the link as a loopback, and a 12th picture, `pg_12_friend_vote.png`: the friend's copy following a host's vote.
+
+Validation:
+- `native\build.bat pg15` builds `botcore_pg15.dll` with no new warnings. tools/launch.py injects the newest botcore, so it is live at the next MCC start.
+- `native\build_pg_preview.bat` built and drew all 12 pictures. In `pg_12_friend_vote`, the friend's copy followed the host's vote:
+  - 3 options and 7 bots, with their clan tags;
+  - the host's vote counted (Territories 2);
+  - the friend's own vote in its own box (Team Crazy King).
+
+Not tested:
+- Live in MCC, with two PCs:
+  - the handshake through botcore;
+  - the friend's screens over a guest's lobby;
+  - the friend's vote reaching the host's tally;
+  - the launch screen over the friend's countdown;
+  - the friend's credits after a match.
+- The friend needs this botcore and `pglink=2` in its botcore.ini.
+
+First live run (friend on botcore_pg15): the friend's controller did nothing once the match loaded, though it worked in the vote and after the game.
+- **Cause.** `overlay.cpp` keeps MCC's own XInput reads at rest while our screens take the pad (`g_pad_held`), but `pad_frame` only runs inside our ImGui frame. The friend's last frame was the launch screen, which holds the pad, and the match draws no frame of ours. So the hold stayed on through the whole match. The host's launch screen could do the same with a pad.
+- **Fix.** A present with none of our UI up lets the pad go (`g_pad_held = false`). The button that closed a panel is kept from MCC only in the menus (`mcc_menu_state() == 0`).
+- Built as `botcore_pg17.dll`, which also has the other session's Assault round-change fix. `ProvingGrounds_FriendView.zip` was remade with pg17. Untested in a match.
+
+Bug reports of 17:51, "All the bots are frozen" and "100 sporks is bugged". The cause is not found yet.
+- **What the logs show.** Two Proving Grounds matches on Forge World with the friend (17:47:59 and 17:50:28, variant `v8e4a8930`). Each brain's recording stopped 10.1-10.7 s in, with no error in it.
+  - botcore's per-tick hook kept running (netwatch lines through the match), so the game ticked on and the bots stood still.
+  - Windows logged no crash of the brain.
+  - `logs/brain.txt`, which held the error, was overwritten by the next match.
+- **Ruled out:**
+  - The map variant: the 17:53 match on it played fully.
+  - The solved grenades: dormant with 2 learned flights.
+  - The flight watch: its errors are caught.
+  - Brain file edits: none after 17:30.
+  - The bot simulation's process check: it is Windows-safe.
+- **Not ruled out:** both came right after the Proving Grounds counting run, which runs the simulation, and with the friend's link up. Both also came within 1.3 s of a bot's grenade press.
+- **The change** (`tools/live_bots.py`): a tick's error and its traceback, the brain stopping after 90 failed ticks, and a pause the brain reads from botcore's still tick count now go into the match's own recording (`tick_failed`, `brain_stopped`, `paused` / `resumed`), which is kept per match. The next freeze names its cause.
+- Checks: `live_bots.py` parses; 873 tests pass.
+
+### Grenades thrown on a solved arc, Halo Infinite's way, 2026-11-18
+
+The owner: Halo Infinite's bots "throw really good grenades", then "try to copy what they did but in a way that works with our code and doesn't break it".
+
+- **Found** in `HaloInfinite.exe` (build HI_1_13_0, decompiled with Ghidra 12.2 for comparison only; no 343 code is in the mod):
+  - A landing point, not the man (`FUN_1426fb7c0`, bouncing grenades only): past 8 it aims 3 in front of him on the thrower's side; closer, 0.8 of the way back toward the thrower; 0.2 lower.
+  - A ballistic solve (`FUN_14316427c`) from the grenade's own launch speed and gravity (its `proj` tag): low or high arc, none out of reach.
+  - The throw only within 30 degrees of the facing (cos 0.866).
+  - The arc walked in 0.2 s steps through the level with a grenade-sized sweep (`FUN_14263e95c`); a blocked arc is not thrown.
+- `brain/nade.py` (new): `landing_point` (Reach-sized numbers: 1 u short past 8 u, 15% back closer in; Infinite's own kept in `INFINITE`), `solve`, `arc_points`, `arc_clear`.
+- **Physics learned, not guessed:** no editing kit is installed and the map files' projectile tags are not read, so each game's grenade speed, gravity, launch-over-view pitch and release delay are learned from the bots' own throws. `nade.FlightWatch` in `tools/live_bots.py` follows the new projectile after a bot's press (Reach, Halo 3, ODST, Halo 4: where objects are read), fits its first 0.6 s to a parabola (`fit`, bounces dropped) and keeps it in `user/grenade_flights.json` (60 per game). `model(game)` gives their medians from 3 throws up; the brain prints "grenade flight learned" for each.
+- `brain/bot.py` `think`, every tier, on foot, at a man believed within 3-30 u near the plan's aim (`nade_target`):
+  - `nade_steer` (before the turn cap): the press held back while the view turns onto the solved launch, up to `NADE_TURN_S` 0.5 s, the low arc first, the high one if the low is shut, led by 60% of his way over the flight.
+  - `nade_release` (after the turn cap): the press once within `NADE_ON` 0.05 rad; the view held the learned delay + 0.15 s.
+  - No open arc, a teammate by the landing (`nade_clear`), the arc past 30 degrees of the facing, or not lined up in time: not thrown, another try 1 s on.
+  - No shot lock over a throw's view.
+- Unchanged: every throw until a game's physics are learned (then exactly as before), the doorway pre-nade, throws with no man in sight (a landing, a counter spot), vehicle seats. `NADE_ARC = False` turns it off.
+- Validation: `tools/test_nade_throw.py` (new, 14 tests: Infinite's rule as decompiled and ours; the solve lands where asked; the high arc and out of reach; the arc walk under a ceiling; the fit through a bounce; the watch keeping a bot's throw and not a bullet; the bot unchanged without a model, turning, pressing and holding with one, refusing off the facing, shut or onto a mate, lobbing over a wall, untouched without a man, in a vehicle, in a pre-nade or switched off). All 873 regression tests pass. **Untested in a match:** the first matches only collect flights; whether the fit sees Reach's frags; the landing numbers; plasma grenades are aimed the same way (the bots' grenade type is not read).
+
+### Link test: can two PCs' mods talk in MCC? 2026-11-18
+
+The owner wants Proving Grounds on PC friends' screens: the search, the vote, the loading hold and the level-up, following the host. ("Yes we need this to work in order to expand it even further.") Xbox friends can't run the mod. A PC friend's mod needs a channel to the host's mod.
+
+What a static read found (MCC Oct 31 build):
+- MCC uses PlayFab Party 1.4.13 (`PartyWin.dll`) for voice and text chat only. Its network allows 0 message endpoints a device (the `PartyCreateNewNetwork` call at rva 0x25F58F).
+- Halo: Reach's session still carries Reach's own matchmaking vote: the `matchmaking-voting-*`, `countdown-timer` and `game-start-status` parameters, made near haloreach rva 0x3E2800. Whether Reach sends them in a custom game is unknown.
+
+What an offline run of `PartyWin.dll` found:
+- Every property call answers "API not implemented": device, network, endpoint and chat control.
+- `PartyChatControlSendText` works, to chosen chat controls, up to 1023 characters, with data buffers.
+- MCC gives its chat controls text permissions itself (rva 0x261D98), so an unmodded MCC would receive any text sent to it.
+
+The kit (`native\build_linktest.bat` builds it into `native\bin\linktest`):
+- `native/pglink.cpp` builds pglink.dll, a DLL of its own, so a friend on an older install can run it. It changes nothing in the games and logs to pglink.log next to it.
+  - **Party.** It hooks MCC's `PartyStartProcessingStateChanges` and `PartyFinishProcessingStateChanges`. Each other chat control first gets one hello, 3 at most, a minute apart. One that answers gets a post every 3 s, carrying a sequence number and an echo, so a round trip shows in one log. Size tests follow: a 1023-character text, then texts with 1000, 4000, 16000 and 60000 data bytes. pglink texts are taken out of the state changes before MCC sees them: MCC finishes a copy, the test finishes the original. It also logs each chat control's entity id and device, and the permissions MCC gave it.
+  - **Reach, read only.** The session's state, peers and members, and whether the vote and countdown parameters change, hashed 4 times a second.
+- `native/pglink_load.cpp` builds pglink_load.exe, which loads pglink.dll from its own folder into a running MCC. It refuses while Easy Anti-Cheat runs or when pglink.dll is already loaded.
+- `native/pglink_readme.txt` becomes the kit's README.txt.
+
+Validation:
+- Built with VS 2022.
+- In a test process, it loaded, hooked a real `PartyWin.dll` and passed its calls through. With an offline Party handle, local user and chat control, the poll read the chat control and its entity id without a fault.
+
+Not tested:
+- With MCC, and between two PCs.
+- The hiding of received texts: a loopback isn't possible offline.
+- The Reach probe.
+- Whether MCC keeps a Party network in a custom game lobby.
+
+First live run, 2026-11-18 (host only), and the change it led to (test 3):
+- The host's pglink.log: MCC kept a Party network in the custom game lobby, the friend's chat control appeared, and the host's hello to it sent without an error. The friend's MCC dropped out 10 s after the first hello and 5 s after the hello on the rejoin. No pglink text ever came back from the friend's side. So a hello reaching an MCC without the test, or the friend's copy itself, may crash it; the friend's log is not read yet.
+- Now only the friend's copy speaks first. A file `pglink_friend.txt` next to the DLL marks it, and only the friend's zip has it. The host's copy (`native\bin\linktest`) never messages first and only answers a chat control whose pglink sent it a pglink text. The log's second line says which role a copy has.
+- The README now has the host load the test before the friend joins, the friend load theirs before joining, and only the two of them in the lobby.
+- Rebuilt with `native\build_linktest.bat`. `native\bin\ProvingGrounds_LinkTest.zip` was remade with pglink_friend.txt. The DLL has the new strings.
+
+Live run of test 3, 2026-11-18, 17:01 to 17:13, host and one PC friend, both running it. The roles were swapped: the host ran the friend's copy. Results:
+- A lobby join with neither copy speaking first (16:44): no crash, and a full Proving Grounds match played.
+- HANDSHAKE within 1 s of the join, both ways. The hello and every later pglink text were "kept from MCC" on both PCs. No crash and no chat text shown.
+- Sizes: the 1023-character text and texts carrying 1000, 4000, 16000 and 60000 data bytes all arrived with the data intact, both ways.
+- The posts kept flowing through two Proving Grounds matches, though MCC lowers the chat permissions from 0x1F to 0x10 in a game.
+- Round trip: about 0.4-0.6 s (the friend's side's figure). The host's figure of about 2.5-3 s includes the wait for the friend's next 3 s post.
+- Reach's vote and countdown parameters didn't change in the custom lobby. They stay unused, and Party chat text is the channel.
+- On the friend's PC, Reach's session counted 8 members and 3 peers in a match with bots.
+
 ### No drive sample high over the floor: flying is no owner route, 2026-11-18
 
 The owner: "Does my new routines in vehicles look good on breakpoint and boneyard?" ("not boneyard, I did renegade"), then "Yea fix it".
@@ -9,6 +171,47 @@ The owner: "Does my new routines in vehicles look good on breakpoint and boneyar
 - Found (offline, the maps' terrain and `Terrain.vnav`): Renegade (Forge World `vf1ed8bb6`) 1,676 of the 1,686 route cells on the vehicles' ground; 43 drives between its route ends 99% on the routes (66% without them), all arriving. Breakpoint (`veae7463a`): its ground routes one network base to base (2,303 cells), 21 drives between the vehicles' spawns 90% on them (86% without), all arriving; but 1,949 of its 4,260 route cells 5-19 u over the floor, one track over the whole map where people fly (1,556 within 1 u of a flown cell, at its height): the owner's flying saved as drives (which way the flight came in as a drive not found: the kinds read as aircraft). No floor within 1 u of them, so never the bots' roads; drawn orange in the LiDAR view. Also: the Elite Wraith and Ghost on Breakpoint spawn on a 70-cell piece of vehicle ground 3.5-4.7 u off the rest (a bot there drives about 2 u and stops, with or without routes; left to a LiDAR drive off that pad).
 - `tools/lidar.py` `RideWatch`: a drive sample over `DRIVE_MAX_H` 3 u over the floor under it (`Terrain.height_over`) is not kept (live_bots and LiDAR mode alike; a ground vehicle's bump or short jump within it still is). The cells already saved are left in rides.json.
 - Validation: `tools/test_owner_routes.py` (new: a LiDAR-mode drive 11 u up saves nothing; on the ground and a bump within 3 u kept). All 859 regression tests pass. Untested in a LiDAR run.
+
+### Service Record: home states set by hand, 2026-11-18
+
+The owner: edit a bot's or player's location; saving refreshes the site so it lists them in the right places.
+
+- `tools/service_record.py`: `load_home_states` / `save_home_state` keep the owner's picks in `native/bin/service_record/home_states.json` ({name: state code}, only codes `states.json` lists; "" goes back to the state the name picks). The build uses a pick over `home_state` and marks it (`state_set`).
+- `tools/service_record_edit.py`: `POST /api/home-state {"name", "state"}` for any name the built site lists (bots and people), then the site rebuilt.
+- `tools/service_record_site/app.js`: in edit mode each record card has a Home state picker (states grouped by region), Save and, for a state set by hand, Back to its picked state; a save reloads the page, so every state board, region and the Hometown Hero badge use the new state. The placements and state-board notes say when a state was set by hand.
+- Validation: `tools/test_home_state.py` (new: save, back to the pick, a bad state, a bad saved entry, the route's 403/400/200 for a bot and a person). `test_service_record.py` (33) and `test_bot_emblem.py` (2) pass. In the browser on the editor, Pistol Queen was moved Vermont to Texas: the page reloaded with her in Texas (state, region, the Texas count), then Back to its picked state returned her to Vermont. The owner's page gets the picker too; no sideways scroll at phone width.
+
+### Service Record: an emblem editor for each bot, 2026-11-18
+
+The owner: an emblem editor on the site for each bot, like MCC's own (foreground, background, primary/secondary/background colours, secondary on or off), in edit mode only. A saved emblem should show on the site, in MCC's lobby and in matches.
+
+- **`brain/emblems.py`:**
+  - **Saved picks:** `native/bin/emblems/chosen.json` (not in git), with `chosen`, `valid` (every id checked against the catalog; secondary may be OFF), `save_chosen` and `emblem_for` (the bot's pick, else its roll).
+  - **`export` uses it:** the lobby's `<name>.ids` and the `<name>.rgba` picture follow the pick.
+  - The other chat's `draw()` is untouched.
+- **Other readers:**
+  - `brain/looks.py emblem_of` uses `emblem_for`, so `tools/play.py` adds the bot to a match with its pick.
+  - `tools/emblems.py sheet` draws picks too.
+  - A bot with no pick gets exactly its roll as before.
+- **`tools/service_record_edit.py`, new routes:**
+  - `GET /api/emblem-catalog`.
+  - `GET /api/emblem-art/<layer>.png`: only layer names the catalog has. The layer art stays on this PC and is never in the built site.
+  - `GET /api/bot-emblem?name=`: a listed bot only, not a person.
+  - `GET /api/emblem-editor.js`.
+  - `POST /api/bot-emblem`: the five ids or `{reset: true}`. It needs the edit header and a bot the site lists; it saves, writes that bot's `.ids` and `.rgba` again, then rebuilds.
+- **`tools/service_record_site/emblem_editor.js` (new):** served only by the editor, so it exists in edit mode alone.
+  - **Picking:** foreground and background grids with thumbnails, three palettes of MCC's 30 colours, and a secondary on/off switch.
+  - **Live canvas preview:** layered as `compose` does, beside the bot's rolled emblem.
+  - **Buttons:** Save emblem, and Back to its rolled emblem.
+- **`app.js`:** an "Edit emblem" button on a bot's record card in edit mode (not for a person). It loads the editor and opens it under the card.
+- **Validation:**
+  - **Tests:** `tools/test_bot_emblem.py` (new, 2 tests). It covers picks and reset, names in any case, `emblem_of` and the `.ids`, refused bad ids, and a bad saved entry left out. On the editor routes it covers save, reset, a bad foreground, an unknown bot, a person, no edit header (403), the catalog, and art for unknown or `..` layer names (404). `test_service_record.py` still passes (33); `emblems.selftest` passes; `node --check` passes on both scripts.
+  - **In the browser on the editor at localhost:8766:**
+    - The preview matches the site's own emblem picture to within 0.27 of 255 per channel.
+    - Picking the skull, turning the secondary off and choosing a cyan primary, then saving, wrote `chosen.json`, `Pistol Queen.ids` (`2 536 14 31 29`) and the picture; the site showed the new emblem after its rebuild.
+    - "Back to its rolled emblem" restored `57 536 23 10 29` and an empty `chosen.json`.
+    - No sideways scroll at phone width.
+  - **Not tested in MCC:** a saved emblem should show from the bot's next lobby or match. The bots panel keeps the pictures it already loaded, so its old picture may stay until MCC restarts.
 
 ### Reach Demon and Mythic: Halo 4's team play, the other bots' difficulty, the peek as he looks away, 2026-11-18
 
@@ -36,6 +239,49 @@ The owner, on how he plays low bots: "I know if a low level bot won't push, or h
   - peek: waits while he looks this way, goes when he looks away or after 2 s, not for a weak man, not without a team sighting; Mythic waits; Reach Legendary and Halo 4 do not.
   - `test_demon_odds.py`'s "Reach Demon unchanged" checks now check Reach Legendary. `test_demon_anticipate.py`'s radar-dot nearness test holds `chase_ok` aside, because the ported "no friend of his near" check would trip on its dot.
   - All 858 regression tests pass. **Untested in a match;** the odds thresholds are Halo 4's calibration.
+
+### Service Record: clan rewards, 2026-11-18
+
+The owner: make people and bots want to join a big clan (a clan's cR stays its members' added up), "add everything you stated", and each item changeable in edit mode so he can test it himself. Site only, nothing in game.
+
+- **`tools/service_record_site/clan_rewards.json` (new):** the ten rewards and 10 clan weekly challenges. Each look reward lists the clan ranks that unlock its levels, on the players' ladder with every step ×10.
+- **Looks:**
+  - **Card frame:** a coloured, glowing, then moving edge on the Clans card.
+  - **Tag colour:** cyan, gold, then gold glow, on every clan tag on the site (leaderboard, carnage reports, player card, profile).
+  - **Clan banner:** five CSS-drawn banners behind the clan page header, no art.
+  - **Member ribbon:** "Member of [clan] · rank" on each member's card.
+  - **Clan emblem:** a member's emblem, picked in edit mode; the top member's until then.
+- **Play:**
+  - **Clan weekly challenge:** one a week, drawn by the date, every member's Reach matches of that week together. Finished, its cR is added to the clan's cR; members' own cR is unchanged.
+  - **Rivals:** the clans just above and below, with the cR gap.
+  - **Hall of fame:** top member, best K/D (10+ games), most games, this week's MVP.
+- **Prestige:**
+  - **History:** first match, ranks reached, games played milestones, weeks as the top clan.
+  - **Top-clan crown:** on the first clan's card, title and tags.
+  - **How the history is dated:** worked out from the counted matches. A rank's date comes from the clan's cR growing match by match, with commendation and personal challenge cR spread over the matches alike, so its last step is the rank the clan holds now. A reset clears it too.
+- **`tools/service_record.py`:** `load_clan_table`, `load_clan_settings`, `clan_rewards`, `clan_block`, `match_credits`, and the saves `save_clan_rewards`, `save_clan_week`, `save_clan_emblem`. `data.js` gains `clans`, `clan_week` and `clan_rewards`.
+- **The owner's changes** go to `native/bin/service_record/clan_settings.json` (not in git).
+- **Edit mode:**
+  - **Clans page:** each reward on/off and its unlock ranks, with "Back to defaults"; this week's clan challenge picked by hand.
+  - **Clan page:** a preview that shows the clan at any rank and with the crown on or off, on every page until reload (never saved); the clan emblem picker.
+  - **`tools/service_record_edit.py`:** `/api/clan-rewards`, `/api/clan-week`, `/api/clan-emblem`. An emblem must be a member of that clan.
+- **Validation:**
+  - `test_service_record.py test_clan_rewards` (new). All 33 tests in the file pass, and `node --check app.js` passes.
+  - **In the browser on the editor:** the rewards list and clan challenge show on the Clans page. The preview showed the frames, gold tag, starfield and grid banners, ribbon, emblem and crown. The hall of fame, rivals and history were checked with in-page sample numbers, since every clan is near 0 after the reset.
+  - **Saves:** the three saves were checked against the live editor: a falling unlock and a non-member emblem are refused. All were put back to defaults.
+  - No sideways scroll at phone width.
+  - Not checked yet with real clan progress from matches.
+
+### Service Record: the Challenges page, 2026-11-17
+
+The owner: "Add these to the achievements page, But rename it to challenges. And we will make a plethora of daily and weekly challenges", with 4 dailies and 1 weekly counting toward the rank.
+
+- **`tools/service_record_site/challenges.json` (new):** 52 daily and 18 weekly challenges.
+- **How they are drawn:** each day's and week's are drawn by the date (`challenge_pick`). A day runs local midnight to midnight; a week starts Monday.
+- **Credits:** a finished challenge's cR counts in the rank (`ranks.json challenge_credits`), worked out again from the counted Reach matches at each build.
+- **The page:** a player's Challenges page (old `achievements` links still work) with the time left, cR and progress for each.
+- **Handoff:** `docs/CHALLENGES_IN_GAME.md` is a short note for adding them to the game from the site's build output.
+- **Validation:** `test_daily_and_weekly_challenges`, checked in the browser.
 
 ### Demon steps out of a second man's sight; Forge pieces in the analysis line of sight, 2026-11-18
 
@@ -80,6 +326,17 @@ The owner: "Just as you have the demon autopsy report, you also have one for me,
   He is seen by two at once as often as a Demon; he lives through it more than twice as often. His deaths are mostly lost 1v1s (44%, median 2.2 u).
 - **Validation:** `tools/test_death_autopsy.py` rewritten for world rows (2 tests: a Demon outnumbered, the owner started hurt, a Demon shot from behind; the 2-on-1 that killed it; the comparison and the "you" report; the 0 shield read counts as full). All regression tests pass. The terrain line of sight leaves Forge pieces out, so Forge World reads a little more "seen".
 
+### Proving Grounds stays up while the game starts, 2026-11-18
+
+The owner: "is there a way for it to leave the bot matchmaking screen up as the game starts?" After the vote, Proving Grounds went away for a moment and MCC's custom game lobby showed before the load.
+
+- **Why:** MCC's countdown greys the lobby's OPTIONS tile. The overlay's lobby probe (`probe_lobby`) looks for that tile's frame line, so it read the lobby as gone (log: `OPTIONS 0 ... -> not seen` right after `MCC's countdown started`). Proving Grounds then hid and moved to the match stage while MCC's lobby counted down.
+- **`native/overlay.cpp`:** `pg_hold` keeps Proving Grounds drawn during its launch. It holds while Halo: Reach's menus are up (`mcc_menu_state() == 0`), whatever the probe reads. `pg_env.in_game` (new) passes MCC's menu state on.
+- **`native/proving_grounds.cpp`:** the launch ends when MCC is in the game (`e.in_game`), not when the lobby probe fails. It falls back to the old rule after a minute without a game, and logs it.
+  - `pg_launching()` (new) tells the overlay the launch is on.
+  - The "GAME STARTING" screen no longer fades in a second time when the launch begins, and it says "Loading..." instead of "MCC's lobby is counting down...".
+- **Validation:** `botcore_pg14.dll` and the preview build. Untested in game: whether MCC's loading screen comes before or after its menu state turns to a game (if before, Proving Grounds' screen covers the load as well).
+
 ### Death autopsy tool; hurt Demons start no new fight, 2026-11-18
 
 The owner asked for ideas to make a Demon "that puts it staying alive as most important", then: "Let's start by making the tool. And then the full shield bullet also."
@@ -98,6 +355,29 @@ The owner asked for ideas to make a Demon "that puts it staying alive as most im
   - The usual rules still decide in these cases: the man it fights (its target, the one carried through a hunt or retreat, the last to hurt it within 10 s), a man within `DEMON_STAND_R` 6 u, a shot in the last 1 s, and no cover in reach (turning away in the open is a shot in the back).
   - It does not apply in a vehicle, while carrying, on a loose objective, in Race or Infection, without shields, or while the recharge hold already runs.
 - **Validation:** `tools/test_demon_no_new_fight.py` (9 tests: cover from a new man, out of his sight; full, it fights; its own man, the man who hurt it, a man on it, a fresh hit, and no cover are all left to the usual rules; the recharge hold takes over; other tiers and Race unchanged) and `tools/test_death_autopsy.py` (2: three deaths, three causes; the 0 shield read counts as full). All 834 regression tests pass. Untested in a match.
+
+### Bot simulation: the pool's bots play matches of their own for the Service Record, 2026-11-17/18
+
+The owner: bots "only play when I play and its against me", so a bot gets a game or two a session while he logs 8-10; "I want to implement a system like this so that the website tracker gives bots a chance to keep up", true to the players and the bots. The design was agreed with him over five rounds of questions: `docs/BOT_SIMULATION_PLAN.md`.
+
+- **When:** a round as each Proving Grounds match of his ends (after that match's own build, so the credits screen is not delayed). Also on demand: a SIMULATE MATCHES menu row (Left/Right 1-20 rounds, A/Enter plays) and a "Play rounds" form in the site's edit mode (`/api/simulate`). `sim.after_match=0` in proving_grounds.ini turns the after-match round off.
+- **Who:** every pool bot (people never), each at its own pace averaging a third of his games, with grinders three times as likely among Legendary, Blind, Mythic and Demon. Lobbies are built like his: Arena 4v4 or BTB 8v8 from proving_grounds.ini, clans together, teams balanced by skill, the same vote (`liking` / `bot_vote` ported) for map and gametype. Bots left unseated wait for the next round.
+- **How a match plays (`tools/sim_engine.py`):** fight by fight.
+  - Skill is a Bradley-Terry fit of who killed whom in his real matches, around each tier's start. It learns from real matches only, never from a simulated one.
+  - Rates (fights a minute, assists, suicides, headshots, weapon mix) are each bot's own, shrunk toward its tier's.
+  - Weapons and vehicles, with their respawn times, come from each map's own game files (objects.json; a Forge or Anniversary layout's .mvar). Power weapons are picked up and run out; bots board vehicles, gunners shoot, drivers splatter, and an empty vehicle can be hijacked.
+  - All 10 playlist gametypes, with their objectives; score and time limits from his real matches by team size (Team Slayer 50 in 4v4, 100 in 8v8).
+  - Medals follow Reach's rules on the kill-by-kill record (multi-kills in 4 s, sprees, Killjoy, Revenge, Avenger, First Strike, Wheelman, Splatter...), the rest at the rates real matches show.
+- **Shown exactly like real matches:** each match is stored as a report and kill rows, and the Service Record reads them as it builds, so K/D, credits and rank, commendations, challenges, weapons, heatmaps and carnage reports all come out of the same code. Storage is `native/bin/service_record/sim.db` (SQLite: seed, engine, inputs, compressed report and kill rows, about 7 KB a match), and their ids are added to matchmaking.txt. bot_career's totals (the in-game career pages) include them, and `--reset-bots` / `--reset-all` cover them.
+- **Site:** Today's Top 5 (best games by credits earned, his included) and Playlist Activity on the Bot Tracker. The credits screen still reports the newest match a person played.
+- **Changed files:** new `tools/bot_sim.py`, `tools/sim_engine.py` and `tools/test_bot_sim.py`. Hunks in `tools/service_record.py` (build, collect, `write_last_match`, `today_block`), `tools/bot_career.py`, `tools/service_record_edit.py`, `service_record_site/app.js` and `style.css`, and `native/proving_grounds.cpp` (`stats_build`, `run_tools`, `sim_start` / `sim_poll`, the menu row). Built as `botcore_pg14.dll`.
+- **Validation:**
+  - `bot_sim.py --check` replays each of his 41 real two-team Reach matches 60 times: kills a player a minute 1.44 simulated vs 1.49 real; real K/D inside the simulated 90% band for 90% of 433 players; win-call Brier 0.21.
+  - Medals per 100 kills are close to real ones (Revenge 7.6 vs 7.7, Avenger 5.9 vs 5.5, Wheelman 2.9 vs 2.1).
+  - A round is about 25 lobbies in under a second.
+  - `tools/test_bot_sim.py` (12 tests): a seed replays; kill rows equal the scoreboard; every gametype keeps its limits; Boneyard has vehicle and power weapon kills; people never play; clans line up; the pace average holds; storage and the site and career totals read it; a reset covers it; a stored match plays again from its inputs; the credits screen keeps the person's match; Top 5 and activity.
+  - All 823 `tools/test_*.py` and the 32 `test_service_record.py` checks pass. The menu row was checked in the Proving Grounds preview.
+- **Not yet tried:** a real match's round, the menu row in game, and the site button. Not yet run against the real store.
 
 ### Reach carriers drop the flag to fight when they would die with it, 2026-11-17
 
@@ -142,6 +422,34 @@ The owner: "They need to stay in cover and fully recharge their sheilds. current
 - `brain/bot.py` `demon_recharge` (new, called late in `decide`), every game: a Demon hurt within `SHIELD_BACK` s, its shield under `DEMON_FULL` 0.95, out of every enemy's sight `DEMON_RECHARGE_ARM` 0.5 s, holds cover until the shield is full. No fight or hunt meanwhile, a man who comes into view included. It stays where it stands if no man known in the last 10 s has a line to it, else goes to cover from them (`cover_from`, `hidden_spot`), at `DEMON_RECHARGE_SCORE` 3.5 (over hunts, a trade 3.4, guns 3.15, pushes; under a losing fight's break 3.6). Still fought: a man within `DEMON_STAND_R` 6 u (in sight, or a dot under 0.6 s old). A shot in the last `DEMON_RECHARGE_HIT` 1 s leaves it to the usual rules. Not in a vehicle, carrying, on a loose objective, in Race or Infection, or without shields. Legendary, Mythic, Blind and the rest unchanged.
 - Validation: `tools/test_demon_recharge.py` (new, 7: no hunt back out at 0.55 or 0.85, back to him at 0.95; a 0.3 s blink out of sight does not start it; a man who comes into view at 12 u is not fought, cover behind the wall from him; a man at 4 u still fought; shot 0.2 s ago, the usual rules; untouched past `SHIELD_BACK` counts as full; Legendary and Race as before). All 792 regression tests pass. Untested in a match.
 
+### Proving Grounds: the challenges in game, connected to the Service Record, 2026-11-17
+
+The owner, with the Service Record session's note on the challenges in game and a picture of Bungie.net's Halo: Reach Challenges page: "Make it correlate to our website as well. They have to be connected."
+
+- **`tools/service_record.py write_game_challenges`:** each build writes `logs/service_record/challenges.txt` beside `data.js` from the same `challenge_table` and `challenge_progress`. It holds this week's weekly and today's dailies in the site's order (name, what to do, target, cR, icon, when the period ends) and each listed person's completed counts, challenge cR and progress on the live challenges. The game reads this file and works nothing out itself, so the site and the game show the same numbers.
+- **`native/proving_grounds.cpp`:** a CHALLENGES row on the menu ("done / live", with the GAMES INCLUDED block moved down 60) opens the page, laid out as Bungie.net's:
+  - a header band per section, "Weekly Challenge:" or "Daily Challenges:", with "... Challenges Completed: N";
+  - a dark row per challenge with the white icon, the name, what to do, the time left with its seconds in orange, the cR, and the bar with its tick and `n/need`, or Completed;
+  - "Ended" once the time runs out before the next build, as on the site.
+  - The icons are the site's own pictures (`logs/service_record/icons`, chosen as `app.js` NEON chooses them; assists is drawn from the site's own path), and cR is written with commas, as on the site.
+  - The file is re-read when the site is rebuilt.
+  - Y (or Tab) opens the same player's page on the site, `http://localhost:8766/#/p/<name>/challenges`, after starting the editor if needed (`tools/service_record_editor.cmd /startup`). Esc or B goes back to the menu.
+- Validation: `tools/test_service_record.py` 32 passed (new `test_game_reads_the_sites_challenges`: `challenges.txt` equals the build's data, row by row, after a counted match). Compared in the preview against the site in the browser: the same weekly and dailies, times, cR, progress and counts. Built `native/bin/botcore_pg13.dll`. Not tested in game: the menu row, the page, and Y opening the browser over MCC.
+
+### Proving Grounds: Reach's party list with player cards; the credits each match earned, 2026-11-17
+
+The owner, with three Halo: Reach pictures (the full party list, its header picked with MY PARTY DETAILS, a player picked with their Spartan): "Only if its super similar if not spot on", then "Also possible add this level up bar after each game showing what earned you your xp. Before the carnage report? Or after whichever is cleaner".
+
+- **The roster (`native/proving_grounds.cpp`, `roster`, `ros_details`, `ros_card`):** the menu's session list and the search and vote lobby lists are now one roster. Pressing Right (arrow or d-pad) or clicking the list gives it the focus. It then slides 0.22 s from MCC's place to Reach's (measured from the owner's pictures: rows ending at x 990, a tab over the header). The screen's own content steps aside, and Up and Down move through it. Left, Esc, B or a click away bring the screen back, with its focus as it was; the menu's GAME SIZE still takes Right (`g_lr_taken`).
+  - **Header:** picked, it lights grey with Reach's pointer, and MY PARTY DETAILS (the menu) or LOBBY DETAILS stands beside it: Party Leader, Playlist, Player Count, Max Player Count, Game Mode.
+  - **Rows:** a picked row is drawn a little larger and lit, its pointer reaching the panel. Its card shows the emblem, the name over the Service Record rank, the emblem again large and faint, and the Spartan in 3D: a bot's own Reach look (`bots_panel.cpp bot_figure`, as the bot card draws it; a bot with no profile gets one, as on that card), or for a person Reach's default Spartan in Steel (`person_figure`; MCC does not give the mod a player's armor).
+  - **Card numbers:** Reach's own four lines with the Service Record's numbers: Daily and Weekly Challenges Completed, Kill/Death Ratio (in place of Armory Completion), Overall Commendation Progress. "..." where there is none.
+  - `pg_env.figure` is filled by `overlay.cpp pg_figure` and the preview's `pv_figure`.
+- **The Service Record side (`tools/service_record.py`):** `ranks.txt` gains games, K/D, win %, commendation progress, credits and the daily and weekly challenges completed. `commendation_progress` now computes the percentage once; the site's `app.js commProgress` reads the build's `comm_pct` instead of its own sum.
+- **The credits screen (`S_CREDITS`, `credits_screen`):** after the carnage report, since MCC owns its post-game screens. When `mark_check` tags a match, `stats_build` runs `bot_career.py` and `service_record.py` in the background, so the match counts straight away instead of at the next game's start. `write_last_match` writes `logs/service_record/last_match.txt` with the player's credits before (what the last build had, `credits_seen.json`) and after, and lines by `ranks.json`'s worth: Game Completed, Victory, Kills, Assists, Medals, then Challenges and Commendations. When the lobby comes back from a marked match, the lines come in one by one, then the total, then the bar fills toward the next rank, with PROMOTED on a promotion. A, Enter, a click, Esc or B go on to the lobby, and it moves on by itself 6 s after the bar. No report in 20 s, or nobody listed played: straight on.
+- `native/pg_preview.cpp`: three roster shots and the credits screen, the Spartans drawn with `model_view.cpp`. A bot without a profile is skipped there, so the preview never writes the owner's `bot_profiles.ini`.
+- Validation: `tools/test_service_record.py` 31 passed (new `test_credits_of_the_last_match`; `test_game_reads_the_sites_ranks` checks the new columns). `test_bot_matchmaking`, `test_service_record_art` and `test_figure_snap` passed. Built `native/bin/botcore_pg12.dll`, and the preview's shots were checked against the owner's pictures. Not tested in game: the keys, mouse and pad in the list, the slide, the figure's turn, the credits screen after a real match, and the background build's timing.
+
 ### Banshee bombs as the owner's bomb kills had them; a run stays on its man, 2026-11-17
 
 The owner: "I did the banshee bomb and boost like at the same time. Only record the ones where i got kills with the bomb", "C2IR when flying it didnt get a kill and died", then "Yes, fixes 1-3" (the boost into the bomb left for later: "Before boost bombing I want them to just play correctly inside the banshee first").
@@ -170,6 +478,16 @@ The owner: "why is it when reset all the bots list reset to 47? why isnt every b
 - `app.js` / `style.css` (`pager`, `pagedTable`, `holders`): the leaderboard, the state boards, each Ranks card's holders, the clans list and a clan's members show a page of 100 at a time: Top 100, 101-200 ... with Prev and Next; a page's numbers count from the top of the whole list. The leaderboard's and the state boards' Find a name searches every name, not the page, and a found name keeps its place.
 - Validation: `tools/test_service_record.py` 29 passed in the working tree and 26 in this commit's own tree (the other sessions' new tests are not in it), `tools/test_bot_career.py` passed (`test_everyone_restarts_at_zero` adds the pool: a repeat, `Name*3`, a note and a long name read right, pool bots listed at 0 and not as people). The first build with the pool drew each new bot's figure once (541 s), later builds 2 s; `data.js` 0.4 MB. Browser: 754 names in 8 pages (701-754 last), "TheNoble" found from any page; a state board with numbers put in the page only (reload clears them) paged the same and searched with places kept (181st); an empty board shows its message (a stray "null" there found and fixed); a clan's members; phone width without sideways scroll. Not seen: a state board with real numbers past 100 (nobody has a counted match since the reset).
 
+### Service Record: Proving Grounds matches only, 2026-11-17
+
+The owner: "Why are stats recording to the website when bot matchmaking is turned off and still play with bots?", then, given a choice between splitting custom games out like Reach and dropping them, "Matchmaking only".
+
+- The cause: the site counted every match MCC wrote a post-game report for (60 s or more played). Nothing checked how the match was started, and a Proving Grounds game's report is the same as any custom game's.
+- **`native/proving_grounds.cpp`:** when a match Proving Grounds launched starts (`S_LAUNCH` to `S_PLAYING`, `mark_start`), it waits for MCC's report (`mpcarnagereport1_3528_0_0.xml`) to be written after that start. It then appends the report's `GameUniqueId`, the time and the playlist to `native/bin/service_record/matchmaking.txt` (`mark_check`, once a second from `pg_frame`). It gives up 30 s after the lobby is back with no new report (a quit game) and logs either outcome.
+- **`tools/service_record.py`:** `load_matchmaking` reads that list (`Paths.matchmaking`). `collect` keeps only the matches it names, so a custom game adds no match, stats, rank credits or newly listed bot. People and pool bots are still listed at 0. No list yet means no matches. `bot_career.py` and `totals.txt` (the bots' in-game MCC Career pages) still count every match. The test World passes `matchmaking=None`, so the older tests still count every match.
+- Built `native/bin/botcore_pg11.dll`. The running MCC has `botcore_standin1.dll`, which does not mark matches, so Proving Grounds matches count only after MCC restarts on pg11. Every match so far was already reset (Reset all), so none had to be sorted.
+- Validation: `tools/test_service_record.py` 29 passed (new `test_matchmaking_only`: an unlisted custom game is in `totals.txt` but not on the site; a listed match counts alone; the game writes the file the site reads). `test_service_record_art.py` 11 and `test_figure_snap.py` 3 passed, and the Proving Grounds preview compiles. Not tested live: no match has been marked in game yet.
+
 ### Service Record: the owner listed, everyone's stats reset, a Reset all button, an edit mode that stays, 2026-11-17
 
 The owner: "Are humans allocated to the website? I see myself in carnage reports but not on the board", then "Yes just me for now and also my ability to edit is gone?"; "purge the stats. Including mine from the website I want everyone to start at zero"; "add the Website owner (me) to have a permanent edit button"; "a reset all button so I don't ask you everytime? And store it the same as the edit".
@@ -179,6 +497,128 @@ The owner: "Are humans allocated to the website? I see myself in carnage reports
 - Reset all in the edit mode: `service_record.py reset_everyone` (a copy of the ledger first, `ledger.before_reset_all_<date>_<time>.json`; refused while MCC runs, since `tools/play.py` runs bot_career as a match starts), `service_record_edit.py POST /api/reset-all` (only with `{"confirm": "reset all"}`, the same this-PC / Origin / header checks); `app.js` / `style.css`: a red Reset all stats strip on the Bot Tracker page in edit mode, asking a second yes before it sends.
 - Edit mode that stays: `app.js` keeps the switch in `localStorage` (it was per tab). The editor had gone because the desktop app stopped the preview server it ran in; `tools/service_record_editor.cmd` (new) starts `service_record_edit.py` in the background with `pythonw` unless port 8766 already answers, then opens the site (`/startup`: start only). The local `.claude/launch.json` (ignored) now attaches to it instead of starting its own copy.
 - Validation: `tools/test_service_record.py` 28 passed (new `test_a_person_the_owner_lists`, `test_everyone_restarts_at_zero` with Reset all refused while MCC "runs", the copy kept and everyone at 0), `tools/test_bot_career.py` passed. Live: the owner listed (68 Reach games before the reset), then everyone at 0 with 47 players and no matches; Reset all clicked through the browser (second yes, done, copy kept); the edit switch kept over a reload; the launcher started the editor once and left it running on a second start. Not tested: a reset while MCC runs (refusal tested only in the test), the launcher at Windows sign-in (no Startup shortcut made).
+
+### Proving Grounds: friends who join take a bot's seat, teams balanced around them, 2026-11-17
+
+The owner, on a friend joining the lobby: "Just balance him to a team like normal matchmaking would".
+
+- **`native/session_watch.cpp`:** reads the people in MCC's session from the session list. The rule comes from the
+  owner's logs of real lobbies, with two friends who joined and two only on the friends list:
+  - A person in the session has flags +0x12 and +0x13 set. A friends-list entry has only +0x14.
+  - +0x6C is the team: the player 0, a joined friend 1, and in a match's list each bot its dealt team. +0x64 is the
+    machine.
+  - Bot ids are never people.
+  - It keeps them only from a list that holds the player, and provides `mcc_session_people`, `mcc_player_team` and
+    `mcc_session_has`. Changes are logged ("session list: people: ...").
+- **`native/report.cpp`:** the look cache now covers a joined friend's emblem and nameplate as well as the player's
+  (`mcc_person_look`).
+- **`native/bots_panel.cpp` `bot_pool_matchmake`:** takes the other people and their teams. Each takes a bot's seat on
+  his team and is counted (20 points) in the deal. One not on a team yet counts on the team with fewer people, and that
+  team is written back. 8v8 with a friend is 14 bots, keeping the game's 16.
+- **`native/proving_grounds.cpp`:**
+  - **Your team:** `person_team` uses the team MCC's lobby has you on, and the last match's file only when that is not
+    known.
+  - **The deal:** `deal()` makes the lobby with the people in it, for searches and between matches.
+  - **Live changes:** once a second before the launch, a friend joining, leaving or switching team deals the lobby
+    again. Every bot that still has a seat keeps it, with its arrival and its vote; a new bot arrives and votes then.
+  - **On screen:** friends are shown with their own emblem and nameplate, in IN LOBBY, on their team in the vote's
+    roster and in MY GAME SESSION, and they count in the lobby totals.
+  - **Votes:** a friend cannot vote in Proving Grounds, so for None of the Above's majority he counts as a player not
+    voting.
+- **Limits:**
+  - Proving Grounds cannot move a real player between MCC's teams. It builds the teams around where MCC put him (MCC
+    put the one joined friend in the logs on Blue).
+  - The bots on a friend's own machine are the separate, still open sync problem.
+- **Validation:**
+  - `native/pool_test.cpp` test 26: a friend on Blue gives 3 + 3 bots, on Red 2 + 4, and one not on a team counts on
+    Blue. 8v8 with a friend is 14 bots. With keep 100, a friend in costs one bot and out gives it back. All pool checks
+    pass.
+  - Preview with `PG_FRIEND=1` (a stand-in friend): the friend sits on Blue with his look, IN LOBBY reads 4/8 at once,
+    and the teams are 4 and 4.
+  - `build.bat pg10` builds `botcore_pg10.dll`, and all 81 `tools/test_*.py` pass.
+  - Not tried with a real friend, so MCC's team for a friend while still in the lobby is read but untested live.
+
+### Proving Grounds: each player's Service Record Reach rank beside their name, 2026-11-17
+
+The owner asked for each player's rank from the Service Record site beside their name, as in the original Halo: Reach.
+
+- `tools/service_record.py` `write_game_ranks` writes `logs/service_record/ranks.txt` with every site build: each listed
+  player's name, rank step and rank. The one table stays `ranks.json` and the one credits sum stays this file's; the
+  game reads the result and never adds up credits itself (the Reach-ranks-one-copy rule).
+- `native/proving_grounds.cpp`:
+  - `sr_rank_of` reads that file and reads it again when the site is rebuilt.
+  - A bot the site has no record for has no credits, so it shows Recruit, as the site would.
+  - The site's own insignia (`ranks/<step>.png`) sits in its own cell past each nameplate, as in the owner's picture of
+    Halo: Reach's roster ("in its own little sub space"). The cell is a 44 square, 3 units apart from the nameplate, in
+    the row's shade (team colour in team games), and is drawn even when there is no rank. Rows now end at the cell. The
+    lobby headers, MY GAME SESSION and the invite list widened by 47 to fit it, and the nameplate keeps MCC's 332.
+    Built as `botcore_pg9.dll`.
+- Not shown: the player's own Reach rank. The site lists bots only ("People are never listed"), so there is no rank of
+  theirs to show.
+- **Validation:**
+  - New test `test_game_reads_the_sites_ranks` (`tools/test_service_record.py`).
+  - `test_reach_ranks_one_copy` still passes, and all 81 `tools/test_*.py` pass.
+  - The preview shows the insignia.
+  - `build.bat pg8` builds `botcore_pg8.dll`.
+  - Not yet seen in game.
+
+### Proving Grounds: rows at MCC's own size; the player's own nameplate and emblem, 2026-11-17
+
+The owner asked for the rows to match MCC's nameplate and emblem sizes, and for his own nameplate and emblem to show.
+
+- `native/proving_grounds.cpp`, `player_row`:
+  - **Size:** the numbers come from MCC's MY GAME SESSION, as `overlay.cpp`'s bot rows use them (`ui_layout.h`). The
+    nameplate is 332 x 44 and the team bar 12 wide, 14 to its left. The emblem is a 32 square at (9, 6). The tag is 15
+    over a name of 21 at x 55. Rows are 50 apart, and the rank badge (46) sits left of the bar.
+  - **Where:** the lobby columns, MY GAME SESSION (y 82 and 137 + 50 k, as MCC places them) and the invite list (720
+    wide) all use it.
+  - **Names:** a dark edge under each name, so it reads on light nameplates.
+- **The player's look:**
+  - `native/session_watch.cpp` keeps the player's id from MCC's list as `mcc_player_id`.
+  - `native/report.cpp` `h_profile` keeps the five emblem numbers and the nameplate (+0x18) when MCC's own lookup answers
+    for that id (`mcc_player_look`). It calls nothing MCC does not call itself.
+  - `native/bots_panel.cpp` `player_emblem` draws the emblem once in the background to
+    `native/bin/emblems/_player_<numbers>.rgba`. A changed emblem gets a new file.
+  - `brain/emblems.py --draw <out> fg bg primary secondary background` composes any emblem from MCC's numbers.
+- Not shown: the player's clan tag. MCC's string in the lookup is not read, so the name is drawn alone.
+- `native/pg_preview.cpp`: a stand-in look for the person.
+- **Validation:**
+  - The preview renders rows at the new size with the stand-in emblem and nameplate.
+  - `--draw` with real numbers draws, and with unknown ones refuses. The `emblems.py` selftest passes.
+  - `build.bat pg7` builds `botcore_pg7.dll`, and all 81 `tools/test_*.py` pass.
+  - Not yet run in game, so it is unconfirmed whether MCC's lookup is called for the player while in the lobby. The log
+    line "report: the player's look" will show it.
+
+### Proving Grounds: closer to MCC's own matchmaking screens; MCC's lobby hidden behind them, 2026-11-17
+
+The owner asked for Proving Grounds to look more like MCC's matchmaking and for the custom game lobby not to show through.
+The layouts follow screenshots of MCC's own Find Game and Match Found (vote) screens.
+
+- `native/proving_grounds.cpp`:
+  - **Background:** opaque, so MCC's lobby is no longer seen behind the screens. It is a deep blue wash over a faint
+    picture of one of the playlist's maps, changing every 12 s with a fade. The vote shows your option's map and the
+    result shows the winner's.
+  - **Footer:** MCC's button prompts. The key glyph (Esc, Enter) or the pad's lettered circle (B, A) is chosen from the
+    last input. A line of help for the focused control sits above them, replacing the boxed description. Back stays
+    clickable.
+  - **Find Game:** the status and a search clock (playlist and m:ss) are centred at the top. The playlist's card has its
+    name low on the picture with the blurb under it. The middle column holds GAMES IN THIS PLAYLIST, a maps and
+    game-types line, and PLAYLIST STATS, all one width.
+  - **Match Found:** plain option rows (a thin map picture, the game over the map, the votes, the box). A chevron marks
+    the focused row. The gametype icon is gone from the rows. The round's clock sits right-aligned under a divider line.
+    The big picture's game name is in capitals.
+  - **Player rows:** bots wear their MCC nameplate as the overlay's MY GAME SESSION rows do. Plain nameplates are
+    tinted in the team's colour, and a shade sits under the name. A bot with no clan shows its name alone, not "[ ]".
+  - **Menu:** PLAYLIST STATS moved level with the card, clear of the category tiles.
+  - **Error wording:** the launch errors now say to leave Proving Grounds to see MCC's lobby message, since the lobby is
+    hidden. Same change in `native/pg_lobby.cpp`.
+- `native/pg_preview.cpp`: loads MCC's nameplates (MCC_ROOT, else the owner's Steam library), as `pool_test` does.
+- **Validation:**
+  - `build_pg_preview.bat` renders all six screens. The preview's stand-in backdrop no longer shows, and the nameplates,
+    prompts and layouts were checked by eye.
+  - `build.bat pg6` builds `botcore_pg6.dll`.
+  - All 81 `tools/test_*.py` pass.
+  - Not yet seen in game.
 
 ### The owner's LiDAR driving routes: the bots keep to them, 2026-11-17
 
@@ -199,6 +639,29 @@ The owner: "I would like all weapons and vehicles to be on the site pages correl
 - `service_record.py arsenal_keys`: the site's `arsenal` {weapons, vehicles}; every one named and given MCC's picture whether or not a bot has used it.
 - `app.js` / `style.css`: a player's Weapons page has a Weapons and a Vehicles panel listing the whole arsenal, most kills first, the ones never used at Kills 0 | Deaths 0, faded and grey; "N of M used" in each panel's corner; another way the bot killed or died (a fall...) still listed with the weapons. A bot with no kill record yet sees the whole list at 0 with the note why. The "not matched live" mark only on a card with numbers. The state boards' Weapon and Vehicle menus list every one (opened on the first with a kill); one nobody has a kill with says so.
 - Validation: `tools/test_service_record.py` passed (new `test_whole_arsenal_listed`); 26 weapons and 18 vehicles in the built site, all with MCC's pictures. Browser: 12ab34cd's Weapons page shows its 10 used first, the rest at 0 (a stray "0" after an unused card's name found and fixed); the boards list 28 weapons and 19 vehicle choices; Scorpion board: "No kill with the Scorpion is recorded yet."
+### Service Record: four new commendations, MVP, Game Changer, Positive Thinking, Loyal Soldier, 2026-11-17
+
+The owner picked these four on Nov 16 ("Mvp, Game Changer, Positive thinking, Loyal soldier") and sent their tier sheets on Nov 17: a title over six emblems, Iron to Max.
+
+- `service_record.py match_deeds`, counted per match in `collect` (new `deeds` per player), as follows:
+  - **MVP:** the most points (MCC's Score, ties too) in a Slayer game.
+  - **Game Changer:** the same in an objective game (CTF, Assault, King, Oddball, Headhunter, Stockpile, Territories), where the Score is the objective's points.
+  - **Positive Thinking:** more kills than deaths in a game played to the end.
+  - **Loyal Soldier:** a game played to the end.
+  - The points ones need MCC's report. "To the end" is the report's `mCompletedGame`, now read (`_int` takes a default; reports kept before count as finished).
+- `commendations.json`: the four in the "pg" set with Iron-to-Max needs and cR. MVP and Game Changer are 5/25/100/400/1000/2000, Positive Thinking is like Victor, and Loyal Soldier is the long one at 25 to 8000. Their cR counts in the rank as the others' does.
+- `service_record_art.py emblems <sheet> <key>` (new): cuts a tier sheet into `art/commendations/tiers/<tier>/<key>_<tier>.png` (448 squares).
+  - The six are the sheet's biggest lit shapes that are not wide (not the title, its rules or the names), left to right. Each is lifted off the sheet's own black or night blue, its glow kept; any other count writes nothing.
+  - It also makes the "not started" banner (Victor's Reach banner with the Silver emblem in grey) and keeps a copy of the sheet. The four of the owner's were cut (local art, not in git).
+- Tests:
+  - `test_service_record.py`: new `test_mvp_game_changer_positive_loyal`; the commendation tests now expect 23.
+  - `test_service_record_art.py`: new `test_tier_emblems_from_a_sheet` (a made-up night-blue sheet).
+  - `test_bot_matchmaking.py`: its overlay line updated for Proving Grounds' `pg_up`, missed when that was built.
+- Validation:
+  - All 80 `tools/test_*.py` pass.
+  - The 24 emblems were looked at on a checkerboard (clean edges, glow kept).
+  - Site rebuilt (7 matches since the bots' reset: Cosmic 1 MVP, three bots 1 Game Changer, the most Loyal Soldier games 2). The four cards were looked at in the browser pane, and the Gold MVP and Max Loyal Soldier banners framed in their colours.
+
 ### Service Record: clan tags set from the edit mode, saved in game; the clan on its own line of the player card, 2026-11-16
 
 The owner: "add to the edit mode my ability to effectively change their clan tags on a player page basis ... add them to clans through the edit mode on the website so I dont have to ingame but it saves in game"; then, of "Gamertag -Clan" on the player page, "Make it more professional. Find a better spot for clan that keeps it relevant but not dirty".
@@ -216,6 +679,84 @@ The owner: the player pages' panels "more transparent" with "the neon glow ... s
 - Clans (`app.js`): a Clans tab (search by tag, name, description or member), clan cR = all members' cR, the clan rank the players' ladder with every step x10 (from `D.ranks`: the one table), a clan page with its members linked to their records, the clan tag on cards and in the standings a link to the clan. Apply: a disabled "Coming soon" placeholder.
 - Edit mode (`tools/service_record_edit.py`, new): serves the site at localhost:8766 and takes the owner's edits only (this PC alone, the site's own Origin, an edit header); a footer switch shows it, a clan's page then has its name and description boxes (`clan_names.json`, `clan_about.json` in `native/bin/service_record`, `save_clan_name`, `save_clan_about`), the site rebuilt after each. The site from its folder or any copy has no edit mode. Clans show the full name first and the tag second.
 - Validation: `tools/test_service_record.py` 22 (+1: clan names, descriptions and the editor's origin check), `tools/test_figure_snap.py` 3 (+1: a pool bot's look is the mod's own). Checked live: a name and a description saved and shown, then my test text cleared; a save from another origin and one without the edit header refused (403); the folder copy has no edit switch; phone width without sideways scroll. `tools/test_bot_matchmaking.py` fails on uncommitted `native/overlay.cpp` work in progress (the custom-lobby files), not this change.
+### Proving Grounds: offline Social Games for Halo: Reach (4v4 / 8v8, search, the vote, invites), 2026-11-16
+
+The owner: "recreate the Social games menu for my own offline experience. We will name the new selection Proving Grounds", "select either 4v4 or 8v8", "a random 4-10 seconds of fake searching and then we connect to our lobby", the voting "where I can openly vote and the bots in my lobby will (vote)", "an 'invite player' function", then "Build the entire thing start to finish Map voting and all". His friend: random lobbies "broken up to balance teams every match (unless they're a stack/clan)", "Three maps/gametypes to vote for", bots voting on their traits and skill, "Roll a weighted dice". The engine under it is the lobby test below.
+
+- **Where it is:** a PROVING GROUNDS tile (or **P**) beside BOTS in MCC's Halo: Reach custom game lobby (`native/overlay.cpp`, `ui_layout.h pg_tile_rect`). Its screens cover the lobby and take the mouse, keys and pad while they are up.
+- **Screens** (`native/proving_grounds.cpp`, our own drawing over MCC's backdrop, no game art shipped):
+  - **Proving Grounds:** GAME SIZE 4v4 (Arena) / 8v8 (Big Team Battle), INVITE PLAYER, games and categories included, playlist stats, MY GAME SESSION.
+  - **Find Game:** "Checking for rejoins", then 4-10 s of searching while the lobby fills. A clan arrives together.
+  - **Match Found:** three gametype-on-map options and None of the Above. Live vote counts, a 15 s clock (`vote_seconds=`), your vote with a click, Enter or A, and red and blue teams.
+  - **Next game,** then MCC's own countdown.
+  - Map previews and gametype icons come from `native/bin/service_record/art` when this PC has them (MCC's own pictures, the owner's icon sheet; not in git).
+- **The lobby** (`bots_panel.cpp bot_pool_matchmake`, Bot Matchmaking's pool and format files):
+  - your invited party is pinned to your team (`roster_point_balance` now takes pinned seats);
+  - a clan stays whole on one team, not yours when it fits;
+  - teams are dealt by points every match.
+  - Between matches about 7 in 10 stay (a clan stays or goes together), new bots join, and the vote comes round again (the overlay's after-match step hands over to Proving Grounds).
+- **The vote:**
+  - **Options:** drawn from the playlist's gametypes by weight and its maps, only team games (MCC's own flag, checked against its SLAYER and CAPTURE THE FLAG, else a list of known team games), never the last game, and only pairs MCC's own pairing check accepts.
+  - **Bot votes:** each bot rolls on its own odds. These come from its name (its favourite and least favourite maps, its liking of each kind of game, vehicles, map size), its play style (Wheelman: vehicles, Sniper: big maps, Rusher: small) and its difficulty (Demon, Mythic and Legendary sweatier: Slayer and the competitive maps).
+  - **None of the Above:** a majority on it brings three new options with no veto, as in Reach.
+- **The launch** (`native/pg_lobby.cpp`, replacing the test file): hooks the lobby screen's per-frame Update (vtable +0x58, `FUN_1404DECDC`, MCC's UI thread). There it:
+  - keeps a copy of MCC's maps and gametypes (team flag included; `lobby_library.txt` once a session);
+  - answers the pairing checks;
+  - puts the winner in as MCC's own picks do, runs its apply step and presses its Start, unless a countdown already runs (`FUN_14034CEF8(1)`, `FUN_14034D1E4`).
+- **Playlists** (`native/bin/proving_grounds.ini`, not in git, made on first change): `size=`, `vote_seconds=`, `party=` lines. `arena.gametype=NAME*weight` / `arena.map=` (and `btb.`) lines replace a playlist's own lists.
+  - Arena: Team Slayer (TU Team Slayer DMR) most, SWAT, CTF, King, Oddball, Assault, Stockpile, 3 Plot Territories on Sword Base, Countdown, Zealot, Powerhouse, Reflection, Boardwalk, Anchor 9, Condemned, Asylum, The Cage, Pinnacle, Beaver Creek, Damnation, Hang 'Em High and Prisoner.
+  - Big Team Battle: Team Slayer, CTF, Assault, Stockpile, Territories and Headhunter on Boneyard, Spire, Breakpoint, Tempest, Highlands, Hemorrhage, Paradiso, Ridgeline, Breakneck, Headlong and Timberland.
+  - FFA gametypes in a list are left out by MCC's own team flag.
+- **Also:**
+  - `session_watch.cpp mcc_player_name` (your name in MCC's list, for your row);
+  - `bots_panel.cpp bot_pool_names` and `hb_image_rgba`;
+  - `native/pg_preview.cpp` with `build_pg_preview.bat` (the screens drawn offscreen to PNGs with the real code; MCC's side stood in for by the lists of the owner's lobby test).
+- **Validation:**
+  - `build.bat` builds `botcore_pg2.dll`.
+  - `build_pool_test.bat`: all pool checks pass. Test 25 is new: 300 lobbies sized right with the party always on your team, the clan whole and off your team, no name twice, keep 100 / keep 0, pinned seats through the point deal.
+  - `pg_preview`: all six screens drawn and looked at (menu, invite, search, vote, next game, error). The odds of one vote's 7 bots ranged from 91% on one option to near-even splits, None of the Above 3-12%.
+  - **Not yet run in MCC:** pressing Start from the Update hook, the team flag read, the screens' input over the live lobby, the between-match turnover after a real match, and which team MCC puts you on. Until a match has written `bot_pool_humans.txt`, you are taken to be on Red, and your party goes there.
+- **First live run** (the owner: "The firsdt game worked perfectly"): the search and the vote, then Team Slayer on Anchor 9 launched by MCC's own Start, pressed from the Update hook. The second vote failed with "MCC's lobby did not answer which games go on which maps", and Try Again fixed it.
+  - Cause, from the log: the next vote was drawn when the match ended, before MCC came back to its lobby and reloaded its Reach lists. MCC accepted none of the options, so the vote had nothing to show. Try Again started a fresh search once the lobby was back, but it also replaced the lobby between matches with all new bots.
+  - Fix (`botcore_pg3.dll`):
+    - the vote is drawn once MCC's lobby is back;
+    - `pg_lobby.cpp` copies MCC's lists the moment the lobby returns;
+    - when MCC accepts no option, the options are drawn again from the lists as they are now (up to 8 times, 16 s), not given up after 6 s;
+    - TRY AGAIN keeps the lobby and only sets its vote up again (after a launch failure, it presses Start again for the same winner);
+    - your team (and your party's) comes from `bot_pool_humans.txt`, which `tools/play.py` writes at each match start.
+  - Validation: builds; `pg_preview` draws all six screens. Not yet seen live: the second game's vote.
+- The owner: "that was great. Can I add my own maps and modes to the list of voting? and also is the starting votes always the same three at the restart of the mod?" (`botcore_pg4.dll`):
+  - **The same three:** they were. The vote's dice started from a fixed seed, so every MCC start drew the same first options, search length and bot rolls. They are now seeded from the clock on first use. Two preview runs drew different first votes.
+  - **Your own maps and modes:** `proving_grounds.ini` takes `<arena|btb>.addmap=` and `.addgametype=NAME*weight` (added to the built-in lists, or a gametype's weight changed), and `.removemap=` / `.removegametype=`. `.map=` / `.gametype=` still replace a whole list.
+  - The file is read each time Proving Grounds is opened. The owner's file now lists his own Forge maps and MLG gametypes from MCC's list, commented out.
+  - Checked with `pg_preview lists` on a scratch file: adds, a changed weight, removes and a replaced list all came out as written.
+- The owner's own TU gametypes (`botcore_pg5.dll`). He sent ten files: "add these all to the game. And replace our matchmaking gametypes with these corresponding to the ones we have".
+  - **The files:** Halo: Reach `_blf`/`chdr`/`mpvr` gametype files, read for their names only. The two TU Neutral Bomb Assault (4-10) files are byte-identical.
+  - **Copied:** the nine distinct ones went into his `LocalLow\MCC\LocalFiles\<id>\HaloReach\GameType` under new GUID names, as MCC names its own (local only, not in git; nothing overwritten, the downloads untouched).
+  - **Same names as MCC's:** TU TEAM SLAYER DMR and TU MULTI FLAG CTF have MCC's built-in names, but their data differs from MCC's built-in copies. `playlist_pool` now picks the player's own (kind 3) when MCC has a name twice. The vote shows clean names: "TU ONE FLAG CTF (4-10)" as One Flag CTF, and so on.
+  - **`proving_grounds.ini`, Arena:** his (4-10) One Flag, Multi Flag and Neutral Bomb, his CTU 5-Plot Territories (for 3-Plot), and his Team Crazy King (4-10) and Team Oddball. The last two are new to the vote; MCC's own are free for all.
+  - **`proving_grounds.ini`, Big Team Battle:** his TU Multi Flag CTF and CTU 5-Plot Territories. Neutral Bomb stays MCC's, since his is the 4-10 player one. The weights are kept (Stockpile 2%).
+  - **Both playlists:** Team Slayer is his TU TEAM SLAYER DMR. TU FFA CRAZY KING is in the game but not in the vote (free for all).
+  - Checked with `pg_preview lists` (stand-in list with his names as kind 3 and MCC's team flags as read live): the vote uses his files for every replaced mode and MCC's for CTF, One Bomb, Stockpile and BTB's Neutral Bomb.
+  - Not yet seen: MCC listing the nine files. They are uncompressed `mpvr`, as MCC's shipped files are, while MCC's own saves are compressed. A file MCC does not load is simply missing from the vote.
+- Not done: Reach's own matchmaking variant files (`haloreach\hopper_game_variants`) are not used, because custom games list only the shipped and the player's own. A real entry in MCC's Multiplayer menu is not done either: that menu is MCC's newer UI, so the tile sits in the Reach lobby instead.
+
+#### The lobby test that proved it (same day)
+
+The owner's plan: Proving Grounds, an offline copy of Social Games (4v4 / 8v8, a short fake search, Reach's vote with the bots voting). Its open question is whether the mod can make MCC's own Custom Multiplayer lobby launch the vote's winner, so that the lobby, the match and any friends agree. The owner: "Yes, study it", then "Yes, build the test".
+
+- Static study of `MCC-Win64-Shipping.exe` (Oct 31 2026 file, read only). The lobby's screen keeps its picks: the game variant id, map variant id, base map and map entry. Its Start checks the pair against MCC's variant library, then hands it to the lobby's settings. The map id is the one MCC's own map pick sets.
+- `native/lobby_test.cpp` (new): hooks that Start, so it runs on MCC's own thread at the moment MCC chooses.
+  - With `native/bin/lobby_test.ini` `on=1` (not in git) in a Halo: Reach lobby, it swaps in `game=` and `map=` (a name or `#id`) just before MCC checks and commits them. It acts once, then sets the file back to `on=0`.
+  - Every Start logs what the lobby had and writes the whole library to `native/bin/lobby_library.txt`: each title's game variants, map variants and base maps.
+  - With `on=0`, no file, or another MCC build (byte check), nothing changes.
+- `native/overlay.cpp`: `mcc_lobby_title()` (the open lobby's title, from the files it loads). `native/session_watch.cpp` installs the hook, and `native/build.bat` builds the new file.
+- First live run (the owner's Reach lobby, CTF on Boardwalk): the hook caught Start, and Reach is library index 6, the only title loaded. Names read as empty, so nothing was swapped and CTF on Boardwalk launched as picked. An entry's text is a run of 0x30-byte records from +0x28 (length +0x14, text pointer +0x18); the name is the record at +0x58, the one MCC's own name reader gets. A map variant's +0x450 is its base map id. Fixed the name reader.
+- Second live run (CTF on Boardwalk): the names read correctly, but they showed the static read had two lists swapped. The library's +0x28 list is the gametypes (their category at +0x450) and +0x108 is the maps. The screen's +0x16D0 is the map and +0x16D8 the gametype. The test's fallback set TU Team Slayer DMR on Boardwalk, MCC's check accepted it, and CTF still launched. MCC's own Start tile runs its apply step (`FUN_1404D4C8C`) before Start, and the test's swap came after that.
+- Rewritten for that (run 3): gametype and map are swapped as MCC's own picks set them. That covers the map, its content id, the category, the gametype and its entry, plus the host's category. MCC's own pairing check runs first, then MCC's own apply step. Names match the entry name or any of its text (`SwordBase`), or `#id`. A watcher logs the launch host's map and gametype whenever they change. The fallback is removed.
+- Third live run (the owner: "It loaded Sword base slayer"): the lobby had CTF on Boardwalk and the test swapped in SLAYER on Sword Base. MCC's check passed, its Start committed the new picks (the host read map #5088, gametype #5182, category 1), and the match loaded Slayer on Sword Base. **The mod can choose what MCC's own lobby launches.**
+- Validation: builds (`botcore_lobbytest4.dll`, no warnings from the new file). The function bytes and the screen's Start slot were checked against the exe on disk. Never seen: a friend in the lobby (the owner has none to test with).
+
 ### Service Record: commendation banners outlined in their tier's colour, 2026-11-16
 
 The owner: "You didnt update the website to inclue the commendation banner outlines. The colored outlines for each rank?", then sent his six tier frames (Iron to Max, Max with flames).
@@ -250,6 +791,17 @@ The owner: "Region leaderboards per weapon, vehicle, mode, procedural state plac
 - Each record: a State Placements page (its place in its state, its region and nationwide on every board it is on); its home state on the banner and Profile.
 - The pages say "bot" only on the front page now: "Roster" / "Matchmaking pool", Name, Standings, "Find a name", the kill notes name the player, the footer drops "for our own bots".
 - Validation: `tools/test_service_record.py` +1 (16): six names pinned to their states (a table change that would move them fails), the picks follow the weights over 20,000 names, every state has a region, the site names every player's state and the vehicle types. All 79 `tools/test_*.py` passed before the rewording; the site, art and one-copy tests again after it. In the browser pane at 1280 px and 375 px (no sideways scroll), no console errors: Overall cR equals the rank's cR for all 55; ties share places on the DMR board. No vehicle kill is recorded yet, so the Vehicle board shows only its empty note.
+
+### Bot Matchmaking: 4v4 / 8v8 pool files, clans always whole, 2026-11-16
+
+The owner: "Make clans trump team balance, then balance lobby the best possible. Make balance button follow this rule. Distance clans in the text file, but add variety so teams can play"; the teams "have to always remained balanced, but I don't want a clan member of theirs on my team"; then "a UI element next to the bot matchmaking button ... choose between a bot text file formatted for 4v4 or 8v8", "allow clan parties to be up to 4 or up to 8", "for the clans with more members, usually include the max party size".
+
+- Pool files (`native/bots_panel.cpp` `pool_write_format`, `pool_ensure_format`, `bot_pool_set_format`, `bot_pool_reshuffle`): `bot_pool.txt` stays the file to edit. `bot_pool_4v4.txt` and `bot_pool_8v8.txt` are made from it whenever it, a bot's clan tag or the reshuffle changes (their `# source=` line). In them, the lines of bots in no clan (or a clan of one bot) keep their order; each clan's lines go in rounds cut into parties of up to 4 or 8; the parties are spread evenly through the file, one clan's apart, and about 1 in 4 is placed beside another clan's so the clans meet. Each format keeps its own queue position (`bot_pool_saved.ini` `next4=`, `next8=`, `salt=`; the old `next=` reads as the 4v4 one). `botcore.ini` `pool_format=4|8`.
+- Parties (`bot_pool_rotate`, `pool_fits`, `party_cap`): a clan's first bot in a lobby pulls its clanmates in 85% of the time (was 70%, re-rolled by each clanmate), up to the format's party size and the seats of the team without people. A lobby never takes more of a clan than fit whole on one team (that bot is passed over); "Swap for next bot" too.
+- Teams (`roster_point_balance`, `roster_balance`): a clan stays whole on one team (it was cut to the biggest team's size), the team without people when it fits, then the points. Balance teams now evens the sizes counting the people of the last match (it counted bots only, so a 4v4 with you could deal 4 bots to your team). A clan too big for any team (a lobby made by hand): with Bot Matchmaking on, its extra bots are swapped for the next pool bots that fit; off, it is split, and the panel's banner names the clan (`roster_balance_note`).
+- Menus: a 4v4 / 8v8 picker beside the Bot Matchmaking switch; "Group parties" became "Reshuffle clans" (both files made again with a new spread; `bot_pool.txt` unchanged); the help text, the banner and the Balance teams tooltip say the new rules.
+- The owner's question: the earlier counts (COD 12, WE 11) were pool lines, repeats included. COD has 3 bots and WE 4.
+- Validation: `native/pool_test.cpp` test 22 updated (party on the team without people; the 4v4 file keeps a clan together and the rest in order), new 22b (a clan of 6: parties of 4 and 2; the full party 258 of 300 times, about 85%; never more than fit; 4v4 and 8v8), 22c (5 clanmates in a 4v4 with you: even sizes; split with a note when off, swapped when on), test 24 replaced (three clans in 200 lines: clans meet in 113 of 487 places, places at least 3 lines apart, the other lines in order, a clan of one bot no party, each format's own queue position). All pool checks and all 79 `tools/test_*.py` pass; `native\build.bat clanformat` built `botcore_clanformat.dll`. The owner's real pool, copied to a scratch folder, came out with every clan's parties spread out (COD at lines 73, 522, 691, 857) and AYS beside WAVE. Not yet seen in MCC.
 
 ### Service Record: every weapon has its picture; a blueprint theme, 2026-11-15
 
@@ -458,6 +1010,65 @@ The owner's F9 reports from Forge World and Boneyard (20261115-044159, -045642, 
 - `plan` (vehicle run on foot), every tier: with a man in view (`vehicle_way_target`), the fight's aim and trigger stay on him while the walk goes on to the seat, as on a patrol (no sprint while it does), except in the last `VEHICLE_FIGHT_LAST` 3 u, where it gets in; not while carrying or dry. A man within 8 u still turns the run into a fight, as before. Patrols already fight on the way at every tier; unchanged.
 - Validation: `tools/test_warthog_guns.py` is new (17 tests: the Warthog bands, the rocket gun's rule with a vehicle in or out of sight and range, the parked ban and its lifting, fighting on the way for every tier and its exceptions). All 753 regression tests pass. **Untested in a match**: the turret droop, how often gunners now see vehicle crews (13-55% before, by kind), and the slower vehicle runs under fire.
 
+### Reach netrelay: the bots' input reaches joined machines (no more skating); netbots=4 makes every bot a member, 2026-11-15
+
+The owner, after netmembers2 with SnypeShee (Xbox) joined: the 3 member bots showed on his scoreboard on the right team (no red reticle on teammates) but still skated, and the other bots were missing. Then: "deep dive and figure out how we could get this to work on all our consoles with me as a host."
+
+- **Found** (static; `docs/REACH_NETWORK_PLAYERS_2026-11-12.md`, "Why the member bots skated"):
+  - A joined machine moves and animates a remote player from that player's input: a 0x4C-byte action per tick, which the host sends to every joined machine (`FUN_1803c16ec`: every simulation player's action to every type-4 view but his own machine's, queued on the view's channel by `FUN_1804212c0`). The joined machine reads it per simulation player (`FUN_180418a7c`, states 4/5).
+  - The game's tick (`FUN_1800575ac`) builds the tick's input, **sends it**, and only then runs the players update (`FUN_180047050`) that botcore hooks to write the bots' input. So the bots' input never left the host. On the host the bots played normally; joined machines got positions only.
+  - The membership message packs a member's user slot in 2 bits and carries no per-peer player count; a joined machine copies members with no check that a (peer, user slot) pair is unique. So more than 3 bots can share the host peer's user slots 1-3, with no made-up peers.
+- **`native/reach.cpp` `hr_net_relay`** (netbots=3 and 4, host only, simulation state 7/8): right after botcore writes the bots' input, it runs the game's own relay `FUN_1803c16ec` once more for the member bots only. A bot with no simulation player gets one by the game's own `FUN_1803aa1b0`, as `player_new_at` makes it. Checks the two functions' first bytes. Logs the simulation state and, once a match per bot, how many joined machines it relays to.
+- **`netbots=4`** (new; `hr_mb_add`): every bot becomes a member, on user slot 1 + (slot mod 3), skipping a slot a person (a split-screen guest) holds.
+  - `hr_mb_remove_bot`: the game's remove clears the peer's slot-to-player entry even when another bot still has that slot; it is pointed back at one that does, so the game's own drop after the match still finds the bots.
+  - `hr_mb_sweep`: bot members that are no live bot of this match go when a bot is added. At match end (the member guard's "match is over") netbots=4 removes every bot member, since the game drops only one a slot.
+  - netbots=3 behaves as before, plus the relay. `botcore.cpp` takes 0-4.
+- **First netbots=4 run** (`botcore_pg10.log`, Sakallis joined, 6 bots): all 6 became members and the host relayed all 6 bots' input to 1 joined machine, but the friend saw only 3 bots on the scoreboard, red reticles on his bot teammates, and skating. Every machine makes a game player for a member only if no player of that machine has the member's record "user" (entry +0x1C) yet (`FUN_18041f510`, the members-to-players diff), and every bot had its user slot (1-3) there: the host's own diff likewise added only bots 2-4. `netrelay2`: under netbots=4 each bot gets the lowest record user 1-7 no member of this machine has (3 bits in the message; the host is 0), so 7 bots at most; more are not added (logged).
+- **netrelay2 run** (Sakallis, launcher with bots off, 6 bots): **the 3 bots he could see did not skate from their first life, and his bot teammate showed friendly (green), no red reticle.** The netbots=3 part works. He still saw only those 3: the host's own netcheck shows the type-9 adds for bots 5-7 with users 0, 1, 2, though the members had 4, 5, 6. The player record keeps the user in 2 bits, so they matched the host (0) and bots 2 and 3, and the joined machine refused them. **A machine holds 4 players at most (users 0-3); more than 3 bots need more machines (peers) in the membership.** netbots=4 is no use as built.
+- **Two more netbots=4 games** (10 bots, 4 teams; 7 bot members, record users 1-7): Sakallis was kicked at the start of both. The relay already counted 0 joined machines when the bots spawned. `netrelay3`: `botcore.cpp` reads netbots=4 as 3, so a saved 4 can't do it again.
+- **`netbots=5`, an experiment** (owner: "I want him to be able to see all the bots"; `standin1`): bots 1-3 stay on the host's machine. Bots 4+ go on stand-in machines, made-up peers of the membership (`hr_peer_make`: the host's peer entry as template, address and +0x138 `0xB07B07B0000000xx`, no observer, peers 16, 15, 14 down), 4 each as users 0-3. Stand-ins without bots are removed when a bot is added. At the match's end the member guard removes every bot member and stand-in. The relay logs when the stand-in set changes. Static finding: a joined machine adds each peer with a connection to its address (`FUN_18039cf80` -> `FUN_1803f6fc0`). That connection can't succeed, and when it dies `FUN_18042b164` -> `FUN_1803958cc` removes the peer there. Whether that drops the bots, kicks the friend, or neither is what the test shows.
+- **It works** (`botcore_standin1.log`, a 4v4 with Sakallis joined, 6 bots: 3 on the host's machine, 3 on stand-in peer 16). He saw **every bot on the scoreboard, none skating, not even in its first life, and no red reticle on teammates**, and he was not kicked. The stand-in stayed for the whole match (the relay logged no change), and at the end the guard removed all 6 bot members and the stand-in. Still open: the bots' names show as "[UNSC]" on his scoreboard. Not yet tried: more than one stand-in (bots 8+), an Xbox friend, several friends at once.
+- Validation: `native\build.bat netrelay1` built `native/bin/botcore_netrelay1.dll` (not in Git) with no new warnings; `netrelay2` likewise. **Untested in game**: whether the relayed input makes the bots animate on a joined Xbox; whether joined machines also predict the bots' shots and vehicle use correctly; and netbots=4 (lobby, MCC screens, match end, a second match, friends joining with up to 16 members).
+
+### Reach netbots=3: the first three bots join the session's membership, the list the host sends to every machine, 2026-11-15
+
+The owner, after the netcheck run: "Yes, dig in", then "Yes, build it".
+
+- **Found** (static; `docs/REACH_NETWORK_PLAYERS_2026-11-12.md`, "The session membership"):
+  - The host sends the session's membership as the `membership-update` network message.
+  - Every machine builds its game players from its own copy. The type-9 adds of netbots=1/2 never left the host, which the netcheck log showed: each one was applied on the host at once.
+  - A member belongs to a peer and takes one of its 4 user slots. The host takes slot 0, so its peer has room for 3 bots.
+- **`native/reach.cpp` `hr_mb_add`** (host only; session state 4-9):
+  - For bot slots 0-2 it writes a member entry at the bot's own player index, on this machine's peer, user slot 1-3. It uses the game's own entry fill `FUN_18039d8a8`, then the bot's identifier and 0x80-byte configuration (name, look, team).
+  - It bumps the join and update numbers and marks the membership changed (`FUN_1803fa3d8`), as the game's add `FUN_18039d620` does. That add's `FUN_18000d6b8` (MCC's online session) is left out of this test.
+  - An old bot member in the way is removed first with the game's own remove. If a person holds the slot, the bot is not added.
+  - On the host, its own diff finds the slot already that bot's, with the same identifier, so its add is refused: no split screen, and the bot plays as before.
+- **The member guard** `h_hr_localdrop` on `FUN_180394d48`:
+  - The host drops its own peer's members whose user slot has no signed-in person (`FUN_18038f49c`), so without the guard the bot members would go at once.
+  - While a match ticks (a players update within 3 s), the guard keeps bot members. After the match the game drops them itself, so none reaches the next lobby or match.
+- `botcore.ini` `netbots=3` turns it on (0-3 now; netbots=1/2 unchanged). The netcheck log stays on with it.
+- **First solo run** (`botcore_netmembers1.log`):
+  - The three bots became members (peer 0, user slots 1-3), the guard kept them, and the host's own adds for them were refused as planned. MCC's session list at match end showed three extra entries with their identifiers and no names.
+  - The next lobby's list had none of them. No second match was played.
+  - The members' team came out 0 for all three, though two were on team 1. The copied configuration carried the host's wanted team (entry +0x72), which the host's team assignment `FUN_1803915a8` uses.
+  - `netmembers2`: `hr_mb_add` sets +0x72, +0x98 and +0x99 to the bot's team, and netcheck's player lines show all three. Untested.
+- Log lines: `netmembers: bot index N is a member (...)`, `kept bot member`, `the match is over: ... dropped by the game`, or why a bot was not added.
+- Validation: `native\build.bat netmembers1` built `native/bin/botcore_netmembers1.dll` (not in Git) with no new warnings. All 73 `tools/test_*.py` files and the pool checks pass. **Untested in game**: whether the host stays stable with bot members (lobby, MCC's screens, the next match); whether a joined Xbox or PC friend sees the 3 bots with their teams and animations; and whether it disconnects them.
+- **Friend run** (netmembers2, SnypeShee on Xbox, two matches): the 3 member bots showed on his scoreboard on the right team, with no red reticle on teammates, and he stayed connected. They still skated (fixed by netrelay, above), and the other bots were missing. One start hung at 0 s with friends, with no member writes that session; the cause is unknown, and later starts worked.
+
+### Reach netbots: a log-only check of the player adds the host applies, 2026-11-15
+
+The owner: Xbox friends joined his Reach matches with `netbots=2`, and "the same bugs from before were still there": "Skating, and same team red reticles".
+
+- His log (`botcore_nodemonwheel.log`) had SnypeShee, on their own machine, in 5 Reach matches. Every bot's add was queued (14-15 a match), none refused or dropped, and the host played as before. The friend's game still had no players for the bots, even the three on the host's machine.
+- Every machine applies the simulation queue, the host too. So the host can show whether the adds go through at all, without the friend's log (an Xbox has none).
+- `native/reach.cpp` `hr_chk_hook`, hooked only with `netbots` on:
+  - `FUN_1803c4004` (one queue entry applied): logs `netcheck: queue entry type 9 applied, sequence N, B bytes`.
+  - `FUN_180418ff8` (one decoded player record applied): logs its index, type, identifier, machine, controller, user, team, and `applied` or `refused`.
+  - Both call the game's own code first and change nothing. 300 lines per load at most. Not hooked if their first bytes differ from this `haloreach.dll` build.
+- Reading it: on the host each bot's add should show as type 3, `refused` (the slot is already that bot's). If our entries never show up, they never leave the host. If they show up as other values than we sent, the encoding is wrong.
+- Validation: `native\build.bat netcheck1` built `native/bin/botcore_netcheck1.dll` (not in Git). All 73 `tools/test_*.py` files pass. Untested in game.
+
 ### Warthogs drive on in a fight; Ghosts hold the boost on a run-over; a boost recorder, 2026-11-14
 
 The owner: "I dont want any warthog driver to circle in a fight, just stick to their normal pathing. Also I want the ghost to boost when they go to run over a person. It makes it better. boosting on controller is my left trigger if that helps and you have to hold it down".
@@ -482,6 +1093,13 @@ The owner, after the Halo 2 Battle Rifle change below: "Do H2a, Halo 3, And Halo
 - Brain (`brain/bot.py` `demon_precision_snap`, was `h2_demon_br`; `DEMON_SNAP_GAMES`): Demon only, on foot, in Halo 2, H2A and Halo 3, with any gun in `PRECISION` (Battle Rifle, Covenant Carbine, Magnum, Sniper Rifle, Beam Rifle, and the other games' names, which never match there). The same three places as below: the trigger goes with the sight of him, the press snaps to his head, `fire_gate` lets it through. Reach and Halo 4 Demons keep their own paths; Legendary, Mythic, Blind and the lower tiers are unchanged.
 - Validation: `tools/test_h2_demon_br.py` rewritten for the three games and five guns (automatics, shotgun, rockets and sword excluded; CE, Reach, Halo 4 excluded; Legendary, Blind, Heroic, Mythic excluded). All 726 `tools/test_*.py` pass. Not yet played in MCC, and there are no H2A or Halo 3 recordings: the generic head point (feet + 0.62) is untested against H2A's raised body report (`H2A_FEET`) and a crouched target, and the Carbine's and Beam Rifle's hits are unmeasured.
 
+### Halo 2 Demon's Battle Rifle fires on sight, 2026-11-14
+
+The owner: "Check the bot Parkerr and see why he doesnt hit as much as Halo 4 or Halo reach". Midship (20261114-152922), Parkerr (Demon, Battle Rifle): 2-9. His presses landed like the other games' Demons (damage within 0.35 s on 55% of presses; Reach Demon 55%, Halo 4 65%), but the trigger was allowed only 52% of his fight time (Halo 4 Demon 78%) and fights ran 5.1 s (2.3 s). Reach's DMR and Halo 4's guns fire on the sight of him and snap the press to the part; Halo 2's BR waited on the bot's own turn-capped aim.
+
+- Brain (`brain/bot.py` `h2_demon_br`): Halo 2 (not H2A) Demon, Battle Rifle, on foot. In `fight` the trigger goes with the sight of him and a clear line (as Reach's DMR); in `think` the press snaps to his head (`head_solution`) past the turn cap; `fire_gate` lets that press through for the selected man. Legendary, Blind, Mythic, other guns and other games are unchanged.
+- Validation: `tools/test_h2_demon_br.py` is new (4 tests: only H2 Demon's BR on foot; the press snaps to the head; Legendary and Halo 3 keep their aim; the Demon fires before Legendary's aim settles). All 726 `tools/test_*.py` pass. Not yet played in MCC: whether the snapped bursts land and the fights end sooner is untested.
+
 ### No Demon Wheelman, 2026-11-14
 
 The owner: "make it to where bots that dont drive passenger vehicles cannot get wheelman". Demon is the one difficulty that never takes a Warthog's, Mongoose's or Ghost's wheel (`vehicles.DEMON_NO_DRIVE`), so a Demon Wheelman only ever went for a tank or aircraft.
@@ -489,13 +1107,6 @@ The owner: "make it to where bots that dont drive passenger vehicles cannot get 
 - Brain (`brain/profiles.py` `make_profile`): a Demon given the Wheelman style plays as a Flanker (the Wheelman's own on-foot traits). Every other difficulty, Mythic included, keeps Wheelman.
 - Menus (`native/bots_panel.h` `HB_STYLE_WHEELMAN`, `hb_style_fits`; `native/bots_panel.cpp`): the bot editor greys out Wheelman for a Demon (tooltip: Demon never drives a Warthog, Mongoose or Ghost); Quick setup's style list does the same when the difficulty is Demon. A Demon set to Wheelman any other way (its difficulty changed, the "for everyone" bar, a Mixed deal, a saved lineup or a Bot Matchmaking saved bot) becomes Any style.
 - Validation: `tools/test_wheelman.py` +1 (a Demon Wheelman is a Flanker; every other difficulty keeps it; the header's rule). All 70 `tools/test_*.py` files and the pool checks pass; `native\build.bat nodemonwheel` built `botcore_nodemonwheel.dll`. Not yet seen in MCC.
-
-### Halo 2 Demon's Battle Rifle fires on sight, 2026-11-14
-
-The owner: "Check the bot Parkerr and see why he doesnt hit as much as Halo 4 or Halo reach". Midship (20261114-152922), Parkerr (Demon, Battle Rifle): 2-9. His presses landed like the other games' Demons (damage within 0.35 s on 55% of presses; Reach Demon 55%, Halo 4 65%), but the trigger was allowed only 52% of his fight time (Halo 4 Demon 78%) and fights ran 5.1 s (2.3 s). Reach's DMR and Halo 4's guns fire on the sight of him and snap the press to the part; Halo 2's BR waited on the bot's own turn-capped aim.
-
-- Brain (`brain/bot.py` `h2_demon_br`): Halo 2 (not H2A) Demon, Battle Rifle, on foot. In `fight` the trigger goes with the sight of him and a clear line (as Reach's DMR); in `think` the press snaps to his head (`head_solution`) past the turn cap; `fire_gate` lets that press through for the selected man. Legendary, Blind, Mythic, other guns and other games are unchanged.
-- Validation: `tools/test_h2_demon_br.py` is new (4 tests: only H2 Demon's BR on foot; the press snaps to the head; Legendary and Halo 3 keep their aim; the Demon fires before Legendary's aim settles). All 726 `tools/test_*.py` pass. Not yet played in MCC: whether the snapped bursts land and the fights end sooner is untested.
 
 ### Balance teams deals by points, 2026-11-14
 

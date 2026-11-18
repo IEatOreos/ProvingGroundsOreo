@@ -61,7 +61,8 @@ class World:
                            pool=os.path.join(tmp, "bot_pool_saved.ini"), bot_pool=os.path.join(tmp, "bot_pool.txt"),
                            emblems=os.path.join(tmp, "emblems"),
                            look_names=os.path.join(tmp, "look_names.h"), mcc_report=os.path.join(tmp, "none.xml"),
-                           maps=os.path.join(tmp, "maps"), snap=os.path.join(tmp, "no_figure_snap.exe"))
+                           maps=os.path.join(tmp, "maps"), snap=os.path.join(tmp, "no_figure_snap.exe"),
+                           matchmaking=None)                # (every match: test_matchmaking_only has the list)
 
     def write(s, name, text):
         with open(os.path.join(s.logs, name), "w", encoding="utf-8") as f:
@@ -227,8 +228,10 @@ def test_commendations():
         base = sr.credits(oreo["g"]["reach"]["cats"]["all"], worth)
         # One Shot (50 headshots) and Assistant (60 assists) reach Iron: 150 + 150
         assert oreo["comm"]["one_shot"] == 50 and oreo["comm"]["assistant"] == 60 and oreo["comm_cr"] == 300, oreo["comm"]
-        assert oreo["cr"] == base + 300 and data["commendations"]["credits"] is True, (oreo["cr"], base)
-        assert len(data["commendations"]["list"]) == 19 and data["commendations"]["list"][0]["from"] in ("report", "matches", "kills")
+        # (and, Nov 17, the challenges its match finished on that day and week)
+        assert oreo["cr"] == base + 300 + oreo["chal"]["cr"] and data["commendations"]["credits"] is True, (oreo["cr"], base)
+        assert len(data["commendations"]["list"]) == 23 and data["commendations"]["list"][0]["from"] in ("report", "matches", "kills")
+        assert oreo["comm"]["loyal_soldier"] == 1 and oreo["comm"]["mvp"] == 0, oreo["comm"]   # (Nov 17: one game to the end)
         assert sum(c["set"] == "mp" for c in data["commendations"]["list"]) == 14 and len(data["commendations"]["badges"]) == 2
 
 
@@ -245,7 +248,8 @@ def test_proving_grounds_commendations():
     assert sr.feed_feats([], {"A"}) == {}
     _, comms = sr.load_commendations()
     keys = [c["key"] for c in comms]
-    assert len(comms) == 19 and keys[-5:] == ["victor", "first_blood", "closer", "grudge_match", "medal_collector"], keys
+    assert len(comms) == 23 and keys[14:19] == ["victor", "first_blood", "closer", "grudge_match", "medal_collector"], keys
+    assert keys[19:] == ["mvp", "game_changer", "positive_thinking", "loyal_soldier"], keys   # (Nov 17, the owner's four)
     g = {"medals": {"8": 2, "9": 0, "111": 5}, "cats": {"all": sr.blank() | {"wins": 12}}, "weapons": {}, "kill_games": 1,
          "feats": {"first": 6, "closer": 0, "grudge": 2}, "maps": {"reach_70_boneyard": {"wins": 2}, "reach_forge_halo": {"wins": 0}, "x": {"wins": 1}}}
     n = sr.commendation_counts(g, comms, {})
@@ -255,6 +259,30 @@ def test_proving_grounds_commendations():
     assert [b["key"] for b in badges] == ["map_master", "hometown_hero"] and len(badges[0]["maps"]) == 20
     assert set(badges[0]["maps"]) == set(sr.MAP_NAMES)
     assert sr.badge_counts(g, badges) == {"map_master": ["reach_70_boneyard"]}
+
+
+def test_mvp_game_changer_positive_loyal():
+    """(Nov 17) MVP: the most points in a Slayer game, ties too; Game Changer: the same in an objective game (not in
+    Slayer, nor Invasion or Infection); Positive Thinking: more kills than deaths in a game played to the end; Loyal
+    Soldier: a game played to the end. Points need MCC's report; without one a game counts as played to the end. The
+    counts reach the commendations, from the reports (the points ones) or every counted match."""
+    row = {"kills": 10, "deaths": 4}
+    assert sr.match_deeds(row, {"score": 25, "completed": 1}, "slayer", 25) == {"mvp": 1, "game_changer": 0, "positive": 1, "loyal": 1}
+    assert sr.match_deeds(row, {"score": 25, "completed": 1}, "ctf", 25)["game_changer"] == 1
+    assert sr.match_deeds(row, {"score": 25, "completed": 1}, "invasion", 25)["game_changer"] == 0
+    assert sr.match_deeds(row, {"score": 24, "completed": 1}, "slayer", 25)["mvp"] == 0             # (not the top)
+    assert sr.match_deeds(row, {"score": 0, "completed": 1}, "koth", 0)["game_changer"] == 0        # (nobody scored)
+    quit_ = sr.match_deeds(row, {"score": 25, "completed": 0}, "slayer", 25)
+    assert quit_["positive"] == 0 and quit_["loyal"] == 0 and quit_["mvp"] == 1
+    assert sr.match_deeds({"kills": 3, "deaths": 3}, {"score": 3}, "slayer", 9) == {"mvp": 0, "game_changer": 0, "positive": 0, "loyal": 1}
+    assert sr.match_deeds(row, None, "slayer", 0) == {"mvp": 0, "game_changer": 0, "positive": 1, "loyal": 1}
+    _, comms = sr.load_commendations()
+    g = {"medals": {}, "cats": {"all": sr.blank()}, "weapons": {}, "kill_games": 0,
+         "deeds": {"mvp": 3, "game_changer": 1, "positive": 7, "loyal": 30}}
+    n = sr.commendation_counts(g, comms, {})
+    assert (n["mvp"], n["game_changer"], n["positive_thinking"], n["loyal_soldier"]) == (3, 1, 7, 30), n
+    src = {c["key"]: sr.commendation_source(c["count"]) for c in comms}
+    assert (src["mvp"], src["game_changer"], src["positive_thinking"], src["loyal_soldier"]) == ("report", "report", "matches", "matches")
 
 
 def test_forge_layouts_and_tier_banners():
@@ -505,6 +533,109 @@ def test_everyone_restarts_at_zero():
         assert w.build()["matches"] == []
 
 
+def test_matchmaking_only():
+    """(Nov 17, the owner: "Matchmaking only") the site shows only the matches Proving Grounds named in its list: a
+    custom game counts in totals.txt but adds no match, no stats and no bot to the site; no list yet, no matches. The
+    game writes the list where the site reads it, by MCC's GameUniqueId."""
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.paths.matchmaking = os.path.join(w.paths.store, "matchmaking.txt")
+        w.write("trace_reach_forge_halo_20261117-180000.carnage.xml", report("pg-1", [
+            row(ME, "Me", 0, 0, 10, 4, 2, 600), row(bot(1), "Wheezy", 1, 1, 4, 10, 1, 600)]))
+        w.write("trace_reach_70_boneyard_20261117-183000.carnage.xml", report("custom-1", [
+            row(ME, "Me", 0, 0, 9, 1, 0, 600), row(bot(1), "Wheezy", 1, 1, 1, 9, 0, 600),
+            row(bot(3), "CustomOnly", 1, 1, 0, 0, 0, 600)]))
+        w.career()
+        assert w.totals()["Wheezy"][0] == 2 and "CustomOnly" in w.totals()
+        data = w.build()
+        assert data["matches"] == [] and data["players"] == [], data["players"]
+        os.makedirs(w.paths.store, exist_ok=True)
+        with open(w.paths.matchmaking, "w", encoding="utf-8") as f:
+            f.write("# The matches Proving Grounds started\npg-1\t2026-11-17 18:00\tARENA\n\n")
+        assert sr.load_matchmaking(w.paths.matchmaking) == {"pg-1"} and sr.load_matchmaking(None) is None
+        data = w.build()
+        assert [m["id"] for m in data["matches"]] == ["pg-1"] and [p["name"] for p in data["players"]] == ["Wheezy"]
+        s = player(data, "Wheezy")["g"]["all"]["cats"]["all"]
+        assert (s["games"], s["kills"], s["deaths"]) == (1, 4, 10), s
+    with open(os.path.join(HERE, "..", "native", "proving_grounds.cpp"), encoding="utf-8") as f:
+        cpp = f.read()
+    assert 'L"%s\\\\service_record"' in cpp and 'L"%s\\\\matchmaking.txt"' in cpp and "GameUniqueId=" in cpp
+    assert sr.Paths().matchmaking == os.path.join(sr.BIN, "service_record", "matchmaking.txt")
+
+
+def test_game_reads_the_sites_challenges():
+    """(Nov 17, the challenges in game: "They have to be connected") <site>/challenges.txt holds what data.js holds:
+    this week's weekly then today's dailies in the site's order with their names, targets, cR, icons and ends, and each
+    listed person's completed counts, challenge cR and progress on the live ones; the game reads it where it is written."""
+    import time as _time
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        os.makedirs(w.paths.store, exist_ok=True)
+        with open(os.path.join(w.paths.store, "people.json"), "w", encoding="utf-8") as f:
+            json.dump(["Me"], f)
+        w.write(f"trace_reach_forge_halo_{_time.strftime('%Y%m%d-%H%M%S')}.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 0, 25, 2, 4, 600), row(bot(1), "Wheezy", 1, 1, 2, 25, 0, 600)]))
+        w.career()
+        data = w.build()
+        with open(os.path.join(w.paths.out, "challenges.txt"), encoding="utf-8") as f:
+            rows = [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    C, me = data["challenges"], player(data, "Me")
+    by = {c["key"]: c for c in C["list"]}
+    want = []
+    for period in ("weekly", "daily"):
+        want.append(["period", period, C[period]["start"], str(int(C[period]["ends"]))])
+        want += [["challenge", period, k, by[k]["name"], by[k]["what"], str(by[k]["need"]), str(by[k]["cr"]), by[k]["icon"]]
+                 for k in C[period]["keys"]]
+    want.append(["person", "Me", str(me["chal"]["daily_done"]), str(me["chal"]["weekly_done"]), str(me["chal"]["cr"])])
+    want += [["progress", "Me", k, str(n)] for k, n in me["chal"]["now"].items()]
+    assert rows == want, (rows, want)
+    assert any(r[0] == "progress" and r[3] != "0" for r in rows) or not me["chal"]["now"], rows   # (the match counted)
+    with open(os.path.join(HERE, "..", "native", "proving_grounds.cpp"), encoding="utf-8") as f:
+        cpp = f.read()
+    assert "\\\\logs\\\\service_record\\\\challenges.txt" in cpp and "\\\\logs\\\\service_record\\\\icons\\\\%S.png" in cpp
+
+
+def test_credits_of_the_last_match():
+    """(Nov 17, the owner's level up bar after each game) last_match.txt: what the newest Proving Grounds match earned the
+    listed person, from where the last build stood, each kind of credit by ranks.json's worth and the rest as
+    Commendations; reported once; the next match starts from there."""
+    def report_lines(w):
+        with open(os.path.join(w.paths.out, "last_match.txt"), encoding="utf-8") as f:
+            return [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.paths.matchmaking = os.path.join(w.paths.store, "matchmaking.txt")
+        os.makedirs(w.paths.store, exist_ok=True)
+        with open(os.path.join(w.paths.store, "people.json"), "w", encoding="utf-8") as f:
+            json.dump(["Me"], f)
+        with open(w.paths.matchmaking, "w", encoding="utf-8") as f:
+            f.write("pg-1\npg-2\n")
+        w.build()                                           # (a build before any match: where Me stands, 0)
+        w.write("trace_reach_forge_halo_20261117-180000.carnage.xml", report("pg-1", [
+            row(ME, "Me", 0, 0, 10, 4, 2, 600, medals={8: 3}), row(bot(1), "Wheezy", 1, 1, 4, 10, 1, 600)]))
+        w.career()
+        data = w.build()
+        got = report_lines(w)
+        me = player(data, "Me")
+        assert got[0] == ["match", "pg-1"] and got[1] == ["person", "Me", "0", str(me["cr"])], got
+        lines = {l[2]: (l[3], int(l[4])) for l in got if l[0] == "line"}
+        assert lines["Game Completed"] == ("1", 1000) and lines["Victory"] == ("1", 1000), lines
+        assert lines["Kills"] == ("10", 1000) and lines["Assists"] == ("2", 100) and lines["Medals"] == ("3", 75), lines
+        assert sum(cr for _, cr in lines.values()) == me["cr"], (lines, me["cr"])
+        steps = [l for l in got if l[0] == "step"]
+        assert steps[0][2:4] == ["0", "Recruit"] and int(steps[-1][2]) == me["rank"] + 1, steps
+        w.build()                                           # (no new match: the report stays as it was)
+        assert report_lines(w) == got
+        first = me["cr"]
+        w.write("trace_reach_70_boneyard_20261117-183000.carnage.xml", report("pg-2", [
+            row(ME, "Me", 0, 1, 1, 6, 0, 600), row(bot(1), "Wheezy", 1, 0, 6, 1, 0, 600)]))
+        w.career()
+        data = w.build()
+        got = report_lines(w)
+        assert got[0] == ["match", "pg-2"] and got[1] == ["person", "Me", str(first), str(player(data, "Me")["cr"])], got
+        assert "Victory" not in {l[2] for l in got if l[0] == "line"}
+
+
 def test_rank_table_and_credits():
     worth, steps = sr.load_ranks()
     by = {s[0]: s[3] for s in steps}
@@ -518,6 +649,37 @@ def test_rank_table_and_credits():
     assert worth == {"game": 1000, "win": 1000, "kill": 100, "assist": 50, "medal": 25}, worth
     s = sr.blank() | {"games": 3, "wins": 2, "kills": 40, "assists": 10, "medals": 12, "deaths": 99}
     assert sr.credits(s, worth) == 3000 + 2000 + 4000 + 500 + 300
+
+
+def test_game_reads_the_sites_ranks():
+    """(Nov 17) <site>/ranks.txt, the ranks Proving Grounds' rows show beside the names: each listed player's rank
+    step and rank as the site has them (one table, one credits sum), people left off as on the site."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600), row(bot(2), "Oreo", 1, 0, 7, 0, 3, 600, medals={8: 3})]))
+        w.career()
+        data = w.build()
+        out = os.path.join(tmp, "game")
+        os.makedirs(out)
+        sr.write_game_ranks(data, types.SimpleNamespace(out=out))
+        with open(os.path.join(out, "ranks.txt"), encoding="utf-8") as f:
+            text = f.read()
+    assert "ranks.json" in text.splitlines()[0]
+    rows = [l.split("\t") for l in text.splitlines() if not l.startswith("#")]
+    assert [r[:3] for r in rows] == [[p["name"], str(p["rank"]), data["ranks"][p["rank"]][0]] for p in data["players"]], rows
+    assert not any(r[0] == "Me" for r in rows)
+    # (Nov 17) the player card's numbers, the site's: Reach games, K/D, win %, commendation progress, credits
+    oreo = next(r for r in rows if r[0] == "Oreo")
+    p = player(data, "Oreo")
+    assert oreo[:8] == ["Oreo", "0", "Recruit", "1", "7.00", "100", f"{p['comm_pct']:.1f}", str(p["cr"])], oreo
+    assert oreo[8:] == [str(p["chal"]["daily_done"]), str(p["chal"]["weekly_done"])], oreo   # (Reach's card: challenges)
+    assert p["cr"] > 0 and 0 <= p["comm_pct"] <= 100
+    assert sr.commendation_progress({"a": 5, "b": None}, [{"key": "a", "need": [1, 10]}, {"key": "b", "need": [1, 4]}]) == 25.0
+    with open(os.path.join(HERE, "..", "native", "proving_grounds.cpp"), encoding="utf-8") as f:
+        cpp = f.read()
+    assert "\\\\logs\\\\service_record\\\\ranks.txt" in cpp and "\\\\logs\\\\service_record\\\\ranks\\\\%d.png" in cpp
 
 
 def test_rank_from_reach_matches_only():
@@ -807,6 +969,135 @@ def test_whole_arsenal_listed():
     by_name = {names[k.split(":")[1]] for k in weapons}
     assert {"DMR", "Magnum", "Energy Sword", "Focus Rifle", "Fuel Rod Gun"} <= by_name
     assert not by_name & {"Fall", "Suicide", "Guardians", "SMG", "Battle Rifle", "Brute Shot"}   # (not Reach weapons)
+
+
+def test_daily_and_weekly_challenges():
+    """(Nov 17) Challenges: each day's and week's drawn by its date alone; a match counts in its local day and its
+    Monday week; one finished in its window adds its cR (ranks.json challenge_credits), today's and this week's
+    progress shown; filters, one-match feats, medals, weapons; the list itself well formed."""
+    import datetime as dt
+    table = sr.load_challenges()
+    keys = [c["key"] for c in table["daily"] + table["weekly"]]
+    assert len(keys) == len(set(keys)) and len(table["daily"]) >= 40 and len(table["weekly"]) >= 15
+    assert (table["daily_count"], table["weekly_count"]) == (4, 1)
+    for c in table["daily"] + table["weekly"]:
+        how = c["count"]
+        assert c["need"] > 0 and c["cr"] > 0 and c["name"] and c["what"] and c["icon"], c
+        assert sum(k in how for k in ("stat", "medals", "group", "weapons", "vehicles")) == 1, c
+        assert how.get("stat") in (None, "kills", "assists", "wins", "games", "medals", "kg", "km", "score", "spree", "plus", "top"), c
+    assert sr.challenge_pick("daily", "2026-11-17", table["daily"], 4) == sr.challenge_pick("daily", "2026-11-17", table["daily"], 4)
+    assert sr.challenge_pick("daily", "2026-11-17", table["daily"], 4) != sr.challenge_pick("daily", "2026-11-18", table["daily"], 4)
+    assert len(set(sr.challenge_pick("daily", "2026-11-17", table["daily"], 4))) == 4
+    at = lambda y, mo, d, h: dt.datetime(y, mo, d, h).timestamp()
+    assert sr.challenge_starts(at(2026, 11, 17, 23)) == ("2026-11-17", "2026-11-16")   # (a Tuesday: its Monday)
+    assert sr.challenge_starts(at(2026, 11, 16, 0)) == ("2026-11-16", "2026-11-16")
+    mine = {"daily": [{"key": "ten", "count": {"stat": "kills"}, "need": 10, "cr": 1000},
+                      {"key": "big", "count": {"stat": "kills", "at_least": 15}, "need": 1, "cr": 500}],
+            "weekly": [{"key": "wins", "count": {"stat": "wins"}, "need": 2, "cr": 5000}], "daily_count": 2, "weekly_count": 1}
+
+    def crow(t, kills, won, **more):
+        return {"t": t, "cat": "slayer", "map": "reach_70_boneyard", "games": 1, "wins": int(won), "kills": kills, "deaths": 3,
+                "assists": 0, "plus": kills - 3, "medals_n": 0, "kg": 0, "km": 0, "score": 0, "spree": 0, "top": 0,
+                "medal": {}, "weapons": {}} | more
+    rows = [crow(at(2026, 11, 16, 20), 6, True), crow(at(2026, 11, 16, 21), 6, False),   # Monday: 12 kills, no big game
+            crow(at(2026, 11, 17, 20), 16, True)]                                         # Tuesday: 16 kills in one
+    got = sr.challenge_progress(rows, mine, {}, at(2026, 11, 17, 22))
+    assert got == {"cr": 1000 + 1000 + 500 + 5000, "daily_done": 3, "weekly_done": 1, "now": {"ten": 16, "big": 1, "wins": 2}}, got
+    nxt = sr.challenge_progress(rows, mine, {}, at(2026, 11, 23, 9))           # (next Monday: nothing now, credits kept)
+    assert nxt["cr"] == got["cr"] and nxt["now"] == {}
+    v = lambda how, r: sr.challenge_value({"count": how}, r, {"medal_headshot": "7"}, {"3": "multikill"}, {"reach:24"})
+    r = crow(0, 12, True, cat="ctf", medal={"7": 4, "3": 2}, weapons={"reach:6": 5, "reach:24": 2})
+    assert v({"stat": "kills", "cat": ["slayer"]}, r) == 0 and v({"stat": "kills", "cat": ["ctf"]}, r) == 12
+    assert v({"stat": "wins", "map": ["reach_30_settlement"]}, r) == 0 and v({"stat": "kills", "map": ["reach_70_boneyard"]}, r) == 12
+    assert v({"medals": ["medal_headshot"]}, r) == 4 and v({"group": "multikill"}, r) == 2
+    assert v({"weapons": [6]}, r) == 5 and v({"vehicles": True}, r) == 2 and v({"stat": "plus", "at_least": 10}, r) == 0
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 0, 30, 4, 2, 600), row(bot(1), "Wheezy", 1, 1, 4, 30, 1, 600)]))
+        w.career()
+        data = w.build()
+        C = data["challenges"]
+        assert len(C["daily"]["keys"]) == 4 and len(C["weekly"]["keys"]) == 1 and C["credits"] is True
+        assert len(C["list"]) == len(keys) and C["daily"]["ends"] > C["daily"]["ends"] - 86400
+        wheezy = player(data, "Wheezy")
+        assert set(wheezy["chal"]) == {"cr", "daily_done", "weekly_done", "now"}
+        s = wheezy["g"]["reach"]["cats"]["all"]
+        assert wheezy["cr"] == sr.credits(s, sr.load_ranks()[0]) + wheezy["comm_cr"] + wheezy["chal"]["cr"]
+
+
+def test_clan_rewards():
+    """(Nov 18) Clan rewards: the table well formed; a clan's weekly challenge counts every member's matches of its
+    week together and adds its cR once; this week's MVP; the history (first match, ranks reached ending at the rank its
+    cR has now, games milestones, the week's top clan); the owner's settings (a reward off, unlocks moved, a bad change
+    refused, a week's challenge picked, an emblem) kept and laid over the defaults."""
+    import datetime as dt
+    worth, steps = sr.load_ranks()
+    table = sr.load_clan_table()
+    names = sr.rank_names(steps)
+    keys = [r["key"] for r in table["rewards"]]
+    assert keys == ["frame", "tag", "banner", "ribbon", "emblem", "challenge", "rivals", "hall", "history", "crown"]
+    for r in table["rewards"]:
+        assert r["name"] and r["what"] and isinstance(r["on"], bool), r
+        if "at" in r:
+            assert len(r["at"]) == len(r["levels"]) and all(a in names for a in r["at"]), r
+            assert [names.index(a) for a in r["at"]] == sorted(names.index(a) for a in r["at"]), r
+    for c in table["challenges"]:
+        assert c["need"] > 0 and c["cr"] > 0 and c["name"] and c["what"] and c["icon"] and sum(
+            k in c["count"] for k in ("stat", "medals", "group", "weapons", "vehicles")) == 1, c
+    at = lambda d, h: dt.datetime(2026, 11, d, h).timestamp()
+
+    def crow(t, kills, won):
+        return {"t": t, "cat": "slayer", "map": "", "games": 1, "wins": int(won), "kills": kills, "deaths": 3, "assists": 0,
+                "plus": kills - 3, "medals_n": 0, "kg": 0, "km": 0, "score": 0, "spree": 0, "top": 0, "medal": {}, "weapons": {}}
+    mine = {"rewards": table["rewards"], "challenges": [{"key": "k30", "count": {"stat": "kills"}, "need": 30, "cr": 100000,
+                                                          "name": "n", "what": "w", "icon": "kills"}]}
+    rows = {"A": [crow(at(10, 20), 20, True), crow(at(16, 20), 10, True)],     # (last week: 20 + 15 kills together)
+            "B": [crow(at(11, 20), 15, False), crow(at(17, 20), 5, False)],
+            "C": [crow(at(12, 20), 2, False)]}
+    out_players = [{"name": n, "clan": clan, "cr": sum(sr.match_credits(r, worth) for r in rows[n]), "emblem": "e.png"}
+                   for n, clan in (("A", "RED"), ("B", "red "), ("C", "BLU"))]
+    settings = {"rewards": {}, "weeks": {}, "emblems": {"red": "B", "blu": "Nobody"}}
+    rewards = sr.clan_rewards(mine, settings, steps)
+    clans, week = sr.clan_block(out_players, rows, mine, settings, rewards, {}, worth, steps, at(17, 22))
+    red, blu = clans["red"], clans["blu"]
+    assert (red["bonus"], red["done"], red["now"]) == (100000, 1, 15) and (blu["bonus"], blu["now"]) == (0, 0)
+    assert red["mvp"] == ["A", sr.match_credits(rows["A"][1], worth)] and blu["mvp"] is None
+    assert red["emblem"] == "B" and blu["emblem"] is None              # (a name not in the clan: none)
+    kinds = [e[1] for e in red["history"]]
+    assert kinds[-1] == "first" and "top" in kinds and "top" not in [e[1] for e in blu["history"]]
+    total = sum(p["cr"] for p in out_players[:2]) + 100000
+    reached = [e[2] for e in red["history"] if e[1] == "rank"]
+    assert reached and reached[0] == steps[max(i for i, s in enumerate(steps) if s[2] == 0 and s[3] * 10 <= total)][1]
+    assert week["start"] == "2026-11-16" and week["key"] == "k30" and week["picked"] is False
+    off = sr.clan_rewards(mine, {"rewards": {"challenge": {"on": False}}, "weeks": {}, "emblems": {}}, steps)
+    assert sr.clan_block(out_players, rows, mine, settings, off, {}, worth, steps, at(17, 22))[0]["red"]["bonus"] == 0
+    moved = sr.clan_rewards(mine, {"rewards": {"tag": {"at": ["Recruit", "Recruit", "Hero"]},
+                                               "frame": {"at": ["Hero", "Private", "Major"]}}, "weeks": {}, "emblems": {}}, steps)
+    assert moved[1]["at"] == ["Recruit", "Recruit", "Hero"] and moved[0]["at"] == table["rewards"][0]["at"]   # (falling: kept)
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = sr.Paths(store=tmp)
+        got = sr.save_clan_rewards(paths, {"crown": {"on": False}, "ribbon": {"on": True, "at": ["Major"]}}, steps)
+        assert [r["on"] for r in got if r["key"] == "crown"] == [False] and [r["at"] for r in got if r["key"] == "ribbon"] == [["Major"]]
+        for bad in ({"nope": {"on": True}}, {"tag": {"at": ["Major"]}}, {"ribbon": {"at": ["General Grade 9"]}}, []):
+            try:
+                sr.save_clan_rewards(paths, bad, steps)
+                raise AssertionError(bad)
+            except ValueError:
+                pass
+        assert sr.load_clan_settings(paths)["rewards"]["crown"] == {"on": False}
+        assert all(r["on"] for r in sr.save_clan_rewards(paths, {}, steps))   # (the defaults again)
+        pick = table["challenges"][-1]["key"]
+        assert sr.save_clan_week(paths, pick, at(17, 9)) == pick
+        assert sr.load_clan_settings(paths)["weeks"] == {"2026-11-16": pick}
+        sr.save_clan_week(paths, "", at(17, 9))
+        assert sr.load_clan_settings(paths)["weeks"] == {}
+        assert sr.save_clan_emblem(paths, "RED", "B") == "B" and sr.load_clan_settings(paths)["emblems"] == {"red": "B"}
+        try:
+            sr.save_clan_week(paths, "not_one", at(17, 9))
+            raise AssertionError("a made-up challenge")
+        except ValueError:
+            pass
 
 
 def test_png():

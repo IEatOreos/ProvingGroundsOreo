@@ -308,7 +308,7 @@ static int hr_net_send(const uint8_t* rec) {
 
 // the record for a bot just made at index (its configuration as passed to player_new_at); sent from the next tick
 static void hr_net_add(uint8_t* tls, int index, int slot, const uint8_t* cfg) {
-    if (!g_netbots || index < 0 || index >= HB_MAX_PLAYERS) return;
+    if ((g_netbots != 1 && g_netbots != 2) || index < 0 || index >= HB_MAX_PLAYERS) return;
     uint8_t* p = hr_player(tls, index);
     uint8_t* gg = *(uint8_t**)(tls + 0x48);
     if (!p || !gg) return;
@@ -351,6 +351,289 @@ static void hr_net_pump(uint8_t* gg) {
         if (why == 0 || why == 1 || why == 3 || why == 9) g_hr_net_due[i] = 0;    // sent, or never will be
         g_hr_net_why[i] = why;
     }
+}
+
+// (custom, Nov 15) netbots=3: the first three bots join the session's membership, which the host sends to every
+// machine ("membership-update", registered at FUN_180427e93). Each machine then makes its game players from its own
+// copy (the diff FUN_18041f510 -> type-9 records -> FUN_1804192c4). The queued adds of netbots=1/2 stayed on the host:
+// the friend's game never made the bots (docs/REACH_NETWORK_PLAYERS_2026-11-12.md, "The session membership").
+// The session S = *(*(0x184e0e910) + 0x18), its membership M = S + 0x30; S offsets:
+// - +0x40 the host's peer, +0x4464 this machine's
+// - peers of 0x158 from +0x60: +0x1A0 the peer's player count, +0x1A4 + user * 4 its user slot -> player index
+//   (4 slots: the host keeps slot 0)
+// - +0x173C players mask, players of 0xB0 from +0x1740: +4 identifier, +0xC peer, +0x10 user slot, +0x1C the
+//   record's "user" (0 for the owner's), +0x20 the 0x80-byte configuration
+// - +0x2240 join numbers, +0x38 and +0x4468 update numbers
+// As the game's own add FUN_18039d620 does, but at the bot's own index (so the host's diff finds the slot already
+// that bot's, with its identifier, and its add is refused: the bot stays as hr_add_bot made it, no split screen):
+// FUN_18039d8a8 fills the entry, then the configuration, the join and update numbers, and FUN_1803fa3d8 marks the
+// membership changed. (The add's FUN_18000d6b8, MCC's online session, is left out of this test.) Host only.
+static const uintptr_t HR_MB_FILL = 0x39D8A8, HR_MB_REMOVE = 0x39D7F8, HR_MB_DIRTY = 0x3FA3D8, HR_MB_LOCALDROP = 0x394D48;
+typedef void(__fastcall* hr_mb_fill_fn)(uint8_t* m, int index, const uint64_t* id, int peer, int user, int join, char flag);
+typedef void(__fastcall* hr_mb_remove_fn)(uint8_t* m, int index);
+typedef char(__fastcall* hr_mb_dirty_fn)(uint8_t* obj, int a, int b, int c, uint64_t d);
+static volatile ULONGLONG g_hr_tick_ms;          // the last players update (a match is ticking)
+long report_results_built();                       // report.cpp: MCC's post-game results built so far (-1: unknown)
+static volatile long g_hr_results_at_add = -1;    // that count when this match's last bot member was made
+
+static bool hr_mb_code_ok() {
+    static const struct { uintptr_t rva; uint8_t b[6]; } want[] = {
+        { HR_MB_FILL, { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x48 } }, { HR_MB_REMOVE, { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57 } },
+        { HR_MB_DIRTY, { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57 } },
+        { 0x39D0AC /* HR_PEER_REMOVE */, { 0x48, 0x89, 0x5C, 0x24, 0x08, 0x48 } } };
+    for (const auto& w : want) if (memcmp(g_hr + w.rva, w.b, sizeof w.b)) return false;
+    return true;
+}
+static bool hr_mb_is_bot(const uint8_t* s, int index) {
+    return index >= 0 && index < HB_MAX_PLAYERS && ((*(uint32_t*)(s + 0x173C) >> index) & 1) &&
+           (*(uint64_t*)(s + 0x1744 + (size_t)index * 0xB0) >> 32) == 0xB07B07B0u;
+}
+
+// a live bot of this match (hr_add_bot's list)
+static bool hr_mb_current(uint8_t* tls, int index) {
+    if (!tls || !hr_live(tls, index)) return false;
+    for (int k = 0; k < HB_MAX_PLAYERS; k++) if (g_shm->bot_player_index[k] == index) return true;
+    return false;
+}
+
+// (netbots=4) bots share the host peer's user slots 1..3. The game's remove (FUN_18039d950) clears the peer's
+// slot -> player entry of the removed member's slot even when another member still has that slot: pointed back at
+// one that does, so the game's own drop after the match (FUN_180394d48 reads that entry) still finds the bots
+static void hr_mb_remove_bot(uint8_t* s, int index) {
+    const uint8_t* e = s + 0x1740 + (size_t)index * 0xB0;
+    int peer = *(int32_t*)(e + 0xC), user = *(int32_t*)(e + 0x10);
+    ((hr_mb_remove_fn)(g_hr + HR_MB_REMOVE))(s + 0x30, index);
+    if (peer < 0 || peer > 16 || user < 0 || user > 3) return;
+    int32_t* map = (int32_t*)(s + 0x1A4 + (size_t)peer * 0x158);
+    if (map[user] != -1) return;
+    for (int j = 0; j < HB_MAX_PLAYERS; j++) {
+        const uint8_t* o = s + 0x1740 + (size_t)j * 0xB0;
+        if (hr_mb_is_bot(s, j) && *(int32_t*)(o + 0xC) == peer && *(int32_t*)(o + 0x10) == user) { map[user] = j; break; }
+    }
+}
+
+// bot members that are no live bot of this match (all: every bot member)
+static int hr_mb_sweep(uint8_t* tls, uint8_t* s, bool all) {
+    int n = 0;
+    for (int j = 0; j < HB_MAX_PLAYERS; j++) {
+        if (!hr_mb_is_bot(s, j) || (!all && hr_mb_current(tls, j))) continue;
+        hr_mb_remove_bot(s, j);
+        n++;
+    }
+    return n;
+}
+
+// (custom, Nov 17) netbots=5, an experiment: stand-in machines for bots past the third. A machine holds 4 players
+// (the player record keeps the user in 2 bits; netbots=4, sharing the host's machine, kicked a joined friend twice), so
+// bots 4.. go on made-up peers of the membership, 4 each, from peer 16 down. A peer entry (S + 0x60 + p * 0x158): +0
+// its network address, whose hash is the machine id (FUN_1803a922c), +8/+0xC/+0x10 as FUN_18039cf80 sets them, +0x18
+// its properties, +0x138, +0x140 player count, +0x144 its 4 user slots; S+0x58 the peer count, S+0x5C the mask, S +
+// 0x446C + p * 12 the observer (connection; none here: -1, as FUN_18039d0ac leaves a removed peer). The host's own
+// entry is the template, with address and +0x138 0xB07B07B0'000000xx. Made without FUN_18039cf80, so this machine opens
+// no connection to it. A joined machine will (FUN_18039e47c -> FUN_18039cf80 -> FUN_1803f6fc0) and fail: what it does
+// then is what this test finds out. Removed with its bots at the match's end. Host only, the match only
+static const uintptr_t HR_PEER_REMOVE = 0x39D0AC;
+typedef void(__fastcall* hr_peer_remove_fn)(uint8_t* m, int peer);
+static bool hr_peer_standin(const uint8_t* s, int p) {
+    return p >= 0 && p <= 16 && ((*(uint32_t*)(s + 0x5C) >> p) & 1) &&
+           (*(uint64_t*)(s + 0x60 + (size_t)p * 0x158) >> 32) == 0xB07B07B0u;
+}
+static int hr_peer_make(uint8_t* s, int host, int k) {   // stand-in k (0, 1, 2): its peer index, or -1
+    int p = 16 - k;
+    if (hr_peer_standin(s, p)) return p;
+    if ((*(uint32_t*)(s + 0x5C) >> p) & 1) { logf("netpeers: peer %d is a real machine's: no stand-in %d", p, k); return -1; }
+    uint8_t* pe = s + 0x60 + (size_t)p * 0x158;
+    memcpy(pe, s + 0x60 + (size_t)host * 0x158, 0x158);
+    uint64_t addr = 0xB07B07B000000000ull | (uint64_t)(0x10 + k);
+    *(uint64_t*)pe = addr;
+    *(uint64_t*)(pe + 0x138) = addr;
+    *(int32_t*)(pe + 0x140) = 0;
+    for (int u = 0; u < 4; u++) *(int32_t*)(pe + 0x144 + 4 * u) = -1;
+    *(uint64_t*)(s + 0x446C + (size_t)p * 12) = 0;
+    *(int32_t*)(s + 0x4474 + (size_t)p * 12) = -1;
+    *(int32_t*)(s + 0x4470 + (size_t)p * 12) = -1;
+    *(uint32_t*)(s + 0x5C) |= 1u << p;
+    ++*(int32_t*)(s + 0x58);
+    logf("netpeers: stand-in machine %d is peer %d (address %016llx)", k, p, (unsigned long long)addr);
+    return p;
+}
+// the stand-ins without bots (all: every stand-in, its bots first)
+static int hr_peer_clear(uint8_t* s, bool all) {
+    int n = 0;
+    for (int p = 0; p <= 16; p++) {
+        if (!hr_peer_standin(s, p)) continue;
+        bool has = false;
+        for (int j = 0; j < HB_MAX_PLAYERS; j++) {
+            if (!((*(uint32_t*)(s + 0x173C) >> j) & 1) || *(int32_t*)(s + 0x1740 + (size_t)j * 0xB0 + 0xC) != p) continue;
+            if (all && hr_mb_is_bot(s, j)) hr_mb_remove_bot(s, j);
+            else has = true;
+        }
+        if (has) continue;
+        ((hr_peer_remove_fn)(g_hr + HR_PEER_REMOVE))(s + 0x30, p);
+        logf("netpeers: stand-in peer %d removed", p);
+        n++;
+    }
+    if (n) {
+        ((hr_mb_dirty_fn)(g_hr + HR_MB_DIRTY))(*(uint8_t**)(s + 0x30) + 0x59AA8, 0, 0, 0, 0);
+        ++*(int32_t*)(s + 0x38);
+        ++*(int32_t*)(s + 0x4468);
+    }
+    return n;
+}
+
+static void hr_mb_add(uint8_t* tls, int index, int slot, const uint8_t* cfg) {
+    // netbots=3: the first three bots (user slots 1..3); 5: also bots 4.. on stand-in machines (above). Every machine
+    // makes a game player for a member only if no player of that machine has the member's record "user" (entry +0x1C)
+    // yet (FUN_18041f510, the members -> players diff), and the player record keeps it in 2 bits
+    if ((g_netbots != 3 && g_netbots != 5) || slot < 0 || (g_netbots == 3 && slot > 2) || slot >= HB_MAX_PLAYERS ||
+        index < 0 || index >= HB_MAX_PLAYERS) return;
+    if (!hr_mb_code_ok()) { logf("netmembers: not this haloreach.dll's code"); return; }
+    uint8_t* so = *(uint8_t**)(g_hr + HR_SESSION);
+    uint8_t* s = so ? *(uint8_t**)(so + 0x18) : nullptr;
+    uint8_t* p = hr_player(tls, index);
+    if (!s || !p) { logf("netmembers: no session for index %d", index); return; }
+    int state = *(int32_t*)(s + 0x60EF8), host = *(int32_t*)(s + 0x40), peer = *(int32_t*)(s + 0x4464);
+    if ((uint32_t)(state - 4) > 5 || peer < 0 || peer > 16 || host != peer) {
+        logf("netmembers: index %d not added (state %d, host peer %d, this peer %d)", index, state, host, peer);
+        return;
+    }
+    uint8_t* m = s + 0x30;
+    if (int n = hr_mb_sweep(tls, s, false)) logf("netmembers: removed %d bot member(s) left from before", n);
+    if (g_netbots == 5) hr_peer_clear(s, false);     // stand-ins left without bots
+    int host_peer = peer;
+    int user = slot + 1;
+    if (slot > 2) {                                   // (netbots=5) bot 4..: a stand-in machine, user 0..3
+        peer = hr_peer_make(s, host_peer, (slot - 3) / 4);
+        if (peer < 0) return;
+        user = (slot - 3) % 4;
+    }
+    int32_t* map = (int32_t*)(s + 0x1A4 + (size_t)peer * 0x158);
+    auto person_at = [&](int u) {
+        int o = map[u];
+        return o >= 0 && o < HB_MAX_PLAYERS && ((*(uint32_t*)(s + 0x173C) >> o) & 1) && !hr_mb_is_bot(s, o);
+    };
+    if (person_at(user)) {
+        logf("netmembers: index %d not added: member %d is a person", index, map[user]);
+        return;
+    }
+    (void)host_peer;
+    if ((*(uint32_t*)(s + 0x173C) >> index) & 1) {  // an earlier bot at this index goes; a person's slot is kept
+        if (!hr_mb_is_bot(s, index)) { logf("netmembers: index %d not added: member %d is a person", index, index); return; }
+        hr_mb_remove_bot(s, index);
+        logf("netmembers: removed the old bot member %d", index);
+    }
+    if (map[user] >= 0 && hr_mb_is_bot(s, map[user])) {   // one bot a user slot
+        logf("netmembers: removed the old bot member %d", map[user]);
+        hr_mb_remove_bot(s, map[user]);
+    }
+    int ruser = user;                                 // the record's user
+    uint64_t id = *(uint64_t*)(p + 8);                // its identifier as the player has it
+    int join = *(int32_t*)(s + 0x2240);
+    ((hr_mb_fill_fn)(g_hr + HR_MB_FILL))(m, index, &id, peer, user, join, *(int32_t*)(s + 0x24) == 2);
+    *(int32_t*)(s + 0x2240) = (join + 1) & 0xFFFFF;
+    uint8_t* e = s + 0x1740 + (size_t)index * 0xB0;
+    memcpy(e + 0x20, cfg + 0x20, 0x80);             // its name, look and team, as passed to player_new_at
+    *(int32_t*)(e + 0x1C) = ruser;                    // unique on this machine (the record's "user")
+    // its team, where the host's team assignment reads and writes it (FUN_1803915a8: entry +0x72 the wanted team,
+    // +0x99 the team it gets, +0x98 the index in free for all). The copy carried the host's: in the first run every
+    // bot member came out team 0 (two of the three were on team 1)
+    e[0x72] = cfg[0x98];
+    e[0x98] = cfg[0x98];
+    e[0x99] = cfg[0x98];
+    ((hr_mb_dirty_fn)(g_hr + HR_MB_DIRTY))(*(uint8_t**)m + 0x59AA8, 0, 0, 0, 0);
+    ++*(int32_t*)(s + 0x38);
+    ++*(int32_t*)(s + 0x4468);
+    g_hr_results_at_add = report_results_built();   // (the member guard: no results since = the match still runs)
+    logf("netmembers: bot index %d is a member (peer %d, user slot %d, user %d, id %016llx, team %d)", index, peer, user,
+         ruser, (unsigned long long)id, (int)(int8_t)cfg[0x98]);
+}
+
+// (custom, Nov 15) netrelay, netbots=3/4: the bots' input to the joined machines. The member bots showed on a joined
+// Xbox's scoreboard on the right team but still slid without animation: a joined machine moves and animates a remote
+// player from that player's input (a 0x4C-byte action), which the host sends each tick, and the bots' never went out.
+// The game's tick (FUN_1800575ac) builds the tick's input (FUN_1803aabd0 -> FUN_1803bff80, from each simulation player
+// at world +0x100 + i * 0xE0), sends every player's to every joined machine but his own (FUN_1803ab59c ->
+// FUN_1803c0804, world state 7/8 -> FUN_1803c16ec(world, mask, actions): FUN_180419b4c packs the action,
+// FUN_1804212c0 queues it on each type-4 view's channel at view +0x10 + 0x63e0 +0x88 + i * 0x4C, bit i of +0x20),
+// and only then runs the players update this hook sits on, where the bots' input is written. A joined machine takes
+// a remote simulation player's action from that channel (FUN_180418a7c: state 4/5, bit +0x30). So the relay runs
+// once more here, for the member bots only, with their input as written. world = *(0x184e0e908); its state at +0x10.
+// A bot without a simulation player gets one by the game's own FUN_1803aa1b0, as player_new_at makes it. Host only
+static const uintptr_t HR_SIM_RELAY = 0x3C16EC, HR_SIM_SLOT_ADD = 0x3AA1B0;
+typedef void(__fastcall* hr_relay_fn)(uint8_t* world, uint32_t mask, uint8_t* actions);
+typedef void(__fastcall* hr_slot_add_fn)(uint32_t player);
+static uint32_t g_hr_relay_seen, g_hr_relay_tried;   // bots logged / given a simulation player, since the state changed
+static int g_hr_relay_state = -2;
+
+static void hr_net_relay(uint8_t* tls, uint8_t* actions) {
+    if (g_netbots < 3 || !tls || !actions) return;
+    static int code = -1;
+    if (code < 0) {
+        static const uint8_t rl[6] = { 0x48, 0x89, 0x5C, 0x24, 0x10, 0x55 }, sa[6] = { 0x48, 0x83, 0xEC, 0x28, 0x33, 0xD2 };
+        code = !memcmp(g_hr + HR_SIM_RELAY, rl, 6) && !memcmp(g_hr + HR_SIM_SLOT_ADD, sa, 6);
+        if (!code) logf("netrelay: not this haloreach.dll's code: the bots' input is not relayed");
+    }
+    if (!code) return;
+    uint8_t* w = *(uint8_t**)(g_hr + HR_SQ_QUEUE);
+    uint8_t* so = *(uint8_t**)(g_hr + HR_SESSION);
+    uint8_t* s = so ? *(uint8_t**)(so + 0x18) : nullptr;
+    if (!w || !s) return;
+    int ws = *(int32_t*)(w + 0x10);
+    bool host = *(int32_t*)(s + 0x40) == *(int32_t*)(s + 0x4464);
+    static ULONGLONG last;                            // a new match (no tick for 3 s): logged again
+    ULONGLONG now = GetTickCount64();
+    if (now - last > 3000) g_hr_relay_state = -2;
+    last = now;
+    if (ws != g_hr_relay_state) {
+        g_hr_relay_state = ws;
+        g_hr_relay_seen = g_hr_relay_tried = 0;
+        logf("netrelay: simulation state %d, %s", ws, (ws == 7 || ws == 8) && host ? "relaying the member bots' input"
+                                                                                 : "no relay (not a hosted network game)");
+    }
+    if ((ws != 7 && ws != 8) || !host) return;
+    if (g_netbots == 5) {                             // (the stand-in experiment: are they kept?)
+        static uint32_t logged = 0;
+        uint32_t st = 0;
+        for (int q = 0; q <= 16; q++) if (hr_peer_standin(s, q)) st |= 1u << q;
+        if (st != logged) {
+            logf("netpeers: stand-in peers now %05x, all peers %05x, members %04x", st, *(uint32_t*)(s + 0x5C),
+                 *(uint32_t*)(s + 0x173C));
+            logged = st;
+        }
+    }
+    uint32_t have = *(uint32_t*)(actions + 8), mask = 0;
+    for (int i = 0; i < HB_MAX_PLAYERS; i++) {
+        if (!((have >> i) & 1) || !hr_mb_is_bot(s, i)) continue;
+        uint8_t* p = hr_player(tls, i);
+        if (!p || *(uint16_t*)p == 0 || *(int32_t*)(p + 0x28) == -1) continue;   // no unit: nothing to send
+        uint8_t* sp = w + 0x100 + (size_t)i * 0xE0;
+        if (*(int32_t*)sp == -1) {
+            if ((g_hr_relay_tried >> i) & 1) continue;
+            g_hr_relay_tried |= 1u << i;
+            ((hr_slot_add_fn)(g_hr + HR_SIM_SLOT_ADD))(((uint32_t)*(uint16_t*)p << 16) | (uint32_t)i);
+            logf("netrelay: bot %d had no simulation player: %s", i, *(int32_t*)sp == -1 ? "not added" : "added");
+            if (*(int32_t*)sp == -1) continue;
+        }
+        if ((*(uint32_t*)(sp + 4) & 0xFFFF) != (uint32_t)i) {
+            if (!((g_hr_relay_tried >> i) & 1)) {
+                g_hr_relay_tried |= 1u << i;
+                logf("netrelay: bot %d's simulation player is player %08x, not relayed", i, *(uint32_t*)(sp + 4));
+            }
+            continue;
+        }
+        mask |= 1u << i;
+        if (!((g_hr_relay_seen >> i) & 1)) {
+            g_hr_relay_seen |= 1u << i;
+            int views = 0;
+            for (int k = 0; k < 16; k++) {
+                uint8_t* v = *(uint8_t**)(w + 0x80 + (size_t)k * 8);
+                if (v && *(int32_t*)(v + 4) == 4) views++;
+            }
+            logf("netrelay: relaying bot %d's input to %d joined machine(s) (simulation player state %d)", i, views,
+                 *(int32_t*)(sp + 8));
+        }
+    }
+    if (mask) ((hr_relay_fn)(g_hr + HR_SIM_RELAY))(w, mask, actions + 0x10);
 }
 
 static int64_t hr_add_bot(uint8_t* tls, int arg) {
@@ -426,6 +709,8 @@ static int64_t hr_add_bot(uint8_t* tls, int arg) {
         g_shm->actions[slot].seq = 0;
         g_shm->bot_player_index[slot] = index;
         hr_net_add(tls, index, slot, cfg);                // (netbots=: the joined machines' player add)
+        __try { hr_mb_add(tls, index, slot, cfg); }       // (netbots=3: a session member)
+        __except (EXCEPTION_EXECUTE_HANDLER) { logf("netmembers: index %d faulted", index); }
     }
     logf("reach add_bot index %d team %d -> %08x", index, team, h);
     return (int64_t)h;
@@ -652,6 +937,7 @@ static void hr_net_watch(uint8_t* tls, uint8_t* gg) {
 static void __fastcall h_hr_update(uint8_t* actions) {
     if (g_shm) {
         g_shm->game_tick++;
+        g_hr_tick_ms = GetTickCount64();             // (netbots=3: a match is ticking)
         __try {
             uint8_t* tls = hr_tls();
             uint8_t* gg = tls ? *(uint8_t**)(tls + 0x48) : nullptr;
@@ -778,6 +1064,7 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                     hb_apply_buttons(g_shm, 4, act, HR_ACTION, b, map_prev[i]);
                     map_prev[i] = b;
                 }
+                if (g_netbots >= 3) hr_net_relay(tls, actions);   // (netrelay: the member bots' input, as written)
             }
         } __except (EXCEPTION_EXECUTE_HANDLER) { g_shm->cmd_fault = 2; }
     }
@@ -790,6 +1077,128 @@ static DWORD tls_index_of(uint8_t* mod) {
     if (!rva) return 0;
     IMAGE_TLS_DIRECTORY64* t = (IMAGE_TLS_DIRECTORY64*)(mod + rva);
     return *(DWORD*)t->AddressOfIndex;
+}
+
+// (custom, Nov 15) netbots check, log only: does the host read its own bot player adds back? With netbots=2 the
+// owner's Xbox friend still saw the bots skate and his team's bots under a red reticle in 5 matches, though every add
+// was queued. Every machine applies the queue, the host too, so the host's log shows whether the entries go through:
+// FUN_1803c4004 applies one entry (+0 type, +0xB bit 0 applied, +0xC sequence, +0xE bytes); for type 9 FUN_1803a4648
+// decodes the record and, unless the stream overran, hands it to FUN_180418ff8, which returns whether it applied.
+// Hooked only with netbots on, both calling the game's own first; 300 lines a load at most
+static const uintptr_t HR_SQ_APPLY = 0x3C4004, HR_PU_APPLY = 0x418FF8;
+typedef char(__fastcall* hr_apply_fn)(uint8_t* p);
+static hr_apply_fn o_hr_sq_apply, o_hr_pu_apply;
+static uint8_t* g_hr_chk;                       // the haloreach.dll these two are on
+static volatile LONG g_hr_chk_left;
+
+static char __fastcall h_hr_sq_apply(uint8_t* el) {
+    __try {
+        if (el && *(int32_t*)el == 9 && !(el[0xB] & 1) && InterlockedDecrement(&g_hr_chk_left) >= 0)
+            logf("netcheck: queue entry type 9 applied, sequence %u, %d bytes", *(uint16_t*)(el + 0xC),
+                 (int)*(int16_t*)(el + 0xE));
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    return o_hr_sq_apply(el);
+}
+
+static char __fastcall h_hr_pu_apply(uint8_t* r) {
+    char ok = o_hr_pu_apply(r);
+    __try {
+        if (r && InterlockedDecrement(&g_hr_chk_left) >= 0) {
+            const uint8_t* m = r + 0x10;
+            logf("netcheck: player update index %d type %d id %016llx no machine %d machine %02x%02x%02x%02x%02x%02x "
+                 "ctl %d user %d team %d/%d wanted %d -> %s", *(int32_t*)r, *(int32_t*)(r + 0xC),
+                 (unsigned long long)*(uint64_t*)(r + 4), r[0x20], m[0], m[1], m[2], m[3], m[4], m[5],
+                 *(int32_t*)(r + 0x18), *(int32_t*)(r + 0x1C), (int)(int8_t)r[0x28 + 0x78], (int)(int8_t)r[0x28 + 0x79],
+                 (int)(int8_t)r[0x28 + 0x52], ok ? "applied" : "refused");
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    return ok;
+}
+
+// (netbots=3) the host drops its own peer's members whose user slot has no signed-in person (FUN_18038f49c ->
+// FUN_180394d48(S, user slot), after a timeout): that would take the bot members out at once. Kept while a match ticks
+// (a players update in the last 3 s); after the match the game drops them itself, so no bot member reaches the next
+// lobby or match
+typedef char(__fastcall* hr_localdrop_fn)(uint8_t* s, int user);
+static hr_localdrop_fn o_hr_localdrop;
+static uint8_t* g_hr_drop;                      // the haloreach.dll it is on
+static uint8_t g_hr_drop_kept[4];               // logged once a match per user slot
+
+static char __fastcall h_hr_localdrop(uint8_t* s, int user) {
+    __try {
+        if (s && user > 0 && user < 4) {
+            int peer = *(int32_t*)(s + 0x4464);
+            int index = peer >= 0 && peer <= 16 ? *(int32_t*)(s + 0x1A4 + (size_t)peer * 0x158 + (size_t)user * 4) : -1;
+            if (hr_mb_is_bot(s, index)) {
+                // (custom, Nov 18) a pause in the players update is not always the match's end: at an Assault's round
+                // change (One Bomb, Pinnacle, botcore_pg14.log) the 3 s ran out, every bot member and the stand-in went,
+                // and round 2 had 3 bots that never respawned and, on the joined friend's screen, bots skating under a
+                // red reticle (no member, no relayed input). MCC builds the post-game results before the game drops
+                // the bots at a match's end (every other match that day): until then a pause of up to 30 s keeps them
+                ULONGLONG last = g_hr_tick_ms, now = GetTickCount64(), idle = now > last ? now - last : 0;
+                long built = report_results_built();
+                bool results = built < 0 || built != g_hr_results_at_add;
+                if (idle < 3000 || (!results && idle < 30000)) {
+                    if (!g_hr_drop_kept[user]) { g_hr_drop_kept[user] = 1; logf("netmembers: kept bot member %d (user slot %d)", index, user); }
+                    static ULONGLONG paused_at;
+                    if (idle >= 3000 && paused_at != last) {
+                        paused_at = last;
+                        logf("netmembers: kept the bot members over a %.1f s pause: no post-game results yet (a round change)",
+                             idle / 1000.0);
+                    }
+                    return 0;
+                }
+                g_hr_drop_kept[user] = 0;
+                logf("netmembers: the match is over: bot member %d (user slot %d) dropped by the game (%.1f s without a "
+                     "players update, post-game results %s)", index, user, idle / 1000.0,
+                     built < 0 ? "not watched" : results ? "built" : "not built");
+                if (g_netbots == 5) {                   // (the stand-ins' bots are no user slot's here)
+                    int n = hr_mb_sweep(nullptr, s, true);
+                    int k = hr_peer_clear(s, true);
+                    logf("netmembers: removed all %d bot member(s) and %d stand-in machine(s)", n, k);
+                }
+            }
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    return o_hr_localdrop(s, user);
+}
+
+static void hr_chk_hook(uint8_t* mod) {
+    if (g_hr_chk) {                                   // (the dll unloaded: its old code may be gone)
+        __try { MH_RemoveHook(g_hr_chk + HR_SQ_APPLY); MH_RemoveHook(g_hr_chk + HR_PU_APPLY); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
+        g_hr_chk = nullptr;
+    }
+    if (g_hr_drop) {
+        __try { MH_RemoveHook(g_hr_drop + HR_MB_LOCALDROP); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
+        g_hr_drop = nullptr;
+    }
+    if (g_netbots >= 3) {
+        static const uint8_t ld[6] = { 0x48, 0x89, 0x5C, 0x24, 0x18, 0x48 };
+        if (!memcmp(mod + HR_MB_LOCALDROP, ld, 6) &&
+            MH_CreateHook(mod + HR_MB_LOCALDROP, (void*)&h_hr_localdrop, (void**)&o_hr_localdrop) == MH_OK &&
+            MH_EnableHook(mod + HR_MB_LOCALDROP) == MH_OK) {
+            g_hr_drop = mod;
+            logf("netmembers: guarding the bot members while a match runs");
+        } else logf("netmembers: the member guard was not hooked: the bot members would be dropped");
+    }
+    if (!g_netbots) return;
+    static const uint8_t sq[6] = { 0x40, 0x53, 0x48, 0x83, 0xEC, 0x20 }, pu[6] = { 0x48, 0x83, 0xEC, 0x28, 0x8B, 0x51 };
+    if (memcmp(mod + HR_SQ_APPLY, sq, 6) || memcmp(mod + HR_PU_APPLY, pu, 6)) {
+        logf("netcheck: not this haloreach.dll's code, not hooked");
+        return;
+    }
+    if (MH_CreateHook(mod + HR_SQ_APPLY, (void*)&h_hr_sq_apply, (void**)&o_hr_sq_apply) != MH_OK) return;
+    if (MH_CreateHook(mod + HR_PU_APPLY, (void*)&h_hr_pu_apply, (void**)&o_hr_pu_apply) != MH_OK) {
+        MH_RemoveHook(mod + HR_SQ_APPLY);
+        return;
+    }
+    MH_EnableHook(mod + HR_SQ_APPLY);
+    MH_EnableHook(mod + HR_PU_APPLY);
+    g_hr_chk = mod;
+    g_hr_chk_left = 300;
+    logf("netcheck: watching the player updates this machine applies");
 }
 
 // called from botcore's main loop: hook halo3.dll when it is loaded (again)
@@ -814,4 +1223,5 @@ void reach_watch() {
     memcpy(g_hr_patch, h3 + HR_PLAYERS_UPDATE, 5);
     logf("reach hooks on at haloreach %p: players update +0x%llx, tls index %lu", h3,
          (unsigned long long)HR_PLAYERS_UPDATE, g_hr_tls_index);
+    hr_chk_hook(h3);                                  // (netbots=: the log-only check)
 }

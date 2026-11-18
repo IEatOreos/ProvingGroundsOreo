@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include "bots_panel.h"
 
 static int fails = 0;
@@ -328,7 +329,7 @@ int main(int argc, char** argv) {
         CHECK(hi - lo <= 2, "3 teams: %d to %d", lo, hi);
     }
 
-    // 22. parties: one clan's bots always on one team; the next seats pull clanmates about 70% of the time
+    // 22. parties: one clan's bots always on one team, (Nov 16) the team without people when it fits
     write(prof, "experience=original\neffects=none\nbot=P1,1,XO\nbot=P2,2,XO\nbot=P3,3,XO\nbot=Solo,4,ZZ\n");
     bots_panel_profiles(prof);
     {
@@ -340,33 +341,94 @@ int main(int argc, char** argv) {
             uint32_t rng = 31u + k;
             roster_point_balance(b, humans, rng);
             CHECK(b.bot[0].team == b.bot[2].team && b.bot[2].team == b.bot[4].team, "party split: %d %d %d", b.bot[0].team, b.bot[2].team, b.bot[4].team);
+            CHECK(b.bot[0].team == 1, "party on the team without people: %d", b.bot[0].team);
             CHECK(roster_on_team(b, 0) == 3, "sizes with a party");
         }
-        // (Nov 14) the lobby's "Balance teams": the sizes evened, then the points dealt with the party together
+        // (Nov 14) the lobby's "Balance teams": the sizes evened (Nov 16: you counted: 3 bots with you, 3 without), then
+        // the points dealt with the party together
         for (int k = 0; k < 20; k++) {
             hb_roster c = b;
             for (int i = 0; i < 6; i++) c.bot[i].team = 0;
             roster_balance(c);
             CHECK(roster_on_team(c, 0) == 3 && roster_on_team(c, 1) == 3, "balance sizes %d %d", roster_on_team(c, 0), roster_on_team(c, 1));
             CHECK(c.bot[0].team == c.bot[2].team && c.bot[2].team == c.bot[4].team, "balance split the party");
+            CHECK(!roster_balance_note()[0], "no note: %s", roster_balance_note());
         }
+        // (Nov 16) the 4v4 file: the clan's bots together, the other lines in their order
         write(pool, "P1\nN1\nN2\nN3\nN4\nP2\nN5\nP3\nN6\n");
-        int pulled = 0, runs = 300;
-        for (int k = 0; k < runs; k++) {
+        DeleteFileW(saved);
+        bot_pool_load(dir);
+        {
+            char q[10][16]; int at = -1, nq = bot_pool_size(), nn = 0;
+            for (int k = 0; k < nq; k++) strcpy_s(q[k], bot_pool_upcoming(k));
+            for (int k = 0; k < nq; k++) if (!strcmp(q[k], "P1")) at = k;
+            CHECK(nq == 9 && at >= 0 && at + 2 < nq && !strcmp(q[at + 1], "P2") && !strcmp(q[at + 2], "P3"), "party together at %d", at);
+            for (int k = 0; k < nq; k++) if (q[k][0] == 'N') { char w[4]; sprintf_s(w, "N%d", ++nn); CHECK(!strcmp(q[k], w), "solo order %s want %s", q[k], w); }
+            wchar_t f4[MAX_PATH]; swprintf_s(f4, L"%sbot_pool_4v4.txt", dir);
+            CHECK(GetFileAttributesW(f4) != INVALID_FILE_ATTRIBUTES, "bot_pool_4v4.txt made");
+        }
+    }
+
+    // 22b. (Nov 16) a clan of 6 in a 4v4 file: parties of 4 and 2 apart; the 2 pull the others in about 85% of the time,
+    // up to 4 (the team without people has 4 seats), never more; the party on that team. 8v8: still 4 (the seats)
+    {
+        char text[2048] = "experience=original\neffects=none\n";
+        for (int i = 1; i <= 6; i++) { char l[32]; sprintf_s(l, "bot=Q%d,%d,QQ\n", i, i); strcat_s(text, l); }
+        write(prof, text);
+        bots_panel_profiles(prof);
+        char pl[4096] = "";
+        for (int i = 1; i <= 6; i++) { char l[16]; sprintf_s(l, "Q%d\n", i); strcat_s(pl, l); }
+        for (int i = 1; i <= 40; i++) { char l[16]; sprintf_s(l, "M%d\n", i); strcat_s(pl, l); }
+        write(pool, pl);
+        for (uint32_t fmt : { 4u, 8u }) {
+            bot_pool_set_format(fmt);
             DeleteFileW(saved);
             bot_pool_load(dir);
-            bot_pool_seed(4242u + 13u * k);
-            hb_roster s = seats(6);
-            bot_pool_rotate(s, 2);
-            bool p23 = !strcmp(s.bot[1].name, "P2") && !strcmp(s.bot[2].name, "P3");
-            if (p23) {
-                pulled++;
-                CHECK(!strcmp(s.bot[3].name, "N1") && !strcmp(bot_pool_upcoming(0), "N4"), "after the pull: %s, next %s", s.bot[3].name, bot_pool_upcoming(0));
-                CHECK(s.bot[0].team == s.bot[1].team && s.bot[1].team == s.bot[2].team, "pulled party on one team");
-            } else CHECK(!strcmp(s.bot[1].name, "N1"), "no pull: queue order %s", s.bot[1].name);
+            int q5 = -1;
+            for (int k = 0; k < bot_pool_size(); k++) if (!strcmp(bot_pool_upcoming(k), "Q5")) q5 = k;
+            CHECK(q5 >= 0 && !strcmp(bot_pool_upcoming(q5 + 1), "Q6"), "the party of 2 together (%u)", fmt);
+            int four = 0, runs = 300;
+            for (int k = 0; k < runs; k++) {
+                char sv[64]; sprintf_s(sv, "next%u=%d\n", fmt, q5);
+                write(saved, sv);
+                bot_pool_load(dir);
+                bot_pool_seed(777u + 31u * k);
+                hb_roster s = seats(8);
+                bot_pool_rotate(s, 2);
+                int nq = 0, team = -1; bool one = true;
+                for (int i = 0; i < 8; i++) if (s.bot[i].name[0] == 'Q') { nq++; if (team < 0) team = s.bot[i].team; else one &= s.bot[i].team == team; }
+                CHECK(nq == 2 || nq == 4, "Q bots %d (%u)", nq, fmt);
+                CHECK(one && team == 1, "party on one team, the one without people: %d (%u)", team, fmt);
+                four += nq == 4;
+            }
+            CHECK(four > runs * 78 / 100 && four < runs * 92 / 100, "full party %d of %d (want about 85%%, %u)", four, runs, fmt);
+            printf("parties (%uv%u): the full party in %d of %d\n", fmt, fmt, four, runs);
         }
-        CHECK(pulled > runs * 62 / 100 && pulled < runs * 78 / 100, "party pulled %d of %d (want about 70%%)", pulled, runs);
-        printf("parties: pulled in %d of %d\n", pulled, runs);
+        bot_pool_set_format(4);
+    }
+
+    // 22c. (Nov 16) Balance teams with a clan too big for any team (5 in a 4v4 with you): the sizes stay even; off, the
+    // clan split (4 on the team without you) and the note says so; on, its extra bot swapped for the next pool bot
+    {
+        hb_roster c{}; c.teams = 2; c.n = 7;
+        const char* nm[7] = { "Q1", "Q2", "Q3", "Q4", "Q5", "M1", "M2" };
+        for (int i = 0; i < 7; i++) { strcpy_s(c.bot[i].name, nm[i]); c.bot[i].tier = 2; c.bot[i].team = 0; }
+        DeleteFileW(saved);
+        bot_pool_load(dir);
+        hb_matchmaking = 0;
+        hb_roster d = c;
+        roster_balance(d);
+        int qb = 0;
+        for (int i = 0; i < 7; i++) qb += d.bot[i].name[0] == 'Q' && d.bot[i].team == 1;
+        CHECK(roster_on_team(d, 0) == 3 && roster_on_team(d, 1) == 4, "even with you: %d %d", roster_on_team(d, 0), roster_on_team(d, 1));
+        CHECK(qb == 4 && strstr(roster_balance_note(), "[QQ]") && strstr(roster_balance_note(), "split"), "split: %d '%s'", qb, roster_balance_note());
+        hb_matchmaking = 1;
+        d = c;
+        roster_balance(d);
+        int nq = 0, qt = -1; bool one = true;
+        for (int i = 0; i < 7; i++) if (d.bot[i].name[0] == 'Q') { nq++; if (qt < 0) qt = d.bot[i].team; else one &= d.bot[i].team == qt; }
+        CHECK(nq == 4 && one && qt == 1 && strstr(roster_balance_note(), "swapped"), "swapped: %d on %d '%s'", nq, qt, roster_balance_note());
+        CHECK(roster_on_team(d, 0) == 3 && roster_on_team(d, 1) == 4, "still even: %d %d", roster_on_team(d, 0), roster_on_team(d, 1));
     }
 
     // 23. the people of the last match (tools/play.py's bot_pool_humans.txt) count on their team; none: you on Red
@@ -384,17 +446,167 @@ int main(int argc, char** argv) {
         DeleteFileW(hum);
     }
 
-    // 24. "Group parties": each clan's lines together where its first stood, a round per repeat, notes and the rest kept
-    write(pool, "# note\nP1\nN1\nN2\nP2*2\nN3\nP3\nP1\nSolo\n");
-    bot_pool_load(dir);
+    // 24. (Nov 16) the 4v4 / 8v8 files: three clans of 2 bots, each line 10 times, among 200 others. Every clan's
+    // parties apart from its own; about 1 in 4 places two clans side by side (they meet); bot_pool.txt unchanged; a clan
+    // of one bot is no party; each format keeps its own queue position
     {
-        CHECK(bot_pool_group_parties() == 1, "one party grouped (ZZ has one bot)");
-        FILE* f = nullptr; _wfopen_s(&f, pool, L"rb"); char all[256] = ""; size_t n = fread(all, 1, sizeof all - 1, f); all[n] = 0; fclose(f);
-        CHECK(!strcmp(all, "# note\nP1\nP2*2\nP3\nN1\nN2\nN3\nP1\nSolo\n"), "grouped file: [%s]", all);
-        wchar_t bak[MAX_PATH]; swprintf_s(bak, L"%s.bak", pool);
-        CHECK(GetFileAttributesW(bak) != INVALID_FILE_ATTRIBUTES, "backup kept");
-        CHECK(bot_pool_size() == 9, "pool re-read %d", bot_pool_size());
-        CHECK(bot_pool_group_parties() == 1, "again: the same");
+        write(prof, "experience=original\neffects=none\nbot=A1,1,AA\nbot=A2,2,AA\nbot=B1,3,BB\nbot=B2,4,BB\n"
+                    "bot=C1,5,CC\nbot=C2,6,CC\nbot=Lone,7,LL\n");
+        bots_panel_profiles(prof);
+        std::string pl;
+        for (int k = 0; k < 10; k++) pl += "A1\nA2\nB1\nB2\nC1\nC2\n";
+        for (int i = 1; i <= 200; i++) { char l[16]; sprintf_s(l, "M%d\n", i); pl += l; if (i == 100) pl += "Lone\n"; }
+        write(pool, pl.c_str());
+        DeleteFileW(saved);
+        bot_pool_load(dir);
+        int met = 0, places = 0;
+        for (int run = 0; run < 20; run++) {
+            CHECK(bot_pool_reshuffle() == 3, "three clans");
+            int n = bot_pool_size();
+            CHECK(n == 261, "every line kept: %d", n);
+            // each run of clan lines is a place: one clan's party, or two clans' side by side; between places at least
+            // 3 other lines (201 lines, about 24 places: about 8 apart, never under half that, rounded down)
+            char prev = 0; int last_end = -1, gap_min = 999, solo_n = 0;
+            std::string clans_in;
+            for (int k = 0; k <= n; k++) {
+                const char* nm = k < n ? bot_pool_upcoming(k) : "";
+                char c = (nm[0] == 'A' || nm[0] == 'B' || nm[0] == 'C') ? nm[0] : 0;
+                if (c && !prev) { clans_in.clear(); if (last_end >= 0 && k - last_end < gap_min) gap_min = k - last_end; }
+                if (c && clans_in.find(c) == std::string::npos) clans_in += c;
+                if (!c && prev) { places++; met += clans_in.size() > 1; last_end = k; }
+                if (!c && k < n) {                       // the other lines in their own order, Lone (a clan of one) among them
+                    char w[16];
+                    if (solo_n == 100) strcpy_s(w, "Lone"); else sprintf_s(w, "M%d", solo_n < 100 ? solo_n + 1 : solo_n);
+                    CHECK(!strcmp(nm, w), "other lines' order: %s want %s", nm, w);
+                    solo_n++;
+                }
+                prev = c;
+            }
+            CHECK(gap_min >= 3, "places %d apart", gap_min);
+        }
+        CHECK(met > places * 14 / 100 && met < places * 36 / 100, "clans meet in %d of %d places (want about 25%%)", met, places);
+        printf("spread: clans meet in %d of %d places\n", met, places);
+        FILE* f = nullptr; _wfopen_s(&f, pool, L"rb"); char head[16] = ""; fread(head, 1, 9, f); fclose(f);
+        CHECK(!strncmp(head, "A1\nA2\nB1\n", 9), "bot_pool.txt unchanged: [%s]", head);
+        // each format its own place
+        hb_roster s = seats(4);
+        bot_pool_rotate(s, 2);
+        char next4[16]; strcpy_s(next4, bot_pool_upcoming(0));
+        bot_pool_set_format(8);
+        wchar_t f8[MAX_PATH]; swprintf_s(f8, L"%sbot_pool_8v8.txt", dir);
+        CHECK(GetFileAttributesW(f8) != INVALID_FILE_ATTRIBUTES && bot_pool_size() == 261, "the 8v8 file read");
+        bot_pool_set_format(4);
+        CHECK(!strcmp(bot_pool_upcoming(0), next4), "4v4 place kept: %s want %s", bot_pool_upcoming(0), next4);
+    }
+
+    // 25. (Nov 16, Proving Grounds) bot_pool_matchmake: two teams of 4 (or 8) with the person on Red: 3 / 4 bots (7 / 8);
+    // the invited party pinned to Red every time; a clan whole on one team (a clan of 3 with a party of 2 on Red: Blue);
+    // no name twice; keep 100: every last-lobby bot stays (teams dealt again), keep 0: a new lobby but the party
+    {
+        write(prof, "experience=original\neffects=none\nbot=Q1,1,QQ\nbot=Q2,2,QQ\nbot=Q3,3,QQ\n");
+        bots_panel_profiles(prof);
+        std::string pl = "Q1\nQ2\nQ3\n";
+        for (int i = 1; i <= 40; i++) { char l[16]; sprintf_s(l, "M%d\n", i); pl += l; }
+        write(pool, pl.c_str());
+        DeleteFileW(saved);
+        wchar_t hum[MAX_PATH];
+        swprintf_s(hum, L"%sbot_pool_humans.txt", dir);
+        DeleteFileW(hum);
+        const char party[2][16] = { "M5", "M6" };
+        for (int size : { 4, 8 }) {
+            bot_pool_set_format((uint32_t)size);
+            int bad_size = 0, bad_party = 0, bad_clan = 0, dup = 0, clan_seen = 0;
+            for (int run = 0; run < 150; run++) {
+                bot_pool_seed(4242u + 17u * run);
+                hb_roster r = seats(0);
+                uint8_t pin[HB_ROSTER_MAX];
+                bot_pool_matchmake(r, size, party, 2, 0, 0, 2, pin);
+                if (r.n != size * 2 - 1 || roster_on_team(r, 0) != size - 1 || roster_on_team(r, 1) != size) bad_size++;
+                int pr = 0, qn = 0, qt = -1; bool one = true;
+                for (int i = 0; i < r.n; i++) {
+                    if (pin[i]) { pr++; if (r.bot[i].team != 0) bad_party++; }
+                    if (r.bot[i].name[0] == 'Q') { qn++; if (qt < 0) qt = r.bot[i].team; else one &= r.bot[i].team == qt; }
+                    for (int k = i + 1; k < r.n; k++) dup += !_stricmp(r.bot[i].name, r.bot[k].name);
+                }
+                if (pr != 2) bad_party++;
+                if (qn >= 2) { clan_seen++; if (!one || (size == 4 && qt != 1)) bad_clan++; }
+            }
+            CHECK(!bad_size, "%dv%d sizes wrong in %d runs", size, size, bad_size);
+            CHECK(!bad_party, "%dv%d party off Red or missing in %d", size, size, bad_party);
+            CHECK(!bad_clan, "%dv%d clan split or on Red in %d of %d", size, size, bad_clan, clan_seen);
+            CHECK(!dup, "%dv%d a name twice %d", size, size, dup);
+            printf("proving grounds %dv%d: 150 lobbies, the clan in %d\n", size, size, clan_seen);
+        }
+        bot_pool_set_format(4);
+        bot_pool_seed(99);
+        hb_roster r = seats(0);
+        uint8_t pin[HB_ROSTER_MAX];
+        bot_pool_matchmake(r, 4, party, 2, 0, 0, 2, pin);
+        hb_roster kept = r;
+        bot_pool_matchmake(kept, 4, party, 2, 0, 100, 2, pin);
+        int same = 0;
+        for (int i = 0; i < r.n; i++) for (int k = 0; k < kept.n; k++) same += !_stricmp(r.bot[i].name, kept.bot[k].name);
+        CHECK(same == r.n && kept.n == 7, "keep 100: %d of %d stayed", same, r.n);
+        hb_roster fresh = r;
+        bot_pool_matchmake(fresh, 4, party, 2, 0, 0, 2, pin);
+        same = 0;
+        for (int i = 0; i < r.n; i++) for (int k = 0; k < fresh.n; k++) same += !_stricmp(r.bot[i].name, fresh.bot[k].name);
+        CHECK(same < r.n, "keep 0: a new lobby (%d of %d the same, the party among them)", same, r.n);
+        // pinned seats keep their team through the point deal, whatever their points
+        hb_roster p = seats(7);
+        uint8_t pins[HB_ROSTER_MAX] = {};
+        p.bot[0].team = 0; p.bot[0].tier = HB_TIER_DEMON; pins[0] = 1;
+        p.bot[2].team = 0; p.bot[2].tier = HB_TIER_DEMON; pins[2] = 1;
+        int humans[HB_TEAMS_MAX] = { 1 };
+        uint32_t rng = 5;
+        for (int k = 0; k < 20; k++) { roster_point_balance(p, humans, rng, pins); CHECK(p.bot[0].team == 0 && p.bot[2].team == 0, "pinned moved"); }
+
+        // 26. (Nov 17) friends who joined: each takes a bot's seat on the team MCC has them on (4v4, the player on Red: a
+        // friend on Blue, 3 + 3 bots; on Red, 2 + 4); one not on a team yet goes where there are fewer people (Blue) and
+        // is written back; 8v8 with a friend is 14 bots, the game's 16; keep 100 with a friend in: one bot goes, the
+        // rest stay; out again: one comes back
+        bot_pool_set_format(4);
+        struct { int team, red, blue, resolved; } cases[] = { { 1, 3, 3, 1 }, { 0, 2, 4, 0 }, { -1, 3, 3, 1 } };
+        for (auto& c : cases) {
+            bot_pool_seed(7);
+            hb_roster f = seats(0);
+            uint8_t fp[HB_ROSTER_MAX];
+            int people[1] = { c.team };
+            bot_pool_matchmake(f, 4, party, 0, 0, 0, 2, fp, people, 1);
+            CHECK(f.n == 6 && roster_on_team(f, 0) == c.red && roster_on_team(f, 1) == c.blue && people[0] == c.resolved,
+                  "friend on %d: %d bots, %d red, %d blue, counted on %d", c.team, f.n, roster_on_team(f, 0),
+                  roster_on_team(f, 1), people[0]);
+            CHECK(bot_pool_humans(0) + bot_pool_humans(1) == 2, "friend: %d + %d people counted", bot_pool_humans(0),
+                  bot_pool_humans(1));
+        }
+        bot_pool_set_format(8);
+        {
+            bot_pool_seed(8);
+            hb_roster f = seats(0);
+            uint8_t fp[HB_ROSTER_MAX];
+            int people[1] = { 1 };
+            bot_pool_matchmake(f, 8, party, 2, 0, 0, 2, fp, people, 1);
+            CHECK(f.n == 14 && roster_on_team(f, 0) == 7 && roster_on_team(f, 1) == 7, "8v8 friend: %d bots", f.n);
+        }
+        bot_pool_set_format(4);
+        {
+            bot_pool_seed(9);
+            hb_roster a = seats(0);
+            uint8_t fp[HB_ROSTER_MAX];
+            bot_pool_matchmake(a, 4, party, 0, 0, 0, 2, fp);
+            hb_roster b = a;
+            int people[1] = { 1 };
+            bot_pool_matchmake(b, 4, party, 0, 0, 100, 2, fp, people, 1);
+            int same = 0;
+            for (int i = 0; i < b.n; i++) for (int k = 0; k < a.n; k++) same += !_stricmp(b.bot[i].name, a.bot[k].name);
+            CHECK(b.n == 6 && same == 6, "friend in, keep 100: %d bots, %d stayed", b.n, same);
+            hb_roster c2 = b;
+            bot_pool_matchmake(c2, 4, party, 0, 0, 100, 2, fp);
+            same = 0;
+            for (int i = 0; i < c2.n; i++) for (int k = 0; k < b.n; k++) same += !_stricmp(c2.bot[i].name, b.bot[k].name);
+            CHECK(c2.n == 7 && same == 6, "friend out, keep 100: %d bots, %d stayed", c2.n, same);
+        }
+        printf("proving grounds: friends take bots' seats on their teams\n");
     }
 
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);

@@ -1,0 +1,32 @@
+{
+  "comment": "Clan rank rewards (Nov 18, the owner: make people and bots want to join a big clan; site only). A clan's cR stays its members' added up, plus its finished clan challenges. 'at' lists the clan rank names that unlock each level of a reward (the players' ladder, every step x10); the owner can turn each reward off or move its unlocks in the site's edit mode (native/bin/service_record/clan_settings.json). The clan challenges: one a week, drawn by the week's date, every member's Reach matches that week added together.",
+  "rewards": [
+    {"key": "frame", "group": "looks", "name": "Card frame", "what": "The clan's card on the Clans page gets a better border: a coloured edge, a glowing edge, then a moving one.", "on": true,
+     "at": ["Private", "Sergeant", "Captain"], "levels": ["Coloured edge", "Glowing edge", "Moving edge"]},
+    {"key": "tag", "group": "looks", "name": "Tag colour", "what": "Members' clan tags get a colour everywhere on the site, then a brighter one, then a glow.", "on": true,
+     "at": ["Private", "Warrant Officer", "Major"], "levels": ["Cyan", "Gold", "Gold glow"]},
+    {"key": "banner", "group": "looks", "name": "Clan banner", "what": "A banner behind the clan's page header that changes with each step.", "on": true,
+     "at": ["Private", "Corporal", "Sergeant", "Warrant Officer", "Captain"], "levels": ["Stripes", "Chevrons", "Grid", "Sunrise", "Starfield"]},
+    {"key": "ribbon", "group": "looks", "name": "Member ribbon", "what": "A 'Member of' ribbon with the clan's rank on each member's card.", "on": true,
+     "at": ["Corporal"], "levels": ["Ribbon"]},
+    {"key": "emblem", "group": "looks", "name": "Clan emblem", "what": "The clan shows an emblem on its card and page: one of its members', picked in edit mode (its top member's until then).", "on": true,
+     "at": ["Sergeant"], "levels": ["Emblem"]},
+    {"key": "challenge", "group": "play", "name": "Clan weekly challenge", "what": "One shared challenge a week for every member's matches together; finishing it adds its cR to the clan.", "on": true},
+    {"key": "rivals", "group": "play", "name": "Rivals", "what": "The clans just above and just below on the Clans list, and the cR between them.", "on": true},
+    {"key": "hall", "group": "play", "name": "Hall of fame", "what": "The clan's top member, best K/D, most games played and this week's MVP.", "on": true},
+    {"key": "history", "group": "prestige", "name": "History", "what": "A timeline of the clan's ranks reached, games played milestones and weeks as the top clan.", "on": true},
+    {"key": "crown", "group": "prestige", "name": "Top-clan crown", "what": "The first clan on the list wears a crown on its card and tag while it holds first place.", "on": true}
+  ],
+  "challenges": [
+    {"key": "clan_kills_1", "name": "Shoulder to Shoulder", "what": "Kill 400 enemies together this week.", "count": {"stat": "kills"}, "need": 400, "cr": 40000, "icon": "kills"},
+    {"key": "clan_kills_2", "name": "Wall of Fire", "what": "Kill 1,000 enemies together this week.", "count": {"stat": "kills"}, "need": 1000, "cr": 90000, "icon": "kills"},
+    {"key": "clan_wins_1", "name": "Banner Raised", "what": "Win 25 matches together this week.", "count": {"stat": "wins"}, "need": 25, "cr": 40000, "icon": "win"},
+    {"key": "clan_wins_2", "name": "Victory March", "what": "Win 60 matches together this week.", "count": {"stat": "wins"}, "need": 60, "cr": 90000, "icon": "win"},
+    {"key": "clan_games", "name": "Full Barracks", "what": "Play 80 matches together this week.", "count": {"stat": "games"}, "need": 80, "cr": 50000, "icon": "games"},
+    {"key": "clan_assists", "name": "Covering Fire", "what": "Earn 250 assists together this week.", "count": {"stat": "assists"}, "need": 250, "cr": 45000, "icon": "assists"},
+    {"key": "clan_medals", "name": "Decorated Unit", "what": "Earn 600 medals together this week.", "count": {"stat": "medals"}, "need": 600, "cr": 50000, "icon": "stat-medals"},
+    {"key": "clan_objective", "name": "Hold the Line", "what": "Win 15 objective matches together this week.", "count": {"stat": "wins", "cat": ["ctf", "assault", "koth", "oddball", "headhunter", "stockpile", "territories"]}, "need": 15, "cr": 50000, "icon": "win"},
+    {"key": "clan_multikills", "name": "Chain Reaction", "what": "Earn 60 multikill medals together this week.", "count": {"group": "multikill"}, "need": 60, "cr": 55000, "icon": "stat-medals"},
+    {"key": "clan_big_games", "name": "Heavy Hitters", "what": "Have 20 matches of 20 kills or more this week.", "count": {"stat": "kills", "at_least": 20}, "need": 20, "cr": 60000, "icon": "kills"}
+  ]
+}

@@ -94,8 +94,8 @@ def totals(ledger):
     out = {}
     for match in ledger.values():
         players = match["players"]
-        if not counts(players) or match.get("all_reset"):       # (--reset-all: before everyone's restart)
-            continue
+        if not (counts(players) or match.get("sim")) or match.get("all_reset"):   # (--reset-all: before everyone's
+            continue                                            # restart; a simulated match has no person: it counts)
         draw = all(p["standing"] == 0 for p in players)
         for p in players:
             if not p["name"] or (p["bot"] and match.get("bots_reset")):   # (--reset-bots: before the bots' restart)
@@ -131,7 +131,16 @@ def main(argv):
         tmp = ledger_path + ".tmp"
         json.dump(ledger, open(tmp, "w", encoding="utf-8"))
         os.replace(tmp, ledger_path)
-    tot = totals(ledger)
+    sims = {}
+    try:                                    # (Nov 17, the bot simulation: tools/bot_sim.py's matches count as real ones;
+        import bot_sim                      # a reset covers them too. Its database beside this ledger's folder:
+        sim_paths = bot_sim.sr.Paths(store=os.path.join(os.path.dirname(OUT), "service_record"))   # native/bin/...)
+        if reset or reset_all:
+            bot_sim.mark_reset("all" if reset_all else "bots", sim_paths)
+        sims = bot_sim.ledger_entries(sim_paths)
+    except Exception:
+        sims = {}
+    tot = totals({**ledger, **sims})
     tmp = os.path.join(OUT, "totals.txt.tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         for name, t in sorted(tot.items()):

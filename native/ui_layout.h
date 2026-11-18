@@ -46,6 +46,8 @@ inline ui_rect mcc_ff_title_probe(float W, float H) { return ui_at(mcc_content(W
 inline ui_rect bots_tile_rect(float W, float H, bool ff = false) {
     return ff ? ui_at(mcc_content(W, H), 1376, 158, 1611, 316) : ui_at(mcc_content(W, H), 1216, 158, 1451, 316);
 }
+// (custom, Nov 16) the PROVING GROUNDS tile (Halo: Reach's custom game lobby): the slot right of the BOTS tile
+inline ui_rect pg_tile_rect(float W, float H) { return ui_at(mcc_content(W, H), 1456, 158, 1691, 316); }
 // Firefight's custom lobby (Reach, ODST: mission, game type, OPTIONS, difficulty, START): the same tiles one slot
 // further right (the difficulty tile; measured live Nov 6 on the 3440x1440 buffer, Reach Custom Firefight frame lines:
 // mission 95-410, game type 416-651, OPTIONS 655-891, difficulty 896-1131, START 1136-1370, y 158-314)

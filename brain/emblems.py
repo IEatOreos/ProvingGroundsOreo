@@ -54,6 +54,63 @@ def ids(e):
     return e["fg"], e["bg"], e["primary"], e["secondary"], e["background"]
 
 
+# (custom, Nov 18, the owner: an emblem editor for each bot on the Service Record, "like MCC's own") the emblems the
+# owner picked in the site's edit mode (tools/service_record_edit.py), by bot name: native/bin/emblems/chosen.json
+# {name: {fg, bg, primary, secondary, background}}. A bot with one shows it everywhere its roll showed (the lobby's
+# .ids, the .rgba picture, matches: brain/looks.py emblem_of); the others keep their roll.
+KEYS = ("fg", "bg", "primary", "secondary", "background")
+
+
+def chosen_path():
+    return os.path.join(OUT, "chosen.json")
+
+
+def chosen():
+    """{name: emblem} as saved; an entry that is not a good emblem (valid) is left out."""
+    try:
+        with open(chosen_path(), encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return {n: {k: e[k] for k in KEYS} for n, e in (raw.items() if isinstance(raw, dict) else [])
+            if isinstance(n, str) and valid(e)}
+
+
+def valid(e):
+    """Whether e is an emblem MCC has: a foreground and a background of the catalog, three of its colours (the
+    secondary may be OFF, the second part switched off)."""
+    if not isinstance(e, dict) or any(not isinstance(e.get(k), int) or isinstance(e.get(k), bool) for k in KEYS):
+        return False
+    fgs, bgs, cols = catalog()
+    return (any(x[0] == e["fg"] for x in fgs) and any(x[0] == e["bg"] for x in bgs) and e["primary"] in cols
+            and e["background"] in cols and (e["secondary"] in cols or e["secondary"] == OFF))
+
+
+def save_chosen(name, e):
+    """The bot's emblem picked (e None: back to its roll). ValueError for an emblem that is not one (valid)."""
+    if not isinstance(name, str) or not name.strip() or len(name) > 32:
+        raise ValueError("not a bot name")
+    picks = chosen()
+    if e is None:
+        picks.pop(name, None)
+    elif valid(e):
+        picks[name] = {k: e[k] for k in KEYS}
+    else:
+        raise ValueError("not an emblem MCC has")
+    os.makedirs(OUT, exist_ok=True)
+    tmp = chosen_path() + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(picks, f, indent=1, sort_keys=True)
+    os.replace(tmp, chosen_path())
+
+
+def emblem_for(name, seed):
+    """The bot's emblem: the one picked for it (chosen; its name in any case), else its roll."""
+    picks = chosen()
+    pick = picks.get(name) or next((e for n, e in picks.items() if n.lower() == str(name).lower()), None)
+    return dict(pick) if pick else roll(seed)
+
+
 def compose(e, size=128):
     """The emblem as an RGBA picture (PIL) as MCC layers it (background, secondary, primary), or None when the art
     is not extracted."""
@@ -96,10 +153,10 @@ def write_ids(e, path):
 
 def export(names_seeds):
     """Every bot's emblem picture: native/bin/emblems/<name>.rgba, and its numbers, <name>.ids (written even without
-    the art). Returns how many pictures were written."""
+    the art): the one picked for it, else its roll (emblem_for). Returns how many pictures were written."""
     n = 0
     for name, seed in names_seeds:
-        e = roll(seed)
+        e = emblem_for(name, seed)
         write_ids(e, os.path.join(OUT, f"{name}.ids"))
         try:
             img = compose(e)
@@ -125,5 +182,23 @@ def selftest():
     print("emblems OK")
 
 
+def draw(path, fg, bg, primary, secondary, background):
+    """(custom, Nov 17) Any emblem by MCC's five numbers (the person's own, as MCC's player lookup gives them:
+    native/bots_panel.cpp player_emblem) into an .rgba picture. False when the art or a number is not known."""
+    fgs, bgs, _ = catalog()
+    if not any(x[0] == fg for x in fgs) or not any(x[0] == bg for x in bgs):
+        return False
+    img = compose(dict(fg=fg, bg=bg, primary=primary, secondary=secondary, background=background))
+    if img is None:
+        return False
+    write_rgba(img, path)
+    return True
+
+
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:2] == ["--draw"] and len(sys.argv) == 8:
+        ok = draw(sys.argv[2], *(int(v) for v in sys.argv[3:8]))
+        print("drawn" if ok else "not drawn")
+        sys.exit(0 if ok else 1)
     selftest()

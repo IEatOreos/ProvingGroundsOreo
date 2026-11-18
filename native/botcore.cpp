@@ -316,6 +316,7 @@ void session_watch_hooks();
 void odst_watch();
 void h4f_watch();
 void spawnhook_watch();
+void pg_link_watch();                // (custom, Nov 18) native/pg_link.cpp
 int mcc_menu_state();
 static int g_last_menu = -1;
 static DWORD g_brain_due;            // match started: start the brain when the game has bots
@@ -331,12 +332,20 @@ uint32_t g_sounds = 60;              // the BOTS panel's sound volume, 0-100, 0 
 uint32_t g_playback = 0;             // a Theater film is running (set by the games' hooks): no brain, no bots (film.cpp)
 // (custom, Nov 12) Reach test: the host also sends the game's own player add for each bot, so a joined friend's game
 // makes the bots' players (reach.cpp hr_net_add; docs/REACH_NETWORK_PLAYERS_2026-11-12.md). 0 off (the default), 1 every
-// bot machine-less, 2 the first three bots on the host's machine (controller and user 1..3), the rest machine-less.
+// bot machine-less, 2 the first three bots on the host's machine (controller and user 1..3), the rest machine-less;
+// 3 (Nov 15) the first three bots join the session's membership on the host's peer instead (reach.cpp hr_mb_add),
+// and their input is relayed to the joined machines (reach.cpp hr_net_relay). 4 (every bot a member, record users
+// 1..7) is read as 3 since Nov 17: with 7 bot members a joined friend was kicked at match start, twice. 5 (Nov 17,
+// an experiment): bots 4.. on stand-in machines of the membership (reach.cpp hr_peer_make).
 // botcore.ini netbots=
 uint32_t g_netbots = 0;
 // (custom, Nov 13) test: the lobby's first bot in MCC's own session list, the menus only (session_watch.cpp). 0 off (the
 // default), 1 as a plain entry, 2 with the player's session flags. botcore.ini sessionbots=
 uint32_t g_sessionbots = 0;
+// (custom, Nov 18) the link that shows a joined PC friend the host's Proving Grounds (pg_link.cpp): 0 off, 1 answers a
+// friend's link and never speaks first (the default), 2 also speaks first when this PC joins a host's lobby alone (the
+// friend's copy: only with a host who runs the mod). botcore.ini pglink=
+uint32_t g_pglink = 1;
 void film_old_dir(wchar_t* out) {    // where this copy kept them before: <project>\logs\films (film.cpp still reads it)
     swprintf_s(out, MAX_PATH, L"%s..\\..\\logs\\films", g_dir);
 }
@@ -369,8 +378,10 @@ void save_settings() {
             g_scale_games);                                                                           // (prejoin kept: a save
                                                                                                    // dropped it)
     fprintf(f, "matchmaking=%u\n", hb_matchmaking);                     // (custom, Nov 10: Bot Matchmaking)
+    fprintf(f, "pool_format=%u\n", hb_pool_format);                     // (custom, Nov 16: its 4v4 / 8v8 file)
     fprintf(f, "netbots=%u\n", g_netbots);                              // (custom, Nov 12: Reach network test)
     fprintf(f, "sessionbots=%u\n", g_sessionbots);                      // (custom, Nov 13: MCC's session list test)
+    fprintf(f, "pglink=%u\n", g_pglink);                                // (custom, Nov 18: Proving Grounds for a friend)
     roster_write(f, g_roster);
     roster_write(f, g_ff_roster, "ff");
     fclose(f);
@@ -415,8 +426,10 @@ static void load_settings() {
             else if (sscanf_s(line, "sounds=%u", &v) == 1) g_sounds = v > 100 ? 100 : v;
             else if (sscanf_s(line, "scale_games=%u", &v) == 1) g_scale_games = v < 1 ? 1 : v > 20 ? 20 : v;
             else if (sscanf_s(line, "matchmaking=%u", &v) == 1) hb_matchmaking = v != 0;
-            else if (sscanf_s(line, "netbots=%u", &v) == 1) g_netbots = v > 2 ? 0 : v;
+            else if (sscanf_s(line, "pool_format=%u", &v) == 1) bot_pool_set_format(v);   // (custom, Nov 16)
+            else if (sscanf_s(line, "netbots=%u", &v) == 1) g_netbots = v > 5 ? 0 : v == 4 ? 3 : v;   // (4 retired Nov 17: a joined friend was kicked)
             else if (sscanf_s(line, "sessionbots=%u", &v) == 1) g_sessionbots = v > 2 ? 0 : v;
+            else if (sscanf_s(line, "pglink=%u", &v) == 1) g_pglink = v > 2 ? 1 : v;
         }
         fclose(f);
     }
@@ -543,6 +556,7 @@ static DWORD WINAPI main_thread(LPVOID self) {
         odst_watch();                         // Halo 3: ODST (native/odst.cpp)
         h4f_watch();                          // Halo 2 Anniversary, Halo 4 (native/h4f.cpp)
         spawnhook_watch();                    // Reach: bots respawn in Invasion (native/spawnhook.cpp)
+        pg_link_watch();                      // (custom, Nov 18) Proving Grounds for a joined PC friend (native/pg_link.cpp)
         // the brain runs while a match is on: start it when the menus give way to a game (MCC
         // does not always reload halo1.dll for a new match), stop it back in the menus
         int menu = mcc_menu_state();

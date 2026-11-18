@@ -29,6 +29,7 @@ from brain.director import Director  # noqa: E402
 from brain.loadouts import Palette, liked_guns, record_death, want_slot  # noqa: E402
 from brain.profiles import make_profile  # noqa: E402
 from brain import scaling  # noqa: E402
+from brain import nade  # noqa: E402
 from brain.live import Live, LiveH2, LiveH3, LiveReach, LiveODST, LiveH4F, WEAPON_ALIAS  # noqa: E402
 from brain.invasion import layout as invasion_layout, Watch, clear_barriers, honor_spawn, honor_spawns, \
     ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR  # noqa: E402
@@ -947,6 +948,9 @@ def main():
         print(f"crouch key not read: {type(e).__name__}: {e}", flush=True)
         crouch_now = lambda: False                   # noqa: E731
     crouch_cmd = {}                                  # bot index -> its last command crouched
+    # (custom, Nov 18) the bots' own grenade throws, followed to learn the game's grenade physics for the solved
+    # throws (brain/nade.py: user/grenade_flights.json; only where the game's objects are read)
+    nade_watch = nade.FlightWatch(o.game) if hasattr(live, "objects") else None
     if o.collect == "on":      # the BOTS panel's Data collector: the people, for the Observer (tools/player_stats.py)
         from collector import Collector
         same = re.search(r"_(\d{8}-\d{6})\.jsonl$", o.trace or "")     # the match's trace stamp: the pair is found by it
@@ -1022,8 +1026,13 @@ def main():
                 still[0], still[1] = gt, (still[1] + 1 if gt == still[0] else 0)
                 if still[1] >= PAUSE_TICKS and still[2] is None:
                     still[2] = tick
+                    if trace is not None:                # (Nov 18: a stall shows in the recording, not just a gap)
+                        trace.write(json.dumps(dict(t=round(now, 3), paused=gt)) + chr(10))
                 elif still[1] < PAUSE_TICKS and still[2] is not None:
                     paused[0] += tick - still[2]
+                    if trace is not None:
+                        trace.write(json.dumps(dict(t=round(now, 3), resumed=gt,
+                                                    after=round(tick - still[2], 1))) + chr(10))
                     still[2] = None
                     now = tick - t0 - paused[0]
                 if now - bug_check[0] > 1.0:            # the player's bug reports (tools/bug_reports.py): the moment
@@ -1311,6 +1320,7 @@ def main():
                 dt = think_dt(now - last_think if last_think is not None else 0.0)
                 last_think = now
                 passes += 1
+                nade_presses = []
                 for index, b in think_order(bots, passes):    # (the teams interleaved, the first swapping)
                     me = snap.player(index)
                     if not me or not me.alive:
@@ -1360,6 +1370,21 @@ def main():
                     botctl.act(m, slots[index], a.forward, a.strafe, a.yaw, a.pitch, buttons(a))
                     last_yaw[index] = a.yaw
                     crouch_cmd[index] = a.crouch and o.game in BOT_CROUCH
+                    if a.grenade and me.vehicle in (None, -1):
+                        nade_presses.append((index, me.pos + Vec(0.0, 0.0, 0.62), a.yaw, a.pitch))
+                if nade_watch is not None and (nade_presses or nade_watch.active(now)):
+                    try:
+                        projs = [(h, Vec(*q)) for h, t, n, q in live.objects((5,))]
+                        for index, at, yaw, pitch in nade_presses:
+                            nade_watch.pressed(now, index, at, yaw, pitch, known={h for h, _ in projs})
+                        kept = nade_watch.kept
+                        nade_watch.observe(now, projs)
+                        if nade_watch.kept > kept:
+                            print(f"{now:6.1f}s grenade flight learned ({nade_watch.kept} this match)", flush=True)
+                    except Exception as e:            # (an object read raced the game: the next tick reads again)
+                        if not getattr(nade_watch, "warned", False):
+                            nade_watch.warned = True
+                            print(f"grenade watch: {type(e).__name__}: {e}", flush=True)
                 for c in comms[said:]:
                     if not o.quiet or o.callouts:
                         print(f"{now:6.1f}s {'RED ' if c[1] == 0 else 'BLUE'} says: {c[2]}", flush=True)
@@ -1378,9 +1403,24 @@ def main():
                 if err not in seen_errors:           # function, so after one read error every tick failed
                     seen_errors.add(err)             # and the brain stopped 3 s later)
                     import traceback
-                    print(f"{now:6.1f}s tick failed ({err}):", traceback.format_exc(limit=4), flush=True)
+                    tb = traceback.format_exc(limit=6)
+                    print(f"{now:6.1f}s tick failed ({err}):", tb, flush=True)
+                    # (custom, Nov 18) into the match's recording too: logs/brain.txt is the last match's only, and two
+                    # matches whose bots all froze 10 s in (17:47, 17:50, Proving Grounds with a friend) left no error
+                    # once the next match had written over it
+                    if trace is not None:
+                        try:
+                            trace.write(json.dumps(dict(t=round(now, 3), tick_failed=err, traceback=tb[-3000:])) + chr(10))
+                        except Exception:
+                            pass
                 if fails > 90:
                     print('game gone, brain stopping:', e, flush=True)
+                    if trace is not None:
+                        try:
+                            trace.write(json.dumps(dict(t=round(now, 3), brain_stopped=f"{type(e).__name__}: {e}",
+                                                        fails=fails)) + chr(10))
+                        except Exception:
+                            pass
                     break
                 time.sleep(1 / HZ)
                 continue

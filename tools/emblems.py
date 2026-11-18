@@ -106,7 +106,7 @@ def sheet(out):
     img = Image.new("RGB", (S * 8, (S + 16) * ((len(bots) + 7) // 8)), (24, 28, 34))
     d = ImageDraw.Draw(img)
     for k, (name, _) in enumerate(bots):
-        e = emblems.compose(emblems.roll(looks.seed_of(name, looks.PROFILES)), S)
+        e = emblems.compose(emblems.emblem_for(name, looks.seed_of(name, looks.PROFILES)), S)
         x, y = (k % 8) * S, (k // 8) * (S + 16)
         if e is not None:
             img.paste(e, (x, y), e)

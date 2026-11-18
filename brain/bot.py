@@ -12,6 +12,7 @@ from .terrain import MAX_DROP, MAX_RISE, ROUTE_JUMP, ROUTE_CROUCH, EYE, CHEST
 from . import vehicles
 from . import anticipate
 from . import odds as odds_model
+from . import nade
 
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
@@ -441,6 +442,15 @@ PRENADE = True
 PRENADE_FRESH, PRENADE_MIN, PRENADE_MAX, PRENADE_ETA = 2.0, 4.0, 20.0, (1.0, 2.5)
 PRENADE_EVERY, PRENADE_PER_MAN, PRENADE_TURN, PRENADE_ALIGN = 0.25, 10.0, 0.8, 0.12
 PRENADE_PRESS, PRENADE_HOLD, PRENADE_COOLDOWN, PRENADE_LOFT = 0.3, 2.5, 6.0, 0.0
+# (custom, Nov 18, the owner: Halo Infinite's bots "throw really good grenades ... try to copy what they did") a throw at
+# a man in sight solved like Infinite's (brain/nade.py): a landing short of him, the arc that lands there from the
+# game's learned grenade speed and gravity, within NADE_CONE of the view, the arc open through the level. The view
+# turns onto the solved launch up to NADE_TURN_S, the press when within NADE_ON rad (after the turn cap), the view
+# held the grenade's learned delay + NADE_HOLD s; no arc: no throw, another try NADE_RETRY s on. Until the game's
+# physics are learned (nade.model None) every throw is as before. NADE_ARC False: as before everywhere
+NADE_ARC = True
+NADE_TURN_S, NADE_ON, NADE_HOLD, NADE_RETRY = 0.5, 0.05, 0.15, 1.0
+NADE_PICK_YAW, NADE_PICK_R = 0.35, (3.0, 30.0)   # the man the throw is at: within this of the plan's aim, this far
 HUNT_KEEP = 4.0                        # s fresher another man's trace must be to change whom a hunt goes after (decide)
 UPGRADE_GAIN = 0.08                    # loadout_value a loose gun must add to be worth the trip (upgrade_point)
 # where a DMR always goes over the assault rifle: in hand at every range while it is loaded (choose_weapon), and never
@@ -2382,16 +2392,18 @@ class Bot:
         if not s.grenades_allowed():
             act.grenade = False   # final safeguard for every grenade path, including boarding
         if me and me.alive:
+            s.nade_steer(now, me, snap, act)      # (custom, Nov 18: a solved throw's view, before the turn cap)
             s.turn_cap(me, act, dt)
             shot_part = getattr(s, "shot_part", None)
             lock = getattr(s, "h4_lock", None)
             locked = None
-            if lock is not None and me.vehicle == -1 and not act.grenade:
+            throwing = getattr(s, "nade_job", None) is not None   # (no shot lock over a throw's view)
+            if lock is not None and me.vehicle == -1 and not act.grenade and not throwing:
                 # Halo 4 Demon: the view on the chosen part every tick the line holds, past the turn cap, led
                 target = snap.player(lock[0])
                 if target is not None and target.alive and h4_demon_fire(s.p, s.game, me, target):
                     locked = h4_ray(me, target, lock[1], lead=True)
-            if locked is None and (act.fire and me.vehicle == -1
+            if locked is None and not throwing and (act.fire and me.vehicle == -1
                     and (me.weapon in ("dmr", "sniper") or demon_precision_snap(s.p, s.game, me))   # (H2/H2A/H3 Demon)
                     and ((profiles.protected_aim(s.p)) or percentage_sniper(s.p, me))   # (Blind: no head snap)
                     and shot_part is not None):
@@ -2410,6 +2422,7 @@ class Bot:
                 act.forward = max(-1.0, min(1.0, f * c - st * sn))
                 act.strafe = max(-1.0, min(1.0, f * sn + st * c))
                 act.yaw, act.pitch = yaw, pitch
+            s.nade_release(now, me, act)           # (custom, Nov 18: the solved throw's press, on the capped view)
             if act.grenade and me.vehicle == -1 and me.weapon not in CHARGE and me.weapon not in LUNGE:
                 s.nade_retry = dict(until=now + POST_GRENADE_RETRY, weapon=me.weapon,
                                     mag=s.current_mag(me), pressed=False, attempted=False)
@@ -2473,6 +2486,114 @@ class Bot:
         if act.fire:
             s.note("grenade: retry fire as weapon recovers")
         return True
+
+    def nade_steer(s, now, me, snap, act):
+        """(custom, Nov 18) A grenade the plan presses at a man in sight, thrown on its solved arc (brain/nade.py, Halo
+        Infinite's way): the press held back while the view turns onto the launch (nade_release presses), the view kept
+        there while it leaves the hand. Not in a vehicle, not the pre-nade (its own aim), not before the game's grenade
+        physics are learned (the press as before)."""
+        job = getattr(s, "nade_job", None)
+        if job is None:
+            if (not NADE_ARC or not act.grenade or me.vehicle not in (None, -1)
+                    or getattr(s, "prenade_st", None) is not None):
+                return
+            m = nade.model(s.game)
+            tid = s.nade_target(now, me, snap, act) if m is not None else None
+            if tid is None:
+                return                                  # (as before: along the plan's aim)
+            job = s.nade_job = dict(t0=now, until=now + NADE_TURN_S, tid=tid, phase="aim", m=m, view=None)
+            view = s.nade_plan(me, snap, job)
+            if view is not None and not s.nade_facing(me, view):
+                view = None
+                s.note("grenade: arc outside my view, not thrown")
+            if view is None:
+                s.nade_job = None
+                act.grenade = False
+                s.grenade_ready_at = min(s.grenade_ready_at, now + NADE_RETRY)
+                if not any(n.startswith("grenade: arc outside") for n in getattr(s, "notes", None) or ()):
+                    s.note("grenade: no open arc, not thrown")
+                return
+            job["view"] = view
+        if job["phase"] == "hold":
+            if now >= job["until"]:
+                s.nade_job = None
+                return
+            act.yaw, act.pitch = job["view"]
+            act.fire = act.grenade = False
+            return
+        view = s.nade_plan(me, snap, job) if now - job["t0"] > 0.0 else job["view"]
+        if view is None or now > job["until"]:
+            s.nade_job = None
+            act.grenade = False
+            s.grenade_ready_at = min(s.grenade_ready_at, now + NADE_RETRY)
+            s.note("grenade: could not line the arc up" if view is not None else "grenade: no open arc, not thrown")
+            return
+        job["view"] = view
+        act.yaw, act.pitch = view
+        act.fire = act.grenade = False                  # (the press after the turn cap: nade_release)
+
+    def nade_release(s, now, me, act):
+        """The solved throw's press, once the capped view is on its launch (NADE_ON); then the view held its delay."""
+        job = getattr(s, "nade_job", None)
+        if job is None or job["phase"] != "aim" or job["view"] is None:
+            return
+        yaw, pitch = job["view"]
+        if abs(wrap(act.yaw - yaw)) <= NADE_ON and abs(act.pitch - pitch) <= NADE_ON:
+            act.grenade, act.fire = True, False
+            job["phase"], job["until"] = "hold", now + job["m"]["delay"] + NADE_HOLD
+            s.note("grenade: thrown on its arc")
+
+    def nade_target(s, now, me, snap, act):
+        """The man a grenade press is at: an enemy believed within the last 3 s, NADE_PICK_R u off, the nearest to the
+        plan's aim within NADE_PICK_YAW rad. None: no one (a landing, a counter spot: thrown as before)."""
+        best, off_best = None, NADE_PICK_YAW
+        src = eye(me)
+        for k, b in s.per.beliefs.items():
+            if not isinstance(k, int) or now - b.t > 3.0:
+                continue
+            p = snap.player(k)
+            if p is None or not p.alive or p.team == me.team:
+                continue
+            d = dist(me.pos, b.pos)
+            if not (NADE_PICK_R[0] <= d <= NADE_PICK_R[1]):
+                continue
+            off = abs(wrap(angles_to(src, b.pos)[0] - act.yaw))
+            if off <= off_best:
+                best, off_best = k, off
+        return best
+
+    def nade_plan(s, me, snap, job):
+        """The view (yaw, pitch) that throws the job's grenade on an open arc onto its landing short of the man (led by
+        nade.LEAD of his way over the flight), the low arc first, the high one if the low is shut; None: neither open,
+        out of reach, or a teammate by the landing (nade_clear)."""
+        b = s.per.beliefs.get(job["tid"])
+        if b is None:
+            return None
+        m = job["m"]
+        src = eye(me)
+        T = s.T()
+        line = getattr(T, "point_los", None)
+        for high in (False, True):
+            at, sol, land = b.pos, None, None
+            for _ in range(2):                          # (a lead by the flight's time, once refined)
+                land = nade.landing_point(src, at)
+                sol = nade.solve(src, land, m["speed"], m["gravity"], high=high)
+                if sol is None:
+                    break
+                at = b.pos + Vec(b.vel.x, b.vel.y, 0.0) * (sol[2] * nade.LEAD)
+            if sol is None or not s.nade_clear(me, land, snap):
+                continue
+            if line is not None and not nade.arc_clear(lambda a, c: line(a, c, mode="shot"), src, sol[0], sol[1],
+                                                       m["speed"], m["gravity"], sol[2]):
+                continue
+            return wrap(sol[0] - m.get("yaw_off", 0.0)), sol[1] - m["pitch_off"]
+        return None
+
+    @staticmethod
+    def nade_facing(me, view):
+        """Infinite's facing rule: the throw's direction within 30 degrees of the way the bot faces, on the flat (its
+        check is the flat dot product with the facing, cos nade.CONE_COS)."""
+        return math.cos(wrap(view[0] - me.yaw)) >= nade.CONE_COS
 
     def percentage_sniper_shot(s, now, me, snap, act):
         """Apply one intended hit/miss outcome, retained through unacknowledged fire requests.

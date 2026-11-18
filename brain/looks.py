@@ -138,10 +138,11 @@ def clan_of(name, path=PROFILES):
 
 def emblem_of(name, path=PROFILES):
     """The bot's MCC emblem ids (brain/emblems.py, its profile view's picture): MCC shows it for the bot in every game's
-    scoreboard and the post-game report (native/report.cpp). None without the catalog (MCC's default then)."""
+    scoreboard and the post-game report (native/report.cpp): the one the owner picked for it on the Service Record, else
+    its roll (emblems.emblem_for). None without the catalog (MCC's default then)."""
     from . import emblems
     try:
-        return emblems.ids(emblems.roll(seed_of(name, path)))
+        return emblems.ids(emblems.emblem_for(name, seed_of(name, path)))
     except (OSError, ValueError):
         return None
 

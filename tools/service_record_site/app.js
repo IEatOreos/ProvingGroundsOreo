@@ -45,7 +45,7 @@
   const RING = ["slayer", "ctf", "koth", "territories", "oddball", "infection", "assault", "invasion"];
   const PAGES = [
     ["Service Record", [["overview", "Overview"], ["placements", "State Placements"], ["history", "Game History"], ["commendations", "Commendations"],
-      ["heatmaps", "Heatmaps"], ["achievements", "Achievements"], ["profile", "Profile"]]],
+      ["heatmaps", "Heatmaps"], ["challenges", "Challenges"], ["profile", "Profile"]]],
     ["Career Stats", [["summary", "Summary"], ["types", "By Game Type"], ["maps", "By Map"], ["medals", "Medals"],
       ["weapons", "Weapons"], ["enemies", "Enemies"]]],
   ];
@@ -110,7 +110,7 @@
     history: "M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4M12 7v5l3 3",
     commendations: "M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z",
     heatmaps: "M12 21c-4 0-6.5-2.6-6.5-6 0-4 3.5-5.5 4-9 2.5 1.5 4 4 4 6 1-.5 1.6-1.6 1.8-3 1.7 1.6 3.2 3.8 3.2 6 0 3.4-2.5 6-6.5 6z",
-    achievements: "M12 3l7 4v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V7zM9 12l2 2 4-4",
+    challenges: "M12 3l7 4v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V7zM9 12l2 2 4-4",
     profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5",
     summary: "M5 20v-8M10 20V5M15 20v-6M20 20V9M3 20h18",
     types: "M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.5 1.5L15 14H9l-1.5 2A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4zM8 11v3M6.5 12.5h3M15.5 11.5h.01M17.5 13.5h.01",
@@ -136,7 +136,7 @@
   // drawn ones below otherwise
   const NEON = { overview: "home", placements: "rising", history: "clock", commendations: "star", heatmaps: "picture",
     profile: "helmet", summary: "bars", types: "s_controller", maps: "pin", medals: "s_perfection", weapons: "s_dmr",
-    enemies: "skull", film: "film", achievements: "s_hex",
+    enemies: "skull", film: "film", challenges: "s_hex",
     // the Overview's stat list and the kills box (his second set); Assists keeps the drawn one
     calendar: "s_calendar", games: "s_controller", win: "s_star", kills: "s_crosshair", deaths: "s_skull",
     "stat-medals": "s_medal", spree: "s_layers", since: "s_clock" };
@@ -178,6 +178,22 @@
   const pad2 = (n) => String(n).padStart(2, "0");
   const dotted = (t) => { const d = new Date(t * 1000); return pad2(d.getMonth() + 1) + "." + pad2(d.getDate()) + "." + d.getFullYear(); };
 
+  // (Nov 18, the owner: an emblem editor for each bot "like MCC's own") a bot's emblem editor, under its card in edit
+  // mode: emblem_editor.js, which only the owner's editor serves (/api/emblem-editor.js), loaded the first time
+  let emblemOpen = null, emblemScript = null;      // (the bot whose editor is open, kept while the page redraws)
+  const loadEmblemEditor = () => emblemScript || (emblemScript = new Promise((ok, no) => {
+    const s = el("script", { src: "/api/emblem-editor.js" });
+    s.onload = ok;
+    s.onerror = () => { emblemScript = null; s.remove(); no(new Error("the editor is not running")); };
+    document.head.append(s);
+  }));
+  function emblemSlot(p) {
+    if (!editing() || p.person || emblemOpen !== p.name) return null;
+    const host = el("div", { class: "emblem-slot", style: "grid-column: 1 / -1; min-width: 0" });
+    loadEmblemEditor().then(() => window.SREmblemEditor.open(host, p.name))
+      .catch((e) => host.replaceChildren(el("span", { class: "note" }, "Not loaded: " + e.message)));
+    return host;
+  }
   // The record's card across the top of every one of its pages: the emblem, the name and clan tag, the rank and its
   // progress, and the three game type families it has played most.
   function recordCard(p) {
@@ -191,6 +207,10 @@
         el("div", { class: "nm" }, insignia(p.rank, true), el("h1", null, p.name), cardBadges(p)),
         cardClan(p),
         editing() && !p.person ? botClanForm(p) : null,   // (a person's tag is their own, set in the game's settings)
+        editing() && !p.person ? difficultyForm(p) : null,
+        editing() ? homeStateForm(p) : null,
+        editing() && !p.person ? el("button", { type: "button", class: "edit-toggle", style: "justify-self: start; margin-top: var(--s-2)", "aria-pressed": String(emblemOpen === p.name),
+          onclick: () => { emblemOpen = emblemOpen === p.name ? null : p.name; render(); } }, emblemOpen === p.name ? "Close emblem editor" : "Edit emblem") : null,
         el("div", { class: "rk" }, el("span", null, cur[0]),
           el("span", { class: "nx" }, next ? "Next: " + next[0] + " (" + int(p.cr) + " / " + int(next[1]) + " cR)" : "Highest rank reached (" + int(p.cr) + " cR)")),
         next ? el("progress", { max: next[1] - cur[1], value: p.cr - cur[1], "aria-label": "Progress to " + next[0] })
@@ -200,6 +220,7 @@
         return el("li", { class: n ? null : "off", "data-tip": (catName.get(k) || FAMILY_LABEL[k] || title(k)) + ": " + int(n) + (n === 1 ? " game" : " games") },
           el("span", null, BADGE_LABEL[k] || title(k)), modeBadge(k));
       })),
+      ...[emblemSlot(p)].filter(Boolean),
     ];
   }
   // the bot's clan on its card: a quiet line of its own under the name (label, tag, the clan's full name), the clan's page
@@ -207,7 +228,8 @@
     if (!p.clan || !String(p.clan).trim()) return null;
     const full = (D.clan_names && D.clan_names[clanKey(p.clan)]) || "";
     return el("a", { class: "card-clan", href: href(["clans", clanKey(p.clan)]), "aria-label": "Clan: " + (full ? full + " (" + p.clan + ")" : p.clan) },
-      el("span", { class: "lbl" }, "Clan"), el("span", { class: "clan-abbr" }, p.clan), full ? el("span", { class: "full" }, full) : null);
+      el("span", { class: "lbl" }, "Clan"), clanTag(p.clan, "clan-abbr"), full ? el("span", { class: "full" }, full) : null,
+      (() => { const c = clanOf(p.clan); return level(c, "ribbon") ? el("span", { class: "clan-ribbon" }, "Member of " + c.title + " · " + clanRankName(c)) : null; })());
   }
   // a page's own title, under the card (the card itself is drawn once by render)
   function banner() {
@@ -400,7 +422,7 @@
         const s = bucket(p);
         return el("tr", null, td(i + 1, i < 3 && s.games && !want ? "pos lead" : "pos"),
           td(el("span", { class: "cell" }, emblem(p, true), el("a", { href: href(["p", p.name, "overview"]) }, p.name),
-            p.clan && el("a", { class: "tag hide-s", href: href(["clans", clanKey(p.clan)]) }, p.clan)), "l"),
+            p.clan && clanTag(p.clan, "tag hide-s", { href: href(["clans", clanKey(p.clan)]) })), "l"),
           td(el("span", { class: "cell" }, insignia(p.rank, true), D.ranks[p.rank][0]), "l hide-s"),
           td(int(s.games)), td(int(s.wins), "hide-s"), td(int(s.kills)), td(int(s.deaths)), td(int(s.assists), "hide-s"), td(dec(s.r.kd)));
       }) : [el("tr", null, el("td", { class: "l", colspan: 9 }, "Nothing matches “" + find + "”."))]));
@@ -416,10 +438,11 @@
     draw();
     const played = D.players.filter((p) => bucket(p).games).length;
     return [
-      el("h1", null, "Bot Tracker"), boardTabs(""), editing() ? resetAllForm() : null, podium(),
+      el("h1", null, "Bot Tracker"), boardTabs(""), editing() ? [simulateForm(), resetAllForm()] : null, podium(),
       el("p", { class: "note" }, played
         ? int(played) + " of " + int(D.players.length) + " have a counted match in " + gameName.get(game()) + ". Choose a name to open its Service Record."
         : "Nobody has a counted match in " + gameName.get(game()) + " yet. Everyone starts at 0; the numbers fill in after the next match."),
+      todayPanels(),
       panel("Standings", el("div", null, el("div", { class: "scroll" }, el("table", null,
         el("thead", null, el("tr", null, el("th", { scope: "col" }, "#"), head("name", "Name", "l"), head("rank", "Rank", "l hide-s"),
           head("games", "Games"), head("wins", "Wins", "hide-s"), head("kills", "Kills"), head("deaths", "Deaths"),
@@ -455,6 +478,36 @@
           el("span", { class: "cr" }, int(v) + " cR"));
       })));
   }
+  // (Nov 17, the owner: "Daily Top 5, Playlist activity") today's five best games by the credits each earned, and how
+  // busy the playlists were (tools/service_record.py today_block; Reach, Proving Grounds' matches and the simulated ones)
+  function todayPanels() {
+    const t = D.today;
+    if (!t) return null;
+    const shortDay = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short" });
+    const top = t.top.length
+      ? el("div", { class: "scroll" }, el("table", null,
+        el("thead", null, el("tr", null, el("th", { scope: "col" }, "#"), el("th", { scope: "col", class: "l" }, "Player"),
+          el("th", { scope: "col", class: "l hide-s" }, "Game"), el("th", { scope: "col" }, "K / D / A"), el("th", { scope: "col" }, "cR"))),
+        el("tbody", null, t.top.map((g, i) => {
+          const p = players.get(g.n);
+          return el("tr", null, td(i + 1, i === 0 ? "pos lead" : "pos"),
+            td(el("span", { class: "cell" }, p ? emblem(p, true) : null, p ? el("a", { href: href(["p", g.n, "overview"]) }, g.n) : g.n), "l"),
+            td(p ? el("a", { href: href(["p", g.n, "match", g.id]) }, mapName(g.map) + " · " + (g.type || "Unknown")) : mapName(g.map), "l hide-s"),
+            td(int(g.k) + " / " + int(g.d) + " / " + int(g.a) + (g.won ? " · Win" : "")), td(int(g.cr)));
+        }))))
+      : el("p", { class: "note" }, "No games yet today.");
+    const most = Math.max(1, ...t.week.map((w) => w[1]));
+    const week = el("ol", { class: "week", "aria-label": "Games a day, the last seven days" }, t.week.map(([d, n]) =>
+      el("li", { title: int(n) + " games on " + d }, el("span", { class: "bar", style: "height:" + Math.round(4 + 56 * n / most) + "px" }),
+        el("span", { class: "n" }, int(n)), el("span", { class: "d" }, shortDay(d)))));
+    const activity = el("div", null, el("dl", { class: "stats" },
+      el("dt", null, "Games today"), el("dd", null, int(t.games)),
+      t.playlists.map(([pl, n]) => [el("dt", null, String(pl).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())), el("dd", null, int(n))]),
+      el("dt", null, "Players today"), el("dd", null, int(t.players)),
+      el("dt", null, "Most active"), el("dd", null, t.busiest.length ? t.busiest.map(([n, k], i) => [i ? ", " : "",
+        players.has(n) ? el("a", { href: href(["p", n, "overview"]) }, n) : n, " (" + int(k) + ")"]) : "-")), week);
+    return el("div", { class: "today" }, panel("Today's Top 5", top), panel("Playlist Activity", activity));
+  }
   // every rank of Reach in order, its Grades with their credits, and which bots hold it now (credits come from counted
   // Reach matches only: ranks.json)
   // ---------------------------------------------------------------- clans
@@ -463,7 +516,8 @@
   // every step x10 (D.ranks: the one table, ranks.json).
   const CLAN_SCALE = 10;
   const clanKey = (tag) => String(tag).trim().toLowerCase();
-  let clanCache = null;
+  let clanCache = null, clanIndex = new Map();
+  const clanMap = () => { clanList(); return clanIndex; };
   function clanList() {
     if (clanCache) return clanCache;
     const by = new Map();
@@ -476,8 +530,9 @@
       c.tags.set(p.clan, (c.tags.get(p.clan) || 0) + 1);
     }
     clanCache = [...by.values()].map((c) => {
-      const cr = c.members.reduce((n, p) => n + (p.cr || 0), 0);
-      const tag = [...c.tags].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];   // (its most worn spelling)
+      // (Nov 18: and every clan weekly challenge it finished, service_record.py clan_block)
+      const cr = c.members.reduce((n, p) => n + (p.cr || 0), 0) + ((D.clans && D.clans[c.key] && D.clans[c.key].bonus) || 0);
+      const tag =[...c.tags].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];   // (its most worn spelling)
       c.members.sort((a, b) => (b.cr || 0) - (a.cr || 0) || a.name.localeCompare(b.name));
       const games = c.members.reduce((n, p) => n + ((p.g[D.default_game] && p.g[D.default_game].cats.all) || ZERO).games, 0);
       const name = (D.clan_names && D.clan_names[c.key]) || "";
@@ -485,6 +540,7 @@
       return { key: c.key, tag, name, about, title: name || tag, members: c.members, cr, games, rank: clanRank(cr) };
     }).sort((a, b) => b.cr - a.cr || b.members.length - a.members.length || a.tag.localeCompare(b.tag));
     clanCache.forEach((c, i) => { c.place = i && c.cr === clanCache[i - 1].cr ? clanCache[i - 1].place : i + 1; });
+    clanIndex = new Map(clanCache.map((c) => [c.key, c]));
     return clanCache;
   }
   function clanRank(cr) {
@@ -499,6 +555,205 @@
         next ? el("progress", { max: (next[1] - cur[1]) * CLAN_SCALE, value: c.cr - cur[1] * CLAN_SCALE, "aria-label": "Clan progress to " + next[0] })
           : el("progress", { max: 1, value: 1, "aria-label": "Highest clan rank reached" }),
         el("div", { class: "rk-next" }, next ? "Next: " + next[0] + " (" + int(c.cr) + " / " + int(next[1] * CLAN_SCALE) + " cR)" : "Highest rank reached (" + int(c.cr) + " cR)")));
+  }
+  // ---------------------------------------------------------------- clan rewards (Nov 18, the owner: make people and
+  // bots want to join a big clan; "add everything", each one changeable in edit mode to test it). Which rewards are on
+  // and the clan ranks unlocking each level: D.clan_rewards (clan_rewards.json and the owner's changes); what each clan
+  // earned: D.clans (service_record.py clan_block). The edit mode's preview shows a clan at any rank, or with the crown
+  // on or off, on every page until the site reloads; nothing of it is saved.
+  const clanPreview = new Map();               // clan key -> { rank: a rank's number (0: its own), top: true, false or null }
+  const reward = (k) => (D.clan_rewards || []).find((r) => r.key === k);
+  const rewardOn = (k) => { const r = reward(k); return !!(r && r.on); };
+  const RANK_NAMES = D.ranks.filter((r) => r[3] === 0).map((r) => r[0]);
+  const rankNo = (name) => RANK_NAMES.indexOf(name) + 1;   // (D.ranks[i][2]: Recruit 1)
+  const clanNumber = (c) => { const pv = clanPreview.get(c.key); return pv && pv.rank ? pv.rank : D.ranks[c.rank][2]; };
+  const clanRankName = (c) => { const pv = clanPreview.get(c.key); return pv && pv.rank ? RANK_NAMES[pv.rank - 1] : D.ranks[c.rank][0]; };
+  // how many levels of a reward a clan has: 0 none yet (or the reward is off)
+  function level(c, k) {
+    const r = reward(k);
+    if (!c || !r || !r.on) return 0;
+    if (!r.at) return 1;
+    const n = clanNumber(c);
+    return r.at.filter((a) => n >= rankNo(a)).length;
+  }
+  function crowned(c) {
+    if (!c || !rewardOn("crown")) return false;
+    const pv = clanPreview.get(c.key);
+    return pv && pv.top != null ? pv.top : c.place === 1 && c.cr > 0;
+  }
+  const clanOf = (tag) => (tag && String(tag).trim() ? clanMap().get(clanKey(tag)) || null : null);
+  function crownIcon() {
+    return svg("svg", { class: "crown", viewBox: "0 0 24 16", width: 16, height: 11, role: "img", "aria-label": "Top clan" },
+      svg("title", null, "Top clan"),
+      svg("path", { d: "M3 13.5h18M3.5 11.5 2 3.5l5.5 3.5L12 1.5 16.5 7 22 3.5l-1.5 8z", fill: "currentColor", stroke: "currentColor", "stroke-width": 1.2, "stroke-linejoin": "round" }));
+  }
+  // a clan tag as shown anywhere on the site: its clan's tag colour, and the crown while its clan is first
+  function clanTag(tag, cls, attrs, noCrown) {
+    const c = clanOf(tag), lv = level(c, "tag");
+    return el(attrs && attrs.href ? "a" : "span", Object.assign({}, attrs || {}, { class: cls + (lv ? " ct ct-" + lv : "") }),
+      !noCrown && crowned(c) ? crownIcon() : null, tag);
+  }
+  // the clan's emblem: the member's the owner picked, else its top member's with one
+  function clanEmblem(c, small) {
+    if (!level(c, "emblem")) return null;
+    const pick = D.clans && D.clans[c.key] && D.clans[c.key].emblem;
+    const p = (pick && c.members.find((m) => m.name === pick)) || c.members.find((m) => m.emblem);
+    return p ? el("span", { class: "clan-emblem" + (small ? " sm" : ""), title: "Clan emblem (" + p.name + "'s)" }, emblem(p, small)) : null;
+  }
+  const clanInfo = (c) => (D.clans && D.clans[c.key]) || { bonus: 0, done: 0, now: 0, mvp: null, history: [], emblem: null };
+  const reachAll = (p) => (p.g[D.default_game] && p.g[D.default_game].cats.all) || ZERO;
+  function clanChallengePanel(c) {
+    const W = D.clan_week, ch = W && W.list.find((x) => x.key === W.key);
+    if (!rewardOn("challenge") || !ch) return null;
+    const info = clanInfo(c);
+    return panel("Clan Weekly Challenge", el("div", { class: "body" }, el("ol", { class: "chals" }, challengeCard(ch, info.now || 0, W.ends)),
+      el("p", { class: "note" }, "Every member's " + gameName.get(D.default_game) + " matches this week count together. Finished, its cR goes to the clan.")),
+      el("span", { class: "chal-count" }, "Finished: ", el("b", null, int(info.done)), " · Clan challenge cR: ", el("b", null, int(info.bonus))));
+  }
+  function hallPanel(c) {
+    if (!rewardOn("hall") || !c.members.length) return null;
+    const by = (f) => c.members.slice().sort((a, b) => f(b) - f(a))[0];
+    const top = c.members[0];
+    const played = c.members.filter((p) => reachAll(p).games >= 10);
+    const kd = played.length ? played.slice().sort((a, b) => (reachAll(b).r.kd || 0) - (reachAll(a).r.kd || 0))[0] : null;
+    const most = by((p) => reachAll(p).games);
+    const mvp = clanInfo(c).mvp;
+    const item = (k, p, v) => el("li", null, el("span", { class: "k" }, k),
+      p ? el("a", { class: "who", href: href(["p", p.name, "overview"]) }, emblem(p, true), p.name) : el("span", { class: "who none" }, "No one yet"),
+      el("span", { class: "v" }, p ? v : ""));
+    return panel("Hall of Fame", el("div", { class: "body" }, el("ul", { class: "hall" },
+      item("Top member", top.cr ? top : null, int(top.cr) + " cR"),
+      item("Best K/D", kd, kd ? dec(reachAll(kd).r.kd) + " K/D (10 or more games)" : ""),
+      item("Most games", reachAll(most).games ? most : null, int(reachAll(most).games) + " games"),
+      item("This week's MVP", mvp && players.has(mvp[0]) ? players.get(mvp[0]) : null, mvp ? int(mvp[1]) + " cR this week" : ""))));
+  }
+  function rivalsPanel(c) {
+    if (!rewardOn("rivals")) return null;
+    const list = clanList(), i = list.indexOf(c), up = list[i - 1], down = list[i + 1];
+    if (!up && !down) return null;
+    const row = (x, k, v) => el("li", null, el("span", { class: "k" }, k),
+      el("a", { class: "who", href: href(["clans", x.key]) }, insignia(x.rank, true), clanTag(x.tag, "clan-abbr"), x.name || null), el("span", { class: "v" }, v));
+    return panel("Rivals", el("div", { class: "body" }, el("ul", { class: "hall rivals" },
+      up ? row(up, "Just above: #" + up.place, int(up.cr - c.cr) + " cR to pass them") : null,
+      down ? row(down, "Just below: #" + down.place, int(c.cr - down.cr) + " cR ahead of them") : null)));
+  }
+  function historyPanel(c) {
+    if (!rewardOn("history")) return null;
+    const h = clanInfo(c).history || [];
+    const text = ([, kind, v]) => (kind === "rank" ? "Reached " + v : kind === "games" ? int(v) + " games played"
+      : kind === "top" ? "Top clan for the week of " + day(new Date(v + "T12:00:00").getTime() / 1000) : "First match as a clan");
+    return panel("History", el("div", { class: "body" }, h.length
+      ? el("ol", { class: "timeline" }, h.map((e) => el("li", { class: "tl-" + e[1] }, el("time", { datetime: new Date(e[0] * 1000).toISOString() }, day(e[0])), el("span", null, text(e)))))
+      : empty("No history yet", "Ranks reached, games played milestones and weeks as the top clan show here as the members play.")));
+  }
+  // the Clans page's summary of this week's clan challenge: what it is, the time left, how many clans finished it
+  function clanWeekSummary() {
+    const W = D.clan_week, ch = W && W.list.find((x) => x.key === W.key);
+    if (!rewardOn("challenge") || !ch) return null;
+    const done = clanList().filter((c) => clanInfo(c).now >= ch.need).length;
+    return panel("This Week's Clan Challenge", el("div", { class: "body clan-week" },
+      el("div", { class: "chal-ic" }, neon(ch.icon, 56)),
+      el("div", null, el("h3", null, ch.name), el("p", { class: "chal-what" }, ch.what + " Every member's matches count; finished, " + int(ch.cr) + " cR goes to the clan.")),
+      el("div", { class: "chal-meta" }, countdown(el("span", { class: "chal-time", "aria-label": "Time left" }), W.ends),
+        el("span", null, int(done) + (done === 1 ? " clan" : " clans") + " finished"))));
+  }
+  // what a clan earns as it ranks up, for everyone to see (the rewards that are on)
+  function clanRewardsList() {
+    const on = (D.clan_rewards || []).filter((r) => r.on);
+    if (!on.length) return null;
+    return panel("Clan Rewards", el("div", { class: "body" }, el("ul", { class: "rewards-list" }, on.map((r) => el("li", null,
+      el("b", null, r.name), el("span", { class: "rw-what" }, r.what),
+      el("span", { class: "rw-at" }, r.at ? r.at.map((a, i) => el("span", { class: "rw-step" }, (r.levels && r.levels[i]) || "Unlocked", el("small", null, a))) : el("span", { class: "rw-step" }, "Every clan")))))));
+  }
+  // ---- the owner's clan reward tools (edit mode)
+  async function editPost(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Service-Record-Edit": "1" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "error");
+    return d;
+  }
+  const notSaved = (e) => (e instanceof TypeError ? "Not saved: the editor is not running." : "Not saved: " + e.message);
+  // every reward: on or off, and the rank each level unlocks at (saved; the site rebuilds)
+  function clanRewardsForm() {
+    const rows = (D.clan_rewards || []).map((r) => {
+      const on = el("input", { type: "checkbox", checked: !!r.on, "aria-label": r.name + ": on" });
+      const at = (r.at || []).map((a, i) => {
+        const s = el("select", { "aria-label": r.name + ", " + ((r.levels && r.levels[i]) || "level " + (i + 1)) + ": unlocks at" }, RANK_NAMES.map((n) => el("option", { value: n }, n)));
+        s.value = a;
+        return s;
+      });
+      return { r, on, at, node: el("li", null, el("label", { class: "rw-on" }, on, el("b", null, r.name)), el("span", { class: "rw-what" }, r.what),
+        el("span", { class: "rw-at" }, at.length ? at.map((s, i) => el("label", null, (r.levels && r.levels[i]) || "Unlocks at", s)) : el("small", null, "No rank needed"))) };
+    });
+    const msg = el("span", { class: "note", "aria-live": "polite" }, "Ranks are the clan ladder (every step ×" + CLAN_SCALE + "). Use a clan page's Preview to see a look at any rank.");
+    const send = async (rewards) => {
+      msg.textContent = "Saving…";
+      try {
+        D.clan_rewards = (await editPost("/api/clan-rewards", { rewards })).rewards;
+        clanCache = null;
+        msg.textContent = "Saved. The page reloads with the new build.";
+        render();
+      } catch (e) { msg.textContent = notSaved(e); }
+    };
+    const save = () => send(Object.fromEntries(rows.map((x) => [x.r.key, x.at.length ? { on: x.on.checked, at: x.at.map((s) => s.value) } : { on: x.on.checked }])));
+    return el("form", { class: "edit-form clan-tool clan-rewards-form", onsubmit: (e) => { e.preventDefault(); save(); } },
+      el("strong", null, "Clan rewards"), el("ul", null, rows.map((x) => x.node)),
+      el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save rewards"), el("button", { type: "button", onclick: () => send({}) }, "Back to defaults")), msg);
+  }
+  // this week's clan challenge picked by hand, or drawn by the date again (saved; the site rebuilds)
+  function clanWeekForm() {
+    const W = D.clan_week;
+    if (!W || !W.list.length) return null;
+    const sel = el("select", { "aria-label": "This week's clan challenge" }, el("option", { value: "" }, "Drawn by the date"),
+      W.list.map((c) => el("option", { value: c.key }, c.name + ": " + c.what + " (" + int(c.cr) + " cR)")));
+    sel.value = W.picked ? W.key : "";
+    const msg = el("span", { class: "note", "aria-live": "polite" }, "For this week only; next Monday's is drawn by its date.");
+    const save = async () => {
+      msg.textContent = "Saving…";
+      try { await editPost("/api/clan-week", { challenge: sel.value }); msg.textContent = "Saved. The page reloads with the new build."; } catch (e) { msg.textContent = notSaved(e); }
+    };
+    return el("form", { class: "edit-form clan-tool clan-week-form", onsubmit: (e) => { e.preventDefault(); save(); } },
+      el("strong", null, "This week's clan challenge"), el("label", null, "Challenge", sel), el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save")), msg);
+  }
+  // a clan seen at any rank, or with the crown on or off: this page only, never saved
+  function clanPreviewForm(c) {
+    const pv = clanPreview.get(c.key) || { rank: 0, top: null };
+    const rank = el("select", { "aria-label": "Preview " + c.tag + " at a rank" }, el("option", { value: "0" }, "Its own (" + D.ranks[c.rank][0] + ")"),
+      RANK_NAMES.map((n, i) => el("option", { value: String(i + 1) }, n)));
+    rank.value = String(pv.rank || 0);
+    const top = el("select", { "aria-label": "Preview the crown on " + c.tag }, el("option", { value: "" }, "As it is"), el("option", { value: "1" }, "On"), el("option", { value: "0" }, "Off"));
+    top.value = pv.top == null ? "" : pv.top ? "1" : "0";
+    const apply = () => {
+      const r = Number(rank.value), t = top.value === "" ? null : top.value === "1";
+      if (!r && t == null) clanPreview.delete(c.key); else clanPreview.set(c.key, { rank: r, top: t });
+      render();
+    };
+    rank.addEventListener("change", apply);
+    top.addEventListener("change", apply);
+    return el("div", { class: "edit-form clan-tool clan-preview" }, el("strong", null, "Preview rewards"), el("label", null, "Rank", rank), el("label", null, "Crown", top),
+      clanPreview.has(c.key) ? el("button", { type: "button", onclick: () => { clanPreview.delete(c.key); render(); } }, "Stop preview") : null,
+      el("span", { class: "note" }, clanPreview.has(c.key) ? "Previewing on every page until the site reloads. Nothing is saved." : "See this clan's looks at any rank. Nothing is saved."));
+  }
+  // which member's emblem the clan shows (saved; the site rebuilds)
+  function clanEmblemForm(c) {
+    const r = reward("emblem");
+    if (!r) return null;
+    const pick = clanInfo(c).emblem || "";
+    const sel = el("select", { "aria-label": "Emblem for " + c.tag }, el("option", { value: "" }, "Top member's"),
+      c.members.filter((p) => p.emblem).map((p) => el("option", { value: p.name }, p.name)));
+    sel.value = pick;
+    const msg = el("span", { class: "note", "aria-live": "polite" }, !r.on ? "The clan emblem reward is off." : level(c, "emblem") ? "" : "Shows from " + r.at[0] + " (Preview a rank to see it).");
+    const save = async () => {
+      msg.textContent = "Saving…";
+      try {
+        const d = await editPost("/api/clan-emblem", { key: c.key, name: sel.value });
+        D.clans = D.clans || {};
+        D.clans[c.key] = Object.assign(clanInfo(c), { emblem: d.name || null });
+        render();
+      } catch (e) { msg.textContent = notSaved(e); }
+    };
+    return el("form", { class: "edit-form clan-tool", onsubmit: (e) => { e.preventDefault(); save(); } },
+      el("strong", null, "Clan emblem"), el("label", null, "Member's emblem", sel), el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save")), msg);
   }
   // ---------------------------------------------------------------- the owner's edit mode
   // Only when the site is served by the owner's editor on this PC (tools/service_record_edit.py answers /api/editor);
@@ -566,6 +821,76 @@
       el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save"),
         p.clan ? el("button", { type: "button", onclick: () => save("") }, "Leave clan") : null), msg);
   }
+  // (Nov 18, the owner) a bot's difficulty, saved where the game reads it (bot_pool_saved.ini, and the lobby list when
+  // the bot is on it, by the editor): only while MCC is closed, played from MCC's next start. "The lobby's": no saved
+  // difficulty, it plays at the lobby's. The keys and names are the BOTS panel's (bots_panel.cpp TIER_KEY, TIER_NAME).
+  const TIER_NAMES = { novice: "Easy", average: "Normal", strong: "Heroic", top: "Legendary", scaling: "Scaling", demon: "Demon",
+    blind: "Blind", tactician: "Tactician", mythic: "Mythic" };
+  function difficultyForm(p) {
+    const sel = el("select", { "aria-label": "Difficulty for " + p.name },
+      el("option", { value: "", selected: !p.difficulty }, "The lobby's"),
+      Object.entries(TIER_NAMES).map(([k, n]) => el("option", { value: k, selected: k === p.difficulty }, n)));
+    const msg = el("span", { class: "note", "aria-live": "polite" }, "Saved to the game: close MCC first; played from its next start.");
+    const save = async () => {
+      if (sel.value === (p.difficulty || "")) { msg.textContent = "No change."; return; }
+      msg.textContent = "Saving…";
+      try {
+        await editPost("/api/bot-difficulty", { name: p.name, difficulty: sel.value });
+        msg.textContent = "Saved. Reloading…";
+        location.reload();
+      } catch (e) { msg.textContent = notSaved(e); }
+    };
+    return el("form", { class: "edit-form bot-clan difficulty", onsubmit: (e) => { e.preventDefault(); save(); } },
+      el("label", null, "Difficulty", sel), el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save")), msg);
+  }
+  // (Nov 18, the owner) a bot's or player's home state on the state boards: saved by the editor (home_states.json),
+  // the site rebuilt, then the page reloads so every board shows the name in its new state
+  function homeStateForm(p) {
+    const groups = [...REGIONS].map(([k, n]) => el("optgroup", { label: n },
+      Object.entries(STATES).filter(([, s]) => s[1] === k).sort((a, b) => a[1][0].localeCompare(b[1][0]))
+        .map(([c, s]) => el("option", { value: c, selected: c === p.state }, s[0]))));
+    const sel = el("select", { "aria-label": "Home state for " + p.name }, groups);
+    const msg = el("span", { class: "note", "aria-live": "polite" }, p.state_set ? "Set by you in edit mode." : "Picked from the name.");
+    const save = async (code) => {
+      if (code === p.state) { msg.textContent = "No change."; return; }
+      msg.textContent = "Saving…";
+      try {
+        await editPost("/api/home-state", { name: p.name, state: code });
+        msg.textContent = "Saved. Reloading…";
+        location.reload();
+      } catch (e) { msg.textContent = notSaved(e); }
+    };
+    return el("form", { class: "edit-form bot-clan home-state", onsubmit: (e) => { e.preventDefault(); save(sel.value); } },
+      el("label", null, "Home state", sel),
+      el("div", { class: "edit-actions" }, el("button", { type: "submit" }, "Save"),
+        p.state_set ? el("button", { type: "button", onclick: () => save("") }, "Back to its picked state") : null), msg);
+  }
+  // Play rounds (Nov 17, the owner: the bot simulation's button, "ask each time"): how many rounds of the playlists
+  // to play now (a round: the lobbies alongside one match of yours, tools/bot_sim.py); the editor plays them and
+  // rebuilds the site, which reloads with the new build
+  function simulateForm() {
+    const input = el("input", { type: "number", min: 1, max: 20, value: 1, class: "rounds", "aria-label": "Rounds to play" });
+    const msg = el("span", { class: "note", "aria-live": "polite" }, "Bots play the playlists on their own: one round is about 25 lobbies.");
+    const go = el("button", { type: "submit" }, "Play rounds");
+    const run = async () => {
+      const n = Math.max(1, Math.min(20, Math.round(Number(input.value) || 1)));
+      go.disabled = true;
+      msg.textContent = "Playing " + n + (n === 1 ? " round" : " rounds") + "…";
+      try {
+        const r = await fetch("/api/simulate", { method: "POST", headers: { "Content-Type": "application/json", "X-Service-Record-Edit": "1" },
+          body: JSON.stringify({ rounds: n }) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "error");
+        msg.textContent = "Done: " + int(d.matches) + " matches played. The page reloads with the new build.";
+      } catch (e) {
+        msg.textContent = e instanceof TypeError ? "Not played: the editor is not running." : "Not played: " + e.message;
+      } finally {
+        go.disabled = false;
+      }
+    };
+    return el("form", { class: "edit-form simulate", onsubmit: (e) => { e.preventDefault(); run(); } },
+      el("strong", null, "Simulated matches"), el("label", null, "Rounds", input), el("div", { class: "edit-actions" }, go), msg);
+  }
   // Reset all (Nov 17, the owner: "a reset all button so I don't ask you everytime"): everyone's stats from 0, the
   // owner's too, after a second, explicit yes. The editor keeps a copy of the ledger first and refuses while MCC runs.
   function resetAllForm() {
@@ -628,10 +953,11 @@
         c.members.some((p) => p.name.toLowerCase().includes(want)));
       page = Math.min(page, Math.max(0, Math.ceil(shown.length / PAGE) - 1));
       slot.replaceChildren(pager(shown.length, page, (n) => { page = n; draw(); body.scrollIntoView({ block: "start" }); }, "Clan pages") || "");
-      body.replaceChildren(...(shown.length ? shown.slice(page * PAGE, (page + 1) * PAGE).map((c) => el("li", null, el("a", { class: "clan-card", href: href(["clans", c.key]) },
+      body.replaceChildren(...(shown.length ? shown.slice(page * PAGE, (page + 1) * PAGE).map((c) => el("li", null, el("a", { class: "clan-card" + (level(c, "frame") ? " frame-" + level(c, "frame") : ""), href: href(["clans", c.key]) },
         el("span", { class: "place" + (c.cr && c.place <= 3 ? " lead" : "") }, c.cr ? c.place : "-"),
-        el("span", { class: "ins" }, insignia(c.rank)),
-        el("span", { class: "who" }, el("b", null, c.title), el("small", null, c.name ? el("span", { class: "clan-abbr" }, c.tag) : null, D.ranks[c.rank][0]),
+        el("span", { class: "ins" }, insignia(c.rank), clanEmblem(c, true)),
+        el("span", { class: "who" }, el("b", null, crowned(c) ? crownIcon() : null, c.title),
+          el("small", null, c.name ? clanTag(c.tag, "clan-abbr", null, true) : null, clanPreview.has(c.key) ? "Preview: " + clanRankName(c) : D.ranks[c.rank][0]),
           c.about ? el("span", { class: "clan-blurb" }, c.about.replace(/\s+/g, " ")) : null),
         el("span", { class: "crew" }, c.members.slice(0, 6).map((p) => emblem(p, true)), c.members.length > 6 ? el("small", null, "+" + (c.members.length - 6)) : null),
         el("span", { class: "nums" }, el("b", null, int(c.cr) + " cR"), el("small", null, c.members.length + (c.members.length === 1 ? " member" : " members")))))) :
@@ -640,7 +966,11 @@
     };
     draw();
     return [el("h1", null, "Bot Tracker"), boardTabs("clans"),
-      el("p", { class: "note" }, "Every clan the bots wear a tag of. A clan's credits are all its members' cR added up, and its rank is the same ladder as a player's with every step \u00D7" + CLAN_SCALE + "."),
+      el("p", { class: "note" }, "Every clan the bots wear a tag of. A clan's credits are all its members' cR added up" + (rewardOn("challenge") ? " plus its clan challenges" : "") +
+        ", and its rank is the same ladder as a player's with every step \u00D7" + CLAN_SCALE + ". The bigger the clan, the faster it climbs, and higher ranks unlock its rewards."),
+      editing() ? [clanRewardsForm(), clanWeekForm()] : null,
+      clanWeekSummary(),
+      clanRewardsList(),
       panel("Clans", el("div", { class: "body" },
         el("div", { class: "toolbar" }, count, el("label", null, "Find a clan or member", el("input", { type: "search", value: clanFind, autocomplete: "off",
           oninput: (e) => { clanFind = e.target.value; page = 0; draw(); } }))),
@@ -658,9 +988,11 @@
     };
     return [el("h1", null, "Bot Tracker"), boardTabs("clans"),
       el("p", null, el("a", { class: "more back-link", href: href(["clans"]) }, "All clans")),
-      el("section", { class: "panel clan-head" }, el("div", { class: "body" },
-        el("div", { class: "clan-title" }, c.cr ? el("span", { class: "place-big" }, "#" + c.place) : null,
-          el("div", null, el("h2", null, c.title), c.name ? el("span", { class: "clan-abbr big" }, c.tag) : null, editing() ? clanNameForm(c) : null)),
+      editing() ? clanPreviewForm(c) : null,
+      el("section", { class: "panel clan-head" + (level(c, "banner") ? " banner-" + level(c, "banner") : "") }, el("div", { class: "body" },
+        el("div", { class: "clan-title" }, c.cr ? el("span", { class: "place-big" }, "#" + c.place) : null, clanEmblem(c),
+          el("div", null, el("h2", null, crowned(c) ? crownIcon() : null, c.title), c.name ? clanTag(c.tag, "clan-abbr big", null, true) : null,
+            clanPreview.has(c.key) ? el("span", { class: "preview-flag" }, "Preview: " + clanRankName(c)) : null, editing() ? clanNameForm(c) : null)),
         clanRankBlock(c),
         el("ul", { class: "clan-facts" },
           el("li", null, el("b", null, int(c.cr)), el("span", null, "Clan cR")),
@@ -669,8 +1001,11 @@
         c.about ? el("p", { class: "clan-about" }, c.about) : null,
         // (a placeholder: applying to a clan is not decided yet, the owner, Nov 16)
         el("button", { type: "button", class: "apply-btn", disabled: true, title: "Clan applications are coming soon" }, "Apply", el("small", null, "Coming soon")))),
+      editing() ? clanEmblemForm(c) : null,
+      clanChallengePanel(c), hallPanel(c), rivalsPanel(c),
       panel("Members", pagedTable([["#"], ["Member", "l"], ["Rank", "l hide-s"], ["cR"], ["Share", "hide-s"], ["Games"], ["K/D", "hide-s"]], c.members, memberRow,
-        { find: c.members.length > PAGE ? (p) => p.name : null }))];
+        { find: c.members.length > PAGE ? (p) => p.name : null })),
+      historyPanel(c)];
   }
 
   // a rank's holders, most credits first, a page of 100 at a time (Recruit holds every bot with none)
@@ -724,8 +1059,10 @@
   const VEHICLES = new Set(D.vehicles || []);
   const BOARDS = [["overall", "Overall"], ["mode", "Mode"], ["weapon", "Weapon"], ["vehicle", "Vehicle"]];
   const crOf = (s) => { const w = D.credits; return s.games * w.game + s.wins * w.win + s.kills * w.kill + s.assists * w.assist + s.medals * w.medal; };
-  // the credits its commendations' tiers add (Reach's, so in Reach and in all games; none by mode)
-  const commCr = (p) => ((game() === D.default_game || game() === "all") && D.commendations && D.commendations.credits ? p.comm_cr || 0 : 0);
+  // the credits its commendations' tiers and its finished challenges add (Reach's, so in Reach and in all games; none
+  // by mode)
+  const commCr = (p) => (game() === D.default_game || game() === "all"
+    ? (D.commendations && D.commendations.credits ? p.comm_cr || 0 : 0) + (D.challenges && D.challenges.credits && p.chal ? p.chal.cr || 0 : 0) : 0);
   const stateName = (code) => (STATES[code] || [code || "Unknown"])[0];
   const regionOf = (p) => (STATES[p.state] || [])[1];
   const areaName = (a) => (!a ? "Nationwide" : REGIONS.has(a) ? REGIONS.get(a) : stateName(a));
@@ -817,7 +1154,7 @@
         td(int(rows[0].v)))))) : null;
     const what = !b ? "" : b.unit === "cR" ? "credits earned in " + (kind === "mode" ? b.label + " matches" : "every counted match") : "kills with " + (key === "all" ? "any vehicle" : "the " + b.label);
     return [el("h1", null, "Bot Tracker"), boardTabs("states"),
-      el("p", { class: "note" }, "Every name has a home state, picked from the name the first time it is listed, so it never moves (it is not where anyone lives). " +
+      el("p", { class: "note" }, "Every name has a home state, picked from the name the first time it is listed, so it never moves unless the site's owner sets one by hand (it is not where anyone lives). " +
         "Each board ranks one area" + (what ? " by " + what : "") + " in " + gameName.get(game()) + "; anyone with none is left off, and equal numbers share a place."),
       panel(b ? b.label + ": " + areaName(area) : "State leaderboards", el("div", null, el("div", { class: "body" }, tools), body)),
       leaders];
@@ -868,10 +1205,9 @@
             : int(st.n) + " of " + int(c.need[st.next]) + " for " + tierName(st.next + 1) + (c.cr[st.next] ? " (+" + int(c.cr[st.next]) + " cR)" : "")),
         el("p", { class: "comm-src" }, commSource[c.from] + (st.earned ? " \u00B7 " + int(st.earned) + " cR earned" : ""))));
   }
+  // (Nov 17) the build's own number (service_record.py commendation_progress), as the game's player card shows it
   function commProgress(p) {
-    const list = (D.commendations && D.commendations.list) || [];
-    const known = list.map((c) => commState(p, c)).filter((s) => s.n != null);
-    return known.length ? (100 * known.reduce((a, s) => a + s.whole, 0)) / list.length : 0;
+    return p.comm_pct || 0;
   }
   // Hometown Hero: the boards this bot leads in its home state, each with at least one other bot of the state on it
   function hometownBoards(p) {
@@ -1234,7 +1570,7 @@
     const line = (r) => el("tr", { class: r.n === p.name ? "me" : null }, td(ordinal(r.st + 1), "pos"),
       td(el("span", { class: "cell" }, players.has(r.n) ? emblem(players.get(r.n), true) : el("span", { class: "emblem none sm" }),
         r.listed && players.has(r.n) ? el("a", { href: href(["p", r.n, "overview"]) }, r.n) : el("span", null, r.n),
-        r.clan ? el("span", { class: "tag hide-s" }, r.clan) : null, !r.bot ? el("span", { class: "tag" }, "player") : null), "l"),
+        r.clan ? clanTag(r.clan, "tag hide-s") : null, !r.bot ? el("span", { class: "tag" }, "player") : null), "l"),
       full ? td(int(r.score), "hide-s") : null, td(int(r.k)), td(int(r.d)), td(int(r.a), "hide-s"), td(dec(r.d ? r.k / r.d : r.k)),
       full ? td(medalStrip(r.medals, 6), "l hide-s") : null);
     const boards = teams.length
@@ -1482,21 +1818,24 @@
     return [banner(p), el("div", { class: "grid" },
       panel("Profile", el("dl", { class: "stats" },
         el("dt", null, "Name"), el("dd", null, p.name),
-        el("dt", null, "Clan tag"), el("dd", null, p.clan || "-"),
+        el("dt", null, "Clan tag"), el("dd", null, p.clan ? clanTag(p.clan, "clan-abbr") : "-"),
         el("dt", null, "Listed as"), el("dd", null, p.person ? "Player" : p.roster ? "Roster" : "Matchmaking pool"),
         el("dt", null, "Home state"), el("dd", null, STATES[p.state]
           ? el("a", { href: href(["states"], { area: p.state }) }, stateName(p.state) + " (" + areaName(regionOf(p)) + ")") : "-"),
-        p.person ? null : [el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? title(p.difficulty) : "Not saved")],
+        p.person ? null : [el("dt", null, "Difficulty"), el("dd", null, p.difficulty ? TIER_NAMES[p.difficulty] || title(p.difficulty) : "The lobby's")],
         el("dt", null, "Species (Reach)"), el("dd", null, looks ? looks.species : "-"))),
       panel("Armor (Reach)", looks && looks.pieces.length
         ? el("dl", { class: "stats" }, looks.pieces.map(([k, v]) => [el("dt", null, k), el("dd", null, v)]))
         : empty("No Reach look on file", "No line in the mod's looks file yet."))),
       panel("How the rank is earned", el("div", null,
-        table("Credits (cR) come from counted " + gameName.get(D.default_game) + " matches" + (D.commendations && D.commendations.credits ? " and the commendation tiers they earn" : " only") + ", so the rank can always be rebuilt from the record.",
+        table("Credits (cR) come from counted " + gameName.get(D.default_game) + " matches" + (D.commendations && D.commendations.credits ? " and the commendation tiers they earn" : " only") +
+          (D.challenges && D.challenges.credits ? ", plus the challenges finished in time" : "") + ", so the rank can always be rebuilt from the record.",
           [["Earned for", "l"], ["Count"], ["cR each"], ["cR"]],
           earn.map(([k, n, each]) => el("tr", null, td(k, "l"), td(int(n)), td(int(each)), td(int(n * each))))
             .concat(D.commendations && D.commendations.credits ? el("tr", null, td(el("a", { href: href(["p", p.name, "commendations"]) }, "Commendation tiers"), "l"),
               td(int((D.commendations.list || []).reduce((a, c) => a + commState(p, c).tier, 0))), td("varies"), td(int(p.comm_cr || 0))) : [])
+            .concat(D.challenges && D.challenges.credits && p.chal ? el("tr", null, td(el("a", { href: href(["p", p.name, "challenges"]) }, "Challenges"), "l"),
+              td(int(p.chal.daily_done + p.chal.weekly_done)), td("varies"), td(int(p.chal.cr))) : [])
             .concat(el("tr", null, el("th", { scope: "row", class: "l" }, "Total"), td(""), td(""), td(int(p.cr)))), { fit: true })))];
   }
 
@@ -1532,7 +1871,7 @@
     const rides = kills.filter(([k]) => VEHICLES.has(k)).map(([k]) => board("vehicle", k));
     const noRows = recorded(g) ? null : NO_KILLS;
     return [banner(p), el("p", { class: "note" }, p.name + "'s home state is " + stateName(p.state) + ", in the " + areaName(regionOf(p)) +
-      " region: picked from its name, so it never moves. Each place counts only the names of that area with a number on the board; equal numbers share a place. ",
+      " region: " + (p.state_set ? "set by hand" : "picked from its name, so it never moves") + ". Each place counts only the names of that area with a number on the board; equal numbers share a place. ",
       el("a", { href: href(["states"], { area: p.state }) }, "Open the " + stateName(p.state) + " leaderboard"), "."),
       hero,
       section("Overall", [overall], "No counted match in " + gameName.get(game()) + " yet."),
@@ -1541,12 +1880,60 @@
       section("Vehicles", rides.length ? [board("vehicle", "all")].concat(rides) : [], noRows || "No kill with a vehicle recorded in " + gameName.get(game()) + " yet.")];
   }
 
-  const missing = {
-    achievements: ["Achievements", "Not recorded", "Achievements belong to MCC accounts; none are recorded here."],
-  };
+  const missing = {};
+
+  // ---------------------------------------------------------------- challenges (Nov 17, the owner: "Add these to the
+  // achievements page, But rename it to challenges"): today's 4 dailies and this week's weekly (service_record.py
+  // challenge_table), each with the time left, its cR, and this player's progress (p.chal.now).
+  const tickers = new Set();
+  let ticking = null;
+  function countdown(node, ends) {
+    const draw = () => {
+      if (!node.isConnected) { tickers.delete(draw); return; }
+      const left = Math.floor(ends - Date.now() / 1000);
+      if (left <= 0) { node.replaceChildren("Ended"); node.title = "New challenges are drawn when the site next rebuilds (a match starting or ending)."; return; }
+      const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+      node.replaceChildren(d + "d " + h + "h " + m + "m ", el("span", { class: "sec" }, s + "s"));
+    };
+    draw();
+    tickers.add(draw);
+    if (!ticking) ticking = setInterval(() => { tickers.forEach((f) => f()); if (!tickers.size) { clearInterval(ticking); ticking = null; } }, 1000);
+    return node;
+  }
+  function challengeCard(c, n, ends) {
+    const got = Math.min(n, c.need), done = n >= c.need;
+    return el("li", { class: "chal" + (done ? " done" : "") },
+      el("div", { class: "chal-ic" }, neon(c.icon, 72)),
+      el("div", { class: "chal-body" },
+        el("div", { class: "chal-top" }, el("h3", null, c.name),
+          el("span", { class: "chal-meta" }, countdown(el("span", { class: "chal-time", "aria-label": "Time left" }), ends),
+            el("span", { class: "chal-cr" }, int(c.cr) + "cR"))),
+        el("p", { class: "chal-what" }, c.what),
+        el("div", { class: "chal-bar", role: "progressbar", "aria-label": c.name, "aria-valuemin": 0, "aria-valuemax": c.need, "aria-valuenow": got },
+          el("span", { class: "fill", style: "width:" + (100 * got) / c.need + "%" }),
+          el("span", { class: "num" }, done ? "Completed" : int(got) + "/" + int(c.need)))));
+  }
+  function challengesPage(p) {
+    const C = D.challenges;
+    if (!C) return [banner(p), panel("Challenges", empty("No challenges yet", "The site's next build draws them."))];
+    const by = new Map(C.list.map((c) => [c.key, c]));
+    const ch = p.chal || { cr: 0, daily_done: 0, weekly_done: 0, now: {} };
+    const cards = (w) => el("ol", { class: "chals" }, w.keys.filter((k) => by.has(k)).map((k) => challengeCard(by.get(k), ch.now[k] || 0, w.ends)));
+    const stale = Date.now() / 1000 >= C.daily.ends;
+    return [banner(p),
+      el("ul", { class: "hero three" }, [["Challenge cR", int(ch.cr), C.credits ? "counted in the rank" : "not in the rank"],
+        ["Dailies completed", int(ch.daily_done), "all time"], ["Weeklies completed", int(ch.weekly_done), "all time"]]
+        .map(([k, v, sub]) => el("li", null, el("span", { class: "v" }, v), el("span", { class: "k" }, k), el("span", { class: "sub" }, sub)))),
+      el("p", { class: "note" }, "Four new daily challenges at midnight and a new weekly one every Monday, the same for every player. Counted " +
+        gameName.get(D.default_game) + " matches count toward them; one finished before its time runs out adds its cR" + (C.credits ? " to the rank." : ".") +
+        (stale ? " These are from the site's last build: the new ones are drawn when it next rebuilds (a match starting or ending)." : "")),
+      panel("Weekly Challenge", cards(C.weekly), el("span", { class: "chal-count" }, "Weekly Challenges Completed: ", el("b", null, int(ch.weekly_done)))),
+      panel("Daily Challenges", cards(C.daily), el("span", { class: "chal-count" }, "Daily Challenges Completed: ", el("b", null, int(ch.daily_done))))];
+  }
 
   function playerPage(p, page, arg) {
     switch (page) {
+      case "challenges": case "achievements": return challengesPage(p);   // (achievements: the page's old name)
       case "overview": return overview(p);
       case "placements": return placements(p);
       case "history": return history(p);

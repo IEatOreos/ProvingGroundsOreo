@@ -92,6 +92,146 @@ is not in the session membership, so the host's own diff never sends one either.
 3. **A client-side mod** that makes the players from a list the host sends. It needs the mod on every machine and a
    channel between them, so it is the last resort.
 
+## Results (2026-11-15)
+
+- **netbots=2 with an Xbox friend** (5 Reach matches, SnypeShee on their own machine): every add was queued and none
+  was refused or dropped. The friend still saw every bot skate, and his team's bots got a red reticle. That
+  includes the three on the host's machine.
+- **netcheck, the host alone** (`botcore_netcheck1.log`): each add came back through `FUN_1803c4004` as a type-9
+  entry and decoded exactly as sent: index, identifier, machine, controller/user 1-3 or no machine, and team. Each
+  was then `refused` on the host, as expected, since the slot was already the bot's. Every entry had sequence 0 and
+  was applied within the same few log lines as it was queued.
+- So the encoding is right and the host applies the entries. They most likely never reach the other machines: this
+  queue appears to be per machine in a networked custom game. Each machine probably runs the sender
+  (`FUN_1803aafa4` / `FUN_18041f510`) itself, from its own copy of the session membership. Not proven: that needs a
+  PC client's log.
+- Next lead: the session membership (`r13` in `FUN_18041f510`: +0x173C mask, 16 players of 0xB0 from +0x1744, each
+  tied to a peer), and how it reaches the other machines (MCC's session, not the simulation queue).
+
+## The session membership (static, 2026-11-15)
+
+The session is `*(0x184E0E910)` + 0x18 (call it S). Its membership object is S + 0x30 (M), and code that takes M
+uses offsets 0x30 lower than S.
+
+- **It is a network message.** `membership-update` is registered at `180427E93`: body 0x2550 bytes, encoder
+  `18042675C`, decoder `180427140`. The host sends the membership to the peers. Each machine then builds its game
+  players from its own copy, through the diff `18041F510`, the type-9 records and `1804192C4`. That explains the
+  results: our type-9 adds were local only.
+- **Layout (S offsets)**:
+  - +0x5C: peers mask (17). Peers are 0x158 bytes each from +0x60. In each peer, +0x170 is its player count and
+    +0x174 + user*4 maps user slot 0..3 to a player index: **4 players per peer**.
+  - +0x173C: players mask (16). Player entries are 0xB0 bytes from +0x1740:
+    - +4: identifier
+    - +0xC: peer
+    - +0x10: user slot (the record's "controller")
+    - +0x14: join number
+    - +0x18: flag
+    - +0x1C: -1 (the record's "user")
+    - +0x20: the 0x80-byte configuration (team at +0x98)
+  - +0x4464: this machine's peer. +0x4468: membership update number (bumped on every change).
+- **Adding a player**: `18039D620(M, peer, user, &ids, ...)` takes the first free player slot. It fills the entry
+  with `18039D8A8(M, index, &ids, peer, user, join number, flag)`, sets flags, and bumps M+0x2210 (join numbers) and
+  the update number. Callers: session creation (`180391F0C`, the host's local users 0..3), `180395340` (a peer's
+  "session add players" request) and `18039FB34`.
+- **The host removes its own members that aren't real users**: `18038F49C` checks each local user slot (table
+  `0x182A1E948`, 0x2F0 each: +0 signed in, +4 identifier). When this machine's peer has a player in a slot whose user
+  is not signed in, or has another identifier, it calls `180394D48(S, user)` after a timeout (`0x180D1FD40`), and
+  that removes the player (`18039D7F8`).
+
+### Plan: bots as members of the host's peer (up to 3), then more peers
+
+1. For each of the first 3 bots, after `hr_add_bot` makes it: write a member entry at **the same index** as the
+   bot's game player, on this machine's peer (S+0x4464) as user slot 1..3. Use its identifier and configuration.
+   Then bump the update number, as `18039D620` does. On the host, the diff's add for that slot is refused (the slot
+   is already the bot's, with the same identifier), so the bot stays non-local: no split screen.
+2. Hook `180394D48` so it does not remove a member whose identifier is a bot's (0xB07B07B0...).
+3. The friend's machine should get the members through `membership-update` and make the players itself, on the
+   host's machine with user slots 1..3. Those are the same records that decoded correctly in netcheck.
+4. If that works: more bots need more peers (17 at most). Each would be a made-up peer with no connection, which
+   the host and MCC may drop or reject. That is a separate investigation.
+
+Risks: MCC watches the session (lobby counts, invites), a bad membership could disconnect the friend, and an Xbox
+client may check the membership more strictly. Test with the host alone first, then with a friend.
+
+## Why the member bots skated, and the relay (2026-11-15)
+
+netmembers2 result: with SnypeShee (Xbox) joined, the 3 member bots were on his scoreboard on the right team, but
+they still slid. The host's netwatch showed them as players of the host's machine id with machine slot (+0x1A),
+controller (+0x1C) and user (+0x20) all -1, units linked.
+
+How a joined machine gets a remote player's input (all static, haloreach.dll):
+
+- **The simulation world** `W = *(0x184E0E908)` (botcore's `HR_SQ_QUEUE`). +0x10 state (7/8: a distributed network
+  game; 3-6 synchronous). +0x80: 16 view pointers (view +4 type: 4 = a joined machine's view; view +0x24/+0x28 its
+  machine id; view +0x10 -> +0x63E0 its channel).
+- **Simulation players** at W+0x100 + i * 0xE0, one per player index (`FUN_1803c0ad8`): +0 index, +4 player
+  handle, +8 state, +0xC identifier, +0x14 machine id (6 bytes, copied at creation), +0x20 the world, +0x30 the
+  last action, +0xD8 its time. The state comes from the game kind (game globals +0x11) and whether the player's
+  machine id is this machine's (`FUN_1800532d8`): 0/1 local, 3/4/5 remote. Made by `FUN_1803aa1b0` (from
+  `player_new_at` and the type-9 add) and `FUN_1803c30b8` (rebuilt from the player list). Freed when a player
+  leaves (`FUN_180052514`).
+- **The tick** (`FUN_1800575ac`):
+  1. `FUN_1803aabd0` -> `FUN_1803c034c` -> `FUN_1803bff80` builds the tick's update (+8 mask, +0x10 + i * 0xA8 the
+     actions, +0xCF48/+0xCF4C the remote control records, +0xD68C/+0xD690 per-machine latency).
+  2. `FUN_1803ab59c` -> `FUN_1803c0804` -> (state 7/8) `FUN_1803c16ec(W, mask, actions)` sends each player's
+     action to every type-4 view except one on the player's own machine: `FUN_180419b4c` packs it (0x4C bytes),
+     `FUN_1804212c0` puts it in the channel at +0x88 + i * 0x4C and sets bit i of +0x20. The channel's encoder
+     (`FUN_1804215e8`) sends both masks (+0x20 actions, +0x28 0x74-byte control records at +0x548).
+  3. `FUN_1803ab220` applies the update's control records.
+  4. `FUN_180047050`, the players update: **botcore writes the bots' input here**, after step 2.
+  5. `FUN_1803bfd8c` sends the local users' 0x74-byte control records (found by `FUN_1803c2c38`: player +0x1A this
+     machine's slot and +0x1C the user 0..3).
+- **On the joined machine**, `FUN_1803bff80` -> `FUN_180418a7c`: a simulation player in state 4/5 takes the action
+  from the host's channel (bit i of +0x30, the 0x4C record at +0x88 + i * 0x4C) and holds it for a short time.
+  That action drives the remote player's unit there, so its animation.
+
+So the bots' actions were never sent: the host relays at step 2, and botcore writes them at step 4. The bots'
+positions still reached the friend through the unit's state, hence the sliding.
+
+**The fix** (`hr_net_relay`, netbots=3/4): at the end of botcore's step-4 hook, call `FUN_1803c16ec(W, mask,
+actions + 0x10)` again with the mask of the member bots that have input this tick. Host only, state 7/8. A bot
+without a simulation player gets one by `FUN_1803aa1b0(handle)`. The packing (`FUN_180419b4c` ->
+`FUN_18041adb8`) only reads game state and writes the record.
+
+Not done: the 0x74-byte control record is sent only for local users (step 5); remote people get only the action
+too, so the action alone should be enough.
+
+### More than 3 bots without made-up peers (netbots=4)
+
+The membership message (`FUN_18042675c`) packs each member's peer in 5 bits, its user slot in 2 bits and the
+record's user in 3 bits, with no per-peer player count. A joined machine fills members with `FUN_18039d8a8`, which
+sets the peer's slot -> player entry and count without checking for a duplicate. So bots can share user slots 1-3
+of the host's peer. On a joined machine a remote player's controller number is not used for input.
+
+The catches, handled in `hr_mb_remove_bot` / `hr_mb_sweep`:
+
+- The game's remove (`FUN_18039d950`) clears the slot -> player entry of the removed member's (peer, slot) even if
+  another member has it. The entry is pointed back at a remaining bot.
+- The game's drop after a match (`FUN_180394d48`) removes the one member in that entry. netbots=4 removes every bot
+  member at that moment, so none reaches the lobby (where a host-peer member could become a split-screen user).
+- Every member counts against the session's 16 players.
+
+### Tested 2026-11-17, and why more than 3 bots needs more machines
+
+With Sakallis joined (his launcher, bots off), netbots=3 plus the relay worked: the 3 member bots animated from their
+first life, and his bot teammate showed friendly. netbots=4 did not. The type-9 player record keeps the user in 2 bits
+(users 4, 5, 6 arrived as 0, 1, 2), and a machine makes a player for a member only if none of that machine's
+players has its user (`FUN_18041f510`). So a machine holds 4 players: the host's person plus 3 bots.
+
+Stand-in peers (more machines), static only:
+
+- A machine's id is a hash of its peer entry's first 8 bytes, its network address (`FUN_1803a922c`). The same
+  address means the same machine, so a stand-in needs its own address.
+- Adding a peer (`FUN_18039cf80`) finds or makes an observer (a network connection) to that address
+  (`FUN_1803f6fc0`, 34 slots), unless it is this machine's own address. A joined machine adds each peer of the
+  membership this way (`FUN_18039e47c`). If an add fails, it stops applying and leaves the session (`FUN_1803951ac`).
+- When an observer to a peer closes, `FUN_18042b164` -> `FUN_1803958cc` removes that peer (and on a joined machine
+  sends a message about it).
+- So every joined machine would try to connect to each stand-in address. If that fails, the likely results are that
+  machine dropping the stand-in and its bots after the connection times out, possibly back and forth as the host
+  keeps listing it, or its copy of the membership diverging from the host's. A diverged copy may make it leave the
+  session. Not built.
+
 ## Next experiment (needs both PCs)
 
 Built as `botcore.ini` `netbots=` (`native/reach.cpp` `hr_net_add` / `hr_net_pump`; CUSTOM_CHANGELOG.md, 2026-11-12).
