@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Demon stays in cover until its shield is full, 2026-11-17
+
+The owner: "They need to stay in cover and fully recharge their sheilds. currently they do break line of sight, but they seem to re challenge when the shields start to recharge, Not at full. Or even 75%".
+
+- Found (13 Reach traces, Nov 12-17): of 125 times a Demon was out of every enemy's sight under 0.75 shield and unhurt for 0.5 s, 79 waited for a full shield. The other 46 went back in about 0.5 s later at a median shield of 0.56 (41 under 0.75): a hunt toward a tracker dot or the man it had fought (3.16-3.42), or a corner push (2.9-3.07), over the recharge holds (2.3-3.1). The full-shield re-peek rule (`repeek_rule`, Nov 8) runs only in `demon_odds_rules`, which is Halo 4's; Reach Demons had none.
+- `brain/bot.py` `demon_recharge` (new, called late in `decide`), every game: a Demon hurt within `SHIELD_BACK` s, its shield under `DEMON_FULL` 0.95, out of every enemy's sight `DEMON_RECHARGE_ARM` 0.5 s, holds cover until the shield is full. No fight or hunt meanwhile, a man who comes into view included. It stays where it stands if no man known in the last 10 s has a line to it, else goes to cover from them (`cover_from`, `hidden_spot`), at `DEMON_RECHARGE_SCORE` 3.5 (over hunts, a trade 3.4, guns 3.15, pushes; under a losing fight's break 3.6). Still fought: a man within `DEMON_STAND_R` 6 u (in sight, or a dot under 0.6 s old). A shot in the last `DEMON_RECHARGE_HIT` 1 s leaves it to the usual rules. Not in a vehicle, carrying, on a loose objective, in Race or Infection, or without shields. Legendary, Mythic, Blind and the rest unchanged.
+- Validation: `tools/test_demon_recharge.py` (new, 7: no hunt back out at 0.55 or 0.85, back to him at 0.95; a 0.3 s blink out of sight does not start it; a man who comes into view at 12 u is not fought, cover behind the wall from him; a man at 4 u still fought; shot 0.2 s ago, the usual rules; untouched past `SHIELD_BACK` counts as full; Legendary and Race as before). All 792 regression tests pass. Untested in a match.
+
 ### Banshee bombs as the owner's bomb kills had them; a run stays on its man, 2026-11-17
 
 The owner: "I did the banshee bomb and boost like at the same time. Only record the ones where i got kills with the bomb", "C2IR when flying it didnt get a kill and died", then "Yes, fixes 1-3" (the boost into the bomb left for later: "Before boost bombing I want them to just play correctly inside the banshee first").
