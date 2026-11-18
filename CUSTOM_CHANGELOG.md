@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Death autopsy: the owner's deaths beside every bot tier, 2026-11-18
+
+The owner: "Just as you have the demon autopsy report, you also have one for me, and then we can compare the demon difficulties to what I do as well."
+
+- **`tools/death_autopsy.py` now reads everyone from the world rows** (4 a second), so a person and a bot are measured the same way:
+  - the fatal fight and the shield and health going in;
+  - "saw him": the killer in his field of view (105°, the owner's MCC setting) with a line of sight on the map's terrain;
+  - "took the fight": an enemy in his sights in the second before the first damage.
+  - A bot's own rows still add its goal.
+  - A trace's one person is "you"; with two or more people they are "people".
+- **The default run is the comparison:** you and each bot tier side by side.
+  - Rows: deaths, K/D, deaths per 10 minutes alive, each cause's and condition's share, and the killer's distance and fight length.
+  - **Exposure:** the share of time alive on foot that 0, 1 or 2+ enemies within 40 u had him in view with a line of sight.
+  - **2-on-1 moments:** each time 2+ saw him at once, how often per 10 minutes, how many he died in (or within 2 s after), and how long they lasted.
+  - `--tier demon|top|you|...` gives one group's full report.
+- **What it shows**, from the 4 Reach traces with kill rows (16 of the owner's deaths, 48 Demon):
+
+  | | you | Demon | Legendary |
+  |---|---|---|---|
+  | K/D | 5.00 | 2.15 | 1.51 |
+  | deaths per 10 minutes alive | 8.8 | 11.6 | 14.5 |
+  | deaths with 2+ enemies shooting (first cause) | 25% | 62% | 41% |
+  | 2-on-1 moments per 10 minutes alive | 33.7 | 31.9 | 49.0 |
+  | died in a 2-on-1 moment | 11% | 25% | 21% |
+
+  He is seen by two at once as often as a Demon; he lives through it more than twice as often. His deaths are mostly lost 1v1s (44%, median 2.2 u).
+- **Validation:** `tools/test_death_autopsy.py` rewritten for world rows (2 tests: a Demon outnumbered, the owner started hurt, a Demon shot from behind; the 2-on-1 that killed it; the comparison and the "you" report; the 0 shield read counts as full). All regression tests pass. The terrain line of sight leaves Forge pieces out, so Forge World reads a little more "seen".
+
 ### Death autopsy tool; hurt Demons start no new fight, 2026-11-18
 
 The owner asked for ideas to make a Demon "that puts it staying alive as most important", then: "Let's start by making the tool. And then the full shield bullet also."

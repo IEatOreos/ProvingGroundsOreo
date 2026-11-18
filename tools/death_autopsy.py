@@ -1,24 +1,31 @@
-"""Why bots die (custom, Nov 18): every recorded death of a bot, sorted into one cause, from the match traces.
+"""Why players die (custom, Nov 18): every recorded death, the owner's and the bots', sorted into one cause, from the
+match traces, so a Demon's deaths can be set beside his.
 
-The owner wants a Demon that puts staying alive first; this says which deaths a rule would save. A trace with kill rows
-(tools/kill_record.py: who the game credits, what killed, who damaged the body lately) and the bot's own rows (its
-shield and health, its goal, who it believed it saw) gives, for each death of a bot:
+The owner wants a Demon that puts staying alive first; this says which deaths a rule would save, and how he dies
+compared with it ("Just as you have the demon autopsy report, you also have one for me, and then we can compare the
+demon difficulties to what I do as well"). A trace with kill rows (tools/kill_record.py: who the game credits, what
+killed, who damaged the body lately) and its world rows (everyone, 4 a second: position, aim, shield, health, the enemy
+in their sights; brain/tracefmt.py Everyone) give, for each death, measured the same way for a person and a bot:
 
-- the fatal fight: its damage since the last FIGHT_GAP without any (the bot's shield + health falling more than 0.01,
-  as Bot.hurt_by counts a hit), and the shield and health it went into that fight with
-- shooters: the enemies whose damage is on the body (the game's own list, 4 at most)
-- whether it had seen the man who killed it (its beliefs, seen by eye) before his first damage
-- its goal when the fight started ("fight"/"hunt": it took the fight; anything else: caught on its way), and at death
-- what killed it, how far off he was, how long it had been alive, the killer's own shield + health at the death
+- the fatal fight: the damage since the last FIGHT_GAP without any (shield + health falling more than 0.01, as
+  Bot.hurt_by counts a hit), and the shield and health he went into it with
+- shooters: the enemies whose damage of that fight is on the body (the game's own list, 4 at most)
+- whether he saw the man who killed him before his first damage: in his field of view (HFOV, the owner's MCC setting)
+  with a line of sight on the map's terrain (Forge pieces of a layout are not in it: those maps read a little "seen")
+- whether he took the fight: an enemy in his sights (row 14) in the second before the first damage; else caught
+- what killed him, how far off the killer was, how long he had been alive, the killer's own shield at the death;
+  for a bot also its goal when the fight started and at death (its own rows)
 
-and one cause, the first of CAUSES that holds. The causes overlap, so the report also counts every condition across all
-the deaths. Kills by the same bots give their K/D, and their time alive deaths per 10 minutes alive.
+and one cause, the first of CAUSES that holds. The causes overlap, so the report also counts every condition. Kills
+give K/D, the time alive deaths per 10 minutes alive. A trace's one person is "you" (the owner); with two or more
+people in the match they are "people" (who is who is not in the trace).
 
-The Reach shield read can be 0 with the shield full; as the brain (SHIELD_BACK), a bot untouched for 10 s went in full.
+The Reach shield read can be 0 with the shield full; as the brain (SHIELD_BACK), a player untouched for 10 s went in
+full.
 
-    python -I tools\\death_autopsy.py                    Demon deaths in every trace with kill rows
-    python -I tools\\death_autopsy.py --last 4 --list    the 4 newest traces, one line a death
-    python -I tools\\death_autopsy.py --tier all         every bot tier, and each tier's causes side by side
+    python -I tools\\death_autopsy.py                   you beside each bot tier (the comparison)
+    python -I tools\\death_autopsy.py --tier demon      one group's report: demon, top, you, people, all ...
+    python -I tools\\death_autopsy.py --last 4 --list   the 4 newest traces, one line a death
     python -I tools\\death_autopsy.py logs\\trace_x.jsonl ...
 """
 import argparse
@@ -34,6 +41,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
+sys.path.insert(0, ROOT)
 import kill_record                                      # noqa: E402
 
 LOGS = os.path.join(ROOT, "logs")
@@ -42,41 +50,50 @@ SHIELD_BACK = 10.0      # s untouched: the shield is full whatever the read says
 LOW_HEALTH = 0.6        # health under this going in (Reach refills health only so far) counts as started hurt
 FIGHT_GAP = 2.0         # s without damage: the exchange before it is over; the fatal one is the damage after the last
                         # (4 s merged a break, 3 s of recharge and the re-peek into one fight "gone into" at full)
-KEEP = 25.0             # s of each bot's rows kept before a death
-SEEN_BEFORE = 3.0       # s: the killer seen by eye this long before his first damage, or
-SEEN_GRACE = 0.25       # s after it (one look of the bot), counts as seen
-SPAWN_S = 5.0           # s alive: died off its spawn
+KEEP = 25.0             # s of world rows kept before a death
+SEEN_BEFORE = 3.0       # s: the killer in view this long before his first damage, or
+SEEN_GRACE = 0.25       # s after it (a look), counts as seen
+TOOK = 1.0              # s before the first damage: an enemy in his sights then, he took the fight
+EXPOSE_EVERY = 0.5      # s: how often everyone's exposure is counted (the enemies with him in view, a line of sight)
+EXPOSE_R = 40.0         # u: an enemy farther off is not counted as seeing him (past DMR range for a fight)
+TWO_DIED = 2.0          # s: dead this soon after 2+ enemies stopped seeing him, that 2-on-1 killed him
+SPAWN_S = 5.0           # s alive: died off his spawn
 GRENADES = {11, 22}     # frag, plasma
 POWER = {7, 8, 9, 10, 12, 20, 21, 64}   # shotgun, sniper, rockets, laser, grenade launcher, hammer, sword, fuel rod
 TICKS = 60.0            # Reach game ticks a second (a kill row's hits count ticks before the death)
-HURT_STEP = 0.01       # shield + health falling more than this between two rows is a hit (Bot.hurt_by)
+HURT_STEP = 0.01        # shield + health falling more than this between two rows is a hit (Bot.hurt_by)
+EYE, AIM_Z = 0.62, 0.35                 # tools/player_stats.py: eye over the feet, the body's middle
+HFOV = math.radians(105.0)              # the owner's MCC field of view (player_stats)
+VFOV = 2 * math.atan(math.tan(HFOV / 2) * 9 / 16)
+YOU, PEOPLE = "you", "people"
+NAMES_OF = {"top": "Legendary", "demon": "Demon", YOU: "you", PEOPLE: "people"}
 
 CAUSES = [
-    ("no killer", "a fall, its own grenade or a teammate"),
+    ("no killer", "a fall, his own grenade or a teammate"),
     ("vehicle", "in a vehicle, or killed by one"),
     ("outnumbered", "2 or more enemies' damage on the body"),
     ("grenade", "killed by a grenade"),
-    ("never saw him", "the killer unseen until he had shot it"),
+    ("never saw him", "the killer not in view until he had shot"),
     ("started hurt", "went into the fight under full shield or low on health"),
     ("power weapon", "shotgun, sniper, rockets, sword, hammer and the like"),
-    ("lost a 1v1", "none of the above: one man, seen, it went in healthy"),
+    ("lost a 1v1", "none of the above: one man, seen, went in healthy"),
 ]
 TAGS = [
-    ("outnumbered", "2+ enemies damaged it"),
-    ("never saw him", "killer unseen before his first damage"),
+    ("outnumbered", "2+ enemies damaged him"),
+    ("never saw him", "killer not in view before his first damage"),
     ("started hurt", "went in under full shield / low health"),
-    ("took the fight", "its goal was fight/hunt when the fight started"),
-    ("caught on its way", "any other goal when the fight started"),
-    ("breaking off", "its goal was retreat when it died"),
-    ("off its spawn", f"alive under {SPAWN_S:.0f} s"),
-    ("he was nearly dead", "the killer's shield was gone when it died"),
+    ("took the fight", "an enemy in his sights as the fight began"),
+    ("caught", "nobody in his sights as the fight began"),
+    ("breaking off", "a bot's goal was retreat when it died"),
+    ("off his spawn", f"alive under {SPAWN_S:.0f} s"),
+    ("he was nearly dead", "the killer's shield was gone"),
     ("power weapon", "killed by one"),
     ("grenade", "killed by one"),
     ("vehicle", "in one or killed by one"),
 ]
 
 _KEY = re.compile(r'^\{"t": [^,]+, "(\w+)": ')
-_ID = re.compile(r'^\{"t": [^,]+, "id": (\d+), "(\w+)"')
+_ID = re.compile(r'^\{"t": [^,]+, "id": (\d+), "pos"')
 
 
 def weapon_names():
@@ -99,41 +116,101 @@ def has_kills(path):
         return False
 
 
-class Bot:
-    def __init__(s, tier, name, team):
-        s.tier, s.name, s.team = tier, name, team
-        s.rows = collections.deque()        # (t, shield, health, goal, veh, foes, pos)
-        s.thinks = collections.deque()      # (t, {enemy id seen by eye}, enemies seen)
-        s.dead_at = -99.0
+_TERRAIN = {}
+
+
+def map_los(name):
+    """A line-of-sight test on map `name`'s terrain, (a, b) -> bool, or None when it cannot be loaded (then "seen" is the
+    field of view alone)."""
+    if name not in _TERRAIN:
+        try:
+            from brain.core import Vec
+            from brain.maps import get_map, terrain
+            T = terrain(get_map(name))
+            _TERRAIN[name] = lambda a, b: T.los(Vec(a[0], a[1], a[2]), Vec(b[0], b[1], b[2]))
+        except Exception:
+            _TERRAIN[name] = None
+    return _TERRAIN[name]
+
+
+def wrap(a):
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+def in_view(p, e, los):
+    """Is e (a world row) in p's field of view with a line of sight?"""
+    if not (p[2] and e[2]):
+        return False
+    dx, dy = e[3] - p[3], e[4] - p[4]
+    d = math.hypot(dx, dy)
+    if d > 80.0:
+        return False
+    dz = (e[5] + AIM_Z) - (p[5] + EYE)
+    if abs(wrap(math.atan2(dy, dx) - p[10])) > HFOV / 2 or abs(math.atan2(dz, max(d, 1e-6)) - p[11]) > VFOV / 2:
+        return False
+    if los is None:
+        return True
+    try:
+        return bool(los(p[3:6], e[3:6]))
+    except Exception:
+        return True
+
+
+def exposure(W, los):
+    """{id: how many enemies have him in their field of view with a line of sight within EXPOSE_R} of everyone alive
+    on foot in world rows W."""
+    out = {}
+    alive = [w for w in W.values() if w[2]]
+    for p in alive:
+        if len(p) > 16 and p[16] is not None:
+            continue                        # (in a vehicle: seen or not, it is not the angle play on foot)
+        out[p[0]] = sum(1 for e in alive if e[1] != p[1] and math.hypot(e[3] - p[3], e[4] - p[4]) <= EXPOSE_R
+                        and in_view(e, p, los))
+    return out
+
+
+class Player:
+    def __init__(s, pid):
+        s.id = pid
+        s.bot = None            # (tier, name) from the trace's meta; None: a person
+        s.goals = collections.deque()       # a bot's (t, goal, vehicle)
         s.life_from = None
+        s.was_alive = False
         s.last_t = None
         s.alive_s = 0.0
         s.kills = 0
+        s.seen_by = collections.Counter()   # seconds alive with 0, 1, 2+ enemies seeing him (exposure)
+        s.twos = []                         # [start, end, died] of each time 2+ enemies saw him at once
+        s.open_two = None
 
-    def row(s, t, r):
-        hp = r.get("hp") or [1.0, 1.0]
-        if s.last_t is not None and 0 < t - s.last_t < 1.0 and hp[1] > 0:
+    def two(s, t, on):
+        if on and s.open_two is None:
+            s.open_two = [t, t, False]
+            s.twos.append(s.open_two)
+        elif on:
+            s.open_two[1] = t
+        else:
+            s.open_two = None
+
+    def world(s, t, w):
+        if s.last_t is not None and w[2] and 0 < t - s.last_t < 1.0:
             s.alive_s += t - s.last_t
         s.last_t = t
-        if s.life_from is None and t > s.dead_at + 0.5 and hp[1] > 0:
+        if w[2] and not s.was_alive:
             s.life_from = t
-        s.rows.append((t, hp[0], hp[1], r.get("goal"), r.get("veh", -1), r.get("foes") or [], r.get("pos")))
-        while s.rows and t - s.rows[0][0] > KEEP:
-            s.rows.popleft()
+        s.was_alive = bool(w[2])
 
-    def think(s, t, r):
-        seen = {b[0] for b in r.get("beliefs") or [] if len(b) > 4 and b[4]}
-        s.thinks.append((t, seen, (r.get("flags") or {}).get("seen", 0)))
-        while s.thinks and t - s.thinks[0][0] > KEEP:
-            s.thinks.popleft()
+    def goal(s, t, r):
+        s.goals.append((t, r.get("goal"), r.get("veh", -1)))
+        while s.goals and t - s.goals[0][0] > KEEP:
+            s.goals.popleft()
 
 
 def fatal_fight(rows):
-    """(index of the fight's first damaged row, index of the last row before it, recent damage before the fight) in
-    rows up to the death: the damage since the last FIGHT_GAP without any."""
+    """(index of the fight's first damaged row, index of the last row before it, damage before the fight within
+    SHIELD_BACK) in rows (t, shield, health) up to the death: the damage since the last FIGHT_GAP without any."""
     hits = [i for i in range(1, len(rows))
-            if (rows[i - 1][1] + rows[i - 1][2]) - (rows[i][1] + rows[i][2]) > HURT_STEP and rows[i][2] > 0
-            or (rows[i][2] <= 0 < rows[i - 1][2])]
+            if (rows[i - 1][1] + rows[i - 1][2]) - (rows[i][1] + rows[i][2]) > HURT_STEP]
     if not hits:
         return len(rows) - 1, max(0, len(rows) - 2), False      # (killed between two rows)
     k = len(hits) - 1
@@ -144,38 +221,46 @@ def fatal_fight(rows):
     return first, first - 1, bool(before)
 
 
-def autopsy(b, k, t, victim):
-    """One death of bot b at t from kill row k: a dict of what was found."""
-    rows = [r for r in b.rows if r[0] <= t + 0.05]
+def autopsy(pl, k, t, world, los):
+    """One death of player pl at t from kill row k, world: [(t, {id: world row})] before it."""
+    v = pl.id
     kind, killer, weapon = kill_record.read(k) or ("death", None, k.get("c"))
-    d = dict(t=t, who=b.name, tier=b.tier, kind=kind, killer=killer, weapon=weapon, c=k.get("c"),
-             killer_bot=bool(k.get("kb")), life=(t - b.life_from) if b.life_from is not None else None)
-    if not rows:
-        d.update(shield=None, health=None, goal=None, end_goal=None, seen=None, shooters=1, veh=False, killer_hp=None,
-                 recent=False, dist=None)
+    d = dict(t=t, id=v, kind=kind, killer=killer, weapon=weapon, c=k.get("c"), killer_bot=bool(k.get("kb")),
+             life=(t - pl.life_from) if pl.life_from is not None else None, goal=None, end_goal=None)
+    snaps = [(tt, W) for tt, W in world if tt <= t + 0.05 and v in W and W[v][2]
+             and (pl.life_from is None or tt >= pl.life_from)]
+    if not snaps:
+        d.update(shield=None, health=None, seen=None, took=None, shooters=1, veh=False, killer_hp=None, dist=None)
         return d
+    rows = [(tt, W[v][6], W[v][7]) for tt, W in snaps]
     first, pre, recent = fatal_fight(rows)
     t0 = rows[first][0]
     sh, hl = rows[pre][1], rows[pre][2]
-    if sh < FULL and not recent and t0 - (b.life_from or -99.0) >= 0:     # (the 0 read: untouched, it was full)
+    if sh < FULL and not recent:            # (the 0 read: untouched SHIELD_BACK s before the fight, it was full)
         sh = 1.0
-    enemies = {f[0] for r in rows for f in r[5]}
+    me = snaps[-1][1][v]
+    enemies = {i for _, W in snaps for i, w in W.items() if w[1] != me[1]}
     window = (t - t0 + 0.5) * TICKS                             # (damage of the fatal fight, not one before it)
-    shooters = {h[0] for h in k.get("hits") or [] if h[0] is not None and h[0] != victim and h[0] in enemies
+    shooters = {h[0] for h in k.get("hits") or [] if h[0] is not None and h[0] != v and h[0] in enemies
                 and (h[3] or 0) + (h[4] or 0) > 0 and (h[5] or 0) <= window}
     if killer is not None and killer in enemies:
         shooters.add(killer)
     seen = None
-    if killer is not None:
-        seen = any(killer in s_ for tt, s_, _ in b.thinks if t0 - SEEN_BEFORE <= tt <= t0 + SEEN_GRACE)
-    foes = {f[0]: f for f in rows[-1][5]}
-    kh = foes.get(killer)
+    if killer is not None and killer in enemies:
+        seen = any(killer in W and in_view(W[v], W[killer], los) for tt, W in snaps
+                   if t0 - SEEN_BEFORE <= tt <= t0 + SEEN_GRACE)
+    took = any(len(W[v]) > 14 and W[v][14] not in (-1, None) for tt, W in snaps if t0 - TOOK <= tt <= t0 + 0.05)
+    kw = snaps[-1][1].get(killer)
+    veh = len(me) > 16 and me[16] is not None
+    if pl.bot is not None:
+        g = [x for x in pl.goals if x[0] <= t + 0.05]
+        before = [x for x in g if x[0] <= t0] or g[:1]
+        d.update(goal=before[-1][1] if before else None, end_goal=g[-1][1] if g else None)
+        veh = veh or any(x[2] not in (None, -1) for x in g[-3:])
     vp, kp = k.get("vp"), k.get("kp")
-    d.update(shield=sh, health=hl, goal=rows[pre][3], end_goal=rows[-1][3], seen=seen, shooters=len(shooters),
-             veh=any(r[4] not in (None, -1) for r in rows[-3:]), killer_hp=(kh[1], kh[2]) if kh else None,
-             recent=recent, fight_s=t - t0,
-             dist=math.dist(vp, kp) if vp and kp else None,
-             seen_n=max((n for tt, _, n in b.thinks if t0 - 0.5 <= tt <= t), default=0))
+    d.update(shield=sh, health=hl, seen=seen, took=took, shooters=len(shooters), veh=veh,
+             killer_hp=(kw[6], kw[7]) if kw else None, fight_s=t - t0,
+             dist=math.dist(vp, kp) if vp and kp else None)
     return d
 
 
@@ -188,12 +273,12 @@ def tags(d):
         out.add("never saw him")
     if d.get("shield") is not None and (d["shield"] < FULL or d["health"] < LOW_HEALTH):
         out.add("started hurt")
-    if d.get("goal") is not None:
-        out.add("took the fight" if d["goal"] in ("fight", "hunt") else "caught on its way")
+    if d.get("took") is not None:
+        out.add("took the fight" if d["took"] else "caught")
     if d.get("end_goal") == "retreat":
         out.add("breaking off")
     if d.get("life") is not None and d["life"] < SPAWN_S:
-        out.add("off its spawn")
+        out.add("off his spawn")
     if d.get("killer_hp") and d["killer_hp"][0] <= 0.02:
         out.add("he was nearly dead")
     if c in POWER:
@@ -215,18 +300,19 @@ def cause(d):
     return "lost a 1v1"
 
 
-def read_trace(path):
-    """(deaths, bots) of one trace: deaths a list of autopsy dicts (with "map"), bots {id: Bot}."""
-    bots, deaths, mp = {}, [], os.path.basename(path)
+def read_trace(path, los=None):
+    """(deaths, players) of one trace: deaths a list of autopsy dicts (each with "map", "group", "who"), players
+    {id: Player}. los: a line-of-sight test (default: the trace's map, map_los)."""
+    players, deaths, mp, world, expose_t = {}, [], None, collections.deque(), -99.0
+    get = lambda i: players.setdefault(i, Player(i))           # noqa: E731
     with open(path, encoding="utf-8") as fh:
         for line in fh:
             m = _ID.match(line)
             if m:
                 i = int(m.group(1))
-                if i not in bots:
-                    continue
-                r = json.loads(line)
-                (bots[i].think if m.group(2) == "think" else bots[i].row)(r["t"], r)
+                if i in players and players[i].bot is not None:
+                    r = json.loads(line)
+                    players[i].goal(r["t"], r)
                 continue
             m = _KEY.match(line)
             if not m:
@@ -235,40 +321,78 @@ def read_trace(path):
             if key == "meta":
                 r = json.loads(line)
                 b = r["meta"].get("bot") or {}
-                mp = r["meta"].get("map", mp)
-                if "id" in b and b["id"] not in bots:
-                    bots[b["id"]] = Bot(b.get("tier", "?"), b.get("name", "?"), b.get("team"))
+                mp = mp or r["meta"].get("map")
+                if "id" in b:
+                    get(b["id"]).bot = (b.get("tier", "?"), b.get("name", "?"))
+            elif key == "mode":
+                r = json.loads(line)
+                if "world" not in r:
+                    continue
+                t, W = r["t"], {w[0]: w for w in r["world"]}
+                for i, w in W.items():
+                    get(i).world(t, w)
+                if t - expose_t >= EXPOSE_EVERY:
+                    if los is None and mp is not None:
+                        los = map_los(mp) or (lambda a, b: True)
+                    ex = exposure(W, los)
+                    for i, n in ex.items():
+                        players[i].seen_by[min(n, 2)] += t - expose_t if t - expose_t < 2 * EXPOSE_EVERY else EXPOSE_EVERY
+                    for p in players.values():
+                        p.two(t, ex.get(p.id, 0) >= 2)
+                    expose_t = t
+                world.append((t, W))
+                while world and t - world[0][0] > KEEP:
+                    world.popleft()
             elif key == "kill":
                 r = json.loads(line)
                 k, t = r["kill"], r["t"]
                 if k.get("st") == kill_record.OVER:
                     continue
                 kind, killer, _ = kill_record.read(k) or (None, None, None)
-                if kind == "kill" and killer in bots:
-                    bots[killer].kills += 1
+                if kind == "kill" and killer is not None:
+                    get(killer).kills += 1
                 v = k.get("v")
-                if v in bots:
-                    d = autopsy(bots[v], k, t, v)
-                    d["map"] = mp
-                    deaths.append(d)
-                    bots[v].dead_at, bots[v].life_from = t, None
-    return deaths, bots
+                if isinstance(v, int):
+                    if los is None and mp is not None:
+                        los = map_los(mp) or (lambda a, b: True)
+                    deaths.append(autopsy(get(v), k, t, world, los))
+                    get(v).life_from, get(v).was_alive = None, False
+    people = [i for i, p in players.items() if p.bot is None and p.last_t is not None]
+    for p in players.values():
+        p.group = p.bot[0] if p.bot else (YOU if len(people) == 1 else PEOPLE)
+        p.name = p.bot[1] if p.bot else p.group
+    for d in deaths:
+        p = players[d["id"]]
+        d.update(map=mp or os.path.basename(path), group=p.group, who=p.name)
+        for x in p.twos:                    # (died while 2+ saw him, or within TWO_DIED s after)
+            if x[0] <= d["t"] <= x[1] + TWO_DIED:
+                x[2] = True
+    return deaths, players
 
 
 def pct(n, d):
     return f"{100 * n / d:.0f}%" if d else "-"
 
 
-def report(deaths, bots, tier, matches, out=print):
-    mine = [d for d in deaths if tier == "all" or d["tier"] == tier]
-    them = [b for bb in bots for b in bb.values() if tier == "all" or b.tier == tier]
-    alive = sum(b.alive_s for b in them)
-    kills = sum(b.kills for b in them)
+def label(g):
+    return NAMES_OF.get(g, g)
+
+
+def summary(deaths, players, group):
+    mine = [d for d in deaths if group == "all" or d["group"] == group]
+    them = [p for pp in players for p in pp.values() if (group == "all" or p.group == group) and p.last_t is not None]
+    alive = sum(p.alive_s for p in them)
+    kills = sum(p.kills for p in them)
+    return mine, kills, alive
+
+
+def report(deaths, players, group, matches, out=print):
+    mine, kills, alive = summary(deaths, players, group)
     n = len(mine)
-    out(f"{tier} bots: {n} deaths in {matches} matches, {kills} kills (K/D {kills / n:.2f})" if n else
-        f"{tier} bots: no deaths in {matches} matches ({kills} kills)")
+    out(f"{label(group)}: {n} deaths in {matches} matches, {kills} kills (K/D {kills / n:.2f})" if n else
+        f"{label(group)}: no deaths in {matches} matches ({kills} kills)")
     if alive:
-        out(f"  {10 * 60 * n / alive:.1f} deaths per 10 minutes alive ({alive / 60:.0f} bot-minutes)")
+        out(f"  {10 * 60 * n / alive:.1f} deaths per 10 minutes alive ({alive / 60:.0f} minutes alive)")
     if not n:
         return
     by = collections.Counter(cause(d) for d in mine)
@@ -279,9 +403,8 @@ def report(deaths, bots, tier, matches, out=print):
             continue
         hum = sum(not d["killer_bot"] for d in ds if d["kind"] == "kill")
         dists = [d["dist"] for d in ds if d.get("dist") is not None]
-        out(f"  {name:16} {by[name]:4}  {pct(by[name], n):>4}   human killer {hum:3}   "
-            f"median {statistics.median(dists):5.1f} u   {what}" if dists else
-            f"  {name:16} {by[name]:4}  {pct(by[name], n):>4}   {what}")
+        far = f"median {statistics.median(dists):5.1f} u" if dists else " " * 14
+        out(f"  {name:16} {by[name]:4}  {pct(by[name], n):>4}   killed by a person {hum:3}   {far}   {what}")
     out("\nalso true of the deaths (they overlap)")
     tc = collections.Counter(t_ for d in mine for t_ in tags(d))
     for name, what in TAGS:
@@ -293,41 +416,83 @@ def report(deaths, bots, tier, matches, out=print):
     ws = collections.Counter(NAMES.get(d["c"], f"type {d['c']}") for d in mine if d["c"] is not None)
     out("\nkilled with: " + ", ".join(f"{w} {c}" for w, c in ws.most_common(8)))
     goals = collections.Counter(d["goal"] for d in mine if d.get("goal"))
-    out("its goal when the fatal fight started: " + ", ".join(f"{g} {c}" for g, c in goals.most_common(8)))
+    if goals:
+        out("a bot's goal when the fatal fight started: " + ", ".join(f"{g} {c}" for g, c in goals.most_common(8)))
 
 
-def by_tier(deaths, out=print):
-    tiers = sorted({d["tier"] for d in deaths})
-    out("\nshare of each tier's deaths by cause")
-    out(f"  {'':16}" + "".join(f"{t:>9}" for t in tiers))
+def order(groups):
+    first = [g for g in (YOU, PEOPLE, "demon", "top") if g in groups]
+    return first + sorted(g for g in groups if g not in first)
+
+
+def compare(deaths, players, out=print, groups=None):
+    """Every group side by side: the rates, each cause's share and each condition's."""
+    groups = groups or order({d["group"] for d in deaths})
+    cols = []
+    for g in groups:
+        mine, kills, alive = summary(deaths, players, g)
+        cols.append((g, mine, kills, alive))
+    w = 11
+    out("side by side (share of each one's deaths)")
+    out(f"  {'':22}" + "".join(f"{label(g)[:w - 1]:>{w}}" for g in groups))
+    out(f"  {'deaths':22}" + "".join(f"{len(m):>{w}}" for _, m, _, _ in cols))
+    out(f"  {'K/D':22}" + "".join(f"{(k / len(m) if m else 0):>{w}.2f}" for _, m, k, _ in cols))
+    out(f"  {'deaths / 10 min alive':22}" + "".join(f"{(600 * len(m) / a if a else 0):>{w}.1f}" for _, m, _, a in cols))
+    out("  cause")
     for name, _ in CAUSES:
+        out(f"    {name:20}" + "".join(f"{pct(sum(cause(d) == name for d in m), len(m)):>{w}}" for _, m, _, _ in cols))
+    out("  also true of")
+    for name, _ in TAGS:
+        out(f"    {name:20}" + "".join(f"{pct(sum(name in tags(d) for d in m), len(m)):>{w}}" for _, m, _, _ in cols))
+    out("  time alive on foot (every 0.5 s: the enemies within 40 u with him in view and a line of sight)")
+    seen = []
+    for g in groups:
+        c = collections.Counter()
+        for pp in players:
+            for p in pp.values():
+                if g == "all" or p.group == g:
+                    c.update(p.seen_by)
+        seen.append(c)
+    for n, what in ((0, "seen by nobody"), (1, "seen by 1 enemy"), (2, "seen by 2+ at once")):
+        out(f"    {what:20}" + "".join(f"{pct(c[n], sum(c.values())):>{w}}" for c in seen))
+    out(f"    {'2+ of all time seen':20}" + "".join(f"{pct(c[2], c[1] + c[2]):>{w}}" for c in seen))
+    out("  each time 2+ enemies saw him at once")
+    twos = [[x for pp in players for p in pp.values() if g == "all" or p.group == g for x in p.twos] for g in groups]
+    out(f"    {'times / 10 min alive':20}" + "".join(
+        f"{(600 * len(x) / a if a else 0):>{w}.1f}" for x, (_, _, _, a) in zip(twos, cols)))
+    out(f"    {'died in it':20}" + "".join(f"{pct(sum(y[2] for y in x), len(x)):>{w}}" for x in twos))
+    for what, pick in (("lasted, survived s", lambda y: not y[2]), ("lasted, died s", lambda y: y[2])):
+        out(f"    {what:20}" + "".join(
+            f"{statistics.median(y[1] - y[0] + EXPOSE_EVERY for y in x if pick(y)):>{w}.1f}"
+            if any(pick(y) for y in x) else f"{'-':>{w}}" for x in twos))
+    out("  median of the fatal fight")
+    for key, what in (("dist", "killer's distance u"), ("fight_s", "fight length s")):
         row = []
-        for t in tiers:
-            ds = [d for d in deaths if d["tier"] == t]
-            row.append(pct(sum(cause(d) == name for d in ds), len(ds)))
-        out(f"  {name:16}" + "".join(f"{x:>9}" for x in row))
-    out(f"  {'deaths':16}" + "".join(f"{sum(d['tier'] == t for d in deaths):>9}" for t in tiers))
+        for _, m, _, _ in cols:
+            v = [d[key] for d in m if d.get(key) is not None and d["kind"] == "kill"]
+            row.append(f"{statistics.median(v):>{w}.1f}" if v else f"{'-':>{w}}")
+        out(f"    {what:20}" + "".join(row))
 
 
-def listing(deaths, tier, out=print):
+def listing(deaths, group, out=print):
     out("\nevery death")
     for d in deaths:
-        if tier != "all" and d["tier"] != tier:
+        if group != "all" and d["group"] != group:
             continue
         sh = "  -  " if d.get("shield") is None else f"{d['shield']:.2f}/{d['health']:.2f}"
         kh = f"{d['killer_hp'][0]:.2f}" if d.get("killer_hp") else " -  "
         far = "" if d.get("dist") is None else f"{d['dist']:.0f} u"
+        goal = f" goal {str(d.get('goal'))[:9]:9} -> {str(d.get('end_goal'))[:9]:9}" if d.get("goal") else ""
         out(f"  {d['map'][:24]:24} t={d['t']:6.1f} {d['who'][:14]:14} {cause(d):15} went in {sh} "
-            f"goal {str(d.get('goal'))[:9]:9} -> {str(d.get('end_goal'))[:9]:9} "
-            f"{NAMES.get(d['c'], d['c'])!s:16} {far:>5} "
+            f"{'took it' if d.get('took') else 'caught '} {NAMES.get(d['c'], d['c'])!s:16} {far:>5} "
             f"shooters {d['shooters']} saw {d.get('seen')!s:5} his shield {kh} "
-            f"{'bot' if d['killer_bot'] else 'human'}")
+            f"{'bot' if d['killer_bot'] else 'person'}{goal}")
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("traces", nargs="*")
-    ap.add_argument("--tier", default="demon", help="demon (default), top, ..., or all")
+    ap.add_argument("--tier", help="one group's report: demon, top, ..., you, people or all (default: the comparison)")
     ap.add_argument("--last", type=int, default=0, help="only the N newest traces with kill rows")
     ap.add_argument("--list", action="store_true", help="one line a death")
     a = ap.parse_args(argv)
@@ -338,16 +503,18 @@ def main(argv=None):
     if not paths:
         print("no traces with kill rows (tools/kill_record.py writes them in recorded Reach matches)")
         return 1
-    deaths, bots = [], []
+    deaths, players = [], []
     for p in paths:
-        ds, bs = read_trace(p)
+        ds, ps = read_trace(p)
         deaths += ds
-        bots.append(bs)
-    report(deaths, bots, a.tier, len(paths))
-    if a.tier == "all":
-        by_tier(deaths)
+        players.append(ps)
+    if a.tier:
+        report(deaths, players, a.tier, len(paths))
+    else:
+        print(f"{len(deaths)} deaths in {len(paths)} matches with kill rows")
+        compare(deaths, players)
     if a.list:
-        listing(deaths, a.tier)
+        listing(deaths, a.tier or "all")
     return 0
 
 
