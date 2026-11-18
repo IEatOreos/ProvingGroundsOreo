@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Banshee bombs as the owner's bomb kills had them; a run stays on its man, 2026-11-17
+
+The owner: "I did the banshee bomb and boost like at the same time. Only record the ones where i got kills with the bomb", "C2IR when flying it didnt get a kill and died", then "Yes, fixes 1-3" (the boost into the bomb left for later: "Before boost bombing I want them to just play correctly inside the banshee first").
+
+- `tools/owner_bomb_kills.py` (new): a match's trace and collect file to the person's Banshee bomb kills only (damage type 30) and his flight over the 3 s before each hit: speed, height over the man, range, nose pitch, heading off him (logs/owner_bomb_kills_<map>_<stamp>.json, a summary). No buttons are recorded in a match, so his boost shows as speed.
+- Found (Boneyard 20261117-185650, his 21 bomb kills, about 0.5 s before each hit): range 3.8-17.3 u (median 11.5; 6 under 10 u, none past 20), 6.5 u over him, nose 0.71 rad down, within 0.07 rad of him, 4.6 -> 7.3 -> 8.7 u/s through the release. C2IR's one Banshee ride (77-99 s): never over about 12 u from the floor, median 3.7 u/s, its nose up most of its runs, its run's man changed 10 times among six, the cannons on 8 of 536 ticks; three DMRs killed it.
+- `brain/bot.py` `air_pass`: Reach's bomb from `REACH_BOMB_R` 6-18 u (was `FUELROD_R` 10-31, which Halo 4 keeps). With the bomb ready, in gun range and under `REACH_BOMB_OVER` 6.5 u over him, the nose climbs toward that height over him (no bomb while it does); once there in a run (`bomb_dive`, the run's start) it dives onto him with no climbing back.
+- `brain/bot.py` `drive`, `run_hold`: a pilot's run stays on its man out of sight for `AIR_RUN_HOLD_S` 2.5 s while another man is in sight (`air_keep` held him only with nobody else in sight).
+- `tools/test_reach_boost.py`: the bomb-first test's run now from 15 u (its 29.4 u is past Reach's bomb reach now).
+- Validation: `tools/test_banshee_owner_bombs.py` (new, 7: Reach bombs from 8.8 and 15.7 u, not 21.2; Halo 4 not from 8.8; low with the bomb ready it climbs and holds the bomb, not without one ready or in Halo 4; over him it dives and keeps diving lower down; the run's man held 1 s out of sight, let go after 3). All 785 regression tests pass. Untested in a match.
+
 ### A Banshee's bomb goes at his feet, 2026-11-17
 
 The owner: "Before boost bombing I want them to just play correctly inside the banshee first. Does a driver of a banshee try to flick the banshee bomb at them? It should try to shoot it similarly like a rocket or fuel rod. At their legs or ground below them?"

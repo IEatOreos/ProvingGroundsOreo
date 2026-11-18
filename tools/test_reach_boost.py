@@ -168,7 +168,8 @@ class BombFirstTests(unittest.TestCase):
         self.assertGreater(shots[0], 0.6)
 
     def test_every_run_from_3_2_s_and_no_boost_into_it(self):
-        b, act = RunTests().run_at(Vec(CANNON_R, 0, 9.0))     # (29.4 u: in the bomb's reach, past gun range, nose on)
+        # (custom, Nov 17: in the owner's bomb reach, REACH_BOMB_R 6-18 u; 29.4 u, past gun range, was one before)
+        b, act = RunTests().run_at(Vec(12.0, 0, 9.0))         # (15 u, nose on)
         self.assertIsNotNone(b.rod)
         self.assertAlmostEqual(b.rod_next - 50.0, 3.2)
         self.assertFalse(act.fire2)

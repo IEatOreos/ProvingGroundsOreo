@@ -668,6 +668,16 @@ BOMB_GUN_R = 3.0
 # 10-20 u. (every, cycle to shot, trigger tap, shot to cycle back), s
 REACH_FUELROD = (3.2, 0.25, 0.12, 0.05)       # (every: 0.1 s over the recharge, a press on a bomb not ready is wasted)
 REACH_BOMB_SPEED = 20.0
+# (custom, Nov 17) Reach's bomb as the owner's bomb kills had it (tools/owner_bomb_kills.py, his 21 Boneyard bomb kills,
+# logs/owner_bomb_kills_reach_70_boneyard_20261117-185650.json; "Only record the ones where i got kills with the bomb"):
+# let go 3.8-17.3 u off (median 11.5; 6 under 10 u, none past 20), REACH_BOMB_R; 6.5 u over him (median) with the nose
+# 0.71 rad down, so a run with the bomb ready comes in over him (REACH_BOMB_OVER) and dives onto him. Halo 4 keeps
+# FUELROD_R
+REACH_BOMB_R = (6.0, 18.0)
+REACH_BOMB_OVER = 6.5
+# (custom, Nov 17) a pilot's run stays on its man out of sight this long while another is in sight (Bot.run_hold): C2IR
+# (Boneyard 20261117-185650) switched its run's man 10 times among six in a 22 s ride, finishing no run
+AIR_RUN_HOLD_S = 2.5
 
 
 def fuelrod_times(game):
@@ -4741,6 +4751,10 @@ class Bot:
             # (custom, Nov 13) a pilot keeps its run's man while he is in sight (each tick's pick flipped between men:
             # 108 of Valhalla's 174 runs ended on a new target)
             held = s.run_target(seen) if air and st.get("role") == "air" else None
+            if held is None and air and st.get("role") == "air" and not easy and not transit:
+                held = s.run_hold(now, me, snap)     # (custom, Nov 17) its run's man just out of sight, another in it
+                if held is not None:
+                    s.note("air: on the run's man, another in sight")
             tid = held if held is not None else (s.vehicle_pick(me, v, "driver", seen, snap) if armed else None) or \
                 min(seen, key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
             b = s.per.beliefs[tid]
@@ -5150,6 +5164,12 @@ class Bot:
             return None
         return tid
 
+    def run_hold(s, now, me, snap):
+        """(custom, Nov 17) The man of a pilot's attack run while he is out of its sight and another man is in it: kept
+        (air_keep) and last seen within AIR_RUN_HOLD_S; else None (a new man is picked)."""
+        tid = s.air_keep(now, me, snap)
+        return tid if tid is not None and now - s.per.last_seen.get(tid, -99.0) < AIR_RUN_HOLD_S else None
+
     def run_target(s, seen):
         """(custom, Nov 13) The man of a pilot's attack run when he is among those in sight, else None."""
         run = getattr(s, "air_run", None)
@@ -5231,6 +5251,19 @@ class Bot:
         # ended the run before a shot (tools/air_replay.py, Shrine)
         if dist(me.pos, b.pos) > CANNON_R and h < start_h:
             act.pitch = max(act.pitch, min(0.4, (start_h - h) * 0.08))
+        # (custom, Nov 17) Reach, the bomb ready: in over him, REACH_BOMB_OVER up, then the nose (on him, from drive)
+        # dives onto him as the owner's bomb kills did; under that height and short of the bomb's reach it climbs
+        # toward that height over him. Once there in this run (bomb_dive: the run's start) it dives, no climbing back
+        bomb_lo, bomb_hi = REACH_BOMB_R if s.game == "reach" else FUELROD_R
+        over = me.pos.z - b.pos.z
+        if over >= REACH_BOMB_OVER:
+            s.bomb_dive = run[2]
+        if (s.game == "reach" and getattr(s, "veh_kind", "banshee") == "banshee" and getattr(s, "rod", None) is None
+                and now >= getattr(s, "rod_next", 0.0) and getattr(s, "bomb_dive", None) != run[2]
+                and over < REACH_BOMB_OVER and flat > bomb_lo and dist(me.pos, b.pos) <= CANNON_R):
+            up = math.atan2(b.pos.z + REACH_BOMB_OVER - me.pos.z, max(flat, 1.0))
+            act.pitch = max(act.pitch, min(0.35, up + 0.05))
+            s.note("air: bomb ready, climbing over him")
         if jinking:
             act.yaw += AIR_JINK * jink[1]
             act.fire2 = act.fire2 or s.game == "reach"
@@ -5262,7 +5295,7 @@ class Bot:
         rb = math.atan2(BOMB_GUN_R, max(d, 1.0))     # (custom, Nov 13: the bomb's wider window, its blast)
         bomb_on = on or (abs(wrap(ya - act.yaw)) < rb and abs(pa - act.pitch) < rb)
         if (getattr(s, "can_cycle", s.game == "reach") and getattr(s, "veh_kind", "banshee") == "banshee" and bomb_on
-                and FUELROD_R[0] <= d <= FUELROD_R[1] and getattr(s, "rod", None) is None
+                and bomb_lo <= d <= bomb_hi and getattr(s, "rod", None) is None
                 and now >= getattr(s, "rod_next", 0.0) and (s.game == "reach" or me.pos.z - b.pos.z >= 2.0)):
             # (the bomb from over him; Reach's fuel rod straight on) fuel_rod() from drive does the cycle, shot, cycle
             s.rod, s.rod_next = ["to", now], now + fuelrod_times(s.game)[0]
