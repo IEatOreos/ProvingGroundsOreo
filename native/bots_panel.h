@@ -20,8 +20,11 @@ struct ImFont;
 #define HB_TIER_MYTHIC 8        // hb_bot.tier: Mythic (custom, Nov 13: Legendary, hands halfway to Demon, Demon's eyes)
 #define HB_TIERS 9
 #define HB_STYLE_WHEELMAN 7     // (custom, Nov 14) the Wheelman play style: never a Demon's (it drives no Warthog,
-                                // Mongoose or Ghost: brain/profiles.py make_profile)
-static inline bool hb_style_fits(int tier, int style) { return !(tier == HB_TIER_DEMON && style == HB_STYLE_WHEELMAN); }
+                                // Mongoose or Ghost: brain/profiles.py make_profile); (Nov 18) nor a Mythic's, which plays by
+                                // Demon's rules (profiles.demon_rules, mythic_profile)
+static inline bool hb_style_fits(int tier, int style) {
+    return !((tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC) && style == HB_STYLE_WHEELMAN);
+}
 
 struct hb_bot {
     char name[16];              // up to 15 characters, the game's name field

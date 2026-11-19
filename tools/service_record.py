@@ -2102,6 +2102,7 @@ def set_bot_clan(paths, name, clan, running=None):
 
 # the bots panel's difficulty keys (native/bots_panel.cpp TIER_KEY, in its order)
 TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician", "mythic")
+NO_WHEELMAN = ("demon", "mythic")   # (Nov 18) no Wheelman style: Demon's rules (bots_panel.h hb_style_fits)
 POOL_HEADER = ("; Bot Matchmaking (BOTS panel): the queue positions in bot_pool_4v4.txt and bot_pool_8v8.txt, the clans'\n"
                "; reshuffle, and each bot's saved difficulty and play style (saved=<difficulty>,<style>,<name>). A bot with\n"
                "; no line here takes the defaults.\n")
@@ -2118,7 +2119,7 @@ def set_bot_difficulty(paths, name, tier, running=None):
     """(Nov 18, the owner: "edit a bot's difficulty on the website and have it change in the game") a bot's saved
     difficulty, written as the BOTS panel writes it when its difficulty is changed (bots_panel.cpp bot_pool_remember):
     its saved=<difficulty>,<style>,<name> line in native/bin/bot_pool_saved.ini, which Bot Matchmaking seats it with,
-    its play style kept (Demon never Wheelman: then any), and its tier in the lobby list's bot=/ffbot= lines of
+    its play style kept (Demon and Mythic never Wheelman, NO_WHEELMAN: then any), and its tier in the lobby list's bot=/ffbot= lines of
     botcore.ini when it is on that list. "" takes its saved line out (it takes the lobby's difficulty again; the lobby
     list is left as it is). Refused while MCC runs (botcore holds both files and writes them back); in game from MCC's
     next start. A copy of each file as it was is kept beside it (.before_site_edit). Names match as the panel matches
@@ -2148,7 +2149,7 @@ def set_bot_difficulty(paths, name, tier, running=None):
         if len(parts) == 3 and pool_name(parts[2]).lower() == name.lower():
             style, at, name = parts[1], i, pool_name(parts[2])   # (its line's own spelling kept)
             break
-    if tier == "demon" and style == "wheelman":
+    if tier in NO_WHEELMAN and style == "wheelman":
         style = "any"
     if tier:
         new = f"saved={tier},{style},{name}"
@@ -2170,7 +2171,7 @@ def set_bot_difficulty(paths, name, tier, running=None):
             parts = line[len(key):].split(",", 3) if key else []
             if len(parts) == 4 and pool_name(parts[3]).lower() == name.lower():
                 parts[1] = tier
-                if tier == "demon" and parts[2] == "wheelman":
+                if tier in NO_WHEELMAN and parts[2] == "wheelman":
                     parts[2] = "any"
                 lines[i], hit = key + ",".join(parts), True
         if hit:

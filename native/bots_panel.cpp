@@ -2764,7 +2764,8 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     ImGui::PushStyleColor(ImGuiCol_Header, v4(alpha(ACCENT, 0.16f)));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, v4(HOVER));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
-    bool qs_demon = qs_tier == 6;                            // (custom, Nov 14: all Demon, no Wheelman; Mixed's Demons
+    bool qs_demon = qs_tier == 6 || qs_tier == 9;            // (custom, Nov 14: all Demon, no Wheelman; Nov 18: nor all
+                                                             //  Mythic, Demon's rules; Mixed's Demons
     if (qs_demon && qs_style == HB_STYLE_WHEELMAN) qs_style = HB_STYLE_ANY;   //  get Any style: bots_panel)
     if (ImGui::BeginCombo("##qstyle", STYLE_NAME[qs_style])) {
         g_list_frame = ImGui::GetFrameCount();
