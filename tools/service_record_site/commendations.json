@@ -56,8 +56,15 @@
     {"key": "positive_thinking", "set": "pg", "name": "Positive Thinking", "what": "Finish a game with more kills than deaths.", "count": {"deed": "positive"},
      "need": [10, 50, 250, 1000, 2500, 5000], "cr": [200, 500, 1200, 2000, 2000, 0]},
     {"key": "loyal_soldier", "set": "pg", "name": "Loyal Soldier", "what": "Play a game to the end.", "count": {"deed": "loyal"},
-     "need": [25, 100, 500, 1500, 4000, 8000], "cr": [150, 400, 1000, 2000, 2000, 0]}
+     "need": [25, 100, 500, 1500, 4000, 8000], "cr": [150, 400, 1000, 2000, 2000, 0]},
+    {"key": "mission_first", "set": "pg", "name": "Mission First", "what": "Score the objective: capture a flag, plant a bomb, bring a flag home in Stockpile, or bank 10 skulls at once in Headhunter.",
+     "count": {"medals": ["medal_flag_captured", "medal_bomb_planted", "medal_skullamanjaro"], "plus_deed": "stockpile"},
+     "need": [5, 25, 100, 500, 1500, 3000], "cr": [150, 400, 1000, 2000, 2000, 0]},
+    {"key": "denied", "set": "pg", "name": "Denied", "what": "Kill the enemy's flag carrier or bomb carrier.",
+     "count": {"medals": ["medal_flag_carrier_kill", "medal_bomb_carrier_kill"]},
+     "need": [5, 25, 100, 500, 1500, 3000], "cr": [150, 400, 1000, 2000, 2000, 0]}
   ],
+  "objective_note": "Mission First and Denied (the owner, Nov 19) count what MCC's Reach reports really carry. In the store's 28 objective games up to Nov 19 the only objective medals were Flag Captured, Bomb Planted, Flag Carrier Kill, Bomb Carrier Kill and Flag Kill; Skullamanjaro is Reach's own and waits for a Headhunter game. count.plus_deed adds a number the matches give beside the medals: 'stockpile', a player's Score in Stockpile games (the flags brought home; no medal says it). Not counted, because the reports say nothing of them: territories taken (Score 0 for everyone in 4 Territories games, no medal), flag returns, bomb defuses and defense. King of the Hill's Score is seconds in the hill, a different thing, left to Game Changer.",
   "badges_note": "Badges: one-time unlocks, no tiers and no credits (the owner, Nov 16: Map Master 'a badge they unlock once they get a win on each map'; Hometown Hero his special badge). Hometown Hero is worked out on the page from the state leaderboards: #1 in the bot's home state on any board that has at least two bots of the state on it.",
   "badges": [
     {"key": "map_master", "name": "Map Master", "what": "Win a game on every one of Reach's 20 multiplayer maps.",

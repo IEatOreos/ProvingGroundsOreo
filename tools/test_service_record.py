@@ -230,7 +230,7 @@ def test_commendations():
         assert oreo["comm"]["one_shot"] == 50 and oreo["comm"]["assistant"] == 60 and oreo["comm_cr"] == 300, oreo["comm"]
         # (and, Nov 17, the challenges its match finished on that day and week)
         assert oreo["cr"] == base + 300 + oreo["chal"]["cr"] and data["commendations"]["credits"] is True, (oreo["cr"], base)
-        assert len(data["commendations"]["list"]) == 23 and data["commendations"]["list"][0]["from"] in ("report", "matches", "kills")
+        assert len(data["commendations"]["list"]) == 25 and data["commendations"]["list"][0]["from"] in ("report", "matches", "kills")
         assert oreo["comm"]["loyal_soldier"] == 1 and oreo["comm"]["mvp"] == 0, oreo["comm"]   # (Nov 17: one game to the end)
         assert sum(c["set"] == "mp" for c in data["commendations"]["list"]) == 14 and len(data["commendations"]["badges"]) == 2
 
@@ -248,8 +248,9 @@ def test_proving_grounds_commendations():
     assert sr.feed_feats([], {"A"}) == {}
     _, comms = sr.load_commendations()
     keys = [c["key"] for c in comms]
-    assert len(comms) == 23 and keys[14:19] == ["victor", "first_blood", "closer", "grudge_match", "medal_collector"], keys
-    assert keys[19:] == ["mvp", "game_changer", "positive_thinking", "loyal_soldier"], keys   # (Nov 17, the owner's four)
+    assert len(comms) == 25 and keys[14:19] == ["victor", "first_blood", "closer", "grudge_match", "medal_collector"], keys
+    assert keys[19:23] == ["mvp", "game_changer", "positive_thinking", "loyal_soldier"], keys   # (Nov 17, the owner's four)
+    assert keys[23:] == ["mission_first", "denied"], keys                                       # (Nov 19, the objective two)
     g = {"medals": {"8": 2, "9": 0, "111": 5}, "cats": {"all": sr.blank() | {"wins": 12, "medals": 7}}, "weapons": {}, "kill_games": 1,
          "feats": {"first": 6, "closer": 0, "grudge": 2}, "maps": {"reach_70_boneyard": {"wins": 2}, "reach_forge_halo": {"wins": 0}, "x": {"wins": 1}}}
     n = sr.commendation_counts(g, comms, {})
@@ -285,6 +286,48 @@ def test_mvp_game_changer_positive_loyal():
     assert (n["mvp"], n["game_changer"], n["positive_thinking"], n["loyal_soldier"]) == (3, 1, 7, 30), n
     src = {c["key"]: sr.commendation_source(c["count"]) for c in comms}
     assert (src["mvp"], src["game_changer"], src["positive_thinking"], src["loyal_soldier"]) == ("report", "report", "matches", "matches")
+
+
+def test_mission_first_and_denied():
+    """(Nov 19, the owner: "Do mission first, and Denied") Mission First: flags captured, bombs planted and Headhunter's
+    10-skull banks by MCC's medals, plus the flags brought home in Stockpile, which is MCC's Score there (no medal says
+    it). Denied: flag and bomb carrier kills by MCC's medals; a kill made with the flag is neither. Both come from the
+    reports: None, not 0, while MCC's medal list has not been read. A Score outside Stockpile adds nothing."""
+    assert sr.stockpile_flags({"score": 4}, "stockpile") == 4 and sr.stockpile_flags({"score": 4}, "ctf") == 0
+    assert sr.stockpile_flags(None, "stockpile") == 0 and sr.stockpile_flags({"score": -1}, "stockpile") == 0
+    assert sr.stockpile_flags({}, "stockpile") == 0
+    _, comms = sr.load_commendations()
+    by = {c["key"]: c for c in comms}
+    info = {"77": {"key": "medal_flag_captured"}, "38": {"key": "medal_bomb_planted"}, "268": {"key": "medal_skullamanjaro"},
+            "78": {"key": "medal_flag_carrier_kill"}, "33": {"key": "medal_bomb_carrier_kill"}, "83": {"key": "medal_flag_kill"}}
+    g = {"medals": {"77": 3, "38": 2, "268": 1, "78": 9, "33": 4, "83": 6}, "cats": {"all": sr.blank()}, "weapons": {},
+         "kill_games": 0, "deeds": {"stockpile": 7}}
+    n = sr.commendation_counts(g, comms, info)
+    assert (n["mission_first"], n["denied"]) == (3 + 2 + 1 + 7, 9 + 4), n
+    assert sr.commendation_counts(dict(g, deeds={}), comms, info)["mission_first"] == 6
+    none = sr.commendation_counts(g, comms, {})
+    assert none["mission_first"] is None and none["denied"] is None, none
+    for key in ("mission_first", "denied"):
+        c = by[key]
+        assert c["set"] == "pg" and sr.commendation_source(c["count"]) == "report", c
+        assert c["need"] == [5, 25, 100, 500, 1500, 3000] and c["cr"] == [150, 400, 1000, 2000, 2000, 0], c
+        assert sr.commendation_tier(n[key], c["need"]) == 1, (key, n[key])
+    # through the build: a Stockpile game's Score is counted, a CTF game's is not (its captures are the medals)
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261119-180000.carnage.xml", report("s1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600),
+            row(bot(2), "Oreo", 1, 0, 7, 0, 0, 600, score=3, medals={78: 2})], "TU STOCKPILE"))
+        w.write("trace_reach_forge_halo_20261119-183000.carnage.xml", report("c1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600),
+            row(bot(2), "Oreo", 1, 0, 7, 0, 0, 600, score=2, medals={77: 2, 33: 1})], "TU MULTI FLAG CTF"))
+        os.makedirs(os.path.join(w.paths.store, "art"))
+        with open(os.path.join(w.paths.store, "art", "medals.json"), "w", encoding="utf-8") as f:
+            json.dump({i: {"name": v["key"], "icon": "", "kind": "ModeSpecific", "key": v["key"]} for i, v in info.items()}, f)
+        w.career()
+        oreo = player(w.build(), "Oreo")
+        assert oreo["g"]["reach"]["deeds"]["stockpile"] == 3, oreo["g"]["reach"]["deeds"]
+        assert (oreo["comm"]["mission_first"], oreo["comm"]["denied"]) == (3 + 2, 2 + 1), oreo["comm"]
 
 
 def test_forge_layouts_and_tier_banners():

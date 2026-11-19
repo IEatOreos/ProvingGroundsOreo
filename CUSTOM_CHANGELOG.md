@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Service Record: Mission First and Denied, two commendations for objective play, 2026-11-19
+
+The owner, from a list of commendations the site lacked: "Do mission first, and Denied."
+
+- **Why:** nothing counted objective play. Reach had no multiplayer objective commendations, and Game Changer only rewards the top Score of an objective game.
+- **What MCC's Reach reports carry** (the store's 28 objective games up to Nov 19: 9 CTF, 6 Assault, 6 King of the Hill, 4 Territories, 3 Stockpile):
+  - Five objective medals only: Flag Captured, Bomb Planted, Flag Carrier Kill, Bomb Carrier Kill and Flag Kill.
+  - A flag brought home in Stockpile is a point of the player's Score there; no medal says it.
+  - Territories record nothing: Score 0 for all 40 player rows, no medal. There is no medal for a flag return, a bomb defuse or defense either.
+- **Mission First** (`tools/service_record_site/commendations.json`, set "pg"): flags captured, bombs planted and Headhunter's 10-skull banks by MCC's medals, plus the flags brought home in Stockpile.
+- **Denied:** flag carrier kills and bomb carrier kills by MCC's medals.
+- Both are narrower than the sketch the owner chose from, which also named territories taken, flag returns, defuses and defense: the reports do not say those. `commendations.json` `objective_note` records what is and is not counted.
+- Tiers for both: 5, 25, 100, 500, 1,500, 3,000, with First Blood's credits (150, 400, 1,000, 2,000, 2,000).
+- `tools/service_record.py`: `stockpile_flags` (new) reads a Stockpile game's Score; a match's flags are summed as `deeds["stockpile"]`; `commendation_counts` adds `count.plus_deed` to a medal count.
+- No art yet: both cards show the drawn placeholder until the owner sends a tier sheet for each (`service_record_art.py emblems <sheet> mission_first`, `denied`).
+- Each Iron adds 150 cR to a bot's credits, and the Overall Commendation Progress is now out of 25 commendations, so it falls a little for everyone.
+- Validation:
+  - `tools/test_service_record.py` +1 (35): the medals and the Stockpile flags summed, a Score outside Stockpile adding nothing, None while MCC's medal list is unread, the tiers, and both counts through a build of a Stockpile and a CTF game. All 107 `tools/test_*.py` files pass.
+  - The real site rebuilt: of 680 bots with a counted match, 341 have a count in one of the two; 34 are at Iron in Mission First and 49 in Denied; the highest counts are 15 and 13.
+  - A bot's Commendations page in a browser: both cards in the Proving Grounds set, at Iron with their counts, no console errors.
+- **Untested:** Skullamanjaro (the store has no Headhunter game) and Oddball (none either). The game's own Commendations page, which reads the site's table.
+
 ### Service Record: Medal Collector counts every medal, 2026-11-19
 
 - The owner asked for Medal Collector to count total medals, not unique ones, with the tiers left to Claude.

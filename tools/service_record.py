@@ -916,6 +916,13 @@ def match_deeds(p, d, cat, top):
             "positive": int(finished and p["kills"] > p["deaths"]), "loyal": int(finished)}
 
 
+def stockpile_flags(d, cat):
+    """(Nov 19, Mission First) the flags one player brought home in a Stockpile game: MCC's Score there, which no medal
+    says (the store's three Stockpile games of Nov 16-18: 0 to 4 a player, 10 for the team that won to 10). 0 in any
+    other game and with no report kept. d: MCC's report's row, cat: the match's family."""
+    return max(0, int(d.get("score", 0))) if d and cat == "stockpile" else 0
+
+
 def load_commendations(path=os.path.join(SITE, "commendations.json")):
     """(tier names, [commendation, ...]) from the site's table; a commendation whose tiers do not rise is left out."""
     table = load_json(path, {})
@@ -957,6 +964,8 @@ def commendation_counts(g, comms, medal_info):
         elif ("weapons" in how or "vehicles" in how) and g.get("kill_games"):
             keys = vehicles if how.get("vehicles") else {f"reach:{w}" for w in how.get("weapons", [])}
             n = sum(v[0] for k, v in weapons.items() if k in keys)
+        if n is not None and how.get("plus_deed"):               # (Nov 19, Mission First: Stockpile's flags, a count
+            n += int(g.get("deeds", {}).get(how["plus_deed"], 0))    # of the matches' own beside the medals)
         out[c["key"]] = n
     return out
 
@@ -1400,6 +1409,7 @@ def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bo
                 g["results"].append((t, gid, won))
                 for k, n in match_deeds(p, d, match["cat"], top).items():
                     g["deeds"][k] += n
+                g["deeds"]["stockpile"] = g["deeds"].get("stockpile", 0) + stockpile_flags(d, match["cat"])
                 if tally is not None:                       # (this match has its kill rows)
                     g["kill_games"] += 1
                     for k, n in feats.get(html.unescape(p["name"]), {}).items():
