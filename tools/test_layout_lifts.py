@@ -144,6 +144,74 @@ class MapRideTests(unittest.TestCase):
         self.assertEqual(maps.map_lift_rides("bloodgulch", None, []), [])
 
 
+CAGE = "reach_forge_halo/variants/vd7eaef53"
+
+
+class ForgePadTests(unittest.TestCase):
+    """(Nov 18, "What about the cage the forge map?") maps.forge_pads / forge_throws: Forge-placed cannons and lifts."""
+
+    def test_forge_pieces_become_markers(self):
+        v = dict(pieces=[piece("ff_man_cannon_forge", 1, 2, 3), piece("ff_grav_lift", 10, 0, 0),
+                         piece("heh_red_airlift_paneldoor", 20, 0, 0), piece("ff_block", 30, 0, 0),
+                         piece("gravity_lift", 40.2, 0, 0)])
+        old = [dict(kind="lift", name="gravity_lift", pos=[40.0, 0.0, 0.0], group="crates")]
+        out = maps.forge_pads(old, v)
+        self.assertEqual([(f["kind"], f["name"]) for f in out[1:]], [("launcher", "ff_man_cannon_forge"),
+                                                                     ("lift", "ff_grav_lift")])
+        self.assertEqual(out[1]["group"], "forge")
+
+    def test_a_long_link_off_a_forge_cannon_is_its_throw(self):
+        feats = [dict(kind="launcher", name="ff_man_cannon_forge", pos=[0.0, 0.0, 0.0], group="forge")]
+        throw = dict(take_off=[0.0, 0.8, 0.1], land=[0.6, -14.7, 2.5], air_s=3.17)
+        hop = dict(take_off=[0.0, 0.8, 0.1], land=[0.0, -0.4, 0.9])
+        far = dict(take_off=[5.0, 0.0, 0.0], land=[5.0, -15.0, 0.0])
+        out = maps.forge_throws([throw, hop, far], feats)
+        self.assertEqual((out[0]["ride"], out[0]["launch"], out[0]["air_s"]), (1, 1, 3.17))
+        self.assertEqual(out[1:], [hop, far])
+        self.assertEqual(maps.forge_throws([throw], [dict(feats[0], group="crates")]), [throw])   # (a base map's)
+
+
+@unittest.skipUnless(os.path.isdir(ROOT / "maps" / CAGE), "no The Cage data")
+class CageTests(unittest.TestCase):
+    TAKE, LAND = (17.8, 181.6, 35.5), (18.4, 166.1, 37.9)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.m = maps.get_map(CAGE)
+        cls.T = maps.terrain(cls.m)
+
+    def test_the_cannon_is_a_marker_and_its_throw_a_launch(self):
+        self.assertEqual([f["name"] for f in self.m["features"] if f.get("group") == "forge"], ["ff_man_cannon_forge"])
+        throws = [(k, w) for _, _, k, w in self.T.hjumps if k.get("launch")]
+        self.assertEqual(len(throws), 1)
+        k, w = throws[0]
+        self.assertLess(math.dist(k["take_off"][:2], self.TAKE[:2]), 0.2)
+        self.assertLess(w, 10.0)                                # (by its 3.2 s airtime: 24 as a 15.5 u jump)
+
+    def bot(self):
+        b = Bot(0, 0, make_profile("strong", "rusher", random.Random(3)), self.m, random.Random(5))
+        b._terrain, b.notes, b.now = self.T, [], 0.0
+        b.rng.random = lambda: 0.0
+        return b
+
+    def test_the_nav_and_the_chance_ride_it(self):
+        a, g = Vec(18.2, 184.6, 35.1), Vec(16.7, 168.8, 37.9)   # (north of the pad to past its landing)
+        b = self.bot()
+        pos = a                                                 # (the nav's own way: the throw, ridden as a cannon)
+        for _ in range(10):
+            nxt = self.T.nav(pos, g, human=True)
+            if hasattr(nxt, "sx"):
+                break
+            pos = nxt
+        self.assertTrue(hasattr(nxt, "sx"))
+        self.assertAlmostEqual(b.cannon_of(nxt), 3.17)
+        take = b.lift_detour(PlayerState(0, 0, "bot", a), g)
+        self.assertLess(math.dist((take.x, take.y), self.TAKE[:2]), 0.2)
+        self.assertIs(b.lift_detour(PlayerState(0, 0, "bot", take), g), True)
+        self.assertIsNotNone(b.cannon_ride)
+        self.assertIn("lift chance: on the man cannon", b.notes)
+
+
 class Floor:
     """A floor at z 0 with a lift's take-off at the origin (a people's ride to (2, 0, 3.4))."""
     def __init__(s):

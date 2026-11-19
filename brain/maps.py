@@ -178,6 +178,7 @@ def load_map(name):
     # (custom, Nov 18) the base's lifts and cannons this layout lacks: left out, their rides too (_build: off_gone_pads)
     m["features"], m["lifts_gone"] = layout_lifts(m["features"], m.get("variant"),
                                                   {it["name"] for it in objs.get("placed", ())})
+    m["features"] = forge_pads(m["features"], m.get("variant"))   # (custom, Nov 18) its Forge lifts and cannons
     m["features"] = owner_ride_pads(m["features"], data_names(m))   # (custom) the owner's lift / man cannon pads
     return m
 
@@ -402,6 +403,48 @@ def layout_lifts(features, variant, placed=()):
             continue
         keep.append(f)
     return keep, gone
+
+
+# (custom, Nov 18) gravity lifts and man cannons placed in Forge are markers too (features.json has the scenario's alone).
+# The owner, "What about the cage the forge map?": The Cage (Forge World vd7eaef53) has one ff_man_cannon_forge, and
+# its recorded throw (15.5 u in 3.2 s) was a 15 u jump to the nav (cost 24) run as a jump, never the cheap way
+FORGE_LIFT = (("man_cannon", "launcher"), ("mancannon", "launcher"), ("grav_lift", "lift"), ("gravlift", "lift"),
+              ("gravity_lift", "lift"))
+CANNON_PAD_R = 2.0     # u: a link from this near a Forge cannon's piece (and 3 u of its height) ...
+CANNON_THROW = 7.0     # u: ... going this far or more on the flat is its throw (no jump goes 7 u): ride, launch
+
+
+def forge_pads(features, variant):
+    """features plus a "lift" or "launcher" marker (group "forge") at each lift or cannon piece of a variant's layout
+    (variant.json "pieces", by name: FORGE_LIFT) no lift or launcher marker is within LAYOUT_PAD_SAME of."""
+    out = list(features)
+    for p in (variant or {}).get("pieces") or []:
+        n = p[0].lower()
+        kind = next((k for w, k in FORGE_LIFT if w in n), None)
+        if kind is None or "door" in n:
+            continue
+        if any(f.get("kind") in ("lift", "launcher") and math.hypot(f["pos"][0] - p[1], f["pos"][1] - p[2]) < LAYOUT_PAD_SAME
+               and abs(f["pos"][2] - p[3]) < LAYOUT_PAD_SAME for f in out):
+            continue
+        out.append(dict(kind=kind, name=p[0], pos=[float(p[1]), float(p[2]), float(p[3])], group="forge"))
+    return out
+
+
+def forge_throws(links, features):
+    """links with each throw from a Forge man cannon (forge_pads) marked ride and launch: from within CANNON_PAD_R of its
+    piece, CANNON_THROW+ u on the flat. The nav prices it by its airtime (Terrain.add_human_links) and the bot steps on
+    and is thrown (Bot.cannon_of, ride_cannon), as the owner's drawn cannons. Copies; the rest as they are."""
+    pads = [f["pos"] for f in features if f.get("kind") == "launcher" and f.get("group") == "forge"]
+    if not pads:
+        return list(links)
+    out = []
+    for k in links:
+        to, la = k.get("take_off"), k.get("land")
+        if (to and la and not k.get("launch") and math.hypot(la[0] - to[0], la[1] - to[1]) >= CANNON_THROW
+                and any(math.hypot(to[0] - p[0], to[1] - p[1]) < CANNON_PAD_R and abs(to[2] - p[2]) < 3.0 for p in pads)):
+            k = dict(k, ride=1, launch=1, air_s=max(1.0, float(k.get("air_s") or 0.0)))
+        out.append(k)
+    return out
 
 
 def off_gone_pads(links, gone):
@@ -673,6 +716,7 @@ def _build(m, window):
         T.jump_apex = jumps[len(jumps) // 2] if len(jumps) >= 20 else 0.8
         links = usable_links(data.get("links", []))
     links = off_gone_pads(anchor_launches(links + painted, m.get("features", [])), m.get("lifts_gone"))
+    links = forge_throws(links, m.get("features", []))   # (custom, Nov 18) a Forge cannon's recorded throws
     links += owner_ride_links(names)    # (custom) the owner's lifts and man cannons (LiDAR view, Edit spots)
     links += map_lift_rides(m["name"], T, links)   # (custom, Nov 18) lifts nobody rode: their solved rides
     if links:

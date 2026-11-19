@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Forge-placed man cannons and grav lifts: markers, their throws ridden; the chance picks cannons, 2026-11-18
+
+The owner: "What about the cage the forge map?"
+
+- Found: The Cage (Forge World `vd7eaef53`, "$HReach_MPMap_R-25_Title") has one Forge piece `ff_man_cannon_forge` at (17.8, 180.9, 35.4) and no lift. Bots had no marker for it: features.json holds the scenario's lifts and cannons, never a layout's Forge pieces. People's LiDAR walking recorded its throw, (17.8, 181.6, 35.5) to (18.4, 166.1, 37.9): 15.5 u in 3.17 s. To the nav that was a plain 15.5 u jump (cost 24.3), still cheaper than walking round (67-79 from by the pad to by its landing), so the nav did send bots there. They ran it as a jump, though, and the jump check called it short 1.5 s into the 3.2 s flight (the failure `ride_cannon` was made for: the owner's Adrift cannon). No trace of a Cage match names its layout, so what bots did at that pad is not seen.
+- `brain/maps.py` `forge_pads` (load_map): each lift or cannon piece of a variant's layout (name `man_cannon` / `mancannon`: launcher; `grav_lift` / `gravlift` / `gravity_lift`: lift; no doors) with no lift or launcher marker within `LAYOUT_PAD_SAME` 1.5 u becomes one, group "forge". That gives `Bot.lift_near` / `lift_base`, the nav's lift columns and `anchor_launches`' ride marking. `forge_throws` (`_build`): a link from within `CANNON_PAD_R` 2 u of a Forge cannon's piece (3 u in height) going `CANNON_THROW` 7+ u on the flat is its throw: ride, launch, its recorded airtime (at least 1 s). The nav prices it by airtime (The Cage's: 8.1). The bot steps on and is thrown (`cannon_of`, `ride_cannon`). Base-map cannons (Tempest, Breakneck) are as before.
+- `brain/bot.py` `lift_detour`: the lift chance takes a man cannon's throw too (any ride link flagged launch: Forge cannons, the owner's drawn ones), on any trip, not only up; on a win it walks to the take-off and starts `cannon_ride` ("lift chance: on the man cannon"). A cannon this bot found short or never thrown is skipped (`jump_fails`). Stand-in terrains without a list of links are skipped, and whether a map has a throw at all is cached per link list.
+- Other layouts this gives markers to: Wayont (four ff_grav_lift), Delta Facility, Rasu, Mt. Lam Lam, Utopie, Brick and others (lifts and cannons listed in the lift entry below). Without a recorded ride there is still none to take: those pieces have no phantoms (no HREK kit here).
+- Validation: `tools/test_layout_lifts.py` 17 tests (new: Forge pieces become markers, doors and pieces on a marker not; a Forge cannon's long link is its throw, a hop off it and a base map's cannon not; The Cage: one marker, one throw costed under 10, the nav's way from north of the pad is the throw and `cannon_of` gives its 3.17 s, the chance walks to its take-off and starts the cannon ride). All 936 regression tests pass. Untested in a match.
+
 ### No sight or shots through a Forge piece's sloped top (Pinnacle's centre dish), 2026-11-18
 
 The owner: "Pinnacle bots still shoot through the side of the forge bowl in the middle of the map."

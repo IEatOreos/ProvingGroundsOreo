@@ -8919,15 +8919,16 @@ class Bot:
 
     def lift_detour(s, me, point):
         """(custom, Nov 18) The lift chance (LIFT_P): on a trip up, the way by a gravity lift's ride when it is little
-        longer than the nav's. The take-off to walk to while it holds (s.via_lift), True when the ride began here
-        (s.lift_ride: ride_lift), or None: the nav's own way."""
+        longer than the nav's; on any trip, by a man cannon's throw (a ride link flagged launch: the owner's drawn ones,
+        a Forge cannon's, maps.forge_throws). The take-off to walk to while it holds (s.via_lift), True when the ride
+        began here (s.lift_ride: ride_lift, or s.cannon_ride: ride_cannon), or None: the nav's own way."""
         if me.vehicle != -1:
             s.via_lift = None
             return None
         now = getattr(s, "now", 0.0)
         via = getattr(s, "via_lift", None)
         if via is not None:
-            take, base, land, goal, until = via
+            take, base, land, goal, until, air = via
             if now > until or (point - goal).flat() > LIFT_GOAL_R or abs(point.z - goal.z) > 2.0:
                 s.via_lift = None                    # (too slow, or the goal moved on: the nav's way)
             elif (me.pos - take).flat() < 0.9 and abs(me.pos.z - take.z) < 1.0:
@@ -8942,7 +8943,8 @@ class Bot:
         if roll is not None and now < roll[1] and (point - roll[0]).flat() < LIFT_GOAL_R:
             return None
         T = s.T()
-        if point.z - me.pos.z < LIFT_UP or not getattr(T, "hjumps", None):
+        hj = getattr(T, "hjumps", None)
+        if not isinstance(hj, list) or not hj:
             return None
         s.lift_roll = (point, now + LIFT_ROLL_S)
         if s.rng.random() >= LIFT_P:
@@ -8950,6 +8952,10 @@ class Bot:
         try:
             here = T._node(me.pos)
             to_goal = T._field(point, human=True)
+                if air is not None:                  # a cannon: onto its pad, thrown to the landing
+                    s.cannon_ride = (Vec(take.x, take.y, me.pos.z), land, now, air, None)
+                    s.note("lift chance: on the man cannon")
+                    return True
             direct = float(to_goal[here])
         except Exception:                            # (a place off the numbers: the nav's way)
             return None
@@ -8958,12 +8964,22 @@ class Bot:
         fails, best = getattr(s, "jump_fails", {}), None
         for _, dst, k, w in T.hjumps:
             to, la = k.get("take_off"), k.get("land")
-            if not (k.get("ride") and to and la) or la[2] - to[2] < LIFT_UP:
+            if not (k.get("ride") and to and la):
                 continue
-            base = s.lift_near(to[0], to[1])
+            air = float(k.get("air_s") or 2.0) if k.get("launch") else None
+            base = None if air is not None else s.lift_near(to[0], to[1])
+            if air is None and (base is None or not up or la[2] - to[2] < LIFT_UP):
+                continue                             # (no lift by it, or no trip up)
             f = fails.get((round(to[0], 1), round(to[1], 1)))
-            if base is None or (f is not None and f[0] >= 2 and now < f[1]):
-                continue                             # (a cannon's, or a lift this bot found dead: ride_lift)
+        up = point.z - me.pos.z >= LIFT_UP
+        if not up:                                   # (a trip not up: only a cannon's throw, if the map has one)
+            hl = getattr(s, "_has_launch", None)
+            if hl is None or hl[0] is not hj:
+                hl = s._has_launch = (hj, any(k.get("launch") for _, _, k, _ in hj))
+            if not hl[1]:
+                return None
+            if f is not None and f[0] >= 2 and now < f[1]:
+                continue                             # (one this bot found dead or short: ride_lift, ride_cannon)
             after = float(to_goal[dst])
             if not math.isfinite(after) or after >= direct:
                 continue                             # (it lands no nearer the goal)
@@ -8972,12 +8988,12 @@ class Bot:
                 continue
             cost = walk + w + after
             if cost - direct <= min(LIFT_DETOUR, LIFT_DETOUR_SHARE * direct) and (best is None or cost < best[0]):
-                best = (cost, walk, Vec(*to[:3]), base, Vec(*la[:3]))
+                best = (cost, walk, Vec(*to[:3]), base, Vec(*la[:3]), air)
         if best is None:
             return None
-        cost, walk, take, base, land = best
-        s.via_lift = (take, base, land, point, now + walk / 2.0 + 6.0)
-        s.note(f"lift chance: to the lift ({cost - direct:.1f} longer)")
+        cost, walk, take, base, land, air = best
+        s.via_lift = (take, base, land, point, now + walk / 2.0 + 6.0, air)
+        s.note(f"lift chance: to the {'man cannon' if air is not None else 'lift'} ({cost - direct:.1f} longer)")
         return take
 
     def lift_base(s, j, me):
@@ -9414,7 +9430,10 @@ class Bot:
             return
         lp = s.lift_detour(me, point)            # (custom, Nov 18) up by a lift, on a roll (LIFT_P)
         if lp is True:
-            s.ride_lift(me, act)
+            if getattr(s, "cannon_ride", None):
+                s.ride_cannon(me, act)
+            else:
+                s.ride_lift(me, act)
             return
         if lp is not None:
             point = lp
