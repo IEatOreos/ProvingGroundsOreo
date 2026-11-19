@@ -2444,6 +2444,49 @@ def write_game_challenges(data, paths):
     os.replace(tmp, os.path.join(paths.out, "challenges.txt"))
 
 
+def write_game_commendations(data, paths):
+    """(Nov 19, the owner's picture of Halo: Reach's Service Record: Commendations, "add it to ours with its own menu
+    option, and keep it connected to the service record site") <out>/commendations.txt for Proving Grounds' Commendations
+    page (native/proving_grounds.cpp): the site's table and banners (each tier's own where the site has it), and each
+    listed person's counts with the tier reached as the site's Commendations page counts it (app.js commState: the tiers
+    whose need the count reaches), their Overall Commendation Progress, credits, rank and the next rank. The game works
+    nothing out: the page and the site show the same numbers."""
+    C = data.get("commendations") or {}
+    comms, tiers = C.get("list") or [], C.get("tiers") or []
+    art, tier_art = C.get("art") or {}, C.get("tier_art") or {}
+    ranks = data.get("ranks") or []
+    clean = lambda s: str(s).replace("\t", " ").replace("\n", " ")
+    lines = ["# made by tools/service_record.py with the site (its commendations table, commendation_counts); do not edit",
+             "# tiers<TAB>Iron<TAB>Bronze ...",
+             "# commendation<TAB>key<TAB>set (mp, pg)<TAB>name<TAB>what to do<TAB>needs (comma)<TAB>cR (comma)<TAB>banner"
+             "<TAB>each tier's banner (comma, empty where none; paths under this folder)",
+             "# person<TAB>name<TAB>commendation progress %<TAB>credits<TAB>rank<TAB>next rank<TAB>its credits",
+             "# count<TAB>name<TAB>key<TAB>n (empty: not recorded yet)<TAB>tiers reached",
+             "tiers\t" + "\t".join(clean(t) for t in tiers)]
+    for c in comms:
+        row = (tier_art.get(c["key"]) or [None])[1:]
+        lines.append(f"commendation\t{clean(c['key'])}\t{clean(c.get('set', 'mp'))}\t{clean(c['name'])}\t{clean(c['what'])}"
+                     f"\t{','.join(str(int(x)) for x in c['need'])}\t{','.join(str(int(x)) for x in c['cr'])}"
+                     f"\t{clean(art.get(c['key']) or '')}\t{','.join(clean(x or '') for x in row)}")
+    for p in data["players"]:
+        if not p.get("person"):
+            continue
+        name, step = clean(p["name"]), int(p.get("rank") or 0)
+        label = ranks[step][0] if 0 <= step < len(ranks) else ""
+        nxt = ranks[step + 1] if 0 <= step + 1 < len(ranks) else None
+        lines.append(f"person\t{name}\t{float(p.get('comm_pct') or 0):.1f}\t{int(p.get('cr') or 0)}\t{clean(label)}"
+                     f"\t{clean(nxt[0]) if nxt else ''}\t{int(nxt[1]) if nxt else ''}")
+        counts = p.get("comm") or {}
+        for c in comms:
+            n = counts.get(c["key"])
+            lines.append(f"count\t{name}\t{clean(c['key'])}\t{'' if n is None else int(n)}"
+                         f"\t{commendation_tier(n, c['need'])}")
+    tmp = os.path.join(paths.out, "commendations.txt.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, os.path.join(paths.out, "commendations.txt"))
+
+
 def write_last_match(data, paths):
     """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
     report) <out>/last_match.txt: what the newest match on the site (a Proving Grounds match) earned each listed person
@@ -2535,6 +2578,7 @@ def write_site(data, paths):
     write_game_ranks(data, paths)
     write_last_match(data, paths)
     write_game_challenges(data, paths)
+    write_game_commendations(data, paths)                    # (Nov 19: the game's Commendations page)
     for name, text in (("data.js", "window.SR_DATA = " + json.dumps(data, separators=(",", ":")) + ";\n"),
                        ("stamp.js", f'window.SR_STAMP && window.SR_STAMP("{data["stamp"]}");\n')):
         tmp = os.path.join(paths.out, name + ".tmp")

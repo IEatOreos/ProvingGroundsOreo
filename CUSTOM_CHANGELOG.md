@@ -41,6 +41,86 @@ The owner, from a list of commendations the site lacked: "Do mission first, and 
   - Full suite: 986 tests pass.
   - The site was rebuilt and the new tiers were checked in `data.js`.
 
+### Proving Grounds: the credits after a game as Reach's own sequence, 2026-11-19
+
+The owner sent ten frames, in order, of Halo: Reach's screen after a game (a Reddit video). `native/proving_grounds.cpp` `credits_screen` now runs that sequence, with the same data as before (`last_match.txt`, the site's own lines and rank steps):
+
+- **Look:**
+  - Reach's dark slate over the postgame painting (kept faint) and its fine hex pattern, brightest in the middle.
+  - The player's Spartan at the right (bots_panel's person figure), turning toward the camera on a promotion.
+- **Sequence:**
+  1. Each line in turn, 1 s each. Its name and "+n" counting up in the middle, a huge faint word behind ("TIME SPENT" for Game Completed, "TEAM PLAYER" for Assists, else the line's name), then into the list at the bottom left.
+  2. CREDITS EARNED at the top, the list rising under it, and TOTAL counting up, with "TOTAL CREDITS" faint behind.
+  3. The total flies to the player's band along the bottom: emblem, rank insignia, name, rank, credits counting up, and "Next: <rank> in n cR" or MAX RANK. The owner's level-up bar (Nov 17) is now a thin bar under the band, filling toward the next rank.
+  4. On a promotion: the header turns to PROMOTED, the list dims, "<RANK> PROMOTED" appears faint behind, and the new insignia comes in large with its name and a gold ring.
+- **Controls:**
+  - A, Enter or a click skips to the end (Reach's Skip), then goes on.
+  - B goes on.
+  - It goes on by itself 6 s after the end.
+- **Commendations page:** each bar is now the colour of the tier reached, grey before Iron. It was the next tier's colour. (The owner: "the color of the tier it's at currently".)
+- **`native/pg_preview.cpp`:** the credits drawn three times (a line, the total, the promotion: screens 10, 13, 14). The friend's vote is now screen 15.
+- **Validation:**
+  - The preview renders every phase, checked by eye against the owner's frames.
+  - `build.bat pg23` builds `botcore_pg23.dll`.
+  - **Untested in game:** the timing, the figure's turn and the sounds.
+- **Later the same day:**
+  - The owner asked for the new rank's insignia "a tad slower", since it felt too instant. Now:
+    - it waits 0.35 s after PROMOTED;
+    - it fades in over 0.6 s while settling from larger over 0.8 s;
+    - its name and the gold ring follow it;
+    - the sequence ends 0.6 s later (`botcore_pg24.dll`).
+  - `pg_preview video <out.mp4> [screen] [seconds]` records a screen as it plays: 30 fps H.264 through Media Foundation, no sound (`build_pg_preview.bat` links mfplat, mfreadwrite and mfuuid). `logs/previews/pg_levelup.mp4` is the credits sequence.
+
+### Proving Grounds: Reach's Service Record Commendations page, from the site, 2026-11-19
+
+The owner sent a picture of Halo: Reach's Service Record Commendations screen: "Let's add it to ours with its own menu option, and keep it connected to the service record site."
+
+- `tools/service_record.py` `write_game_commendations`, run with every site build beside `ranks.txt` and `challenges.txt`, writes `logs/service_record/commendations.txt`. It holds:
+  - the site's tiers and table, with each commendation's Reach banner and its tier banners;
+  - for each listed person: their counts with the tier reached as the site counts it (`commendation_tier`, the same as `app.js` commState), their Overall Commendation Progress, credits, rank and next rank.
+- `native/proving_grounds.cpp`: a COMMENDATIONS row on the menu, between CHALLENGES and SIMULATE MATCHES, showing the progress %. The rows are now 44 tall and 6 apart, and the games and category tiles a little smaller, so six rows fit.
+- The page is laid out like Reach's:
+  - **Header:** "SERVICE RECORD".
+  - **Lists, at the left:** Top Commendations (all), Multiplayer, Proving Grounds (the site's two sets).
+  - **Commendation list, at the right:** six rows at a time, sorted as the site sorts them (tier, then progress, then name). Each row has:
+    - the banner of the tier reached (the site's tier banner), else Reach's own;
+    - the tier name in the site's tier colour;
+    - a bar toward the next tier in that tier's colour, with n/need.
+  - **Player band, at the bottom:** emblem, rank insignia, name, rank, credits, and "Next: <rank> in n cR".
+  - **Footer:** the focused commendation's description and "n of need for <tier> (+cR)", worded as on the site.
+  - **Controls:** Up and Down (or the stick) move and scroll, with chevrons when more is above or below. Left and Right or LB and RB change list. Y or Tab opens the player's Commendations page on the site (`open_site_page`, shared with Challenges). B goes back to the menu's COMMENDATIONS row.
+- `native/pg_preview.cpp`:
+  - The page is preview screen 12 (the friend's vote is now 13).
+  - The preview's link loopback now answers only on the friend's screen. A screen drawn after the credits used to follow its stale state, so `pg_11_challenges` had drawn the credits.
+- **Validation:**
+  - `tools/test_service_record.py` `test_game_reads_the_sites_commendations`. The file's own run passes (34 tests).
+  - A real site build wrote 23 commendations with the owner's counts.
+  - The preview draws the page with them, checked by eye.
+  - `build.bat pg22` builds `botcore_pg22.dll`.
+  - **Untested in game.**
+- **Not done:** the owner's Reddit video of Reach's level-up screen could not be opened from here (Reddit refuses the fetch, and video can't be watched), so the credits screen is unchanged.
+
+### Proving Grounds over Reach's own painted backgrounds, see-through as Reach's menus, 2026-11-19
+
+The owner sent pictures of Halo: Reach's matchmaking, main menu and custom game lobby ("The background is more seemless and fluid ... I want the background to be like that") with upscales of three of Reach's menu backgrounds to use.
+
+- `native/proving_grounds.cpp`:
+  - **Backgrounds:**
+    - One painting across the whole screen, bright: `menu` for Proving Grounds' own screens, `matchmaking` for Find Game, the vote and the next game, `postgame` for the credits after a game.
+    - Each drifts slowly, 9-11% larger than the screen and moving about in that room, and a new screen's painting fades in over the last in 0.9 s (not when the screens were just put up).
+    - Over it, Reach's treatment: a light dimming, darker on the left behind the menu and at the bottom under the prompts, a touch at the top and right.
+    - The pictures are this PC's only, in `native\bin\pg_backgrounds\` (menu, matchmaking and postgame, `.png` or `.jpg`). That folder is git-ignored: Reach's art is never committed. Without a picture, a screen keeps the playlist's maps, faint, as before.
+  - **See-through:**
+    - Panels at alpha 176 (214 before); the menu's info panels lighter too.
+    - A plain list row is nearly clear.
+    - The focus is Reach's light band with a white line at its left, on the menu, the error screen's buttons and the vote's options. This replaces the solid grey bar and pointer from this morning.
+    - Reach's thin line over the button prompts.
+- `native\bin\pg_backgrounds\` (not committed): the owner's three pictures. menu.png is the Halo over Reach, matchmaking.png the Covenant over the glassing (swapped at the owner's word), postgame.png an Elite and a Spartan (1672x941 each).
+- **Validation:**
+  - The preview renders all 12 screens with the paintings (no fade there), checked by eye at 1920x1080.
+  - `build.bat pg21` builds `botcore_pg21.dll`.
+  - **Untested in game**, including how the drift and the fades feel live.
+
 ### Proving Grounds in Halo: Reach's look, livelier, and fully on the controller, 2026-11-19
 
 The owner asked for the bot matchmaking screens to be "more vibrant and true to the original", then chose Reach's steel grey for every screen ("I want the vibe of reach as much as possible"; this replaces the Nov 17 MCC navy for the menu, search, vote, result and error screens), and "Make the menu also compatible with controller. Since we mostly use controllers." The player card's stats over the figure and the PARTY tag on bright nameplates were left for later at the owner's word.
@@ -356,6 +436,11 @@ Validation:
 Not tested:
 - Nothing of this is tested in game yet. The next multi-round Reach match with a joined friend on `botcore_pg16` should show the new "kept ... pause" line at each round change and no "match is over" line before `report: results`. Round two should have all bots on both screens.
 - A host quitting mid-match (no results) keeps the bot members up to 30 s after the last tick instead of 3 s. The next match's `hr_mb_add` sweeps any left over.
+
+Follow-up, the same evening (F9 reports 20261118-202245, "One Flag round switches players (bots) get booted from each team", Ivory Tower, and 20261118-203514, "Second example of bots getting kicked from round to round", Assault on Condemned):
+- **Found** (`native\bin\botcore_pg17.log`): at both round changes the guard logged `kept the bot members over a 3.0 s pause: no post-game results yet (a round change)`, then `the match is over: ... (30.0 s without a players update, post-game results not built)` and `removed all 7 bot member(s)`. These round changes paused the players update for over 30 s. The 3 bot members (Wannada, Deadly Stealth, RancidMeteor in the One Flag game) were gone for the rest of the match; the 4 local bots stayed. No friend was in that lobby, so any multi-round Reach game with netbots members was hit.
+- **Fix** (`native/reach.cpp` `h_hr_localdrop`): with no post-game results built since the members were made, the pause that keeps them is now `HR_ROUND_PAUSE_MS` 180 s (was 30 s). A real match end is unchanged (results first, then the 3 s rule). Only a match left midway keeps them longer, up to 3 min; the next match's `hr_mb_add` still sweeps any left over.
+- Validation: `native\build.bat pg18` built `botcore_pg18.dll` (the known `tools/panel_art.py` PIL failure aside). No Python changed. **Untested in a match:** the next One Flag, Assault or other multi-round Reach match should show one `kept ... pause` line per round change and no `match is over` line before `report: results`, with all bots in every round.
 
 ### Proving Grounds on a joined PC friend's screen, 2026-11-18
 
@@ -723,6 +808,7 @@ The owner: bots "only play when I play and its against me", so a bot gets a game
   - `tools/test_bot_sim.py` (12 tests): a seed replays; kill rows equal the scoreboard; every gametype keeps its limits; Boneyard has vehicle and power weapon kills; people never play; clans line up; the pace average holds; storage and the site and career totals read it; a reset covers it; a stored match plays again from its inputs; the credits screen keeps the person's match; Top 5 and activity.
   - All 823 `tools/test_*.py` and the 32 `test_service_record.py` checks pass. The menu row was checked in the Proving Grounds preview.
 - **Not yet tried:** a real match's round, the menu row in game, and the site button. Not yet run against the real store.
+- **Utopie (Nov 18):** the owner swapped Paradiso for his own Forge map Utopie in 8v8 ("Remove Paradiso from the map rotation in 8v8 and replace it with Utopie"; `btb.removemap` / `btb.addmap` in his proving_grounds.ini). `bot_sim.py` MAP_FILES now names `Utopie.mvar`, so simulated 8v8 matches play it from his file (35 weapons, 11 vehicles, flag and bomb points read). The 12 `test_bot_sim.py` tests pass. Not yet seen in a lobby.
 
 ### Reach carriers drop the flag to fight when they would die with it, 2026-11-17
 

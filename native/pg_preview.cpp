@@ -6,6 +6,10 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <wincodec.h>
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <vector>
 #include <stdio.h>
 #include <string.h>
 #include <string>
@@ -99,10 +103,13 @@ int pg_lobby_launch_state(char* why, int cap) { if (why) why[0] = 0; return 1; }
 // friend's copy follows it
 static unsigned char g_loop[PGS_MAX];
 static uint32_t g_loop_n;
+// (Nov 19) the loopback answers only on the friend's screen: on the others the host's own last state came back and a
+// screen after the credits followed it (pg_11 drew the credits, not the challenges)
+static bool g_loop_on;
 void pg_link_set_state(const void* d, uint32_t n) { if (n <= PGS_MAX) { memcpy(g_loop, d, n); g_loop_n = n; } }
 uint32_t pg_link_state(void* out, uint32_t cap, uint64_t* age_ms) {
-    *age_ms = g_loop_n ? 0 : ~0ull;
-    if (!g_loop_n || g_loop_n > cap) return 0;
+    *age_ms = g_loop_n && g_loop_on ? 0 : ~0ull;
+    if (!g_loop_on || !g_loop_n || g_loop_n > cap) return 0;
     memcpy(out, g_loop, g_loop_n);
     return g_loop_n;
 }
@@ -223,10 +230,90 @@ int main(int argc, char** argv) {
     hb_roster roster{};
     roster.teams = 2;
     uint32_t bots_on = 1, lidar = 0;
+    // (Nov 19, the owner: "record a playable video of the level up screen") pg_preview video <out.mp4> [screen]
+    // [seconds]: one screen drawn 30 times a second as its clock runs (the pad's prompts), encoded as H.264 by Windows'
+    // own Media Foundation as bink_to_mp4.cpp does; no sound. Screen 9, the credits after a game, by default.
+    if (argc >= 3 && !strcmp(argv[1], "video")) {
+        int which = argc > 3 ? atoi(argv[3]) : 9;
+        float secs = argc > 4 ? (float)atof(argv[4]) : 13.5f;
+        const UINT32 FPS = 30;
+        int N = (int)(secs * FPS);
+        wchar_t mp4[MAX_PATH], tmpv[MAX_PATH];
+        swprintf_s(mp4, L"%S", argv[2]);
+        swprintf_s(tmpv, L"%s.tmp.mp4", mp4);
+        if (FAILED(MFStartup(MF_VERSION))) { printf("no Media Foundation\n"); return 1; }
+        IMFSinkWriter* sink = nullptr; IMFMediaType *outT = nullptr, *inT = nullptr; DWORD stream = 0;
+        HRESULT hr = MFCreateSinkWriterFromURL(tmpv, nullptr, nullptr, &sink);
+        if (SUCCEEDED(hr)) hr = MFCreateMediaType(&outT);
+        if (SUCCEEDED(hr)) {
+            outT->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video); outT->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
+            outT->SetUINT32(MF_MT_AVG_BITRATE, 10000000); outT->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
+            MFSetAttributeSize(outT, MF_MT_FRAME_SIZE, W, H); MFSetAttributeRatio(outT, MF_MT_FRAME_RATE, FPS, 1);
+            MFSetAttributeRatio(outT, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
+            hr = sink->AddStream(outT, &stream);
+        }
+        if (SUCCEEDED(hr)) hr = MFCreateMediaType(&inT);
+        if (SUCCEEDED(hr)) {
+            inT->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video); inT->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
+            inT->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive); inT->SetUINT32(MF_MT_DEFAULT_STRIDE, W * 4);
+            MFSetAttributeSize(inT, MF_MT_FRAME_SIZE, W, H); MFSetAttributeRatio(inT, MF_MT_FRAME_RATE, FPS, 1);
+            MFSetAttributeRatio(inT, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
+            hr = sink->SetInputMediaType(stream, inT, nullptr);
+        }
+        if (SUCCEEDED(hr)) hr = sink->BeginWriting();
+        if (FAILED(hr)) { printf("the H.264 encoder would not start (0x%08x)\n", (unsigned)hr); return 1; }
+        pg_env e{};
+        e.roster = &roster; e.difficulty = 2; e.scale = 1; e.W = (float)W; e.H = (float)H;
+        e.f_label = fl2; e.f_small = fs; e.make_texture = make_texture; e.play_sound = nullptr; e.sounds = 0;
+        e.lobby_visible = true; e.bots_enabled = &bots_on; e.lidar_mode = &lidar; e.pad = true; e.figure = pv_figure;
+        const LONGLONG dur = 10000000 / FPS;
+        std::vector<unsigned char> px((size_t)W * H * 4);
+        for (int i = 0; i < N && SUCCEEDED(hr); i++) {
+            io.DeltaTime = 1.0f / FPS;
+            ImGui_ImplDX11_NewFrame();
+            ImGui::NewFrame();
+            if (i == 0) pg_preview_stage(which, 0.0f, e);
+            pg_frame(e);
+            ImGui::Render();
+            float clear[4] = { 0.05f, 0.08f, 0.1f, 1 };
+            g_ctx->OMSetRenderTargets(1, &rtv, nullptr);
+            g_ctx->ClearRenderTargetView(rtv, clear);
+            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+            g_ctx->CopyResource(st, rt);
+            D3D11_MAPPED_SUBRESOURCE m;
+            if (FAILED(g_ctx->Map(st, 0, D3D11_MAP_READ, 0, &m))) { hr = E_FAIL; break; }
+            for (int y = 0; y < H; y++) {                    // (RGBA to the encoder's BGRX, top row first)
+                const unsigned char* q = (const unsigned char*)m.pData + y * m.RowPitch;
+                unsigned char* o = px.data() + (size_t)y * W * 4;
+                for (int x = 0; x < W; x++) { o[0] = q[2]; o[1] = q[1]; o[2] = q[0]; o[3] = 255; q += 4; o += 4; }
+            }
+            g_ctx->Unmap(st, 0);
+            IMFMediaBuffer* buf = nullptr; IMFSample* smp = nullptr; BYTE* p = nullptr;
+            hr = MFCreateMemoryBuffer((DWORD)px.size(), &buf);
+            if (SUCCEEDED(hr)) hr = buf->Lock(&p, nullptr, nullptr);
+            if (SUCCEEDED(hr)) { memcpy(p, px.data(), px.size()); buf->Unlock(); buf->SetCurrentLength((DWORD)px.size()); }
+            if (SUCCEEDED(hr)) hr = MFCreateSample(&smp);
+            if (SUCCEEDED(hr)) hr = smp->AddBuffer(buf);
+            if (SUCCEEDED(hr)) { smp->SetSampleTime(dur * i); smp->SetSampleDuration(dur); hr = sink->WriteSample(stream, smp); }
+            if (smp) smp->Release();
+            if (buf) buf->Release();
+        }
+        if (SUCCEEDED(hr)) hr = sink->Finalize();
+        sink->Release(); outT->Release(); inT->Release();
+        MFShutdown();
+        if (FAILED(hr)) { DeleteFileW(tmpv); printf("encoding stopped (0x%08x)\n", (unsigned)hr); return 1; }
+        MoveFileExW(tmpv, mp4, MOVEFILE_REPLACE_EXISTING);
+        printf("video: screen %d, %d frames at %u fps, %dx%d -> %s\n", which, N, FPS, W, H, argv[2]);
+        return 0;
+    }
     const char* names[] = { "menu", "invite", "search", "vote", "result", "error", "roster_details", "roster_card",
-                            "roster_you", "credits", "challenges", "friend_vote" };
-    const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 4.4f, 1.0f, 6.0f };
-    for (int s = 0; s < 12; s++) {
+                            "roster_you", "credits", "challenges", "commendations", "credits_total", "credits_promoted",
+                            "friend_vote" };
+    // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
+    // band (8.9 s), the promotion (11.5 s; six lines)
+    const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f };
+    for (int s = 0; s < 15; s++) {
+        g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};
         e.roster = &roster; e.difficulty = 2; e.scale = 1; e.W = (float)W; e.H = (float)H;
         e.f_label = fl2; e.f_small = fs; e.make_texture = make_texture; e.play_sound = nullptr; e.sounds = 0;

@@ -727,6 +727,41 @@ def test_game_reads_the_sites_ranks():
     assert "\\\\logs\\\\service_record\\\\ranks.txt" in cpp and "\\\\logs\\\\service_record\\\\ranks\\\\%d.png" in cpp
 
 
+def test_game_reads_the_sites_commendations():
+    """(Nov 19) <site>/commendations.txt, Proving Grounds' Commendations page: the site's table, and each listed
+    person's counts with the tier reached as the site counts it, their progress, credits, rank and the next rank."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600), row(bot(2), "Oreo", 1, 0, 7, 0, 3, 600, medals={8: 3})]))
+        w.career()
+        data = w.build()
+        data["players"][0]["person"] = True                  # (the page is a person's: list one)
+        out = os.path.join(tmp, "game")
+        os.makedirs(out)
+        sr.write_game_commendations(data, types.SimpleNamespace(out=out))
+        with open(os.path.join(out, "commendations.txt"), encoding="utf-8") as f:
+            rows = [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    C = data["commendations"]
+    assert rows[0] == ["tiers"] + C["tiers"], rows[0]
+    table = [r for r in rows if r[0] == "commendation"]
+    assert [r[1] for r in table] == [c["key"] for c in C["list"]] and all(len(r) == 9 for r in table)
+    first = C["list"][0]
+    assert table[0][5] == ",".join(map(str, first["need"])) and table[0][6] == ",".join(map(str, first["cr"]))
+    p = data["players"][0]
+    person = next(r for r in rows if r[0] == "person")
+    assert person[1] == p["name"] and person[2] == f"{p['comm_pct']:.1f}" and person[3] == str(p["cr"]), person
+    assert person[4] == data["ranks"][p["rank"]][0] and person[5] == data["ranks"][p["rank"] + 1][0], person
+    counts = [r for r in rows if r[0] == "count"]
+    assert len(counts) == len(C["list"]) and all(r[1] == p["name"] for r in counts)
+    for r, c in zip(counts, C["list"]):
+        n = p["comm"].get(c["key"])
+        assert r[3] == ("" if n is None else str(n)) and r[4] == str(sr.commendation_tier(n, c["need"])), r
+    with open(os.path.join(HERE, "..", "native", "proving_grounds.cpp"), encoding="utf-8") as f:
+        assert "\\\\logs\\\\service_record\\\\commendations.txt" in f.read()
+
+
 def test_rank_from_reach_matches_only():
     """Credits come from the counted Reach matches (a Halo 4 match earns none): 1 game, 1 win, 7 kills, 3 assists,
     5 medals."""

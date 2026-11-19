@@ -510,6 +510,8 @@ enum stage { S_OFF, S_MENU, S_SEARCH, S_VOTE, S_RESULT, S_LAUNCH, S_PLAYING, S_E
 static stage g_stage = S_OFF;
 static bool g_invite;                            // the invite list over the menu
 static bool g_chal;                              // (Nov 17) the Challenges page in place of the menu
+static bool g_comm;                              // (Nov 19) the Commendations page in place of the menu
+static int g_focus_after = -1;                   // (Nov 19) the focus to give the next frame (-1 none)
 static bool g_lobby_vis;                         // MCC's lobby on screen, last frame
 static double g_t0;                              // the stage's start
 static bool g_between;                           // the search screen as the lobby between matches
@@ -588,6 +590,7 @@ void pg_open() {
     g_stage = S_MENU;
     g_invite = false;
     g_chal = false;
+    g_comm = false;
     g_t0 = ImGui::GetTime();
     logf("proving grounds: opened (%s)", cur_pl().title);
 }
@@ -602,6 +605,7 @@ void pg_back() {
     }
     if (g_invite) { g_invite = false; return; }
     if (g_chal) { g_chal = false; return; }
+    if (g_comm) { g_comm = false; g_focus_after = 4; return; }   // (back on the menu's COMMENDATIONS)
     switch (g_stage) {
     case S_MENU: g_stage = S_OFF; logf("proving grounds: closed"); break;
     case S_SEARCH: case S_VOTE: case S_ERROR: to_menu(); break;
@@ -1026,10 +1030,12 @@ static ImU32 A(ImU32 c) { return (c & 0x00FFFFFFu) | ((ImU32)(((c >> 24) & 255) 
 // roster and credits already were (C_REACH_*): grey see-through panels, light grey text, a lit grey focus with a white
 // edge; the colour comes from the maps, nameplates, emblems, team colours and gold. C_BLUE is now Reach's pale steel
 // accent (the name kept: it marks the same places it did in MCC's navy)
-static const ImU32 C_TEXT = IM_COL32(238, 240, 242, 255), C_DIM = IM_COL32(172, 178, 184, 255),
-                   C_BLUE = IM_COL32(200, 212, 222, 255), C_PANEL = IM_COL32(22, 25, 28, 214),
-                   C_EDGE = IM_COL32(104, 112, 120, 140), C_FOCUS = IM_COL32(112, 118, 124, 236),
-                   C_GOLD = IM_COL32(255, 204, 92, 255), C_ROW = IM_COL32(24, 27, 30, 205),
+// (Nov 19, later: the owner's pictures of Reach's menus) see-through as Reach's are, the painting behind flowing under
+// them: the panels lighter, a plain list row nearly clear, the focus Reach's light band with a white line at its left
+static const ImU32 C_TEXT = IM_COL32(238, 240, 242, 255), C_DIM = IM_COL32(176, 182, 188, 255),
+                   C_BLUE = IM_COL32(200, 212, 222, 255), C_PANEL = IM_COL32(18, 20, 23, 176),
+                   C_EDGE = IM_COL32(110, 118, 126, 120), C_FOCUS = IM_COL32(196, 202, 208, 66),
+                   C_GOLD = IM_COL32(255, 204, 92, 255), C_ROW = IM_COL32(14, 16, 18, 70),
                    C_LIT = IM_COL32(240, 244, 248, 255);
 
 static float text_w(ImFont* f, float size, const char* s) { return f->CalcTextSizeA(U(size), 1e9f, 0, s).x; }
@@ -1118,17 +1124,18 @@ static void frame_keys() {
     g_mouse_was = ImGui::GetIO().MousePos;
 }
 
-// a menu row, as Reach's lists (Nov 19): dark see-through, the focused one lit grey with a white edge and, with tip,
-// Reach's pointer at its right end toward the panel beside the list; a label, an optional value at its right
+// Reach's focus (the owner's pictures of its menus): a light see-through band, a faint edge, a white line at its left
+static void focus_band(float x0, float y0, float x1, float y1) {
+    g_dl->AddRectFilled(P(x0, y0), P(x1, y1), A(C_FOCUS));
+    g_dl->AddRect(P(x0, y0), P(x1, y1), A(IM_COL32(214, 218, 222, 70)), 0, 0, U(1));
+    g_dl->AddRectFilled(P(x0, y0), P(x0 + 3, y1), A(C_LIT));
+}
+// a menu row, as Reach's lists (Nov 19): nearly clear over the painting, the focused one Reach's band (focus_band); a
+// label, an optional value at its right
 static void row(float x0, float y0, float x1, float y1, bool focus, const char* label, const char* value = nullptr,
-                bool arrows = false, bool tip = false) {
-    g_dl->AddRectFilled(P(x0, y0), P(x1, y1), A(focus ? C_FOCUS : C_ROW));
-    if (focus) {
-        g_dl->AddRectFilledMultiColor(P(x0, y0), P(x1, (y0 + y1) * 0.5f), A(IM_COL32(255, 255, 255, 34)),
-                                      A(IM_COL32(255, 255, 255, 34)), A(IM_COL32(255, 255, 255, 0)), A(IM_COL32(255, 255, 255, 0)));
-        g_dl->AddRect(P(x0, y0), P(x1, y1), A(C_LIT), 0, 0, U(1.6f));
-        if (tip) g_dl->AddTriangleFilled(P(x1, y0), P(x1 + 18, (y0 + y1) * 0.5f), P(x1, y1), A(IM_COL32(226, 230, 234, 240)));
-    }
+                bool arrows = false) {
+    if (focus) focus_band(x0, y0, x1, y1);
+    else g_dl->AddRectFilled(P(x0, y0), P(x1, y1), A(C_ROW));
     float h = y1 - y0, fs = h * 0.46f;
     text(g_fl, fs, x0 + 22, y0 + (h - fs * 1.2f) * 0.5f, focus ? C_TEXT : C_DIM, label);
     if (value) {
@@ -1343,7 +1350,11 @@ static float prompt(float x, float y, const char* pad, const char* key, const ch
 }
 // (Nov 19) the screens with the roster beside them also name the way into it: RB on the pad (or Right), Right on the keys
 static bool g_footer_players;                    // the footer's Players clicked this frame
+static void footer_line() {                      // (Nov 19) Reach's thin line over its button prompts
+    g_dl->AddLine(P(96, 981), P(1240, 981), A(IM_COL32(206, 212, 218, 90)), U(1));
+}
 static void footer(const char* hint = nullptr, const char* select = nullptr, bool players = false) {
+    footer_line();
     if (hint && hint[0]) text(g_fs, 21, 100, 948, IM_COL32(200, 206, 212, 255), hint);
     float x = prompt(100, 992, "B", "Esc", "Back", &g_footer_back);
     if (select) x = prompt(x, 992, "A", "Enter", select, nullptr);
@@ -1352,6 +1363,63 @@ static void footer(const char* hint = nullptr, const char* select = nullptr, boo
 
 // (Nov 17) the screens' own ground, opaque: MCC's custom game lobby is not seen behind them. A playlist's map, faint and
 // slowly changing, under a deep blue wash, as MCC's menus have their art behind; a slow light across.
+// (Nov 19, the owner's pictures of Halo: Reach's own menus: "The background is more seemless and fluid ... I want the
+// background to be like that") Reach's backgrounds, the owner's upscales of its menu art: one painting across the whole
+// screen, bright, the menus over it. This PC's only, in native\bin\pg_backgrounds (git-ignored: Reach's art is never
+// committed): menu.png Proving Grounds' own screens (the Halo over Reach), matchmaking.png Find Game, the vote and the
+// next game (Reach's main menu, the Covenant over the glassing), postgame.png the credits after a game (an Elite and a
+// Spartan); .jpg too. Without one: the playlist's maps, faint, as before (background below).
+enum { BG_MENU, BG_MATCH, BG_POST, BG_N };
+static const pic* bg_picture(int k) {
+    static const wchar_t* N[BG_N] = { L"menu", L"matchmaking", L"postgame" };
+    wchar_t p[MAX_PATH];
+    swprintf_s(p, L"%s\\pg_backgrounds\\%s.png", g_bin, N[k]);
+    if (const pic* q = picture(p)) return q;
+    swprintf_s(p, L"%s\\pg_backgrounds\\%s.jpg", g_bin, N[k]);
+    return picture(p);
+}
+// a painting over the whole window, as Reach's drift: 8-10% larger than the screen, slowly moving about in that room
+static void painting(const pic* art, float a, float t) {
+    ImVec2 d = ImGui::GetIO().DisplaySize;
+    float pr = (float)art->w / art->h, br = d.x / d.y, uw = 1, vh = 1;
+    if (pr > br) uw = br / pr; else vh = pr / br;            // (cover: cropped, not stretched)
+    float z = 1.09f + 0.02f * sinf(t * 0.021f);
+    uw /= z; vh /= z;
+    float px = 0.5f + 0.42f * sinf(t * 0.017f), py = 0.5f + 0.42f * sinf(t * 0.011f + 1.3f);
+    ImVec2 uv0((1 - uw) * px, (1 - vh) * py);
+    g_dl->AddImage((ImTextureID)art->tex, ImVec2(0, 0), d, uv0, ImVec2(uv0.x + uw, uv0.y + vh),
+                   IM_COL32(255, 255, 255, (int)(255 * a)));
+}
+static void painted_background(float t, const pic* art) {
+    static const pic *cur, *was;
+    static float since = -100, drawn = -100;
+    // (a new screen's painting fades in over the last; not when the screens were just put up again, or in the preview's
+    // few frames a screen)
+    bool fresh = t - drawn > 0.5f;
+#ifdef PG_PREVIEW
+    fresh = true;
+#endif
+    drawn = t;
+    if (art != cur) { was = cur; cur = art; since = fresh ? t - 10 : t; }
+    ImVec2 d = ImGui::GetIO().DisplaySize;
+    g_dl->AddRectFilled(ImVec2(0, 0), d, IM_COL32(6, 7, 9, 255));        // (never faded: the lobby stays hidden)
+    float k = (t - since) / 0.9f;
+    k = k < 0 ? 0 : k > 1 ? 1 : k;
+    if (was && k < 1) painting(was, 1, t);
+    painting(cur, k * k * (3 - 2 * k), t);
+    // Reach's own treatment: the painting bright, a little dimmed; darker where the menu stands (left) and under the
+    // prompts (bottom), a touch at the top and behind the roster (right)
+    g_dl->AddRectFilled(ImVec2(0, 0), d, IM_COL32(6, 7, 9, 56));
+    g_dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(d.x * 0.58f, d.y), IM_COL32(6, 7, 9, 165), IM_COL32(6, 7, 9, 0),
+                                  IM_COL32(6, 7, 9, 0), IM_COL32(6, 7, 9, 165));
+    g_dl->AddRectFilledMultiColor(ImVec2(0, d.y * 0.68f), d, IM_COL32(6, 7, 9, 0), IM_COL32(6, 7, 9, 0),
+                                  IM_COL32(6, 7, 9, 200), IM_COL32(6, 7, 9, 200));
+    g_dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(d.x, d.y * 0.2f), IM_COL32(6, 7, 9, 90), IM_COL32(6, 7, 9, 90),
+                                  IM_COL32(6, 7, 9, 0), IM_COL32(6, 7, 9, 0));
+    g_dl->AddRectFilledMultiColor(ImVec2(d.x * 0.72f, 0), d, IM_COL32(6, 7, 9, 0), IM_COL32(6, 7, 9, 80),
+                                  IM_COL32(6, 7, 9, 80), IM_COL32(6, 7, 9, 0));
+}
+
 // (Nov 19) Reach's grey in place of MCC's navy, and the art about twice as bright: kept at near its own colours under
 // a light steel wash, the left side and the bottom darkened less, so the maps' colour shows through
 static void background(float t, const pic* art, float art_a) {
@@ -1404,7 +1472,7 @@ static void category_tiles(float x0, float y0, float tile) {
         int f = family_of(g.e->category);
         if (shown[f]) continue;
         shown[f] = true;
-        panel(x, y0, x + tile, y0 + tile, IM_COL32(28, 31, 34, 225));
+        panel(x, y0, x + tile, y0 + tile, IM_COL32(18, 20, 23, 170));
         const pic* p = family_picture(f);
         if (p) image(p, x + tile * 0.12f, y0 + tile * 0.08f, x + tile * 0.88f, y0 + tile * 0.84f);
         else text(g_fl, tile * 0.16f, x + tile * 0.5f, y0 + tile * 0.4f, C_BLUE, FAMILY_NAME[f], 1);
@@ -1816,9 +1884,9 @@ static std::string url_part(const std::string& s) {      // encodeURIComponent
 }
 // the player's Challenges page on the site, in the browser: the Service Record's editor started first if it is not
 // running (tools/service_record_editor.cmd /startup), a moment for it to listen, then
-// http://localhost:8766/#/p/<name>/challenges
-static void open_site_challenges() {
-    std::string u = "http://localhost:8766/#/p/" + url_part(g_chal_who.empty() ? me_name() : g_chal_who) + "/challenges";
+// http://localhost:8766/#/p/<name>/challenges (Nov 19: or another of the player's pages, /commendations)
+static void open_site_page(const std::string& who, const char* page) {
+    std::string u = "http://localhost:8766/#/p/" + url_part(who.empty() ? me_name() : who) + "/" + page;
     wchar_t cmd[2048];
     swprintf_s(cmd, L"cmd.exe /c \"\"%s\\tools\\service_record_editor.cmd\" /startup & ping -n 3 127.0.0.1 >nul & start \"\" \"%S\"\"",
                g_root, u.c_str());
@@ -1828,9 +1896,10 @@ static void open_site_challenges() {
     if (CreateProcessW(nullptr, cmd, nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-        logf("proving grounds: opening the Service Record's challenges");
+        logf("proving grounds: opening the Service Record's %s", page);
     }
 }
+static void open_site_challenges() { open_site_page(g_chal_who, "challenges"); }
 
 static void challenges_screen(pg_env& e, float t) {
     (void)e; (void)t;
@@ -1897,6 +1966,7 @@ static void challenges_screen(pg_env& e, float t) {
         text(g_fl, 22, x1, 112, C_REACH_DIM, cr, 2);
     }
     // the footer: Back, and Y: the same page on the Service Record site
+    footer_line();
     float x = prompt(100, 992, "B", "Esc", "Back", &g_footer_back);
     bool site = false;
     prompt(x, 992, "Y", "Tab", "Challenges on the Service Record", &site);
@@ -1906,12 +1976,264 @@ static void challenges_screen(pg_env& e, float t) {
     }
 }
 
+// ------------------------------------------------------------------ the commendations, as Reach's Service Record
+// (Nov 19, the owner's picture of Halo: Reach's Service Record: Commendations, "add it to ours with its own menu option,
+// and keep it connected to the service record site") The menu's COMMENDATIONS: Reach's page. Its lists at the left
+// (Top Commendations, then the site's two sets: Multiplayer, Proving Grounds' own), the list at the right (each its
+// banner, the tier reached, the bar toward the next tier with n/need, sorted as the site's Commendations page sorts
+// them: tier, then progress), the player's band along the bottom (emblem, rank insignia, name, rank, credits, the next
+// rank). Everything from <repo>\logs\service_record\commendations.txt, which the Service Record's build writes with the
+// site (tools/service_record.py write_game_commendations; the tier reached is the site's, not worked out here); read
+// again whenever the site is rebuilt. Up / Down move through the list, Left / Right or LB / RB change list, Y (Tab)
+// opens the player's Commendations page on the site.
+struct comm_item { std::string key, set, name, what, banner; std::vector<int> need, cr; std::vector<std::string> tier_art; };
+struct comm_now { int n, tier; };                // n -1: not recorded yet
+static std::vector<comm_item> g_comm_items;
+static std::vector<comm_now> g_comm_now;         // (one for each item, in its order)
+static std::vector<std::string> g_comm_tiers;
+static std::string g_comm_who, g_comm_rank, g_comm_next;
+static float g_comm_pct;
+static int g_comm_cr, g_comm_next_cr = -1, g_comm_tab;
+static float g_comm_scroll;
+static ULONGLONG g_comm_check, g_comm_stamp;
+static bool g_comm_have;
+static const ImU32 TIER_COL[7] = { IM_COL32(150, 156, 162, 255), IM_COL32(142, 149, 157, 255), IM_COL32(192, 132, 76, 255),
+                                   IM_COL32(207, 219, 230, 255), IM_COL32(232, 178, 60, 255), IM_COL32(155, 92, 217, 255),
+                                   IM_COL32(216, 50, 58, 255) };   // (none, then the site's own: style.css --tier-*)
+
+static void comm_load() {
+    ULONGLONG now = GetTickCount64();
+    if (g_comm_check && now - g_comm_check < 2000) return;
+    g_comm_check = now;
+    wchar_t p[MAX_PATH];
+    swprintf_s(p, L"%s\\logs\\service_record\\commendations.txt", g_root);
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    ULONGLONG stamp = GetFileAttributesExW(p, GetFileExInfoStandard, &fa) ? ft_u64(fa.ftLastWriteTime) : 0;
+    if (stamp == g_comm_stamp) return;
+    g_comm_stamp = stamp;
+    g_comm_items.clear(); g_comm_now.clear(); g_comm_tiers.clear(); g_comm_who.clear();
+    g_comm_rank.clear(); g_comm_next.clear(); g_comm_pct = 0; g_comm_cr = 0; g_comm_next_cr = -1;
+    g_comm_have = false;
+    FILE* f = nullptr;
+    if (!stamp || _wfopen_s(&f, p, L"rb") || !f) return;
+    std::vector<std::vector<std::string>> rows;
+    char line[4096];
+    std::vector<std::string> c;
+    while (fgets(line, sizeof line, f)) {
+        if (line[0] == '#') continue;
+        line[strcspn(line, "\r\n")] = 0;
+        split_tabs(line, c);
+        rows.push_back(c);
+    }
+    fclose(f);
+    g_comm_have = true;
+    auto list = [](const std::string& s) {               // "a,b,c" (empties kept)
+        std::vector<std::string> v;
+        for (size_t a = 0;;) { size_t b = s.find(',', a); v.push_back(s.substr(a, b == std::string::npos ? b : b - a)); if (b == std::string::npos) break; a = b + 1; }
+        return v;
+    };
+    for (auto& r : rows) {
+        if (r[0] == "tiers") g_comm_tiers.assign(r.begin() + 1, r.end());
+        else if (r[0] == "commendation" && r.size() >= 9) {
+            comm_item it{ r[1], r[2], r[3], r[4], r[7] };
+            for (auto& s : list(r[5])) it.need.push_back(atoi(s.c_str()));
+            for (auto& s : list(r[6])) it.cr.push_back(atoi(s.c_str()));
+            it.tier_art = list(r[8]);
+            if (!it.need.empty()) g_comm_items.push_back(it);
+        } else if (r[0] == "person" && r.size() >= 7 && (g_comm_who.empty() || !_stricmp(r[1].c_str(), me_name()))) {
+            g_comm_who = r[1];                               // (the player by MCC's name, else the first listed)
+            g_comm_pct = (float)atof(r[2].c_str()); g_comm_cr = atoi(r[3].c_str());
+            g_comm_rank = r[4]; g_comm_next = r[5]; g_comm_next_cr = r[6].empty() ? -1 : atoi(r[6].c_str());
+        }
+    }
+    g_comm_now.assign(g_comm_items.size(), comm_now{ -1, 0 });
+    for (auto& r : rows)
+        if (r[0] == "count" && r.size() >= 5 && r[1] == g_comm_who)
+            for (size_t i = 0; i < g_comm_items.size(); i++)
+                if (g_comm_items[i].key == r[2]) g_comm_now[i] = { r[3].empty() ? -1 : atoi(r[3].c_str()), atoi(r[4].c_str()) };
+}
+
+// a picture whole inside the box (contained, not cropped), centred
+static void image_fit(const pic* p, float x0, float y0, float x1, float y1, float a = 1.0f) {
+    float bw = x1 - x0, bh = y1 - y0, s = bw / p->w < bh / p->h ? bw / p->w : bh / p->h, w = p->w * s, h = p->h * s;
+    float cx = (x0 + x1) * 0.5f, cy = (y0 + y1) * 0.5f;
+    g_dl->AddImage((ImTextureID)p->tex, P(cx - w * 0.5f, cy - h * 0.5f), P(cx + w * 0.5f, cy + h * 0.5f), ImVec2(0, 0),
+                   ImVec2(1, 1), A(IM_COL32(255, 255, 255, (int)(255 * a))));
+}
+static const pic* site_picture(const std::string& rel) {   // a picture of the site's, by its path under the site
+    if (rel.empty()) return nullptr;
+    std::wstring w(rel.begin(), rel.end());
+    for (auto& ch : w) if (ch == L'/') ch = L'\\';
+    wchar_t p[MAX_PATH];
+    swprintf_s(p, L"%s\\logs\\service_record\\%s", g_root, w.c_str());
+    return picture(p);
+}
+
+static void comm_screen(pg_env& e, float t) {
+    (void)e; (void)t;
+    comm_load();
+    header("PROVING GROUNDS", "SERVICE RECORD", 0);
+    static const char* TAB[3] = { "TOP COMMENDATIONS", "MULTIPLAYER", "PROVING GROUNDS" };
+    static const char* TITLE[3] = { "Top Commendations", "Multiplayer Commendations", "Proving Grounds Commendations" };
+    // the lists, at the left: Left / Right, LB / RB or a click change them
+    int tab_was = g_comm_tab;
+    for (int k = 0; k < 3; k++) {
+        float y = 196 + 46.0f * k;
+        if (k == g_comm_tab) focus_band(96, y, 520, y + 40);
+        text(g_fl, 22, 112, y + 8, k == g_comm_tab ? C_TEXT : C_DIM, TAB[k]);
+        ImVec2 m = ImGui::GetIO().MousePos, a = P(96, y), b = P(520, y + 40);
+        if (ImGui::IsMouseClicked(0) && m.x >= a.x && m.x <= b.x && m.y >= a.y && m.y <= b.y) g_comm_tab = k;
+    }
+    if (g_left_right) { g_lr_taken = true; g_comm_tab = (g_comm_tab + 3 + g_left_right) % 3; }
+    if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) g_comm_tab = (g_comm_tab + 1) % 3;
+    if (ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false)) g_comm_tab = (g_comm_tab + 2) % 3;
+    if (g_comm_tab != tab_was) { g_comm_scroll = 0; g_focus = 0; sound(PS_MOVE); }
+    const float lx0 = 600, lx1 = 1500;
+    if (!g_comm_have || g_comm_items.empty()) {
+        reach_panel(lx0, 300, lx1, 520);
+        text(g_fl, 30, (lx0 + lx1) * 0.5f, 360, C_REACH_TEXT, "NO COMMENDATIONS YET", 1);
+        text(g_fs, 22, (lx0 + lx1) * 0.5f, 420, C_REACH_DIM, "The Service Record writes them when it is next built (a match starting or ending).", 1);
+        footer_line();
+        prompt(100, 992, "B", "Esc", "Back", &g_footer_back);
+        return;
+    }
+    // this list, as the site sorts it: the tier reached, then the share toward the next, then the name
+    auto share = [&](int i) {
+        const comm_item& c = g_comm_items[i];
+        const comm_now& s = g_comm_now[i];
+        if (s.n < 0) return 0.0f;
+        if (s.tier >= (int)c.need.size()) return 1.0f;
+        int from = s.tier ? c.need[s.tier - 1] : 0, to = c.need[s.tier];
+        float k = to > from ? (float)(s.n - from) / (to - from) : 1.0f;
+        return k < 0 ? 0 : k > 1 ? 1 : k;
+    };
+    std::vector<int> order;
+    for (int i = 0; i < (int)g_comm_items.size(); i++)
+        if (g_comm_tab == 0 || g_comm_items[i].set == (g_comm_tab == 1 ? "mp" : "pg")) order.push_back(i);
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+        if (g_comm_now[a].tier != g_comm_now[b].tier) return g_comm_now[a].tier > g_comm_now[b].tier;
+        float sa = share(a), sb = share(b);
+        if (sa != sb) return sa > sb;
+        return _stricmp(g_comm_items[a].name.c_str(), g_comm_items[b].name.c_str()) < 0;
+    });
+    text(g_fl, 24, lx0, 190, C_TEXT, TITLE[g_comm_tab]);
+    char pct[48];
+    sprintf_s(pct, "Overall Progress: %.1f%%", g_comm_pct);
+    text(g_fs, 20, lx1, 194, C_DIM, pct, 2);
+    g_dl->AddLine(P(lx0, 226), P(lx1, 226), A(IM_COL32(206, 212, 218, 110)), U(1));
+    // the rows: six at a time, the list moving at its edges (wheel, Up / Down, the left stick)
+    const float ry0 = 236, rh = 84, rs = 90;
+    const int visible = 6, total = (int)order.size();
+    g_comm_scroll -= ImGui::GetIO().MouseWheel * 2;
+    int maxs = total - visible;
+    if (g_comm_scroll > maxs) g_comm_scroll = (float)(maxs > 0 ? maxs : 0);
+    if (g_comm_scroll < 0) g_comm_scroll = 0;
+    int first = (int)g_comm_scroll, base = (int)g_items.size(), focused = -1;
+    for (int k = 0; k < visible && first + k < total; k++) {
+        int i = order[first + k];
+        const comm_item& c = g_comm_items[i];
+        const comm_now& s = g_comm_now[i];
+        float y = ry0 + k * rs;
+        bool f = item(lx0, y, lx1, y + rh);
+        if (f) { focus_band(lx0, y, lx1, y + rh); focused = i; }
+        else g_dl->AddRectFilled(P(lx0, y), P(lx1, y + rh), A(C_ROW));
+        // its banner: the tier reached's own (the owner's emblem of that tier), else Reach's
+        const pic* bp = s.tier > 0 && s.tier <= (int)c.tier_art.size() ? site_picture(c.tier_art[s.tier - 1]) : nullptr;
+        if (!bp) bp = site_picture(c.banner);
+        if (bp) image_fit(bp, lx0 + 8, y + 4, lx0 + 252, y + rh - 4, s.n < 0 ? 0.45f : 1.0f);
+        else { panel(lx0 + 8, y + 6, lx0 + 252, y + rh - 6, IM_COL32(40, 70, 104, 200)); crest(lx0 + 130, y + rh * 0.5f, 26, C_DIM); }
+        float tx = lx0 + 272, bx1 = lx1 - 16;
+        text(g_fl, 25, tx, y + 8, s.n < 0 ? C_DIM : C_TEXT, c.name.c_str());
+        bool done = s.tier >= (int)c.need.size();
+        const char* tl = s.n < 0 ? "Not recorded yet" : s.tier > 0 && s.tier <= (int)g_comm_tiers.size() ? g_comm_tiers[s.tier - 1].c_str() : "Not started";
+        text(g_fl, 21, bx1, y + 11, s.tier > 0 ? TIER_COL[s.tier < 7 ? s.tier : 6] : C_DIM, tl, 2);
+        // the bar toward the next tier, in the colour of the tier reached (the owner, Nov 19: "the color of the tier it's
+        // at currently"; grey before Iron)
+        float by = y + 46, sh = share(i), fx = tx + (bx1 - tx) * sh;
+        g_dl->AddRectFilled(P(tx, by), P(bx1, by + 22), A(IM_COL32(34, 38, 42, 215)));
+        if (sh > 0) {
+            ImU32 tc = TIER_COL[s.tier < 7 ? s.tier : 6];
+            int r = tc & 255, g = (tc >> 8) & 255, b = (tc >> 16) & 255;
+            g_dl->AddRectFilledMultiColor(P(tx, by), P(fx, by + 22), A(IM_COL32(r * 70 / 100, g * 70 / 100, b * 70 / 100, 235)),
+                                          A(tc), A(tc), A(IM_COL32(r * 70 / 100, g * 70 / 100, b * 70 / 100, 235)));
+        }
+        g_dl->AddRect(P(tx, by), P(bx1, by + 22), A(IM_COL32(120, 128, 136, 130)), 0, 0, U(1));
+        if (s.n >= 0) {
+            std::string nums = done ? cr_text(s.n) : cr_text(s.n) + "/" + cr_text(c.need[s.tier]);
+            text(g_fs, 17, bx1 - 8, by + 1, C_TEXT, nums.c_str(), 2);
+        }
+        g_dl->AddLine(P(lx0, y + rs - 3), P(lx1, y + rs - 3), A(IM_COL32(150, 158, 166, 60)), U(1));
+    }
+    // more above or below: Reach's small chevrons
+    auto chevron = [&](float y, bool down) {
+        float cx = (lx0 + lx1) * 0.5f, d = down ? 7.0f : -7.0f;
+        ImVec2 v[3] = { P(cx - 12, y - d), P(cx, y + d), P(cx + 12, y - d) };
+        g_dl->AddPolyline(v, 3, A(IM_COL32(220, 226, 232, 220)), 0, U(2));
+    };
+    if (first > 0) chevron(230 - 14, false);
+    if (first + visible < total) chevron(ry0 + visible * rs + 4, true);
+    int fk = g_focus - base;
+    bool down = ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown) ||
+                ImGui::IsKeyPressed(ImGuiKey_GamepadLStickDown);
+    bool up = ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp) ||
+              ImGui::IsKeyPressed(ImGuiKey_GamepadLStickUp);
+    if (down && fk == visible - 1 && first + visible < total) { g_comm_scroll += 1; g_focus--; }
+    if (up && fk == 0 && first > 0) { g_comm_scroll -= 1; g_focus++; }
+    // the player's band, as Reach's: the emblem, the rank insignia, the name over the rank, the credits and the next rank
+    const float py0 = 800, py1 = 916;
+    g_dl->AddRectFilledMultiColor(P(96, py0), P(lx1, py1), A(IM_COL32(46, 50, 54, 205)), A(IM_COL32(22, 25, 28, 150)),
+                                  A(IM_COL32(22, 25, 28, 150)), A(IM_COL32(46, 50, 54, 205)));
+    g_dl->AddLine(P(96, py0), P(lx1, py0), A(IM_COL32(214, 220, 226, 110)), U(1));
+    int32_t emb[5];
+    int np = -1;
+    unsigned long long em = g_make && mcc_player_look(emb, &np) ? player_emblem(emb, g_make) : 0;
+    if (em) g_dl->AddImage((ImTextureID)em, P(108, py0 + 8), P(208, py0 + 108), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
+    else crest(158, py0 + 58, 40, C_TEXT);
+    const char* who = g_comm_who.empty() ? me_name() : g_comm_who.c_str();
+    if (const pic* rp = sr_rank_picture(sr_rank_of(who, false))) image_fit(rp, 224, py0 + 14, 288, py0 + 78);
+    text(g_fl, 34, 304, py0 + 12, C_TEXT, who);
+    g_dl->AddRectFilled(P(300, py0 + 64), P(1100, py0 + 100), A(IM_COL32(255, 255, 255, 20)));
+    text(g_fl, 23, 308, py0 + 69, C_DIM, g_comm_rank.empty() ? "..." : g_comm_rank.c_str());
+    std::string crs = cr_text(g_comm_cr) + " cR";
+    text(g_fl, 40, lx1 - 16, py0 + 8, C_TEXT, crs.c_str(), 2);
+    if (!g_comm_next.empty()) {
+        std::string nx = "Next: " + g_comm_next;
+        if (g_comm_next_cr > g_comm_cr) nx += " in " + cr_text(g_comm_next_cr - g_comm_cr) + " cR";
+        text(g_fl, 21, lx1 - 16, py0 + 70, C_DIM, nx.c_str(), 2);
+    }
+    // the footer: the focused one's what and its next tier, as the site words it; Back, the lists, the site
+    std::string hint;
+    if (focused >= 0) {
+        const comm_item& c = g_comm_items[focused];
+        const comm_now& s = g_comm_now[focused];
+        hint = c.what + "  ";
+        if (s.n < 0) hint += "Not recorded yet.";
+        else if (s.tier >= (int)c.need.size()) hint += cr_text(s.n) + ": every tier reached.";
+        else {
+            hint += cr_text(s.n) + " of " + cr_text(c.need[s.tier]) + " for " +
+                    (s.tier < (int)g_comm_tiers.size() ? g_comm_tiers[s.tier] : std::string("the next tier"));
+            if (s.tier < (int)c.cr.size() && c.cr[s.tier]) hint += " (+" + cr_text(c.cr[s.tier]) + " cR)";
+            hint += ".";
+        }
+    }
+    footer_line();
+    if (!hint.empty()) text(g_fs, 21, 100, 948, IM_COL32(200, 206, 212, 255), hint.c_str());
+    float x = prompt(100, 992, "B", "Esc", "Back", &g_footer_back);
+    x = prompt(x, 992, "LB/RB", "Left/Right", "Lists", nullptr);
+    bool site = false;
+    prompt(x, 992, "Y", "Tab", "Commendations on the Service Record", &site);
+    if (site || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false) || ImGui::IsKeyPressed(ImGuiKey_Tab, false)) {
+        sound(PS_SELECT);
+        open_site_page(g_comm_who, "commendations");
+    }
+}
+
 static void menu_screen(pg_env& e, float t) {
     if (ros_up()) { session_panel(e); return; }          // (the roster has the focus: Reach's list and its panel)
     header("MULTIPLAYER", "PROVING GROUNDS", 0);
     text(g_fl, 24, 96, 188, C_TEXT, "COMPOSE YOUR MATCH");
     // the card: a map of the playlist behind our crest
-    panel(96, 215, 880, 340, IM_COL32(34, 38, 42, 235));
+    panel(96, 215, 880, 340, IM_COL32(18, 20, 23, 190));
     std::vector<pool_gt> gts;
     std::vector<const pg_entry*> maps;
     library();
@@ -1919,31 +2241,35 @@ static void menu_screen(pg_env& e, float t) {
     if (!maps.empty()) {
         const pic* p = map_picture(maps[(int)(t / 6) % maps.size()]->key);
         if (p) image(p, 330, 217, 878, 338, 0.85f);      // (Nov 19: brighter, 0.55 before)
-        g_dl->AddRectFilledMultiColor(P(97, 216), P(879, 339), A(IM_COL32(34, 38, 42, 255)), A(IM_COL32(34, 38, 42, 20)),
-                                      A(IM_COL32(34, 38, 42, 20)), A(IM_COL32(34, 38, 42, 255)));
+        g_dl->AddRectFilledMultiColor(P(97, 216), P(879, 339), A(IM_COL32(18, 20, 23, 235)), A(IM_COL32(18, 20, 23, 20)),
+                                      A(IM_COL32(18, 20, 23, 20)), A(IM_COL32(18, 20, 23, 235)));
     }
     crest(170, 278, 44, IM_COL32(232, 236, 240, 255));
     text(g_fl, 40, 238, 236, C_TEXT, "PROVING GROUNDS");
     text(g_fl, 24, 240, 286, C_BLUE, cur_pl().title);
-    const char* desc[6] = { "Find a game: a lobby of bots from your pool, then the vote.",
+    const char* desc[7] = { "Find a game: a lobby of bots from your pool, then the vote.",
                             "Arena is 4v4, Big Team Battle 8v8.",
                             "Bots who play on your team every game, whatever the lobby.",
                             "Today's and this week's challenges, as your Service Record has them.",
+                            "Your commendations, tiers and progress, as your Service Record has them.",
                             "Bots play matches of their own for the Service Record. Left / Right: how many rounds (a round is about 25 lobbies).",
                             "Leave Proving Grounds for MCC's own lobby." };
     int base = (int)g_items.size();
-    // (Nov 18: the rows 48 tall, 8 apart, so SIMULATE MATCHES fits above the games and categories)
-    bool f0 = item(96, 355, 880, 403);
-    row(96, 355, 880, 403, f0, "PLAY", nullptr, false, true);
-    bool f1 = item(96, 411, 880, 459);
+    // (Nov 18: the rows 48 tall, 8 apart, so SIMULATE MATCHES fits above the games and categories; Nov 19: 44 tall, 6
+    // apart, for COMMENDATIONS too)
+    auto ry = [](int k) { return 352.0f + 50.0f * k; };
+    const float RH = 44;
+    bool f0 = item(96, ry(0), 880, ry(0) + RH);
+    row(96, ry(0), 880, ry(0) + RH, f0, "PLAY");
+    bool f1 = item(96, ry(1), 880, ry(1) + RH);
     char sz[32];
     sprintf_s(sz, "%dV%d (TEAM)", cur_pl().size, cur_pl().size);
-    row(96, 411, 880, 459, f1, "GAME SIZE", sz, true, true);
-    bool f2 = item(96, 467, 880, 515);
+    row(96, ry(1), 880, ry(1) + RH, f1, "GAME SIZE", sz, true);
+    bool f2 = item(96, ry(2), 880, ry(2) + RH);
     char inv[32];
     sprintf_s(inv, "%d / %d", g_nparty, cur_pl().size - 1);
-    row(96, 467, 880, 515, f2, "INVITE PLAYER", inv, false, true);
-    bool f3 = item(96, 523, 880, 571);                   // (Nov 17: the challenges, as the Service Record has them)
+    row(96, ry(2), 880, ry(2) + RH, f2, "INVITE PLAYER", inv);
+    bool f3 = item(96, ry(3), 880, ry(3) + RH);          // (Nov 17: the challenges, as the Service Record has them)
     chal_load();
     int live = 0, done = 0;
     for (const chal_item& c : g_chal_items) {
@@ -1952,8 +2278,13 @@ static void menu_screen(pg_env& e, float t) {
     }
     char chs[32];
     sprintf_s(chs, "%d / %d", done, live);
-    row(96, 523, 880, 571, f3, "CHALLENGES", live ? chs : nullptr, false, true);
-    bool f4 = item(96, 579, 880, 627);                   // (Nov 18: the bot simulation, a round at a time)
+    row(96, ry(3), 880, ry(3) + RH, f3, "CHALLENGES", live ? chs : nullptr);
+    bool f4 = item(96, ry(4), 880, ry(4) + RH);          // (Nov 19: the commendations, as the Service Record has them)
+    comm_load();
+    char cms[32];
+    sprintf_s(cms, "%.1f%%", g_comm_pct);
+    row(96, ry(4), 880, ry(4) + RH, f4, "COMMENDATIONS", g_comm_have && !g_comm_items.empty() ? cms : nullptr);
+    bool f5 = item(96, ry(5), 880, ry(5) + RH);          // (Nov 18: the bot simulation, a round at a time)
     double now = ImGui::GetTime();
     sim_poll(now);
     char sims[48];
@@ -1961,24 +2292,24 @@ static void menu_screen(pg_env& e, float t) {
     if (g_sim_proc) strcpy_s(sims, "PLAYING...");
     else if (g_sim_done_at >= 0 && now - g_sim_done_at < 10.0 && g_sim_made >= 0) sprintf_s(sims, "DONE: %d MATCHES", g_sim_made);
     else { sprintf_s(sims, "%d ROUND%s", g_sim_rounds, g_sim_rounds == 1 ? "" : "S"); sim_arrows = true; }
-    row(96, 579, 880, 627, f4, "SIMULATE MATCHES", sims, sim_arrows, true);
-    text(g_fl, 24, 96, 648, C_BLUE, "GAMES INCLUDED");
-    panel(96, 674, 236, 774, IM_COL32(30, 34, 38, 230));
-    text(g_fl, 30, 166, 712, C_TEXT, "REACH", 1);
-    g_dl->AddRectFilled(P(102, 754), P(118, 768), A(C_BLUE));
-    text(g_fl, 24, 96, 790, C_BLUE, "GAME CATEGORIES INCLUDED");
-    category_tiles(96, 820, 118);
+    row(96, ry(5), 880, ry(5) + RH, f5, "SIMULATE MATCHES", sims, sim_arrows);
+    text(g_fl, 24, 96, 660, C_BLUE, "GAMES INCLUDED");   // (Nov 19: these a little smaller, under six rows)
+    panel(96, 688, 236, 776, IM_COL32(18, 20, 23, 170));
+    text(g_fl, 30, 166, 716, C_TEXT, "REACH", 1);
+    g_dl->AddRectFilled(P(102, 756), P(116, 770), A(C_BLUE));
+    text(g_fl, 24, 96, 788, C_BLUE, "GAME CATEGORIES INCLUDED");
+    category_tiles(96, 816, 106);
     stats_panel(1000, 215);                              // (Nov 17: level with the card, clear of the category tiles)
     session_panel(e);
     int focus = g_focus - base;
-    if (!g_invite) footer(desc[focus >= 0 && focus < 5 ? focus : 5], "Select", true);   // (the invite list: its own)
+    if (!g_invite) footer(desc[focus >= 0 && focus < 6 ? focus : 6], "Select", true);   // (the invite list: its own)
     if (f1 && g_left_right) {
         g_lr_taken = true;                               // (Right here is the size, not the roster)
         g_size = g_size >= 8 ? 4 : 8;
         while (g_nparty > cur_pl().size - 1) g_nparty--;
         save_settings(); sound(PS_MOVE);
     }
-    if (f4 && g_left_right) {                            // (Right here is the rounds, not the roster)
+    if (f5 && g_left_right) {                            // (Right here is the rounds, not the roster)
         g_lr_taken = true;
         if (!g_sim_proc) {
             int r = g_sim_rounds + g_left_right;
@@ -1991,7 +2322,8 @@ static void menu_screen(pg_env& e, float t) {
     if (pressed(base + 1)) { g_size = g_size >= 8 ? 4 : 8; while (g_nparty > cur_pl().size - 1) g_nparty--; save_settings(); sound(PS_SELECT); }
     if (pressed(base + 2)) { g_invite = true; g_npool_names = 0; g_invite_scroll = 0; g_focus = 0; sound(PS_SELECT); }
     if (pressed(base + 3)) { g_chal = true; g_chal_check = 0; sound(PS_SELECT); }
-    if (pressed(base + 4) && !g_sim_proc) {
+    if (pressed(base + 4)) { g_comm = true; g_comm_check = 0; g_comm_tab = 0; g_comm_scroll = 0; g_focus = 0; sound(PS_SELECT); }
+    if (pressed(base + 5) && !g_sim_proc) {
         // (a click on the row's < or >: the rounds; anywhere else, or A / Enter: play them)
         float mx = ImGui::GetIO().MousePos.x;
         bool by_mouse = ImGui::IsMouseReleased(0) || ImGui::IsMouseClicked(0);
@@ -2102,12 +2434,12 @@ static void search_screen(pg_env& e, float t) {
     g_dl->AddText(g_fs, U(20), P(102, 512), A(IM_COL32(206, 222, 232, 255)), cur_pl().blurb, nullptr, U(690));
     // the middle column: the games, a line of the playlist's numbers, the stats
     float mx = 850, mw = 470;
-    panel(mx, 222, mx + mw, 372, IM_COL32(26, 29, 32, 235));
+    panel(mx, 222, mx + mw, 372);
     text(g_fl, 20, mx + 14, 230, C_BLUE, "GAMES IN THIS PLAYLIST");
-    panel(mx + 14, 262, mx + 110, 360, IM_COL32(40, 44, 48, 245));
+    panel(mx + 14, 262, mx + 110, 360, IM_COL32(40, 44, 48, 200));
     crest(mx + 62, 296, 22, IM_COL32(230, 234, 238, 255));
     text(g_fl, 18, mx + 62, 330, C_TEXT, "REACH", 1);
-    panel(mx, 380, mx + mw, 424, IM_COL32(32, 36, 40, 240));
+    panel(mx, 380, mx + mw, 424, IM_COL32(24, 27, 30, 190));
     char nums[64];
     sprintf_s(nums, "%d MAPS  /  %d GAME TYPES IN THIS PLAYLIST", (int)maps.size(), (int)gts.size());
     text(g_fl, 19, mx + 14, 390, C_TEXT, nums);
@@ -2183,14 +2515,11 @@ static void vote_screen(pg_env& e, float t) {
         float y = ry + i * rs;
         bool f = item(116, y, 820, y + rh);
         bool mine = g_vote_me == (i < g_nopt ? i : 3);
-        if (f) {                                         // (Reach's focus: a lit grey row, its white edge, the chevron)
-            g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(C_FOCUS));
-            g_dl->AddRectFilledMultiColor(P(116, y), P(820, y + rh * 0.5f), A(IM_COL32(255, 255, 255, 34)),
-                                          A(IM_COL32(255, 255, 255, 34)), A(IM_COL32(255, 255, 255, 0)), A(IM_COL32(255, 255, 255, 0)));
-            g_dl->AddRect(P(116, y), P(820, y + rh), A(C_LIT), 0, 0, U(1.6f));
+        if (f) {                                         // (Reach's focus band, the chevron before it)
+            focus_band(116, y, 820, y + rh);
             ImVec2 fc[3] = { P(98, y + rh * 0.5f - 11), P(108, y + rh * 0.5f), P(98, y + rh * 0.5f + 11) };
             g_dl->AddPolyline(fc, 3, A(C_TEXT), 0, U(2.4f));
-        } else g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(IM_COL32(22, 25, 28, 175)));
+        } else g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(IM_COL32(14, 16, 18, 110)));
         // (Nov 19) the option's share of the votes, a bar along the row's foot: yours gold, the others steel; the
         // option ahead brighter
         int n = c[i < g_nopt ? i : 3];
@@ -2346,7 +2675,7 @@ static void credits_screen(pg_env& e, float t, double now) {
     (void)e;
     if (!g_credit_have && now - g_credit_read > 0.5) { g_credit_read = now; credit_load(); }
     bool go = false;
-    float x0 = 420, x1 = 1500, y0 = 130, y1 = 930;
+    float t_end = 0;                                      // (when Reach's sequence below has run its course)
     if (!g_credit_have) {                                 // (the build still counting)
         reach_panel(560, 400, 1360, 640);
         text(g_fl, 34, 960, 448, C_REACH_TEXT, "COUNTING YOUR CREDITS", 1);
@@ -2358,93 +2687,178 @@ static void credits_screen(pg_env& e, float t, double now) {
         if (t > 20) go = true;
     } else if (g_credit_who.empty()) go = true;           // (no one listed played it: nothing to show)
     else {
-        int L = (int)g_credit_lines.size();
-        float t_tot = 0.5f + 0.35f * L + 0.2f, t_bar = t_tot + 0.4f, bar_s = 1.8f;
-        float k = (t - t_bar) / bar_s;
-        k = k < 0 ? 0 : k > 1 ? 1 : k;
-        float ek = 1 - (1 - k) * (1 - k);
-        int v = g_credit_before + (int)((g_credit_after - g_credit_before) * ek);
-        int s = 0, s0 = 0;                                // (the step reached now, and where it started)
+        // (Nov 19, the owner's frames of Halo: Reach's own screen after a game) Reach's sequence, over its dark slate
+        // and fine hex pattern, the player's Spartan standing at the right:
+        //   1. each line in turn: its name and "+n" counting up in the middle, a huge faint word behind it ("TIME
+        //      SPENT"), then into the list at the bottom left;
+        //   2. CREDITS EARNED at the top, the list risen under it, TOTAL counting up;
+        //   3. the total going to the player's band along the bottom, its credits counting up (and the owner's
+        //      level-up bar under it, Nov 17, filling toward the next rank);
+        //   4. a promotion: PROMOTED, the list dimmed, "<RANK> PROMOTED" faint behind, the new insignia large with
+        //      its name under it.
+        // A (Enter, a click) skips to the end, then goes on; B goes on; 6 s after the end it goes on by itself.
+        int L = (int)g_credit_lines.size(), total = g_credit_after - g_credit_before;
+        const float T_LINE = 1.0f, t_b = 0.3f + T_LINE * L + 0.2f, t_c = t_b + 1.6f, t_d = t_c + 1.8f;
+        int s0 = 0, s1 = 0;
         for (int i = 0; i < (int)g_credit_steps.size(); i++) {
-            if (g_credit_steps[i].cr <= v) s = i;
             if (g_credit_steps[i].cr <= g_credit_before) s0 = i;
+            if (g_credit_steps[i].cr <= g_credit_after) s1 = i;
         }
-        reach_panel(x0, y0, x1, y1);
-        g_dl->AddRectFilledMultiColor(P(x0 + 1, y0 + 1), P(x1 - 1, y0 + 190), A(IM_COL32(70, 74, 78, 150)),
-                                      A(IM_COL32(46, 50, 54, 110)), A(IM_COL32(46, 50, 54, 110)), A(IM_COL32(70, 74, 78, 150)));
-        const credit_step* cur = g_credit_steps.empty() ? nullptr : &g_credit_steps[s];
-        const credit_step* nxt = s + 1 < (int)g_credit_steps.size() ? &g_credit_steps[s + 1] : nullptr;
-        // (Nov 19) a promotion's moment: the new insignia comes in large and settles, a gold ring spreading from it
-        float pp = s > s0 && g_promoted_to == s ? (float)(now - g_promoted_at) : 99;
-        if (cur) if (const pic* rp = sr_rank_picture(cur->step)) {
-            float k = pp < 0.35f ? 1.0f + 0.3f * (1 - pp / 0.35f) * (1 - pp / 0.35f) : 1.0f, cx = x0 + 100, cy = y0 + 95, hs = 70 * k;
-            image(rp, cx - hs, cy - hs, cx + hs, cy + hs);
-            if (pp < 0.8f) g_dl->AddCircle(P(cx, cy), U(70 + 90 * pp), A(IM_COL32(255, 204, 92, (int)(200 * (1 - pp / 0.8f)))), 48, U(3));
+        bool promoted = s1 > s0;
+        t_end = promoted ? t_d + 2.0f : t_c + 1.8f;     // (Nov 19: the insignia slower, so the end a little later)
+        bool promo = promoted && t >= t_d;
+        auto clamp01 = [](float v) { return v < 0 ? 0.0f : v > 1 ? 1.0f : v; };
+        auto smooth = [&](float v) { v = clamp01(v); return v * v * (3 - 2 * v); };
+        auto upper = [](const std::string& s) { std::string o; for (char ch : s) o += (char)toupper((unsigned char)ch); return o; };
+        auto faded = [&](float a, auto draw) { float keep = g_alpha; g_alpha *= clamp01(a); draw(); g_alpha = keep; };
+        // the ground: Reach's slate over the painting, its fine hex pattern brightest in the middle
+        {
+            ImVec2 d = ImGui::GetIO().DisplaySize;
+            g_dl->AddRectFilled(ImVec2(0, 0), d, IM_COL32(10, 16, 24, 165));   // (the painting kept faint behind)
+            const float r = 20, hw = r * 1.5f, hh = r * 1.732f;
+            for (int col = 0; col * hw < 1940; col++)
+                for (int rw = 0; rw * hh < 1100; rw++) {
+                    float cx = col * hw, cy = rw * hh + (col & 1 ? hh * 0.5f : 0);
+                    float dx = (cx - 960) / 960, dy = (cy - 540) / 540, a = 15 * (1 - (dx * dx + dy * dy) * 0.8f);
+                    if (a < 2) continue;
+                    ImU32 lc = A(IM_COL32(200, 220, 240, (int)a));
+                    ImVec2 p0 = P(cx + r, cy), p1 = P(cx + r * 0.5f, cy - hh * 0.5f), p2 = P(cx - r * 0.5f, cy - hh * 0.5f),
+                           p3 = P(cx - r, cy);
+                    g_dl->AddLine(p0, p1, lc); g_dl->AddLine(p1, p2, lc); g_dl->AddLine(p2, p3, lc);
+                }
         }
-        text(g_fl, 40, x0 + 200, y0 + 36, C_REACH_TEXT, g_credit_who.c_str());
-        text(g_fl, 28, x0 + 202, y0 + 90, C_REACH_DIM, cur ? cur->label.c_str() : "...");
-        if (t >= t_tot) {                                 // the total
-            float ka = (t - t_tot) * 4;
-            float keep = g_alpha;
-            g_alpha *= ka > 1 ? 1 : ka;
-            std::string tot = "+" + cr_text(g_credit_after - g_credit_before) + " cR";
-            text(g_fl, 50, x1 - 32, y0 + 30, C_GOLD, tot.c_str(), 2);
-            text(g_fl, 22, x1 - 32, y0 + 96, C_REACH_DIM, "CREDITS EARNED", 2);
-            g_alpha = keep;
+        // the Spartan at the right (a person: Reach's default Spartan, bots_panel.cpp person_figure), turning toward
+        // the camera once promoted
+        if (e.figure) {
+            ImVec2 f0 = P(1140, 100), f1 = P(1780, 900);
+            unsigned long long fig = e.figure(g_credit_who.c_str(), false, promo ? 0.12f : 0.42f, (int)(f1.x - f0.x), (int)(f1.y - f0.y));
+            if (fig) g_dl->AddImage((ImTextureID)fig, f0, f1, ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
         }
-        // what earned them, one by one
+        // a huge faint word or two behind, as Reach's ("TIME" over "SPENT"), fitted to the left of the Spartan
+        auto big_words = [&](const std::string& s, float x, float y, float a) {
+            std::string w1 = s, w2;
+            size_t sp = s.find(' ');
+            if (sp != std::string::npos) { w1 = s.substr(0, sp); w2 = s.substr(sp + 1); }
+            float sz = 150, wmax = text_w(g_fl, sz, w1.c_str()) / g_pg.s;
+            if (!w2.empty()) { float w = text_w(g_fl, sz, w2.c_str()) / g_pg.s + 100; wmax = w > wmax ? w : wmax; }
+            if (wmax > 920) sz *= 920 / wmax;
+            ImU32 c = A(IM_COL32(214, 224, 236, (int)(30 * clamp01(a))));
+            g_dl->AddText(g_fl, U(sz), P(x, y), c, w1.c_str());
+            if (!w2.empty()) g_dl->AddText(g_fl, U(sz), P(x + 100, y + sz * 0.78f), c, w2.c_str());
+        };
+        static const char* WORD[][2] = { {"Game Completed", "TIME SPENT"}, {"Victory", "VICTORY"}, {"Kills", "KILLS"},
+                                         {"Assists", "TEAM PLAYER"}, {"Medals", "MEDALS"}, {"Commendations", "COMMENDATIONS"},
+                                         {"Challenges", "CHALLENGES"} };
+        auto word_of = [&](const std::string& what) {
+            for (auto& w : WORD) if (!_stricmp(what.c_str(), w[0])) return std::string(w[1]);
+            return upper(what);
+        };
+        // 1. the line in the middle
+        int li = (int)((t - 0.3f) / T_LINE);
+        if (t >= 0.3f && t < t_b - 0.2f && li >= 0 && li < L) {
+            const credit_line& c = g_credit_lines[li];
+            float u = t - (0.3f + li * T_LINE), a = smooth(u / 0.15f) * (1 - smooth((u - 0.8f) / 0.2f));
+            big_words(word_of(c.what), 200, 300, a);
+            faded(a, [&] {
+                float dx = (1 - smooth(u / 0.2f)) * 40;
+                text(g_fl, 36, 410 + dx, 440, C_TEXT, upper(c.what).c_str());
+                std::string n = "+" + cr_text((int)(c.cr * smooth(u / 0.45f)));
+                text(g_fl, 66, 372 + dx, 482, C_TEXT, n.c_str());
+                if (!c.n.empty() && c.n != "1") text(g_fs, 22, 412 + dx, 564, C_DIM, ("x" + c.n).c_str());
+            });
+        }
+        // the list: at the bottom left as the lines come, then risen under CREDITS EARNED with the total
+        const float RW = 30, top_up = 316, top_down = 836 - RW * L;
+        float rise = smooth((t - t_b) / 0.5f), ly = top_down + (top_up - top_down) * rise;
+        float dim = promo ? 1 - 0.75f * smooth((t - t_d) / 0.4f) : 1.0f;
+        if (t >= t_b) faded(smooth((t - t_b) / 0.3f) * (promo ? 1 : 1), [&] {
+            text(g_fl, 50, 192, 252, C_TEXT, promo ? "PROMOTED" : "CREDITS EARNED");
+        });
         for (int i = 0; i < L; i++) {
-            float ti = 0.5f + 0.35f * i, ka = (t - ti) * 4;
-            if (ka <= 0) break;
-            float keep = g_alpha;
-            g_alpha *= ka > 1 ? 1 : ka;
-            float y = y0 + 220 + 58.0f * i, dx = ka < 1 ? (1 - ka) * 30 : 0;
-            const credit_line& c = g_credit_lines[i];
-            text(g_fl, 28, x0 + 40 + dx, y, C_REACH_TEXT, c.what.c_str());
-            if (!c.n.empty() && c.n != "1") { std::string n = "x" + c.n; text(g_fl, 26, x1 - 300 + dx, y + 2, C_REACH_DIM, n.c_str(), 2); }
-            std::string cr = "+" + cr_text(c.cr) + " cR";
-            text(g_fl, 28, x1 - 32 + dx, y, C_REACH_TEXT, cr.c_str(), 2);
-            g_dl->AddLine(P(x0 + 40, y + 48), P(x1 - 32, y + 48), A(IM_COL32(120, 128, 136, 110)), U(1));
-            g_alpha = keep;
+            float a = smooth((t - (0.3f + i * T_LINE + 0.55f)) / 0.25f) * dim;
+            if (a <= 0) continue;
+            faded(a, [&] {
+                const credit_line& c = g_credit_lines[i];
+                float y = ly + RW * i;
+                text(g_fs, 20, 198, y, IM_COL32(206, 214, 222, 255), upper(c.what).c_str());
+                text(g_fs, 20, 640, y, IM_COL32(206, 214, 222, 255), cr_text(c.cr).c_str(), 2);
+                g_dl->AddLine(P(198, y + RW - 4), P(640, y + RW - 4), A(IM_COL32(200, 210, 220, 70)), U(1));
+            });
         }
-        // the bar: the rank now, filling toward the next
-        float by = y1 - 130, bx0 = x0 + 40, bx1 = x1 - 32;
-        g_dl->AddRectFilled(P(bx0, by), P(bx1, by + 26), A(IM_COL32(34, 38, 42, 235)));
-        float share = 1;
-        if (cur && nxt && nxt->cr > cur->cr) share = (float)(v - cur->cr) / (float)(nxt->cr - cur->cr);
-        share = share < 0 ? 0 : share > 1 ? 1 : share;
-        float fx = bx0 + (bx1 - bx0) * share;
-        g_dl->AddRectFilledMultiColor(P(bx0, by), P(fx, by + 26), A(IM_COL32(70, 140, 200, 255)), A(IM_COL32(150, 210, 250, 255)),
-                                      A(IM_COL32(150, 210, 250, 255)), A(IM_COL32(70, 140, 200, 255)));
-        if (k > 0 && k < 1) g_dl->AddRectFilled(P(fx - 3, by - 3), P(fx + 1, by + 29), A(IM_COL32(240, 250, 255, 255)));
-        g_dl->AddRect(P(bx0, by), P(bx1, by + 26), A(IM_COL32(150, 158, 166, 160)), 0, 0, U(1));
-        text(g_fl, 24, bx0, by + 38, C_REACH_DIM, cur ? cur->label.c_str() : "");
-        if (nxt) {
-            std::string rest = cr_text(nxt->cr - v) + " cR to " + nxt->label;
-            text(g_fl, 24, bx1, by + 38, C_REACH_DIM, rest.c_str(), 2);
-        } else text(g_fl, 24, bx1, by + 38, C_REACH_DIM, "The highest rank", 2);
-        if (s > s0) {                                     // a promotion on the way
-            if (g_promoted_to != s) { g_promoted_to = s; g_promoted_at = now; sound(PS_OPEN); }
+        // 2. the total, counting up
+        float ty = top_up + RW * L + 6;
+        if (t >= t_b + 0.3f) faded(smooth((t - t_b - 0.3f) / 0.2f) * dim, [&] {
+            text(g_fl, 34, 194, ty, C_TEXT, "TOTAL:");
+            std::string n = "+" + cr_text((int)(total * smooth((t - t_b - 0.4f) / 1.0f)));
+            text(g_fl, 34, 640, ty, C_TEXT, n.c_str(), 2);
+        });
+        if (t >= t_b && !promo) big_words("TOTAL CREDITS", 300, 560, smooth((t - t_b) / 0.3f) * (1 - smooth((t - t_c - 1.6f) / 0.3f)));
+        // 3. the band: the total flies to it, its credits count up, the level-up bar fills
+        float kc = smooth((t - t_c - 0.5f) / 1.2f);
+        int v = g_credit_before + (int)(total * kc);
+        int sv = 0;
+        for (int i = 0; i < (int)g_credit_steps.size(); i++) if (g_credit_steps[i].cr <= v) sv = i;
+        const credit_step* shown = g_credit_steps.empty() ? nullptr : &g_credit_steps[promo ? s1 : s0];
+        const credit_step* at = g_credit_steps.empty() ? nullptr : &g_credit_steps[sv];
+        const credit_step* nxt = sv + 1 < (int)g_credit_steps.size() ? &g_credit_steps[sv + 1] : nullptr;
+        const float by0 = 846, by1 = 922, bx0 = 252, bx1 = 1500;
+        int32_t emb[5];
+        int np = -1;
+        unsigned long long em = g_make && mcc_player_look(emb, &np) ? player_emblem(emb, g_make) : 0;
+        if (em) g_dl->AddImage((ImTextureID)em, P(166, by0 + 2), P(240, by0 + 76), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
+        else crest(203, by0 + 38, 30, C_TEXT);
+        g_dl->AddRectFilledMultiColor(P(bx0, by0), P(bx1, by1), A(IM_COL32(62, 68, 74, 220)), A(IM_COL32(30, 34, 38, 190)),
+                                      A(IM_COL32(30, 34, 38, 190)), A(IM_COL32(62, 68, 74, 220)));
+        g_dl->AddLine(P(bx0, by0), P(bx1, by0), A(IM_COL32(220, 226, 232, 120)), U(1));
+        if (shown) if (const pic* rp = sr_rank_picture(shown->step)) image_fit(rp, bx0 + 8, by0 + 4, bx0 + 52, by0 + 48);
+        text(g_fl, 30, bx0 + 62, by0 + 4, C_TEXT, g_credit_who.c_str());
+        text(g_fs, 20, bx0 + 64, by0 + 44, C_DIM, shown ? shown->label.c_str() : "");
+        std::string crs = cr_text(v) + " cR";
+        text(g_fl, 32, bx1 - 14, by0 + 2, C_TEXT, crs.c_str(), 2);
+        text(g_fs, 18, bx1 - 14, by0 + 44, C_DIM, nxt ? ("Next: " + nxt->label + " in " + cr_text(nxt->cr - v) + " cR").c_str() : "MAX RANK", 2);
+        {   // (the owner's level-up bar, Nov 17: the rank now, filling toward the next)
+            float share = 1;
+            if (at && nxt && nxt->cr > at->cr) share = clamp01((float)(v - at->cr) / (float)(nxt->cr - at->cr));
+            float fx = bx0 + (bx1 - bx0) * share;
+            g_dl->AddRectFilled(P(bx0, by1), P(bx1, by1 + 6), A(IM_COL32(20, 24, 28, 220)));
+            g_dl->AddRectFilledMultiColor(P(bx0, by1), P(fx, by1 + 6), A(IM_COL32(70, 140, 200, 255)), A(IM_COL32(150, 210, 250, 255)),
+                                          A(IM_COL32(150, 210, 250, 255)), A(IM_COL32(70, 140, 200, 255)));
+        }
+        if (t >= t_c) {                                   // (the total, on its way to the band, then over it)
+            float k = smooth((t - t_c) / 0.5f);
+            float x = 640 + (bx1 - 14 - 640) * k, y = ty + (by0 - 52 - ty) * k;
+            std::string n = "+" + cr_text(total);
+            faded(1 - smooth((t - t_c - 2.4f) / 0.4f), [&] { text(g_fl, 40, x, y, C_TEXT, n.c_str(), 2); });
+        }
+        // 4. the promotion
+        if (promo) {
+            if (g_promoted_to != s1) { g_promoted_to = s1; g_promoted_at = now; sound(PS_OPEN); }
             float pa = (float)(now - g_promoted_at);
-            // (Nov 19) the new rank named ("PROMOTED" alone read as if the bar disagreed), in larger gold settling to
-            // its size, and a white flash along the bar
-            std::string pr = "PROMOTED TO ";
-            for (char ch : cur ? cur->label : std::string()) pr += (char)toupper((unsigned char)ch);
-            float keep = g_alpha;
-            g_alpha *= pa < 0.15f ? pa / 0.15f : 1;
-            float ps = pa < 0.35f ? 44 + 14 * (1 - pa / 0.35f) * (1 - pa / 0.35f) : 44;
-            text(g_fl, ps, (bx0 + bx1) * 0.5f, by - 72 - (ps - 44) * 0.6f, C_GOLD, pr.c_str(), 1);
-            g_alpha = keep;
-            if (pa < 0.6f)
-                g_dl->AddRectFilled(P(bx0, by), P(bx1, by + 26), A(IM_COL32(255, 255, 255, (int)(150 * (1 - pa / 0.6f)))));
+            std::string rank = upper(g_credit_steps[s1].label);
+            big_words(rank + " PROMOTED", 200, 500, smooth(pa / 0.4f));
+            // (Nov 19, the owner: "a tad slower ... feels a little too instant") the insignia a beat after PROMOTED
+            // (0.35 s), fading in over 0.6 s while it settles from larger over 0.8 s; its name and the ring after it
+            float pi = pa - 0.35f, ks = clamp01(pi / 0.8f);
+            float k = 1.0f + 0.35f * (1 - ks) * (1 - ks), cx = 760, cy = 520, hs = 92 * k;
+            if (pi > 0) {
+                faded(smooth(pi / 0.6f), [&] {
+                    if (const pic* rp = sr_rank_picture(g_credit_steps[s1].step)) image_fit(rp, cx - hs, cy - hs, cx + hs, cy + hs);
+                });
+                faded(smooth((pi - 0.4f) / 0.4f), [&] { text(g_fl, 28, cx, cy + 108, C_TEXT, rank.c_str(), 1); });
+                float pr = pi - 0.3f;
+                if (pr > 0 && pr < 1.0f) g_dl->AddCircle(P(cx, cy), U(90 + 110 * pr), A(IM_COL32(255, 204, 92, (int)(200 * (1 - pr)))), 48, U(3));
+            }
         }
-        if (t > t_bar + bar_s + 6) go = true;
+        if (t > t_end + 6) go = true;
     }
-    footer(nullptr, "Continue");
+    bool running = g_credit_have && !g_credit_who.empty() && t < t_end;
+    footer(nullptr, running ? "Skip" : "Continue");
     if (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_Space, false) ||
         ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown, false) ||
-        (ImGui::IsMouseClicked(0) && t > 0.3f && !g_footer_back))   // (the footer's Back: pg_back goes on)
-        go = true;
+        (ImGui::IsMouseClicked(0) && t > 0.3f && !g_footer_back)) {  // (the footer's Back: pg_back goes on)
+        if (running) { g_t0 = now - t_end; sound(PS_MOVE); }   // (Reach's Skip: straight to the end)
+        else go = true;
+    }
     if (go) {
         sound(PS_SELECT);
         g_credit_id[0] = 0;
@@ -2725,7 +3139,7 @@ void pg_preview_stage(int which, float t, pg_env& e) {
         g_focus = GetEnvironmentVariableA("PG_FOCUS", f, sizeof f) && which == 7 ? atoi(f) : which == 6 ? 0 : which == 7 ? 2 : 1;
         break;
     }
-    case 9:                                              // (Nov 17) the credits screen: a made-up match, a promotion
+    case 9: case 12: case 13:                            // (Nov 17) the credits screen: a made-up match, a promotion
         pg_open();
         g_stage = S_CREDITS;
         strcpy_s(g_credit_id, "preview");
@@ -2737,9 +3151,12 @@ void pg_preview_stage(int which, float t, pg_env& e) {
                            {"Assists", "3", 150}, {"Medals", "5", 125}, {"Commendations", "", 0} };
         g_credit_lines.back().cr = 9925 - 6200 - 3475;
         g_credit_steps = { {0, "Recruit", 0}, {1, "Private", 7500}, {2, "Corporal", 10000} };
+        g_promoted_to = which == 13 ? 1 : -1;            // (Nov 19: the promotion 2 s on, its insignia settled)
+        g_promoted_at = now - 2;
         break;
     case 10: pg_open(); g_chal = true; break;            // (Nov 17) the Challenges page, from the site's last build
-    case 11:                                             // (Nov 18) a friend's copy following the host's vote
+    case 11: pg_open(); g_comm = true; g_comm_check = 0; break;   // (Nov 19) the Commendations page, the same
+    case 14:                                             // (Nov 18) a friend's copy following the host's vote
         pg_open(); start_search(e); take_options(); start_vote(*e.roster, false); g_vote_me = 1;
         g_t0 = now - t;
         link_host(e, now);                               // (the host's state, as pg_link.cpp sends it; a loopback here)
@@ -2851,10 +3268,16 @@ static bool pg_frame_body(pg_env& e) {
     g_pg = mcc_content(e.W, e.H);
     g_alpha = 1;
     g_items.clear();
+    if (g_focus_after >= 0) { g_focus = g_focus_after; g_focus_after = -1; }
     int pressed_before = g_pressed;
     (void)pressed_before;
     g_pad_in = e.pad;
-    {   // the ground's art: the vote's options and the winner, else the playlist's maps in turn (faded between)
+    // (Nov 19) Reach's own painting for the screen when this PC has it (bg_picture): Proving Grounds' menu, matchmaking
+    // (Find Game, the vote, the next game), the credits after a game
+    int bgk = g_stage == S_CREDITS ? BG_POST
+            : (g_stage == S_SEARCH || g_stage == S_VOTE || g_stage == S_RESULT || g_stage == S_LAUNCH) ? BG_MATCH : BG_MENU;
+    if (const pic* painted = bg_picture(bgk)) painted_background((float)now, painted);
+    else {  // the ground's art: the vote's options and the winner, else the playlist's maps in turn (faded between)
         const pic* art = nullptr;
         float art_a = 0.30f;                             // (Nov 19: 0.16 before, under a heavier wash)
         if ((g_stage == S_RESULT || g_stage == S_LAUNCH) && g_nopt) art = map_picture(g_opt[g_winner].map_key);
@@ -2878,6 +3301,7 @@ static bool pg_frame_body(pg_env& e) {
     switch (g_stage) {
     case S_MENU:
         if (g_chal) { challenges_screen(e, t); break; }  // (Nov 17: the Challenges page)
+        if (g_comm) { comm_screen(e, t); break; }        // (Nov 19: the Commendations page)
         g_inert = g_invite;
         menu_screen(e, t);
         g_inert = false;
@@ -2903,7 +3327,7 @@ static bool pg_frame_body(pg_env& e) {
     }
     // (Nov 17) the roster, as Reach's party list: into it with Right or a click on it, out with Left, Esc, B or a click
     // away from it and its panel; the list slides between MCC's place and Reach's in 0.22 s
-    bool ros_here = (g_stage == S_MENU && !g_invite && !g_chal) || g_stage == S_SEARCH || g_stage == S_VOTE, ros_out = false;
+    bool ros_here = (g_stage == S_MENU && !g_invite && !g_chal && !g_comm) || g_stage == S_SEARCH || g_stage == S_VOTE, ros_out = false;
     if (!ros_here) { g_ros_on = false; g_ros_k = 0; }
     else if (!g_ros_on) {
         // (Nov 19) RB (the footer's Players prompt) as well as Right: Right is GAME SIZE's and the rounds' on those rows
