@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Proving Grounds: Halo: Reach's own menus, phase 1 (title, main menu, matchmaking), 2026-11-19
+
+The owner sent seven frames of Halo: Reach's menus (its title screen, MAIN MENU, MATCHMAKING, PLAYLIST twice, SEARCH RESTRICTIONS, PSYCH PROFILE): "Starting here. This is the main menu. And the matchmaking menus all phase 1".
+
+- **`native/proving_grounds_reach.inc`** (new, included once by `proving_grounds.cpp` after `menu_screen`): Proving Grounds' menu stage (`S_MENU`) now shows Reach's pages, `g_rpage`:
+  - **Title** (the first open of a session; the PPG Launcher's route lands here): PROJECT / PROVING GROUNDS spaced wide over the painting with a band of light under it, START SOLO CAMPAIGN (not in Proving Grounds yet) and MAIN MENU, the Menu prompt, the mod's version at the bottom right.
+  - **Main menu:** our winged mark, MAIN MENU, "This party is offline: you and the bots you invite.", CAMPAIGN, MATCHMAKING, FIREFIGHT, CUSTOM GAME, FORGE, THEATER with a line on each, MY PARTY at the right ("In Main Menu Lobby", the roster as before). MATCHMAKING opens matchmaking; CUSTOM GAME closes Proving Grounds onto MCC's own Halo: Reach custom game lobby; the other four are dim and say they are not in Proving Grounds yet. Later opens in the session start here.
+  - **Matchmaking:** the playlist's maps in a banner with the pool's count and the playlist's size, MAIN MENU upright at the left (Reach's breadcrumb), "Ready", PLAYLIST (its name), SEARCH RESTRICTIONS (NONE (FASTEST) or the ticked ones), PSYCH PROFILE, START MATCHMAKING (the search, the vote and the game as before), MY PARTY ("In Matchmaking Lobby"). Back from the search or the vote comes here.
+  - **Playlist:** STANDARD, EVOLVED, ANNIVERSARY, COMMUNITY, COOPERATIVE, then the category's playlists (Right or A in, Left or B out), the picked one's picture with its name cut at the edge, our words for it, Team Size, Max Party Size, the pool and the vote's time, and the player's band (emblem, rank insignia, name, rank, credits, next rank, from the Service Record). Reach's Standard and Evolved lists are shown; Proving Grounds plays BIG TEAM BATTLE (8v8) and THE ARENA (4v4), the rest are dim with "Not in Proving Grounds yet". Picking one sets the game size as GAME SIZE did.
+  - **Search Restrictions** (GOOD CONNECTION, LANGUAGE, SKILL: ticks) and **Psych Profile** (CHATTINESS, MOTIVATION, TEAMWORK, TONE: No preference and two choices each, Left / Right or A) are saved in `native\bin\reach_menus.ini`. The search does not use them yet, and both pages say so.
+  - **Proving Grounds' own menu** (invite, challenges, commendations, simulate matches, game size) is still there, from the Menu prompt (the pad's Start, M, or a click) on the title, the main menu and matchmaking. B goes back one page; from the title it closes Proving Grounds.
+- Our own drawing and words: no Bungie or 343 art, logos or icons (the header marks, the caution sign and the diamond lattice are drawn shapes). The title, main menu and matchmaking use this PC's paintings (`native\bin\pg_backgrounds\title`, `main_menu`, `matchmaking_lobby`, else the `menu` and `matchmaking` ones); the sub-pages draw a dark steel-blue ground with a faint lattice.
+- `proving_grounds.cpp`: the page state and its hooks (`pg_open`, `to_menu`, `pg_back`, the frame's ground, the S_MENU case, where the roster can open), the preview's screens 16-22 (`pg_preview_stage` 15-21). `pg_preview.cpp`: the seven new screens, and `PG_ONLY=<n>` to draw one.
+- **Validation:** `build_pg_preview.bat` and `build.bat pg25` (`botcore_pg25.dll`) build without new warnings; all 22 preview screens render, the seven new ones checked by eye against the owner's frames (the playlist name overflow and a hard edge in the sub-pages' ground were fixed after the first look); the older screens unchanged (Proving Grounds' own menu draws as before). **Untested in game:** the controller on every page, the roster on the main menu and matchmaking, the title on the launcher's route, CUSTOM GAME closing onto MCC's lobby.
+
 ### Service Record: Mission First and Denied, two commendations for objective play, 2026-11-19
 
 The owner, from a list of commendations the site lacked: "Do mission first, and Denied."

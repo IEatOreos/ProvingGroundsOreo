@@ -308,11 +308,19 @@ int main(int argc, char** argv) {
     }
     const char* names[] = { "menu", "invite", "search", "vote", "result", "error", "roster_details", "roster_card",
                             "roster_you", "credits", "challenges", "commendations", "credits_total", "credits_promoted",
-                            "friend_vote" };
+                            "friend_vote",
+                            // (Nov 19) Halo: Reach's own pages around Proving Grounds (proving_grounds_reach.inc)
+                            "reach_title", "reach_main_menu", "reach_matchmaking", "reach_playlist_categories",
+                            "reach_playlist_lists", "reach_search_restrictions", "reach_psych_profile" };
     // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
     // band (8.9 s), the promotion (11.5 s; six lines)
-    const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f };
-    for (int s = 0; s < 15; s++) {
+    const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f,
+                         3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
+    // (PG_ONLY=<n>: that screen alone, 1-based as its file's number)
+    char only_s[8];
+    int only = GetEnvironmentVariableA("PG_ONLY", only_s, sizeof only_s) ? atoi(only_s) : 0;
+    for (int s = 0; s < 22; s++) {
+        if (only && s + 1 != only) continue;
         g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};
         e.roster = &roster; e.difficulty = 2; e.scale = 1; e.W = (float)W; e.H = (float)H;

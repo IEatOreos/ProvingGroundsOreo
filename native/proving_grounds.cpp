@@ -582,6 +582,13 @@ bool pg_following() { return g_follow; }
 static char g_pool_names[4096][16];
 static int g_npool_names;
 
+// (Nov 19, the owner's frames of Halo: Reach's menus, phase 1) the page S_MENU shows: Reach's title, main menu,
+// matchmaking and its three sub-pages, or Proving Grounds' own menu (RP_OPTIONS). proving_grounds_reach.inc
+enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS };
+static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
+static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
+static bool rmenu_back();
+
 void pg_open() {
     if (g_follow) { g_f_hide = false; return; }  // (Nov 18: following the host: its screens back, no session here)
     load_settings();                             // (each time: proving_grounds.ini edits apply on the next open)
@@ -591,11 +598,15 @@ void pg_open() {
     g_invite = false;
     g_chal = false;
     g_comm = false;
+    g_rpage = g_rtitled ? RP_MAIN : RP_TITLE;    // (Reach's title the first time, its main menu after)
+    g_rtitled = true;
+    g_focus_after = 1;                           // (MAIN MENU on the title, MATCHMAKING on the main menu)
     g_t0 = ImGui::GetTime();
     logf("proving grounds: opened (%s)", cur_pl().title);
 }
 
-static void to_menu() { g_stage = S_MENU; g_invite = false; g_t0 = ImGui::GetTime(); }
+// (back from the search or the vote: Reach's matchmaking page)
+static void to_menu() { g_stage = S_MENU; g_invite = false; g_rpage = RP_MM; g_focus_after = 3; g_t0 = ImGui::GetTime(); }
 
 void pg_back() {
     if (g_follow) {                              // (Nov 18: following: the host's screens away till its next stage;
@@ -606,6 +617,7 @@ void pg_back() {
     if (g_invite) { g_invite = false; return; }
     if (g_chal) { g_chal = false; return; }
     if (g_comm) { g_comm = false; g_focus_after = 4; return; }   // (back on the menu's COMMENDATIONS)
+    if (g_stage == S_MENU && rmenu_back()) return;   // (Reach's pages: one page back; from the title, closed)
     switch (g_stage) {
     case S_MENU: g_stage = S_OFF; logf("proving grounds: closed"); break;
     case S_SEARCH: case S_VOTE: case S_ERROR: to_menu(); break;
@@ -2337,6 +2349,8 @@ static void menu_screen(pg_env& e, float t) {
     }
 }
 
+#include "proving_grounds_reach.inc"                // (Nov 19) Halo: Reach's own menus around it, phase 1
+
 // the lobby's list (the search, the vote): the player, the friends who joined (Nov 17: there from the start), the bots
 // as they arrive (an empty seat searching until then); in a team game each team together, the teams 12 apart
 static void lobby_rows(pg_env& e, float t, bool teams, float x1, float y0, const char* empty_text) {
@@ -3167,7 +3181,18 @@ void pg_preview_stage(int which, float t, pg_env& e) {
         printf("friend's copy: following %s, stage %d, %d options, %d bots, %d people, host voted %d\n",
                g_follow ? "yes" : "NO", (int)g_stage, g_nopt, g_f_roster.n, g_npeople, g_npeople ? g_people_vote[0] : -9);
         return;
+    // (Nov 19) Reach's pages: the title, the main menu, matchmaking, the playlists (the categories, then the playlists
+    // of Evolved), search restrictions, the psych profile
+    case 15: pg_open(); g_rpage = RP_TITLE; g_focus = 1; break;
+    case 16: pg_open(); g_rpage = RP_MAIN; g_focus = 1; break;
+    case 17: pg_open(); g_rpage = RP_MM; g_focus = 0; break;
+    case 18: pg_open(); g_rpage = RP_PLAYLIST; g_rm_col = 0; g_rm_cat = 1; g_focus = 1; break;
+    case 19: pg_open(); g_rpage = RP_PLAYLIST; g_rm_col = 1; g_rm_cat = 1; g_focus = 4; break;
+    case 20: pg_open(); g_rpage = RP_RESTRICT; g_focus = 0; break;
+    case 21: pg_open(); g_rpage = RP_PSYCH; g_focus = 0; break;
     }
+    if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Proving Grounds' own menu)
+    g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
     g_t0 = now - t;
 }
 // the playlists as read (proving_grounds.ini's add / remove lines applied)
@@ -3276,7 +3301,8 @@ static bool pg_frame_body(pg_env& e) {
     // (Find Game, the vote, the next game), the credits after a game
     int bgk = g_stage == S_CREDITS ? BG_POST
             : (g_stage == S_SEARCH || g_stage == S_VOTE || g_stage == S_RESULT || g_stage == S_LAUNCH) ? BG_MATCH : BG_MENU;
-    if (const pic* painted = bg_picture(bgk)) painted_background((float)now, painted);
+    if (g_stage == S_MENU && !g_chal && !g_comm && rmenu_background((float)now)) {}   // (Reach's pages: their own)
+    else if (const pic* painted = bg_picture(bgk)) painted_background((float)now, painted);
     else {  // the ground's art: the vote's options and the winner, else the playlist's maps in turn (faded between)
         const pic* art = nullptr;
         float art_a = 0.30f;                             // (Nov 19: 0.16 before, under a heavier wash)
@@ -3302,6 +3328,7 @@ static bool pg_frame_body(pg_env& e) {
     case S_MENU:
         if (g_chal) { challenges_screen(e, t); break; }  // (Nov 17: the Challenges page)
         if (g_comm) { comm_screen(e, t); break; }        // (Nov 19: the Commendations page)
+        if (g_rpage != RP_OPTIONS) { reach_menu_screen(e, t); break; }   // (Nov 19: Reach's pages)
         g_inert = g_invite;
         menu_screen(e, t);
         g_inert = false;
@@ -3327,7 +3354,8 @@ static bool pg_frame_body(pg_env& e) {
     }
     // (Nov 17) the roster, as Reach's party list: into it with Right or a click on it, out with Left, Esc, B or a click
     // away from it and its panel; the list slides between MCC's place and Reach's in 0.22 s
-    bool ros_here = (g_stage == S_MENU && !g_invite && !g_chal && !g_comm) || g_stage == S_SEARCH || g_stage == S_VOTE, ros_out = false;
+    bool ros_here = (g_stage == S_MENU && !g_invite && !g_chal && !g_comm && rmenu_party()) || g_stage == S_SEARCH ||
+                    g_stage == S_VOTE, ros_out = false;
     if (!ros_here) { g_ros_on = false; g_ros_k = 0; }
     else if (!g_ros_on) {
         // (Nov 19) RB (the footer's Players prompt) as well as Right: Right is GAME SIZE's and the rounds' on those rows
