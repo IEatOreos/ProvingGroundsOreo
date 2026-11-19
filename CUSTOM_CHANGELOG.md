@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Demon and Mythic Warthog chaingunners lock on, 2026-11-18
+
+The owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner seat".
+
+- `brain/bot.py` `Bot.chaingun_lock`, `Aim.lock`: a Demon or a Mythic in a Warthog's chaingun seat aims dead on the man's chest every tick. It aims from the gun's mount (`turret_origin`), or in Halo 4 at the real point on him, led by the round's flight and the 0.05 s read delay. There is no aim error, tremor, turn limit or flick, and it fires whenever the sent aim is on him. The seat must have the Warthog's chaingun (`vehicles.gunner_gun` "assault_rifle"), so not the Gauss or Rocket Warthog; this applies in every game. Who it shoots, the clear-line check and the Reach chaingun's heat are unchanged; the spin-up on a man just out of sight is unchanged.
+- Note: this is exact aim at the point the bots compute. It does not explain or change the 606-611 s misses above, which were already on that point from the calibrated mount.
+- Validation: `tools/test_chaingun_lock.py` (new, 3: Demon and Mythic dead on at once from 2 rad away, led, firing; Legendary still turns onto him; not the Gauss or Rocket Warthog). With only this change on HEAD all of those, `test_warthog_spin`, `test_h4_vehicle_aim` and the Demon / Mythic rule tests pass. In the shared tree 4 Demon / Mythic rule tests fail from another session's uncommitted `demon_rules` change. **Untested in a match.**
+
 ### Warthog chaingun: no spray at the newest radar dot, 2026-11-18
 
 The owner's F9 "Majorgunner in the turret shooting the ground why" (reach_dlc_medium `20261118-220316`, 619.2 s; he added "The gunner shooting the ground was about several seconds before killing me").

@@ -1567,6 +1567,19 @@ class Aim:
         tremor = s.rng.gauss(0, TREMOR * (p.extra or {}).get("tremor_k", 1.0)) if target_id is not None and not fixed_high else 0.0
         return me.yaw + dy * gain + tremor, me.pitch + dp * gain + tremor * 0.5
 
+    def lock(s, me, target_id, point, tvel, origin=None, gun=None):
+        """(custom, Nov 18, owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner
+        seat") The exact angles from origin (else the eye) to point led by the shot's flight and the 0.05 s read delay
+        (step's own lead, unerring), this tick: no error, no tremor, no turn limit, no flick. on_target reads it as the
+        goal."""
+        gun = gun or me.weapon
+        o = origin or eye(me)
+        lead_t = dist(o, point) / PROJECTILE_SPEED.get(gun, 360.0)
+        s.target, s.flick, s.focus = target_id, None, 1.0
+        s.goal = angles_to(o, point + tvel * (lead_t + 0.05))
+        s.goal_rate, s.goal_prev = 0.0, (s.goal[0], getattr(s, "now", 0.0))
+        return s.goal
+
     def on_target(s, me, tpos, yaw=None, pitch=None, slack=1.0):
         """Whether the bot *thinks* it is on target: the crosshair it is sending (yaw, pitch; else its view) is
         on his body where its own (error-laden) aim plan puts him: 0.12 to each side and 0.22 up or down of
@@ -5249,13 +5262,21 @@ class Bot:
                         tp = None
                     if tp is not None:
                         aim_at = tp
-                act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=gun,
-                                                origin=origin, target_point=tp,
-                                                crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
+                locked = gunner and s.chaingun_lock(v, me)
+                if locked:
+                    # (custom, Nov 18) Demon and Mythic on a Warthog's chaingun: dead on his chest (aim_at, Halo 4's
+                    # real point tp) every tick, led (Aim.lock)
+                    chest = tp if tp is not None else aim_at + Vec(0, 0, aim_height(False, crouched(snap.player(tid))))
+                    act.yaw, act.pitch = s.aim.lock(me, tid, chest, b.vel, origin=origin, gun=gun)
+                else:
+                    act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=gun,
+                                                    origin=origin, target_point=tp,
+                                                    crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
                 # a mounted gun is held down while it tracks, as people spray a turret: 2.5 times the hand gun's window,
                 # 4 times once firing (live: a Falcon gunner 0.4 deg off a man 16 u away fired on 34% of its ticks by
-                # the hand gun's window)
-                fire = s.aim.on_target(me, aim_at, slack=(4.0 if getattr(s, "seat_fire", False) else 2.5) if gunner else 1.0)
+                # the hand gun's window). Locked: the angles it sends are the goal
+                fire = (s.aim.on_target(me, aim_at, act.yaw, act.pitch) if locked else
+                        s.aim.on_target(me, aim_at, slack=(4.0 if getattr(s, "seat_fire", False) else 2.5) if gunner else 1.0))
                 s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
                 if gunner:
                     s.spin_on = (tid, now)               # (custom, Nov 18) the man the gun was on (the spin below)
@@ -6007,6 +6028,15 @@ class Bot:
         float (maps/_inputs/reach.json "fire2", the owner's Boneyard capture)."""
         if s.game == "reach" and act.fire2:
             act.vertical = 1.0
+
+    def chaingun_lock(s, v, me):
+        """(custom, Nov 18, owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner
+        seat") A Demon's or Mythic's seat on a Warthog's chaingun (the Warthog's gun as a hand gun, vehicles.gunner_gun:
+        not the Gauss or Rocket Warthog's, which read "warthog" too with their gun riding on it; every game): its aim
+        locks dead on the man (Aim.lock)."""
+        return (v is not None and vehicles.kind_of(v["kind"]) == "warthog"
+                and vehicles.gunner_gun(v, getattr(me, "turret", "") or "") == "assault_rifle"
+                and (profiles.fixed_demon(s.p) or profiles.fixed_mythic(s.p)))
 
     def spin_target(s, now, me, snap):
         """(custom, Nov 18, the owner's F9 "Majorgunner in the turret shooting the ground why") The man a Warthog's
