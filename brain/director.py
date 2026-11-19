@@ -860,7 +860,7 @@ class Director:
                 c = dist(pos, point) / 30.0
                 c += 0.0 if s.roles.get(b.id) == role else 0.5      # role inertia
                 if fit == "anchor":
-                    priority = 0 if profiles.fixed_demon(b.p) else {"camper": 1, "sniper": 2}.get(b.p.personality, 3)
+                    priority = 0 if profiles.demon_rules(b.p) else {"camper": 1, "sniper": 2}.get(b.p.personality, 3)
                     return priority, c
                 if fit == "low_tier":   # (custom) CTF's one defender: the lowest difficulty, not Easy; then the nearest
                     return profiles.defend_priority(b.p), c
@@ -953,11 +953,11 @@ class Director:
         20261108-024522: its two Demons within 8 u of each other 18% of the match, median 17.6 u apart)."""
         ids = {b.id: b for b in alive}
         kept = [(a, m) for a, m in getattr(s, "pairs", ()) if a in ids and m in ids
-                and profiles.fixed_demon(ids[a].p) and profiles.fixed_high(ids[m].p)]
+                and profiles.demon_rules(ids[a].p) and profiles.fixed_high(ids[m].p)]
         used = {k for pair in kept for k in pair}
         free = lambda b: b.id not in used
-        demons = sorted((b for b in alive if profiles.fixed_demon(b.p) and free(b)), key=lambda b: b.id)
-        legends = sorted((b for b in alive if profiles.fixed_high(b.p) and not profiles.fixed_demon(b.p) and free(b)),
+        demons = sorted((b for b in alive if profiles.demon_rules(b.p) and free(b)), key=lambda b: b.id)
+        legends = sorted((b for b in alive if profiles.fixed_high(b.p) and not profiles.demon_rules(b.p) and free(b)),
                          key=lambda b: b.id)
         while demons:
             lead = demons.pop(0)
@@ -1170,7 +1170,7 @@ class Director:
     @staticmethod
     def gunner_available(b):
         """Do not divert Demon from a reserved weapon or vehicle to a new seat."""
-        return b.order.role != "drive" and (not profiles.fixed_demon(b.p) or getattr(b, "fetch", None) is None)
+        return b.order.role != "drive" and (not profiles.demon_rules(b.p) or getattr(b, "fetch", None) is None)
 
     def rider_calls(s, now, snap, alive, players):
         """Drivers call riders ("this guy with the warthog has no gunner or passenger or anything",; "flagging down other
@@ -1717,8 +1717,8 @@ class Director:
         duds = s.map.get("_vehicle_duds", {})
         empty = {v["handle"]: v for v in snap.vehicles if not v["occupied"] and vehicles.roles_of(v["kind"])
                  and vehicles.usable(v, now, duds)}
-        free = {b.id: b for b in foot if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
-        near = {b.id: b for b in busy if not (profiles.fixed_demon(b.p) and getattr(b, "fetch", None) is not None)}
+        free = {b.id: b for b in foot if not (profiles.demon_rules(b.p) and getattr(b, "fetch", None) is not None)}
+        near = {b.id: b for b in busy if not (profiles.demon_rules(b.p) and getattr(b, "fetch", None) is not None)}
         # (custom, Nov 8: the owner) a power vehicle comes before a power weapon and a gun seat for fixed Legendary and
         # Demon: one on a weapon run (its run is dropped once it has the job), or riding a gun or a passenger seat (it
         # gets out: Bot.drive), is called to one too, from CREW_REACH. They go first by rank (resource_priority)
@@ -1731,7 +1731,7 @@ class Director:
             # (custom: no Demon at the wheel of a Warthog or a Mongoose, vehicles.DEMON_NO_DRIVE; Race laps excepted)
             # (custom, Nov 13: nor anyone at a Warthog's a Wheelman of ours is on his way to, Bot.wheel_yield: a job on
             # one already given is dropped)
-            return (snap.mode == "race" or not (profiles.fixed_demon(b.p) and vehicles.demon_no_drive(v["kind"]))) \
+            return (snap.mode == "race" or not (profiles.demon_rules(b.p) and vehicles.demon_no_drive(v["kind"]))) \
                 and not Bot.wheel_yield(b, v)
 
         def pool_for(v):

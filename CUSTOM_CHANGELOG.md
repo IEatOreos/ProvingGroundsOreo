@@ -10,6 +10,15 @@ The owner: "I would like Mythic and Demon chain gunners to have aimbot with the 
 - Note: this is exact aim at the point the bots compute. It does not explain or change the 606-611 s misses above, which were already on that point from the calibrated mount.
 - Validation: `tools/test_chaingun_lock.py` (new, 3: Demon and Mythic dead on at once from 2 rad away, led, firing; Legendary still turns onto him; not the Gauss or Rocket Warthog). With only this change on HEAD all of those, `test_warthog_spin`, `test_h4_vehicle_aim` and the Demon / Mythic rule tests pass. In the shared tree 4 Demon / Mythic rule tests fail from another session's uncommitted `demon_rules` change. **Untested in a match.**
 
+### Mythic plays by Demon's rules, 2026-11-18
+
+The owner: "Give mythic the same ruleset as demons. such as the vehicle bans fight commit, pickups and regen reads".
+
+- `brain/profiles.py` `demon_rules` (new): Demon or Mythic. Each Demon-only rule check across `brain/bot.py`, `brain/director.py` and `brain/equipment.py` now uses it (37 sites). Rules covered: the Warthog/Mongoose/Ghost wheel ban and its director orders, never a Wheelman (`mythic_profile` makes one a Flanker, `driver_priority` None), standing its ground, sidearm cover, mending and recharging to full, no new fight while hurt, breaking from a second watcher, the radar threat, dot glance and open dots, regen reads (`learn_regen`), the anticipated guess, the hunt's held look, the blade draw range, target choice, waiting on a man out of sight, on-the-way fights, playing the objective, the gun fetch commit, the corner chase, the power-weapon commit, the pre-nade's predicted path, cover from threats, no thruster in a gunfight, the Team Slayer anchor and Demon pairs, Halo 4's rules (`h4_demon`: Boltshot swap, melee range, power grab) and the fight odds and team play in every game (`team_demon`).
+- **Kept Demon-only (aim and hands):** Reach direct fire, the precision and Halo 4 head snaps, unerring lead, the fixed decision timing. Mythic keeps its halfway hands and Legendary's protected head/turret precision (`precision_profile`). Its own odds pace stays 0.9 (`odds.own_acc`), now in Halo 4 as well (`own_pace`, the posted sightings pace).
+- **Not changed:** the BOTS panel (`native/bots_panel.h` `hb_style_fits`, Quick Start) and the site (`tools/service_record.py`) still offer Wheelman for Mythic. The brain plays it as a Flanker.
+- Validation: `tools/test_demon_objective.py`, `test_demon_radar.py`, `test_reach_team_demon.py` and `test_wheelman.py` now expect Mythic with Demon's rules. Full suite: 961 tests OK; `brain.bot`, `brain.director` and `brain.equipment` import. **Untested in a match.**
+
 ### Warthog chaingun: no spray at the newest radar dot, 2026-11-18
 
 The owner's F9 "Majorgunner in the turret shooting the ground why" (reach_dlc_medium `20261118-220316`, 619.2 s; he added "The gunner shooting the ground was about several seconds before killing me").

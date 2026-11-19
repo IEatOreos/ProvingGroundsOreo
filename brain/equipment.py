@@ -637,7 +637,7 @@ class Kit:
         # a heal field, bubble or regenerator.
         # (custom: no thruster in a gunfight for Demon outside Infection, the owner's ask Nov 7: not this cover thrust,
         # nor the fight's dash-in below; the grenade, lunge, sniper-lane and flag thrusts stay)
-        demon_gunfight = k == "thruster" and profiles.fixed_demon(bot.p) and snap.mode != "infection"
+        demon_gunfight = k == "thruster" and profiles.demon_rules(bot.p) and snap.mode != "infection"
         if x["cracked"] and x["hit"]:
             close = next((e for e in x["seen"] if dist(e.pos, me.pos) < 8.0), None)
             if k == "thruster" and not demon_gunfight and not no_cover():

@@ -117,9 +117,12 @@ class RankTests(unittest.TestCase):
         self.assertIsNone(b.radar_threat(10.0, me, known(b)))           # stale
         b, me = scene(dots={1: (Vec(-5, 0, 0), "heard")}, open_x=(-5,))
         self.assertIsNone(b.radar_threat(10.0, me, known(b)))           # a shot heard: not a dot
-        for tier in ("top", "strong", "mythic"):
+        for tier in ("top", "strong", "blind"):
             b, me = scene(tier=tier, dots={1: (Vec(-5, 0, 0), "radar")}, open_x=(-5,))
             self.assertIsNone(b.radar_threat(10.0, me, known(b)), tier)
+        # (Nov 18, owner: "Give mythic the same ruleset as demons") Mythic watches the dot too (profiles.demon_rules)
+        b, me = scene(tier="mythic", dots={1: (Vec(-5, 0, 0), "radar")}, open_x=(-5,))
+        self.assertIsNotNone(b.radar_threat(10.0, me, known(b)))
         b, me = scene(dots={1: (Vec(-5, 0, 0), "radar")}, open_x=(-5,))
         with mock.patch.object(botmod, "DEMON_RADAR", False):
             self.assertIsNone(b.radar_threat(10.0, me, known(b)))

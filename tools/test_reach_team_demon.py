@@ -41,7 +41,8 @@ class GateTests(Clean):
     def test_who_has_the_team_play(self):
         for tier, game_map, want in (("demon", "reach_test", True), ("mythic", "reach_test", True),
                                      ("top", "reach_test", False), ("demon", "h4_test", True),
-                                     ("mythic", "h4_test", False), ("strong", "reach_test", False)):
+                                     ("mythic", "h4_test", True), ("strong", "reach_test", False)):
+            # (Nov 18, owner: "Give mythic the same ruleset as demons": Halo 4 Mythic too, profiles.demon_rules)
             with self.subTest(tier=tier, game=game_map):
                 b = Bot(0, 0, make_profile(tier, "rusher", random.Random(1)), {"name": game_map}, random.Random(2))
                 self.assertEqual(b.team_demon(), want)

@@ -116,8 +116,9 @@ TACTICIAN_REACTION = HANDS["reaction"] * (0.85 + 0.70) / 2
 # awareness only, named Mythic, 10 points) Mythic: Legendary (tier "top", extra None, label "mythic": every Legendary
 # rule, and Legendary's protected head / turret precision) whose aim, hands and decision time sit MYTHIC_TOWARD of the
 # way from Legendary's base to Demon's, jittered as every tier's are, with Demon's eyes (demon_eyes: its wide view, every
-# radar dot noticed, a firing man's dot, the dot's drift). Demon's other rules (fight commitment, pickups, regen reads,
-# the vehicle bans) stay Demon's. Why: the owner went 43-0 against Legendary and Blind, who lost the first look (49-62%
+# radar dot noticed, a firing man's dot, the dot's drift). (Nov 18, owner: "Give mythic the same ruleset as demons")
+# Demon's other rules too (demon_rules: fight commitment, pickups, regen reads, the vehicle bans); its aim stays its
+# own. Why: the owner went 43-0 against Legendary and Blind, who lost the first look (49-62%
 # to his 69%); Blind's quicker hands alone did not help it (3 kills, 14 deaths), Demon's eyes win that look
 MYTHIC = "mythic"
 MYTHIC_TOWARD = 0.5
@@ -146,6 +147,14 @@ def fixed_mythic(prof):
 def demon_eyes(prof):
     """(custom, Nov 13) Demon's awareness (Perception.update: the wide view, every radar dot noticed, a firing man's
     dot, the dot's drift): Demon and Mythic."""
+    return fixed_demon(prof) or fixed_mythic(prof)
+
+
+def demon_rules(prof):
+    """(custom, Nov 18, owner: "Give mythic the same ruleset as demons") Demon's rules, not its aim: the vehicle bans
+    (no Warthog, Mongoose or Ghost wheel, no Wheelman), fight commitment, pickups, regen reads, the radar play, the
+    team pairing and Halo 4's rules: Demon and Mythic. Demon's aim stays its own (fixed_demon: the head snaps, direct
+    fire, unerring lead, its decision timing) and Mythic keeps Legendary's protected precision (precision_profile)."""
     return fixed_demon(prof) or fixed_mythic(prof)
 
 
@@ -195,8 +204,8 @@ def defend_priority(prof):
 
 def driver_priority(prof):
     """Who the director sends to drive a Warthog or a Mongoose (vehicles.DEMON_NO_DRIVE): Normal and Heroic first, then
-    Scaling and Legendary, then Easy; Demon never (None). (custom, Nov 13) A Wheelman before all of them."""
-    if fixed_demon(prof):
+    Scaling and Legendary, then Easy; Demon and Mythic never (None). (custom, Nov 13) A Wheelman before all of them."""
+    if demon_rules(prof):
         return None
     if wheelman(prof):
         return -1
@@ -348,7 +357,10 @@ def mythic_hands():
 
 def mythic_profile(personality, rng=random):
     """Legendary's profile (its game sense, jittered as ever) with its hands set between Legendary's and Demon's, each
-    jittered 0.9-1.1 as make_profile jitters every tier's (the turn speed not: TURN never is)."""
+    jittered 0.9-1.1 as make_profile jitters every tier's (the turn speed not: TURN never is). (Nov 18) Like a Demon
+    never a Wheelman (demon_rules: it drives no Warthog, Mongoose or Ghost): a Flanker."""
+    if personality == "wheelman":
+        personality = "flanker"
     prof = make_profile("top", personality, rng)
     base = mythic_hands()
     turn = base.pop("turn")

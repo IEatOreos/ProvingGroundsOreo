@@ -47,7 +47,12 @@ class ProfileTests(unittest.TestCase):
         d = profiles.make_profile("demon", "wheelman", random.Random(1))
         self.assertFalse(profiles.wheelman(d))
         self.assertEqual(d.personality, "flanker")
-        for t in ("novice", "average", "strong", "top", "blind", "tactician", "mythic"):
+        # (Nov 18, owner: "Give mythic the same ruleset as demons") Mythic, like Demon, plays a Wheelman as a Flanker
+        m = profiles.make_profile("mythic", "wheelman", random.Random(1))
+        self.assertFalse(profiles.wheelman(m))
+        self.assertEqual(m.personality, "flanker")
+        self.assertIsNone(profiles.driver_priority(m))
+        for t in ("novice", "average", "strong", "top", "blind", "tactician"):
             self.assertTrue(profiles.wheelman(profiles.make_profile(t, "wheelman", random.Random(1))), t)
         header = (ROOT / "native" / "bots_panel.h").read_text(encoding="utf-8", errors="replace")
         self.assertIn("#define HB_STYLE_WHEELMAN 7", header)

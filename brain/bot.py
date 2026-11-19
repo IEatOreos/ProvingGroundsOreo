@@ -1305,7 +1305,7 @@ class Perception:
         part_los = getattr(terrain, "target_parts", None)
         vision_mode = "see" if getattr(los, "__name__", "") == "sees" else None
         fixed_high = profiles.fixed_high(s.p)
-        demon = profiles.fixed_demon(s.p)
+        demon = profiles.demon_rules(s.p)
         eyes = profiles.demon_eyes(s.p)          # (custom, Nov 13) Demon's awareness: Demon and Mythic
         center_half = math.radians(90) if eyes else math.radians(50) if fixed_high else FOV_HALF
         peripheral_half = center_half if eyes else math.radians(60) if fixed_high else PERIPHERAL_HALF
@@ -2030,7 +2030,7 @@ class Bot:
     def guess(s, now, me, k, b):
         """Demon: where enemy k most likely is now (anticipate.predict over what belief b says), kept GUESS_KEEP s
         per trace. Every other tier: where it last knew him (b.pos), as before."""
-        if not profiles.fixed_demon(s.p) or b is None or s.map is None or not s.map.get("name"):
+        if not profiles.demon_rules(s.p) or b is None or s.map is None or not s.map.get("name"):
             return b.pos if b is not None else None
         cache = s.__dict__.setdefault("_guess", {})
         c = cache.get(k)
@@ -2108,7 +2108,7 @@ class Bot:
         him (decide's close-fight rule), or, him only on the tracker, turns to him (a hunt at his dot). The owner's
         Powerhouse games, Nov 7: Demons he killed from 5-9 u behind were retreating (Slayer7 at 49 and 152 s, Havoc94
         at 40 s). Not with the objective in hand."""
-        if not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle != -1:
+        if not profiles.demon_rules(s.p) or me.has_flag or me.vehicle != -1:
             return
         near = [(dist(me.pos, b.pos), k, b) for k, b in s.per.beliefs.items() if isinstance(k, int)
                 and (b.seen or (b.source in ("radar", "hit") and now - b.t < DEMON_STAND_FRESH))]
@@ -2132,7 +2132,7 @@ class Bot:
         and none within DEMON_STAND_R: cover from them within DEMON_SIDEARM_COVER, a person's break to find a gun
         rather than a pistol's trade with a rifle. A man right on it is still fought (stand_ground, decide's
         close-fight rule). None: armed, nobody in sight, or no cover near."""
-        if not profiles.fixed_demon(s.p) or me.vehicle != -1 or me.has_flag or not seen or snap.mode == "race":
+        if not profiles.demon_rules(s.p) or me.vehicle != -1 or me.has_flag or not seen or snap.mode == "race":
             return None
         guns = [w for w in getattr(me, "weapons", ()) or () if w not in ("none", "unknown")]
         if not guns or any(w not in DEMON_SIDEARMS for w in guns):
@@ -2153,7 +2153,7 @@ class Bot:
         (the 3.2 turns on him) still win, as for a person. Ends when the shield is full and the body full or no longer
         refilling for MEND_STALL s, or after MEND_MAX s. None: not mending."""
         m = getattr(s, "mend", None)
-        if not profiles.fixed_demon(s.p) or me.vehicle != -1 or me.has_flag or snap.shieldless or snap.mode == "race":
+        if not profiles.demon_rules(s.p) or me.vehicle != -1 or me.has_flag or snap.shieldless or snap.mode == "race":
             s.mend = None
             return None
         g = s.goal
@@ -2196,7 +2196,7 @@ class Bot:
         the last DEMON_RECHARGE_HIT s leaves it to the usual rules. Not in a vehicle, carrying, standing on a loose
         objective (stay_on), in Race or Infection, or without shields."""
         hurt = getattr(s.per, "hurt_at", -99.0)
-        if (not profiles.fixed_demon(s.p) or me.vehicle not in (None, -1) or me.has_flag or snap.shieldless
+        if (not profiles.demon_rules(s.p) or me.vehicle not in (None, -1) or me.has_flag or snap.shieldless
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK):
             s.recharge_hold = s.recharge_out = None
@@ -2250,7 +2250,7 @@ class Bot:
         shot in the back). Not in a vehicle, carrying, standing on a loose objective, in Race or Infection, without
         shields, or while demon_recharge's hold already runs."""
         hurt = getattr(s.per, "hurt_at", -99.0)
-        if (not seen or not profiles.fixed_demon(s.p) or me.vehicle not in (None, -1) or me.has_flag
+        if (not seen or not profiles.demon_rules(s.p) or me.vehicle not in (None, -1) or me.has_flag
                 or snap.shieldless or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK or now - hurt < DEMON_RECHARGE_HIT
                 or getattr(s, "recharge_hold", None) is not None):
@@ -2304,7 +2304,7 @@ class Bot:
         """(custom, Nov 18) {enemy: where it guesses he is} of the radar dots and team callouts (not in view, under
         DOT_BREAK_FRESH s old, within DEMON_WATCH_R) with an open line to it on the map: a man who can shoot it that it
         cannot see, the second man of a fight it is in (demon_break_second). Demon with DEMON_RADAR only."""
-        if not DEMON_RADAR or not profiles.fixed_demon(s.p):
+        if not DEMON_RADAR or not profiles.demon_rules(s.p):
             return {}
         T, out = s.T(), {}
         for k, b in s.per.beliefs.items():
@@ -2331,7 +2331,7 @@ class Bot:
         reach, the recharge hold, a vehicle, carrying, a loose objective under it, Race and Infection: the usual
         rules."""
         dots = s.open_dots(now, me, snap, seen) if seen else {}   # (Nov 18: a radar dot with a line on it counts too)
-        if (not profiles.fixed_demon(s.p) or len(seen) + len(dots) < 2 or me.vehicle not in (None, -1) or me.has_flag
+        if (not profiles.demon_rules(s.p) or len(seen) + len(dots) < 2 or me.vehicle not in (None, -1) or me.has_flag
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or getattr(s, "recharge_hold", None) is not None):
             s.break_spot = None
@@ -3000,7 +3000,7 @@ class Bot:
             # back off toward safety (a wall between us and them if LiDAR found one) while still
             # shooting at the closest threat; by the nav, a straight line can run into a wall
             t = min(s.per.visible_enemies(), key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
-            if profiles.fixed_demon(s.p):
+            if profiles.demon_rules(s.p):
                 held = s.carried_target(now, snap)     # (Demon: still the man it was fighting, while it sees him)
                 if held in s.per.visible_enemies():
                     t = held
@@ -3070,7 +3070,7 @@ class Bot:
             s.aim.whip = 0.0
             look = s.look_point(me, point, nav, post)
             ck = getattr(s, "commit_carry", None)
-            cb = s.per.beliefs.get(ck) if kind == "hunt" and ck is not None and profiles.fixed_demon(s.p) else None
+            cb = s.per.beliefs.get(ck) if kind == "hunt" and ck is not None and profiles.demon_rules(s.p) else None
             if cb is not None and isinstance(arg, Vec) and (arg - cb.pos).flat() < 4.0:
                 # (custom, Nov 13) a Demon hunting the man it fought: its eyes on where it believes he is, chest high,
                 # not along its path (where he peeks from)
@@ -3647,7 +3647,7 @@ class Bot:
                     # sword users held it out at 4-15 units for 85% of their sword fights). Demon (custom): its rifle's
                     # aim wins the range fight, so the blade comes out only for the man nearly in reach (owner's
                     # Powerhouse games, Nov 7: Demons held the hammer out 216 fight ticks at a median 6 u, swung 0 times)
-                    if profiles.fixed_demon(s.p):
+                    if profiles.demon_rules(s.p):
                         draw = DEMON_LUNGE_KEEP if i == cur else DEMON_LUNGE_DRAW
                     else:
                         draw = 8.0 if i == cur else 6.0
@@ -3772,11 +3772,11 @@ class Bot:
         scored = {k: s.threat(now, me, snap, k) for k in seen}
         best = max(scored, key=scored.get)
         cur = s.goal[1] if s.goal[0] == "fight" else None
-        if cur is None and profiles.fixed_demon(s.p):
+        if cur is None and profiles.demon_rules(s.p):
             cur = s.carried_target(now, snap)     # (the man it fought before a short hunt or retreat)
             if cur is not None and cur not in seen and not s.chase_ok(now, me, snap, cur):
                 cur = None                        # (custom, Nov 8: Halo 4, not after him hurt or into his friends)
-        if profiles.fixed_demon(s.p) and cur is not None and best != cur:
+        if profiles.demon_rules(s.p) and cur is not None and best != cur:
             return s.demon_commit(now, me, snap, seen, scored, best, cur)
         if cur in scored and best != cur and s.shot_by_other(now, me, snap, best, cur, seen):
             return best
@@ -3862,7 +3862,7 @@ class Bot:
 
     def demon_waiting(s, now, snap, k):
         """(custom, Nov 13) Fixed Demon, the man k it fights out of sight no longer than demon_wait."""
-        if not profiles.fixed_demon(s.p) or k is None or k not in s.per.beliefs:
+        if not profiles.demon_rules(s.p) or k is None or k not in s.per.beliefs:
             return False
         e = snap.player(k)
         return e is not None and e.alive and now - s.per.last_seen.get(k, -9.0) <= s.demon_wait(now, snap, k)
@@ -3946,7 +3946,7 @@ class Bot:
         goal, as a patrol does); None otherwise, or in the last steps onto a gun (the pickup's own presses). The owner's
         Rasu game, Nov 7: a Demon looked at him 6.6 s at 22 u on its way to a plasma pistol and a gun and never fired."""
         run = kind == "objective" and snap.mode not in ("slayer", "race")   # (owner: objective runs too, Nov 7)
-        if ((kind not in ON_WAY_KINDS and not run) or not isinstance(arg, Vec) or not profiles.fixed_demon(s.p)
+        if ((kind not in ON_WAY_KINDS and not run) or not isinstance(arg, Vec) or not profiles.demon_rules(s.p)
                 or me.vehicle not in (None, -1) or me.has_flag or s.dry(me)):
             return None
         if kind == "item" and (me.pos - arg).flat() < ON_WAY_LAST:
@@ -3979,7 +3979,7 @@ class Bot:
         (on_way_target), a man at arm's length (DEMON_OBJ_ARM) still fought. Live Condemned Crazy King 20261113-204320:
         within 8 u of the hill the two Demons chose it 3% and 13% of the time (Easy to Mythic 30-85%), beaten by a gun
         grab (3.15), a stand-ground hunt (3.2) and committed fights; they stood on it 2 s and 4 s of 5 minutes."""
-        if (not profiles.fixed_demon(s.p) or snap.mode in ("slayer", "race") or me.has_flag
+        if (not profiles.demon_rules(s.p) or snap.mode in ("slayer", "race") or me.has_flag
                 or me.vehicle not in (None, -1) or s.order.role not in DEMON_OBJ_ROLES or s.dry(me)):
             return
         obj = [k for k in scores if k[0] == "objective" and isinstance(k[1], Vec)]
@@ -4046,7 +4046,7 @@ class Bot:
         shot. Returns whether it lifted one."""
         if not (seen and regroup is None and not me.has_flag and me.vehicle in (None, -1) and profiles.fixed_high(s.p)):
             return False
-        eyes = profiles.fixed_demon(s.p) and not avoid
+        eyes = profiles.demon_rules(s.p) and not avoid
         if not (hit_recent or eyes):
             return False
         mission = set(getattr(s, "mission_keys", ()) or ())
@@ -4147,7 +4147,7 @@ class Bot:
             # owner's Powerhouse games, Nov 7: of 21 Demons he killed, 11 knew him by a dot under 1 s old through their
             # last 3 s and 6 of those never turned on him: an item, a retreat, another man). Cracked: arm's length only
             radius = 3.5
-            if profiles.fixed_demon(s.p) and (snap.shieldless or me.shield >= 0.5):
+            if profiles.demon_rules(s.p) and (snap.shieldless or me.shield >= 0.5):
                 radius = DEMON_RADAR_TURN_R
             near = [(dist(me.pos, b.pos), k) for k, b in s.per.beliefs.items() if isinstance(k, int) and not b.seen
                     and b.source in ("radar", "hit") and now - b.t < 1.0 and k != cur and dist(me.pos, b.pos) < radius]
@@ -4324,7 +4324,7 @@ class Bot:
                 # every mode isoR / isoP)
                 busy = hit_recent or any(dist(me.pos, s.per.beliefs[k].pos) < 15.0 for k in seen)
                 want = 1.2 if busy else 1.85
-                if (profiles.fixed_demon(s.p) and (me.pos - fetch[0]).flat() < FETCH_COMMIT_R
+                if (profiles.demon_rules(s.p) and (me.pos - fetch[0]).flat() < FETCH_COMMIT_R
                         and abs(me.pos.z - fetch[0].z) < FETCH_COMMIT_DZ):
                     # Demon a few steps from the gun: take it, then fight with it (live Headlong: 107 of 253 runs left
                     # for a fight, 57 for a hunt; 25 of 282 got the gun). A man close in is still fought first (decide's
@@ -4499,7 +4499,7 @@ class Bot:
     def may_drive(s, v, snap):
         """This bot may take vehicle v's wheel: not a Demon at a Warthog's or a Mongoose's (vehicles.DEMON_NO_DRIVE: it rides
         their guns and seats; the owner's ask Nov 7). Race laps excepted: every racer drives."""
-        return (getattr(snap, "mode", None) == "race" or not profiles.fixed_demon(s.p)
+        return (getattr(snap, "mode", None) == "race" or not profiles.demon_rules(s.p)
                 or not (vehicles.demon_no_drive(v["kind"]) or s.ghost_spent(v)))
 
     def wheel_yield(s, v):
@@ -6522,7 +6522,7 @@ class Bot:
             # of sight: chase by the nav to where he went (a little along his last velocity); the straight run at the
             # wall he went behind lost him in 54% of live Lockdown fights (tools/fight_ends.py --map). A novice still
             # runs straight at where he was
-            if profiles.fixed_demon(s.p) and unseen > 0.5 and not hold:
+            if profiles.demon_rules(s.p) and unseen > 0.5 and not hold:
                 # Demon: no chase into his bait (corner_plan), and the chase goes where he got to (anticipate)
                 how, point = s.corner_plan(now, me, b, target, tid, d, unseen, snap)
                 if how == "hold" and (point - me.pos).flat() < 0.5:
@@ -6949,7 +6949,7 @@ class Bot:
             o = odds_model.simulate(th) if th else 9.0
             if o < POWER_PUSH_ODDS:
                 return                              # it would lose: the usual choice (break off, cover, fight)
-        rest = {k: v for k, v in scores.items() if k != g and (profiles.fixed_demon(s.p) or k[0] != "fight")}
+        rest = {k: v for k, v in scores.items() if k != g and (profiles.demon_rules(s.p) or k[0] != "fight")}
         top = max(rest.values()) if rest else scores[g]
         if scores[g] < top + POWER_COMMIT_MARGIN:
             scores[g] = top + POWER_COMMIT_MARGIN
@@ -8379,13 +8379,14 @@ class Bot:
         return s.p.jump >= 0.5 or (EASY_NAV_JUMP and s.p.tier in ("novice", "average"))
 
     def h4_demon(s):
-        """(custom) Fixed Demon in Halo 4: its Halo 4 only rules (the Boltshot swap, the melee range, the power grab)."""
-        return s.game == "h4" and profiles.fixed_demon(s.p)
+        """(custom) Fixed Demon in Halo 4: its Halo 4 only rules (the Boltshot swap, the melee range, the power grab).
+        (Nov 18) Mythic too (profiles.demon_rules)."""
+        return s.game == "h4" and profiles.demon_rules(s.p)
 
     def team_demon(s):
         """(custom) The fight odds (brain/odds.py), team play and the team's sightings: Halo 4 Demon, and (Nov 18, the
-        owner) Reach Demon and Mythic."""
-        return s.h4_demon() or (s.game == "reach" and (profiles.fixed_demon(s.p) or profiles.fixed_mythic(s.p)))
+        owner) Reach Demon and Mythic; (Nov 18) Halo 4 Mythic too (profiles.demon_rules)."""
+        return s.h4_demon() or (s.game == "reach" and profiles.demon_rules(s.p))
 
     def enemy_acc(s, e):
         """(custom, Nov 18) Man e's share of the odds' pace: in Reach a bot's by its difficulty (BOT_PROFILES), a person
@@ -8394,8 +8395,9 @@ class Bot:
         return odds_model.acc_of(e, prof, s.game)
 
     def own_pace(s):
-        """(custom, Nov 18) Its own share of the odds' pace: Halo 4 Demon's DEMON_ACC; Reach Demon and Mythic own_acc."""
-        return odds_model.own_acc(s.p) if s.game == "reach" else odds_model.DEMON_ACC
+        """(custom, Nov 18) Its own share of the odds' pace: Demon's DEMON_ACC, Mythic's own (odds.own_acc), in every
+        game."""
+        return odds_model.own_acc(s.p)
 
     def weak(s, e):
         """(custom, Nov 18) Reach: an enemy bot of a weak difficulty (under odds.DANGER_ACC: Normal and below, Blind,
@@ -8436,7 +8438,7 @@ class Bot:
             if b is not None:
                 book[k] = (now, b.pos, b.vel, me.id)
         acc = (odds_model.acc_of(me, s.p, "reach") if s.game == "reach"      # (custom, Nov 18: by its difficulty)
-               else odds_model.DEMON_ACC if profiles.fixed_demon(s.p) else odds_model.ACC[False])
+               else odds_model.own_acc(s.p) if profiles.demon_rules(s.p) else odds_model.ACC[False])
         TEAM_EYES.setdefault(key, {})[me.id] = (now, frozenset(k for k in in_view if isinstance(k, int)), acc)
         BOT_PROFILES[(key[0], me.id)] = s.p                # (custom, Nov 18: who it is, for the team's odds)
         facing = TEAM_FACING.setdefault(key, {})
@@ -8684,7 +8686,7 @@ class Bot:
             v = b.vel
             if v.flat() < 0.5 or (v.x * to.x + v.y * to.y) < math.cos(math.radians(70)) * v.flat() * to.flat():
                 continue                                    # not coming this way
-            if profiles.fixed_demon(s.p):
+            if profiles.demon_rules(s.p):
                 where = anticipate.predict(T, me.pos, b, now, tracker=True)
             else:
                 where = b.pos + Vec(v.x, v.y, 0.0) * min(1.0, now - b.t)
@@ -9973,7 +9975,7 @@ class Bot:
         at full speed), so a man lining it up from behind comes into view and the fight on the way takes him
         (on_way_target). The owner's Gore Valley CTF, Nov 7: 11% of his hits on Demons came on their objective runs
         while they had him only as a radar dot. Where to look, or None."""
-        if not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle not in (None, -1) or DEMON_RADAR:
+        if not profiles.demon_rules(s.p) or me.has_flag or me.vehicle not in (None, -1) or DEMON_RADAR:
             return None                     # (DEMON_RADAR: radar_threat in look_point instead)
         g = getattr(s, "glance", None)
         if g is not None and now < g[1]:
@@ -10039,7 +10041,7 @@ class Bot:
         our sight right by us (down that way: "way"); with no way found, one within DOT_NEAR_R: the nav's way to him.
         More than DOT_IGNORE_S from view: left. The one watched keeps the eyes until another is DOT_SWITCH s sooner.
         Only what a person has: the dots, where they went, the map."""
-        if not DEMON_RADAR or not profiles.fixed_demon(s.p) or me.has_flag or me.vehicle not in (None, -1):
+        if not DEMON_RADAR or not profiles.demon_rules(s.p) or me.has_flag or me.vehicle not in (None, -1):
             return None
         dots = [(k, b) for k, b in known if isinstance(k, int) and not b.seen and b.source in ("radar", "team")
                 and now - b.t < DOT_FRESH and dist(me.pos, b.pos) < DOT_THREAT_R]
@@ -10313,7 +10315,7 @@ class Bot:
         losing-fight, recharge and regroup retreats never found any.) (Nov 18: Reach Mythic too, team_demon: its odds
         break-offs need a way out of sight there as Demon's do.)"""
         spot = s.lidar_cover(me, threats)
-        if spot is None and threats and (profiles.fixed_demon(s.p) or s.team_demon()):
+        if spot is None and threats and (profiles.demon_rules(s.p) or s.team_demon()):
             spot = s.los_cover(me, threats)
         return spot
 

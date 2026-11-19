@@ -61,16 +61,18 @@ class DemonObjectiveTests(unittest.TestCase):
         self.assertEqual(scores, before)
 
     def test_only_demon_and_only_objective_modes_and_roles(self):
-        for tier, mode, role in (("top", "king", "defender"), ("mythic", "king", "defender"), ("demon", "slayer", "mid"),
+        # (Nov 18, owner: "Give mythic the same ruleset as demons") Mythic plays it too (profiles.demon_rules)
+        for tier, mode, role in (("top", "king", "defender"), ("blind", "king", "defender"), ("demon", "slayer", "mid"),
                                  ("demon", "race", "runner"), ("demon", "ctf", "hunter"), ("demon", "ctf", "escort")):
             b, me, snap, scores = scene(tier=tier, mode=mode, role=role)
             before = dict(scores)
             b.demon_objective(me, snap, scores, [5])
             self.assertEqual(scores, before, (tier, mode, role))
-        for mode in ("king", "ctf", "oddball", "territories", "headhunter"):
-            b, me, snap, scores = scene(mode=mode)
-            b.demon_objective(me, snap, scores, [5])
-            self.assertEqual(best(scores), "objective", mode)
+        for tier in ("demon", "mythic"):
+            for mode in ("king", "ctf", "oddball", "territories", "headhunter"):
+                b, me, snap, scores = scene(tier=tier, mode=mode)
+                b.demon_objective(me, snap, scores, [5])
+                self.assertEqual(best(scores), "objective", (tier, mode))
 
     def test_dry_or_carrying_unchanged(self):
         b, me, snap, scores = scene()
