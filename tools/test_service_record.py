@@ -762,6 +762,39 @@ def test_game_reads_the_sites_commendations():
         assert "\\\\logs\\\\service_record\\\\commendations.txt" in f.read()
 
 
+def test_game_reads_the_sites_home_states():
+    """(Nov 19) <site>/locations.txt, the heat on Proving Grounds' Psych Profile map: every state of states.json with
+    how many listed players have it as their home state (the site's own pick or the one set by hand), and each person's
+    state; every code also on the game's built-in map (native/world_map.h)."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 0, 600), row(bot(2), "Oreo", 1, 0, 7, 0, 3, 600)]))
+        w.career()
+        data = w.build()
+        data["players"][0]["person"] = True
+        data["players"][0]["state"] = "WA"                  # (as edit mode sets it)
+        out = os.path.join(tmp, "game")
+        os.makedirs(out)
+        sr.write_game_locations(data, types.SimpleNamespace(out=out))
+        with open(os.path.join(out, "locations.txt"), encoding="utf-8") as f:
+            rows = [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    _, states = sr.load_states()
+    table = [r for r in rows if r[0] == "state"]
+    assert [r[1] for r in table] == [s[0] for s in states] and all(len(r) == 4 for r in table)
+    want = {s[0]: 0 for s in states}
+    for p in data["players"]:
+        want[p["state"]] += 1
+    assert {r[1]: int(r[3]) for r in table} == want and sum(want.values()) == len(data["players"])
+    assert [r for r in rows if r[0] == "person"] == [["person", data["players"][0]["name"], "WA"]], rows
+    with open(os.path.join(HERE, "..", "native", "world_map.h"), encoding="utf-8") as f:
+        header = f.read()
+    assert all(f'{{"{s[0]}",' in header for s in states), "a state missing from the built-in map"
+    with open(os.path.join(HERE, "..", "native", "proving_grounds_reach.inc"), encoding="utf-8") as f:
+        assert "\\\\logs\\\\service_record\\\\locations.txt" in f.read()
+
+
 def test_rank_from_reach_matches_only():
     """Credits come from the counted Reach matches (a Halo 4 match earns none): 1 game, 1 win, 7 kills, 3 assists,
     5 medals."""

@@ -2487,6 +2487,31 @@ def write_game_commendations(data, paths):
     os.replace(tmp, os.path.join(paths.out, "commendations.txt"))
 
 
+def write_game_locations(data, paths):
+    """(Nov 19, the owner: Proving Grounds' Psych Profile page, "a static heat map of the service websites player
+    locations") <out>/locations.txt: how many of the site's listed players (bots and people) have each home state, as
+    the site shows them (states.json's pick from the name, or the one set in edit mode), and each person's own state.
+    The game draws the heat over its world map (native/proving_grounds_reach.inc, native/world_map.h)."""
+    _, states = load_states()
+    counts = {s[0]: 0 for s in states}
+    people = []
+    for p in data["players"]:
+        code = p.get("state")
+        if code in counts:
+            counts[code] += 1
+            if p.get("person"):
+                people.append((str(p["name"]).replace("\t", " ").replace("\n", " "), code))
+    lines = ["# made by tools/service_record.py with the site's home states (states.json, edit mode); do not edit",
+             "# state<TAB>code<TAB>name<TAB>players (bots and people) with it as their home state",
+             "# person<TAB>name<TAB>code"]
+    lines += [f"state\t{s[0]}\t{s[1]}\t{counts[s[0]]}" for s in states]
+    lines += [f"person\t{n}\t{c}" for n, c in people]
+    tmp = os.path.join(paths.out, "locations.txt.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, os.path.join(paths.out, "locations.txt"))
+
+
 def write_last_match(data, paths):
     """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
     report) <out>/last_match.txt: what the newest match on the site (a Proving Grounds match) earned each listed person
@@ -2579,6 +2604,7 @@ def write_site(data, paths):
     write_last_match(data, paths)
     write_game_challenges(data, paths)
     write_game_commendations(data, paths)                    # (Nov 19: the game's Commendations page)
+    write_game_locations(data, paths)                        # (Nov 19: the heat on the game's Psych Profile map)
     for name, text in (("data.js", "window.SR_DATA = " + json.dumps(data, separators=(",", ":")) + ";\n"),
                        ("stamp.js", f'window.SR_STAMP && window.SR_STAMP("{data["stamp"]}");\n')):
         tmp = os.path.join(paths.out, name + ".tmp")

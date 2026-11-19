@@ -559,6 +559,179 @@ static void rm_restrict(pg_env& e, float t) {
         if (pressed(base + k)) { g_rm_restrict[k] ^= 1; rm_save(); sound(PS_SELECT); }
 }
 
+// ------------------------------------------------------------------ the world map and the home states' heat
+// (Nov 19, the owner: "On the pysch profile page id like the same world map. and then a static heat map of the service
+// websites player locations") Reach's panel under the profile: the world (native/world_map.h, Natural Earth, public
+// domain) in its lines of latitude, and over it the heat of the Service Record's home states: how many of the site's
+// players (bots and people) live in each, as the site's last build wrote them (<repo>\logs\service_record\locations.txt,
+// tools/service_record.py write_game_locations). The player's own state is ringed.
+#include "world_map.h"
+
+static int g_loc_n[64];                          // players by WM_STATES index
+static int g_loc_total, g_loc_me = -1;           // all of them; the player's state (-1: not listed)
+static ULONGLONG g_loc_check, g_loc_stamp;
+// (Nov 19, the owner: "more of a lowkey vibrance to the orange. Make it more of a colormap instead of a popout circle.
+// similar to the og") the heat as Reach's own map had it: fine specks over the land, a dot every 0.8 degrees inside
+// the states, each coloured by a muted colormap (ember red, orange, soft amber) of the players around it: every
+// state's players spread from its label point (a Gaussian, 2.2 degrees), the most-lived-in place the top of the map.
+// Worked out once each time locations.txt changes.
+struct heat_pt { int16_t lon10, lat10; ImU32 col; };
+static std::vector<heat_pt> g_heat;
+
+static bool in_ring(const int16_t* q, int n, float lon, float lat) {   // (even-odd: a point inside a ring)
+    bool in = false;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+        float xi = q[2 * i] / 10.0f, yi = q[2 * i + 1] / 10.0f, xj = q[2 * j] / 10.0f, yj = q[2 * j + 1] / 10.0f;
+        if ((yi > lat) != (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) in = !in;
+    }
+    return in;
+}
+static ImU32 heat_colour(float v) {              // 0..1: clear, ember, orange, soft amber (never a full glare)
+    static const float S[5][5] = { { 0.00f, 96, 34, 22, 0 }, { 0.25f, 132, 48, 26, 70 }, { 0.50f, 186, 82, 34, 112 },
+                                   { 0.75f, 220, 128, 52, 146 }, { 1.00f, 238, 176, 96, 172 } };
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
+    int k = v >= 1 ? 3 : (int)(v * 4);
+    float t = (v - S[k][0]) / (S[k + 1][0] - S[k][0]);
+    auto mix = [&](int c) { return (int)(S[k][c] + (S[k + 1][c] - S[k][c]) * t); };
+    return IM_COL32(mix(1), mix(2), mix(3), mix(4));
+}
+static void heat_build() {
+    g_heat.clear();
+    if (!g_loc_total) return;
+    std::vector<int> start(WM_NSTATES);              // (each state's first point in WM_STATE_PTS)
+    const int16_t* q = WM_STATE_PTS;
+    int ring = 0;
+    for (int i = 0; i < WM_NSTATES; i++) {
+        start[i] = (int)(q - WM_STATE_PTS);
+        for (int r = 0; r < WM_STATES[i].rings; r++) q += 2 * WM_STATE_RING[ring++];
+    }
+    const float STEP = 0.8f, SIGMA = 2.2f;
+    std::vector<std::pair<heat_pt, float>> pts;
+    float top = 0;
+    for (float lat = 18.0f; lat <= 72.0f; lat += STEP)
+        for (float lon = -180.0f; lon <= -64.0f; lon += STEP) {
+            bool land = false;                   // (inside a state: the specks keep to the land)
+            for (int i = 0; i < WM_NSTATES && !land; i++) {
+                const int16_t* p = WM_STATE_PTS + start[i];
+                for (int r = 0, rr = WM_STATES[i].ring0; r < WM_STATES[i].rings && !land; r++, rr++) {
+                    land = in_ring(p, WM_STATE_RING[rr], lon, lat);
+                    p += 2 * WM_STATE_RING[rr];
+                }
+            }
+            if (!land) continue;
+            float v = 0;
+            for (int i = 0; i < WM_NSTATES; i++) {
+                if (!g_loc_n[i]) continue;
+                float dx = (lon - WM_STATES[i].lon10 / 10.0f) * cosf(lat * 0.01745f), dy = lat - WM_STATES[i].lat10 / 10.0f;
+                v += g_loc_n[i] * expf(-(dx * dx + dy * dy) / (2 * SIGMA * SIGMA));
+            }
+            if (v > top) top = v;
+            pts.push_back({ { (int16_t)(lon * 10), (int16_t)(lat * 10), 0 }, v });
+        }
+    for (auto& p : pts) {
+        float v = top > 0 ? powf(p.second / top, 0.6f) : 0;   // (a gentle curve: the quieter places still show)
+        if (v < 0.04f) continue;
+        p.first.col = heat_colour(v);
+        g_heat.push_back(p.first);
+    }
+}
+
+static void loc_load() {
+    ULONGLONG now = GetTickCount64();
+    if (g_loc_check && now - g_loc_check < 2000) return;
+    g_loc_check = now;
+    wchar_t p[MAX_PATH];
+    swprintf_s(p, L"%s\\logs\\service_record\\locations.txt", g_root);
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    ULONGLONG stamp = GetFileAttributesExW(p, GetFileExInfoStandard, &fa) ? ft_u64(fa.ftLastWriteTime) : 0;
+    if (stamp == g_loc_stamp) return;
+    g_loc_stamp = stamp;
+    memset(g_loc_n, 0, sizeof g_loc_n);
+    g_loc_total = 0;
+    g_loc_me = -1;
+    FILE* f = nullptr;
+    if (!stamp || _wfopen_s(&f, p, L"rb") || !f) return;
+    char line[512];
+    std::vector<std::string> c;
+    auto index_of = [](const std::string& code) {
+        for (int i = 0; i < WM_NSTATES; i++) if (code == WM_STATES[i].code) return i;
+        return -1;
+    };
+    while (fgets(line, sizeof line, f)) {
+        if (line[0] == '#') continue;
+        line[strcspn(line, "\r\n")] = 0;
+        split_tabs(line, c);
+        if (c.size() >= 4 && c[0] == "state") {
+            int i = index_of(c[1]), n = atoi(c[3].c_str());
+            if (i >= 0 && n > 0) { g_loc_n[i] = n; g_loc_total += n; }
+        } else if (c.size() >= 3 && c[0] == "person" && !_stricmp(c[1].c_str(), me_name())) {
+            g_loc_me = index_of(c[2]);
+        }
+    }
+    fclose(f);
+    heat_build();
+}
+
+static void rm_world_heat() {
+    const float X0 = 393, Y0 = 495, X1 = 1480, Y1 = 800;
+    auto at = [](int lon10, int lat10) {             // (latitude 80 at y 508, -40 at 760, as Reach's lines)
+        return P(400 + (lon10 / 10.0f + 180) / 360 * 1060, 508 + (80 - lat10 / 10.0f) * 2.1f);
+    };
+    g_dl->AddRectFilled(P(X0, Y0), P(X1, Y1), A(IM_COL32(7, 10, 13, 200)));
+    g_dl->PushClipRect(P(X0, Y0), P(X1, Y1), true);
+    std::vector<ImVec2> pts;
+    for (int pass = 0; pass < 2; pass++) {           // (the land, then its coasts over it)
+        const int16_t* q = WM_LAND_PTS;
+        for (int r = 0; r < WM_LAND_RINGS; r++) {
+            int n = WM_LAND_RING[r];
+            pts.resize(n);
+            for (int k = 0; k < n; k++) pts[k] = at(q[2 * k], q[2 * k + 1]);
+            if (pass == 0) g_dl->AddConcavePolyFilled(pts.data(), n, A(IM_COL32(40, 46, 52, 235)));
+            else g_dl->AddPolyline(pts.data(), n, A(IM_COL32(96, 108, 120, 140)), ImDrawFlags_Closed, 1.0f);
+            q += 2 * n;
+        }
+    }
+    {                                                // (the states' borders, faint, where the heat is)
+        const int16_t* q = WM_STATE_PTS;
+        int rings = 0;
+        for (int i = 0; i < WM_NSTATES; i++) rings += WM_STATES[i].rings;
+        for (int r = 0; r < rings; r++) {
+            int n = WM_STATE_RING[r];
+            pts.resize(n);
+            for (int k = 0; k < n; k++) pts[k] = at(q[2 * k], q[2 * k + 1]);
+            g_dl->AddPolyline(pts.data(), n, A(IM_COL32(120, 132, 144, 70)), ImDrawFlags_Closed, 1.0f);
+            q += 2 * n;
+        }
+    }
+    static const char* lat[7] = { "80", "60", "40", "20", "0", "20", "40" };
+    for (int i = 0; i < 7; i++) {
+        float y = 508 + i * 42.0f;
+        g_dl->AddLine(P(400, y), P(1460, y), A(IM_COL32(150, 170, 190, 34)), U(1));
+        text(g_fs, 13, 1474, y - 8, IM_COL32(176, 182, 188, 140), lat[i], 2);
+    }
+    // the heat: the specks of the colormap (heat_build)
+    loc_load();
+    int most = 0, most_i = -1;
+    for (int i = 0; i < WM_NSTATES; i++) if (g_loc_n[i] > most) { most = g_loc_n[i]; most_i = i; }
+    const float half = U(0.85f);
+    for (const heat_pt& h : g_heat) {
+        ImVec2 c = at(h.lon10, h.lat10);
+        g_dl->AddRectFilled(ImVec2(c.x - half, c.y - half), ImVec2(c.x + half, c.y + half), A(h.col));
+    }
+    if (g_loc_me >= 0) {                             // (the player's own state: a thin, quiet ring)
+        ImVec2 c = at(WM_STATES[g_loc_me].lon10, WM_STATES[g_loc_me].lat10);
+        g_dl->AddCircle(c, U(7), A(IM_COL32(236, 240, 244, 150)), 24, U(1.2f));
+    }
+    g_dl->PopClipRect();
+    char legend[128];
+    if (g_loc_total && most_i >= 0)
+        sprintf_s(legend, "SERVICE RECORD HOME STATES: %d PLAYERS, THE MOST IN %s (%d)%s", g_loc_total,
+                  WM_STATES[most_i].code, most, g_loc_me >= 0 ? ". YOURS IS RINGED." : "");
+    else
+        strcpy_s(legend, "SERVICE RECORD HOME STATES: NONE YET (THE SITE WRITES THEM WHEN IT IS BUILT)");
+    text(g_fs, 15, 404, Y1 - 24, IM_COL32(200, 206, 212, 190), legend);
+}
+
 static const char* RM_PSY[4] = { "CHATTINESS", "MOTIVATION", "TEAMWORK", "TONE" };
 static const char* RM_PSY_V[4][3] = { { "NO PREFERENCE (DEFAULT)", "QUIET", "TALKATIVE" },
                                       { "NO PREFERENCE (DEFAULT)", "HAVE FUN", "WIN" },
@@ -591,19 +764,7 @@ static void rm_psych(pg_env& e, float t) {
         text(g_fl, 27, 402, 366, C_TEXT, l1);
         text(g_fl, 25, 402, 406, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
     }
-    // a panel of our own under it: lines of latitude and a dot for each bot of the pool, where its name puts it
-    g_dl->AddRectFilled(P(393, 495), P(1480, 800), A(IM_COL32(6, 10, 14, 170)));
-    for (int i = 0; i < 7; i++) {
-        float y = 508 + i * 42.0f;
-        g_dl->AddLine(P(400, y), P(1460, y), A(IM_COL32(150, 170, 190, 40)), U(1));
-        static const char* lat[7] = { "80", "60", "40", "20", "0", "20", "40" };
-        text(g_fs, 13, 1474, y - 8, IM_COL32(176, 182, 188, 140), lat[i], 2);
-    }
-    for (int i = 0; i < g_npool_names && i < 400; i++) {
-        uint32_t h = hash_of(g_pool_names[i], 77);
-        float x = 420 + (h & 1023) / 1023.0f * 1020, y = 520 + ((h >> 10) & 1023) / 1023.0f * 260;
-        g_dl->AddCircleFilled(P(x, y), U(2.2f), A(IM_COL32(230, 140, 60, 170)));
-    }
+    rm_world_heat();                                 // (Nov 19: the world as Reach's, the Service Record's home states)
     rm_band();
     prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
     if (focus >= 0) {

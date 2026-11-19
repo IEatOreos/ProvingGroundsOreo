@@ -25,6 +25,11 @@ install from the user's own copy of the game.
 
 These components keep their own licenses; the PolyForm Noncommercial terms cover this project's own code and data.
 
+## Map data
+
+The world map on Proving Grounds' Psych Profile page (native/world_map.h, made by tools/world_map.py) is made from
+[Natural Earth](https://www.naturalearthdata.com/)'s 1:110m land and admin-1 states data, which is in the public domain.
+
 ## The map tools (a separate program)
 
 The 3D bots of the profile view, the armor effect sprites and some map data are made from each player's own game

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Proving Grounds: the Psych Profile's world map, with the Service Record's home states as heat, 2026-11-19
+
+The owner, after trying the Reach menus ("It works so far"): "On the pysch profile page id like the same world map. and then a static heat map of the service websites player locations". The Service Record's only locations are its home states (states.json: each player's US state, picked from the name by population or set by hand in edit mode).
+
+- **`native/world_map.h`** (new, 83 KB, made by **`tools/world_map.py`**): the world's land (127 outer rings) and the 50 US states and DC (outlines and Natural Earth's label point) at a tenth of a degree, from Natural Earth's 1:110m `ne_110m_land` and `ne_110m_admin_1_states_provinces` GeoJSON (public domain; downloaded on the owner's OK from github.com/nvkelso/natural-earth-vector, not kept in the repository). `NOTICE.md` credits it.
+- **`tools/service_record.py` `write_game_locations`**, run with every site build: `logs/service_record/locations.txt`, each state's count of listed players (bots and people) and each person's state.
+- **`native/proving_grounds_reach.inc` `rm_world_heat`:** the Psych Profile's panel is now the world, filled dark grey with its coasts, the states' borders faint, Reach's lines of latitude (80 to 40) over it, and the heat as Reach's own map had it: fine specks every 0.8 degrees inside the states, each coloured by a muted colormap (ember red, orange, soft amber; never full brightness) of the players around it, every state's players spread from its label point (a Gaussian, 2.2 degrees). Worked out once when `locations.txt` changes (`heat_build`). The player's own state has a thin, quiet ring; a line under the map says how many players, the most-lived-in state and its count. The random dots it had are gone.
+  - First drawn as glowing circles per state; the owner: "more of a lowkey vibrance to the orange. Make it more of a colormap instead of a popout circle. similar to the og".
+- **Validation:** `tools/test_service_record.py` +1 (36 pass): every state of states.json in order with the right counts, the person's state, every code also in `world_map.h`, the page reading `locations.txt`. The site rebuilt for real: 754 players, the most in CA (77), the owner's NY. The preview's Psych Profile drawn and checked by eye (the land, the speck colormap over the US, NY ringed). `build.bat pg27` builds `botcore_pg27.dll`. **Untested in game.**
+
 ### Proving Grounds: Halo: Reach's own menus, phase 1 (title, main menu, matchmaking), 2026-11-19
 
 The owner sent seven frames of Halo: Reach's menus (its title screen, MAIN MENU, MATCHMAKING, PLAYLIST twice, SEARCH RESTRICTIONS, PSYCH PROFILE): "Starting here. This is the main menu. And the matchmaking menus all phase 1".
