@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Bomb carriers: drop to fight in one-bomb Assault, and nothing but the plant near the goal, 2026-11-18
+
+The owner: "Add the ctf rule where the runner drops the flag but for neutral bomb assault and one bomb to fight when running. Also Make it to where the bomb planter doesnt leave the bomb site if theyre planting or within 4 units of planting to avoid a fight. That should be the only priority is too plant the bomb that close."
+
+- **Drop to fight** (`brain/bot.py`): `Bot.flag_fight_check` now also runs in Reach Assault when one bomb is in play (`Bot.single_bomb`: Neutral Bomb's bomb, team 8, or One Bomb's, with one goal left to plant on). The rule is unchanged: dying before it gets there, more than 4 u out, an enemy within 10 u. Home is the enemy goal it plants on (`flag_home`, `modes.carry_goal`). Going back after the fight, it takes the loose bomb but not one armed on a goal (`flag_dropped_at`). Two-bomb Assault is left as it was.
+- **Plant first** (`Bot.plant_point`, `plant_hold`, `plant_stay`, `PLANT_HOLD_R` 4 u, `PLANT_HOLD_SCORE` 9.0): in Assault in every game, a carrier on foot within 4 u of the goal it plants on has one goal, the plant. `decide` drops every other score as its last step (fights, retreats, regroups, hunts, the close-fight rule) and calls off a drop to fight not yet made. `plan` decides again at once when the bot comes within 4 u with another goal, then puts the walk onto the goal back after the carrier's swing, the kit, the give-way and a grenade's step away. **A frag at its feet no longer moves a planter** (the owner's "only priority"). The carrier's melee swing at a man within reach still goes; it does not walk it off the goal.
+- Validation: `tools/test_bomb_plant.py` (new, 10). It covers the Neutral Bomb and One Bomb drops, two-bomb and other games unchanged, back for a loose bomb but not an armed one, within 4 u only the plant, every Assault, not past 4 u or without the bomb, a drop under way called off, the walk put back, and through `plan` a fight goal turned into the plant and a frag's step undone. Full suite: 954 tests OK; `live_bots` imports. **Untested in a match**, and not replayed on a recording.
+
 ### Power weapon runs finished unless an enemy is close, 2026-11-18
 
 The owner, on the rockets of Forge World 20261118-180057: "Why do they need to be taught that though ... a bot got rockets once that match didnt they", then "Yes commit to them unless an enemy is close".

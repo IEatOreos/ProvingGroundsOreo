@@ -264,6 +264,15 @@ FLAG_FIGHT_SCORE = 3.3             # the fight on him: over carrying (3.0), regr
 FLAG_BACK_S, FLAG_BACK_R = 12.0, 20.0   # s after the fight it goes back for the flag while it lies this near (u)
 FLAG_BACK_SCORE = 3.1              # over a committed fight on another man: the flag first
 FLAG_FIGHT_AGAIN = 6.0             # s after a fight ends before another drop
+# (custom, Nov 18, owner: "Add the ctf rule where the runner drops the flag but for neutral bomb assault and one bomb")
+# Reach Assault with one bomb in play (Bot.single_bomb: Neutral Bomb's, team 8, or One Bomb's, one goal to plant on): its
+# carrier drops it and fights by the same rule, home the goal it plants on. Two-bomb Assault is left as it was.
+# (owner: "Make it to where the bomb planter doesnt leave the bomb site if theyre planting or within 4 units of planting
+# to avoid a fight. That should be the only priority") Assault in every game, carrying the bomb on foot within
+# PLANT_HOLD_R of the goal it plants on: the plant is its only goal (Bot.plant_hold: every other score dropped, a drop to
+# fight called off) and its walk onto the goal stands (Bot.plant_stay: no step off it for a grenade, the kit or a mate)
+PLANT_HOLD_R = 4.0                 # u (the same as FLAG_FIGHT_HOME: no drop to fight this near, either)
+PLANT_HOLD_SCORE = 9.0
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -2811,6 +2820,8 @@ class Bot:
         if line is not None and line[2] == now and s.map is not None:
             s.T().learn_shot_through(line[0], line[1])   # his round reached us through what the data calls a wall: a
             s.per.shot_line = None                       # fence it does not name (Terrain.learn_shot_through)
+        if now < s.next_decide and s.goal[0] != "objective" and s.plant_point(me, snap) is not None:
+            s.next_decide = now          # (custom, Nov 18) just came within PLANT_HOLD_R of its goal: plant_hold now
         if now >= s.next_decide:
             fixed_demon = profiles.fixed_demon(s.p)
             s.next_decide = now + s.p.decide * (1.0 if fixed_demon else s.rng.uniform(0.8, 1.3))
@@ -3192,6 +3203,10 @@ class Bot:
         # carrying: no gun, but the flag or ball swings: hit a man at arm's length (one press a swing). Not the Invasion
         # core: a melee press drops it (live: 18 of 18 carrier melees on Spire, 2 of 2 on Boneyard ended the carry within
         # 1 s, logs/tmp/invasion_regress/melee_drop.py; Breakpoint's bomb 0 of 12, CTF flags 0 of 42)
+        plant_kept = None           # (custom, Nov 18) planting: the walk onto the goal, put back after (plant_stay)
+        if kind == "objective" and s.plant_point(me, snap) is not None:
+            plant_kept = (act.yaw + math.atan2(act.strafe, act.forward), min(1.0, math.hypot(act.forward, act.strafe)),
+                          act.sprint)
         if me.has_flag and not (snap.mode == "invasion" and not snap.inv_bomb):
             close = [k for k in s.per.visible_enemies() if dist(me.pos, s.per.beliefs[k].pos) < MELEE_R]
             if close and now >= getattr(s, "melee_at", 0.0):
@@ -3233,6 +3248,7 @@ class Bot:
             # with the clamp in the fight alone; the evade and the give-way stepped them out after it)
             s.keep_in_zone(me, snap, act)
         s.enemy_grenade(now, me, act, snap)    # (custom, Nov 18: after the zone's clamp, a frag outranks the post)
+        s.plant_stay(me, snap, act, plant_kept)    # (custom, Nov 18: planting, a frag does not: the owner's call)
         s.obstacle_guard(now, me, act, snap)
         press = getattr(s.kit, "press", None)
         if act.equipment and press is not None and press[0] == "sprint" and abs(act.strafe) > 0.1:
@@ -3302,11 +3318,57 @@ class Bot:
         return True
 
     def flag_home(s, me, snap):
-        """Where this carrier scores: Stockpile its own goal nearest it (modes.carry_goal), CTF its order's point."""
-        if snap.mode == "stockpile":
+        """Where this carrier scores: Stockpile its own goal nearest it, Assault the enemy goal nearest it
+        (modes.carry_goal), CTF its order's point."""
+        if snap.mode in ("stockpile", "assault"):
             from .modes import carry_goal
-            return carry_goal("stockpile", snap, me.team, me.pos)
+            return carry_goal(snap.mode, snap, me.team, me.pos)
         return s.order.point
+
+    @staticmethod
+    def single_bomb(snap):
+        """(custom, Nov 18) Assault with one bomb in play: Neutral Bomb's (nobody's, team 8) or One Bomb's (modes.one_bomb:
+        the attackers' goal dropped, one goal left to plant on). Two-bomb Assault shows two bombs and two goals: False."""
+        items = getattr(snap, "obj_items", None) or []
+        if snap.mode != "assault" or len(items) != 1:
+            return False
+        return items[0].get("team", 8) == 8 or len(getattr(snap, "obj_goals", None) or {}) == 1
+
+    def plant_point(s, me, snap):
+        """(custom, Nov 18) Assault, carrying the bomb on foot within PLANT_HOLD_R of the goal it plants on: that goal
+        (modes.carry_goal); else None."""
+        if snap.mode != "assault" or not me.has_flag or not me.alive or me.vehicle not in (None, -1):
+            return None
+        from .modes import carry_goal
+        g = carry_goal("assault", snap, me.team, me.pos)
+        return g if g is not None and dist(me.pos, g) <= PLANT_HOLD_R else None
+
+    def plant_hold(s, now, me, snap, scores):
+        """(custom, Nov 18, owner: "the bomb planter doesnt leave the bomb site if theyre planting or within 4 units of
+        planting to avoid a fight. That should be the only priority") decide's last word within PLANT_HOLD_R of the goal:
+        the plant only, every fight, retreat, regroup and hunt dropped, and a drop to fight not yet made called off."""
+        g = s.plant_point(me, snap)
+        if g is None:
+            return False
+        ff = getattr(s, "flag_fight", None)
+        if ff is not None and ff["dropped"] is None:
+            s.flag_fight = None
+        scores.clear()
+        scores[("objective", g)] = PLANT_HOLD_SCORE
+        s.note("bomb: planting, nothing else")
+        return True
+
+    def plant_stay(s, me, snap, act, kept):
+        """(custom, Nov 18) plan's part of plant_hold: kept is the move toward the goal (world heading, magnitude,
+        sprint) from before the carrier's swing, the kit, the give-way and a grenade's step; it is put back, turned to
+        the view's yaw now."""
+        if kept is None:
+            return
+        h, m, sprint = kept
+        fwd, strafe = m * math.cos(h - act.yaw), m * math.sin(h - act.yaw)
+        if abs(fwd - act.forward) + abs(strafe - act.strafe) > 0.05:
+            act.forward, act.strafe, act.sprint = fwd, strafe, sprint
+            s.note("bomb: planting, staying on the goal")
 
     def flag_man(s, now, me, snap):
         """The enemy to fight for a flag_fight: the nearest known within FLAG_FIGHT_KNOWN_S (seen, a dot, a hit) within
@@ -3323,13 +3385,15 @@ class Bot:
 
     def flag_dropped_at(s, me, snap, at):
         """The flag it dropped, lying loose within FLAG_BACK_R of where it dropped it: CTF the other team's flag, not
-        carried or home; Stockpile the nearest loose flag not in our goal. None (taken, home, gone)."""
+        carried or home; Stockpile the nearest loose flag not in our goal; Assault the bomb loose, not armed. None (taken,
+        home, gone)."""
         if snap.mode == "ctf":
             f = (snap.flags or {}).get(1 - me.team % 2)
             ok = f is not None and f.state == "dropped" and dist(f.pos, at) < FLAG_BACK_R
             return f.pos if ok else None
-        goals = (getattr(snap, "obj_goals", None) or {}).get(me.team) or []
+        goals = ((getattr(snap, "obj_goals", None) or {}).get(me.team) or []) if snap.mode == "stockpile" else []
         loose = [it["pos"] for it in (getattr(snap, "obj_items", None) or []) if it.get("carrier") is None
+                 and it.get("armed") is None
                  and dist(it["pos"], at) < FLAG_BACK_R and not any(dist(it["pos"], g) < 2.0 for g in goals)]
         return min(loose, key=lambda q: dist(q, at)) if loose else None
 
@@ -3338,8 +3402,10 @@ class Bot:
         flag") Reach CTF and Stockpile, carrying on foot: hurt within FLAG_FIGHT_HURT_S by losses that would empty it
         within FLAG_FIGHT_DIE_S and before it walks home (FLAG_FIGHT_SPEED), home beyond FLAG_FIGHT_HOME, a man known
         within FLAG_FIGHT_R: it is dying with the flag anyway, so it drops it and fights him (s.flag_fight; the flag lies
-        where it would have fallen). Not within FLAG_FIGHT_AGAIN of the last."""
-        if (getattr(s, "flag_fight", None) is not None or s.game != "reach" or snap.mode not in ("ctf", "stockpile")
+        where it would have fallen). Not within FLAG_FIGHT_AGAIN of the last. (custom, Nov 18) Assault too with one bomb
+        in play (single_bomb: Neutral Bomb, One Bomb), home the goal it plants on."""
+        if (getattr(s, "flag_fight", None) is not None or s.game != "reach"
+                or (snap.mode not in ("ctf", "stockpile") and not s.single_bomb(snap))
                 or not me.has_flag or not me.alive or me.vehicle not in (None, -1)
                 or now < getattr(s, "flag_fight_next", 0.0)):
             return False
@@ -4333,6 +4399,7 @@ class Bot:
             for k in [k for k in scores if k[0] in ("item", "retreat")]:
                 del scores[k]
         s.dry_fights(scores, me)
+        s.plant_hold(now, me, snap, scores)     # (custom, Nov 18: the bomb within PLANT_HOLD_R of its goal: the plant only)
         s.last_scores = scores
         s.last_flags = dict(post=round(post, 2), seen=len(seen), friends=friends, avoid=avoid, cracked=cracked,
                             recharge=now < getattr(s, "recharge_until", 0.0), hit=hit_recent)
