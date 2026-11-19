@@ -767,6 +767,15 @@ AIR_CEIL = 3.0       # u: off a run, floors this far over an aircraft still coun
 AIR_VTOL_CLIMB = 3.0  # u/s: a Falcon's / Hornet's climb on its vertical input (trace 20261105-201917: 3.0-3.2 u/s up)
 AIR_ARRIVE_R = 10.0  # u: an aircraft this near where it goes (flat, on its level) is there (drive: it sets down, gets out)
 AIR_ROOF_M = 2.5     # u: an aircraft's middle stays this far under the map's roof (Terrain.air_roof; Bot.air_roof_guard)
+# (custom, Nov 18) Reach, under a soft roof (Terrain.air_roof_soft: a soft_safe top, a soft kill's bottom; a countdown
+# over it, no instant death): the margin is AIR_ROOF_SOFT_M and the no-climb band under it AIR_ROOF_SOFT_BAND (else
+# AIR_ROOF_M and AIR_ROOF_BAND). Boneyard's soft_safe top is 4.0 z, its tall structures' tops about 0 z: 2.5 u off and no
+# climb in the 1.5 u under that held a Banshee under 0 z, 0.5-1 u over the roofs, and the run's ground look ended 13 of
+# PwnageTV's 15 runs 22-29 u off (trace_reach_70_boneyard_20261118-185212: two bomb tries in 84 s; the owner's bomb
+# dives start ~10 u over him). Replayed (tools/air_replay.py, the map's volumes on, 4 seeds, 4.5 u/s): ticks into the
+# level 39 -> 13. (A level flight over a roof under the run, the run kept, was tried and left out: 22 bomb starts to 28,
+# 193 ticks into the level)
+AIR_ROOF_SOFT_M, AIR_ROOF_SOFT_BAND, AIR_ROOF_BAND = 1.5, 0.5, 1.5
 # (in Reach that right button is the Banshee's boost, not a weapon: his speed held 8.8 u/s, not held 4.3, every hold of
 # 1 s or more faster; logs/tmp/owner_rmb_speed.py.) Reach's fuel rod is cycled to like a secondary: 10 shots from 10-31
 # u (median 16.5), about every 17 s; the cycle to the shot 0.67 s, the shot to the cycle back 0.44 s
@@ -7646,7 +7655,7 @@ class Bot:
                 # (not over the map's roof: climbing over the spire top's crown into its soft kill, a replayed Falcon
                 # pressed 20 s at it held under the roof, never turning: air_roof_guard)
                 if (up_ok(move) and T.fly_clear(me.pos + Vec(0, 0, 3.0), move, look, floor=floor, avoid=avoid) > d + 1.0
-                        and me.pos.z + 3.0 <= T.air_roof(me.pos.x, me.pos.y) - AIR_ROOF_M):
+                        and me.pos.z + 3.0 <= T.air_roof(me.pos.x, me.pos.y) - s.roof_margin(T, me.pos.x, me.pos.y)[0]):
                     climb()
                     act.forward, act.strafe = max(-ease, min(ease, act.forward)), act.strafe * 0.5
                     s.air_unboost(act, vtol)
@@ -7724,7 +7733,7 @@ class Bot:
             # (only decks it can fly over under the map's roof: the spire top's middle block, 3 u under Spire's safe box
             # top, is a wall the probe's rule takes it round; the ring deck round it is the top to climb to)
             fx, fy = me.pos.x + math.cos(way) * (face + 1.5), me.pos.y + math.sin(way) * (face + 1.5)
-            deck = T.top_near(fx, fy, 2.0, zmax=T.air_roof(fx, fy) - AIR_ROOF_M - cl["over"] + 1.0)
+            deck = T.top_near(fx, fy, 2.0, zmax=T.air_roof(fx, fy) - s.roof_margin(T, fx, fy)[0] - cl["over"] + 1.0)
             need = deck + cl["over"] - me.pos.z if math.isfinite(deck) and deck > me.pos.z else 0.0
             if need > 0.0:
                 climb()
@@ -7825,7 +7834,7 @@ class Bot:
             if sp.get("vtol"):
                 act.vertical = -1.0
             s.note("air: the map's roof over us, down")
-        elif me.pos.z > lim - 1.5:
+        elif me.pos.z > lim - s.roof_margin(s.T(), me.pos.x, me.pos.y)[1]:   # (custom, Nov 18: a soft roof's band)
             act.pitch = min(act.pitch, 0.0)
             if sp.get("vtol"):
                 act.vertical = min(getattr(act, "vertical", 0.5), 0.5)
@@ -8281,13 +8290,22 @@ class Bot:
     def air_ceiling(s, x, y, T):
         """(custom) The highest an aircraft's middle goes at (x, y): the map's roof (Terrain.air_roof) less AIR_ROOF_M,
         and no higher than he flew any aircraft here (vehicles.AIR_ENVELOPE ceiling); +inf where neither says
-        (air_roof_guard's limit, shared with air_pass's run heights)."""
+        (air_roof_guard's limit, shared with air_pass's run heights). (custom, Nov 18) A soft roof's margin is
+        AIR_ROOF_SOFT_M (roof_margin)."""
         roof = getattr(T, "air_roof", None)
-        lim = roof(x, y) - AIR_ROOF_M if roof is not None else math.inf
+        lim = roof(x, y) - s.roof_margin(T, x, y)[0] if roof is not None else math.inf
         env = vehicles.envelope(s.map.get("name")) if s.map else None
         if env is not None:
             lim = min(lim, env["ceiling"])   # (the highest he flew any aircraft here, his flag)
         return lim
+
+    def roof_margin(s, T, x, y):
+        """(custom, Nov 18) (margin, no-climb band) under the map's roof at (x, y): in Reach a soft roof's (Terrain.
+        air_roof_soft, a countdown over it) AIR_ROOF_SOFT_M and AIR_ROOF_SOFT_BAND, else AIR_ROOF_M and AIR_ROOF_BAND."""
+        soft = getattr(T, "air_roof_soft", None) if s.game == "reach" else None
+        if soft is not None and soft(x, y):
+            return AIR_ROOF_SOFT_M, AIR_ROOF_SOFT_BAND
+        return AIR_ROOF_M, AIR_ROOF_BAND
 
     def air_snap_fire(s, now, me, act, snap):
         """(custom) An aircraft's pilot fires whenever its nose, after every guard has steered it, is on an enemy inside

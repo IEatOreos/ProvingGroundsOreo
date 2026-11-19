@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reach Banshees: more room under a soft-kill roof, 2026-11-18
+
+The owner, Boneyard: Ashenblade (Blind) flew the Banshee for one kill; the next game PwnageTV (Demon) "not even shoot a banshee bomb once".
+
+- Found (trace_reach_70_boneyard_20261118-185212, PwnageTV's 84 s ride): two bomb cycles. 13 of its 15 attack runs ended 22-29 u from its man; the bomb now goes only from 6-18 u (`REACH_BOMB_R`, Nov 17, from the owner's bomb kills), so it had no chance. The runs ended on the run's ground look ("the ground on the run, pulling out"): Boneyard's soft_safe zone tops out at 4.0 z, and 2.5 u off it (`AIR_ROOF_M`) with no climb in the 1.5 u under that held the Banshee under 0 z, the height of the big structures' tops, 0.5-1 u over them. AshenBlade11 the match before: inside 18 u on 2 of its 11 runs, a bomb cycle on both. The owner's 21 Boneyard bomb kills dive from 10 u over him at 14-21 u off, the nose 0.4-0.9 rad down.
+- `brain/terrain.py`: `air_roof_soft(x, y)`, whether the roof there is a soft one (a soft_safe top or a soft kill's bottom: a countdown over it, not instant death); `air_roof` unchanged.
+- `brain/bot.py` (Reach only): under a soft roof the margin is `AIR_ROOF_SOFT_M` 1.5 u and the no-climb band `AIR_ROOF_SOFT_BAND` 0.5 u (`Bot.roof_margin`, used by `air_ceiling`, `air_roof_guard`, the wall climb and the deck height). Boneyard's pilots may now cruise to 2.0 z, about 2 u over the structures. Hard roofs and the other games keep 2.5 u and 1.5 u.
+- Tried and left out: on a run, flying level over a roof under the nose instead of ending the run. In `tools/air_replay.py` (the map's volumes on, 4 seeds, 4.5 u/s) it cut bomb starts 28 to 22 and raised ticks into the level 39 to 193.
+- Validation: `tools/test_reach_banshee_room.py` (new, 4 tests: Boneyard's safe top reads soft, a hard safe zone's does not, the margins by roof and game, the soft no-climb band). All 101 test files pass. Replayed, the margin change did not raise bomb starts: PwnageTV's ride 28 to 26 (ticks into the level 39 to 13), AshenBlade11's 23 to 17 (5 to 28). The replay does not reproduce the live failure, though (4-7 bomb starts a ride against PwnageTV's 2), so the live Boneyard test the owner is running decides it. Untested in a match.
+
 ### Forge-placed man cannons and grav lifts: markers, their throws ridden; the chance picks cannons, 2026-11-18
 
 The owner: "What about the cage the forge map?"

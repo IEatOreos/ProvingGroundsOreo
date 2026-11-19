@@ -1975,10 +1975,20 @@ class Terrain:
         volume over its floors (Spire's kill_roof); +inf where none says. A safe top or kill bottom under the highest
         floor there says nothing of its air. ponytail: sphere volumes left out (Spire's 150 u safe sphere read as a
         radius would cover the spire top those pilots died over); cached per 2 u cell."""
-        from . import oob as O
-        vols = getattr(s, "_oob_vols", None)
-        if not vols:
+        if not getattr(s, "_oob_vols", None):
             return math.inf
+        return s._air_roof(x, y)[0]
+
+    def air_roof_soft(s, x, y):
+        """(custom, Nov 18) Is the map's roof at (x, y) (air_roof) a soft one: a soft_safe zone's top or a soft kill
+        volume's bottom, a countdown over it, not the instant death of a hard kill or a hard safe zone's edge (Bot.
+        roof_margin: Boneyard's soft_safe top at 4.0 z). False where there is no roof."""
+        return s._air_roof(x, y)[1] if getattr(s, "_oob_vols", None) else False
+
+    def _air_roof(s, x, y):
+        """air_roof's (height, soft) at (x, y), cached per 2 u cell."""
+        from . import oob as O
+        vols = s._oob_vols
         cache = s.__dict__.setdefault("_roof", {})
         if cache.get("vols") is not vols:
             cache.clear()
@@ -1989,7 +1999,7 @@ class Terrain:
         j, i = s._cell(Vec(x, y, 0.0))
         col = s.lz[:, j, i]
         top = float(np.nanmax(col)) if np.isfinite(col).any() else s.ground(x, y)
-        safe, roof = [], math.inf
+        safe, roof, soft = [], math.inf, False
         for v in vols:
             if v.get("shape") == "sphere" or v["kind"] not in O.KILLS + O.SAFES:
                 continue
@@ -1998,13 +2008,17 @@ class Terrain:
             if not O.contains(v, (x, y, mid)).any():
                 continue
             if v["kind"] in O.SAFES and hi[2] > top + 2.0:
-                safe.append(float(hi[2]))
-            elif v["kind"] in O.KILLS and lo[2] > top + 2.0:
-                roof = min(roof, float(lo[2]))
+                safe.append((float(hi[2]), v["kind"] == "soft_safe"))
+            elif v["kind"] in O.KILLS and lo[2] > top + 2.0 and float(lo[2]) < roof:
+                roof, soft = float(lo[2]), v["kind"] == "soft"
         if safe:
-            roof = min(roof, max(safe))
-        cache[key] = roof
-        return roof
+            hi, hi_soft = max(safe)
+            if hi < roof:
+                roof, soft = hi, hi_soft
+            elif hi == roof:
+                soft = soft and hi_soft
+        cache[key] = (roof, soft)
+        return roof, soft
 
     def out_of_bounds(s, p):
         """Is p on a floor out of bounds (set_oob)?"""
