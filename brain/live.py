@@ -909,9 +909,14 @@ class LiveH3(LiveH2):
         """Oddball (Halo 3, Reach keep no tag names): the ball is the weapon object first seen lying on a ball spawn
         (the map's 'oddball_ball' netgame flags, set_map), found the way flags_by_stand finds flags. [{pos, carrier}]"""
         spots = s.__dict__.get("_ball_spots")
-        if not spots:
+        if not spots and not s.OBJECTIVE_NAMES.get("_ball_tags"):
             return []
         weapons, held = s._weapons_held(players)
+        if not spots:               # (Nov 18: the ball known by its name, a layout that lists no ball spawn: found anyway)
+            if not s.__dict__.get("_ball_tags"):
+                return []
+            from .core import Vec
+            spots = {0: Vec(0.0, 0.0, 0.0)}
         # learned only off its spawn marker (Reach hangs the ball under it) or a third slot, never from a loose gun on a
         # spawn: Boardwalk's needle rifle lies 0.45 u from ball spawn 2, and the ball spawns there too
         return [dict(pos=f["pos"], carrier=f["carrier"]) for f in flags_by_stand(
@@ -1175,7 +1180,14 @@ class LiveReach(LiveH3):
     # plasma pistol 0.12 u from stands; no flag seen in 49 s, then the gun a bot dropped dying on a stand was learned
     # and up to 17 dropped guns were loose flags the bots stood on for 20 s and more; the one carry (3.7-10.9 s) was
     # never seen, and 0-0 at both minute collections. CTF (_flag_tags) still learns by stand
-    OBJECTIVE_NAMES = {("_obj_tags", "stockpile"): ("flag",)}
+    # (custom, Nov 18, the owner: the bots don't play Multi Bomb, Stockpile or Oddball right on Sword Base and other maps
+    # "even though the map has been scanned", "I dont want to have to fix every single map") Assault's bombs
+    # ("...\\multiplayer\\assault_bomb\\assault_bomb", read live in hand on Forge World One Bomb 20261118-173209) and
+    # Oddball's ball (Reach's is the skull, "...\\multiplayer\\skull\\skull", as Headhunter's) by the same names: learned
+    # off a stand or a ball spawn instead, the first gun lying on one (a weapon spawn beside it, a gun dropped dying on it)
+    # made every gun of its kind the bomb or the ball, on any map
+    OBJECTIVE_NAMES = {("_obj_tags", "stockpile"): ("flag",), ("_obj_tags", "assault"): ("assault_bomb",),
+                       "_ball_tags": ("skull",)}
 
     def _unpack(s, v):
         """A packed tag data address: base by the top 4 bits, plus 4 x the whole value (as the game does)."""

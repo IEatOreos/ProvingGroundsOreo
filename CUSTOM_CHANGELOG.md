@@ -56,6 +56,39 @@ The owner: "CAn we just make it to where the bots take the lifts more? Like add 
 - Not fixed: three of Ridgeline's four lifts, and Condemned's hangar lift, have no solved ride (`lidar_rides.solve` finds no landing from their step-in). Ridgeline's one solved ride lands 1.85 u up. Forge-placed lifts have no phantoms (no HREK kit here).
 - Validation: `tools/test_layout_lifts.py` 13 tests (new: won rolls on Damnation go up the tall lift; a lost roll holds for the goal; the ride starts at the take-off; no roll for a goal not above; Launch Station's lift is in the nav; none added where a ride is recorded or the lift is gone). All 921 regression tests pass. Untested in a match.
 
+### Reach's bombs and ball found by name on every map, 2026-11-18
+
+The owner: the bots don't play Multi Bomb, Stockpile or Oddball right. On Sword Base, "even though the map has been scanned they have no idea where to go"; they go to the wrong place, and lose it after picking it up. And: "I dont want to have to fix every single map".
+
+**What was found.**
+- Every Reach map's export lists each mode's places in full: 5 bomb stands, 4 bomb goals, 7-13 Stockpile stands, 4 Stockpile goals, 2-9 ball spawns. Sword Base's two variants list the same as its scenario. So the places were not missing.
+- How the objects were found was the problem: the first weapon object seen lying on a stand or ball spawn taught the mode's object tag, one tag a match.
+  - The owner's Pinnacle Stockpile (20261117-205817) shows the result: the brain counted 8-17 "flags" on most ticks against Reach's 4-5. Most were guns in hands (read at 0, 0, 0) or dropped ones, and some lay under the map, so the bots ran to guns.
+  - Another session's fix of Nov 17 already names Stockpile's flags (`LiveReach.OBJECTIVE_NAMES`). The bombs and the ball still learned the old way.
+
+**The change.** `brain/live.py` `LiveReach.OBJECTIVE_NAMES` now also has:
+- Assault's bombs, `assault_bomb`, as read in hand live on Forge World One Bomb today;
+- Oddball's ball, `skull`: Reach's ball, as Headhunter's.
+
+So no gun on a stand or spawn is ever taken for one, on any map. `balls()` also finds the ball by name on a layout that lists no ball spawn.
+
+**Tests.** `tools/test_reach_objective_names.py` (new, 9 tests) uses Sword Base's real stands and ball spawns:
+- both Multi Bomb bombs found;
+- a magnum dropped on the neutral stand never a bomb;
+- the carried bomb's carrier read;
+- the old way taking the magnum, kept as the bug;
+- a loose ball found, and its carrier read;
+- a gun on a ball spawn never the ball;
+- no ball spawns listed, still found;
+- the old way missing a loose ball.
+
+Two full runs: 915 tests OK. One earlier run had one error that did not recur, test not identified.
+
+**Not tested in a match:**
+- the tag names' exact paths for the bomb and the ball (the bomb's name is seen live in hand; the ball's comes from Headhunter's notes);
+- whether this cures the losing of the object after the pickup;
+- Pinnacle's Stockpile recording is mostly the bots stuck on its Forge pieces (step down, edge stops, teleporter waits), which this does not touch.
+
 ### Lifts a map variant's layout lacks are left out; a lift that does not lift is given up, 2026-11-18
 
 The owner: "Can you go through and fix the lifts In halo reaches lidar? Im tired of having to manually show bots how to use it. They just play damnation all stuck in the bottom of the map because they dont want to use the lift and then three on my team are stuck elsewhere. even though the entire map was scanned. Was a bug report" (F9 report 20261118-172222, "Bots stuck on damnation", Damnation Anniversary `reach_cex_damnation/variants/v08b84b0d`).
