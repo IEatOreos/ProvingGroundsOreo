@@ -250,10 +250,12 @@ def test_proving_grounds_commendations():
     keys = [c["key"] for c in comms]
     assert len(comms) == 23 and keys[14:19] == ["victor", "first_blood", "closer", "grudge_match", "medal_collector"], keys
     assert keys[19:] == ["mvp", "game_changer", "positive_thinking", "loyal_soldier"], keys   # (Nov 17, the owner's four)
-    g = {"medals": {"8": 2, "9": 0, "111": 5}, "cats": {"all": sr.blank() | {"wins": 12}}, "weapons": {}, "kill_games": 1,
+    g = {"medals": {"8": 2, "9": 0, "111": 5}, "cats": {"all": sr.blank() | {"wins": 12, "medals": 7}}, "weapons": {}, "kill_games": 1,
          "feats": {"first": 6, "closer": 0, "grudge": 2}, "maps": {"reach_70_boneyard": {"wins": 2}, "reach_forge_halo": {"wins": 0}, "x": {"wins": 1}}}
     n = sr.commendation_counts(g, comms, {})
-    assert (n["victor"], n["first_blood"], n["closer"], n["grudge_match"], n["medal_collector"]) == (12, 6, 0, 2, 2), n
+    assert (n["victor"], n["first_blood"], n["closer"], n["grudge_match"], n["medal_collector"]) == (12, 6, 0, 2, 7), n   # (Nov 19: every medal earned, not kinds)
+    by = {c["key"]: c for c in comms}
+    assert by["medal_collector"]["need"] == [250, 1000, 5000, 20000, 50000, 100000] and sr.commendation_source(by["medal_collector"]["count"]) == "report"
     assert sr.commendation_counts(dict(g, kill_games=0), comms, {})["first_blood"] is None
     badges = sr.load_badges()
     assert [b["key"] for b in badges] == ["map_master", "hometown_hero"] and len(badges[0]["maps"]) == 20

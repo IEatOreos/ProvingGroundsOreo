@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Service Record: Medal Collector counts every medal, 2026-11-19
+
+- The owner asked for Medal Collector to count total medals, not unique ones, with the tiers left to Claude.
+- **`tools/service_record_site/commendations.json`:** Medal Collector now counts `{"stat": "medals"}`, the medal total from MCC's post-game reports (the card says "report"). Its text is now "Earn any medal."
+  - New tiers: Iron 250, Bronze 1,000, Silver 5,000, Gold 20,000, Onyx 50,000, Max 100,000.
+  - Credits per tier are unchanged.
+- **Why these numbers:** a bot earns about 12 medals a game (median; 22 at the 90th percentile). At that rate Iron comes after about 20 games, Gold after about 1,600 and Max after about 8,000. That is close to Loyal Soldier's pace (25 to 8,000 games).
+- The `distinct_medals` count in `tools/service_record.py` stays in place but is now unused.
+- **Effect:** with today's data 77 bots reach Iron; the top bot has 758 medals.
+  - Nobody had Silver (40 kinds); the most any bot had was 39.
+  - Bots with 25 or more kinds had Bronze (200 + 500 cR). They now have Iron or nothing, so they lose 500 or 700 cR.
+  - Bots with 10 to 24 kinds lose Iron's 200 cR unless they have 250 medals.
+- **Validation:**
+  - `test_service_record.py`: 34 tests pass. The Proving Grounds commendation test now checks the medal total, the new tiers and the "report" source.
+  - Full suite: 986 tests pass.
+  - The site was rebuilt and the new tiers were checked in `data.js`.
+
 ### Proving Grounds in Halo: Reach's look, livelier, and fully on the controller, 2026-11-19
 
 The owner asked for the bot matchmaking screens to be "more vibrant and true to the original", then chose Reach's steel grey for every screen ("I want the vibe of reach as much as possible"; this replaces the Nov 17 MCC navy for the menu, search, vote, result and error screens), and "Make the menu also compatible with controller. Since we mostly use controllers." The player card's stats over the figure and the PARTY tag on bright nameplates were left for later at the owner's word.
