@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### No sight or shots through a Forge piece's sloped top (Pinnacle's centre dish), 2026-11-18
+
+The owner: "Pinnacle bots still shoot through the side of the forge bowl in the middle of the map."
+
+- **Found,** offline on Pinnacle's layout (Forge World `v079e8abd`): the bowl is the `ff_dish` and `ff_dish_door` pieces. Their rim stands about 1 u over the floor round it, and is in the terrain all the way round, except the door piece's real doorway at about 45°. Its slopes go in as floor (walkable, no wall bins).
+  - `Terrain._ray`'s floor test compares each sample of a line with its own cell's floor only. A nearly level line that slid in under the rim's rising slope crossed no cell's floor, so it went through the solid rim unseen.
+  - Of 283 open lines from 7-14 u out to the bowl's middle, 148 went through the rim, a few hundredths under its top.
+  - All 40 shoot-through cells learned on this layout (`walls_learned.json`) were inside Forge pieces: the dish, its rocks, bridges, ramps and the tower. A hit put down to the wrong man teaches one (`Bot` `shot_line`: the man aiming nearest our way).
+- **`brain/terrain.py`:**
+  - `_slides_under` (new, `SLIDE_STEP` 0.5) is called by `_ray`. A line going from over a placed piece's floor surface to under it, or back, between two neighbouring samples is shut, when the surface is continuous there (its levels within 0.5). This covers placed pieces only; the level's own floors are as before.
+  - Faced pieces' wall bins are kept per cell (`_note_piece_walls`, `piece_wz`, `piece_solid`). `learn_shot_through` learns none in a piece's walls or floors. Solid boxes, which are approximate, still learn.
+- **`brain/maps.py`:** at load, learned cells inside a Forge piece are not used. They are kept in the file.
+- **Validation:**
+  - `tools/test_piece_slide_los.py` (new, 5 tests):
+    - a line under a sloped ridge is shut (and was open without the test);
+    - lines over it and down its far side stay open, and nothing changes without pieces;
+    - a piece wall at a railing's height learns no shoot-through, while the same wall in the level does.
+  - On Pinnacle the lines through the rim went from 148 to 3, the 3 skimming the doorway's edge by 0.02. The 10 lines the learned cells opened are shut, and all 40 learned cells are now unused.
+  - **Every pair of real positions** in three recordings: Pinnacle 677 open lines, 13 shut; Forge World `v8e4a8930` 1041, 3 shut; `v4b705611` 896, none. Every shut line ran under a piece's top.
+  - A sight test takes 79 µs instead of 70.
+  - All 932 regression tests pass.
+  - **Untested in a match.**
+
 ### The lift chance; lifts nobody rode are in the nav, 2026-11-18
 
 The owner: "CAn we just make it to where the bots take the lifts more? Like add a scoring chance. Weve messed with it before Ive never seen them ever use one".

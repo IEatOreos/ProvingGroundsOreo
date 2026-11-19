@@ -723,8 +723,11 @@ def _build(m, window):
     for nm in names:
         lf = os.path.join(ROOT, nm, "walls_learned.json")
         learned += read_json(lf) if os.path.exists(lf) else []
-    pk["fence"] += [c[:4] for c in learned if not c[4]]
-    pk["fence_floor"] += [c[:4] for c in learned if c[4]]
+    # (custom, Nov 18) none inside a Forge piece (Terrain.piece_solid: its collision model is exact; Pinnacle's 40 were
+    # all in its dish, rocks, bridges and tower). Kept in the file, only not used
+    used = [c for c in learned if not T.piece_solid(c[0] / 4, c[1] / 4, c[2], c[3], deck=bool(c[4]))]
+    pk["fence"] += [c[:4] for c in used if not c[4]]
+    pk["fence_floor"] += [c[:4] for c in used if c[4]]
     if any(pk.values()):
         kinds = dict(kinds, **{k: list(kinds.get(k, [])) + v for k, v in pk.items()})
     if any(kinds.get(k) for k in ("window", "fence", "window_floor", "fence_floor")):

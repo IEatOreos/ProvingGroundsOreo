@@ -70,6 +70,9 @@ ROUTE_JUMP, ROUTE_CROUCH = 2, 4   # route point flags (the same bits as the jump
 # (custom, Nov 9) Terrain.learn_shot_through learns no shoot-through where the wall runs from this far under a round's
 # line to this far over it: a solid pillar or wall (a railing, a grate, a sill is learned as before)
 LEARN_SOLID_BELOW, LEARN_SOLID_ABOVE = 0.6, 1.2
+# (custom, Nov 18) a placed piece's floor surface counts as continuous between two neighbouring cells within this
+# height (Terrain._slides_under: the steepest walkable slope over a cell's diagonal is 0.42)
+SLIDE_STEP = 0.5
 
 # memory each route-field cache may hold (walking, people's, jump, vehicle): a count limit (600 / 200 fields) let
 # Forge World's 84 MB fields (11 million nodes) fill the PC, the brain out of memory at 834 s. A share of the PC's
@@ -575,6 +578,39 @@ class Terrain:
         bit = np.floor((pts[:, 2] - s.wall_z0) / s.wall_bin).astype(int)
         ok = (j >= 0) & (j < s.h) & (i >= 0) & (i < s.w) & (bit >= 0) & (bit < 64 * s.walls.shape[-1])
         np.bitwise_or.at(s.walls, (j[ok], i[ok], bit[ok] >> 6), np.left_shift(np.uint64(1), (bit[ok] & 63).astype(np.uint64)))
+        s._note_piece_walls(j[ok], i[ok], s.wall_z0 + bit[ok] * s.wall_bin)
+
+    def _note_piece_walls(s, j, i, z):
+        """(custom, Nov 18) Keep, per cell, the height range of a placed piece's wall bins (s.piece_wz (h, w, 2), low and
+        high, NaN: none): Terrain.learn_shot_through learns no shoot-through in a piece put in face by face, whose shape
+        is its collision model exactly (piece_solid). (Solid boxes, add_blocks, are approximate and still learn.)"""
+        if not len(j):
+            return
+        if getattr(s, "piece_wz", None) is None:
+            s.piece_wz = np.full((s.h, s.w, 2), np.nan, np.float32)
+        z = np.asarray(z, np.float32)
+        np.fmin.at(s.piece_wz[..., 0], (j, i), z)
+        np.fmax.at(s.piece_wz[..., 1], (j, i), z + np.float32(s.wall_bin))
+
+    def piece_solid(s, x, y, lo, hi, deck=False):
+        """(custom, Nov 18) Is a quarter-unit learned cell at (x, y), heights lo..hi, inside a placed piece: one of its
+        cells (the four _clear_cells clears) has a piece's wall bins in that height range (a deck cell: a piece's floor
+        level within 0.3 of it)? A Forge layout's pieces are their collision models, so a round 'learned' through one
+        was a hit put down to the wrong man (Pinnacle: all 40 learned cells were in its rocks, dish, bridges, tower)."""
+        if not s.inside(x, y):
+            return False
+        jj, ii = s._ij(np.asarray([x - 0.12, x + 0.12, x - 0.12, x + 0.12]),
+                       np.asarray([y - 0.12, y - 0.12, y + 0.12, y + 0.12]))
+        pw = getattr(s, "piece_wz", None)
+        with np.errstate(invalid="ignore"):
+            if not deck:
+                return bool(pw is not None and ((pw[jj, ii, 0] <= hi) & (pw[jj, ii, 1] >= lo)).any())
+            if getattr(s, "piece", None) is not None:
+                L = min(s.piece.shape[0], s.floors.shape[0])
+                fl = s.floors[:L, jj, ii]
+                if (s.piece[:L, jj, ii] & (fl >= lo - 0.3) & (fl <= hi + 0.3)).any():
+                    return True
+        return False
 
     def _face_cells(s, tri):
         """The cell centres under faces tri (T, 3, 3) seen from above: (face index, cell j, cell i, the face's height
@@ -971,7 +1007,17 @@ class Terrain:
         hit &= ~(s._wall_bit(W, zs - LEARN_SOLID_BELOW) & s._wall_bit(W, zs + LEARN_SOLID_ABOVE))
         fl = s.floors[:, j, i]
         with np.errstate(invalid="ignore"):
-            deck = (((np.r_[za, zs[:-1]] - fl) * (zs - fl) < 0) & np.isfinite(fl)).any(axis=0)
+            crossed = ((np.r_[za, zs[:-1]] - fl) * (zs - fl) < 0) & np.isfinite(fl)
+            # (custom, Nov 18) never through a placed piece put in face by face (piece_solid): its walls and floors are
+            # its collision model, so the hit was someone else's
+            pw = getattr(s, "piece_wz", None)
+            if pw is not None:
+                hit &= ~((zs >= pw[j, i, 0]) & (zs <= pw[j, i, 1]))
+            pc = getattr(s, "piece", None)
+            if pc is not None:
+                L = min(pc.shape[0], fl.shape[0])
+                crossed[:L] &= ~pc[:L, j, i]
+            deck = crossed.any(axis=0)
         votes, learned = s.__dict__.setdefault("shot_votes", {}), s.__dict__.setdefault("walls_learned", [])
         new = []
         for k in np.flatnonzero(hit | deck):
@@ -1062,6 +1108,29 @@ class Terrain:
         rl = getattr(s, "ray_low", None)
         return s.low if rl is None else rl
 
+    def _slides_under(s, cross, fl, j, i, zs):
+        """(custom, Nov 18) Adds to cross (L, n) the samples where the ray goes from over a placed piece's floor surface
+        to under it (or back) between two samples in neighbouring cells: the surface continuous between them (its
+        levels there within SLIDE_STEP), so the ray went through it. _ray's own floor test compares a sample with its
+        own cell's level only, so a nearly level line slid in under a piece's rising slope without crossing any cell's
+        level, and through the solid piece: Pinnacle's centre dish, its rim a sloped floor (no wall bins), let 148 of 283
+        lines across it through just under its top (the owner: bots "shoot through the side of the forge bowl"). Placed
+        pieces only (s.piece); the level's own floors are as before."""
+        pc = getattr(s, "piece", None)
+        if pc is None or fl.shape[1] < 2:
+            return
+        L = min(pc.shape[0], fl.shape[0])
+        P = pc[:L, j, i][:, 1:]
+        if not P.any():
+            return
+        cur, prev = fl[:L, 1:], fl[:, :-1]
+        d = np.abs(cur[:, None, :] - prev[None, :, :])            # (L here, L before, n - 1)
+        d = np.where(np.isfinite(d), d, np.inf)
+        k = d.argmin(1)                                            # the level before nearest each level here
+        near = np.take_along_axis(d, k[:, None, :], 1)[:, 0, :] <= SLIDE_STEP
+        before = np.take_along_axis(prev, k, 0)
+        cross[:L, 1:] |= P & near & ((zs[:-1] - before) * (zs[1:] - cur) < 0)
+
     def _ray(s, a, b, part, mode=None, *, source_height=EYE):
         """Eye of a to height part of b over the real level: blocked by a steep face (wall bitmask)
         at the ray's height, by the ray crossing a floor level (a slab between storeys), or by the ray
@@ -1102,6 +1171,7 @@ class Terrain:
         z0, z1 = np.r_[za, zs[:-1]], zs
         with np.errstate(invalid="ignore"):
             cross = ((z0 - fl) * (z1 - fl) < 0) & np.isfinite(fl)
+            s._slides_under(cross, fl, j, i, zs)
             deck = getattr(s, "see_floor" if mode == "see" else "shot_floor", None) if mode else None
             if deck is not None and cross.any():     # a glass floor / grate deck it sees (shoots) through
                 lo, hi = deck[j, i, 0], deck[j, i, 1]
