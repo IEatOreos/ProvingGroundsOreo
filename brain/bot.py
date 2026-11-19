@@ -8933,6 +8933,10 @@ class Bot:
                 s.via_lift = None                    # (too slow, or the goal moved on: the nav's way)
             elif (me.pos - take).flat() < 0.9 and abs(me.pos.z - take.z) < 1.0:
                 s.via_lift = None
+                if air is not None:                  # a cannon: onto its pad, thrown to the landing
+                    s.cannon_ride = (Vec(take.x, take.y, me.pos.z), land, now, air, None)
+                    s.note("lift chance: on the man cannon")
+                    return True
                 s.lift_ride = (base, land, now)
                 s.lift_from = (me.pos.z, (round(take.x, 1), round(take.y, 1)))   # (ride_lift: stalled, dead)
                 s.note("lift chance: up the lift")
@@ -8946,16 +8950,19 @@ class Bot:
         hj = getattr(T, "hjumps", None)
         if not isinstance(hj, list) or not hj:
             return None
+        up = point.z - me.pos.z >= LIFT_UP
+        if not up:                                   # (a trip not up: only a cannon's throw, if the map has one)
+            hl = getattr(s, "_has_launch", None)
+            if hl is None or hl[0] is not hj:
+                hl = s._has_launch = (hj, any(k.get("launch") for _, _, k, _ in hj))
+            if not hl[1]:
+                return None
         s.lift_roll = (point, now + LIFT_ROLL_S)
         if s.rng.random() >= LIFT_P:
             return None
         try:
             here = T._node(me.pos)
             to_goal = T._field(point, human=True)
-                if air is not None:                  # a cannon: onto its pad, thrown to the landing
-                    s.cannon_ride = (Vec(take.x, take.y, me.pos.z), land, now, air, None)
-                    s.note("lift chance: on the man cannon")
-                    return True
             direct = float(to_goal[here])
         except Exception:                            # (a place off the numbers: the nav's way)
             return None
@@ -8971,13 +8978,6 @@ class Bot:
             if air is None and (base is None or not up or la[2] - to[2] < LIFT_UP):
                 continue                             # (no lift by it, or no trip up)
             f = fails.get((round(to[0], 1), round(to[1], 1)))
-        up = point.z - me.pos.z >= LIFT_UP
-        if not up:                                   # (a trip not up: only a cannon's throw, if the map has one)
-            hl = getattr(s, "_has_launch", None)
-            if hl is None or hl[0] is not hj:
-                hl = s._has_launch = (hj, any(k.get("launch") for _, _, k, _ in hj))
-            if not hl[1]:
-                return None
             if f is not None and f[0] >= 2 and now < f[1]:
                 continue                             # (one this bot found dead or short: ride_lift, ride_cannon)
             after = float(to_goal[dst])
