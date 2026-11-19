@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Demon and Mythic Gauss Warthog gunners lock on too, 2026-11-18
+
+The owner: "DO the same for the gauss hog. for those same difficulties".
+
+- `brain/bot.py`: the lock above (`Aim.lock`) now covers the Gauss Warthog's gun as well as the chaingun. `Bot.chaingun_lock` became `Bot.hog_gun_lock`, with `HOG_LOCK_GUNS` the chaingun and the Gauss as `vehicles.gunner_gun` names them ("assault_rifle", "sniper"), so it is led by the Gauss round's speed. It applies to Reach's Gauss (the Warthog's body with the gauss on it) and Halo 3's own kind; the Rocket Warthog is still left out. Demon and Mythic only.
+- Live, no mount is read for the Gauss (`turret_origin` is the chaingun's only, and `GUN_HEIGHT` has no Gauss), so it aims from the gunner's eye as before. The lock is exact from there; how far the Gauss's real muzzle sits from that is not measured.
+- Validation: `tools/test_chaingun_lock.py` (now 4: the Gauss for Demon and Mythic, both kinds, dead on from 2 rad away, led, firing; not the Rocket Warthog, nor Legendary on the Gauss). The full suite passes except one Wheelman check of `native/bots_panel.h`, which another session is editing now. **Untested in a match.**
+
 ### Demon and Mythic Warthog chaingunners lock on, 2026-11-18
 
 The owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner seat".

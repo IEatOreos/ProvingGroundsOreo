@@ -276,6 +276,9 @@ PLANT_HOLD_SCORE = 9.0
 # (custom, Nov 18) a Warthog's chaingun spun up on a man just out of sight (Bot.spin_target): the man it was aimed at only,
 # for SPIN_KEEP s, within SPIN_R u, the trigger only with the gun on where he went (SPIN_SLACK: the held turret window)
 SPIN_KEEP, SPIN_R, SPIN_SLACK = 2.0, 30.0, 4.0
+# (custom, Nov 18) the Warthog guns Demon and Mythic aim dead on with (Bot.hog_gun_lock): the chaingun and the Gauss, as
+# vehicles.gunner_gun names them
+HOG_LOCK_GUNS = ("assault_rifle", "sniper")
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -5262,9 +5265,9 @@ class Bot:
                         tp = None
                     if tp is not None:
                         aim_at = tp
-                locked = gunner and s.chaingun_lock(v, me)
+                locked = gunner and s.hog_gun_lock(v, me)
                 if locked:
-                    # (custom, Nov 18) Demon and Mythic on a Warthog's chaingun: dead on his chest (aim_at, Halo 4's
+                    # (custom, Nov 18) Demon and Mythic on a Warthog's chaingun or Gauss: dead on his chest (aim_at, Halo 4's
                     # real point tp) every tick, led (Aim.lock)
                     chest = tp if tp is not None else aim_at + Vec(0, 0, aim_height(False, crouched(snap.player(tid))))
                     act.yaw, act.pitch = s.aim.lock(me, tid, chest, b.vel, origin=origin, gun=gun)
@@ -6029,13 +6032,14 @@ class Bot:
         if s.game == "reach" and act.fire2:
             act.vertical = 1.0
 
-    def chaingun_lock(s, v, me):
+    def hog_gun_lock(s, v, me):
         """(custom, Nov 18, owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner
-        seat") A Demon's or Mythic's seat on a Warthog's chaingun (the Warthog's gun as a hand gun, vehicles.gunner_gun:
-        not the Gauss or Rocket Warthog's, which read "warthog" too with their gun riding on it; every game): its aim
-        locks dead on the man (Aim.lock)."""
-        return (v is not None and vehicles.kind_of(v["kind"]) == "warthog"
-                and vehicles.gunner_gun(v, getattr(me, "turret", "") or "") == "assault_rifle"
+        seat", then "DO the same for the gauss hog. for those same difficulties") A Demon's or Mythic's seat on a
+        Warthog's chaingun or Gauss cannon (the gun as a hand gun, vehicles.gunner_gun HOG_LOCK_GUNS: the Rocket
+        Warthog's not, which reads "warthog" too with its gun riding on it; every game): its aim locks dead on the man
+        (Aim.lock)."""
+        return (v is not None and vehicles.kind_of(v["kind"]) in ("warthog", "gauss")
+                and vehicles.gunner_gun(v, getattr(me, "turret", "") or "") in HOG_LOCK_GUNS
                 and (profiles.fixed_demon(s.p) or profiles.fixed_mythic(s.p)))
 
     def spin_target(s, now, me, snap):
