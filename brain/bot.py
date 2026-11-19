@@ -273,6 +273,9 @@ FLAG_FIGHT_AGAIN = 6.0             # s after a fight ends before another drop
 # fight called off) and its walk onto the goal stands (Bot.plant_stay: no step off it for a grenade, the kit or a mate)
 PLANT_HOLD_R = 4.0                 # u (the same as FLAG_FIGHT_HOME: no drop to fight this near, either)
 PLANT_HOLD_SCORE = 9.0
+# (custom, Nov 18) a Warthog's chaingun spun up on a man just out of sight (Bot.spin_target): the man it was aimed at only,
+# for SPIN_KEEP s, within SPIN_R u, the trigger only with the gun on where he went (SPIN_SLACK: the held turret window)
+SPIN_KEEP, SPIN_R, SPIN_SLACK = 2.0, 30.0, 4.0
 DEMON_SIGHT_OVER = ("vehicle", "hold", "objective")   # fought over by a Demon with a man in view (objective: Slayer)
 DEMON_LUNGE_DRAW, DEMON_LUNGE_KEEP = 3.0, 4.5   # u: Demon draws a sword or hammer inside the first, puts it away past the second
 DEMON_RADAR_TURN_R = 12.0          # u: Demon checks a fresh tracker dot this near (others 3.5), its shield holding
@@ -5254,18 +5257,20 @@ class Bot:
                 # the hand gun's window)
                 fire = s.aim.on_target(me, aim_at, slack=(4.0 if getattr(s, "seat_fire", False) else 2.5) if gunner else 1.0)
                 s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
+                if gunner:
+                    s.spin_on = (tid, now)               # (custom, Nov 18) the man the gun was on (the spin below)
             elif gunner and v is not None and vehicles.kind_of(v["kind"]) == "warthog":
                 # a chaingun spins up (5 to 15 rounds a second over its first second, Reach's tag: guide 17 §4.4): a man
                 # who just went out of sight is expected back, so it stays spun up on where he went for 2 s
-                gone = [k for k, q in s.per.beliefs.items() if isinstance(k, int) and now - q.t < 2.0
-                        and dist(me.pos, q.pos) < 30.0]
-                if gone:
-                    k = max(gone, key=lambda k: s.per.beliefs[k].t)
+                k = s.spin_target(now, me, snap)
+                if k is not None:
                     q = s.per.beliefs[k]
                     act.yaw, act.pitch = s.aim.step(now, dt, me, None, q.pos, Vec(), False,
                                                     gun="assault_rifle", origin=me.turret_origin,
                                                     protected=me.turret_origin is not None and profiles.fixed_high(s.p))
-                    fire = aimed = True
+                    aimed = True
+                    # (custom, Nov 18) only with the gun on where he went, as the aim's own trigger window
+                    fire = s.aim.on_target(me, q.pos, slack=SPIN_SLACK)
                     s.att = ["spin", k, round(q.pos.x, 1), round(q.pos.y, 1)]
             if not aimed and v is not None and not me.has_flag:
                 act.yaw = s.rider_look(now, dt, me, v)     # nobody in sight: look for him (a carrier rides it out)
@@ -6002,6 +6007,20 @@ class Bot:
         float (maps/_inputs/reach.json "fire2", the owner's Boneyard capture)."""
         if s.game == "reach" and act.fire2:
             act.vertical = 1.0
+
+    def spin_target(s, now, me, snap):
+        """(custom, Nov 18, the owner's F9 "Majorgunner in the turret shooting the ground why") The man a Warthog's
+        chaingun stays spun up on once out of sight: the one the gun was last aimed at (spin_on), within SPIN_KEEP s of
+        that, alive, last known within SPIN_KEEP s and SPIN_R u. Before, it was whoever's belief was newest, a radar dot
+        too, picked again every tick: live reach_dlc_medium 20261118-220316, 615.9-616.2 s, the gun swung between three
+        men it never saw (#4, #14, #9) 12 degrees down, trigger held, into the ground."""
+        on = getattr(s, "spin_on", None)
+        if on is None or now - on[1] >= SPIN_KEEP:
+            return None
+        p, b = snap.player(on[0]), s.per.beliefs.get(on[0])
+        if p is None or not p.alive or b is None or now - b.t >= SPIN_KEEP or dist(me.pos, b.pos) >= SPIN_R:
+            return None
+        return on[0]
 
     def chaingun_heat(s, dt, fire):
         """Reach's Warthog chaingun overheats: heat climbs over CHAINGUN_HEAT[0] s of fire and falls over CHAINGUN_HEAT[1]

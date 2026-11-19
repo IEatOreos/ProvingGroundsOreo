@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Warthog chaingun: no spray at the newest radar dot, 2026-11-18
+
+The owner's F9 "Majorgunner in the turret shooting the ground why" (reach_dlc_medium `20261118-220316`, 619.2 s; he added "The gunner shooting the ground was about several seconds before killing me").
+
+- **Found:** with nobody in sight, the Warthog gunner's "stay spun up" rule aimed at whoever's belief was newest and held the trigger whatever the gun pointed at. That meant any man known in the last 2 s within 30 u, a radar dot too, picked again every tick. At 615.9-616.2 s MajorGunner swung between three men it never saw (#4, #14, #9) with the gun 12° down, into the ground. In that match 6 gunners fired 67 ticks this way, and only 1 was at the man the gun had been on with the gun on his spot.
+- `brain/bot.py`: the gun keeps to the man it was last aimed at (`Bot.spin_on`, set in the aim branch), for `SPIN_KEEP` 2 s after it was last on him, while he is alive, known within 2 s and within `SPIN_R` 30 u (`Bot.spin_target`). It fires only once the gun is on where he went (`aim.on_target`, `SPIN_SLACK` 4, the held turret window). Radar dots alone turn and fire nothing.
+- **Not fixed:** the 606-611 s rounds. From the Warthog driving away up the slope, the gun turned back and 12-18° down, 57 presses did nothing while the owner recharged from 0.22 to a full shield. Those were aimed at his chest from the calibrated gun mount, and the map's data shows a clear line every time; the cause is not known (a guess: `GUN_HEIGHT` was measured at 6 u on level ground).
+- Validation: `tools/test_warthog_spin.py` (new, 4: on him, not the newest dot; no fire while the gun swings there; not after `SPIN_KEEP` nor once he is dead; dots alone spin nothing). Full suite OK; `live_bots` imports. **Untested in a match.**
+
 ### Bomb carriers: drop to fight in one-bomb Assault, and nothing but the plant near the goal, 2026-11-18
 
 The owner: "Add the ctf rule where the runner drops the flag but for neutral bomb assault and one bomb to fight when running. Also Make it to where the bomb planter doesnt leave the bomb site if theyre planting or within 4 units of planting to avoid a fight. That should be the only priority is too plant the bomb that close."
