@@ -930,6 +930,16 @@ def main():
         import kill_record
         kills = kill_record.Watch(live)
         trace.write(json.dumps(dict(t=0.0, kill_record=kill_record.VERSION)) + chr(10))
+    # (custom, Nov 19) the layout's map memory (brain/lore.py, read by Legendary and up): this match's kills and
+    # respawns go in, once per match stamp (tools/lore_seed.py files old recordings by the same stamps)
+    from brain import lore as map_lore
+    book = map_lore.book(MAP)
+    same_stamp = re.search(r"_(\d{8}-\d{6})\.jsonl$", o.trace or "")
+    book_stamp = same_stamp.group(1) if same_stamp else time.strftime("%Y%m%d-%H%M%S")
+    book_on = book.match(book_stamp)
+    if book_on and kills is not None:
+        book.kill_match(book_stamp)              # (its kills recorded: it counts toward trusting the danger spots)
+    respawned = {}                               # player -> when he came back (his place is read 0.25 s on)
     last_wp = {}
 
     def nav(a, b, **kw):                      # remember each bot's waypoint for the trace
@@ -1204,6 +1214,9 @@ def main():
                     try:
                         for row in kills.tick(snap):
                             trace.write(json.dumps(dict(t=round(now, 3), kill=row)) + chr(10))
+                            said = kill_record.read(row, TEAMS) if book_on else None
+                            if said is not None and said[0] == "kill" and row.get("kp") is not None:
+                                book.add_kill(row["vp"], row["kp"])     # (map memory: where each stood)
                         kill_fails = 0
                     except Exception as e:           # never stops the bots; a read racing the game is tried again,
                         kill_fails += 1              # a second of them and it is off for the rest of the match
@@ -1212,6 +1225,16 @@ def main():
                                   f"{type(e).__name__}: {e}", flush=True)
                         if kill_fails >= 30:
                             kills = None
+                if book_on:                          # (custom, Nov 19) respawns, for the map memory's spawn spots
+                    for p in snap.players:
+                        w = before.get(p.id)
+                        if w is not None and p.alive and not w.alive:
+                            respawned[p.id] = now
+                        elif not p.alive:
+                            respawned.pop(p.id, None)
+                        elif p.id in respawned and now - respawned[p.id] >= 0.25:
+                            del respawned[p.id]
+                            book.add_spawn(snap.mode, (p.pos.x, p.pos.y, p.pos.z), p.team)
                 events(bots, directors, before, snap, now)
                 flag_events(directors, flag_before, snap, now)
                 flag_before = {t: f.state for t, f in snap.flags.items()}

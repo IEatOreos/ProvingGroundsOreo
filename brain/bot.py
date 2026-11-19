@@ -339,6 +339,17 @@ DOT_SWITCH = 0.4                   # s: the dot watched stays until another is t
 DOT_KEEP = 0.5                     # s: a dot's corner kept while he moves under 1.5 u and it under 1 u (man_appears')
 DOT_STALE = 1.0                    # s past that an old corner still stands in while another dot's walk took the tick
 DOT_BREAK_FRESH = 1.0              # s: a dot this fresh with an open line on it is a second man in a fight
+# (custom, Nov 19, owner: "Danger map, Spawns, Movement facts ... only give it to legendary and up") what a layout taught
+# over matches (brain/lore.py, profiles.map_memory). Nobody known: the spots men shot from when people died where it
+# walks are checked first (danger_look), each DANGER_LOOK_S, not again for DANGER_RECHECK s, within DANGER_LOOK_R and
+# (walking) LOOK_CONE of its way; a radar dot within DOT_SPOT_R of one with a line to it: that spot watched
+# (radar_threat). After a kill, SPAWN_WATCH_S s on the spawn spots within SPAWN_WATCH_R in sight (spawn_look). Routes
+# round the deadliest lanes when about as short (Terrain.nav avoid). Jumps bots keep falling short of: another way when
+# there is one (jump_learned_bad). MAP_MEMORY False: as before
+MAP_MEMORY = True
+DANGER_LOOK_S, DANGER_RECHECK, DANGER_LOOK_R = 0.8, 8.0, 60.0
+DOT_SPOT_R, DOT_SPOT_EDGE = 6.0, 0.5   # u; s: a spot watched over his corner unless the corner is this much sooner
+SPAWN_WATCH_S, SPAWN_WATCH_R, SPAWN_LOOK_HOLD = 6.0, 35.0, 1.2
 # (custom, Nov 8) Demon leaves a Ghost with this much of its body left or less (may_drive): the owner's 12-20%, the top of
 # it for the 0.8 s the Use hold takes (live Blood Crash 20261108-024522: Camper25's Ghost 100% to 6% in 1.5 s, dead in it)
 DEMON_GHOST_BAIL = 0.20
@@ -2491,6 +2502,10 @@ class Bot:
         haz = s.kit.hazards(me0, snap) if me0 is not None and getattr(snap, "deployed", None) else ()
         if haz:
             nav = (lambda nav0: lambda a, b, **kw: nav0(a, b, hazards=haz, **kw))(nav)
+        lanes = s.danger_lanes(me0)
+        if lanes:       # (custom, Nov 19) Legendary and up: round the lanes the most people died in, when about as short
+            nav = (lambda nav0: lambda a, b, **kw: nav0(a, b, avoid=lanes, **kw))(nav)
+        s.kill_check(now, snap)
         me = snap.player(s.id)
         if me and me.alive:
             # Observe full magazines during fights too, before reload_check needs the
@@ -9530,7 +9545,11 @@ class Bot:
             return
         key, land, _ = t
         s.jump_try = None
-        if (me.pos - land).flat() <= 1.0 and me.pos.z > land.z - 0.4:
+        made = (me.pos - land).flat() <= 1.0 and me.pos.z > land.z - 0.4
+        lb = s.lore()
+        if lb is not None:                  # (custom, Nov 19) the layout's memory of it: jump_learned_bad
+            lb.add_jump(key, made)
+        if made:
             return
         fails = s.__dict__.setdefault("jump_fails", {})
         n = fails.get(key, (0, 0.0))[0] + 1
@@ -9544,13 +9563,39 @@ class Bot:
         f = getattr(s, "jump_fails", {}).get((round(at[0], 1), round(at[1], 1)))
         return f is not None and f[0] >= 2 and getattr(s, "now", 0.0) < f[1]
 
+    def jump_learned_bad(s, me, nxt, point):
+        """(custom, Nov 19) Legendary and up: a jump (a route) bots kept falling short of on this layout over matches
+        (Lore.jump_bad), with a walking way to point: banned as two shorts of its own would (jump_fails, 60 s), so the
+        walk goes round it all (move_to). Without a walking way it is still tried."""
+        lb = s.lore()
+        if lb is None:
+            return False
+        at = (nxt.path[0][0], nxt.path[0][1]) if hasattr(nxt, "path") else (nxt.sx, nxt.sy)
+        key = (round(at[0], 1), round(at[1], 1))
+        if not lb.jump_bad(key):
+            return False
+        try:
+            if not s.T().reaches(me.pos, point):
+                return False
+        except Exception:
+            return False
+        s.__dict__.setdefault("jump_fails", {})[key] = (2, getattr(s, "now", 0.0) + 60.0)
+        s.note("jump: this layout's bots keep falling short of it, another way")
+        return True
+
     def judge_route(s, me):
         """A people's route just left (done, too slow, or pushed off): over 1 u from its end on the flat or 0.8 u under
         it is short, counted as a short jump is (judge_jump). Live Boneyard 20261105-031842: attackers walked the ramp
         route under phase 1's territories along the floor under it, z -10 for an end at -6, again and again."""
         key, end = getattr(s, "route_key", None), getattr(s, "route_end", None)
         s.route_key = s.route_end = None
-        if key is None or ((me.pos - end).flat() <= 1.0 and me.pos.z > end.z - 0.8):
+        if key is None:
+            return
+        made = (me.pos - end).flat() <= 1.0 and me.pos.z > end.z - 0.8
+        lb = s.lore()
+        if lb is not None:                  # (custom, Nov 19) the layout's memory of it: jump_learned_bad
+            lb.add_jump(key, made)
+        if made:
             return
         fails = s.__dict__.setdefault("jump_fails", {})
         n = fails.get(key, (0, 0.0))[0] + 1
@@ -9819,7 +9864,7 @@ class Bot:
             act.forward = act.strafe = 0.0
             s.nav_cmd = (0.0, 0.0)
             return
-        if (hasattr(nxt, "sx") or hasattr(nxt, "path")) and s.jump_blocked(nxt):
+        if (hasattr(nxt, "sx") or hasattr(nxt, "path")) and (s.jump_blocked(nxt) or s.jump_learned_bad(me, nxt, point)):
             nxt = nav(me.pos, point, safe=me.has_flag)          # a jump (a route) it fell short of twice: another way
         off = s.off_lost_floor(me, nxt)
         if off is not None:
@@ -10066,6 +10111,13 @@ class Bot:
                 ranked.append((0.0, d, k, "open", g + Vec(0.0, 0.0, 0.35)))
                 continue
             corner, way, step = s.dot_corner(now, me, k, g)
+            spot = s.dot_spot(me, g)          # (custom, Nov 19) a spot men shot from at people here, by him: watched
+            if spot is not None:
+                ts = dist(g, spot) / DOT_SPEED
+                tc = max((way or 0.0) - dist(me.pos, corner), dist(g, corner)) / DOT_SPEED if corner is not None else None
+                if tc is None or ts <= tc + DOT_SPOT_EDGE:
+                    ranked.append((ts, d, k, "spot", spot))
+                    continue
             if corner is not None:
                 t = max((way or 0.0) - dist(me.pos, corner), dist(g, corner)) / DOT_SPEED   # his walk to it
                 ranked.append((t, d, k, "corner", corner))
@@ -10084,6 +10136,112 @@ class Bot:
         t, d, k, how, look = best
         s.dot_watch = k
         return [["radar", f"#{k} {how}", round(look.x, 1), round(look.y, 1)], look]
+
+    # --- (custom, Nov 19) map memory: brain/lore.py, Legendary and up (profiles.map_memory)
+    def lore(s):
+        """The layout's map memory for Legendary and up; None for the rest (or MAP_MEMORY off)."""
+        if not MAP_MEMORY or not profiles.map_memory(s.p):
+            return None
+        from . import lore
+        return lore.book(s.map)
+
+    def danger_lanes(s, me):
+        """The lanes the most people died in on this layout, for the nav to go round when about as short (on foot)."""
+        if me is None or not me.alive or me.vehicle not in (None, -1):
+            return ()
+        lb = s.lore()
+        return lb.lanes() if lb is not None else ()
+
+    def kill_check(s, now, snap):
+        """The man this bot was fighting went down since the last tick (its kill or a teammate's): kill_seen (now, where
+        he fell), for spawn_look. And the mode the spawns are kept by."""
+        s.lore_mode = getattr(snap, "mode", None)
+        was = getattr(s, "_fight_foe", None)
+        me = snap.player(s.id)
+        if was is not None and was[1] and me is not None and me.alive:
+            p = snap.player(was[0])
+            if p is not None and not p.alive:
+                s.kill_seen = (now, was[2])
+        kind, arg = s.goal
+        p = snap.player(arg) if kind == "fight" and isinstance(arg, int) else None
+        s._fight_foe = (arg, p.alive, p.pos) if p is not None else None
+
+    @staticmethod
+    def _in_cone(me, q, toward):
+        if toward is None:
+            return True
+        a = math.atan2(q.y - me.pos.y, q.x - me.pos.x) - math.atan2(toward.y - me.pos.y, toward.x - me.pos.x)
+        return abs((a + math.pi) % (2 * math.pi) - math.pi) <= LOOK_CONE
+
+    def spawn_look(s, now, me, toward=None):
+        """After a kill (kill_seen, SPAWN_WATCH_S s), nobody known: the spawn spot in sight within SPAWN_WATCH_R where
+        people come back most in this mode (walking: within LOOK_CONE of its way), held SPAWN_LOOK_HOLD s. None: none."""
+        ks = getattr(s, "kill_seen", None)
+        if ks is None or now - ks[0] > SPAWN_WATCH_S or me.has_flag or me.vehicle not in (None, -1):
+            return None
+        held = getattr(s, "_spawn_watch", None)
+        if held is not None and now < held[1] and s._in_cone(me, held[0], toward):
+            return held[0]
+        if now < getattr(s, "_spawn_next", 0.0):
+            return None
+        lb = s.lore()
+        if lb is None:
+            return None
+        T, e, best = s.T(), eye(me), None
+        for spot, n in lb.spawn_spots(getattr(s, "lore_mode", None), getattr(s, "game_team", None))[:16]:
+            d = dist(me.pos, spot)
+            q = spot + Vec(0.0, 0.0, 0.62)
+            if not 4.0 < d < SPAWN_WATCH_R or not s._in_cone(me, q, toward):
+                continue
+            score = n / max(d, 8.0)                     # come back there often, and near
+            if (best is None or score > best[0]) and T.los(e, q):
+                best = (score, q)
+        if best is None:
+            s._spawn_next = now + 0.3
+            return None
+        s._spawn_watch = (best[1], now + SPAWN_LOOK_HOLD)
+        return best[1]
+
+    def danger_look(s, now, me, toward=None):
+        """Nobody known: the spot men shot from most when people died near here (Lore.shooters), in sight within
+        DANGER_LOOK_R (walking: within LOOK_CONE of its way), DANGER_LOOK_S s, then the next; one checked is left
+        DANGER_RECHECK s. None: none to check."""
+        if me.has_flag or me.vehicle not in (None, -1):
+            return None
+        held = getattr(s, "_danger_watch", None)
+        if held is not None and now < held[1] and s._in_cone(me, held[0], toward):
+            return held[0]
+        if now < getattr(s, "_danger_next", 0.0):
+            return None
+        lb = s.lore()
+        if lb is None:
+            return None
+        checked = s.__dict__.setdefault("danger_checked", {})
+        T, e = s.T(), eye(me)
+        for spot, n in lb.shooters(me.pos)[:6]:
+            key = (round(spot.x), round(spot.y), round(spot.z))
+            q = spot + Vec(0.0, 0.0, 0.62)
+            if now - checked.get(key, -99.0) < DANGER_RECHECK or not 3.0 < dist(me.pos, spot) < DANGER_LOOK_R:
+                continue
+            if s._in_cone(me, q, toward) and T.los(e, q):
+                checked[key] = now
+                s._danger_watch = (q, now + DANGER_LOOK_S)
+                return q
+        s._danger_next = now + 0.25
+        return None
+
+    def dot_spot(s, me, g):
+        """A spot men shot from at people near us (Lore.shooters) within DOT_SPOT_R of a radar dot's guessed place g,
+        with a line to us: where he would shoot from (radar_threat). None: none, or not Legendary and up."""
+        lb = s.lore()
+        if lb is None:
+            return None
+        T, e = s.T(), eye(me)
+        for spot, n in lb.shooters(me.pos)[:6]:
+            q = spot + Vec(0.0, 0.0, 0.62)
+            if dist(g, spot) < DOT_SPOT_R and T.los(e, q):
+                return q
+        return None
 
     def look_point(s, me, point, nav=None, post=None):
         # look at the most recent threat it knows of: what it saw or what hit it, and a radar dot or a callout
@@ -10182,6 +10340,14 @@ class Bot:
         w = s.route[0][0] if getattr(s, "route", None) else (getattr(s, "wp", None) or point)
         if nav is not None and not getattr(s, "route", None) and (w - me.pos).flat() < 2.0 and (w - point).flat() > 1.0:
             w = nav(w, point)              # at a corner: look into the turn, as a walker does
+        if not (getattr(s, "planned_jump", False) or getattr(s, "route", None) or hasattr(getattr(s, "wp", None), "sx")):
+            # (custom, Nov 19) Legendary and up, nobody known: after a kill the spawns he comes back at, else the spots
+            # men shot from when people died here (brain/lore.py)
+            toward = s.ahead(me, w) if walking else None
+            for how, q in (("spawn", s.spawn_look(now, me, toward)), ("danger", s.danger_look(now, me, toward))):
+                if q is not None:
+                    s.att = ["watch", how, round(q.x, 1), round(q.y, 1)]
+                    return q
         if s.p.aware > 0.5:
             # nothing known: a good player checks his flanks as he goes, a glance to one side then the other
             # every couple of seconds (most deaths in the sim were men never seen), only where there is room

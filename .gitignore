@@ -46,6 +46,8 @@ maps/*/roofless.json
 # launcher's per-PC state, an agent's machine settings and MCC menu screenshots: never published
 maps/*/owner_profile.json
 maps/*/walls_learned.json
+maps/*/lore.json
+maps/*/lore.json.tmp
 user/
 .codex/
 .claude/

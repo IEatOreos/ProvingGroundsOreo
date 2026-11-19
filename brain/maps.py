@@ -858,6 +858,11 @@ def save_learned(m):
             tmp = os.path.join(ROOT, m["name"], name + ".tmp")
             json.dump(sorted(data), open(tmp, "w"))
             os.replace(tmp, tmp[:-4])
+    from . import lore                   # (custom, Nov 19) and the layout's map memory (brain/lore.py: lore.json)
+    try:
+        lore.save(m)
+    except OSError as e:
+        print(f"map memory not saved: {e}", flush=True)
 
 
 def get_map(name):

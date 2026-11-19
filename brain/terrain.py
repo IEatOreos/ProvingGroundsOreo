@@ -2510,13 +2510,19 @@ class Terrain:
             return a                    # at (or a cell off) the end of the vehicle's ground nearest the goal: here it
         return s._center(*far) if far else b   # stops (drive's ground_end: a = its answer, never a short step)
 
-    def nav(s, a, b, lookahead=6, jump=False, human=False, safe=False, no_tele=False, hazards=()):
+    # (custom, Nov 19) avoid: a way round these disks is taken when it is at most AVOID_LONGER times the plain way's
+    # length plus AVOID_EXTRA u; else the plain way (from inside one, or to a goal in one: the plain way)
+    AVOID_LONGER, AVOID_EXTRA = 1.25, 6.0
+
+    def nav(s, a, b, lookahead=6, jump=False, human=False, safe=False, no_tele=False, hazards=(), avoid=()):
         """Next point to walk toward on the way from a to b. jump=True (skilled players) also
         uses jump links, human=True (any bot that jumps) people's jumps: then the answer may be a
         JumpVec (run to its start, jump). safe=True (a carrier): round people's big drops while any other way
         exists (_field). no_tele=True: round the teleporters while any other way exists (ponytail: the straight-line
         lookahead below can still cut a pad's edge; check _straight_ok against s.links if bots clip pads). hazards:
-        ((x, y, z, r), ...) to go round while any other way exists (an enemy trip mine: Kit.hazards, GitHub #9)."""
+        ((x, y, z, r), ...) to go round while any other way exists (an enemy trip mine: Kit.hazards, GitHub #9).
+        avoid: ((x, y, z, r), ...) to go round only when that way is about as short (AVOID_LONGER, AVOID_EXTRA): the
+        lanes where the most people died (custom, Nov 19: brain/lore.py Lore.lanes, Legendary and up)."""
         if not all(math.isfinite(c) for c in (a.x, a.y, a.z, b.x, b.y)):
             return None              # (a NaN place crashed a tick here, Forge: no way from or to nowhere)
         if not math.isfinite(b.z):   # a goal with no floor under it (a point off Halo 2 Ascension's edge, sim:
@@ -2526,6 +2532,10 @@ class Terrain:
         human = (human or jump) and bool(getattr(s, "hjumps", None) or getattr(s, "hroutes", None))
         cost = s._field(b, jump, human, safe, no_tele=no_tele, hazards=hazards)
         l, j, i = s._node(a)
+        if avoid and np.isfinite(cost[l, j, i]):
+            alt = s._field(b, jump, human, safe, no_tele=no_tele, hazards=tuple(hazards) + tuple(avoid))
+            if alt[l, j, i] < s.BARRIER_COST and alt[l, j, i] <= cost[l, j, i] * s.AVOID_LONGER + s.AVOID_EXTRA:
+                cost = alt
         if human and np.isfinite(cost[l, j, i]):
             # a person's jump (or crouch path) is a way in, never a detour: take it only when it is
             # the cheapest way from its start to where THIS bot is going (the path search's best
@@ -2589,7 +2599,18 @@ class Terrain:
     def _hazard_edges(s, graph, hazards):
         """The graph's edges into and out of the floor within a hazard's reach ((x, y, z, r): an enemy trip mine, Kit.avoid),
         priced as a wall for one search (_field), so a way round wins whenever there is one; through it when there is not
-        (Kit.steer_clear the last resort). Live Rat's Nest s178: a bot's way to the hill ran past a mine and set it off."""
+        (Kit.steer_clear the last resort). Live Rat's Nest s178: a bot's way to the hill ran past a mine and set it off.
+        (custom, Nov 19) Kept per graph and hazard set: the danger lanes (nav avoid) are the same every call."""
+        memo = s.__dict__.setdefault("_haz_memo", {})
+        mk = (id(graph), graph.nnz, tuple(hazards))
+        if mk in memo:
+            return memo[mk]
+        if len(memo) > 32:
+            memo.clear()
+        memo[mk] = out = s._hazard_edges_of(graph, hazards)
+        return out
+
+    def _hazard_edges_of(s, graph, hazards):
         nodes = []
         for x, y, z, r in hazards:
             _, j0, i0 = s._node(Vec(x, y, z))

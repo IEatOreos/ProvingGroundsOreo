@@ -192,6 +192,13 @@ def fixed_high(prof):
     return prof.tier in ("top", DEMON) and prof.extra is None
 
 
+def map_memory(prof):
+    """(custom, Nov 19, owner: "only give it to legendary and up") What a layout taught over matches (brain/lore.py: the
+    danger spots and lanes, the spawns, the jumps bots keep falling short of): fixed Legendary (Mythic, Blind and
+    Tactician too) and Demon, as fixed_high; Scaling and Heroic down play without it."""
+    return fixed_high(prof)
+
+
 def fixed_demon(prof):
     return prof.tier == DEMON and prof.extra is None
 
