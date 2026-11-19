@@ -3,8 +3,10 @@ import random
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from brain import nade
 from brain.bot import Bot
 from brain.core import PlayerState, Snapshot, Vec, angles_to, eye
 from brain.profiles import make_profile
@@ -32,6 +34,14 @@ class Cover:
 
 
 class DemonFireTests(unittest.TestCase):
+    def setUp(self):
+        # (Nov 18) the trigger only: no solved grenade throw (brain/nade.py, tools/test_nade_throw.py) from the
+        # owner's learned flights in user/grenade_flights.json. With 3 Reach flights there, the armor lock test's
+        # "counter his ability" grenade walked its arc through this made-up level's point_los, which has no live_head
+        p = mock.patch.object(nade, "model", return_value=None)
+        p.start()
+        self.addCleanup(p.stop)
+
     def scene(self, sight, shot, *, weapon="dmr", tier="demon", live_head=None, game="reach"):
         cover = Cover(sight, shot, live_head)
         rng = random.Random(1)
