@@ -307,8 +307,11 @@ DEMON_BREAK_SCORE = 3.55           # over recharge (3.5), hunts, a trade and pus
 DEMON_RADAR = True
 # (custom, Nov 18, owner: "commit to them unless an enemy is close") a run at a power weapon is finished (power_commit)
 POWER_COMMIT = True
-POWER_COMMIT_CLOSE = 8.0           # u: an enemy known this near ends the commitment (the usual choice decides)
+POWER_COMMIT_CLOSE = 8.0           # u: an enemy known this near can fight it whatever the walls (and beyond: an open line)
 POWER_COMMIT_FRESH = 1.5           # s: ... known this lately (seen, radar, a callout, his shots)
+POWER_PUSH_ODDS = 1.0              # the men who can fight it: odds this good (they all on it at once) and it pushes on
+POWER_RECHARGE_SHIELD = 0.5        # shield under this with an enemy known within POWER_RECHARGE_R: recharge first
+POWER_RECHARGE_R = 20.0
 POWER_COMMIT_MAX = 25.0            # s: a run this long is no longer held (a way that does not get there)
 POWER_COMMIT_MARGIN = 0.5          # over the best other goal (the flip-flop rule adds 0.2 to the goal it has)
 DOT_THREAT_R = 20.0                # u: dots this near are ranked (the DOT_RANKED nearest)
@@ -6777,14 +6780,20 @@ class Bot:
         return True
 
     def power_commit(s, now, me, snap, scores, hit_recent):
-        """(custom, Nov 18, owner: "commit to them unless an enemy is close") On its way to a power weapon (its goal an
-        item that power_at says is one, still scored, so still believed there and not given up as unreachable), the run
-        goes on over every other goal (POWER_COMMIT_MARGIN over the best) unless an enemy it knows of (seen, radar,
-        callout or shots, under POWER_COMMIT_FRESH s old) is within POWER_COMMIT_CLOSE, or it was hit in the last 2 s,
-        or the run has gone POWER_COMMIT_MAX s. A man seen farther off is still shot at on the way (on_way_target). Not
-        in a vehicle nor carrying. The owner's Forge World 20261118-180057: about 170 runs at the rockets ended after 1-4
-        s for a hunt (78), a retreat (35) or a fight (30), and were begun again from farther off; one bot got them, at
-        206 s, by the east ramp the nav takes."""
+        """(custom, Nov 18, owner: "commit to them unless an enemy is close", then "if the bot thinks it can win the
+        fight from any range it commits to the push" and the recharge first when hurt with an enemy near) On its way to
+        a power weapon (its goal an item that power_at says is one, still scored, so still believed there and not given
+        up as unreachable), the run goes on (POWER_COMMIT_MARGIN over the best other goal) while:
+        - the men who can fight it now (known under POWER_COMMIT_FRESH s old: within POWER_COMMIT_CLOSE whatever the
+          walls, with an open line to it within DEMON_WATCH_R, or the man who just shot it) are a fight it wins:
+          odds (brain/odds.py, all of them on it at once) of POWER_PUSH_ODDS or better. Losing: the usual choice.
+        - its shield is not under POWER_RECHARGE_SHIELD with an enemy known within POWER_RECHARGE_R (then the usual
+          choice: the recharge rules' cover); no enemy that near, it goes on and the shield comes back on the way
+        - the run is under POWER_COMMIT_MAX s
+        A Demon shoots the men in view on its way (on_way_target); every other tier keeps its fights (the run goes over
+        the rest only). Not in a vehicle nor carrying. The owner's Forge World 20261118-180057: about 170 runs at the
+        rockets ended after 1-4 s for a hunt (78), a retreat (35) or a fight (30), and were begun again from farther off;
+        one bot got them, at 206 s, by the east ramp the nav takes."""
         g = s.goal
         run = getattr(s, "power_run", None)
         if (not POWER_COMMIT or g[0] != "item" or not isinstance(g[1], Vec) or g not in scores
@@ -6793,17 +6802,42 @@ class Bot:
             return
         if run is None or (run[0] - g[1]).flat() > 1.0:
             run = s.power_run = (g[1], now)
-        if now - run[1] > POWER_COMMIT_MAX or hit_recent:
+        if now - run[1] > POWER_COMMIT_MAX:
             return
-        close = next((k for k, b in s.per.beliefs.items()
-                      if isinstance(k, int) and now - b.t < POWER_COMMIT_FRESH
-                      and dist(me.pos, b.pos) < POWER_COMMIT_CLOSE), None)
-        if close is not None:
-            return
-        top = max(v for k, v in scores.items() if k != g) if len(scores) > 1 else scores[g]
+        known = {k: b for k, b in s.per.beliefs.items() if isinstance(k, int) and now - b.t < POWER_COMMIT_FRESH
+                 and snap.player(k) is not None and snap.player(k).alive and snap.player(k).team != me.team}
+        if (not snap.shieldless and odds_model.shield_left(me) < POWER_RECHARGE_SHIELD
+                and any(dist(me.pos, b.pos) < POWER_RECHARGE_R for b in known.values())):
+            return                                  # hurt with a man near: cover and the shield first
+        att = getattr(s.per, "attacker_id", None)
+        try:
+            T = s.T() if s.map is not None else None
+        except Exception:
+            T = None
+
+        def can_fight(k, b):
+            d = dist(me.pos, b.pos)
+            if d < POWER_COMMIT_CLOSE or (hit_recent and k == att):
+                return True
+            if d > DEMON_WATCH_R or T is None:
+                return False
+            try:
+                return bool(T.los(b.pos, me.pos))
+            except Exception:
+                return True
+        men = [k for k, b in known.items() if can_fight(k, b)]
+        if hit_recent and att is not None and att not in men and att in s.per.beliefs:
+            men.append(att)                         # (shot by a man it has no fresh belief of: he counts too)
+        if men:
+            th = [t for k in men for _, t in s.odds_threats(now, me, snap, [], only=k, all_aware=True)]
+            o = odds_model.simulate(th) if th else 9.0
+            if o < POWER_PUSH_ODDS:
+                return                              # it would lose: the usual choice (break off, cover, fight)
+        rest = {k: v for k, v in scores.items() if k != g and (profiles.fixed_demon(s.p) or k[0] != "fight")}
+        top = max(rest.values()) if rest else scores[g]
         if scores[g] < top + POWER_COMMIT_MARGIN:
             scores[g] = top + POWER_COMMIT_MARGIN
-            s.note("power weapon run: committed")
+            s.note("power weapon run: committed" + (f", wins against {len(men)}" if men else ""))
 
     def power_spawn(s, q):
         """A power weapon's spawn (a map item: a weapon of value 0.8 or more) at q."""
