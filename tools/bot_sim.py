@@ -5,7 +5,8 @@ together, holds the vote, and keeps the results.
 
 Who plays: every bot of Bot Matchmaking's pool (people never), each at its own pace around a third of yours (one round =
 one match of yours); grinders are three times as likely among Legendary, Blind, Mythic and Demon bots. Lobbies as
-yours: Arena 4v4 or Big Team Battle 8v8 from proving_grounds.ini's playlists, clans together (85%, up to a team),
+yours: (Nov 19, the owner) one game a round at most (a bot's pace is its chance of a game), and the bots of the
+match of yours a round goes alongside sit it out. Arena 4v4 or Big Team Battle 8v8 from proving_grounds.ini's playlists, clans together (85%, up to a team),
 teams balanced by skill, a map and gametype by the same vote as yours (native/proving_grounds.cpp liking / bot_vote,
 None of the Above included). Bots a lobby cannot seat wait for the next round.
 
@@ -642,9 +643,12 @@ def used_starts(paths, con):
     return out
 
 
-def play_round(paths, window, seed, settings=None, playlists=None, quiet=True):
+def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, sit_out=()):
     """One round: who plays, the lobbies, the votes, the matches, stored. window (from, to): when its matches start
-    (epoch seconds). Returns the matches it stored [(gid, playlist title, map, gametype)]."""
+    (epoch seconds). sit_out: the bots of the match of yours this round goes alongside (Nov 19, the owner: they
+    played that match; it is their game this round; a queued one keeps its place for the next). Each bot plays one
+    game a round at most (Nov 19, the owner: no bot in two matches at once; its pace is its chance to play).
+    Returns the matches it stored [(gid, playlist title, map, gametype)]."""
     playlists, ini_settings = (playlists, settings) if playlists else read_ini()
     settings = settings or ini_settings
     bots = population(paths, settings)
@@ -660,11 +664,16 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True):
     try:
         taken = used_starts(paths, con)
         queue = [by_name[n] for n in meta_get(con, "queue", []) if n in by_name]
-        games = {b.name: rng.poisson(b.pace) for b in bots}
+        sit = {n.lower() for n in sit_out}
+        games = {b.name: min(1, rng.poisson(b.pace)) for b in bots}  # (one game a round at most)
+        for b in bots:
+            if b.name.lower() in sit:                                # (in your match: that is its game this round)
+                games[b.name] = 0
         for q in queue:                                              # (last round's waiting bots: their game now)
-            games[q.name] = max(1, games[q.name])
+            if q.name.lower() not in sit:
+                games[q.name] = 1
         layers = max(games.values()) if games else 0
-        waiting = []
+        waiting = [q for q in queue if q.name.lower() in sit]        # (queued but in your match: first next round)
         rows_mm, n_lobby = [], 0
         for layer in range(1, layers + 1):
             entrants = [b for b in queue + bots if games.get(b.name, 0) >= layer]
@@ -768,6 +777,13 @@ def window_after(paths, gid):
     return start, start + max(60.0, secs * 0.5)
 
 
+def bots_in(paths, gid):
+    """(Nov 19) The bots' names of a match of yours (its ledger row; bot_career adds it before this runs): they sit
+    out the round alongside it. [] when it is not in the ledger."""
+    m = sr.load_json(paths.ledger, {}).get(gid) or {}
+    return [p["name"] for p in m.get("players", []) if p.get("bot") and p.get("name")]
+
+
 def run(paths, rounds=1, after=None, quiet=False):
     """The command line's work: rounds now, or one round alongside the match `after`. Returns matches stored."""
     total = []
@@ -779,14 +795,16 @@ def run(paths, rounds=1, after=None, quiet=False):
         n_done = meta_get(con, "rounds", 0)
         con.close()
         for i in range(rounds):
+            sit_out = ()
             if after:
                 window = window_after(paths, after)
+                sit_out = bots_in(paths, after)
             else:
                 now = time.time()
                 back = (rounds - i) * 900 + 720
                 window = (now - back, now - back + 120)
             seed = (base_seed * 6364136223846793005 + n_done + i + 1) & ((1 << 64) - 1)
-            got = play_round(paths, window, seed)
+            got = play_round(paths, window, seed, sit_out=sit_out)
             total += got
             if not quiet:
                 print(f"round {n_done + i + 1}: {len(got)} matches", flush=True)
@@ -816,8 +834,9 @@ def stats(paths):
     med = lambda xs: xs[len(xs) // 2] if xs else 0
     print(f"games per match of yours: everyone {mean:.3f} on average; grinders' median {med(gp):.2f}, "
           f"the others' {med(cp):.3f}")
-    print(f"per round about {sum(b.pace for b in bots):.0f} seats: about {sum(b.pace * (1 - b.lean) for b in bots) / 8:.0f}"
-          f" Arena and {sum(b.pace * b.lean for b in bots) / 16:.0f} Big Team Battle lobbies")
+    plays = lambda b: 1.0 - math.exp(-b.pace)                       # (one game a round at most: its chance of one)
+    print(f"per round about {sum(plays(b) for b in bots):.0f} seats: about {sum(plays(b) * (1 - b.lean) for b in bots) / 8:.0f}"
+          f" Arena and {sum(plays(b) * b.lean for b in bots) / 16:.0f} Big Team Battle lobbies")
     print(f"model: kills a player a minute {model.kpm:.3f}; by family { {k: round(v, 3) for k, v in model.kpm_by.items()} }")
     print(f"real minutes: {sum(model.real_minutes.get(b.name, 0) for b in bots):.0f} across "
           f"{sum(1 for b in bots if model.real_minutes.get(b.name))} bots")

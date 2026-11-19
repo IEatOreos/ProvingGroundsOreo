@@ -251,5 +251,50 @@ class Site(unittest.TestCase):
         self.assertEqual(t["week"][-1], [today[:10], 4])
 
 
+class OneGameARound(unittest.TestCase):
+    """(Nov 19, the owner) a bot plays one simulated game a round at most, however fast its pace, and the bots of the
+    match of yours a round goes alongside sit that round out (a queued one keeps its place)."""
+
+    def rosters(self, paths, got):
+        con = bot_sim.connect(paths)
+        out = {gid: [p["name"] for p in json.loads(led)["players"]]
+               for gid, led in con.execute("SELECT gid, ledger FROM matches")}
+        con.close()
+        return [out[g] for g, *_ in got]
+
+    def test_at_most_one_game_and_the_match_sits_out(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp, names=120)
+            s = dict(w.settings, pace=3.0)                     # (everyone fast: several games a round before)
+            now = time.time()
+            first = bot_sim.play_round(w.paths, (now - 900, now - 600), 5, settings=s, playlists=w.playlists)
+            self.assertTrue(first)
+            seats = [n for r in self.rosters(w.paths, first) for n in r]
+            self.assertEqual(len(seats), len(set(seats)), "a bot in two matches of one round")
+            con = bot_sim.connect(w.paths)
+            queued = bot_sim.meta_get(con, "queue", [])
+            con.close()
+            mine = ["SimBot000", "SimBot001", "SimBot002"] + queued[:2]
+            got = bot_sim.play_round(w.paths, (now - 500, now - 200), 6, settings=s, playlists=w.playlists,
+                                     sit_out=[n.upper() for n in mine])   # (names match without case)
+            seats = [n for r in self.rosters(w.paths, got) for n in r]
+            self.assertTrue(seats)
+            self.assertEqual(len(seats), len(set(seats)))
+            self.assertFalse(set(mine) & set(seats), "a bot of your match played the round alongside it")
+            con = bot_sim.connect(w.paths)
+            queue = bot_sim.meta_get(con, "queue", [])
+            con.close()
+            self.assertEqual(queue[:len(queued[:2])], queued[:2], "a queued bot of your match lost its place")
+
+    def test_bots_in_reads_the_ledger(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp, names=10)
+            with open(w.paths.ledger, "w", encoding="utf-8") as f:
+                json.dump({"g1": {"players": [{"name": "Person One", "bot": False}, {"name": "SimBot003", "bot": True},
+                                              {"name": "", "bot": True}]}}, f)
+            self.assertEqual(bot_sim.bots_in(w.paths, "g1"), ["SimBot003"])
+            self.assertEqual(bot_sim.bots_in(w.paths, "nope"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

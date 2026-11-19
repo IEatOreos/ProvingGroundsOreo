@@ -72,6 +72,14 @@ The owner: "A bad player still has a pretty fast reaction time of 100-135ms. But
 - Scaling is unchanged (it draws from `HANDS`, not the tier rows).
 - Validation: `tools/test_reaction_speed.py` (new reaction times, the rougher aim, Blind and Mythic unchanged), `test_tactician_difficulty.py`, `test_mythic_difficulty.py` and `test_difficulty_separation.py` (the upstream Legendary fingerprint still matches with the stock reaction put back). Full suite: 965 tests OK; `live_bots` imports. **Untested in a match**: whether low tiers now shoot back without becoming too deadly is the owner's test.
 
+### Bot simulation: one game a round, and your match's bots sit its round out, 2026-11-19
+
+The owner asked how bots had 30-48 games when he had 19, and why the bots he partied with seemed to double; he chose both fixes. 20 rounds had stored 464 matches: grinders' paces ran up to about 4 games a round (iTzYaBoiClutch 3.9, 48 games, all simulated), four matches at once inside one of his; and the round alongside his match never looked at who played it (his last match: 6 of its 15 bots also played that round, Slayer117 four times).
+
+- `tools/bot_sim.py` `play_round`: a bot plays one game a round at most (its Poisson draw capped at 1: its pace is now its chance of a game). New `sit_out`: the bots of the match a round goes alongside play none of it (names matched without case); a queued one keeps its place for the next round. `bots_in` reads those names from the ledger (bot_career adds the match before `--after` runs); `run` passes them for `--after` rounds only (button rounds have no match of yours). `--stats` counts seats with the cap.
+- Effect: about 167 seats a round (14 Arena and 4 Big Team Battle lobbies) instead of about 250; a grinder at its median pace (0.91) plays about 60% of rounds, the fastest nearly every round. Games already played are unchanged.
+- Validation: `tools/test_bot_sim.py` `OneGameARound` (pace 3 for everyone: no bot twice in a round; your match's bots and two queued ones sit out, the queued keep their place; `bots_in`). 14 simulation tests and the full suite (964) pass. Not yet seen after a real match: the next round alongside one of the owner's matches is the first.
+
 ### Demon and Mythic Gauss Warthog gunners lock on too, 2026-11-18
 
 The owner: "DO the same for the gauss hog. for those same difficulties".
