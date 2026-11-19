@@ -132,6 +132,8 @@ def main(argv):
         json.dump(ledger, open(tmp, "w", encoding="utf-8"))
         os.replace(tmp, ledger_path)
     sims = {}
+    if HERE not in sys.path:                # (python -I leaves this folder off sys.path: without it the import below
+        sys.path.insert(0, HERE)            # failed and the totals had no simulated match)
     try:                                    # (Nov 17, the bot simulation: tools/bot_sim.py's matches count as real ones;
         import bot_sim                      # a reset covers them too. Its database beside this ledger's folder:
         sim_paths = bot_sim.sr.Paths(store=os.path.join(os.path.dirname(OUT), "service_record"))   # native/bin/...)

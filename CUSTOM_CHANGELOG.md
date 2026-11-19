@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Simulated matches reach the site and career totals under `python -I`, 2026-11-18
+
+- Found: MCC runs the tools as `python -I`, which leaves the tools folder off `sys.path`. `tools/service_record.py` `build` and `tools/bot_career.py` `main` caught the failed `import bot_sim` and went on without a simulated match, so every bot showed only the games it played with the owner.
+- Both now put their own folder (`HERE`) on `sys.path` before that import.
+- Validation: `tools/test_sim_isolated.py` (new, 1 test) runs both under a fresh `python -I` on a made-up install and finds simulated matches on the site and in the totals. Full suite: 935 tests OK. Not yet seen on the live site after a real MCC run.
+
 ### Reach Banshees: more room under a soft-kill roof, 2026-11-18
 
 The owner, Boneyard: Ashenblade (Blind) flew the Banshee for one kill; the next game PwnageTV (Demon) "not even shoot a banshee bomb once".

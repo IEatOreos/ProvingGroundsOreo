@@ -2552,6 +2552,8 @@ def build(paths):
     if update_kills(kills, paths):
         save_json(kills_path, kills)
     matches, kill_rows_all = store.get("matches", {}), kills.get("kills", {})
+    if HERE not in sys.path:                                # (python -I leaves this folder off sys.path: without it
+        sys.path.insert(0, HERE)                            # the import below failed and no simulated match showed)
     try:                                                    # (Nov 17, the bot simulation: tools/bot_sim.py's matches,
         import bot_sim                                      # shown as the real ones are; never saved into these files)
         sim_ledger, sim_matches, sim_kills = bot_sim.site_entries(paths)
