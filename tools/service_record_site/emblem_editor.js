@@ -133,7 +133,12 @@
       const mine = ++drawing;
       const c = document.createElement("canvas");
       c.width = c.height = SIZE;
-      paint(c, e, cat).then(() => { if (mine === drawing) big.getContext("2d").drawImage(c, 0, 0); })
+      paint(c, e, cat).then(() => {                        // (cleared first: drawImage blends over what was there)
+        if (mine !== drawing) return;
+        const g = big.getContext("2d");
+        g.clearRect(0, 0, SIZE, SIZE);
+        g.drawImage(c, 0, 0);
+      })
         .catch((err) => { msg.textContent = "Not drawn: " + err.message; });
       const same = ["fg", "bg", "primary", "secondary", "background"].every((k) => e[k] === now.emblem[k]);
       state.textContent = (now.custom ? "Custom emblem" : "Rolled emblem") + (same ? "" : " · not saved");

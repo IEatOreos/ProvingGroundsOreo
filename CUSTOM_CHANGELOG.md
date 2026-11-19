@@ -497,6 +497,13 @@ The owner: edit a bot's or player's location; saving refreshes the site so it li
 - `tools/service_record_site/app.js`: in edit mode each record card has a Home state picker (states grouped by region), Save and, for a state set by hand, Back to its picked state; a save reloads the page, so every state board, region and the Hometown Hero badge use the new state. The placements and state-board notes say when a state was set by hand.
 - Validation: `tools/test_home_state.py` (new: save, back to the pick, a bad state, a bad saved entry, the route's 403/400/200 for a bot and a person). `test_service_record.py` (33) and `test_bot_emblem.py` (2) pass. In the browser on the editor, Pistol Queen was moved Vermont to Texas: the page reloaded with her in Texas (state, region, the Texas count), then Back to its picked state returned her to Vermont. The owner's page gets the picker too; no sideways scroll at phone width.
 
+### Service Record: the emblem editor's preview no longer stacks old picks, 2026-11-19
+
+The owner: picking a new background (or primary colour) left the old one showing under it, piling up with each pick; the saved emblem was right.
+
+- `tools/service_record_site/emblem_editor.js` `redraw`: the preview canvas is cleared before the new emblem is drawn. `drawImage` blends over what is there, so wherever the new emblem is see-through, the earlier picks showed. Saves were never affected (the editor saves the ids, and the server draws the picture fresh).
+- Validation: in the browser on the editor, background A → B → A and primary colour A → B → A each give a pixel-identical preview (difference 0), while A and B differ. Nothing was saved.
+
 ### Service Record: an emblem editor for each bot, 2026-11-18
 
 The owner: an emblem editor on the site for each bot, like MCC's own (foreground, background, primary/secondary/background colours, secondary on or off), in edit mode only. A saved emblem should show on the site, in MCC's lobby and in matches.
