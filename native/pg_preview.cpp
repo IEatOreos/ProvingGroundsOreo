@@ -231,6 +231,7 @@ int main(int argc, char** argv) {
         e.roster = &roster; e.difficulty = 2; e.scale = 1; e.W = (float)W; e.H = (float)H;
         e.f_label = fl2; e.f_small = fs; e.make_texture = make_texture; e.play_sound = nullptr; e.sounds = 0;
         e.lobby_visible = true; e.bots_enabled = &bots_on; e.lidar_mode = &lidar;
+        { char pv[4]; e.pad = GetEnvironmentVariableA("PG_PAD", pv, sizeof pv) > 0; }   // (Nov 19: the pad's prompts)
         e.figure = pv_figure;                                  // (Nov 17: the player card's Spartan, as in game)
         bool staged = false;
         for (int frame = 0; frame < 4; frame++) {

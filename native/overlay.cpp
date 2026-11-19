@@ -450,10 +450,11 @@ static void draw_pg_tile(float t) {
     dl->AddRectFilled(ImVec2(a.x + 1, b.y - fs * 1.55f), ImVec2(b.x - 1, b.y - 1), IM_COL32(4, 8, 12, 200));
     dl->AddText(g_font_label, fs, ImVec2(a.x + fs * 0.35f, b.y - fs * 1.35f), IM_COL32(112, 178, 222, 255), "PROVING GROUNDS");
     float ks = h * 0.115f * 0.85f, ky = b.y + h * 0.10f;
-    if (!g_pad_last) {
-        float kw = g_font_label->CalcTextSizeA(ks, 1e9f, 0, "P").x + ks * 0.66f;
+    {                                                        // (Nov 19: the pad's too, both triggers: pad_frame)
+        const char* key = g_pad_last ? "LT+RT" : "P";
+        float kw = g_font_label->CalcTextSizeA(ks, 1e9f, 0, key).x + ks * 0.66f;
         dl->AddRect(ImVec2(a.x, ky), ImVec2(a.x + kw, ky + ks * 1.2f), IM_COL32(170, 200, 215, 220), 2.0f, 0, 1.2f);
-        dl->AddText(g_font_label, ks, ImVec2(a.x + ks * 0.33f, ky + ks * 0.1f), IM_COL32(200, 220, 230, 240), "P");
+        dl->AddText(g_font_label, ks, ImVec2(a.x + ks * 0.33f, ky + ks * 0.1f), IM_COL32(200, 220, 230, 240), key);
         dl->AddText(g_font_label, ks, ImVec2(a.x + kw + ks * 0.4f, ky + ks * 0.1f), IM_COL32(170, 200, 215, 230), "Matchmaking");
     }
     if (g_hover_pg && ImGui::IsMouseClicked(0)) { pg_open(); play_sound(PS_OPEN, g_sounds); }
@@ -844,6 +845,12 @@ static void pad_frame() {
             g_panel = false;
             play_sound(PS_BACK, g_sounds);
         }
+        // (Nov 19, the owner: "we mostly use controllers") both triggers together open Proving Grounds in Halo: Reach's
+        // custom game lobby, as both sticks open BOTS (P on the keys); taken on this frame (g_pg_open_req)
+        bool lt = ImGui::IsKeyDown(ImGuiKey_GamepadL2), rt = ImGui::IsKeyDown(ImGuiKey_GamepadR2);
+        if (reach_lobby() && !g_panel && !bot_ui() &&
+            ((lt && ImGui::IsKeyPressed(ImGuiKey_GamepadR2, false)) || (rt && ImGui::IsKeyPressed(ImGuiKey_GamepadL2, false))))
+            g_pg_open_req = true;
     }
     // (a bot's menu, card, PG; the button that closed one stays held from MCC till let go, in the menus only, Nov 18: in a
     // match MCC's pad is never ours)

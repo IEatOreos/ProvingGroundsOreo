@@ -1022,10 +1022,15 @@ static ImVec2 P(float x, float y) { return ImVec2(g_pg.x0 + x * g_pg.s, g_pg.y0 
 static float U(float v) { return v * g_pg.s; }
 static ImU32 A(ImU32 c) { return (c & 0x00FFFFFFu) | ((ImU32)(((c >> 24) & 255) * g_alpha) << 24); }
 
-static const ImU32 C_TEXT = IM_COL32(232, 240, 246, 255), C_DIM = IM_COL32(150, 186, 210, 255),
-                   C_BLUE = IM_COL32(118, 196, 246, 255), C_PANEL = IM_COL32(9, 22, 33, 222),
-                   C_EDGE = IM_COL32(70, 132, 172, 190), C_FOCUS = IM_COL32(40, 98, 142, 240),
-                   C_GOLD = IM_COL32(255, 204, 92, 255);
+// (Nov 19, the owner: "I want the vibe of reach as much as possible") every screen in Halo: Reach's steel grey, as the
+// roster and credits already were (C_REACH_*): grey see-through panels, light grey text, a lit grey focus with a white
+// edge; the colour comes from the maps, nameplates, emblems, team colours and gold. C_BLUE is now Reach's pale steel
+// accent (the name kept: it marks the same places it did in MCC's navy)
+static const ImU32 C_TEXT = IM_COL32(238, 240, 242, 255), C_DIM = IM_COL32(172, 178, 184, 255),
+                   C_BLUE = IM_COL32(200, 212, 222, 255), C_PANEL = IM_COL32(22, 25, 28, 214),
+                   C_EDGE = IM_COL32(104, 112, 120, 140), C_FOCUS = IM_COL32(112, 118, 124, 236),
+                   C_GOLD = IM_COL32(255, 204, 92, 255), C_ROW = IM_COL32(24, 27, 30, 205),
+                   C_LIT = IM_COL32(240, 244, 248, 255);
 
 static float text_w(ImFont* f, float size, const char* s) { return f->CalcTextSizeA(U(size), 1e9f, 0, s).x; }
 static void text(ImFont* f, float size, float x, float y, ImU32 c, const char* s, int align = 0) {
@@ -1037,7 +1042,11 @@ static void text(ImFont* f, float size, float x, float y, ImU32 c, const char* s
     g_dl->AddText(f, U(size), p, A(c), s);
 }
 static void panel(float x0, float y0, float x1, float y1, ImU32 fill = C_PANEL) {
-    g_dl->AddRectFilled(P(x0, y0), P(x1, y1), A(fill));
+    // (Nov 19) as Reach's: lighter at the top, darker toward the bottom, a faint steel edge
+    int r = fill & 255, g = (fill >> 8) & 255, b = (fill >> 16) & 255, a = (fill >> 24) & 255;
+    ImU32 top = IM_COL32(r + (255 - r) / 14, g + (255 - g) / 14, b + (255 - b) / 14, a),
+          bot = IM_COL32(r * 62 / 100, g * 62 / 100, b * 62 / 100, a);
+    g_dl->AddRectFilledMultiColor(P(x0, y0), P(x1, y1), A(top), A(top), A(bot), A(bot));
     g_dl->AddRect(P(x0, y0), P(x1, y1), A(C_EDGE), 0, 0, 1.0f);
 }
 static void image(const pic* p, float x0, float y0, float x1, float y1, float a = 1.0f) {
@@ -1053,7 +1062,7 @@ static void header(const char* over, const char* big, int step) {   // ("small" 
     text(g_fl, 22, 96, 44, C_BLUE, over);
     text(g_fl, 58, 92, 64, C_TEXT, big);
     for (int k = 0; k < 3; k++)
-        g_dl->AddRectFilled(P(100 + k * 44.0f, 170), P(136 + k * 44.0f, 174), A(k == step ? C_BLUE : IM_COL32(90, 110, 125, 200)));
+        g_dl->AddRectFilled(P(100 + k * 44.0f, 170), P(136 + k * 44.0f, 174), A(k == step ? C_LIT : IM_COL32(84, 90, 96, 200)));
 }
 // our own crest for the playlist's card: a chevron over a ring, the name beside it (no game art)
 static void crest(float cx, float cy, float r, ImU32 c) {
@@ -1096,8 +1105,10 @@ static void frame_keys() {
                 ImGui::IsKeyPressed(ImGuiKey_GamepadLStickDown);
     bool ok = ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_Space, false) ||
               ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown, false);
-    g_left_right = (ImGui::IsKeyPressed(ImGuiKey_RightArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight)) ? 1
-                 : (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft)) ? -1 : 0;
+    g_left_right = (ImGui::IsKeyPressed(ImGuiKey_RightArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight) ||
+                    ImGui::IsKeyPressed(ImGuiKey_GamepadLStickRight)) ? 1      // (Nov 19: the left stick too)
+                 : (ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft) ||
+                    ImGui::IsKeyPressed(ImGuiKey_GamepadLStickLeft)) ? -1 : 0;
     if (n) {
         if (up) { g_focus = (g_focus + n - 1) % n; sound(PS_MOVE); }
         if (down) { g_focus = (g_focus + 1) % n; sound(PS_MOVE); }
@@ -1107,13 +1118,16 @@ static void frame_keys() {
     g_mouse_was = ImGui::GetIO().MousePos;
 }
 
-// a menu row: MCC's tile list (dark, its focus blue with a lit edge), a label, an optional value at its right
+// a menu row, as Reach's lists (Nov 19): dark see-through, the focused one lit grey with a white edge and, with tip,
+// Reach's pointer at its right end toward the panel beside the list; a label, an optional value at its right
 static void row(float x0, float y0, float x1, float y1, bool focus, const char* label, const char* value = nullptr,
-                bool arrows = false) {
-    g_dl->AddRectFilled(P(x0, y0), P(x1, y1), A(focus ? C_FOCUS : IM_COL32(12, 28, 42, 200)));
+                bool arrows = false, bool tip = false) {
+    g_dl->AddRectFilled(P(x0, y0), P(x1, y1), A(focus ? C_FOCUS : C_ROW));
     if (focus) {
-        g_dl->AddRectFilled(P(x0, y0), P(x0 + 5, y1), A(C_BLUE));
-        g_dl->AddRect(P(x0, y0), P(x1, y1), A(IM_COL32(150, 210, 245, 230)), 0, 0, 1.2f);
+        g_dl->AddRectFilledMultiColor(P(x0, y0), P(x1, (y0 + y1) * 0.5f), A(IM_COL32(255, 255, 255, 34)),
+                                      A(IM_COL32(255, 255, 255, 34)), A(IM_COL32(255, 255, 255, 0)), A(IM_COL32(255, 255, 255, 0)));
+        g_dl->AddRect(P(x0, y0), P(x1, y1), A(C_LIT), 0, 0, U(1.6f));
+        if (tip) g_dl->AddTriangleFilled(P(x1, y0), P(x1 + 18, (y0 + y1) * 0.5f), P(x1, y1), A(IM_COL32(226, 230, 234, 240)));
     }
     float h = y1 - y0, fs = h * 0.46f;
     text(g_fl, fs, x0 + 22, y0 + (h - fs * 1.2f) * 0.5f, focus ? C_TEXT : C_DIM, label);
@@ -1209,7 +1223,7 @@ static void player_row(float x0, float y0, float x1, float y1, const char* name,
     float u = (y1 - y0) / ROW_H, cx1 = x1;
     x1 -= ROW_CELL * u;                                  // (from here x1 is the nameplate's end; cx1 the cell's)
     float bx0 = x1 - ROW_W * u;
-    ImU32 tc = team >= 0 ? team_colour(team) : IM_COL32(110, 150, 175, 255);
+    ImU32 tc = team >= 0 ? team_colour(team) : IM_COL32(140, 148, 156, 255);
     int r = tc & 255, g = (tc >> 8) & 255, b = (tc >> 16) & 255;
     g_dl->AddRectFilled(P(x1 - 346 * u, y0), P(x1 - 334 * u, y1), A(tc));
     // the nameplate, MCC's own card (the plain ones in the team's colour): a bot's, and the person's own as MCC's player
@@ -1236,7 +1250,7 @@ static void player_row(float x0, float y0, float x1, float y1, const char* name,
     float ex0 = bx0 + 9 * u, ey0 = y0 + 6 * u, ex1 = bx0 + 41 * u, ey1 = y0 + 38 * u;
     if (em) g_dl->AddImage((ImTextureID)em, P(ex0, ey0), P(ex1, ey1), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
     else {
-        g_dl->AddRectFilled(P(ex0, ey0), P(ex1, ey1), A(IM_COL32(20, 28, 36, 220)));
+        g_dl->AddRectFilled(P(ex0, ey0), P(ex1, ey1), A(IM_COL32(24, 27, 30, 220)));
         if (you) crest((ex0 + ex1) * 0.5f, (ey0 + ey1) * 0.5f, 11 * u, C_BLUE);
         else g_dl->AddRect(P(ex0, ey0), P(ex1, ey1), A(IM_COL32(r * 85 / 100 + 30, g * 85 / 100 + 30, b * 85 / 100 + 30, 200)), 0, 0, 1.0f);
     }
@@ -1259,10 +1273,10 @@ static void player_row(float x0, float y0, float x1, float y1, const char* name,
     // own): the cell in the row's shade (the team's in a team game, else dark), there with or without a rank
     {
         float c0 = cx1 - ROW_H * u;
-        ImU32 cf = team >= 0 ? IM_COL32(r * 62 / 100, g * 62 / 100, b * 62 / 100, 240) : IM_COL32(16, 26, 36, 235);
+        ImU32 cf = team >= 0 ? IM_COL32(r * 62 / 100, g * 62 / 100, b * 62 / 100, 240) : IM_COL32(26, 29, 32, 235);
         g_dl->AddRectFilled(P(c0, y0), P(cx1, y1), A(cf));
         g_dl->AddRect(P(c0, y0), P(cx1, y1), A(team >= 0 ? IM_COL32(r * 85 / 100 + 30, g * 85 / 100 + 30, b * 85 / 100 + 30, 200)
-                                                         : IM_COL32(60, 84, 104, 200)), 0, 0, 1.0f);
+                                                         : IM_COL32(84, 90, 96, 200)), 0, 0, 1.0f);
         if (const pic* rp = sr_rank_picture(sr_rank_of(name, !you))) {
             float s = 36 * u, cx = (c0 + cx1) * 0.5f, cy = (y0 + y1) * 0.5f;
             g_dl->AddImage((ImTextureID)rp->tex, P(cx - s * 0.5f, cy - s * 0.5f), P(cx + s * 0.5f, cy + s * 0.5f), ImVec2(0, 0),
@@ -1284,51 +1298,81 @@ static const char* me_name() { const char* n = mcc_player_name(); return n && n[
 // lettered circle, or the key) and its action. Back is clickable; the hint is the focused control's.
 static bool g_footer_back;                       // the footer's Back clicked this frame
 static bool g_pad_in;                            // the last input was the pad: the prompts name its buttons
+// (Nov 19) on the pad, the buttons as Reach showed them: A green, B red, X blue, Y yellow, each a lit disc with its
+// letter; a bumper or trigger (LB, RB, LT+RT) a dark pill with its name. On the keys, the key's outline as before.
+static ImU32 pad_colour(const char* g) {
+    if (!g[0] || g[1]) return 0;
+    switch (g[0]) {
+    case 'A': return IM_COL32(96, 184, 58, 255);
+    case 'B': return IM_COL32(222, 58, 44, 255);
+    case 'X': return IM_COL32(48, 118, 226, 255);
+    case 'Y': return IM_COL32(242, 190, 26, 255);
+    }
+    return 0;
+}
+static float pad_glyph_w(const char* g) { return pad_colour(g) ? 30 : text_w(g_fs, 16, g) / g_pg.s + 20; }
+static void pad_glyph(float x, float y, const char* g, ImU32 edge) {   // (x, y: its box's top left, 30 high)
+    if (ImU32 c = pad_colour(g)) {
+        int r = c & 255, gg = (c >> 8) & 255, b = (c >> 16) & 255;
+        g_dl->AddCircleFilled(P(x + 15, y + 15), U(13.5f), A(IM_COL32(r * 45 / 100, gg * 45 / 100, b * 45 / 100, 255)), 32);
+        g_dl->AddCircleFilled(P(x + 15, y + 14), U(12), A(c), 32);
+        g_dl->AddCircleFilled(P(x + 15, y + 10), U(7), A(IM_COL32(255, 255, 255, 46)), 24);   // (its shine)
+        g_dl->AddText(g_fs, U(18), P(x + 15 - text_w(g_fs, 18, g) / g_pg.s * 0.5f, y + 4), A(IM_COL32(255, 255, 255, 255)), g);
+        return;
+    }
+    float w = pad_glyph_w(g);
+    g_dl->AddRectFilled(P(x, y + 3), P(x + w, y + 27), A(IM_COL32(40, 44, 48, 240)), U(11));
+    g_dl->AddRect(P(x, y + 3), P(x + w, y + 27), A(edge), U(11), 0, U(1.4f));
+    text(g_fs, 16, x + w * 0.5f, y + 6, IM_COL32(236, 238, 240, 255), g, 1);
+}
 static float prompt(float x, float y, const char* pad, const char* key, const char* label, bool* clicked) {
     const char* g = g_pad_in ? pad : key;
-    float gw = g_pad_in ? 30 : text_w(g_fs, 18, g) / g_pg.s + 16, w = gw + 10 + text_w(g_fl, 22, label) / g_pg.s;
+    float gw = g_pad_in ? pad_glyph_w(pad) : text_w(g_fs, 18, g) / g_pg.s + 16, w = gw + 10 + text_w(g_fl, 22, label) / g_pg.s;
     ImVec2 m = ImGui::GetIO().MousePos, a = P(x - 6, y - 4), b = P(x + w + 8, y + 34);
     bool over = clicked && m.x >= a.x && m.x <= b.x && m.y >= a.y && m.y <= b.y;
-    if (over) g_dl->AddRectFilled(a, b, A(IM_COL32(40, 98, 142, 170)));
-    ImU32 gc = over ? C_TEXT : IM_COL32(206, 222, 232, 255);
-    if (g_pad_in) {
-        g_dl->AddCircle(P(x + 15, y + 15), U(13), A(gc), 32, U(1.6f));
-        text(g_fs, 18, x + 15, y + 4, gc, g, 1);
-    } else {
+    if (over) g_dl->AddRectFilled(a, b, A(IM_COL32(96, 102, 108, 170)));
+    ImU32 gc = over ? C_TEXT : IM_COL32(214, 218, 222, 255);
+    if (g_pad_in) pad_glyph(x, y, g, IM_COL32(150, 156, 162, 220));
+    else {
         g_dl->AddRect(P(x, y + 2), P(x + gw, y + 28), A(gc), U(3), 0, U(1.4f));
         text(g_fs, 18, x + gw * 0.5f, y + 4, gc, g, 1);
     }
-    text(g_fl, 22, x + gw + 10, y + 2, over ? C_TEXT : IM_COL32(214, 226, 236, 255), label);
+    text(g_fl, 22, x + gw + 10, y + 2, over ? C_TEXT : IM_COL32(222, 226, 230, 255), label);
     if (over && ImGui::IsMouseClicked(0)) *clicked = true;
     return x + w + 34;
 }
-static void footer(const char* hint = nullptr, const char* select = nullptr) {
-    if (hint && hint[0]) text(g_fs, 21, 100, 948, IM_COL32(196, 214, 226, 255), hint);
+// (Nov 19) the screens with the roster beside them also name the way into it: RB on the pad (or Right), Right on the keys
+static bool g_footer_players;                    // the footer's Players clicked this frame
+static void footer(const char* hint = nullptr, const char* select = nullptr, bool players = false) {
+    if (hint && hint[0]) text(g_fs, 21, 100, 948, IM_COL32(200, 206, 212, 255), hint);
     float x = prompt(100, 992, "B", "Esc", "Back", &g_footer_back);
-    if (select) prompt(x, 992, "A", "Enter", select, nullptr);
+    if (select) x = prompt(x, 992, "A", "Enter", select, nullptr);
+    if (players) prompt(x, 992, "RB", "Right", "Players", &g_footer_players);
 }
 
 // (Nov 17) the screens' own ground, opaque: MCC's custom game lobby is not seen behind them. A playlist's map, faint and
 // slowly changing, under a deep blue wash, as MCC's menus have their art behind; a slow light across.
+// (Nov 19) Reach's grey in place of MCC's navy, and the art about twice as bright: kept at near its own colours under
+// a light steel wash, the left side and the bottom darkened less, so the maps' colour shows through
 static void background(float t, const pic* art, float art_a) {
     ImVec2 d = ImGui::GetIO().DisplaySize;
-    g_dl->AddRectFilled(ImVec2(0, 0), d, IM_COL32(4, 9, 14, 255));       // (never faded: the lobby stays hidden)
+    g_dl->AddRectFilled(ImVec2(0, 0), d, IM_COL32(9, 10, 12, 255));      // (never faded: the lobby stays hidden)
     if (art && art_a > 0) {
         float pr = (float)art->w / art->h, br = d.x / d.y;
         ImVec2 uv0(0, 0), uv1(1, 1);
         if (pr > br) { float k = br / pr; uv0.x = (1 - k) * 0.5f; uv1.x = 1 - uv0.x; }
         else { float k = pr / br; uv0.y = (1 - k) * 0.5f; uv1.y = 1 - uv0.y; }
-        g_dl->AddImage((ImTextureID)art->tex, ImVec2(0, 0), d, uv0, uv1, IM_COL32(150, 180, 205, (int)(255 * art_a)));
+        g_dl->AddImage((ImTextureID)art->tex, ImVec2(0, 0), d, uv0, uv1, IM_COL32(222, 228, 234, (int)(255 * art_a)));
     }
-    g_dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(d.x, d.y * 0.55f), IM_COL32(18, 40, 60, 120), IM_COL32(8, 20, 30, 70),
-                                  IM_COL32(4, 9, 14, 0), IM_COL32(4, 9, 14, 0));
-    g_dl->AddRectFilledMultiColor(ImVec2(0, d.y * 0.6f), d, IM_COL32(2, 5, 9, 0), IM_COL32(2, 5, 9, 0),
-                                  IM_COL32(2, 5, 9, 210), IM_COL32(2, 5, 9, 210));
-    g_dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(d.x * 0.5f, d.y), IM_COL32(2, 6, 10, 150), IM_COL32(2, 6, 10, 0),
-                                  IM_COL32(2, 6, 10, 0), IM_COL32(2, 6, 10, 150));
-    float sweep = fmodf(t * 0.05f, 1.6f) - 0.3f;                   // (a slow light across, as MCC's menus drift)
-    g_dl->AddRectFilledMultiColor(ImVec2(d.x * sweep, 0), ImVec2(d.x * (sweep + 0.25f), d.y), IM_COL32(120, 190, 240, 0),
-                                  IM_COL32(120, 190, 240, 12), IM_COL32(120, 190, 240, 12), IM_COL32(120, 190, 240, 0));
+    g_dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(d.x, d.y * 0.55f), IM_COL32(52, 56, 60, 70), IM_COL32(40, 44, 48, 40),
+                                  IM_COL32(9, 10, 12, 0), IM_COL32(9, 10, 12, 0));
+    g_dl->AddRectFilledMultiColor(ImVec2(0, d.y * 0.62f), d, IM_COL32(5, 6, 7, 0), IM_COL32(5, 6, 7, 0),
+                                  IM_COL32(5, 6, 7, 170), IM_COL32(5, 6, 7, 170));
+    g_dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(d.x * 0.5f, d.y), IM_COL32(5, 6, 8, 95), IM_COL32(5, 6, 8, 0),
+                                  IM_COL32(5, 6, 8, 0), IM_COL32(5, 6, 8, 95));
+    float sweep = fmodf(t * 0.05f, 1.6f) - 0.3f;                   // (a slow light across, as the menus drift)
+    g_dl->AddRectFilledMultiColor(ImVec2(d.x * sweep, 0), ImVec2(d.x * (sweep + 0.25f), d.y), IM_COL32(236, 240, 244, 0),
+                                  IM_COL32(236, 240, 244, 10), IM_COL32(236, 240, 244, 10), IM_COL32(236, 240, 244, 0));
 }
 
 // the playlist's stats, as MCC's PLAYLIST STATS panel
@@ -1360,7 +1404,7 @@ static void category_tiles(float x0, float y0, float tile) {
         int f = family_of(g.e->category);
         if (shown[f]) continue;
         shown[f] = true;
-        panel(x, y0, x + tile, y0 + tile, IM_COL32(14, 30, 44, 225));
+        panel(x, y0, x + tile, y0 + tile, IM_COL32(28, 31, 34, 225));
         const pic* p = family_picture(f);
         if (p) image(p, x + tile * 0.12f, y0 + tile * 0.08f, x + tile * 0.88f, y0 + tile * 0.84f);
         else text(g_fl, tile * 0.16f, x + tile * 0.5f, y0 + tile * 0.4f, C_BLUE, FAMILY_NAME[f], 1);
@@ -1488,7 +1532,7 @@ static void roster(pg_env& e, const std::vector<ros_row>& rows, const ros_head& 
     bool hf = live && item(x0, hy, x1, hy + hh);
     if (!g_ros_on && ros_clicked(x0, hy, x1, hy + hh)) g_ros_click = idx;
     idx++;
-    if (!reach) panel(x0, hy, x1, hy + hh, IM_COL32(16, 36, 52, 230));
+    if (!reach) panel(x0, hy, x1, hy + hh, IM_COL32(32, 36, 40, 228));
     else {
         ImU32 hc = hf ? IM_COL32(150, 156, 162, 226) : IM_COL32(30, 34, 38, 220);
         g_dl->AddRectFilled(P(x0, hy), P(x1, hy + hh), A(hc));
@@ -1501,14 +1545,24 @@ static void roster(pg_env& e, const std::vector<ros_row>& rows, const ros_head& 
     float y = nrow0 + (RROW - nrow0) * ek;
     const ros_row* fr = nullptr;
     float fy = 0;
+    int empty_i = 0;
     for (const ros_row& w : rows) {
         y += w.gap * (1 - ek) + (w.gap >= 10 ? 12.0f : 0.0f) * ek;   // (Reach's: the teams' gap only)
         if (w.kind == RK_EMPTY) {
-            g_dl->AddRectFilled(P(x0, y), P(x1, y + ROW_H), A(IM_COL32(12, 26, 38, 200)));
-            int dots = 1 + ((int)(dots_t * 2.5f) % 3);
-            char s[48];
-            sprintf_s(s, "%s%.*s", empty_text ? empty_text : "", dots, "...");
-            text(g_fl, ROW_H * 0.42f, x0 + 14, y + ROW_H * 0.25f, C_DIM, s);
+            // (Nov 19) an empty seat is an outline, a soft light passing down the seats while the lobby fills; the words
+            // once, on the first (the status over the screen says the rest)
+            g_dl->AddRectFilled(P(x0, y), P(x1, y + ROW_H), A(IM_COL32(18, 20, 23, 120)));
+            g_dl->AddRect(P(x0, y), P(x1, y + ROW_H), A(IM_COL32(74, 80, 86, 130)), 0, 0, 1.0f);
+            float ph = fmodf(dots_t * 0.9f - empty_i * 0.11f, 1.6f);
+            if (ph > 0 && ph < 1)
+                g_dl->AddRectFilled(P(x0, y), P(x1, y + ROW_H), A(IM_COL32(220, 226, 232, (int)(34 * sinf(ph * 3.14159f)))));
+            if (empty_i == 0 && empty_text && empty_text[0]) {
+                int dots = 1 + ((int)(dots_t * 2.5f) % 3);
+                char s[48];
+                sprintf_s(s, "%s%.*s", empty_text, dots, "...");
+                text(g_fl, ROW_H * 0.40f, x0 + 14, y + ROW_H * 0.26f, C_DIM, s);
+            }
+            empty_i++;
             y += ROW_STEP;
             continue;
         }
@@ -1516,7 +1570,14 @@ static void roster(pg_env& e, const std::vector<ros_row>& rows, const ros_head& 
         if (!g_ros_on && ros_clicked(x0, y, x1, y + ROW_H)) g_ros_click = idx;
         idx++;
         if (f) { fr = &w; fy = y; }
-        else player_row(x0, y, x1, y + ROW_H, w.name, w.clan, w.team, w.tier, w.kind != RK_BOT, w.party, w.a, w.pid);
+        else {
+            // (Nov 19) a bot just found slides in from the right as it lights, a white flash fading into its nameplate
+            float ia = w.a < 0 ? 0 : w.a > 1 ? 1 : w.a, dx = (1 - ia) * (1 - ia) * 90;
+            player_row(x0 + dx, y, x1 + dx, y + ROW_H, w.name, w.clan, w.team, w.tier, w.kind != RK_BOT, w.party, w.a, w.pid);
+            if (ia > 0 && ia < 1)
+                g_dl->AddRectFilled(P(x1 + dx - ROW_SPAN + 14, y), P(x1 + dx, y + ROW_H),
+                                    A(IM_COL32(236, 240, 244, (int)(90 * (1 - ia) * (ia * 4 < 1 ? ia * 4 : 1)))));
+        }
         y += ROW_STEP;
     }
     if (fr) {                                            // (Reach's pick: the row a little larger toward the panel, lit,
@@ -1562,7 +1623,8 @@ static void session_panel(pg_env& e) {
     sprintf_s(cnt, "%d/%d", g_nparty + 1 + np, cur_pl().size * 2);
     sprintf_s(now, "%d", g_nparty + 1 + np);
     sprintf_s(max, "%d", cur_pl().size * 2);
-    ros_head h = { "MY GAME SESSION", cnt, "In Proving Grounds Lobby", cnt, "MY PARTY", "MY PARTY DETAILS",
+    // (Nov 19) one name for the list wherever it stands: Reach's own ("MY GAME SESSION" before)
+    ros_head h = { "IN PROVING GROUNDS LOBBY", cnt, "In Proving Grounds Lobby", cnt, "MY PARTY", "MY PARTY DETAILS",
                    { me_name(), cur_pl().title, now, max, "Proving Grounds" } };
     roster(e, rows, h, 1830, 34, 82, 0, nullptr);
 }
@@ -1575,8 +1637,14 @@ static void invite_list(pg_env& e) {
     float x0 = 600, y0 = 150, x1 = 1320, y1 = 930;
     float rx1 = x0 + 84 + ROW_W + ROW_CELL, bt0 = x1 - 200;          // (each row at MCC's size, its rank left of it; the button)
     g_dl->AddRectFilled(ImVec2(0, 0), ImGui::GetIO().DisplaySize, A(IM_COL32(0, 0, 0, 120)));
-    panel(x0, y0, x1, y1, IM_COL32(8, 20, 30, 245));
+    panel(x0, y0, x1, y1, IM_COL32(20, 22, 25, 245));
     text(g_fl, 34, x0 + 24, y0 + 16, C_TEXT, "INVITE PLAYER");
+    if (g_npool_names > 0) {                             // (Nov 19: where in the pool the page is)
+        char at[32];
+        int f0 = (int)g_invite_scroll + 1, f1 = (int)g_invite_scroll + (int)((y1 - 70 - (y0 + 104)) / ROW_STEP);
+        sprintf_s(at, "%d-%d of %d", f0, f1 < g_npool_names ? f1 : g_npool_names, g_npool_names);
+        text(g_fs, 20, x1 - 24, y0 + 26, C_DIM, at, 2);
+    }
     char sub[96];
     sprintf_s(sub, "Your party: %d of %d. Party members are always on your team.", g_nparty, cur_pl().size - 1);
     text(g_fs, 22, x0 + 26, y0 + 64, C_DIM, sub);
@@ -1598,8 +1666,8 @@ static void invite_list(pg_env& e) {
         int tier = 3, t, st;
         if (bot_pool_saved_of(nm, &t, &st)) tier = t;
         player_row(x0, y, rx1, y + ROW_H, nm, profile_clan_of(nm), -1, tier, false, in, 1);
-        g_dl->AddRectFilled(P(bt0, y), P(x1 - 24, y + ROW_H), A(f ? C_FOCUS : IM_COL32(14, 30, 44, 220)));
-        if (f) g_dl->AddRect(P(bt0, y), P(x1 - 24, y + ROW_H), A(IM_COL32(150, 210, 245, 230)), 0, 0, 1.2f);
+        g_dl->AddRectFilled(P(bt0, y), P(x1 - 24, y + ROW_H), A(f ? C_FOCUS : C_ROW));
+        if (f) g_dl->AddRect(P(bt0, y), P(x1 - 24, y + ROW_H), A(C_LIT), 0, 0, U(1.6f));
         text(g_fl, 20, (bt0 + x1 - 24) * 0.5f, y + 10, in ? C_GOLD : C_TEXT, in ? "REMOVE" : "INVITE", 1);
         if (pressed(base + k)) {
             if (in) {
@@ -1615,12 +1683,23 @@ static void invite_list(pg_env& e) {
     }
     // keys: at the list's edge the list moves instead of the focus (frame_keys moves the focus after this)
     int fk = g_focus - base;
-    bool down = ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown);
-    bool up = ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp);
+    bool down = ImGui::IsKeyPressed(ImGuiKey_DownArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadDown) ||
+                ImGui::IsKeyPressed(ImGuiKey_GamepadLStickDown);           // (Nov 19: the left stick too)
+    bool up = ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp) ||
+              ImGui::IsKeyPressed(ImGuiKey_GamepadLStickUp);
     if (down && fk == visible - 1 && first + visible < g_npool_names) { g_invite_scroll += 1; g_focus--; }
     if (up && fk == 0 && first > 0) { g_invite_scroll -= 1; g_focus++; }
-    char more[64];
-    sprintf_s(more, "%d bots in your pool  (wheel or arrows to scroll)", g_npool_names);
+    // (Nov 19) a page at a time: RB / Page Down, LB / Page Up (the focus keeps its place on the page)
+    int page = (ImGui::IsKeyPressed(ImGuiKey_GamepadR1) || ImGui::IsKeyPressed(ImGuiKey_PageDown)) ? 1
+             : (ImGui::IsKeyPressed(ImGuiKey_GamepadL1) || ImGui::IsKeyPressed(ImGuiKey_PageUp)) ? -1 : 0;
+    if (page && g_npool_names > visible) {
+        float s = g_invite_scroll + page * visible, top = (float)(g_npool_names - visible);
+        s = s < 0 ? 0 : s > top ? top : s;
+        if (s != g_invite_scroll) { g_invite_scroll = s; sound(PS_MOVE); }
+    }
+    char more[96];
+    sprintf_s(more, g_pad_in ? "%d bots in your pool  (LB / RB: a page at a time)"
+                             : "%d bots in your pool  (wheel, arrows or Page Up / Down to scroll)", g_npool_names);
     text(g_fs, 20, x0 + 26, y1 - 52, C_DIM, more);
     footer("Invite a bot to your party. Party members are always on your team.", "Invite");
     (void)e;
@@ -1832,18 +1911,18 @@ static void menu_screen(pg_env& e, float t) {
     header("MULTIPLAYER", "PROVING GROUNDS", 0);
     text(g_fl, 24, 96, 188, C_TEXT, "COMPOSE YOUR MATCH");
     // the card: a map of the playlist behind our crest
-    panel(96, 215, 880, 340, IM_COL32(20, 46, 70, 235));
+    panel(96, 215, 880, 340, IM_COL32(34, 38, 42, 235));
     std::vector<pool_gt> gts;
     std::vector<const pg_entry*> maps;
     library();
     playlist_pool(cur_pl(), gts, maps);
     if (!maps.empty()) {
         const pic* p = map_picture(maps[(int)(t / 6) % maps.size()]->key);
-        if (p) image(p, 330, 217, 878, 338, 0.55f);
-        g_dl->AddRectFilledMultiColor(P(97, 216), P(879, 339), A(IM_COL32(20, 46, 70, 255)), A(IM_COL32(20, 46, 70, 30)),
-                                      A(IM_COL32(20, 46, 70, 30)), A(IM_COL32(20, 46, 70, 255)));
+        if (p) image(p, 330, 217, 878, 338, 0.85f);      // (Nov 19: brighter, 0.55 before)
+        g_dl->AddRectFilledMultiColor(P(97, 216), P(879, 339), A(IM_COL32(34, 38, 42, 255)), A(IM_COL32(34, 38, 42, 20)),
+                                      A(IM_COL32(34, 38, 42, 20)), A(IM_COL32(34, 38, 42, 255)));
     }
-    crest(170, 278, 44, IM_COL32(205, 228, 245, 255));
+    crest(170, 278, 44, IM_COL32(232, 236, 240, 255));
     text(g_fl, 40, 238, 236, C_TEXT, "PROVING GROUNDS");
     text(g_fl, 24, 240, 286, C_BLUE, cur_pl().title);
     const char* desc[6] = { "Find a game: a lobby of bots from your pool, then the vote.",
@@ -1855,15 +1934,15 @@ static void menu_screen(pg_env& e, float t) {
     int base = (int)g_items.size();
     // (Nov 18: the rows 48 tall, 8 apart, so SIMULATE MATCHES fits above the games and categories)
     bool f0 = item(96, 355, 880, 403);
-    row(96, 355, 880, 403, f0, "PLAY");
+    row(96, 355, 880, 403, f0, "PLAY", nullptr, false, true);
     bool f1 = item(96, 411, 880, 459);
     char sz[32];
     sprintf_s(sz, "%dV%d (TEAM)", cur_pl().size, cur_pl().size);
-    row(96, 411, 880, 459, f1, "GAME SIZE", sz, true);
+    row(96, 411, 880, 459, f1, "GAME SIZE", sz, true, true);
     bool f2 = item(96, 467, 880, 515);
     char inv[32];
     sprintf_s(inv, "%d / %d", g_nparty, cur_pl().size - 1);
-    row(96, 467, 880, 515, f2, "INVITE PLAYER", inv);
+    row(96, 467, 880, 515, f2, "INVITE PLAYER", inv, false, true);
     bool f3 = item(96, 523, 880, 571);                   // (Nov 17: the challenges, as the Service Record has them)
     chal_load();
     int live = 0, done = 0;
@@ -1873,7 +1952,7 @@ static void menu_screen(pg_env& e, float t) {
     }
     char chs[32];
     sprintf_s(chs, "%d / %d", done, live);
-    row(96, 523, 880, 571, f3, "CHALLENGES", live ? chs : nullptr);
+    row(96, 523, 880, 571, f3, "CHALLENGES", live ? chs : nullptr, false, true);
     bool f4 = item(96, 579, 880, 627);                   // (Nov 18: the bot simulation, a round at a time)
     double now = ImGui::GetTime();
     sim_poll(now);
@@ -1882,9 +1961,9 @@ static void menu_screen(pg_env& e, float t) {
     if (g_sim_proc) strcpy_s(sims, "PLAYING...");
     else if (g_sim_done_at >= 0 && now - g_sim_done_at < 10.0 && g_sim_made >= 0) sprintf_s(sims, "DONE: %d MATCHES", g_sim_made);
     else { sprintf_s(sims, "%d ROUND%s", g_sim_rounds, g_sim_rounds == 1 ? "" : "S"); sim_arrows = true; }
-    row(96, 579, 880, 627, f4, "SIMULATE MATCHES", sims, sim_arrows);
+    row(96, 579, 880, 627, f4, "SIMULATE MATCHES", sims, sim_arrows, true);
     text(g_fl, 24, 96, 648, C_BLUE, "GAMES INCLUDED");
-    panel(96, 674, 236, 774, IM_COL32(16, 36, 52, 230));
+    panel(96, 674, 236, 774, IM_COL32(30, 34, 38, 230));
     text(g_fl, 30, 166, 712, C_TEXT, "REACH", 1);
     g_dl->AddRectFilled(P(102, 754), P(118, 768), A(C_BLUE));
     text(g_fl, 24, 96, 790, C_BLUE, "GAME CATEGORIES INCLUDED");
@@ -1892,7 +1971,7 @@ static void menu_screen(pg_env& e, float t) {
     stats_panel(1000, 215);                              // (Nov 17: level with the card, clear of the category tiles)
     session_panel(e);
     int focus = g_focus - base;
-    if (!g_invite) footer(desc[focus >= 0 && focus < 5 ? focus : 5], "Select");   // (the invite list draws its own)
+    if (!g_invite) footer(desc[focus >= 0 && focus < 5 ? focus : 5], "Select", true);   // (the invite list: its own)
     if (f1 && g_left_right) {
         g_lr_taken = true;                               // (Right here is the size, not the roster)
         g_size = g_size >= 8 ? 4 : 8;
@@ -1964,12 +2043,12 @@ static void lobby_rows(pg_env& e, float t, bool teams, float x1, float y0, const
             gap = 2 * (ROW_STEP - ROW_H);
         }
     }
-    char head[48], cnt[16], now[8], max[8];
-    sprintf_s(head, teams ? "SETTING UP MATCH..." : "IN LOBBY %d/%d", filled, n);
+    char cnt[16], now[8], max[8];
     sprintf_s(cnt, "%d/%d", filled, n);
     sprintf_s(now, "%d", filled);
     sprintf_s(max, "%d", n);
-    ros_head h = { head, nullptr, "In Matchmaking Lobby", cnt, "MATCHMAKING", "LOBBY DETAILS",
+    // (Nov 19) one name for the list wherever it stands: Reach's own ("IN LOBBY", "SETTING UP MATCH..." before)
+    ros_head h = { "IN MATCHMAKING LOBBY", cnt, "In Matchmaking Lobby", cnt, "MATCHMAKING", "LOBBY DETAILS",
                    { me_name(), cur_pl().title, now, max, teams ? "Voting" : "Searching for Players" } };
     roster(e, rows, h, x1, y0, y0 + 44, t, empty_text);
 }
@@ -1979,6 +2058,11 @@ static void search_screen(pg_env& e, float t) {
     int n = r.n + 1 + g_npeople, filled = 1 + g_npeople;
     for (int i = 0; i < r.n; i++) filled += t >= g_arrive[i];
     bool done = t >= g_search_s;
+    {   // (Nov 19) a tick as each player is found (a clan arriving together: one)
+        static int was = 0;
+        if (t < 0.15f) was = filled;
+        else if (filled > was) { if (!done) sound(PS_MOVE); was = filled; }
+    }
     if (ros_up()) {                                      // (the roster has the focus: Reach's list and its panel)
         lobby_rows(e, t, false, 1830, 34, "SEARCHING FOR PLAYERS");
         strcpy_s(g_ros_hint, done ? "Players found. Setting up the vote." : "Finding players for your match.");
@@ -1988,7 +2072,7 @@ static void search_screen(pg_env& e, float t) {
     header("MULTIPLAYER", g_between ? "POSTGAME LOBBY" : "FIND GAME", 1);
     const char* status = done ? "MATCH FOUND" : g_between ? "PLAYERS LEAVING AND JOINING" : t < 1.3f ? "CHECKING FOR REJOINS"
                                                                                                     : "SEARCHING FOR PLAYERS";
-    text(g_fl, 22, 1070, 52, done ? C_GOLD : IM_COL32(196, 214, 226, 255), status, 1);
+    text(g_fl, 22, 1070, 52, done ? C_GOLD : IM_COL32(214, 218, 222, 255), status, 1);
     char clock[48];
     int secs = (int)(done ? g_search_s : t);
     sprintf_s(clock, "%s  %d:%02d", cur_pl().title, secs / 60, secs % 60);
@@ -2000,36 +2084,36 @@ static void search_screen(pg_env& e, float t) {
         float cx = 100 + text_w(g_fl, 20, lbl) / g_pg.s + 22, cy = 196;
         for (int k = 0; k < 8; k++) {
             float a = k * 0.785f + t * 4.0f;
-            g_dl->AddCircleFilled(P(cx + cosf(a) * 9, cy + sinf(a) * 9), U(2.2f), A(IM_COL32(150, 210, 245, 60 + k * 24)));
+            g_dl->AddCircleFilled(P(cx + cosf(a) * 9, cy + sinf(a) * 9), U(2.2f), A(IM_COL32(232, 236, 240, 60 + k * 24)));
         }
     }
     // the playlist's card: its maps turning behind its name, the name low on the picture
     std::vector<pool_gt> gts;
     std::vector<const pg_entry*> maps;
     playlist_pool(cur_pl(), gts, maps);
-    panel(100, 222, 800, 500, IM_COL32(14, 32, 48, 235));
+    panel(100, 222, 800, 500, IM_COL32(26, 29, 32, 235));
     if (!maps.empty()) {
         const pic* p = map_picture(maps[(int)(t / 2.5f) % maps.size()]->key);
-        if (p) image(p, 101, 223, 799, 499, 0.95f);
+        if (p) image(p, 101, 223, 799, 499, 1.0f);
     }
-    g_dl->AddRectFilledMultiColor(P(101, 380), P(799, 499), A(IM_COL32(6, 14, 22, 0)), A(IM_COL32(6, 14, 22, 0)),
-                                  A(IM_COL32(6, 14, 22, 230)), A(IM_COL32(6, 14, 22, 230)));
+    g_dl->AddRectFilledMultiColor(P(101, 390), P(799, 499), A(IM_COL32(8, 9, 11, 0)), A(IM_COL32(8, 9, 11, 0)),
+                                  A(IM_COL32(8, 9, 11, 220)), A(IM_COL32(8, 9, 11, 220)));
     text(g_fl, 34, 120, 446, C_TEXT, cur_pl().title);
     g_dl->AddText(g_fs, U(20), P(102, 512), A(IM_COL32(206, 222, 232, 255)), cur_pl().blurb, nullptr, U(690));
     // the middle column: the games, a line of the playlist's numbers, the stats
     float mx = 850, mw = 470;
-    panel(mx, 222, mx + mw, 372, IM_COL32(14, 32, 48, 235));
+    panel(mx, 222, mx + mw, 372, IM_COL32(26, 29, 32, 235));
     text(g_fl, 20, mx + 14, 230, C_BLUE, "GAMES IN THIS PLAYLIST");
-    panel(mx + 14, 262, mx + 110, 360, IM_COL32(22, 48, 70, 245));
-    crest(mx + 62, 296, 22, IM_COL32(205, 228, 245, 255));
+    panel(mx + 14, 262, mx + 110, 360, IM_COL32(40, 44, 48, 245));
+    crest(mx + 62, 296, 22, IM_COL32(230, 234, 238, 255));
     text(g_fl, 18, mx + 62, 330, C_TEXT, "REACH", 1);
-    panel(mx, 380, mx + mw, 424, IM_COL32(18, 40, 58, 240));
+    panel(mx, 380, mx + mw, 424, IM_COL32(32, 36, 40, 240));
     char nums[64];
     sprintf_s(nums, "%d MAPS  /  %d GAME TYPES IN THIS PLAYLIST", (int)maps.size(), (int)gts.size());
     text(g_fl, 19, mx + 14, 390, C_TEXT, nums);
     stats_panel(mx, 432, mw);
     lobby_rows(e, t, false, 1830, 34, "SEARCHING FOR PLAYERS");
-    footer(done ? "Players found. Setting up the vote." : "Finding players for your match.");
+    footer(done ? "Players found. Setting up the vote." : "Finding players for your match.", nullptr, true);
     }
     if (g_follow) return;                                // (Nov 18: following: the host moves the stages)
     if (done && t >= g_search_s + 1.4f && take_options()) start_vote(r, false);
@@ -2070,12 +2154,12 @@ static void vote_screen(pg_env& e, float t) {
     if (fo < 0 || fo >= rows) fo = g_vote_me >= 0 ? (g_vote_me == 3 ? g_nopt : g_vote_me) : 0;
     // (Nov 17) as MCC's own vote: the focused option's map over its game's name, MATCH FOUND with its chevron, the
     // options as plain rows (a thin picture, the game over the map, the votes, a box), the round's clock under a line
-    panel(96, 90, 820, 400, IM_COL32(14, 32, 48, 235));
+    panel(96, 90, 820, 400, IM_COL32(26, 29, 32, 235));
     if (fo < g_nopt) {
         const pic* p = map_picture(g_opt[fo].map_key);
         if (p) image(p, 97, 91, 819, 399);
-        g_dl->AddRectFilledMultiColor(P(97, 300), P(819, 399), A(IM_COL32(4, 10, 16, 0)), A(IM_COL32(4, 10, 16, 0)),
-                                      A(IM_COL32(4, 10, 16, 235)), A(IM_COL32(4, 10, 16, 235)));
+        g_dl->AddRectFilledMultiColor(P(97, 300), P(819, 399), A(IM_COL32(8, 9, 11, 0)), A(IM_COL32(8, 9, 11, 0)),
+                                      A(IM_COL32(8, 9, 11, 235)), A(IM_COL32(8, 9, 11, 235)));
         char big[96];
         int k = 0;
         for (const char* s = g_opt[fo].gt_name; *s && k < 95; s++) big[k++] = (char)toupper((unsigned char)*s);
@@ -2090,30 +2174,42 @@ static void vote_screen(pg_env& e, float t) {
     ImVec2 ch[3] = { P(100, 428), P(122, 450), P(100, 472) };
     g_dl->AddPolyline(ch, 3, A(C_BLUE), 0, U(5));
     text(g_fl, 48, 136, 416, C_TEXT, "MATCH FOUND");
-    text(g_fl, 20, 138, 470, IM_COL32(196, 214, 226, 255),
+    text(g_fl, 20, 138, 470, IM_COL32(214, 218, 222, 255),
          g_round == 2 ? "VOTE FOR GAME AND MAP (NO VETO)" : "VOTE FOR GAME AND MAP");
     float rh = 62, rs = 66, ry = 512;
+    int all = 0, most = 0;                               // (Nov 19: the votes cast, and the most any option has)
+    for (int i = 0; i < rows; i++) { int n = c[i < g_nopt ? i : 3]; all += n; most = n > most ? n : most; }
     for (int i = 0; i < rows; i++) {
         float y = ry + i * rs;
         bool f = item(116, y, 820, y + rh);
         bool mine = g_vote_me == (i < g_nopt ? i : 3);
-        if (f) {                                         // (MCC's focus: a lit row, its edge, the chevron before it)
-            g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(IM_COL32(40, 98, 142, 150)));
-            g_dl->AddRect(P(116, y), P(820, y + rh), A(IM_COL32(170, 215, 240, 230)), 0, 0, 1.4f);
+        if (f) {                                         // (Reach's focus: a lit grey row, its white edge, the chevron)
+            g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(C_FOCUS));
+            g_dl->AddRectFilledMultiColor(P(116, y), P(820, y + rh * 0.5f), A(IM_COL32(255, 255, 255, 34)),
+                                          A(IM_COL32(255, 255, 255, 34)), A(IM_COL32(255, 255, 255, 0)), A(IM_COL32(255, 255, 255, 0)));
+            g_dl->AddRect(P(116, y), P(820, y + rh), A(C_LIT), 0, 0, U(1.6f));
             ImVec2 fc[3] = { P(98, y + rh * 0.5f - 11), P(108, y + rh * 0.5f), P(98, y + rh * 0.5f + 11) };
             g_dl->AddPolyline(fc, 3, A(C_TEXT), 0, U(2.4f));
-        } else g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(IM_COL32(10, 24, 36, 150)));
+        } else g_dl->AddRectFilled(P(116, y), P(820, y + rh), A(IM_COL32(22, 25, 28, 175)));
+        // (Nov 19) the option's share of the votes, a bar along the row's foot: yours gold, the others steel; the
+        // option ahead brighter
+        int n = c[i < g_nopt ? i : 3];
+        if (all > 0 && n > 0) {
+            float bx1 = 116 + (820 - 116) * (float)n / all;
+            ImU32 bc = mine ? IM_COL32(255, 204, 92, 235) : n == most ? IM_COL32(232, 236, 240, 200) : IM_COL32(150, 156, 162, 170);
+            g_dl->AddRectFilled(P(116, y + rh - 5), P(bx1, y + rh), A(bc));
+        }
         if (i < g_nopt) {
             const pic* p = map_picture(g_opt[i].map_key);
             if (p) image(p, 124, y + 8, 254, y + rh - 8);
-            else panel(124, y + 8, 254, y + rh - 8, IM_COL32(20, 44, 64, 240));
-            text(g_fl, 23, 270, y + 6, f ? C_TEXT : IM_COL32(214, 228, 238, 255), g_opt[i].gt_name);
-            text(g_fl, 18, 271, y + 34, C_DIM, g_opt[i].map_name);
+            else panel(124, y + 8, 254, y + rh - 8, IM_COL32(40, 44, 48, 240));
+            text(g_fl, 23, 270, y + 6, f ? C_TEXT : IM_COL32(222, 226, 230, 255), g_opt[i].gt_name);
+            text(g_fl, 18, 271, y + 34, f ? IM_COL32(214, 218, 222, 255) : C_DIM, g_opt[i].map_name);
         } else {
-            text(g_fl, 23, 132, y + (rh - 28) * 0.5f, f ? C_TEXT : IM_COL32(214, 228, 238, 255), "NONE OF THE ABOVE");
+            text(g_fl, 23, 132, y + (rh - 28) * 0.5f, f ? C_TEXT : IM_COL32(222, 226, 230, 255), "NONE OF THE ABOVE");
         }
         char num[8];
-        sprintf_s(num, "%d", c[i < g_nopt ? i : 3]);
+        sprintf_s(num, "%d", n);
         text(g_fl, 28, 744, y + (rh - 34) * 0.5f, C_TEXT, num, 2);
         float by = y + rh * 0.5f - 13;
         g_dl->AddRect(P(764, by), P(790, by + 26), A(IM_COL32(220, 232, 240, 230)), 0, 0, 1.6f);
@@ -2125,13 +2221,19 @@ static void vote_screen(pg_env& e, float t) {
         }
     }
     float ty = ry + rows * rs + 14;
-    g_dl->AddLine(P(116, ty), P(820, ty), A(IM_COL32(120, 160, 190, 150)), U(1));
-    text(g_fl, 21, 120, ty + 24, IM_COL32(206, 222, 232, 255), "Voting round ends in:");
+    g_dl->AddLine(P(116, ty), P(820, ty), A(IM_COL32(130, 136, 142, 150)), U(1));
+    text(g_fl, 21, 120, ty + 24, IM_COL32(214, 218, 222, 255), "Voting round ends in:");
     char tm[16];
-    sprintf_s(tm, "0:%02d", (int)ceilf(left));
-    text(g_fl, 50, 820, ty + 6, left < 4 ? C_GOLD : C_TEXT, tm, 2);
+    int secs = (int)ceilf(left);
+    sprintf_s(tm, "0:%02d", secs);
+    // (Nov 19) the last five seconds gold, each one a beat: the number swells as it comes and a tick sounds
+    float beat = secs <= 5 ? left - floorf(left) : 0, ts = 50 + 10 * beat * beat;
+    text(g_fl, ts, 820, ty + 6 - (ts - 50) * 0.6f, secs <= 5 ? C_GOLD : C_TEXT, tm, 2);
+    static int ticked = -1;
+    if (secs <= 5 && secs != ticked && left < g_vote_s - 0.5f) sound(PS_MOVE);
+    ticked = secs;
     lobby_rows(e, 1e9f, true, 1830, 34, "");
-    footer("Vote for the game you want to play. Select it again to take your vote back.", "Vote");
+    footer("Vote for the game you want to play. Select it again to take your vote back.", "Vote", true);
 }
 
 static void result_screen(pg_env& e, float t) {
@@ -2141,10 +2243,10 @@ static void result_screen(pg_env& e, float t) {
     float a = g_stage == S_LAUNCH || t * 2.0f > 1 ? 1 : t * 2.0f;
     float keep = g_alpha;
     g_alpha *= a;
-    panel(360, 220, 1560, 820, IM_COL32(10, 24, 36, 240));
+    panel(360, 220, 1560, 820, IM_COL32(20, 22, 25, 240));
     if (p) image(p, 362, 222, 1558, 742);
-    g_dl->AddRectFilledMultiColor(P(362, 560), P(1558, 818), A(IM_COL32(6, 14, 22, 0)), A(IM_COL32(6, 14, 22, 0)),
-                                  A(IM_COL32(6, 14, 22, 245)), A(IM_COL32(6, 14, 22, 245)));
+    g_dl->AddRectFilledMultiColor(P(362, 560), P(1558, 818), A(IM_COL32(8, 9, 11, 0)), A(IM_COL32(8, 9, 11, 0)),
+                                  A(IM_COL32(8, 9, 11, 245)), A(IM_COL32(8, 9, 11, 245)));
     text(g_fl, 26, 400, 600, C_GOLD, g_stage == S_LAUNCH ? "GAME STARTING" : "NEXT GAME");
     text(g_fl, 62, 398, 632, C_TEXT, o.gt_name);
     text(g_fl, 36, 402, 712, C_BLUE, o.map_name);
@@ -2156,8 +2258,8 @@ static void result_screen(pg_env& e, float t) {
 
 static void error_screen(pg_env& e, float t) {
     header("MULTIPLAYER", "PROVING GROUNDS", 0);
-    panel(460, 360, 1460, 640, IM_COL32(10, 24, 36, 245));
-    text(g_fl, 34, 490, 384, C_GOLD, "SOMETHING WENT WRONG");
+    panel(460, 360, 1460, 640, IM_COL32(20, 22, 25, 245));
+    text(g_fl, 34, 490, 384, C_GOLD, "GAME DIDN'T START");   // (Nov 19: what happened, the reason under it)
     // the reason, wrapped
     ImVec2 p = P(492, 440);
     g_dl->AddText(g_fs, U(24), p, A(C_TEXT), g_error, nullptr, U(940));
@@ -2166,6 +2268,11 @@ static void error_screen(pg_env& e, float t) {
     row(490, 560, 850, 615, f0, "TRY AGAIN");
     bool f1 = item(870, 560, 1430, 615);
     row(870, 560, 1430, 615, f1, "BACK TO PROVING GROUNDS");
+    if (g_left_right && (f0 || f1)) {                    // (Nov 19: side by side, so Left / Right move between them too)
+        g_lr_taken = true;
+        g_focus = base + (g_left_right > 0 ? 1 : 0);
+        if ((g_left_right > 0) != f1) sound(PS_MOVE);
+    }
     if (pressed(base)) {
         sound(PS_SELECT);
         if (g_retry == RETRY_VOTE && e.roster->n) {      // (the same lobby: its vote set up again)
@@ -2267,7 +2374,13 @@ static void credits_screen(pg_env& e, float t, double now) {
                                       A(IM_COL32(46, 50, 54, 110)), A(IM_COL32(46, 50, 54, 110)), A(IM_COL32(70, 74, 78, 150)));
         const credit_step* cur = g_credit_steps.empty() ? nullptr : &g_credit_steps[s];
         const credit_step* nxt = s + 1 < (int)g_credit_steps.size() ? &g_credit_steps[s + 1] : nullptr;
-        if (cur) if (const pic* rp = sr_rank_picture(cur->step)) image(rp, x0 + 30, y0 + 25, x0 + 170, y0 + 165);
+        // (Nov 19) a promotion's moment: the new insignia comes in large and settles, a gold ring spreading from it
+        float pp = s > s0 && g_promoted_to == s ? (float)(now - g_promoted_at) : 99;
+        if (cur) if (const pic* rp = sr_rank_picture(cur->step)) {
+            float k = pp < 0.35f ? 1.0f + 0.3f * (1 - pp / 0.35f) * (1 - pp / 0.35f) : 1.0f, cx = x0 + 100, cy = y0 + 95, hs = 70 * k;
+            image(rp, cx - hs, cy - hs, cx + hs, cy + hs);
+            if (pp < 0.8f) g_dl->AddCircle(P(cx, cy), U(70 + 90 * pp), A(IM_COL32(255, 204, 92, (int)(200 * (1 - pp / 0.8f)))), 48, U(3));
+        }
         text(g_fl, 40, x0 + 200, y0 + 36, C_REACH_TEXT, g_credit_who.c_str());
         text(g_fl, 28, x0 + 202, y0 + 90, C_REACH_DIM, cur ? cur->label.c_str() : "...");
         if (t >= t_tot) {                                 // the total
@@ -2313,10 +2426,17 @@ static void credits_screen(pg_env& e, float t, double now) {
         if (s > s0) {                                     // a promotion on the way
             if (g_promoted_to != s) { g_promoted_to = s; g_promoted_at = now; sound(PS_OPEN); }
             float pa = (float)(now - g_promoted_at);
+            // (Nov 19) the new rank named ("PROMOTED" alone read as if the bar disagreed), in larger gold settling to
+            // its size, and a white flash along the bar
+            std::string pr = "PROMOTED TO ";
+            for (char ch : cur ? cur->label : std::string()) pr += (char)toupper((unsigned char)ch);
             float keep = g_alpha;
-            g_alpha *= pa < 0.3f ? pa / 0.3f : 1;
-            text(g_fl, 44, (bx0 + bx1) * 0.5f, by - 72, C_GOLD, "PROMOTED", 1);
+            g_alpha *= pa < 0.15f ? pa / 0.15f : 1;
+            float ps = pa < 0.35f ? 44 + 14 * (1 - pa / 0.35f) * (1 - pa / 0.35f) : 44;
+            text(g_fl, ps, (bx0 + bx1) * 0.5f, by - 72 - (ps - 44) * 0.6f, C_GOLD, pr.c_str(), 1);
             g_alpha = keep;
+            if (pa < 0.6f)
+                g_dl->AddRectFilled(P(bx0, by), P(bx1, by + 26), A(IM_COL32(255, 255, 255, (int)(150 * (1 - pa / 0.6f)))));
         }
         if (t > t_bar + bar_s + 6) go = true;
     }
@@ -2736,7 +2856,7 @@ static bool pg_frame_body(pg_env& e) {
     g_pad_in = e.pad;
     {   // the ground's art: the vote's options and the winner, else the playlist's maps in turn (faded between)
         const pic* art = nullptr;
-        float art_a = 0.16f;
+        float art_a = 0.30f;                             // (Nov 19: 0.16 before, under a heavier wash)
         if ((g_stage == S_RESULT || g_stage == S_LAUNCH) && g_nopt) art = map_picture(g_opt[g_winner].map_key);
         else if (g_stage == S_VOTE && g_nopt) art = map_picture(g_opt[g_vote_me >= 0 && g_vote_me < g_nopt ? g_vote_me : 0].map_key);
         else if (g_stage != S_ERROR) {
@@ -2786,13 +2906,15 @@ static bool pg_frame_body(pg_env& e) {
     bool ros_here = (g_stage == S_MENU && !g_invite && !g_chal) || g_stage == S_SEARCH || g_stage == S_VOTE, ros_out = false;
     if (!ros_here) { g_ros_on = false; g_ros_k = 0; }
     else if (!g_ros_on) {
-        if (g_ros_click >= 0 || (g_left_right == 1 && !g_lr_taken)) {
+        // (Nov 19) RB (the footer's Players prompt) as well as Right: Right is GAME SIZE's and the rounds' on those rows
+        bool rb = ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false) || g_footer_players;
+        if (g_ros_click >= 0 || (g_left_right == 1 && !g_lr_taken) || rb) {
             g_ros_keep = g_focus;
             g_focus = g_ros_click >= 0 ? g_ros_click : 0;
             g_ros_on = true;
             sound(PS_SELECT);
         }
-    } else if (g_left_right == -1) ros_out = true;
+    } else if (g_left_right == -1 || ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false)) ros_out = true;
     else if (ImGui::IsMouseClicked(0)) {
         ImVec2 m = ImGui::GetIO().MousePos, l0 = P(g_ros_x0, g_ros_y0), l1 = P(g_ros_x1, g_ros_y1),
                p0 = P(RP0, RPY0), p1 = P(RP1, RPY1), f0 = P(0, 940);
@@ -2814,6 +2936,7 @@ static bool pg_frame_body(pg_env& e) {
         g_ros_k = g_ros_k < 0 ? 0 : g_ros_k > 1 ? 1 : g_ros_k;
     }
     g_footer_back = false;
+    g_footer_players = false;
     g_pressed = -1;
     frame_keys();
     static int last_n = -1;

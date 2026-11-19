@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+### Proving Grounds in Halo: Reach's look, livelier, and fully on the controller, 2026-11-19
+
+The owner asked for the bot matchmaking screens to be "more vibrant and true to the original", then chose Reach's steel grey for every screen ("I want the vibe of reach as much as possible"; this replaces the Nov 17 MCC navy for the menu, search, vote, result and error screens), and "Make the menu also compatible with controller. Since we mostly use controllers." The player card's stats over the figure and the PARTY tag on bright nameplates were left for later at the owner's word.
+
+- `native/proving_grounds.cpp`:
+  - **Look:**
+    - Reach's palette everywhere: grey see-through panels, lighter at the top; light grey text; a pale steel accent in place of MCC's blue.
+    - A focused row is lit grey with a white edge. The menu's rows carry Reach's pointer toward the stats panel. The vote's focused option matches, and the invite buttons too.
+  - **Background:** a grey wash in place of the navy one. The map art is about twice as strong: alpha 0.16 -> 0.30, tint near its own colours, the left and bottom darkening lighter. The menu card's map is at 0.85, up from 0.55.
+  - **Find Game:**
+    - Empty seats are faint outlines with a soft light passing down them, with "SEARCHING FOR PLAYERS..." on the first one only.
+    - A bot that is found slides in from the right with a white flash, and a tick sounds as players arrive.
+  - **Vote:**
+    - Each option has a bar along its foot sized by its share of the votes: yours gold, the leader brighter.
+    - The last five seconds of the clock are gold, swell on each second and tick.
+  - **Credits:**
+    - The promotion now reads "PROMOTED TO <RANK>", in gold that settles to its size, with a white flash along the bar.
+    - The new insignia comes in large with a gold ring.
+  - **Names:** the roster's header is "IN PROVING GROUNDS LOBBY" (menu) and "IN MATCHMAKING LOBBY" (search and vote), as when it is opened Reach's way. It was "MY GAME SESSION", "IN LOBBY n/m" and "SETTING UP MATCH...".
+  - **Error:** its title is "GAME DIDN'T START" ("SOMETHING WENT WRONG" before).
+  - **Controller:**
+    - Pad prompts are drawn as Reach showed them: A green, B red, X blue, Y yellow discs, and bumper or trigger pills.
+    - The left stick also moves left and right. RB (or the footer's new "Players" prompt) opens the roster, and LB closes it.
+    - The invite list scrolls with the left stick and pages with LB and RB (Page Up and Page Down on the keys). It shows "1-12 of 752" and pad-aware help.
+    - The error screen's two buttons also move with Left and Right.
+- `native/overlay.cpp`: both triggers together (LT+RT) open Proving Grounds in Halo: Reach's custom game lobby, as both sticks open BOTS. The tile's prompt shows LT+RT on the pad; it showed nothing on the pad before.
+- `native/pg_preview.cpp`: `PG_PAD=1` draws the pad's prompts.
+- **Validation:**
+  - `build_pg_preview.bat` renders all 12 screens, with the keys and with `PG_PAD=1`, checked by eye at 1920x1080.
+  - `build.bat pg20` builds `botcore_pg20.dll`. It loads at the next MCC start.
+  - **Untested in game:**
+    - the pad in MCC itself;
+    - whether LT+RT does anything of MCC's own in the Reach custom lobby before Proving Grounds takes the pad;
+    - how the brighter art reads behind text on every map.
+
 ### Map memory for Legendary and up: danger spots and lanes, enemy spawns, jumps that keep failing, 2026-11-19
 
 The owner chose three things for bots to learn per layout over matches (danger map, spawns, movement facts), "only give it to legendary and up". New `brain/lore.py`: one file per layout, `maps/<layout>/lore.json` (this PC's own, git-ignored like `nav_learned.json`). It holds the matches filed, every credited kill's two places, every respawn (mode, place, team), and each jump's lands and shorts. `profiles.map_memory` = `fixed_high`: Legendary, Mythic, Blind, Tactician and Demon. Scaling and Heroic down are unchanged. `MAP_MEMORY` False turns it all off.
