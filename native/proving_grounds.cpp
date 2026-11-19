@@ -584,10 +584,14 @@ static int g_npool_names;
 
 // (Nov 19, the owner's frames of Halo: Reach's menus, phase 1) the page S_MENU shows: Reach's title, main menu,
 // matchmaking and its three sub-pages, or Proving Grounds' own menu (RP_OPTIONS). proving_grounds_reach.inc
-enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS };
+// (Nov 19, phase 2) Reach's Start menu and the player's Service Record, Career and its difficulty pages
+enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF };
 static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
 static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
 static bool rmenu_back();
+static int g_rm_psych[4];                        // (the psych profile, also shown in MY PARTY DETAILS)
+static void rm_load();
+static const char* rm_psych_text(int k);
 
 void pg_open() {
     if (g_follow) { g_f_hide = false; return; }  // (Nov 18: following the host: its screens back, no session here)
@@ -606,7 +610,7 @@ void pg_open() {
 }
 
 // (back from the search or the vote: Reach's matchmaking page)
-static void to_menu() { g_stage = S_MENU; g_invite = false; g_rpage = RP_MM; g_focus_after = 3; g_t0 = ImGui::GetTime(); }
+static void to_menu() { g_stage = S_MENU; g_invite = false; g_rpage = RP_MM; g_focus_after = 4; g_t0 = ImGui::GetTime(); }
 
 void pg_back() {
     if (g_follow) {                              // (Nov 18: following: the host's screens away till its next stage;
@@ -616,7 +620,11 @@ void pg_back() {
     }
     if (g_invite) { g_invite = false; return; }
     if (g_chal) { g_chal = false; return; }
-    if (g_comm) { g_comm = false; g_focus_after = 4; return; }   // (back on the menu's COMMENDATIONS)
+    if (g_comm) {                                // (back on the COMMENDATIONS row it came from)
+        g_comm = false;
+        g_focus_after = g_rpage == RP_MM ? 3 : g_rpage == RP_SR ? 1 : 4;
+        return;
+    }
     if (g_stage == S_MENU && rmenu_back()) return;   // (Reach's pages: one page back; from the title, closed)
     switch (g_stage) {
     case S_MENU: g_stage = S_OFF; logf("proving grounds: closed"); break;
@@ -1550,6 +1558,16 @@ static void ros_details(const ros_head& h) {
         float y = 190 + 43.0f * i;
         text(g_fl, 26, RP0 + 23, y, C_REACH_DIM, K[i]);
         text(g_fl, 26, RP1 - 22, y, C_REACH_TEXT, h.v[i] ? h.v[i] : "...", 2);
+    }
+    // (Nov 19, the owner's frame of Reach's MY PARTY DETAILS) the psych profile, as Reach listed it under the party
+    rm_load();
+    g_dl->AddLine(P(RP0 + 10, 430), P(RP1 - 10, 430), A(IM_COL32(150, 158, 166, 90)), U(2));
+    text(g_fl, 26, RP0 + 14, 452, C_REACH_DIM, "Matchmaking Social Preferences:");
+    static const char* S[4] = { "Chattiness:", "Motivation:", "Teamwork:", "Tone:" };
+    for (int i = 0; i < 4; i++) {
+        float y = 495 + 43.0f * i;
+        text(g_fl, 26, RP0 + 23, y, C_REACH_DIM, S[i]);
+        text(g_fl, 26, RP1 - 22, y, C_REACH_TEXT, rm_psych_text(i), 2);
     }
 }
 
@@ -3190,6 +3208,15 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 19: pg_open(); g_rpage = RP_PLAYLIST; g_rm_col = 1; g_rm_cat = 1; g_focus = 4; break;
     case 20: pg_open(); g_rpage = RP_RESTRICT; g_focus = 0; break;
     case 21: pg_open(); g_rpage = RP_PSYCH; g_focus = 0; break;
+    // (Nov 19, phase 2) the Start menu on the armory, the Service Record, Career on matchmaking, the campaign's
+    // difficulties, the Start menu on Player
+    case 22: pg_open(); g_rpage = RP_MENU; g_focus = 0; break;
+    case 23: pg_open(); g_rpage = RP_SR; g_focus = 0; break;
+    case 24: pg_open(); g_rpage = RP_CAREER; g_focus = 2; break;
+    case 25: pg_open(); g_rpage = RP_DIFF; g_diff_mode = 0; g_focus = 0; break;
+    case 26: pg_open(); g_rpage = RP_MENU; g_focus = 1; break;
+    case 27: pg_open(); g_rpage = RP_MENU; g_focus = 5; break;       // (the challenges, as Reach's Start menu)
+    case 28: pg_open(); g_rpage = RP_PSYCH; g_focus = 4; break;      // (Simulate Matches on the Psych Profile)
     }
     if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Proving Grounds' own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)

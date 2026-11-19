@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Proving Grounds: Halo: Reach's menus, phase 2 (the Start menu, Service Record, Career, party details), 2026-11-19
+
+The owner sent ten more frames of Reach's menus: MY PARTY DETAILS, MENU, SERVICE RECORD, CAREER (on Campaign, Arena, Matchmaking and Firefight), CAMPAIGN and FIREFIGHT by difficulty, and COMMENDATIONS.
+
+- **`tools/service_record.py` `write_game_career`** (with every site build): `logs/service_record/career.txt`, each listed person's games, wins, kills, deaths, assists and seconds for Matchmaking (every match on the Service Record: it counts only Proving Grounds' own, `matchmaking.txt`), Arena (those of the ARENA playlist, The Arena) and Big Team Battle. `tools/test_service_record.py` +1 (37 pass). The real site: 19 games, 11 won, 360 kills, 13 in Arena, 6 in Big Team Battle.
+- **`native/proving_grounds_reach.inc`**, new pages:
+  - **MENU** (the Menu prompt, Start or M, now opens it; Exit or B goes back): THE ARMORY (its pieces listed dim, the player's Spartan in the picture; dim: the player's Spartan is MCC's Customization, the bots' looks the BOTS panel's), PLAYER, FILE BROWSER, CONTROLLER, AUDIO VIDEO (dim: MCC's own), CHALLENGES with Reach's star while there are live ones (the Challenges page), NETWORK STATUS (dim: offline), SERVICE RECORD SITE (where Reach had Halo Waypoint: the site in the browser; Microsoft's name is not used for it) and PROVING GROUNDS (its own options page as before).
+  - **SERVICE RECORD** (PLAYER): CAREER..., COMMENDATIONS... (the Commendations page), LEGACY (not here yet); the player's card (emblem, name, rank, the rank's insignia large), Matchmaking Games Won and MP Kills, the campaign's two rows "Not recorded", and Top Commendations: the three furthest along (highest tier, then nearest the next), their banners and bars.
+  - **CAREER**: CAMPAIGN... and FIREFIGHT... (Reach's rows, "Not recorded", and their NORMAL / HEROIC / LEGENDARY pages the same), ARENA (Games Won, Kills, Deaths, Assists, % of Matchmaking Games Played in Arena), MATCHMAKING (the same, Time Played, Top Commendations), CUSTOM GAMES (they are not on the Service Record, it says).
+  - Each with Reach's upright breadcrumb (cut to fit above the player's band), the player's band and Exit.
+- **`native/proving_grounds.cpp`:** MY PARTY DETAILS (the roster's header panel) now lists Reach's "Matchmaking Social Preferences" under the party: the Psych Profile's four, in Reach's title case. The new pages' states; preview screens 23-27.
+- **Later the same day,** the owner, with Reach's Psych Profile and its beta's Start menu (DAILY CHALLENGES): "I would like the proving grounds options (Simulate Matches 1 round, 2 round, etc) to be on the pysch screen. I would like the option (Challenges to look like this) And I would like the commendations tab to also be between Psych profile and start mathcmaking options."
+  - **Psych Profile:** SIMULATE MATCHES (Left / Right the rounds, 1 to 20; A plays them; PLAYING... and DONE: n MATCHES as before) and INVITE PLAYER (the invite list over the page) under the four preferences; the description moved down, the map unchanged.
+  - **Start menu, CHALLENGES:** the right side lists the live challenges as Reach's did: DAILY, then WEEKLY, each its icon in a ring, its name, what to do, its credits, a thin bar and [n/need] (DONE and the credits in gold when finished). A opens the full Challenges page.
+  - **Matchmaking:** COMMENDATIONS (its progress %) between PSYCH PROFILE and START MATCHMAKING, opening the Commendations page; back from it lands on that row (and on the Service Record's, from there).
+  - The Start menu's PROVING GROUNDS entry is gone: each of its options now has its place in Reach's pages (the game size is the playlist, PLAY is START MATCHMAKING).
+- **Validation:** all 29 preview screens render; the new ones and MY PARTY DETAILS checked by eye against the owner's frames (a crumb into the band and the Exit prompt past it fixed). `build.bat pg30` builds `botcore_pg30.dll`. **Untested in game.**
+
 ### Proving Grounds: the Psych Profile's world map, with the Service Record's home states as heat, 2026-11-19
 
 The owner, after trying the Reach menus ("It works so far"): "On the pysch profile page id like the same world map. and then a static heat map of the service websites player locations". The Service Record's only locations are its home states (states.json: each player's US state, picked from the name by population or set by hand in edit mode).

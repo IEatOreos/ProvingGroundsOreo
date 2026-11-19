@@ -2512,6 +2512,41 @@ def write_game_locations(data, paths):
     os.replace(tmp, os.path.join(paths.out, "locations.txt"))
 
 
+def write_game_career(data, paths):
+    """(Nov 19, the owner's frames of Halo: Reach's Service Record and Career pages) <out>/career.txt: each listed
+    person's matches as Reach's Career split them, from the site's own match list. The Service Record counts only
+    Proving Grounds' matches (matchmaking.txt), so every one is Matchmaking; Arena is the ones of its ARENA playlist
+    (The Arena); Big Team Battle its BIG TEAM BATTLE. Campaign, Firefight and custom games are not recorded."""
+    playlists = load_matchmaking_playlists(getattr(paths, "matchmaking", None))
+    people = {p["name"] for p in data["players"] if p.get("person")}
+    keys = ("games", "wins", "kills", "deaths", "assists", "seconds")
+    tally = {(n, b): dict.fromkeys(keys, 0) for n in people for b in ("matchmaking", "arena", "btb")}
+    for m in data["matches"]:
+        pl = playlists.get(m["id"], "")
+        buckets = ["matchmaking"] + (["arena"] if pl == "ARENA" else ["btb"] if pl == "BIG TEAM BATTLE" else [])
+        for r in m["rows"]:
+            name = html.unescape(str(r.get("n", "")))
+            if name not in people:
+                continue
+            for b in buckets:
+                t = tally[(name, b)]
+                t["games"] += 1
+                t["wins"] += 1 if r.get("won") else 0
+                t["kills"] += int(r.get("k") or 0)
+                t["deaths"] += int(r.get("d") or 0)
+                t["assists"] += int(r.get("a") or 0)
+                t["seconds"] += int(r.get("sec") or 0)
+    lines = ["# made by tools/service_record.py from the site's matches (Proving Grounds' only); do not edit",
+             "# career<TAB>name<TAB>matchmaking | arena | btb<TAB>games<TAB>wins<TAB>kills<TAB>deaths<TAB>assists<TAB>seconds"]
+    for (name, b), t in sorted(tally.items()):
+        clean = name.replace("\t", " ").replace("\n", " ")
+        lines.append(f"career\t{clean}\t{b}\t" + "\t".join(str(t[k]) for k in keys))
+    tmp = os.path.join(paths.out, "career.txt.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, os.path.join(paths.out, "career.txt"))
+
+
 def write_last_match(data, paths):
     """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
     report) <out>/last_match.txt: what the newest match on the site (a Proving Grounds match) earned each listed person
@@ -2605,6 +2640,7 @@ def write_site(data, paths):
     write_game_challenges(data, paths)
     write_game_commendations(data, paths)                    # (Nov 19: the game's Commendations page)
     write_game_locations(data, paths)                        # (Nov 19: the heat on the game's Psych Profile map)
+    write_game_career(data, paths)                           # (Nov 19: the game's Service Record and Career pages)
     for name, text in (("data.js", "window.SR_DATA = " + json.dumps(data, separators=(",", ":")) + ";\n"),
                        ("stamp.js", f'window.SR_STAMP && window.SR_STAMP("{data["stamp"]}");\n')):
         tmp = os.path.join(paths.out, name + ".tmp")

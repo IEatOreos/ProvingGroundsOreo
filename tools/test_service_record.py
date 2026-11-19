@@ -762,6 +762,36 @@ def test_game_reads_the_sites_commendations():
         assert "\\\\logs\\\\service_record\\\\commendations.txt" in f.read()
 
 
+def test_game_reads_the_sites_career():
+    """(Nov 19) <site>/career.txt, the game's Service Record and Career pages: each person's matches (all of them
+    Matchmaking), and those of the ARENA and BIG TEAM BATTLE playlists by matchmaking.txt; bots not listed."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 2, 600), row(bot(2), "Oreo", 1, 0, 2, 7, 3, 600)]))
+        w.career()
+        data = w.build()
+        me = data["players"][0]                          # (the listed player, made a person as people.json would)
+        me["person"] = True
+        mm = os.path.join(tmp, "matchmaking.txt")
+        with open(mm, "w", encoding="utf-8") as f:
+            f.write(f"# test\n{data['matches'][0]['id']}\t2026-11-19 12:00\tARENA\n")
+        out = os.path.join(tmp, "game")
+        os.makedirs(out)
+        sr.write_game_career(data, types.SimpleNamespace(out=out, matchmaking=mm))
+        with open(os.path.join(out, "career.txt"), encoding="utf-8") as f:
+            rows = [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    by = {r[2]: r for r in rows}
+    assert set(by) == {"matchmaking", "arena", "btb"} and all(r[1] == me["name"] for r in rows), rows
+    r = next(x for x in data["matches"][0]["rows"] if x["n"] == me["name"])
+    want = ["1", "1" if r["won"] else "0", str(r["k"]), str(r["d"]), str(r["a"]), str(r["sec"])]
+    assert by["matchmaking"][3:] == want and by["arena"][3:] == want, (by, want)
+    assert by["btb"][3:] == ["0"] * 6
+    with open(os.path.join(HERE, "..", "native", "proving_grounds_reach.inc"), encoding="utf-8") as f:
+        assert "\\\\logs\\\\service_record\\\\career.txt" in f.read()
+
+
 def test_game_reads_the_sites_home_states():
     """(Nov 19) <site>/locations.txt, the heat on Proving Grounds' Psych Profile map: every state of states.json with
     how many listed players have it as their home state (the site's own pick or the one set by hand), and each person's

@@ -24,7 +24,7 @@
 
 // ------------------------------------------------------------------ settings (native\bin\reach_menus.ini)
 static int g_rm_restrict[3];                     // good connection, language, skill (0 / 1)
-static int g_rm_psych[4];                        // chattiness, motivation, teamwork, tone (0 no preference, 1, 2)
+// g_rm_psych[4] (proving_grounds.cpp): chattiness, motivation, teamwork, tone (0 no preference, 1, 2)
 static bool g_rm_loaded;
 static int g_rm_col, g_rm_cat = 1;               // the playlist page: the column with the focus, the category picked
 
@@ -209,7 +209,10 @@ static void rm_big_header(const char* title, const char* sub, const char* crumb)
 static void rm_small_header(const char* title, const char* crumb) {
     rm_diamonds(350, 98, 64, IM_COL32(120, 176, 230, 255));
     text(g_fl, 58, 394, 70, C_TEXT, title);
-    rm_vtext(52, 372, 148, IM_COL32(200, 206, 212, 64), crumb);
+    char cut[96];                                    // (a long one ends above the player's band: cut to what fits)
+    strcpy_s(cut, crumb);
+    for (size_t n = strlen(cut); n > 0 && text_w(g_fl, 52, cut) / g_pg.s > 660; ) cut[--n] = 0;
+    rm_vtext(52, 372, 148, IM_COL32(200, 206, 212, 64), cut);
 }
 
 // the button prompts along the bottom of the main pages; true when Menu was asked for (the pad's Start, M, a click)
@@ -219,11 +222,14 @@ static bool rm_prompts(float x, float y, bool select, bool back, bool menu) {
     if (select) x = prompt(x, y, "A", "Enter", "Select", nullptr);
     if (back) x = prompt(x, y, "B", "Esc", "Back", &g_footer_back);
     if (menu) prompt(x, y, "Start", "M", "Menu", &menu_click);
-    return menu && (menu_click || ImGui::IsKeyPressed(ImGuiKey_GamepadStart, false) || ImGui::IsKeyPressed(ImGuiKey_M, false));
+    return menu && !g_inert &&
+           (menu_click || ImGui::IsKeyPressed(ImGuiKey_GamepadStart, false) || ImGui::IsKeyPressed(ImGuiKey_M, false));
 }
+// (phase 2) the Menu prompt opens Reach's Start menu (RP_MENU); Exit (Start again) or B goes back where it was opened
+static int g_rmenu_from = RP_MAIN;
 static void rm_open_options() {
-    g_rpage_from = g_rpage;
-    g_rpage = RP_OPTIONS;
+    g_rmenu_from = g_rpage;
+    g_rpage = RP_MENU;
     g_focus_after = 0;
     sound(PS_SELECT);
 }
@@ -345,7 +351,7 @@ static void rm_main(pg_env& e, float t) {
     for (int k = 0; k < 6; k++) {
         if (!pressed(base + k)) continue;
         if (!RM_MAIN_ON[k]) { sound(PS_ERROR); continue; }
-        if (k == 1) { g_rpage = RP_MM; g_focus_after = 3; sound(PS_SELECT); }
+        if (k == 1) { g_rpage = RP_MM; g_focus_after = 4; sound(PS_SELECT); }   // (on START MATCHMAKING)
         if (k == 3) { sound(PS_SELECT); g_stage = S_OFF; logf("proving grounds: closed for MCC's custom game lobby (main menu)"); }
     }
 }
@@ -383,14 +389,19 @@ static void rm_mm(pg_env& e, float t) {
     g_dl->AddLine(P(248, 606), P(940, 606), A(IM_COL32(206, 212, 218, 60)), U(1));
     char rs[64];
     rm_restrict_summary(rs, sizeof rs);
-    const char* L[4] = { "PLAYLIST", "SEARCH RESTRICTIONS", "PSYCH PROFILE", "START MATCHMAKING" };
-    const char* V[4] = { RM_PL[rm_current()].name, rs, nullptr, nullptr };
-    const char* D[4] = { "Pick a playlist that suits the way you play.",
+    // (Nov 19, the owner: "the commendations tab ... between Psych profile and start mathcmaking")
+    comm_load();
+    char cms[32];
+    sprintf_s(cms, "%.1f%%", g_comm_pct);
+    const char* L[5] = { "PLAYLIST", "SEARCH RESTRICTIONS", "PSYCH PROFILE", "COMMENDATIONS", "START MATCHMAKING" };
+    const char* V[5] = { RM_PL[rm_current()].name, rs, nullptr, g_comm_have && !g_comm_items.empty() ? cms : nullptr, nullptr };
+    const char* D[5] = { "Pick a playlist that suits the way you play.",
                          "Choose what the search puts first.",
-                         "Tell the search what kind of players you want around you.",
+                         "Tell the search what kind of players you want around you. Simulated matches and invites are here too.",
+                         "Your commendations, tiers and progress, as your Service Record has them.",
                          "Find a game: a lobby of bots from your pool, then the vote." };
     int base = (int)g_items.size(), focus = -1;
-    for (int k = 0; k < 4; k++) {
+    for (int k = 0; k < 5; k++) {
         float y = 612 + 41.0f * k;
         bool f = item(248, y, 940, y + 38);
         if (f) focus = k;
@@ -405,7 +416,8 @@ static void rm_mm(pg_env& e, float t) {
     }
     if (pressed(base + 1)) { g_rpage = RP_RESTRICT; g_focus_after = 0; sound(PS_SELECT); }
     if (pressed(base + 2)) { g_rpage = RP_PSYCH; g_focus_after = 0; sound(PS_SELECT); }
-    if (pressed(base + 3)) { sound(PS_SELECT); start_search(e); }
+    if (pressed(base + 3)) { g_comm = true; g_comm_check = 0; g_comm_tab = 0; g_comm_scroll = 0; g_focus = 0; sound(PS_SELECT); }
+    if (pressed(base + 4)) { sound(PS_SELECT); start_search(e); }
 }
 
 static void rm_playlist(pg_env& e, float t) {
@@ -742,32 +754,57 @@ static const char* RM_PSY_D[4][3] = {
     { "No preference set for why the players play.", "Players who are here to have fun.", "Players who are here to win." },
     { "No preference set for how the players work together.", "Players who go their own way.", "Players who stick with the team." },
     { "No preference set for how the players behave.", "Players who keep it friendly.", "Players who keep it loud." } };
+static const char* rm_psych_text(int k) {        // (MY PARTY DETAILS: in Reach's title case)
+    static const char* T[4][3] = { { "No Preference (Default)", "Quiet", "Talkative" },
+                                   { "No Preference (Default)", "Have Fun", "Win" },
+                                   { "No Preference (Default)", "Lone Wolf", "Team Player" },
+                                   { "No Preference (Default)", "Polite", "Rowdy" } };
+    int v = k >= 0 && k < 4 ? g_rm_psych[k] : 0;
+    return T[k < 0 || k > 3 ? 0 : k][v < 0 || v > 2 ? 0 : v];
+}
 
 static void rm_psych(pg_env& e, float t) {
     (void)e; (void)t;
     rm_load();
     rm_small_header("PSYCH PROFILE", "MATCHMAKING");
     int base = (int)g_items.size(), focus = -1;
-    for (int k = 0; k < 4; k++) {
+    // (Nov 19, the owner: "the proving grounds options (Simulate Matches 1 round, 2 round, etc) to be on the pysch
+    // screen") the four preferences, then Proving Grounds' own two: the bot simulation's rounds, the invited party
+    double now = ImGui::GetTime();
+    sim_poll(now);
+    char sims[48], inv[32];
+    bool sim_arrows = false;
+    if (g_sim_proc) strcpy_s(sims, "PLAYING...");
+    else if (g_sim_done_at >= 0 && now - g_sim_done_at < 10.0 && g_sim_made >= 0) sprintf_s(sims, "DONE: %d MATCHES", g_sim_made);
+    else { sprintf_s(sims, "%d ROUND%s", g_sim_rounds, g_sim_rounds == 1 ? "" : "S"); sim_arrows = true; }
+    sprintf_s(inv, "%d / %d", g_nparty, cur_pl().size - 1);
+    for (int k = 0; k < 6; k++) {
         float y = 160 + 41.0f * k;
         bool f = item(393, y, 1505, y + 38);
         if (f) focus = k;
-        rm_row(393, y, 1505, y + 38, f, RM_PSY[k]);
-        text(g_fl, 25, 1238, y + 7, f ? C_TEXT : C_DIM, RM_PSY_V[k][g_rm_psych[k]], 1);
-        if (f) { text(g_fl, 28, 960, y + 3, C_DIM, "<"); text(g_fl, 28, 1494, y + 3, C_DIM, ">", 2); }
+        rm_row(393, y, 1505, y + 38, f, k < 4 ? RM_PSY[k] : k == 4 ? "SIMULATE MATCHES" : "INVITE PLAYER");
+        const char* v = k < 4 ? RM_PSY_V[k][g_rm_psych[k]] : k == 4 ? sims : inv;
+        text(g_fl, 25, 1238, y + 7, f ? C_TEXT : C_DIM, v, 1);
+        if (f && (k < 4 || (k == 4 && sim_arrows))) { text(g_fl, 28, 960, y + 3, C_DIM, "<"); text(g_fl, 28, 1494, y + 3, C_DIM, ">", 2); }
     }
-    g_dl->AddLine(P(400, 352), P(1500, 352), A(IM_COL32(206, 212, 218, 70)), U(1));
-    if (focus >= 0) {
+    g_dl->AddLine(P(400, 414), P(1500, 414), A(IM_COL32(206, 212, 218, 70)), U(1));
+    if (focus >= 0 && focus < 4) {
         char l1[96];
         sprintf_s(l1, "Saved for your lobbies. The search does not use your %s yet.", focus == 0 ? "chattiness" :
                   focus == 1 ? "motivation" : focus == 2 ? "teamwork" : "tone");
-        text(g_fl, 27, 402, 366, C_TEXT, l1);
-        text(g_fl, 25, 402, 406, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
+        text(g_fl, 27, 402, 422, C_TEXT, l1);
+        text(g_fl, 25, 402, 456, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
+    } else if (focus == 4) {
+        text(g_fl, 27, 402, 422, C_TEXT, "Bots play matches of their own for the Service Record.");
+        text(g_fl, 25, 402, 456, C_DIM, "Left / Right: how many rounds (a round is about 25 lobbies). A: play them.");
+    } else if (focus == 5) {
+        text(g_fl, 27, 402, 422, C_TEXT, "Bots who play on your team every game, whatever the lobby.");
+        text(g_fl, 25, 402, 456, C_DIM, "A: pick them from your pool.");
     }
     rm_world_heat();                                 // (Nov 19: the world as Reach's, the Service Record's home states)
     rm_band();
     prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
-    if (focus >= 0) {
+    if (focus >= 0 && focus < 4) {
         int step = g_left_right ? g_left_right : pressed(base + focus) ? 1 : 0;
         if (step) {
             g_lr_taken = true;
@@ -776,10 +813,362 @@ static void rm_psych(pg_env& e, float t) {
             sound(PS_MOVE);
         }
     }
+    if (focus == 4 && g_left_right && !g_sim_proc) {     // (the rounds, 1 to 20, as Proving Grounds' menu had them)
+        g_lr_taken = true;
+        int r = g_sim_rounds + g_left_right;
+        g_sim_rounds = r < 1 ? 1 : r > 20 ? 20 : r;
+        g_sim_done_at = -1;
+        sound(PS_MOVE);
+    }
+    if (pressed(base + 4)) {
+        if (g_sim_proc) sound(PS_ERROR);
+        else { sim_start(); sound(PS_SELECT); }
+    }
+    if (pressed(base + 5)) { g_invite = true; g_npool_names = 0; g_invite_scroll = 0; g_focus = 0; sound(PS_SELECT); }
 }
 
-// S_MENU's frame while one of Reach's pages is up
+// ------------------------------------------------------------------ phase 2: the Start menu, the Service Record
+// (Nov 19, the owner's ten frames: MY PARTY DETAILS, MENU, SERVICE RECORD, CAREER, CAMPAIGN, ARENA, MATCHMAKING,
+// FIREFIGHT twice, COMMENDATIONS) Reach's player pages. The numbers are the Service Record's (career.txt, written with
+// the site by tools/service_record.py write_game_career): it counts only Proving Grounds' matches, so Matchmaking is
+// all of them and Arena those of The Arena; the campaign, Firefight and custom games are not recorded, and their pages
+// say so rather than show made-up numbers. Top Commendations are the three furthest along (commendations.txt).
+static int g_car[3][6];                          // matchmaking, arena, btb: games, wins, kills, deaths, assists, seconds
+static bool g_car_have;
+static ULONGLONG g_car_check, g_car_stamp;
+static int g_diff_mode;                          // the difficulty page: 0 the campaign, 1 Firefight
+
+static void career_load() {
+    ULONGLONG now = GetTickCount64();
+    if (g_car_check && now - g_car_check < 2000) return;
+    g_car_check = now;
+    wchar_t p[MAX_PATH];
+    swprintf_s(p, L"%s\\logs\\service_record\\career.txt", g_root);
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    ULONGLONG stamp = GetFileAttributesExW(p, GetFileExInfoStandard, &fa) ? ft_u64(fa.ftLastWriteTime) : 0;
+    if (stamp == g_car_stamp) return;
+    g_car_stamp = stamp;
+    memset(g_car, 0, sizeof g_car);
+    g_car_have = false;
+    FILE* f = nullptr;
+    if (!stamp || _wfopen_s(&f, p, L"rb") || !f) return;
+    char line[512];
+    std::vector<std::string> c;
+    while (fgets(line, sizeof line, f)) {
+        if (line[0] == '#') continue;
+        line[strcspn(line, "\r\n")] = 0;
+        split_tabs(line, c);
+        if (c.size() < 9 || c[0] != "career" || _stricmp(c[1].c_str(), me_name())) continue;
+        int b = c[2] == "matchmaking" ? 0 : c[2] == "arena" ? 1 : c[2] == "btb" ? 2 : -1;
+        if (b < 0) continue;
+        for (int k = 0; k < 6; k++) g_car[b][k] = atoi(c[3 + k].c_str());
+        g_car_have = true;
+    }
+    fclose(f);
+}
+
+// the left list of a menu page (Reach's: 41 apart from y 145), its rows dim when not here; returns the focused one
+static int rm_list(const char* const* names, const bool* on, int n, float x1 = 775) {
+    int focus = -1;
+    for (int k = 0; k < n; k++) {
+        float y = 145 + 41.0f * k;
+        bool f = item(390, y, x1, y + 38);
+        if (f) focus = k;
+        rm_row(390, y, x1, y + 38, f, names[k], on ? on[k] : true);
+    }
+    return focus;
+}
+// a row of numbers on the right, as Reach's: the label, the value at the right, a faint line under
+static void rm_stat(float y, const char* label, const char* value, bool dim = false) {
+    text(g_fl, 26, 808, y + 4, dim ? IM_COL32(176, 182, 188, 150) : IM_COL32(220, 224, 228, 255), label);
+    text(g_fl, 26, 1500, y + 4, dim ? IM_COL32(176, 182, 188, 150) : C_TEXT, value, 2);
+    g_dl->AddLine(P(795, y + 40), P(1515, y + 40), A(IM_COL32(150, 158, 166, 55)), U(1));
+}
+static float comm_share(const comm_item& c, const comm_now& s) {   // toward the next tier, 0..1
+    if (s.n < 0) return 0;
+    if (s.tier >= (int)c.need.size()) return 1;
+    int lo = s.tier > 0 ? c.need[s.tier - 1] : 0, hi = c.need[s.tier];
+    return hi > lo ? (float)(s.n - lo) / (hi - lo) : 0;
+}
+// Top Commendations: the three furthest along (the highest tier, then the most toward the next), each its name, its
+// banner (the tier's own, else the commendation's), a thin bar toward the next tier
+static void rm_top_comms(float y) {
+    comm_load();
+    std::vector<int> order;
+    for (int i = 0; i < (int)g_comm_items.size() && i < (int)g_comm_now.size(); i++)
+        if (g_comm_now[i].n > 0) order.push_back(i);
+    std::sort(order.begin(), order.end(), [](int a, int b) {
+        const comm_now &x = g_comm_now[a], &z = g_comm_now[b];
+        if (x.tier != z.tier) return x.tier > z.tier;
+        return comm_share(g_comm_items[a], x) > comm_share(g_comm_items[b], z);
+    });
+    g_dl->AddRect(P(792, y), P(1515, y + 170), A(IM_COL32(150, 158, 166, 70)), 0, 0, U(1));
+    text(g_fl, 26, 805, y + 8, C_TEXT, "Top Commendations");
+    if (order.empty()) { text(g_fl, 22, 805, y + 60, IM_COL32(176, 182, 188, 170), "None earned yet."); return; }
+    for (int k = 0; k < 3 && k < (int)order.size(); k++) {
+        const comm_item& c = g_comm_items[order[k]];
+        const comm_now& s = g_comm_now[order[k]];
+        float x0 = 803 + k * 245.0f, x1 = x0 + 222;
+        text(g_fl, 23, x0, y + 46, C_DIM, c.name.c_str());
+        const pic* bp = s.tier > 0 && s.tier <= (int)c.tier_art.size() ? site_picture(c.tier_art[s.tier - 1]) : nullptr;
+        if (!bp) bp = site_picture(c.banner);
+        if (bp) image_fit(bp, x0, y + 80, x1, y + 144);
+        else { panel(x0, y + 82, x1, y + 142, IM_COL32(40, 70, 104, 200)); crest(x0 + 111, y + 112, 22, C_DIM); }
+        float sh = comm_share(c, s);
+        g_dl->AddRectFilled(P(x0, y + 150), P(x1, y + 156), A(IM_COL32(60, 66, 72, 200)));
+        g_dl->AddRectFilled(P(x0, y + 150), P(x0 + (x1 - x0) * sh, y + 156), A(TIER_COL[s.tier < 7 ? s.tier : 6]));
+    }
+}
+// the Exit prompt at the band's right (the pad's Start, M): true when asked
+static bool rm_exit_prompt() {
+    bool click = false;
+    prompt(1396, 930, "Start", "M", "Exit", &click);
+    return !g_inert && (click || ImGui::IsKeyPressed(ImGuiKey_GamepadStart, false) || ImGui::IsKeyPressed(ImGuiKey_M, false));
+}
+static void rm_exit() { g_rpage = g_rmenu_from; g_focus_after = 0; sound(PS_BACK); }
+
+static void rm_star(float cx, float cy, float r, ImU32 c) {   // (Reach's challenge star, drawn)
+    ImVec2 v[10];
+    for (int i = 0; i < 10; i++) {
+        float a = -1.5708f + i * 0.6283f, rr = (i & 1) ? r * 0.45f : r;
+        v[i] = P(cx + cosf(a) * rr, cy + sinf(a) * rr);
+    }
+    g_dl->AddConcavePolyFilled(v, 10, A(c));
+}
+
+// (Nov 19, later) PROVING GROUNDS' own options left the menu: Simulate Matches and Invite Player are on the Psych
+// Profile, Commendations on Matchmaking, the challenges here (rm_challenges), the game size the playlist
+static const int RM_NMENU = 8;
+static const char* RM_MENU_ITEMS[9] = { "THE ARMORY", "PLAYER", "FILE BROWSER", "CONTROLLER", "AUDIO VIDEO", "CHALLENGES",
+                                        "NETWORK STATUS", "SERVICE RECORD SITE", "PROVING GROUNDS" };
+static const bool RM_MENU_ON[9] = { false, true, false, false, false, true, false, true, true };
+static const char* RM_MENU_DESC[9] = {
+    "Change your Spartan in MCC's own Customization. Your bots' looks are in the BOTS panel's Settings.",
+    "Your Service Record: your career, your commendations.",
+    "Your films, maps and game types are in MCC's own menus.",
+    "Set your controls in MCC's own Settings.",
+    "Set sound and picture in MCC's own Settings.",
+    "Today's and this week's challenges, as your Service Record has them.",
+    "Proving Grounds plays on this PC: there is no network to check.",
+    "Open your Service Record site in the browser: every match, medal and commendation.",
+    "Proving Grounds' own options: invite players, challenges, commendations, simulate matches, game size." };
+
+// the challenges in the Start menu, as Reach's DAILY CHALLENGES: each its icon in a ring, its name, what to do, its
+// credits, a thin bar and [n/need]; the dailies, then the weeklies
+static void rm_challenges() {
+    chal_load();
+    if (g_chal_items.empty()) {
+        rm_wrap(g_fl, 24, 800, 160, 700, IM_COL32(200, 206, 212, 220),
+                "No challenges yet: the Service Record site writes them when it is built.");
+        return;
+    }
+    std::vector<const chal_item*> list;
+    for (const char* per : { "daily", "weekly" })
+        for (const chal_item& c : g_chal_items) if (c.period == per) list.push_back(&c);
+    float y = 148;
+    std::string per;
+    for (size_t k = 0; k < list.size() && y < 800; k++) {
+        const chal_item& c = *list[k];
+        if (c.period != per) {                       // (each period's heading)
+            per = c.period;
+            text(g_fl, 20, 800, y, IM_COL32(176, 182, 188, 200), per == "daily" ? "DAILY" : "WEEKLY");
+            y += 26;
+        }
+        int n = 0;
+        for (auto& kv : g_chal_now) if (kv.first == c.key) n = kv.second;
+        bool done = n >= c.need;
+        g_dl->AddCircle(P(838, y + 34), U(28), A(IM_COL32(214, 220, 226, 150)), 32, U(2));
+        chal_icon(c.icon, 838, y + 34, 34);
+        std::string name = c.name;
+        for (auto& ch : name) ch = (char)toupper((unsigned char)ch);
+        text(g_fl, 24, 884, y + 2, C_TEXT, name.c_str());
+        text(g_fl, 24, 1505, y + 2, done ? C_GOLD : C_TEXT, (cr_text(c.cr) + " cR").c_str(), 2);
+        rm_wrap(g_fs, 19, 884, y + 32, 440, IM_COL32(200, 206, 212, 220), c.what.c_str());
+        float bx0 = 884, bx1 = 1420, by = y + 76, sh = c.need > 0 ? (float)(n < c.need ? n : c.need) / c.need : 0;
+        g_dl->AddRectFilled(P(bx0, by), P(bx1, by + 5), A(IM_COL32(60, 66, 72, 200)));
+        if (sh > 0) g_dl->AddRectFilled(P(bx0, by), P(bx0 + (bx1 - bx0) * sh, by + 5), A(done ? C_GOLD : C_BLUE));
+        char prog[32];
+        sprintf_s(prog, done ? "DONE" : "[%d/%d]", n < c.need ? n : c.need, c.need);
+        text(g_fs, 18, 1505, by - 9, C_DIM, prog, 2);
+        g_dl->AddLine(P(795, y + 94), P(1515, y + 94), A(IM_COL32(150, 158, 166, 55)), U(1));
+        y += 100;
+    }
+}
+
+static void rm_menu_act(int k) {                 // an entry of the Start menu pressed
+    if (!RM_MENU_ON[k]) { sound(PS_ERROR); return; }
+    sound(PS_SELECT);
+    if (k == 1) { g_rpage = RP_SR; g_focus_after = 0; }
+    if (k == 5) { g_chal = true; g_chal_check = 0; }    // (all of them: the Challenges page)
+    if (k == 7) open_site_page(me_name(), "");
+    if (k == 8) { g_rpage_from = RP_MENU; g_rpage = RP_OPTIONS; g_focus_after = 0; }
+}
+
+static void rm_menu(pg_env& e, float t) {
+    rm_small_header("MENU", g_rmenu_from == RP_TITLE ? "TITLE" : g_rmenu_from == RP_MM ? "MATCHMAKING" : "MAIN MENU");
+    chal_load();
+    int base = (int)g_items.size();
+    int focus = rm_list(RM_MENU_ITEMS, RM_MENU_ON, RM_NMENU);
+    if (!g_chal_items.empty()) rm_star(580, 145 + 41.0f * 5 + 19, 11, IM_COL32(232, 140, 50, 255));
+    int f = focus >= 0 ? focus : 0;
+    if (f == 5) {                                    // (the challenges take the page's right side, as Reach's)
+        rm_challenges();
+        rm_band();
+        float x = prompt(318, 966, "A", "Enter", "All challenges", nullptr);
+        prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+        if (rm_exit_prompt()) { rm_exit(); return; }
+        for (int k = 0; k < RM_NMENU; k++) if (pressed(base + k)) rm_menu_act(k);
+        return;
+    }
+    // the middle column: what the focused one holds, dim as Reach's
+    static const char* ARMORY[12] = { "HELMET...", "LEFT SHOULDER...", "RIGHT SHOULDER...", "CHEST...", "WRIST...",
+                                      "UTILITY...", "VISOR COLOR...", "KNEE GUARDS...", "ARMOR EFFECT...",
+                                      "FIREFIGHT VOICE...", "EMBLEM...", "COLORS..." };
+    static const char* PLAYER[2] = { "SERVICE RECORD...", "COMMENDATIONS..." };
+    static const char* CHAL[2] = { "DAILY...", "WEEKLY..." };
+    static const char* PG[5] = { "INVITE PLAYER...", "CHALLENGES...", "COMMENDATIONS...", "SIMULATE MATCHES...", "GAME SIZE..." };
+    const char* const* sub = f == 0 ? ARMORY : f == 1 ? PLAYER : f == 5 ? CHAL : f == 8 ? PG : nullptr;
+    int nsub = f == 0 ? 12 : f == 1 ? 2 : f == 5 ? 2 : f == 8 ? 5 : 0;
+    for (int k = 0; k < nsub; k++) {
+        float y = 153 + 40.0f * k + (f == 0 && k >= 10 ? 38 : 0);
+        text(g_fl, 25, 790, y, IM_COL32(176, 182, 188, RM_MENU_ON[f] ? 170 : 110), sub[k]);
+    }
+    if (f == 0) g_dl->AddLine(P(786, 571), P(1090, 571), A(IM_COL32(150, 158, 166, 70)), U(1));
+    // the picture: the player's Spartan for the armory, else our own panel with the entry's name faint across it
+    panel(1165, 165, 1515, 580, IM_COL32(20, 24, 28, 200));
+    if (f == 0 && e.figure) {
+        if (unsigned long long fig = e.figure(me_name(), false, 0.35f + 0.25f * sinf(t * 0.4f), 350, 415))
+            g_dl->AddImage((ImTextureID)fig, P(1165, 165), P(1515, 580), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
+    } else {
+        rm_diamonds(1340, 330, 150, IM_COL32(120, 176, 230, 120));
+    }
+    g_dl->PushClipRect(P(1165, 165), P(1515, 580), true);
+    text(g_fl, 60, 1180, 492, IM_COL32(236, 240, 244, 70), RM_MENU_ITEMS[f]);
+    g_dl->PopClipRect();
+    rm_wrap(g_fl, 25, 1172, 600, 345, IM_COL32(222, 226, 230, 255), RM_MENU_DESC[f]);
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    for (int k = 0; k < RM_NMENU; k++) if (pressed(base + k)) rm_menu_act(k);
+}
+
+// the player's card on the Service Record: emblem, name, rank, the rank's insignia large at the right
+static void rm_card(float y) {
+    comm_load();
+    g_dl->AddRectFilledMultiColor(P(797, y), P(1505, y + 130), A(IM_COL32(30, 58, 96, 230)), A(IM_COL32(24, 46, 78, 220)),
+                                  A(IM_COL32(18, 34, 58, 220)), A(IM_COL32(26, 50, 84, 230)));
+    int32_t emb[5];
+    int np = -1;
+    unsigned long long em = g_make && mcc_player_look(emb, &np) ? player_emblem(emb, g_make) : 0;
+    if (em) g_dl->AddImage((ImTextureID)em, P(803, y + 6), P(937, y + 126), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
+    else crest(870, y + 65, 50, C_TEXT);
+    const char* who = g_comm_who.empty() ? me_name() : g_comm_who.c_str();
+    text(g_fl, 34, 954, y + 22, C_TEXT, who);
+    text(g_fl, 28, 954, y + 72, IM_COL32(200, 210, 222, 255), g_comm_rank.empty() ? "Rank not recorded yet" : g_comm_rank.c_str());
+    g_dl->AddRectFilled(P(1376, y + 6), P(1505, y + 126), A(IM_COL32(10, 12, 15, 220)));
+    if (const pic* rp = sr_rank_picture(sr_rank_of(who, false))) image_fit(rp, 1386, y + 16, 1495, y + 116);
+}
+
+static void rm_sr(pg_env& e, float t) {
+    (void)e; (void)t;
+    career_load();
+    rm_small_header("SERVICE RECORD", "PLAYER \xC2\xB7 MENU");
+    static const char* L[3] = { "CAREER...", "COMMENDATIONS...", "LEGACY" };
+    static const bool ON[3] = { true, true, false };
+    int base = (int)g_items.size();
+    int focus = rm_list(L, ON, 3);
+    rm_card(160);
+    char v[2][16];
+    sprintf_s(v[0], "%d", g_car[0][1]);
+    sprintf_s(v[1], "%d", g_car[0][2]);
+    rm_stat(300, "Matchmaking Games Won", g_car_have ? v[0] : "0");
+    rm_stat(341, "Matchmaking MP Kills", g_car_have ? v[1] : "0");
+    rm_stat(382, "Highest Campaign Difficulty", "Not recorded", true);
+    rm_stat(423, "Connected Campaign Kills", "Not recorded", true);
+    rm_top_comms(470);
+    if (focus == 2) text(g_fs, 21, 400, 280, IM_COL32(200, 206, 212, 200), "Legacy is not in Proving Grounds yet.");
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    if (pressed(base + 0)) { g_rpage = RP_CAREER; g_focus_after = 2; sound(PS_SELECT); }
+    if (pressed(base + 1)) { g_comm = true; g_comm_check = 0; g_comm_tab = 0; g_comm_scroll = 0; g_focus = 0; sound(PS_SELECT); }
+    if (pressed(base + 2)) sound(PS_ERROR);
+}
+
+static void rm_career(pg_env& e, float t) {
+    (void)e; (void)t;
+    career_load();
+    rm_small_header("CAREER", "SERVICE RECORD \xC2\xB7 PLAYER \xC2\xB7 MENU");
+    static const char* L[5] = { "CAMPAIGN...", "ARENA...", "MATCHMAKING...", "FIREFIGHT...", "CUSTOM GAMES" };
+    int base = (int)g_items.size();
+    int focus = rm_list(L, nullptr, 5), f = focus >= 0 ? focus : 2;
+    char v[6][24];
+    auto num = [&](int i, int n) { sprintf_s(v[i], "%d", n); return (const char*)v[i]; };
+    if (f == 0 || f == 3) {                          // (not recorded: the rows Reach had, with nothing in them)
+        const char* R0[5] = { "Highest Difficulty", "First Completion Date", "Total Enemies Killed",
+                              "Total Vehicles Destroyed", "Time Played" };
+        const char* R3[7] = { "Covenant Kills", "Vehicles Destroyed", "Highest Set Completed (number)",
+                              "Most Kills in a Game", "Waves Completed", "Generators Destroyed", "Enemy Players Killed" };
+        const char* const* R = f == 0 ? R0 : R3;
+        int n = f == 0 ? 5 : 7;
+        for (int k = 0; k < n; k++) rm_stat(160 + 41.0f * k, R[k], "Not recorded", true);
+        rm_wrap(g_fl, 24, 808, 175 + 41.0f * n, 700, IM_COL32(200, 206, 212, 220), f == 0
+                ? "Proving Grounds does not record the campaign: the Service Record counts only its own matches."
+                : "Proving Grounds does not record Firefight: the Service Record counts only its own matches.");
+    } else if (f == 1 || f == 2) {
+        const int* c = g_car[f == 1 ? 1 : 0];
+        rm_stat(160, "Games Won", num(0, c[1]));
+        rm_stat(201, "Kills", num(1, c[2]));
+        rm_stat(242, "Deaths", num(2, c[3]));
+        rm_stat(283, "Assists", num(3, c[4]));
+        if (f == 1) {
+            sprintf_s(v[4], "%d%%", g_car[0][0] ? (int)(100.0f * g_car[1][0] / g_car[0][0] + 0.5f) : 0);
+            rm_stat(324, "% of Matchmaking Games Played in Arena", v[4]);
+        } else {
+            int s = c[5];
+            sprintf_s(v[4], "%dd %02d:%02d:%02d", s / 86400, s / 3600 % 24, s / 60 % 60, s % 60);
+            rm_stat(324, "Time Played", v[4]);
+            rm_top_comms(380);
+        }
+    } else {
+        rm_wrap(g_fl, 25, 808, 175, 700, IM_COL32(222, 226, 230, 255),
+                "Custom games are not on the Service Record: it counts only Proving Grounds' matches, the games its "
+                "matchmaking started.");
+    }
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    if (pressed(base + 0) || pressed(base + 3)) {
+        g_diff_mode = pressed(base + 3) ? 1 : 0;
+        g_rpage = RP_DIFF; g_focus_after = 0; sound(PS_SELECT);
+    }
+}
+
+static void rm_diff(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header(g_diff_mode ? "FIREFIGHT" : "CAMPAIGN", "CAREER \xC2\xB7 SERVICE RECORD \xC2\xB7 PLAYER");
+    static const char* L[3] = { "NORMAL", "HEROIC", "LEGENDARY" };
+    rm_list(L, nullptr, 3);
+    const char* C[5] = { "Missions Completed", "Covenant Kills", "Vehicles Destroyed", "Missions Completed Without Dying/Restarted",
+                         "Highest Skull Multiplier" };
+    const char* F[7] = { "Covenant Kills", "Vehicles Destroyed", "Highest Set Completed", "Most Consecutive Kills without Dying",
+                         "Biggest Kill", "Times Beat Par", "Highest Official Score" };
+    const char* const* R = g_diff_mode ? F : C;
+    int n = g_diff_mode ? 7 : 5;
+    for (int k = 0; k < n; k++) rm_stat(160 + 41.0f * k, R[k], "Not recorded", true);
+    rm_wrap(g_fl, 24, 808, 175 + 41.0f * n, 700, IM_COL32(200, 206, 212, 220),
+            g_diff_mode ? "Proving Grounds does not record Firefight yet." : "Proving Grounds does not record the campaign yet.");
+    rm_band();
+    prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) rm_exit();
+}
+
+// S_MENU's frame while one of Reach's pages is up (the invite list over it, the page held still under it)
 static void reach_menu_screen(pg_env& e, float t) {
+    g_inert = g_invite;
     switch (g_rpage) {
     case RP_TITLE: rm_title(e, t); break;
     case RP_MAIN: rm_main(e, t); break;
@@ -787,8 +1176,14 @@ static void reach_menu_screen(pg_env& e, float t) {
     case RP_PLAYLIST: rm_playlist(e, t); break;
     case RP_RESTRICT: rm_restrict(e, t); break;
     case RP_PSYCH: rm_psych(e, t); break;
+    case RP_MENU: rm_menu(e, t); break;
+    case RP_SR: rm_sr(e, t); break;
+    case RP_CAREER: rm_career(e, t); break;
+    case RP_DIFF: rm_diff(e, t); break;
     default: break;
     }
+    g_inert = false;
+    if (g_invite) invite_list(e);
 }
 
 // B / Esc on Reach's pages: one page back (false: the title, Proving Grounds closes)
@@ -802,7 +1197,11 @@ static bool rmenu_back() {
         g_rpage = RP_MM; g_focus_after = 0; return true;
     case RP_RESTRICT: g_rpage = RP_MM; g_focus_after = 1; return true;
     case RP_PSYCH: g_rpage = RP_MM; g_focus_after = 2; return true;
-    case RP_OPTIONS: g_rpage = g_rpage_from; g_focus_after = 0; return true;
+    case RP_OPTIONS: g_rpage = g_rpage_from; g_focus_after = g_rpage == RP_MENU ? 8 : 0; return true;
+    case RP_MENU: g_rpage = g_rmenu_from; g_focus_after = 0; return true;
+    case RP_SR: g_rpage = RP_MENU; g_focus_after = 1; return true;
+    case RP_CAREER: g_rpage = RP_SR; g_focus_after = 0; return true;
+    case RP_DIFF: g_rpage = RP_CAREER; g_focus_after = g_diff_mode ? 3 : 0; return true;
     }
     return false;
 }
