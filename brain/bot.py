@@ -305,6 +305,12 @@ DEMON_BREAK_SCORE = 3.55           # over recharge (3.5), hunts, a trade and pus
 # 8 of N1ghtR4ven's deaths shot first his radar had the killer within 0.5 u, and dot_glance's 2 s per man turned him at
 # 88.2 s from TheNobleOreo's dot to PacMan's 14 u off, Oreo's sniper 1 s later from 3.8 u
 DEMON_RADAR = True
+# (custom, Nov 18, owner: "commit to them unless an enemy is close") a run at a power weapon is finished (power_commit)
+POWER_COMMIT = True
+POWER_COMMIT_CLOSE = 8.0           # u: an enemy known this near ends the commitment (the usual choice decides)
+POWER_COMMIT_FRESH = 1.5           # s: ... known this lately (seen, radar, a callout, his shots)
+POWER_COMMIT_MAX = 25.0            # s: a run this long is no longer held (a way that does not get there)
+POWER_COMMIT_MARGIN = 0.5          # over the best other goal (the flip-flop rule adds 0.2 to the goal it has)
 DOT_THREAT_R = 20.0                # u: dots this near are ranked (the DOT_RANKED nearest)
 DOT_RANKED = 3                     # (2 left the killer out, 12.5 u off past dots at 9.8 and 12.0: 176 s of that match)
 DOT_FRESH = 2.5                    # s: a dot (radar or a team callout) at most this old
@@ -4314,6 +4320,7 @@ class Bot:
         s.demon_break_second(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, a second man on it: out of his sight)
         s.peek_timing(now, me, snap, scores, seen)          # (custom, Nov 18: Reach Demon / Mythic: go as he looks away)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
+        s.power_commit(now, me, snap, scores, hit_recent)   # (custom, Nov 18: a power weapon run is finished)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
         mv = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None) if me.vehicle not in (None, -1) else None
         if (mv is not None and getattr(s, "seat", None) == "driver"
@@ -6768,6 +6775,35 @@ class Bot:
         s.__dict__.setdefault("veh_ban", {})[v["handle"]] = (now + 30.0, Vec(*v["pos"]))   # (where it stood: veh_banned)
         s.veh_way, s.vehicle_until, s.vehicle_retry_at = None, now, now + 20.0
         return True
+
+    def power_commit(s, now, me, snap, scores, hit_recent):
+        """(custom, Nov 18, owner: "commit to them unless an enemy is close") On its way to a power weapon (its goal an
+        item that power_at says is one, still scored, so still believed there and not given up as unreachable), the run
+        goes on over every other goal (POWER_COMMIT_MARGIN over the best) unless an enemy it knows of (seen, radar,
+        callout or shots, under POWER_COMMIT_FRESH s old) is within POWER_COMMIT_CLOSE, or it was hit in the last 2 s,
+        or the run has gone POWER_COMMIT_MAX s. A man seen farther off is still shot at on the way (on_way_target). Not
+        in a vehicle nor carrying. The owner's Forge World 20261118-180057: about 170 runs at the rockets ended after 1-4
+        s for a hunt (78), a retreat (35) or a fight (30), and were begun again from farther off; one bot got them, at
+        206 s, by the east ramp the nav takes."""
+        g = s.goal
+        run = getattr(s, "power_run", None)
+        if (not POWER_COMMIT or g[0] != "item" or not isinstance(g[1], Vec) or g not in scores
+                or me.vehicle not in (None, -1) or me.has_flag or not s.power_at(g[1], snap)):
+            s.power_run = None
+            return
+        if run is None or (run[0] - g[1]).flat() > 1.0:
+            run = s.power_run = (g[1], now)
+        if now - run[1] > POWER_COMMIT_MAX or hit_recent:
+            return
+        close = next((k for k, b in s.per.beliefs.items()
+                      if isinstance(k, int) and now - b.t < POWER_COMMIT_FRESH
+                      and dist(me.pos, b.pos) < POWER_COMMIT_CLOSE), None)
+        if close is not None:
+            return
+        top = max(v for k, v in scores.items() if k != g) if len(scores) > 1 else scores[g]
+        if scores[g] < top + POWER_COMMIT_MARGIN:
+            scores[g] = top + POWER_COMMIT_MARGIN
+            s.note("power weapon run: committed")
 
     def power_spawn(s, q):
         """A power weapon's spawn (a map item: a weapon of value 0.8 or more) at q."""

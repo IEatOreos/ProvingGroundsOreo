@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Power weapon runs finished unless an enemy is close, 2026-11-18
+
+The owner, on the rockets of Forge World 20261118-180057: "Why do they need to be taught that though ... a bot got rockets once that match didnt they", then "Yes commit to them unless an enemy is close".
+
+- **Found** (that match's trace, and the layout's nav offline): the bots could reach the rocket launcher. The nav's way goes up the east ramp onto the 46.1 u deck, the way Cedercare walked to them at 206 s. About 170 runs at them ended after 1-4 s for a hunt (78), a retreat (35) or a fight (30) and began again from farther off; only McXglossy's 23 s run looked stuck. (An earlier reading here, that the bots kept getting stuck under the raised spot, was wrong: those "unstuck" and "step down" notes were mostly elsewhere on the map.)
+- `brain/bot.py` `Bot.power_commit` (`POWER_COMMIT`), in `decide` before the flip-flop rule: on its way to a power weapon (`power_at`), while that item is still scored (believed there, not given up as unreachable), the run goes `POWER_COMMIT_MARGIN` 0.5 over every other goal, unless an enemy it knows of (seen, radar, a callout or his shots, under 1.5 s old) is within `POWER_COMMIT_CLOSE` 8 u, or it was hit in the last 2 s, or the run has gone `POWER_COMMIT_MAX` 25 s. A man seen farther off is still shot at on the way. Not in a vehicle nor carrying. Every tier.
+- **Measured on that trace:** of 174 runs that ended, 117 would have gone on (59 for a hunt, 19 for a retreat, 18 for another item, 17 for a fight with nobody within 8 u, 4 for a post); 37 ended with an enemy within 8 u, 19 under fire, 1 dying. The 19 retreats include Demon's "cover until the shield is full" with nobody within 8 u: the run now goes on with its shield coming back on the way.
+- Validation: `tools/test_power_commit.py` (new, 5: the run over hunts, retreats and far fights; a close enemy by each source, a hit, an old dot; only a power weapon still scored, on foot, the switch; the 25 s limit and a new clock; the order in `decide`). All regression tests pass. **Untested in a match.**
+
 ### Service Record: every bot has its emblem, 2026-11-18
 
 The owner: "Distribute an emblem to every bot on the site so they have one show on the leaderboards." 138 of 753 bots had no picture: a bot's emblem picture (`native/bin/emblems/<name>.rgba`, and its lobby numbers `.ids`) was made only when the bot was first seated in a lobby.
