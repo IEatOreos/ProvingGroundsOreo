@@ -418,6 +418,38 @@ def off_gone_pads(links, gone):
     return [k for k in links if not ride_off(k)]
 
 
+# (custom, Nov 18) a gravity lift nobody rode is in the nav too: its ride solved from its tags (tools/lidar_rides.py,
+# maps/<map>/phantoms.json), as LiDAR runs had it alone. The owner: "Ive never seen them ever use one": in matches a
+# lift was known only from a recorded ride; Launch Station's main lift had none, Prisoner Anniversary's had one lift's
+# of its five. A solved ride rising MAP_RIDE_RISE+ from a lift no recorded ride starts within LAYOUT_PAD_R of
+MAP_RIDE_RISE = 1.5   # u (Prisoner's low lifts: 1.7 u up; lidar_rides keeps none under 1 u)
+MAP_RIDE_GAMES = ("reach_", "h3_", "odst_", "h4_", "h2a_")   # (lidar_rides.KITS: the games phantoms.json is read for)
+
+
+def map_lift_rides(name, T, links):
+    """The map's gravity lifts' solved rides (lidar_rides.ride_links: a variant's, those its layout has) from lifts no
+    ride in links starts at, or [] (a game without them, or no data)."""
+    if not name.startswith(MAP_RIDE_GAMES):
+        return []
+    import sys
+    tools = os.path.join(os.path.dirname(ROOT), "tools")
+    if tools not in sys.path:
+        sys.path.append(tools)
+    try:
+        import jumpphys
+        import lidar_rides
+        rides = lidar_rides.ride_links(name, T, jumpphys.Phys(jumpphys.game_of(name), getattr(T, "jump_apex", None)))
+    except Exception:                                # (no phantoms, no physics: the recorded rides alone)
+        return []
+    lifts = {o["name"] for o in lidar_rides.layout(name).get("objects", []) if o.get("kind") == "lift"}
+    rode = [k["take_off"] for k in links if k.get("ride") and k.get("take_off")]
+    near = lambda a, b: math.hypot(a[0] - b[0], a[1] - b[1]) < LAYOUT_PAD_R and abs(a[2] - b[2]) < 1.5
+    oob = getattr(T, "oob", None)                    # (none into a kill zone: tools/lidar.py nav_learn, Zealot's walkway)
+    killed = lambda p: oob is not None and T.inside(p[0], p[1]) and bool(oob[T._node(Vec(*p[:3]))])
+    return [k for k in rides if k.get("name") in lifts and k["land"][2] - k["take_off"][2] >= MAP_RIDE_RISE
+            and not any(near(k["take_off"], q) for q in rode) and not killed(k["land"])]
+
+
 VEHICLE_BLOCKS = "vehicle_blocks.json"   # (custom, Nov 13) areas the owner keeps every ground vehicle out of
 
 
@@ -642,6 +674,7 @@ def _build(m, window):
         links = usable_links(data.get("links", []))
     links = off_gone_pads(anchor_launches(links + painted, m.get("features", [])), m.get("lifts_gone"))
     links += owner_ride_links(names)    # (custom) the owner's lifts and man cannons (LiDAR view, Edit spots)
+    links += map_lift_rides(m["name"], T, links)   # (custom, Nov 18) lifts nobody rode: their solved rides
     if links:
         T.add_human_links(links)
     if paint:

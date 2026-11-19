@@ -79,6 +79,71 @@ class DamnationTests(unittest.TestCase):
                          ["short_grav_lift", "tall_grav_lift"])
 
 
+@unittest.skipUnless(os.path.isdir(ROOT / "maps" / DAMNATION), "no Damnation Anniversary data")
+class LiftChanceTests(unittest.TestCase):
+    """(Nov 18, "CAn we just make it to where the bots take the lifts more? Like add a scoring chance") Bot.lift_detour."""
+
+    @classmethod
+    def setUpClass(cls):
+        import numpy as np
+        cls.m = maps.get_map(DAMNATION)
+        cls.T = maps.terrain(cls.m)
+        ls, js, is_ = np.nonzero(cls.T.reach & cls.T.lwalk)
+        pts = [cls.T._center(int(ls[k]), int(js[k]), int(is_[k])) for k in range(0, len(ls), max(1, len(ls) // 400))]
+        rng = random.Random(1)
+        low, high = [p for p in pts if p.z < 1.0], [p for p in pts if p.z > 2.5]
+        cls.trips = [(rng.choice(low), rng.choice(high)) for _ in range(120)]
+
+    def bot(self, roll):
+        b = Bot(0, 0, make_profile("strong", "rusher", random.Random(3)), self.m, random.Random(5))
+        b._terrain, b.notes, b.now = self.T, [], 0.0
+        b.rng.random = lambda: roll
+        return b
+
+    def test_won_rolls_go_up_the_tall_lift(self):
+        took = []
+        for a, g in self.trips:
+            r = self.bot(0.0).lift_detour(PlayerState(0, 0, "bot", a), g)
+            if r is not None:
+                took.append(r)
+        self.assertGreater(len(took), len(self.trips) // 6)        # (88 of 300 such trips offline)
+        self.assertTrue(all(math.hypot(t.x - TALL[0], t.y - TALL[1]) < 2.0 for t in took))
+
+    def test_a_lost_roll_holds_and_the_ride_starts_at_the_take_off(self):
+        a, g = next((a, g) for a, g in self.trips if self.bot(0.0).lift_detour(PlayerState(0, 0, "bot", a), g))
+        b = self.bot(0.99)
+        self.assertIsNone(b.lift_detour(PlayerState(0, 0, "bot", a), g))
+        b.rng.random = lambda: 0.0
+        b.now = 5.0                                                # (the same goal, inside LIFT_ROLL_S: no new roll)
+        self.assertIsNone(b.lift_detour(PlayerState(0, 0, "bot", a), g))
+        b = self.bot(0.0)
+        take = b.lift_detour(PlayerState(0, 0, "bot", a), g)
+        self.assertIs(b.lift_detour(PlayerState(0, 0, "bot", take), g), True)
+        self.assertEqual(b.lift_ride[0].x, TALL[0])
+        self.assertIsNone(b.via_lift)
+
+    def test_no_roll_for_a_goal_not_above(self):
+        a = next(a for a, _ in self.trips)
+        self.assertIsNone(self.bot(0.0).lift_detour(PlayerState(0, 0, "bot", a), a + Vec(8.0, 0.0, 0.0)))
+
+
+class MapRideTests(unittest.TestCase):
+    """maps.map_lift_rides: a lift nobody rode gets its solved ride in matches (Launch Station had none)."""
+
+    @unittest.skipUnless(os.path.exists(ROOT / "maps" / "reach_45_launch_station" / "phantoms.json"), "no data")
+    def test_launch_stations_lift_is_in_the_nav(self):
+        T = maps.terrain(maps.get_map("reach_45_launch_station"))
+        self.assertTrue([k for _, _, k, _ in T.hjumps if k.get("found_by") == "map" and k.get("ride")])
+
+    @unittest.skipUnless(os.path.isdir(ROOT / "maps" / DAMNATION), "no Damnation Anniversary data")
+    def test_a_ridden_lift_or_a_gone_one_gets_none(self):
+        T = maps.terrain(maps.get_map(DAMNATION))
+        self.assertFalse([k for _, _, k, _ in T.hjumps if k.get("found_by") == "map"])
+
+    def test_not_a_lift_game(self):
+        self.assertEqual(maps.map_lift_rides("bloodgulch", None, []), [])
+
+
 class Floor:
     """A floor at z 0 with a lift's take-off at the origin (a people's ride to (2, 0, 3.4))."""
     def __init__(s):

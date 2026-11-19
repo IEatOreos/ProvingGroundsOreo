@@ -119,6 +119,14 @@ LANDED_OUT_H = 1.5           # u: ... but out of an aircraft only once it is dow
 # ride over and run again (ride_lift); a working lift lifts at once (its tall one: 0.5 u up the tick a bot was in).
 # Every take-off into that column is then left for LIFT_DEAD_BAN s (jump_blocked)
 LIFT_DEAD_S, LIFT_DEAD_BAN = 3.0, 300.0
+# (custom, Nov 18) the lift chance (Bot.lift_detour). The owner: "CAn we just make it to where the bots take the lifts
+# more? Like add a scoring chance ... Ive never seen them ever use one". The nav takes a lift only when it is the
+# cheapest way (Damnation Anniversary 20261118-172112: 5 rides of its tall lift in 4 minutes, six bots). A trip to a goal
+# LIFT_UP+ u over the bot rolls LIFT_P once (a goal within LIFT_GOAL_R keeps the roll for LIFT_ROLL_S s); won, it walks
+# to the take-off of the gravity lift ride that is cheapest overall, within LIFT_REACH of the bot, when that way costs at
+# most LIFT_DETOUR (or LIFT_DETOUR_SHARE of the trip, the less) more than the nav's and the ride lands it nearer
+LIFT_P, LIFT_UP, LIFT_GOAL_R, LIFT_ROLL_S = 0.6, 1.5, 3.0, 10.0
+LIFT_REACH, LIFT_DETOUR, LIFT_DETOUR_SHARE, LIFT_MIN_TRIP = 30.0, 15.0, 0.75, 6.0
 PRESS_ITEM, PRESS_ITEM_R = 0.5, 1.5   # an Invasion core runner's gun on its way more than this off: scaled (keep_role)
 NADE_TEAM_R, NADE_LOOK = 4.0, 1.0   # u, s: no grenade with a teammate this near where it goes, now or this soon (nade_clear)
 CALLED_WAIT_R = 15.0         # a driver waits (8 s at most) for a teammate called aboard while he is this near (crew_coming)
@@ -8909,6 +8917,69 @@ class Bot:
                 return Vec(*f["pos"])
         return None
 
+    def lift_detour(s, me, point):
+        """(custom, Nov 18) The lift chance (LIFT_P): on a trip up, the way by a gravity lift's ride when it is little
+        longer than the nav's. The take-off to walk to while it holds (s.via_lift), True when the ride began here
+        (s.lift_ride: ride_lift), or None: the nav's own way."""
+        if me.vehicle != -1:
+            s.via_lift = None
+            return None
+        now = getattr(s, "now", 0.0)
+        via = getattr(s, "via_lift", None)
+        if via is not None:
+            take, base, land, goal, until = via
+            if now > until or (point - goal).flat() > LIFT_GOAL_R or abs(point.z - goal.z) > 2.0:
+                s.via_lift = None                    # (too slow, or the goal moved on: the nav's way)
+            elif (me.pos - take).flat() < 0.9 and abs(me.pos.z - take.z) < 1.0:
+                s.via_lift = None
+                s.lift_ride = (base, land, now)
+                s.lift_from = (me.pos.z, (round(take.x, 1), round(take.y, 1)))   # (ride_lift: stalled, dead)
+                s.note("lift chance: up the lift")
+                return True
+            else:
+                return take
+        roll = getattr(s, "lift_roll", None)
+        if roll is not None and now < roll[1] and (point - roll[0]).flat() < LIFT_GOAL_R:
+            return None
+        T = s.T()
+        if point.z - me.pos.z < LIFT_UP or not getattr(T, "hjumps", None):
+            return None
+        s.lift_roll = (point, now + LIFT_ROLL_S)
+        if s.rng.random() >= LIFT_P:
+            return None
+        try:
+            here = T._node(me.pos)
+            to_goal = T._field(point, human=True)
+            direct = float(to_goal[here])
+        except Exception:                            # (a place off the numbers: the nav's way)
+            return None
+        if not math.isfinite(direct) or direct < LIFT_MIN_TRIP:
+            return None
+        fails, best = getattr(s, "jump_fails", {}), None
+        for _, dst, k, w in T.hjumps:
+            to, la = k.get("take_off"), k.get("land")
+            if not (k.get("ride") and to and la) or la[2] - to[2] < LIFT_UP:
+                continue
+            base = s.lift_near(to[0], to[1])
+            f = fails.get((round(to[0], 1), round(to[1], 1)))
+            if base is None or (f is not None and f[0] >= 2 and now < f[1]):
+                continue                             # (a cannon's, or a lift this bot found dead: ride_lift)
+            after = float(to_goal[dst])
+            if not math.isfinite(after) or after >= direct:
+                continue                             # (it lands no nearer the goal)
+            walk = float(T._field(Vec(*to[:3]), human=True)[here])
+            if not math.isfinite(walk) or walk > LIFT_REACH:
+                continue
+            cost = walk + w + after
+            if cost - direct <= min(LIFT_DETOUR, LIFT_DETOUR_SHARE * direct) and (best is None or cost < best[0]):
+                best = (cost, walk, Vec(*to[:3]), base, Vec(*la[:3]))
+        if best is None:
+            return None
+        cost, walk, take, base, land = best
+        s.via_lift = (take, base, land, point, now + walk / 2.0 + 6.0)
+        s.note(f"lift chance: to the lift ({cost - direct:.1f} longer)")
+        return take
+
     def lift_base(s, j, me):
         """The column a jump j (from nav) rides up: a gravity lift's base by its take-off (lift_near), or a launcher's
         whose people's link climbs steeply (10+ u up, 1.5+ times its flat way): Spire's lifts under the spire are filed
@@ -9341,6 +9412,12 @@ class Bot:
             return
         if getattr(s, "cannon_ride", None) and s.ride_cannon(me, act):
             return
+        lp = s.lift_detour(me, point)            # (custom, Nov 18) up by a lift, on a roll (LIFT_P)
+        if lp is True:
+            s.ride_lift(me, act)
+            return
+        if lp is not None:
+            point = lp
         way = s.way_in(me, point)
         if way is not None:                      # a goal in an Elephant's bay (Sandtrap's flags): its own way in
             point, straight = way

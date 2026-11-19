@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### The lift chance; lifts nobody rode are in the nav, 2026-11-18
+
+The owner: "CAn we just make it to where the bots take the lifts more? Like add a scoring chance. Weve messed with it before Ive never seen them ever use one".
+
+- Found (traces): the nav takes a lift only when it is the cheapest way. Damnation Anniversary 20261118-172112 had 5 real rides of its tall lift in 4 minutes, six bots. (The entry below counted "30+": that counted bots on the floor over its top, not rides.) Ivory Tower 174341 had 3, Launch Station 20261113-231630 none. In matches a lift was known only from a recorded ride. Launch Station's main lift had none, and Prisoner Anniversary's five lifts had recorded rides from one. The rides solved from the lifts' tags (`tools/lidar_rides.py`, the committed phantoms.json) were added only in LiDAR runs.
+- `brain/bot.py` `lift_detour` (move_to, before the nav): a trip to a goal `LIFT_UP` 1.5+ u over the bot rolls `LIFT_P` 0.6. One roll covers a goal within `LIFT_GOAL_R` 3 u for `LIFT_ROLL_S` 10 s. On a win, the bot takes the cheapest gravity-lift ride (a ride link with a lift marker by its take-off, none this bot found dead) whose take-off is within `LIFT_REACH` 30 of it, whose landing is nearer the goal, and whose whole way costs at most `LIFT_DETOUR` 15, or `LIFT_DETOUR_SHARE` 0.75 of the trip if less, more than the nav's (field costs, people's links on; trips under `LIFT_MIN_TRIP` 6 not). It walks to the take-off and starts the ride there (`s.via_lift`, then `s.lift_ride`: `ride_lift`, its stalled and dead checks), with notes "lift chance: ...". It goes back to the nav's own way if the goal moves on or the walk overruns.
+- `brain/maps.py` `map_lift_rides` (`_build`): the map's gravity lifts' solved rides (`lidar_rides.ride_links`, a variant's layout's lifts) rising `MAP_RIDE_RISE` 1.5+ u, from lifts that no ride in the map's links starts within 2 u of. None lands in a kill zone (`T.oob`, as `nav_learn`). Man cannons are not added. About 0.02-0.25 s a map.
+- Offline, every roll won, 300 random trips from beside a lift to a floor 1.5-2.5+ u up: Damnation Anniversary 88 took the tall lift (detours 0-11 u), Launch Station 147 (0 before), Prisoner Anniversary 157 (0 before), Zealot 271, Ivory Tower 275, Highlands 23, Condemned 7. In a match about 60% of that, plus the nav's own rides.
+- Not fixed: three of Ridgeline's four lifts, and Condemned's hangar lift, have no solved ride (`lidar_rides.solve` finds no landing from their step-in). Ridgeline's one solved ride lands 1.85 u up. Forge-placed lifts have no phantoms (no HREK kit here).
+- Validation: `tools/test_layout_lifts.py` 13 tests (new: won rolls on Damnation go up the tall lift; a lost roll holds for the goal; the ride starts at the take-off; no roll for a goal not above; Launch Station's lift is in the nav; none added where a ride is recorded or the lift is gone). All 921 regression tests pass. Untested in a match.
+
 ### Lifts a map variant's layout lacks are left out; a lift that does not lift is given up, 2026-11-18
 
 The owner: "Can you go through and fix the lifts In halo reaches lidar? Im tired of having to manually show bots how to use it. They just play damnation all stuck in the bottom of the map because they dont want to use the lift and then three on my team are stuck elsewhere. even though the entire map was scanned. Was a bug report" (F9 report 20261118-172222, "Bots stuck on damnation", Damnation Anniversary `reach_cex_damnation/variants/v08b84b0d`).
