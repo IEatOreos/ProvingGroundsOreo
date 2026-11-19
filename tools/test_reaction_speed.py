@@ -17,12 +17,23 @@ AIM = ("track", "lead", "decide", "overshoot", "aim_err", "lag", "flick", "turn"
 
 class ReactionSpeedTests(unittest.TestCase):
     def test_base_reaction(self):
-        want = {"novice": 0.22, "average": 0.1936, "strong": 0.1716, "top": 0.154, "demon": 0.154}
+        # (Nov 19, owner: "make them Faster but counter weight it with bad accuracy") Easy 135, Normal 125, Heroic
+        # 115, Legendary 100 ms (were 220, 194, 172, 154); Tactician halfway between Heroic and Legendary
+        want = {"novice": 0.135, "average": 0.125, "strong": 0.115, "top": 0.100, "demon": 0.154}
         for tier, v in want.items():
             self.assertAlmostEqual(profiles.TIERS[tier]["reaction"], v, msg=tier)
         order = [profiles.TIERS[t]["reaction"] for t in ("novice", "average", "strong", "top")]
         self.assertEqual(order, sorted(order, reverse=True))
-        self.assertAlmostEqual(profiles.tactician_hands()["reaction"], 0.1705)
+        self.assertAlmostEqual(profiles.tactician_hands()["reaction"], 0.1075)
+        self.assertAlmostEqual(profiles.blind_ranges()["reaction"][0], 0.154)     # Blind and Mythic unchanged
+        self.assertAlmostEqual(profiles.mythic_hands()["reaction"], 0.077)
+
+    def test_rougher_aim_pays_for_it(self):
+        # (Nov 19) Easy, Normal, Heroic: aim error x1.8 / x1.6 / x1.5, overshoot 50 / 45 / 40%; Legendary's aim as it was
+        for tier, err, over in (("novice", 0.009 * 1.8, 0.50), ("average", 0.009 * 1.6, 0.45),
+                                ("strong", 0.0068 * 1.5, 0.40), ("top", 0.006, 0.30)):
+            self.assertAlmostEqual(profiles.TIERS[tier]["aim_err"], err, msg=tier)
+            self.assertAlmostEqual(profiles.TIERS[tier]["overshoot"], over, msg=tier)
 
     def test_aim_unchanged(self):
         h = profiles.HANDS

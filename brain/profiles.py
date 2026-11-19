@@ -14,7 +14,14 @@ HANDS = dict(reaction=0.22, track=0.10, lead=0.8, decide=0.10, overshoot=0.30, a
 # face (Perception.react_time). (custom, Nov 12, owner: "make all difficulties from easy to heroic react faster ...
 # keep their accuracy settings") Easy 1.25 -> 1.0 (a good human's 0.22 s), Normal 1.0 -> 0.88, Heroic 0.85 -> 0.78;
 # Legendary, Demon, Blind unchanged, Tactician pinned (TACTICIAN_REACTION). Aim, hands and turn speed unchanged
-REACTION = {"novice": 1.0, "average": 0.88, "strong": 0.78, "top": 0.70}
+# (custom, Nov 19, owner: "a bad player still has a pretty fast reaction time of 100-135ms ... I dont like shooting
+# bots that dont shoot back like a bullet sponge. SO lets make them Faster but counter weight it with bad accuracy")
+# Easy 220 -> 135 ms, Normal 194 -> 125, Heroic 172 -> 115, Legendary 154 -> 100 (the ladder kept in order); their
+# aim made worse to pay for it (ROUGH below), Legendary's aim unchanged. Blind and Mythic keep Legendary's former
+# 154 ms base (LEGENDARY_BASE_REACTION); Tactician quicker, its accuracy unchanged (TACTICIAN_REACTION)
+REACTION_S = {"novice": 0.135, "average": 0.125, "strong": 0.115, "top": 0.100}
+REACTION = {k: v / HANDS["reaction"] for k, v in REACTION_S.items()}
+LEGENDARY_BASE_REACTION = HANDS["reaction"] * 0.70     # 0.154 s: Blind's and Mythic's Legendary end, as before Nov 19
 # ... and Heroic's and Legendary's hands: lag, the aim's pursuit time constant (Aim.step: 0.09 s trailed a man
 # strafing at arm's length by 9 degrees), flick, the Fitts time factor of a flick onto a man, a tighter sampled error
 # and a quicker re-read of his motion. Easy and Normal keep a good human's hands Heroic a third of the way on toward
@@ -44,14 +51,22 @@ TURN = {k: math.radians(v) for k, v in dict(novice=270, average=435, strong=650,
 # melee reach in 18% of fights, Legendary 10%. Heroic half of Legendary's; Easy and Normal hold as before. Not jittered,
 # like TURN
 PRESS = {"novice": 0.0, "average": 0.0, "strong": 0.5, "top": 1.0}
+# (custom, Nov 19, owner: "Faster but counter weight it with bad accuracy ... Worse than it is") Easy, Normal and
+# Heroic aim worse to pay for the quicker reaction: aim error (the spread of each re-aim, Aim.step) x1.8 / x1.6 / x1.5
+# (was 0.009 / 0.009 / 0.0068: about 51% / 51% / 65% of first shots on a body at 20 u, now about 30% / 33% / 46%;
+# it still tightens as the bot stays on a man) and more flicks overshoot (was 30% each)
+ROUGH = {"novice": dict(aim_err=0.0162, overshoot=0.50), "average": dict(aim_err=0.0144, overshoot=0.45),
+         "strong": dict(aim_err=0.0102, overshoot=0.40)}
 TIERS = {
     #           memory s, uses motion tracker, teamwork: follows the team's plan, shoots who the team
     #           shoots (focus fire) (+ HANDS). Easy goes it alone
     # Easy plays for itself: no motion sensor, no team plan, no team shot
-    "novice":  dict(HANDS, reaction=HANDS["reaction"] * REACTION["novice"], memory=4, radar=0.0, teamwork=0.0),
-    "average": dict(HANDS, reaction=HANDS["reaction"] * REACTION["average"], memory=6, radar=0.5, teamwork=0.55),
-    "strong":  dict(HANDS, **SHARP["strong"], reaction=HANDS["reaction"] * REACTION["strong"], memory=8, radar=0.8,
-                    teamwork=0.8),
+    "novice":  dict(HANDS, **ROUGH["novice"], reaction=HANDS["reaction"] * REACTION["novice"], memory=4, radar=0.0,
+                    teamwork=0.0),
+    "average": dict(HANDS, **ROUGH["average"], reaction=HANDS["reaction"] * REACTION["average"], memory=6, radar=0.5,
+                    teamwork=0.55),
+    "strong":  {**HANDS, **SHARP["strong"], **ROUGH["strong"], "reaction": HANDS["reaction"] * REACTION["strong"],
+                "memory": 8, "radar": 0.8, "teamwork": 0.8},
     "top":     dict(HANDS, **SHARP["top"], reaction=HANDS["reaction"] * REACTION["top"], memory=10, radar=1.0,
                     teamwork=0.95),
 }
@@ -109,8 +124,11 @@ BLIND_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "dec
 TACTICIAN = "tactician"
 TACTICIAN_TOWARD = 0.5
 TACTICIAN_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot")   # (decide, lead, turn: the same)
-# (custom, Nov 12) its reaction kept where it was before Heroic's got quicker: halfway from Heroic's old 0.85 to 0.70
-TACTICIAN_REACTION = HANDS["reaction"] * (0.85 + 0.70) / 2
+# (custom, Nov 12) its reaction kept where it was before Heroic's got quicker: halfway from Heroic's old 0.85 to 0.70.
+# (Nov 19, owner: "Make tactician just faster and dont touch its accuracy") halfway between the new Heroic's and
+# Legendary's (REACTION_S: 115 and 100 ms, was 171 ms); its hands from Heroic's before ROUGH (TACTICIAN_HEROIC)
+TACTICIAN_REACTION = (REACTION_S["strong"] + REACTION_S["top"]) / 2
+TACTICIAN_HEROIC = dict(HANDS, **SHARP["strong"])   # Heroic's hands as they were: Tactician's accuracy unchanged
 
 # (custom, Nov 13, owner: "a hybrid difficulty between Legendary and Demon", then: aim halfway and fixed, Demon's
 # awareness only, named Mythic, 10 points) Mythic: Legendary (tier "top", extra None, label "mythic": every Legendary
@@ -316,8 +334,9 @@ def make_profile(tier, personality, rng=random):
 
 
 def blind_ranges():
-    """{stat: (Legendary's base, the ceiling BLIND_TOWARD of the way to Demon's)} for Blind's drawn hands."""
-    leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"])
+    """{stat: (Legendary's base, the ceiling BLIND_TOWARD of the way to Demon's)} for Blind's drawn hands. (Nov 19)
+    Legendary's reaction as it was (LEGENDARY_BASE_REACTION): Blind unchanged."""
+    leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"], reaction=LEGENDARY_BASE_REACTION)
     dem = dict(TIERS[DEMON], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN[DEMON])
     return {k: (leg[k], leg[k] + BLIND_TOWARD * (dem[k] - leg[k])) for k in BLIND_HANDS + ("turn",)}
 
@@ -333,7 +352,7 @@ def blind_profile(personality, rng=random):
 def tactician_hands():
     """{stat: Tactician's base}: TACTICIAN_TOWARD of the way from Heroic's base to Legendary's (overshoot: Legendary's 0);
     reaction pinned (TACTICIAN_REACTION)."""
-    her, leg = TIERS["strong"], dict(TIERS["top"], overshoot=0.0)
+    her, leg = TACTICIAN_HEROIC, dict(TIERS["top"], overshoot=0.0)
     mid = {k: her[k] + TACTICIAN_TOWARD * (leg[k] - her[k]) for k in TACTICIAN_HANDS}
     mid["reaction"] = TACTICIAN_REACTION
     return mid
@@ -349,8 +368,9 @@ def tactician_profile(personality, rng=random):
 
 def mythic_hands():
     """{stat: Mythic's base}: MYTHIC_TOWARD of the way from Legendary's base (overshoot 0, as make_profile sets it) to
-    Demon's (DEMON_AIM, no reaction delay, 0.01 s decisions), and the turn speed between theirs."""
-    leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"])
+    Demon's (DEMON_AIM, no reaction delay, 0.01 s decisions), and the turn speed between theirs. (Nov 19) Legendary's
+    reaction as it was (LEGENDARY_BASE_REACTION): Mythic unchanged."""
+    leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"], reaction=LEGENDARY_BASE_REACTION)
     dem = dict(TIERS[DEMON], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN[DEMON])
     return {k: leg[k] + MYTHIC_TOWARD * (dem[k] - leg[k]) for k in MYTHIC_HANDS + ("turn",)}
 

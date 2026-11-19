@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Quicker reactions, rougher aim: Easy, Normal, Heroic (and Legendary, Tactician quicker), 2026-11-19
+
+The owner: "A bad player still has a pretty fast reaction time of 100-135ms. But some are still bad and go 2-25 in game. I dont like shooting bots that dont shoot back like a bullet sponge. SO lets make them Faster but counter weight it with bad accuracy". Then he chose Legendary quicker too so the ladder stays in order, the clearly worse aim, and "Make tactician just faster and dont touch its accuracy".
+
+- `brain/profiles.py` `REACTION_S`: median reaction (each sighting still varies log-normally, about ±25%) Easy 220 -> 135 ms, Normal 194 -> 125, Heroic 172 -> 115, Legendary 154 -> 100. Demon (0) unchanged.
+- `ROUGH`: Easy, Normal and Heroic aim worse. Aim error ×1.8 / ×1.6 / ×1.5 (0.009 / 0.009 / 0.0068 -> 0.0162 / 0.0144 / 0.0102 rad), so about 30% / 33% / 46% of first shots land on a body at 20 u instead of about 51% / 51% / 65%. Aim still tightens while a bot stays on a man. Flick overshoot goes from 30% to 50% / 45% / 40%. Legendary's aim is unchanged; only its reaction moved.
+- Tactician: reaction 171 -> 108 ms (`TACTICIAN_REACTION`, halfway between the new Heroic and Legendary). Its accuracy is unchanged: its hands still come from Heroic's hands before `ROUGH` (`TACTICIAN_HEROIC`).
+- Blind and Mythic are unchanged: their Legendary end keeps the former 154 ms (`LEGENDARY_BASE_REACTION`). A slow-rolled Blind now reacts slower than a Legendary.
+- Scaling is unchanged (it draws from `HANDS`, not the tier rows).
+- Validation: `tools/test_reaction_speed.py` (new reaction times, the rougher aim, Blind and Mythic unchanged), `test_tactician_difficulty.py`, `test_mythic_difficulty.py` and `test_difficulty_separation.py` (the upstream Legendary fingerprint still matches with the stock reaction put back). Full suite: 965 tests OK; `live_bots` imports. **Untested in a match**: whether low tiers now shoot back without becoming too deadly is the owner's test.
+
 ### Demon and Mythic Gauss Warthog gunners lock on too, 2026-11-18
 
 The owner: "DO the same for the gauss hog. for those same difficulties".

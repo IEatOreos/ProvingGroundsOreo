@@ -17,9 +17,11 @@ import botctl  # noqa: E402
 class TacticianTests(unittest.TestCase):
     def test_hands_halfway_between_heroic_and_legendary(self):
         mid = profiles.tactician_hands()
-        her, leg = TIERS["strong"], dict(TIERS["top"], overshoot=0.0)
-        # (Nov 12) reaction pinned where it was before Heroic's got quicker
-        self.assertAlmostEqual(mid.pop("reaction"), 0.22 * (0.85 + 0.70) / 2)
+        # (Nov 19, owner: "Make tactician just faster and dont touch its accuracy") Heroic's hands as they were before
+        # its rougher aim (TACTICIAN_HEROIC); reaction halfway between the new Heroic's 0.115 and Legendary's 0.100 s
+        her, leg = profiles.TACTICIAN_HEROIC, dict(TIERS["top"], overshoot=0.0)
+        self.assertEqual((her["aim_err"], her["overshoot"]), (0.0068, 0.30))
+        self.assertAlmostEqual(mid.pop("reaction"), 0.1075)
         for k, v in mid.items():
             self.assertAlmostEqual(v, (her[k] + leg[k]) / 2, msg=k)
             self.assertTrue(min(her[k], leg[k]) <= v <= max(her[k], leg[k]), k)

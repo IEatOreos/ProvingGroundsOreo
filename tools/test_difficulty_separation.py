@@ -29,14 +29,18 @@ class DifficultySeparationTests(unittest.TestCase):
                 numeric = {k:v for k,v in vars(p).items() if isinstance(v,(float,int))}
                 # Replay stock jitter to restore only overshoot for the stock fingerprint.
                 rng = random.Random(seed)
-                stock = {**profiles.TIERS['top'], **profiles.CRAFT['top'], **profiles.PERSONALITIES[style]}
+                # (Nov 19, owner) Legendary's reaction 0.154 -> 0.100 s: the stock value put back for the fingerprint
+                stock = {**profiles.TIERS['top'], 'reaction': profiles.LEGENDARY_BASE_REACTION, **profiles.CRAFT['top'],
+                         **profiles.PERSONALITIES[style]}
                 original = {k:v*rng.uniform(.9,1.1) for k,v in stock.items()}
                 numeric['overshoot'] = original['overshoot']
+                self.assertAlmostEqual(numeric['reaction'], original['reaction'] * 0.100 / 0.154)
+                numeric['reaction'] = original['reaction']
                 self.assertAlmostEqual(math.degrees(numeric['turn']), 650)   # (Nov 10, owner)
                 numeric['turn'] = math.radians(1000)     # the stock turn speed, for the stock fingerprint
                 values.append(numeric)
-                self.assertGreater(p.reaction,.1385)
-                self.assertLess(p.reaction,.1695)
+                self.assertGreater(p.reaction,.0899)     # (Nov 19: 0.100 s x 0.9-1.1)
+                self.assertLess(p.reaction,.1101)
                 self.assertGreater(p.decide,.0899)
                 self.assertLess(p.decide,.1101)
         digest=hashlib.sha256(json.dumps(values,sort_keys=True,separators=(',',':')).encode()).hexdigest()

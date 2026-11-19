@@ -23,7 +23,8 @@ import botctl  # noqa: E402
 class HandsTests(unittest.TestCase):
     def test_halfway_between_legendary_and_demon(self):
         mid = profiles.mythic_hands()
-        leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"])
+        # (Nov 19) Legendary's former 0.154 s reaction: Mythic unchanged when Legendary got quicker
+        leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"], reaction=profiles.LEGENDARY_BASE_REACTION)
         dem = dict(TIERS["demon"], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN["demon"])
         self.assertEqual(set(mid), set(profiles.MYTHIC_HANDS) | {"turn"})
         for k, v in mid.items():
