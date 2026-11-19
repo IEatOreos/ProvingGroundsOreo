@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Service Record: Denied and Mission First get their art, 2026-11-19
+
+The owner sent a tier sheet for each: "Here is denied and mission first". Each sheet is six emblems in a row, Iron to Max, already cut out: see-through around them (white under the clear part), with no title and no names.
+
+- **`tools/service_record_art.py` `emblems`:** a sheet that is see-through over a fifth of it or more is cut by its own transparency, each emblem's pixels kept as they are. The earlier sheets (MVP, Game Changer, Positive Thinking, Loyal Soldier) were on black or night blue and are cut as before, by lifting the emblem off that background. That way would have thrown away these sheets' dark edges.
+- Cut for real into this PC's art store (`native/bin/service_record/art/commendations`, not in git): `tiers/<tier>/denied_<tier>.png` and `mission_first_<tier>.png`, the grey "not started" banners `denied.png` and `mission_first.png` (from Victor's, as the others), and the sheets kept under `sheets/`.
+- Validation:
+  - `tools/test_service_record_art.py` +1 (12): a cut-out sheet with white under its clear part gives six emblems on 448 squares, clear around them and inside the ring, each one's colour kept, its dark rim kept dark.
+  - Both rows were checked by eye on the banners' blue against the sheets, along with both grey banners.
+  - The real site rebuilt with all twelve tier banners. A bot's Commendations page in a browser shows both cards with their Iron emblems in the Iron frame, no console errors.
+  - `logs/service_record/commendations.txt` lists all six tier banners of each for the game's Commendations page.
+- **Untested:** the game's own Commendations page drawing them. The tiers above Iron were only seen in the cut rows: no bot has reached Bronze in either yet.
+
 ### Proving Grounds: Halo: Reach's menus, phase 2 (the Start menu, Service Record, Career, party details), 2026-11-19
 
 The owner sent ten more frames of Reach's menus: MY PARTY DETAILS, MENU, SERVICE RECORD, CAREER (on Campaign, Arena, Matchmaking and Firefight), CAMPAIGN and FIREFIGHT by difficulty, and COMMENDATIONS.

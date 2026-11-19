@@ -299,17 +299,27 @@ def emblems(sheet, key, out=OUT):
     are the sheet's six biggest lit shapes that are not much wider than tall, left to right; any other count: nothing
     is written. Also its "not started" banner (art/commendations/<key>.png) when there is none: Victor's Reach banner
     (victor.png) with its emblem painted out and the Silver one there in grey, as the earlier ones have. A copy of the
-    sheet is kept (art/commendations/sheets). Returns how many emblems were cut."""
+    sheet is kept (art/commendations/sheets). Returns how many emblems were cut.
+    (Nov 19, Denied and Mission First: six emblems already cut out, the sheet see-through around them and no title or
+    names.) A sheet that is see-through over a fifth of it or more gives its emblems by its own transparency: each one
+    keeps its pixels as they are, and nothing is lifted off a background."""
     import numpy as np
     from PIL import Image
     from scipy import ndimage
     if not re.fullmatch(r"[a-z0-9_]+", key):
         raise ValueError(f"not a commendation key: {key!r}")
-    a = np.asarray(Image.open(sheet).convert("RGB")).astype(np.float32)
-    edge = np.concatenate([a[:8].reshape(-1, 3), a[-8:].reshape(-1, 3), a[:, :8].reshape(-1, 3), a[:, -8:].reshape(-1, 3)])
-    bg = np.median(edge, axis=0)                                # (the sheet's black or night blue)
-    lift = np.clip(a - bg, 0, 255).max(axis=2)
-    lab, _ = ndimage.label(ndimage.binary_dilation(lift > 45, iterations=5))
+    with Image.open(sheet) as im:
+        full = np.asarray(im.convert("RGBA")).astype(np.float32)
+    a, own = full[..., :3], full[..., 3]
+    cut_out = (own < 8).mean() >= 0.2                           # (the sheet's own transparency around its emblems)
+    if cut_out:
+        full[own < 8] = 0                                       # (whatever colour lies under the see-through part)
+        lit = own > 32
+    else:
+        edge = np.concatenate([a[:8].reshape(-1, 3), a[-8:].reshape(-1, 3), a[:, :8].reshape(-1, 3), a[:, -8:].reshape(-1, 3)])
+        bg = np.median(edge, axis=0)                            # (the sheet's black or night blue)
+        lit = np.clip(a - bg, 0, 255).max(axis=2) > 45
+    lab, _ = ndimage.label(ndimage.binary_dilation(lit, iterations=5))
     shapes = []
     for b in ndimage.find_objects(lab):
         h, w = b[0].stop - b[0].start, b[1].stop - b[1].start
@@ -322,10 +332,13 @@ def emblems(sheet, key, out=OUT):
     art = os.path.join(out, "commendations")
     made = {}
     for tier, (ys, xs) in zip(FRAME_TIERS, shapes):
-        part = a[ys, xs]
-        alpha = np.clip((np.clip(part - bg, 0, 255).max(axis=2) - 10) / 90, 0, 1)
-        rgb = np.clip(bg + (part - bg) / np.maximum(alpha[..., None], 0.02), 0, 255)
-        img = Image.fromarray(np.dstack([rgb, alpha * 255]).astype(np.uint8), "RGBA")
+        if cut_out:
+            img = Image.fromarray(full[ys, xs].astype(np.uint8), "RGBA")
+        else:
+            part = a[ys, xs]
+            alpha = np.clip((np.clip(part - bg, 0, 255).max(axis=2) - 10) / 90, 0, 1)
+            rgb = np.clip(bg + (part - bg) / np.maximum(alpha[..., None], 0.02), 0, 255)
+            img = Image.fromarray(np.dstack([rgb, alpha * 255]).astype(np.uint8), "RGBA")
         img = img.crop(img.getbbox() or (0, 0, img.width, img.height))
         s = EMBLEM_SIDE * 0.94 / max(img.width, img.height)
         img = img.resize((max(1, round(img.width * s)), max(1, round(img.height * s))), Image.LANCZOS)

@@ -308,6 +308,37 @@ def test_tier_emblems_from_a_sheet():
             pass
 
 
+def test_tier_emblems_from_a_cut_out_sheet():
+    """(Nov 19, Denied and Mission First) Six emblems already cut out, the sheet see-through around them with stray
+    colour under the clear part and no title: each is cut by the sheet's own transparency, its pixels kept as they are
+    (a light highlight stays light, a dark edge stays dark), the clear part stays clear."""
+    from PIL import Image, ImageDraw
+    with tempfile.TemporaryDirectory() as tmp:
+        sheet = Image.new("RGBA", (1200, 400), (255, 255, 255, 0))                       # (white under the clear part)
+        d = ImageDraw.Draw(sheet)
+        cols = [(150, 150, 150), (200, 120, 60), (190, 205, 230), (230, 180, 50), (160, 80, 220), (220, 40, 40)]
+        for i, c in enumerate(cols):
+            x = 40 + i * 190
+            d.ellipse((x, 90, x + 150, 240), outline=(30, 30, 30, 255), width=4)           # (a dark rim)
+            d.ellipse((x + 4, 94, x + 146, 236), outline=c + (255,), width=10)
+            d.rectangle((x + 60, 120, x + 90, 210), fill=c + (255,))
+            d.rectangle((x + 70, 125, x + 80, 135), fill=(250, 250, 250, 255))            # (a highlight on the bar)
+        path = os.path.join(tmp, "sheet.webp")
+        sheet.save(path, lossless=True)
+        assert art.emblems(path, "test_award", tmp) == 6
+        for tier, c in zip(art.FRAME_TIERS, cols):
+            e = Image.open(os.path.join(tmp, "commendations", "tiers", tier, f"test_award_{tier}.png"))
+            assert e.size == (art.EMBLEM_SIDE, art.EMBLEM_SIDE) and e.mode == "RGBA"
+            assert e.getpixel((2, 2))[3] == 0 and e.getpixel((e.width // 2, 75))[3] == 0  # (clear, also inside the ring)
+            mid = e.getpixel((e.width // 2, e.height // 2 + 40))                         # (the bar under its highlight)
+            assert mid[3] > 200 and all(abs(mid[k] - c[k]) < 25 for k in range(3)), (tier, mid, c)
+            ys = [y for y in range(e.height) if e.getpixel((e.width // 2, y))[3] > 200]
+            top = min(ys)
+            rim = e.getpixel((e.width // 2, top + 2))
+            assert max(rim[:3]) < 90, (tier, rim)                                        # (the dark rim kept dark)
+        assert os.path.exists(os.path.join(tmp, "commendations", "sheets", "test_award.webp"))
+
+
 def test_every_reach_damage_type_has_a_picture_entry():
     """weapon_art.json names a picture for every number weapons.json names, and nothing else."""
     import json
