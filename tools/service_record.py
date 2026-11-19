@@ -622,6 +622,8 @@ def export_emblem(name, paths):
     """The bot's emblem (native/bin/emblems/<name>.rgba: width, height, RGBA) as emblems/<hash>.png in the site;
     the site-relative path, or None when there is no picture of it."""
     src = os.path.join(paths.emblems, name + ".rgba")
+    if not os.path.exists(src):                             # (the game's spelling of the name: "Name " is "Name")
+        src = os.path.join(paths.emblems, pool_name(html.unescape(name)) + ".rgba")
     rel = "emblems/" + hashlib.md5(name.encode("utf-8")).hexdigest()[:12] + ".png"
     dst = os.path.join(paths.out, *rel.split("/"))
     try:
@@ -639,6 +641,28 @@ def export_emblem(name, paths):
         return rel
     except (OSError, struct.error):
         return None
+
+
+def make_emblems(names, paths):
+    """(Nov 18, the owner: "distribute an emblem to every bot on the site so they have one show on the leaderboards")
+    the emblem picture of each bot here that has none yet (native/bin/emblems/<name>.rgba and its lobby numbers,
+    <name>.ids): the one it would get when first seated in a lobby (brain/emblems.py export: its pick, else the roll of
+    its seed), so a bot never in a lobby has one too. Only into the mod's own emblem folder (a test's paths elsewhere:
+    nothing), names the folder can hold. Returns how many pictures were made."""
+    want = sorted({pool_name(n) for n in names if not os.path.exists(os.path.join(paths.emblems, n + ".rgba"))})
+    want = [n for n in want if n and not re.search(r'[\\/:*?"<>|]', n)   # (the game's spelling: "Name " is "Name")
+            and not os.path.exists(os.path.join(paths.emblems, n + ".rgba"))]
+    if not want:
+        return 0
+    try:
+        if ROOT not in sys.path:
+            sys.path.insert(0, ROOT)
+        from brain import emblems, looks
+        if os.path.normcase(os.path.abspath(emblems.OUT)) != os.path.normcase(os.path.abspath(paths.emblems)):
+            return 0
+        return emblems.export([(n, looks.seed_of(n)) for n in want])
+    except (ImportError, OSError, ValueError):
+        return 0
 
 
 def map_frame(path):
@@ -1751,6 +1775,7 @@ def site_data(ledger, store_matches, paths, now=None, kills=None):
     players, matches = collect(ledger, store_matches, roster, kills, paths, people, read_pool_names(paths.bot_pool),
                                load_matchmaking(paths.matchmaking))
     persons = person_names(ledger, people)
+    make_emblems([html.unescape(n) for n in players if n not in persons], paths)   # (Nov 18: every bot its emblem)
     looks_file = all_looks(paths, [html.unescape(n) for n in players])   # (pool bots' looks worked out too)
     looks = read_looks(looks_file, read_look_names(paths.look_names))
     clans = {}

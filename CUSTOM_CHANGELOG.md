@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Service Record: every bot has its emblem, 2026-11-18
+
+The owner: "Distribute an emblem to every bot on the site so they have one show on the leaderboards." 138 of 753 bots had no picture: a bot's emblem picture (`native/bin/emblems/<name>.rgba`, and its lobby numbers `.ids`) was made only when the bot was first seated in a lobby.
+
+- `tools/service_record.py` `make_emblems`: each build makes the missing ones with `brain/emblems.py` `export`, the same emblem the bot would get when seated (its pick, else its seed's roll), so bots added to the pool later get one too. It writes only into the mod's own emblem folder (paths elsewhere, as in tests, make nothing) and skips names a file cannot hold. A name the site lists with a trailing space ("ii Toxic Moose ") is made and found under the game's spelling (`pool_name`), so the site shows the emblem the game uses; `export_emblem` falls back to that spelling.
+- Validation: `tools/test_bot_emblem.py` `test_every_bot_gets_one` (missing made with its roll's numbers, an existing picture kept, the trailing-space name, nothing outside the mod's folder). Full suite: 935 tests OK. The real build made 135 pictures (621 → 756). All 753 bots have an emblem in data.js; all 753 files load from the editor; leaderboard rows: none without an emblem, none broken. AimBotAdjacent (none before) shows its emblem. Not checked in game: the new `.ids` are what the game would write on seating them.
+
 ### Simulated matches reach the site and career totals under `python -I`, 2026-11-18
 
 - Found: MCC runs the tools as `python -I`, which leaves the tools folder off `sys.path`. `tools/service_record.py` `build` and `tools/bot_career.py` `main` caught the failed `import bot_sim` and went on without a simulated match, so every bot showed only the games it played with the owner.

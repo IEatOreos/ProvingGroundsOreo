@@ -120,6 +120,40 @@ def test_editor_routes():
             emblems.OUT, ed.rebuild = keep_out, keep_rebuild
 
 
+def test_every_bot_gets_one():
+    """service_record.make_emblems: a bot with no picture gets its roll's (a trailing-space name under the game's
+    spelling, which the site then finds); one that has a picture keeps it; paths outside the mod's emblem folder (a
+    test's) make nothing."""
+    sr = ed.sr
+    keep = emblems.OUT
+    with tempfile.TemporaryDirectory() as tmp:
+        store, site = os.path.join(tmp, "emblems"), os.path.join(tmp, "site")
+        os.makedirs(store)
+        emblems.OUT = store
+        try:
+            paths = sr.Paths(emblems=store, out=site)
+            with open(os.path.join(store, "Has One.rgba"), "wb") as f:
+                f.write(b"keep")
+            made = sr.make_emblems(["Has One", "New Bot", "Moose Tail ", "Bad:Name"], paths)
+            if not os.path.isdir(emblems.ART):
+                return                                      # (no art on this PC: the numbers only, nothing to show)
+            assert made == 2, made
+            with open(os.path.join(store, "Has One.rgba"), "rb") as f:
+                assert f.read() == b"keep"
+            for n in ("New Bot", "Moose Tail"):
+                assert os.path.exists(os.path.join(store, n + ".rgba")) and os.path.exists(os.path.join(store, n + ".ids"))
+                with open(os.path.join(store, n + ".ids"), encoding="utf-8") as f:
+                    assert f.read().split() == [str(v) for v in emblems.ids(emblems.roll(looks.seed_of(n)))]
+            assert not os.path.exists(os.path.join(store, "Moose Tail .rgba"))
+            assert sr.export_emblem("Moose Tail ", paths) and sr.export_emblem("New Bot", paths)
+            assert sr.make_emblems(["New Bot", "Another"], paths) == 1      # (New Bot has one now: Another only)
+            other = sr.Paths(emblems=os.path.join(tmp, "elsewhere"), out=site)
+            assert sr.make_emblems(["Elsewhere Bot"], other) == 0
+            assert not os.path.exists(os.path.join(store, "Elsewhere Bot.rgba"))
+        finally:
+            emblems.OUT = keep
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:
