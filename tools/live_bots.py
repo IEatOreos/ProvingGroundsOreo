@@ -1234,7 +1234,7 @@ def main():
                             respawned.pop(p.id, None)
                         elif p.id in respawned and now - respawned[p.id] >= 0.25:
                             del respawned[p.id]
-                            book.add_spawn(snap.mode, (p.pos.x, p.pos.y, p.pos.z), p.team)
+                            book.add_spawn(snap.mode, (p.pos.x, p.pos.y, p.pos.z), p.team, now)
                 events(bots, directors, before, snap, now)
                 flag_events(directors, flag_before, snap, now)
                 flag_before = {t: f.state for t, f in snap.flags.items()}

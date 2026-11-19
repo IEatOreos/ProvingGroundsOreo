@@ -37,6 +37,18 @@ The owner asked for the bot matchmaking screens to be "more vibrant and true to 
     - whether LT+RT does anything of MCC's own in the Reach custom lobby before Proving Grounds takes the pad;
     - how the brighter art reads behind text on every map.
 
+### Map memory: spawn spots follow a flip in this match, 2026-11-19
+
+The owner: "Just to be aware some maps and modes spawns flip if they take it over." The history files respawns by team, so after a flip the spot a bot watched after a kill could be its own side's spawn.
+
+- `Lore.add_spawn(..., now)`: `tools/live_bots.py` passes the live clock, so the match's own respawns are also kept in memory (the newest 200; a new match starts with none). They are not saved twice.
+- `Lore.spawn_spots(mode, not_team, now)`:
+  - The other teams' respawns of the last 75 s count 4 each over the history, so one recent respawn is a spot by itself and leads.
+  - A spot the bot's own side came back within 8 u of in that time, with none of the others there, is left out: it is ours now.
+  - Past 75 s it is the history again.
+- `Bot.spawn_look` also leaves out a spot a living teammate stands within 10 u of (`SPAWN_MATE_R`), since the game will not spawn an enemy right beside a player of the other side.
+- **Validation:** `tools/test_map_memory.py` 21 tests (2 new: a flip this match leads the history and falls back after 75 s; a teammate's spot not watched). Full suite: 986 tests OK; `live_bots` imports. **Untested in a match.**
+
 ### Map memory for Legendary and up: danger spots and lanes, enemy spawns, jumps that keep failing, 2026-11-19
 
 The owner chose three things for bots to learn per layout over matches (danger map, spawns, movement facts), "only give it to legendary and up". New `brain/lore.py`: one file per layout, `maps/<layout>/lore.json` (this PC's own, git-ignored like `nav_learned.json`). It holds the matches filed, every credited kill's two places, every respawn (mode, place, team), and each jump's lands and shorts. `profiles.map_memory` = `fixed_high`: Legendary, Mythic, Blind, Tactician and Demon. Scaling and Heroic down are unchanged. `MAP_MEMORY` False turns it all off.

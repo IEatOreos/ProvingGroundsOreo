@@ -350,6 +350,10 @@ MAP_MEMORY = True
 DANGER_LOOK_S, DANGER_RECHECK, DANGER_LOOK_R = 0.8, 8.0, 60.0
 DOT_SPOT_R, DOT_SPOT_EDGE = 6.0, 0.5   # u; s: a spot watched over his corner unless the corner is this much sooner
 SPAWN_WATCH_S, SPAWN_WATCH_R, SPAWN_LOOK_HOLD = 6.0, 35.0, 1.2
+# (owner: "some maps and modes spawns flip if they take it over") this match's enemy respawns of the last minute or so
+# lead the history, spots our own side lately came back by are left (Lore.spawn_spots now), and so is a spot a living
+# teammate stands within SPAWN_MATE_R of
+SPAWN_MATE_R = 10.0
 # (custom, Nov 8) Demon leaves a Ghost with this much of its body left or less (may_drive): the owner's 12-20%, the top of
 # it for the 0.8 s the Use hold takes (live Blood Crash 20261108-024522: Camper25's Ghost 100% to 6% in 1.5 s, dead in it)
 DEMON_GHOST_BAIL = 0.20
@@ -10165,6 +10169,12 @@ class Bot:
         kind, arg = s.goal
         p = snap.player(arg) if kind == "fight" and isinstance(arg, int) else None
         s._fight_foe = (arg, p.alive, p.pos) if p is not None else None
+        s._mates_at = [q.pos for q in snap.players if me is not None and q.team == me.team and q.alive
+                       and q.id != s.id] if s.kill_seen_recent(now) else []
+
+    def kill_seen_recent(s, now):
+        ks = getattr(s, "kill_seen", None)
+        return ks is not None and now - ks[0] <= SPAWN_WATCH_S
 
     @staticmethod
     def _in_cone(me, q, toward):
@@ -10188,11 +10198,14 @@ class Bot:
         if lb is None:
             return None
         T, e, best = s.T(), eye(me), None
-        for spot, n in lb.spawn_spots(getattr(s, "lore_mode", None), getattr(s, "game_team", None))[:16]:
+        mates = getattr(s, "_mates_at", ())
+        for spot, n in lb.spawn_spots(getattr(s, "lore_mode", None), getattr(s, "game_team", None), now)[:16]:
             d = dist(me.pos, spot)
             q = spot + Vec(0.0, 0.0, 0.62)
             if not 4.0 < d < SPAWN_WATCH_R or not s._in_cone(me, q, toward):
                 continue
+            if any(dist(m, spot) < SPAWN_MATE_R for m in mates):
+                continue                                # (a teammate stands on it: nobody of theirs comes back there)
             score = n / max(d, 8.0)                     # come back there often, and near
             if (best is None or score > best[0]) and T.los(e, q):
                 best = (score, q)

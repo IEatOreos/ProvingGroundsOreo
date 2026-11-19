@@ -208,6 +208,31 @@ class SpawnLookTests(unittest.TestCase):
         self.kill(b, me)
         self.assertIsNone(b.spawn_look(10.1, me, Vec(0.0, 5.0, 0.0)))
 
+    def test_spawns_flipped_this_match_lead_the_history(self):
+        # (owner: "some maps and modes spawns flip if they take it over") the enemy came back at -25 lately, where
+        # the history has our own side; we came back at +25, the history's enemy spot
+        b, me = make()
+        for t in (40.0, 55.0):
+            self.b.add_spawn("slayer", (0.0, -25.0, 0.0), 1, now=t)
+            self.b.add_spawn("slayer", (25.0, 0.5, 0.0), 0, now=t)
+        spots = self.b.spawn_spots("slayer", 0, now=60.0)
+        self.assertEqual([(round(v.x), round(v.y)) for v, n in spots], [(0, -25)], "theirs lately; ours left")
+        old = self.b.spawn_spots("slayer", 0, now=60.0 + lore.RECENT_S + 20.0)
+        self.assertEqual([(round(v.x), round(v.y)) for v, n in old], [(25, 0)], "past RECENT_S: the history again")
+        self.assertEqual([(round(v.x), round(v.y)) for v, n in self.b.spawn_spots("slayer", 0)], [(25, 0)])
+        self.b.match("next")                                       # a new match: nothing recent
+        self.assertEqual(self.b.recent, [])
+
+    def test_a_spot_a_teammate_stands_on_is_not_watched(self):
+        b, me = make()
+        mate = PlayerState(2, 0, "mate", Vec(23.0, 2.0, 0.0))
+        foe = PlayerState(4, 1, "foe", Vec(8.0, 0.0, 0.0))
+        b.goal, b.game_team = ("fight", 4), 0
+        b.kill_check(9.9, Snapshot(9.9, [me, mate, foe], mode="slayer"))
+        foe.alive = False
+        b.kill_check(10.0, Snapshot(10.0, [me, mate, foe], mode="slayer"))
+        self.assertIsNone(b.spawn_look(10.1, me))
+
 
 class RadarSpotTests(unittest.TestCase):
     def test_a_dot_by_a_known_shooting_spot_that_spot_is_watched(self):

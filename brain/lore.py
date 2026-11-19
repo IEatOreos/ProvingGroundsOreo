@@ -39,6 +39,10 @@ LANE_MIN, LANE_SHARE, LANES = 8, 0.02, 10   # deaths a lane needs (and this shar
 LANE_R = 2.5              # u: the disk round a lane's middle a way round goes past
 SPAWN_CELL, SPAWN_MIN = 3.0, 3   # u, respawns a cell needs to be a spawn spot
 JUMP_SHORT, JUMP_RATIO = 3, 2.0  # a jump short this often and this many times more than made: left
+# (Nov 19, owner: "some maps and modes spawns flip if they take it over") this match's own respawns, the last RECENT_S s,
+# count RECENT_W each over the history (one is a spawn spot by itself); never saved twice over: in memory only
+RECENT_S, RECENT_W, RECENT_MAX = 75.0, 4, 200
+OURS_R = 8.0              # u: a spot one's own side came back this near lately (and none of the others) is left
 
 
 def _cell(x, y, z, c):
@@ -50,6 +54,7 @@ class Lore:
         s.path = os.path.join(folder, FILE) if folder else None
         s.matches, s.kill_matches, s.kills, s.spawns, s.jumps = [], [], [], {}, {}
         s.dirty = False
+        s.recent = []           # [(when, x, y, z, team, mode), ...]: this match's respawns (live only)
         s.lock = threading.Lock()
         s._cache = {}
         if s.path and os.path.exists(s.path):
@@ -72,6 +77,7 @@ class Lore:
             return False
         with s.lock:
             s.matches.append(stamp)
+            s.recent = []
             s.dirty = True
         return True
 
@@ -92,11 +98,16 @@ class Lore:
             s.dirty = True
             s._cache.clear()
 
-    def add_spawn(s, mode, p, team=None):
+    def add_spawn(s, mode, p, team=None, now=None):
+        """now: the live match's clock, which also keeps it among this match's recent respawns (spawn_spots)."""
         with s.lock:
             ps = s.spawns.setdefault(str(mode or "any"), [])
             ps.append([round(float(c), 2) for c in p[:3]] + [int(team) if team is not None else -1])
             del ps[:-SPAWNS_MAX]
+            if now is not None:
+                s.recent.append((float(now), float(p[0]), float(p[1]), float(p[2]),
+                                 int(team) if team is not None else -1, str(mode or "any")))
+                del s.recent[:-RECENT_MAX]
             s.dirty = True
             for k in [k for k in s._cache if k[0] == "spawns"]:
                 del s._cache[k]
@@ -161,13 +172,17 @@ class Lore:
             s._cache[("lanes",)] = out
         return out
 
-    def spawn_spots(s, mode, not_team=None):
+    def spawn_spots(s, mode, not_team=None, now=None):
         """[(spot, respawns), ...] most first: cells SPAWN_MIN respawns or more in this mode (else in every mode), of
-        players not on not_team (a respawn with no team known counts for everyone)."""
+        players not on not_team (a respawn with no team known counts for everyone).
+
+        now (the live clock): this match's respawns of the last RECENT_S s count RECENT_W each, so where they come back
+        since a side took the spawns over leads; and a cell not_team itself came back by in that time, with none of
+        the others, is left (the spawns flipped: it is ours now)."""
         m = str(mode or "any")
         key = ("spawns", m, not_team)
-        out = s._cache.get(key)
-        if out is None:
+        cells = s._cache.get(key)
+        if cells is None:
             pts = s.spawns.get(m) or [p for ps in s.spawns.values() for p in ps]
             cells = {}
             for x, y, z, *t in pts:
@@ -176,10 +191,24 @@ class Lore:
                 c = _cell(x, y, z, SPAWN_CELL)
                 n, sx, sy, sz = cells.get(c, (0, 0.0, 0.0, 0.0))
                 cells[c] = (n + 1, sx + x, sy + y, sz + z)
-            out = sorted(((Vec(sx / n, sy / n, sz / n), n) for n, sx, sy, sz in cells.values() if n >= SPAWN_MIN),
-                         key=lambda sn: -sn[1])
-            s._cache[key] = out
-        return out
+            s._cache[key] = cells
+        recent = [r for r in s.recent if now - r[0] <= RECENT_S and r[5] == m] if now is not None else []
+        if recent:
+            cells, theirs, ours = dict(cells), set(), []
+            for _, x, y, z, t, _m in recent:
+                if not_team is not None and t == not_team:
+                    ours.append((x, y, z))
+                    continue
+                c = _cell(x, y, z, SPAWN_CELL)
+                n, sx, sy, sz = cells.get(c, (0, 0.0, 0.0, 0.0))
+                cells[c] = (n + RECENT_W, sx + RECENT_W * x, sy + RECENT_W * y, sz + RECENT_W * z)
+                theirs.add(c)
+            for c in [c for c in cells if c not in theirs]:
+                n, sx, sy, sz = cells[c]
+                if any(math.hypot(sx / n - x, sy / n - y) < OURS_R and abs(sz / n - z) < NEAR_DZ for x, y, z in ours):
+                    del cells[c]
+        return sorted(((Vec(sx / n, sy / n, sz / n), n) for n, sx, sy, sz in cells.values() if n >= SPAWN_MIN),
+                      key=lambda sn: -sn[1])
 
     def jump_bad(s, key):
         """A jump (by its take-off, rounded to 0.1 u) short JUMP_SHORT times or more and JUMP_RATIO times as often as
