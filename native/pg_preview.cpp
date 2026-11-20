@@ -317,16 +317,19 @@ int main(int argc, char** argv) {
                             "reach_campaign_difficulty", "reach_menu_player", "reach_menu_challenges",
                             "reach_psych_simulate",
                             // (Nov 19, phase 3) the Armory
-                            "reach_armory", "reach_armory_helmets", "reach_armory_mark_v", "reach_armory_purchase" };
+                            "reach_armory", "reach_armory_helmets", "reach_armory_mark_v", "reach_armory_purchase",
+                            // (Nov 19, phase 4) the Start menu's other pages
+                            "reach_menu_controller", "reach_menu_network", "reach_file_browser", "reach_file_films",
+                            "reach_controller" };
     // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
     // band (8.9 s), the promotion (11.5 s; six lines)
     const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f,
                          3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
-                         2.0f, 2.0f, 2.0f, 2.0f };
+                         2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
     // (PG_ONLY=<n>: that screen alone, 1-based as its file's number)
     char only_s[8];
     int only = GetEnvironmentVariableA("PG_ONLY", only_s, sizeof only_s) ? atoi(only_s) : 0;
-    for (int s = 0; s < 33; s++) {
+    for (int s = 0; s < 38; s++) {
         if (only && s + 1 != only) continue;
         g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};

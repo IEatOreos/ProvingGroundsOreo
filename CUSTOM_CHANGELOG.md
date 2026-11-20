@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Proving Grounds: Reach's File Browser, Controller and Network Status (phase 4), 2026-11-19
+
+The owner sent 17 more frames of Reach's menus: FILE BROWSER, the Start menu on CONTROLLER, NETWORK STATUS and HALO WAYPOINT, the CONTROLLER page, and the Firefight, Custom Game, Forge and Theater lobbies with their game type, mission and option pages. He was asked which to build and chose the Start menu's pages. The lobbies are not built.
+
+- **FILE BROWSER** (`native/proving_grounds_reach.inc`):
+  - It lists this PC's own Halo: Reach files. **TEMPORARY HISTORY** is MCC's `Temporary\UserContent\HaloReach`: the game types, maps and films of recent games (here 50, 50 and 12). **LOCAL FILES** is MCC's `LocalFiles\<id>\HaloReach`: the saved ones.
+  - The second page shows the kinds with their counts; Right or A goes into the files, 15 rows at a time. The right side holds a card with our own mark for the kind, then the file's name, description, creator, last editor, date and size.
+  - These come from the file's own content header (`chdr`): the name at 0xC0 and the description at 0x1C0 (UTF-16, big-endian in map variants), the creator at 0x88 and the editor at 0xAC.
+  - File Share, Active Transfers, Recommendations and the searches were Bungie.net's, so they are shown dim.
+- **CONTROLLER:**
+  - The Start menu lists its rows beside a controller we drew. The page shows Halo: Reach's controls as MCC keeps them in `Saved\Config\WindowsNoEditor\GameUserSettings.ini`, entry 6 of each list (Reach). For example: look sensitivity 10 across and 11 up and down, hold to crouch, clench protection off.
+  - The button layout shows as MCC's preset number, because MCC's names for its numbers are not known.
+  - It only shows them: they are changed in MCC's own Settings, which writes that file.
+- **NETWORK STATUS** is on the Start menu, as Reach's was. Matches: THIS PC. Connection needed: NONE. Your party: from MCC's own list. **SERVICE RECORD SITE** (where Reach had Halo Waypoint) is now a line of text, as Reach's entry was.
+- **Validation:** preview screens 34-38 were checked by eye with this PC's real files and settings. `build.bat pg33` builds `botcore_pg33.dll`. Untested in game.
+
 ### Sword Base: bots can reach the energy sword, 2026-11-19
 
 The owner's F9 reports on Sword Base (`reach_20_sword_slayer_20261119-203930`: "Bots congregate on swordbase here and get stuck", "I defy evil wouldnt shoot me at all. barely moved"), then: "the lidar doesnt allow the bots to get to the sword".
@@ -54,8 +70,9 @@ The owner: "Do the in game cards first, then start the Armory. all one phase". H
   - A scratch program against copies of the files: a rank-locked item and a variant before its base are refused, a second purchase is refused, the purchase lands in the ledger, CQC (auto-bought at grade 1) equips free, and the wear bytes carry the bought chest.
   - Preview screens 30-33 (the Armory, the helmets, Mark V's variants, the purchase dialog) were checked by eye. The figure tries Mark V on (the Halo CE-style helmet).
   - `build.bat pg32` builds `botcore_pg32.dll`.
+- **Live, the same day (`botcore_pg32.log`):** the owner bought Tactical/Recon (1,500 cR, in the ledger) and equipped the CQC helmet. botcore logged "24 byte(s) laid over the player's configuration; 2 copies in the player's record (+0xB0 +0x130)", and the saved look read helmet 3 and chest 6 instead of his MCC armor. The owner: "My spartan was wearing the armor I set before and after death". So it is worn from the first spawn and after a respawn.
 - **Untested in game:**
-  - Whether the laid bytes reach the Spartan at all, and from which spawn. The first life may still wear MCC's choice, and other machines see MCC's.
+  - Other machines still see MCC's choice.
   - With nothing bought, every slot is on its free default (Mark V [B] and so on). The owner's own MCC look (Drengr Valdemar and the rest) is not worn in matches until it is bought here, or `wear=0` is set.
   - The site does not show the credits to spend yet. Armor effects are not drawn on the figure.
 

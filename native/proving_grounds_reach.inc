@@ -943,13 +943,13 @@ static void rm_star(float cx, float cy, float r, ImU32 c) {   // (Reach's challe
 static const int RM_NMENU = 8;
 static const char* RM_MENU_ITEMS[9] = { "THE ARMORY", "PLAYER", "FILE BROWSER", "CONTROLLER", "AUDIO VIDEO", "CHALLENGES",
                                         "NETWORK STATUS", "SERVICE RECORD SITE", "PROVING GROUNDS" };
-static const bool RM_MENU_ON[9] = { true, true, false, false, false, true, false, true, true };
+static const bool RM_MENU_ON[9] = { true, true, true, true, false, true, true, true, true };
 static const char* RM_MENU_DESC[9] = {
     "Buy armor with the credits your Service Record has earned, as in Reach. What you equip here is what you wear in "
     "Proving Grounds' matches.",
     "Your Service Record: your career, your commendations.",
-    "Your films, maps and game types are in MCC's own menus.",
-    "Set your controls in MCC's own Settings.",
+    "Look through the game types, maps and films of your recent games and the ones you saved.",
+    "See Halo: Reach's controls as MCC has them set.",
     "Set sound and picture in MCC's own Settings.",
     "Today's and this week's challenges, as your Service Record has them.",
     "Proving Grounds plays on this PC: there is no network to check.",
@@ -998,11 +998,16 @@ static void rm_challenges() {
     }
 }
 
+static void fb_forget();                         // (phase 4, below: the File Browser, the controller, network status)
+static void ctl_pad(float cx, float cy, float s, ImU32 c);
+static void rm_network();
 static void rm_menu_act(int k) {                 // an entry of the Start menu pressed
     if (!RM_MENU_ON[k]) { sound(PS_ERROR); return; }
     sound(PS_SELECT);
     if (k == 0) { g_rpage = RP_ARMORY; g_focus_after = 0; }
     if (k == 1) { g_rpage = RP_SR; g_focus_after = 0; }
+    if (k == 2) { g_rpage = RP_FILES; g_focus_after = 0; fb_forget(); }
+    if (k == 3) { g_rpage = RP_CONTROLLER; g_focus_after = 0; }
     if (k == 5) { g_chal = true; g_chal_check = 0; }    // (all of them: the Challenges page)
     if (k == 7) open_site_page(me_name(), "");
     if (k == 8) { g_rpage_from = RP_MENU; g_rpage = RP_OPTIONS; g_focus_after = 0; }
@@ -1028,11 +1033,25 @@ static void rm_menu(pg_env& e, float t) {
     static const char* ARMORY[12] = { "HELMET...", "LEFT SHOULDER...", "RIGHT SHOULDER...", "CHEST...", "WRIST...",
                                       "UTILITY...", "VISOR COLOR...", "KNEE GUARDS...", "ARMOR EFFECT...",
                                       "ELITE ARMOR...", "EMBLEM...", "COLORS..." };
+    if (f == 6 || f == 7) {                          // (Network Status on the menu itself; the site: a line, as Reach's
+        if (f == 6) rm_network();                    // Halo Waypoint)
+        else rm_wrap(g_fl, 25, 800, 152, 715, IM_COL32(222, 226, 230, 255), RM_MENU_DESC[f]);
+        rm_band();
+        float x = f == 7 ? prompt(318, 966, "A", "Enter", "Select", nullptr) : 318;
+        prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+        if (rm_exit_prompt()) { rm_exit(); return; }
+        for (int k = 0; k < RM_NMENU; k++) if (pressed(base + k) && k != 6) rm_menu_act(k);
+        return;
+    }
     static const char* PLAYER[2] = { "SERVICE RECORD...", "COMMENDATIONS..." };
+    static const char* FILES[9] = { "TEMPORARY HISTORY", "LOCAL FILES", "FILE SHARE", "ACTIVE TRANSFERS", "RECOMMENDATIONS",
+                                    "NEW CUSTOM SEARCH", "MOST DOWNLOADED", "MOST RECOMMENDED", "SCREENSHOTS OF YOU" };
+    static const char* CTL[6] = { "BUTTON LAYOUT", "STICK LAYOUT", "LOOK INVERSION", "LOOK SENSITIVITY", "AUTOLOOK CENTERING",
+                                  "CROUCH BEHAVIOR" };
     static const char* CHAL[2] = { "DAILY...", "WEEKLY..." };
     static const char* PG[5] = { "INVITE PLAYER...", "CHALLENGES...", "COMMENDATIONS...", "SIMULATE MATCHES...", "GAME SIZE..." };
-    const char* const* sub = f == 0 ? ARMORY : f == 1 ? PLAYER : f == 5 ? CHAL : f == 8 ? PG : nullptr;
-    int nsub = f == 0 ? 12 : f == 1 ? 2 : f == 5 ? 2 : f == 8 ? 5 : 0;
+    const char* const* sub = f == 0 ? ARMORY : f == 1 ? PLAYER : f == 2 ? FILES : f == 3 ? CTL : f == 5 ? CHAL : f == 8 ? PG : nullptr;
+    int nsub = f == 0 ? 12 : f == 1 ? 2 : f == 2 ? 2 : f == 3 ? 6 : f == 5 ? 2 : f == 8 ? 5 : 0;
     for (int k = 0; k < nsub; k++) {
         float y = 153 + 40.0f * k + (f == 0 && k >= 10 ? 38 : 0);
         text(g_fl, 25, 790, y, IM_COL32(176, 182, 188, RM_MENU_ON[f] ? 170 : 110), sub[k]);
@@ -1043,6 +1062,8 @@ static void rm_menu(pg_env& e, float t) {
     if (f == 0 && e.figure) {
         if (unsigned long long fig = e.figure(me_name(), false, 0.35f + 0.25f * sinf(t * 0.4f), 350, 415))
             g_dl->AddImage((ImTextureID)fig, P(1165, 165), P(1515, 580), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
+    } else if (f == 3) {
+        ctl_pad(1340, 340, 290, IM_COL32(200, 205, 210, 255));
     } else {
         rm_diamonds(1340, 330, 150, IM_COL32(120, 176, 230, 120));
     }
@@ -1472,6 +1493,376 @@ static void rm_arm_items(pg_env& e, float t) {
     for (int k = 0; k < n; k++) if (pressed(base + k)) arm_act(rows[k]);
 }
 
+// ------------------------------------------------------------------ phase 4: the Start menu's other pages
+// (Nov 19, the owner's frames of Reach's FILE BROWSER, MENU on CONTROLLER and NETWORK STATUS, CONTROLLER and HALO
+// WAYPOINT; asked which to build, he chose these) FILE BROWSER lists this PC's own Halo: Reach files: TEMPORARY HISTORY
+// (MCC's Temporary\UserContent\HaloReach: the game types, maps and films of recent games) and LOCAL FILES (MCC's
+// LocalFiles\<id>\HaloReach), each file's name, description, creator and last editor read from its own header (the
+// Blam file's chdr: the name at 0xC0, the description at 0x1C0, UTF-16 either way round; the creator at 0x88, the editor
+// at 0xAC). File Share and the searches were Bungie.net's: dim. CONTROLLER shows Reach's controller settings as MCC
+// keeps them (its GameUserSettings.ini, the seventh of each list: Halo: Reach); they are changed in MCC's own Settings,
+// which writes that file. NETWORK STATUS, on the menu as Reach's: Proving Grounds plays on this PC.
+struct fb_file { std::wstring path; std::string name, desc, by, edited; ULONGLONG when = 0; uint64_t size = 0; };
+static const char* FB_KIND[4] = { "GAME TYPES", "MAP VARIANTS", "FILMS", "SCREENSHOTS" };
+static const wchar_t* FB_DIR[4] = { L"GameType", L"Map", L"Movie", L"Screenshot" };
+static std::vector<fb_file> g_fb[2][4];          // [temporary history, local files][kind]
+static bool g_fb_read[2];
+static int g_fb_src, g_fb_kind, g_fb_col, g_fb_scroll;
+static void fb_forget() { g_fb_read[0] = g_fb_read[1] = false; }   // (read again on the next open)
+
+static std::string fb_text16(const uint8_t* p, int maxch) {   // (a header's UTF-16 text, either byte order)
+    bool be = p[0] == 0 && p[1] != 0;
+    std::wstring w;
+    for (int i = 0; i < maxch; i++) {
+        wchar_t c = be ? (wchar_t)(p[2 * i] << 8 | p[2 * i + 1]) : (wchar_t)(p[2 * i] | p[2 * i + 1] << 8);
+        if (!c) break;
+        w += c;
+    }
+    char out[600] = "";
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), -1, out, sizeof out, nullptr, nullptr);
+    return out;
+}
+static std::string fb_text8(const uint8_t* p, int n) {
+    std::string s;
+    for (int i = 0; i < n && p[i]; i++) if (p[i] >= 32 && p[i] < 127) s += (char)p[i];
+    return s;
+}
+static void fb_header(fb_file& f) {               // the name and the rest from the file's own content header
+    FILE* fp = nullptr;
+    if (_wfopen_s(&fp, f.path.c_str(), L"rb") || !fp) return;
+    uint8_t b[0x2C0] = {};
+    size_t n = fread(b, 1, sizeof b, fp);
+    fclose(fp);
+    if (n < 0x2C0 || memcmp(b, "_blf", 4) || memcmp(b + 0x30, "chdr", 4)) return;
+    std::string nm = fb_text16(b + 0xC0, 128);
+    if (!nm.empty()) f.name = nm;
+    f.desc = fb_text16(b + 0x1C0, 128);
+    f.by = fb_text8(b + 0x88, 16);
+    f.edited = fb_text8(b + 0xAC, 16);
+}
+static void fb_scan_dir(const std::wstring& dir, std::vector<fb_file>& out, bool header) {
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileW((dir + L"\\*").c_str(), &fd);
+    if (h == INVALID_HANDLE_VALUE) return;
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY || out.size() >= 400) continue;
+        fb_file f;
+        f.path = dir + L"\\" + fd.cFileName;
+        char nm[300] = "";
+        WideCharToMultiByte(CP_UTF8, 0, fd.cFileName, -1, nm, sizeof nm, nullptr, nullptr);
+        f.name = nm;
+        if (char* dot = strrchr(&f.name[0], '.')) f.name.resize(dot - f.name.c_str());
+        f.when = ft_u64(fd.ftLastWriteTime);
+        f.size = (uint64_t)fd.nFileSizeHigh << 32 | fd.nFileSizeLow;
+        if (header) fb_header(f);
+        out.push_back(f);
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+}
+static void fb_scan(int src) {                    // (read once each time the page is opened)
+    wchar_t up[MAX_PATH];
+    if (!GetEnvironmentVariableW(L"USERPROFILE", up, MAX_PATH)) return;
+    std::wstring mcc = std::wstring(up) + L"\\AppData\\LocalLow\\MCC";
+    for (int k = 0; k < 4; k++) {
+        g_fb[src][k].clear();
+        if (src == 0) fb_scan_dir(mcc + L"\\Temporary\\UserContent\\HaloReach\\" + FB_DIR[k], g_fb[src][k], k < 3);
+        else {
+            WIN32_FIND_DATAW fd;                     // (every signed-in id's own folder)
+            HANDLE h = FindFirstFileW((mcc + L"\\LocalFiles\\*").c_str(), &fd);
+            if (h == INVALID_HANDLE_VALUE) continue;
+            do {
+                if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || fd.cFileName[0] == L'.') continue;
+                fb_scan_dir(mcc + L"\\LocalFiles\\" + fd.cFileName + L"\\HaloReach\\" + FB_DIR[k], g_fb[src][k], k < 3);
+            } while (FindNextFileW(h, &fd));
+            FindClose(h);
+        }
+        std::sort(g_fb[src][k].begin(), g_fb[src][k].end(), [](const fb_file& a, const fb_file& b) { return a.when > b.when; });
+    }
+    g_fb_read[src] = true;
+}
+// our own marks for the kinds (no game art): a game type a flag, a map a ridge, a film a strip, a screenshot a frame
+static void fb_icon(int kind, float cx, float cy, float s, ImU32 c) {
+    if (kind == 0) {
+        g_dl->AddLine(P(cx - s * 0.3f, cy + s * 0.45f), P(cx - s * 0.3f, cy - s * 0.45f), A(c), U(s * 0.07f));
+        ImVec2 f[4] = { P(cx - s * 0.3f, cy - s * 0.45f), P(cx + s * 0.4f, cy - s * 0.3f), P(cx - s * 0.3f, cy - s * 0.05f),
+                        P(cx - s * 0.3f, cy - s * 0.45f) };
+        g_dl->AddConcavePolyFilled(f, 3, A(c));
+    } else if (kind == 1) {
+        ImVec2 r[5] = { P(cx - s * 0.5f, cy + s * 0.35f), P(cx - s * 0.15f, cy - s * 0.3f), P(cx + s * 0.05f, cy),
+                        P(cx + s * 0.25f, cy - s * 0.2f), P(cx + s * 0.5f, cy + s * 0.35f) };
+        g_dl->AddPolyline(r, 5, A(c), 0, U(s * 0.07f));
+    } else if (kind == 2) {
+        g_dl->AddRect(P(cx - s * 0.45f, cy - s * 0.32f), P(cx + s * 0.45f, cy + s * 0.32f), A(c), 0, 0, U(s * 0.06f));
+        for (int k = 0; k < 4; k++) {
+            float x = cx - s * 0.36f + k * s * 0.24f;
+            g_dl->AddRectFilled(P(x, cy - s * 0.27f), P(x + s * 0.08f, cy - s * 0.2f), A(c));
+            g_dl->AddRectFilled(P(x, cy + s * 0.2f), P(x + s * 0.08f, cy + s * 0.27f), A(c));
+        }
+    } else {
+        g_dl->AddRect(P(cx - s * 0.45f, cy - s * 0.32f), P(cx + s * 0.45f, cy + s * 0.32f), A(c), 0, 0, U(s * 0.06f));
+        g_dl->AddCircle(P(cx, cy), U(s * 0.16f), A(c), 20, U(s * 0.06f));
+    }
+}
+// a picture panel as the File Browser's: our ground, the diamonds, the entry's name faint across it
+static void fb_banner(float x0, float y0, float x1, float y1, const char* name) {
+    g_dl->AddRectFilledMultiColor(P(x0, y0), P(x1, y1), A(IM_COL32(44, 66, 86, 230)), A(IM_COL32(30, 48, 64, 230)),
+                                  A(IM_COL32(16, 26, 36, 230)), A(IM_COL32(26, 42, 58, 230)));
+    g_dl->AddRect(P(x0, y0), P(x1, y1), A(IM_COL32(170, 190, 210, 110)), 0, 0, U(1));
+    rm_diamonds(x0 + (x1 - x0) * 0.3f, (y0 + y1) * 0.5f - 10, 120, IM_COL32(120, 176, 230, 110));
+    g_dl->PushClipRect(P(x0, y0), P(x1, y1), true);
+    text(g_fl, 60, x1 - 16, y1 - 74, IM_COL32(236, 240, 244, 70), name, 2);
+    g_dl->PopClipRect();
+}
+
+static const char* FB_ROWS[11] = { "TEMPORARY HISTORY", "LOCAL FILES", "FILE SHARE", "ACTIVE TRANSFERS", "RECOMMENDATIONS",
+                                   "NEW CUSTOM SEARCH", "MOST DOWNLOADED", "MOST RECOMMENDED", "SCREENSHOTS OF YOU" };
+static const char* FB_DESC[9] = {
+    "The game types, maps and films of your recent Halo: Reach games, as MCC keeps them on this PC.",
+    "The game types, maps, films and screenshots you saved in Halo: Reach.",
+    "Your File Share was online, on Bungie.net. Proving Grounds plays on this PC.",
+    "Uploads and downloads were Bungie.net's. Nothing is sent or fetched here.",
+    "Recommended files came from Bungie.net, which Proving Grounds does not reach.",
+    "Searching other players' files was Bungie.net's.",
+    "Searching other players' files was Bungie.net's.",
+    "Searching other players' files was Bungie.net's.",
+    "Screenshots others took of you were Bungie.net's." };
+static float fb_row_y(int k) { return k < 2 ? 145 + 41.0f * k : k < 5 ? 268 + 41.0f * (k - 2) : 432 + 41.0f * (k - 5); }
+
+static void rm_files(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("FILE BROWSER", "MENU");
+    int base = (int)g_items.size(), focus = -1;
+    for (int k = 0; k < 9; k++) {
+        float y = fb_row_y(k);
+        bool f = item(390, y, 775, y + 38);
+        if (f) focus = k;
+        rm_row(390, y, 775, y + 38, f, FB_ROWS[k], k < 2);
+        if (k < 2) text(g_fl, 24, 760, y + 6, f ? C_TEXT : C_DIM, ">", 2);
+    }
+    g_dl->AddLine(P(390, 240), P(735, 240), A(IM_COL32(150, 158, 166, 70)), U(1));
+    g_dl->AddLine(P(390, 404), P(735, 404), A(IM_COL32(150, 158, 166, 70)), U(1));
+    int f = focus >= 0 ? focus : 0;
+    fb_banner(795, 160, 1505, 375, FB_ROWS[f]);
+    rm_wrap(g_fl, 25, 803, 470, 700, IM_COL32(222, 226, 230, 255), FB_DESC[f]);
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    for (int k = 0; k < 9; k++) {
+        if (!pressed(base + k) && !(k == focus && k < 2 && g_left_right == 1)) continue;
+        if (k >= 2) { sound(PS_ERROR); continue; }
+        if (g_left_right == 1) g_lr_taken = true;
+        sound(PS_SELECT);
+        fb_scan(k);
+        g_fb_src = k; g_fb_kind = 0; g_fb_col = 0; g_fb_scroll = 0;
+        g_rpage = RP_FILE_LIST; g_focus_after = 0;
+    }
+}
+
+static void rm_file_list(pg_env& e, float t) {
+    (void)e; (void)t;
+    if (!g_fb_read[g_fb_src]) fb_scan(g_fb_src);
+    rm_small_header(g_fb_src ? "LOCAL FILES" : "TEMPORARY HISTORY", "FILE BROWSER \xC2\xB7 MENU");
+    int base = (int)g_items.size(), focus = -1;
+    for (int k = 0; k < 4; k++) {                    // the kinds, their counts
+        float y = 145 + 41.0f * k;
+        bool f = g_fb_col == 0 && item(390, y, 770, y + 38);
+        if (f) { focus = k; g_fb_kind = k; }
+        int n = (int)g_fb[g_fb_src][k].size();
+        char c[16];
+        sprintf_s(c, "%d", n);
+        if (g_fb_col == 1 && k == g_fb_kind) g_dl->AddRectFilled(P(390, y), P(770, y + 38), A(IM_COL32(214, 218, 222, 40)));
+        rm_row(390, y, 770, y + 38, f, FB_KIND[k], n > 0 || f, c);
+    }
+    const std::vector<fb_file>& files = g_fb[g_fb_src][g_fb_kind];
+    int n = (int)files.size(), sel = -1;
+    const int V = 15;
+    if (g_fb_col == 1) {                             // the files, 15 at a time
+        int ff = g_focus - base;
+        if (ff < 0 || ff >= n) ff = 0;
+        if (ff < g_fb_scroll) g_fb_scroll = ff;
+        if (ff >= g_fb_scroll + V) g_fb_scroll = ff - V + 1;
+    }
+    if (g_fb_scroll > (n > V ? n - V : 0)) g_fb_scroll = n > V ? n - V : 0;
+    for (int k = 0; k < n; k++) {
+        bool shown = k >= g_fb_scroll && k < g_fb_scroll + V;
+        float y = 145 + 41.0f * (k - g_fb_scroll);
+        bool f = g_fb_col == 1 && (shown ? item(782, y, 1137, y + 38) : item(-2000, -2000, -1990, -1990));
+        if (f) sel = k;
+        if (!shown) continue;
+        std::string nm = files[k].name;
+        for (auto& ch : nm) ch = (char)toupper((unsigned char)ch);
+        g_dl->PushClipRect(P(782, y), P(1137, y + 38), true);
+        rm_row(782, y, 1137, y + 38, f, nm.c_str(), g_fb_col == 1);
+        g_dl->PopClipRect();
+    }
+    if (g_fb_scroll > 0) g_dl->AddTriangleFilled(P(960, 128), P(950, 140), P(970, 140), A(C_DIM));
+    if (g_fb_scroll + V < n) g_dl->AddTriangleFilled(P(950, 150 + 41.0f * V), P(970, 150 + 41.0f * V), P(960, 162 + 41.0f * V), A(C_DIM));
+    if (!n) rm_wrap(g_fl, 24, 790, 150, 345, IM_COL32(200, 206, 212, 200),
+                    g_fb_kind == 3 ? "No screenshots: MCC does not keep Halo: Reach screenshots on this PC."
+                                   : "None on this PC yet.");
+    // the right: the file's card (our mark for its kind), its name, description, who made it, when
+    g_dl->AddRectFilled(P(1160, 165), P(1515, 375), A(IM_COL32(236, 240, 244, 235)), U(10));
+    g_dl->AddRectFilled(P(1178, 180), P(1497, 360), A(IM_COL32(20, 34, 44, 255)), U(8));
+    fb_icon(g_fb_kind, 1337, 270, 120, IM_COL32(236, 240, 244, 255));
+    if (sel >= 0) {
+        const fb_file& fl = files[sel];
+        std::string nm = fl.name;
+        for (auto& ch : nm) ch = (char)toupper((unsigned char)ch);
+        g_dl->PushClipRect(P(1160, 390), P(1515, 430), true);
+        text(g_fl, 30, 1160, 392, C_TEXT, nm.c_str());
+        g_dl->PopClipRect();
+        if (!fl.desc.empty()) rm_wrap(g_fl, 22, 1160, 434, 355, IM_COL32(222, 226, 230, 255), fl.desc.c_str());
+        float y = 600;
+        g_dl->AddLine(P(1160, y - 8), P(1515, y - 8), A(IM_COL32(150, 158, 166, 70)), U(1));
+        if (!fl.by.empty()) { text(g_fs, 19, 1160, y, C_DIM, ("Created by " + fl.by).c_str()); y += 28; }
+        if (!fl.edited.empty() && fl.edited != fl.by) { text(g_fs, 19, 1160, y, C_DIM, ("Edited by " + fl.edited).c_str()); y += 28; }
+        FILETIME ft, lt;
+        SYSTEMTIME st;
+        ft.dwLowDateTime = (DWORD)fl.when; ft.dwHighDateTime = (DWORD)(fl.when >> 32);
+        if (FileTimeToLocalFileTime(&ft, &lt) && FileTimeToSystemTime(&lt, &st)) {
+            char d[64];
+            sprintf_s(d, "%04d-%02d-%02d %02d:%02d \xC2\xB7 %llu KB", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute,
+                      (unsigned long long)((fl.size + 1023) / 1024));
+            text(g_fs, 19, 1160, y, C_DIM, d);
+        }
+    } else {
+        char c[64];
+        sprintf_s(c, "%d %s", n, n == 1 ? "file" : "files");
+        text(g_fl, 30, 1160, 392, C_TEXT, FB_KIND[g_fb_kind]);
+        text(g_fl, 24, 1160, 434, C_DIM, c);
+    }
+    rm_band();
+    float x = 318;
+    if (g_fb_col == 0) x = prompt(x, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    if (g_fb_col == 0) {                             // Right or A into the files, Left (or B) back
+        int c = -1;
+        for (int k = 0; k < 4; k++) if (pressed(base + k)) c = k;
+        if (c < 0 && g_left_right == 1 && focus >= 0) c = focus;
+        if (c >= 0) {
+            if (g_left_right == 1) g_lr_taken = true;
+            if (g_fb[g_fb_src][c].empty()) sound(PS_ERROR);
+            else { g_fb_kind = c; g_fb_col = 1; g_fb_scroll = 0; g_focus_after = 0; sound(PS_SELECT); }
+        }
+    } else if (g_left_right == -1) {
+        g_lr_taken = true; g_fb_col = 0; g_focus_after = g_fb_kind; sound(PS_BACK);
+    }
+}
+
+// ---- the controller: Reach's settings as MCC keeps them (GameUserSettings.ini, index 6: Halo: Reach)
+static int ctl_value(const char* key) {          // -1: not in the file
+    static std::vector<std::string> lines;
+    static ULONGLONG checked, stamp;
+    ULONGLONG now = GetTickCount64();
+    if (!checked || now - checked > 3000) {
+        checked = now;
+        wchar_t p[MAX_PATH], up[MAX_PATH];
+        if (GetEnvironmentVariableW(L"USERPROFILE", up, MAX_PATH)) {
+            swprintf_s(p, L"%s\\AppData\\LocalLow\\MCC\\Saved\\Config\\WindowsNoEditor\\GameUserSettings.ini", up);
+            WIN32_FILE_ATTRIBUTE_DATA fa;
+            ULONGLONG s = GetFileAttributesExW(p, GetFileExInfoStandard, &fa) ? ft_u64(fa.ftLastWriteTime) : 0;
+            if (s != stamp) {
+                stamp = s;
+                lines.clear();
+                FILE* f = nullptr;
+                if (s && !_wfopen_s(&f, p, L"rb") && f) {
+                    char line[512];
+                    while (fgets(line, sizeof line, f)) if (strstr(line, "[6]=")) { line[strcspn(line, "\r\n")] = 0; lines.push_back(line); }
+                    fclose(f);
+                }
+            }
+        }
+    }
+    char want[96];
+    sprintf_s(want, "%s[6]=", key);
+    for (const std::string& l : lines) if (!strncmp(l.c_str(), want, strlen(want))) return (int)atof(l.c_str() + strlen(want));
+    return -1;
+}
+static void ctl_pad(float cx, float cy, float s, ImU32 c) {   // (our own controller, drawn)
+    for (int k = -1; k <= 1; k += 2) {               // (the grips: tapering down and out, rounded at the foot)
+        ImVec2 g[4] = { P(cx + k * s * 0.16f, cy), P(cx + k * s * 0.48f, cy - s * 0.1f), P(cx + k * s * 0.44f, cy + s * 0.26f),
+                        P(cx + k * s * 0.26f, cy + s * 0.2f) };
+        g_dl->AddConvexPolyFilled(g, 4, A(c));
+        g_dl->AddCircleFilled(P(cx + k * s * 0.36f, cy + s * 0.24f), U(s * 0.09f), A(c), 20);
+    }
+    g_dl->AddRectFilled(P(cx - s * 0.48f, cy - s * 0.22f), P(cx + s * 0.48f, cy + s * 0.08f), A(c), U(s * 0.14f));
+    ImU32 d = IM_COL32(20, 26, 32, 255), r = IM_COL32(90, 98, 106, 255);
+    g_dl->AddCircleFilled(P(cx - s * 0.3f, cy - s * 0.08f), U(s * 0.065f), A(d), 20);
+    g_dl->AddCircle(P(cx - s * 0.3f, cy - s * 0.08f), U(s * 0.04f), A(r), 20, U(2));
+    g_dl->AddCircleFilled(P(cx + s * 0.12f, cy + s * 0.04f), U(s * 0.065f), A(d), 20);
+    g_dl->AddCircle(P(cx + s * 0.12f, cy + s * 0.04f), U(s * 0.04f), A(r), 20, U(2));
+    g_dl->AddRectFilled(P(cx - s * 0.16f, cy + s * 0.04f), P(cx - s * 0.06f, cy + s * 0.08f), A(d));
+    g_dl->AddRectFilled(P(cx - s * 0.13f, cy + s * 0.01f), P(cx - s * 0.09f, cy + s * 0.11f), A(d));
+    const ImU32 fb[4] = { IM_COL32(110, 190, 70, 255), IM_COL32(220, 70, 60, 255), IM_COL32(60, 120, 220, 255), IM_COL32(240, 200, 60, 255) };
+    const float bx[4] = { 0, 0.05f, -0.05f, 0 }, by[4] = { 0.04f, -0.01f, -0.01f, -0.06f };
+    for (int k = 0; k < 4; k++) g_dl->AddCircleFilled(P(cx + s * (0.3f + bx[k]), cy + s * by[k]), U(s * 0.03f), A(fb[k]), 12);
+    g_dl->AddCircleFilled(P(cx, cy - s * 0.1f), U(s * 0.05f), A(IM_COL32(150, 200, 120, 255)), 18);
+}
+static const char* CTL_ROWS[8] = { "BUTTON LAYOUT", "STICK LAYOUT", "LOOK INVERSION", "LOOK SENSITIVITY", "AUTOLOOK CENTERING",
+                                   "CROUCH BEHAVIOR", "CLENCH PROTECTION", "FLYING CONTROLS" };
+static std::string ctl_text(int k) {
+    char s[64];
+    int v;
+    switch (k) {
+    case 0: v = ctl_value("ButtonPreset"); if (v < 0) return "NOT SET"; sprintf_s(s, "MCC PRESET %d", v); return s;
+    case 1: v = ctl_value("StickPreset"); if (v < 0) return "NOT SET"; if (!v) return "DEFAULT"; sprintf_s(s, "MCC PRESET %d", v); return s;
+    case 2: v = ctl_value("GamepadLookControlsInverted"); return v < 0 ? "NOT SET" : v ? "INVERTED" : "NOT INVERTED";
+    case 3: {
+        int h = ctl_value("HorizontalLookSensitivity"), vv = ctl_value("VerticalLookSensitivity");
+        if (h < 0) return "NOT SET";
+        sprintf_s(s, "%d ACROSS, %d UP AND DOWN", h, vv);
+        return s;
+    }
+    case 4: v = ctl_value("AutoCenterEnabled"); return v < 0 ? "NOT SET" : v ? "ENABLED" : "DISABLED";
+    case 5: v = ctl_value("CrouchLockEnabled"); return v < 0 ? "NOT SET" : v ? "TOGGLE CROUCH" : "HOLD TO CROUCH";
+    case 6: v = ctl_value("ClenchProtectionEnabled"); return v < 0 ? "NOT SET" : v ? "ENABLED" : "DISABLED";
+    default: v = ctl_value("GamepadAircraftControlsInverted"); return v < 0 ? "NOT SET" : v ? "INVERTED" : "NOT INVERTED";
+    }
+}
+static void rm_controller(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("CONTROLLER", "MENU");
+    for (int k = 0; k < 8; k++) {
+        float y = 145 + 41.0f * k;
+        bool f = item(390, y, 1450, y + 38);
+        if (f) focus_band(390, y, 1450, y + 38);
+        text(g_fl, 25, 400, y + 6, f ? C_TEXT : C_DIM, CTL_ROWS[k]);
+        text(g_fl, 25, 950, y + 6, f ? C_TEXT : IM_COL32(222, 226, 230, 255), ctl_text(k).c_str());
+    }
+    ctl_pad(940, 640, 330, IM_COL32(200, 205, 210, 255));
+    rm_wrap(g_fl, 23, 400, 500, 1050, IM_COL32(200, 206, 212, 220),
+            "Halo: Reach's controls as MCC keeps them on this PC. Change them in MCC's own Settings, under Controls: "
+            "Proving Grounds shows them and does not change them.");
+    rm_band();
+    prompt(318, 966, "B", "Esc", "Done", &g_footer_back);
+    if (rm_exit_prompt()) rm_exit();
+}
+
+// NETWORK STATUS, drawn on the Start menu as Reach's (its three boxes), saying what holds for Proving Grounds
+static void rm_network() {
+    uint64_t ids[PG_PEOPLE];
+    char names[PG_PEOPLE][32];
+    int teams[PG_PEOPLE], np = mcc_session_people(ids, names, teams, PG_PEOPLE);
+    char party[32];
+    sprintf_s(party, np ? "%d IN YOUR PARTY" : "JUST YOU", np + 1);
+    const char* L[3] = { "Matches:", "Connection Needed:", "Your Party:" };
+    const char* V[3] = { "THIS PC", "NONE", party };
+    const char* D[3] = { "Proving Grounds hosts every match on this PC: the bots play here.",
+                         "No upload, NAT or packet loss to measure: nothing goes over a network for a match with bots.",
+                         "The players in your MCC party, as MCC lists them." };
+    for (int k = 0; k < 3; k++) {
+        float y = 160 + 140.0f * k;
+        text(g_fl, 26, 790, y + 12, C_TEXT, L[k]);
+        g_dl->AddRectFilled(P(1162, y + 8), P(1514, y + 48), A(k == 1 ? IM_COL32(150, 170, 60, 200) : IM_COL32(40, 50, 60, 220)), U(4));
+        g_dl->AddRect(P(1162, y + 8), P(1514, y + 48), A(IM_COL32(214, 218, 222, 200)), U(4), 0, U(1.5f));
+        text(g_fl, 24, 1338, y + 14, C_TEXT, V[k], 1);
+        rm_wrap(g_fl, 22, 790, y + 62, 725, IM_COL32(200, 206, 212, 220), D[k]);
+        g_dl->AddLine(P(790, y + 130), P(1515, y + 130), A(IM_COL32(150, 158, 166, 55)), U(1));
+    }
+}
+
 // S_MENU's frame while one of Reach's pages is up (the invite list over it, the page held still under it)
 static void reach_menu_screen(pg_env& e, float t) {
     g_inert = g_invite;
@@ -1488,6 +1879,9 @@ static void reach_menu_screen(pg_env& e, float t) {
     case RP_DIFF: rm_diff(e, t); break;
     case RP_ARMORY: rm_armory(e, t); break;
     case RP_ARM_ITEMS: case RP_ARM_FAMILY: rm_arm_items(e, t); break;
+    case RP_FILES: rm_files(e, t); break;
+    case RP_FILE_LIST: rm_file_list(e, t); break;
+    case RP_CONTROLLER: rm_controller(e, t); break;
     default: break;
     }
     g_inert = false;
@@ -1522,6 +1916,11 @@ static bool rmenu_back() {
         for (int r = 0; r < (int)rows.size(); r++) if (armory_items()[rows[r]].family == g_arm_family) g_focus_after = r;
         return true;
     }
+    case RP_FILES: g_rpage = RP_MENU; g_focus_after = 2; return true;
+    case RP_FILE_LIST:
+        if (g_fb_col == 1) { g_fb_col = 0; g_focus_after = g_fb_kind; return true; }
+        g_rpage = RP_FILES; g_focus_after = g_fb_src; return true;
+    case RP_CONTROLLER: g_rpage = RP_MENU; g_focus_after = 3; return true;
     }
     return false;
 }

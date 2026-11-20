@@ -587,7 +587,8 @@ static int g_npool_names;
 // matchmaking and its three sub-pages, or Proving Grounds' own menu (RP_OPTIONS). proving_grounds_reach.inc
 // (Nov 19, phase 2) Reach's Start menu and the player's Service Record, Career and its difficulty pages
 enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF,
-       RP_ARMORY, RP_ARM_ITEMS, RP_ARM_FAMILY };   // (Nov 19, phase 3: the Armory, proving_grounds_reach.inc)
+       RP_ARMORY, RP_ARM_ITEMS, RP_ARM_FAMILY,     // (Nov 19, phase 3: the Armory, proving_grounds_reach.inc)
+       RP_FILES, RP_FILE_LIST, RP_CONTROLLER };    // (phase 4: the File Browser, the controller)
 static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
 static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
 static bool rmenu_back();
@@ -3235,6 +3236,14 @@ void pg_preview_stage(int which, float t, pg_env& e) {
         g_focus = 0;
         break;
     }
+    // (phase 4) the Start menu on Controller and on Network Status, the File Browser, Temporary History's films, the
+    // controller page
+    case 33: pg_open(); g_rpage = RP_MENU; g_focus = 3; break;
+    case 34: pg_open(); g_rpage = RP_MENU; g_focus = 6; break;
+    case 35: pg_open(); g_rpage = RP_FILES; g_focus = 1; break;
+    case 36: pg_open(); fb_scan(0); g_rpage = RP_FILE_LIST; g_fb_src = 0; g_fb_kind = 2; g_fb_col = 1; g_fb_scroll = 0;
+             g_focus = 0; break;
+    case 37: pg_open(); g_rpage = RP_CONTROLLER; g_focus = 0; break;
     }
     if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Proving Grounds' own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
