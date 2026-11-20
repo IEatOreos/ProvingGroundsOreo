@@ -25,6 +25,7 @@
 #include <intrin.h>
 #include "shared.h"
 #include "film.h"
+#include "armory.h"                                   // (custom, Nov 19: the Armory's pieces worn in matches)
 #include "third_party/minhook/include/MinHook.h"
 
 extern hb_shared* g_shm;
@@ -678,6 +679,49 @@ static void hr_save_my_look(const uint8_t* cfg) {
     }
 }
 
+// (custom, Nov 19) Proving Grounds' Armory (armory.cpp): the player wears what was bought and equipped there, not what
+// MCC's own Customization has on (MCC keeps everything unlocked; only this Armory's choices are worn). Each tick the
+// equipped pieces' bytes are laid over player 0's configuration in the match (game globals +0x2D8, which bots and
+// later joins start from) and over the copies of it in player 0's own record, found once a match by the player's name
+// and service tag (the configuration's +0x20 block: name +0x00, service tag +0x44). Untested in game: which copy the
+// game builds the Spartan from at a spawn is not known, so all of them are kept; the first life may still wear MCC's
+// choice. <bin>\reach_menus.ini [armory] wear=0 turns it off.
+static void hr_wear_armory(uint8_t* tls, uint8_t* gg) {
+    static uint8_t* seen;                             // player 0's record when its copies were found
+    static int copies[4], ncopies;
+    static uint32_t logged;
+    uint8_t off[24], val[24];
+    int n = armory_wear(off, val, 24);
+    if (n <= 0 || g_playback) return;
+    uint8_t* me = hr_player(tls, 0);
+    if (!me || !hr_live(tls, 0)) return;
+    uint8_t* cfg = gg + 0x2D8;
+    bool valid = seen == me;
+    for (int c = 0; valid && c < ncopies; c++)          // (still this player: its name and tag where they were)
+        valid = !memcmp(me + copies[c], cfg + 0x20, 32) && !memcmp(me + copies[c] + 0x44, cfg + 0x64, 8);
+    if (!valid) {
+        seen = me;
+        ncopies = 0;
+        for (int k = 0; k + 0x80 <= (int)HR_PLAYER_SIZE && ncopies < 4; k += 2)
+            if (!memcmp(me + k, cfg + 0x20, 32) && !memcmp(me + k + 0x44, cfg + 0x64, 8)) copies[ncopies++] = k;
+        logged = 0;
+    }
+    int changed = 0;
+    for (int i = 0; i < n; i++) {
+        if (off[i] < 0x20 || off[i] >= HR_CONFIG) continue;
+        if (cfg[off[i]] != val[i]) { cfg[off[i]] = val[i]; changed++; }
+        for (int c = 0; c < ncopies; c++) {
+            uint8_t* p = me + copies[c] + (off[i] - 0x20);
+            if (*p != val[i]) { *p = val[i]; changed++; }
+        }
+    }
+    if (changed && logged < 3) {                     // (a few lines a match: what was found and laid)
+        logged++;
+        logf("armory: %d byte(s) laid over the player's configuration; %d copies in the player's record (+0x%X +0x%X)",
+             changed, ncopies, ncopies > 0 ? copies[0] : 0, ncopies > 1 ? copies[1] : 0);
+    }
+}
+
 static int64_t hr_add_bot(uint8_t* tls, int arg) {
     uint8_t* globals = *(uint8_t**)(tls + 0x48);
     uint8_t* me = hr_player(tls, 0);
@@ -991,6 +1035,10 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                 fr = film_tick(film_hash(gg, HR_GG_OPTIONS), *(uint32_t*)(gg + HR_GG_TICKS), g_playback != 0, 1u << 26);
             }
             g_shm->game = 4;
+            if (tls && gg) {                             // (custom, Nov 19: the Armory's pieces on the player)
+                __try { hr_wear_armory(tls, gg); }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+            }
             if (tls) hr_net_watch(tls, gg);
             if (tls && g_netbots) hr_net_pump(gg);
             if (tls && fr) {

@@ -31,6 +31,7 @@
 #include <vector>
 #include "third_party/imgui/imgui.h"
 #include "bots_panel.h"
+#include "armory.h"                                     // (Nov 19, phase 3: the Armory)
 #include "proving_grounds.h"
 #include "ui_layout.h"
 
@@ -585,7 +586,8 @@ static int g_npool_names;
 // (Nov 19, the owner's frames of Halo: Reach's menus, phase 1) the page S_MENU shows: Reach's title, main menu,
 // matchmaking and its three sub-pages, or Proving Grounds' own menu (RP_OPTIONS). proving_grounds_reach.inc
 // (Nov 19, phase 2) Reach's Start menu and the player's Service Record, Career and its difficulty pages
-enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF };
+enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF,
+       RP_ARMORY, RP_ARM_ITEMS, RP_ARM_FAMILY };   // (Nov 19, phase 3: the Armory, proving_grounds_reach.inc)
 static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
 static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
 static bool rmenu_back();
@@ -3217,6 +3219,22 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 26: pg_open(); g_rpage = RP_MENU; g_focus = 1; break;
     case 27: pg_open(); g_rpage = RP_MENU; g_focus = 5; break;       // (the challenges, as Reach's Start menu)
     case 28: pg_open(); g_rpage = RP_PSYCH; g_focus = 4; break;      // (Simulate Matches on the Psych Profile)
+    // (Nov 19, phase 3) the Armory: its slots, the helmets, Mark V's variants, a chest asked about before it is bought
+    case 29: pg_open(); g_rpage = RP_ARMORY; g_focus = 0; break;
+    case 30: pg_open(); armory_load(); g_rpage = RP_ARM_ITEMS; g_arm_slot = 0; g_arm_family = -1; g_focus = 13; break;
+    case 31: pg_open(); armory_load(); g_rpage = RP_ARM_FAMILY; g_arm_slot = 0; g_arm_family = 13; g_focus = 0; break;
+    case 32: {
+        pg_open(); armory_load(); g_rpage = RP_ARM_ITEMS; g_arm_slot = 3; g_arm_family = -1;
+        std::vector<int> rows;
+        arm_rows(3, -1, rows);
+        int want = armory_find("chest_07");
+        g_focus = 0;
+        for (int r = 0; r < (int)rows.size(); r++) if (rows[r] == want) g_focus = r;
+        g_arm_back_focus = g_focus;
+        g_arm_buy = want;                                // (the purchase dialog up over the chest page, on PURCHASE)
+        g_focus = 0;
+        break;
+    }
     }
     if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Proving Grounds' own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
@@ -3321,6 +3339,8 @@ static bool pg_frame_body(pg_env& e) {
     g_alpha = 1;
     g_items.clear();
     if (g_focus_after >= 0) { g_focus = g_focus_after; g_focus_after = -1; }
+    if (!(g_stage == S_MENU && (g_rpage == RP_ARMORY || g_rpage == RP_ARM_ITEMS || g_rpage == RP_ARM_FAMILY)))
+        armory_try(-1);                                  // (an item tried on in the Armory: only while there)
     int pressed_before = g_pressed;
     (void)pressed_before;
     g_pad_in = e.pad;

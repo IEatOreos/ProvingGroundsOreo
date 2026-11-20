@@ -689,7 +689,7 @@ static void panel_env(bots_panel_env& e) {
 static unsigned long long pg_figure(const char* name, bool bot, float yaw, int w, int h) {
     bots_panel_env e{};
     panel_env(e);
-    return bot ? bot_figure(e, name, yaw, w, h) : person_figure(e, yaw, w, h);
+    return bot ? bot_figure(e, name, yaw, w, h) : person_figure(e, name, yaw, w, h);
 }
 // (custom, Nov 16) what Proving Grounds' screens work with
 static void pg_env_fill(pg_env& e, bool lobby_visible) {

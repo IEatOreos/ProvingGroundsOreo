@@ -148,7 +148,8 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty);   // seat i: the n
 bool bot_card(bots_panel_env& e, const hb_bot& b);
 // (custom, Nov 17) a bot's Reach figure in 3D, its own look, for Proving Grounds' player card (0: none yet)
 unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, int w, int h);
-unsigned long long person_figure(bots_panel_env& e, float yaw, int w, int h);   // Reach's default Spartan (a person)
+unsigned long long person_figure(bots_panel_env& e, const char* name, float yaw, int w, int h);   // a person: the
+                                                     // player's own Spartan (Armory-dressed), else Reach's default
 void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt line and saved settings follow (the editor)
 // (custom, Nov 13) bot_pool.txt "Name*5": one bot, 5 turns spread through the queue. Parties: bots whose profiles share a
 // clan tag; bot_pool_rotate pulls a seated bot's clanmates into the next seats 85% of the time, then deals the seats'

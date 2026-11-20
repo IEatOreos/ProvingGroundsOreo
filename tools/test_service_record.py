@@ -792,6 +792,76 @@ def test_game_reads_the_sites_career():
         assert "\\\\logs\\\\service_record\\\\career.txt" in f.read()
 
 
+def test_game_reads_the_sites_armory():
+    """(Nov 19) <site>/armory.txt, Proving Grounds' Armory: the person's rank step and credits earned, every item of
+    maps/_looks/reach_prices.json with its rank gate as a step of the one rank table (Reach's grade 7 is Major), and
+    the customization table's pieces; the game reads it (native/armory.cpp) and works out no rank of its own."""
+    import types
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261115-180000.carnage.xml", report("g1", [
+            row(ME, "Me", 0, 1, 0, 7, 2, 600), row(bot(2), "Oreo", 1, 0, 2, 7, 3, 600)]))
+        w.career()
+        data = w.build()
+        me = data["players"][0]
+        me["person"] = True
+        out = os.path.join(tmp, "game")
+        os.makedirs(out)
+        sr.write_game_armory(data, types.SimpleNamespace(out=out))
+        with open(os.path.join(out, "armory.txt"), encoding="utf-8") as f:
+            rows = [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    ranks = data["ranks"]
+    mine = [r for r in rows if r[0] == "me"]
+    assert mine == [["me", me["name"], str(me["rank"]), ranks[me["rank"]][0], str(me["cr"])]], mine
+    with open(sr.ARMORY_PRICES, encoding="utf-8") as f:
+        prices = json.load(f)["items"]
+    items = {r[1]: r for r in rows if r[0] == "item"}
+    assert len(items) == len(prices) and all(len(r) == 12 for r in items.values())
+    mark_v = items["helmet_13_base"]                     # (Reach's own: 130,000 cR at Major, grade 7)
+    assert mark_v[2:9] == ["helmet", "13", "0", "Mark V", "130000", mark_v[7], "Major"], mark_v
+    assert ranks[int(mark_v[7])][0] == "Major" and mark_v[11] == "88=39"
+    assert items["helmet_01_base"][10] == "d" and items["elite_2"][10] == "a" and "o" in items["mcc_helmet_64"][10]
+    assert items["helmet_01_a"][9] == "helmet_01_base"
+    # a grade past a rank's last Grade: that rank's last step; a rank past the table: the last step
+    major = [i for i, r in enumerate(ranks) if r[0].startswith("Major")]
+    assert sr.armory_gate_step(ranks, 7, 1) == major[0] and sr.armory_gate_step(ranks, 7, 99) == major[-1]
+    assert sr.armory_gate_step(ranks, 99, 1) == len(ranks) - 1
+    pieces = [r for r in rows if r[0] == "piece"]
+    assert ["piece", "88", "39", "head", "player_john117", "0"] in pieces
+    assert ["bytes", "spartan", "88,89,90,91,92,93,94"] in rows and ["bytes", "elite", "95"] in rows
+    assert any(r[:2] == ["base", "female"] for r in rows)
+    with open(os.path.join(HERE, "..", "native", "armory.cpp"), encoding="utf-8") as f:
+        assert "\\\\logs\\\\service_record\\\\armory.txt" in f.read()
+
+
+def test_reach_price_list():
+    """(Nov 19) maps/_looks/reach_prices.json (tools/reach_prices.py, from the Editing Kit's supply depot tag): every
+    item sets its own slot's byte (maps/_looks/reach.json), one free default a slot, what an item needs is listed,
+    MCC's additions priced by us, and the 2010 Armory's own prices as the tag has them."""
+    with open(os.path.join(HERE, "..", "maps", "_looks", "reach_prices.json"), encoding="utf-8") as f:
+        items = json.load(f)["items"]
+    with open(os.path.join(HERE, "..", "maps", "_looks", "reach.json"), encoding="utf-8") as f:
+        at = {fl["name"]: fl["at"] for fl in json.load(f)["fields"]}
+    ids = {it["id"] for it in items}
+    assert len(ids) == len(items)
+    slot_byte = {"helmet": [at["helmet"]], "left_shoulder": [at["left_shoulder"]], "right_shoulder": [at["right_shoulder"]],
+                 "chest": [at["chest"]], "wrist": [at["wrist"]], "utility": [at["utility"]], "visor": [at["visor"]],
+                 "knees": [at["knees"]], "elite_armor": [at["elite_armor"]],
+                 "armor_effect": [at["armor_effect"], at["armor_effect"] + 1]}
+    for it in items:
+        assert [int(o) for o in it["writes"]] == slot_byte[it["slot"]], it
+        assert all(n in ids for n in it["needs"]) and 1 <= it["grade"] <= 21 and it["cost"] >= 0, it
+    for slot in slot_byte:
+        assert sum(it["default"] for it in items if it["slot"] == slot) == 1, slot
+    by = {it["id"]: it for it in items}
+    assert (by["helmet_13_base"]["cost"], by["helmet_13_base"]["grade"], by["helmet_13_base"]["source"]) == (130000, 7, "2010")
+    assert by["helmet_14_c"]["needs"] and by["helmet_14_c"]["auto"]          # (Haunted: every other helmet first)
+    mcc = [it for it in items if it["id"].startswith("mcc_")]
+    assert mcc and all(it["source"] == "ours" for it in mcc)
+    helmets = {list(it["writes"].values())[0] for it in items if it["slot"] == "helmet"}
+    assert helmets == set(range(90))                                         # (all 90 of MCC's helmet table)
+
+
 def test_the_persons_own_reach_look():
     """(Nov 19) the person's look on the site is the one botcore saved from their own configuration (my_look_reach.txt),
     each field read at its byte, not a look made up from their name; with no file, or another name, it is as before."""

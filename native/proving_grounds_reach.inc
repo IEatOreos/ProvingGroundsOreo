@@ -259,8 +259,9 @@ static void rm_party(pg_env& e, const char* where_caps, const char* where) {
     roster(e, rows, h, 1830, 34, 82, 0, nullptr);
 }
 
-// the player's band along the bottom of the sub-pages, as Reach's: emblem, rank insignia, name, rank, credits, next
-static void rm_band() {
+// the player's band along the bottom of the sub-pages, as Reach's: emblem, rank insignia, name, rank, credits, next.
+// The Armory's pages show the credits left to spend instead (spend >= 0), the rank still the credits earned
+static void rm_band(int spend = -1) {
     const float x0 = 318, x1 = 1530, y0 = 842, y1 = 956;
     comm_load();
     g_dl->AddRectFilledMultiColor(P(x0 + 120, y0), P(x1, y1), A(IM_COL32(44, 50, 56, 215)), A(IM_COL32(24, 28, 32, 170)),
@@ -276,9 +277,10 @@ static void rm_band() {
     text(g_fl, 44, x0 + 226, y0 + 6, C_TEXT, who);
     g_dl->AddRectFilled(P(x0 + 136, y0 + 72), P(x0 + 560, y0 + 108), A(IM_COL32(255, 255, 255, 24)));
     text(g_fl, 26, x0 + 144, y0 + 75, C_DIM, g_comm_rank.empty() ? "Rank not recorded yet" : g_comm_rank.c_str());
-    std::string crs = cr_text(g_comm_cr) + " cR";
+    std::string crs = cr_text(spend >= 0 ? spend : g_comm_cr) + " cR";
     text(g_fl, 40, x1 - 14, y0 + 2, C_TEXT, crs.c_str(), 2);
-    if (!g_comm_next.empty()) text(g_fl, 23, x1 - 14, y0 + 62, C_DIM, ("Next: " + g_comm_next).c_str(), 2);
+    if (spend >= 0) text(g_fl, 23, x1 - 14, y0 + 62, C_DIM, ("To spend \xC2\xB7 earned " + cr_text(g_comm_cr) + " cR").c_str(), 2);
+    else if (!g_comm_next.empty()) text(g_fl, 23, x1 - 14, y0 + 62, C_DIM, ("Next: " + g_comm_next).c_str(), 2);
 }
 
 // ------------------------------------------------------------------ the pages
@@ -941,9 +943,10 @@ static void rm_star(float cx, float cy, float r, ImU32 c) {   // (Reach's challe
 static const int RM_NMENU = 8;
 static const char* RM_MENU_ITEMS[9] = { "THE ARMORY", "PLAYER", "FILE BROWSER", "CONTROLLER", "AUDIO VIDEO", "CHALLENGES",
                                         "NETWORK STATUS", "SERVICE RECORD SITE", "PROVING GROUNDS" };
-static const bool RM_MENU_ON[9] = { false, true, false, false, false, true, false, true, true };
+static const bool RM_MENU_ON[9] = { true, true, false, false, false, true, false, true, true };
 static const char* RM_MENU_DESC[9] = {
-    "Change your Spartan in MCC's own Customization. Your bots' looks are in the BOTS panel's Settings.",
+    "Buy armor with the credits your Service Record has earned, as in Reach. What you equip here is what you wear in "
+    "Proving Grounds' matches.",
     "Your Service Record: your career, your commendations.",
     "Your films, maps and game types are in MCC's own menus.",
     "Set your controls in MCC's own Settings.",
@@ -998,6 +1001,7 @@ static void rm_challenges() {
 static void rm_menu_act(int k) {                 // an entry of the Start menu pressed
     if (!RM_MENU_ON[k]) { sound(PS_ERROR); return; }
     sound(PS_SELECT);
+    if (k == 0) { g_rpage = RP_ARMORY; g_focus_after = 0; }
     if (k == 1) { g_rpage = RP_SR; g_focus_after = 0; }
     if (k == 5) { g_chal = true; g_chal_check = 0; }    // (all of them: the Challenges page)
     if (k == 7) open_site_page(me_name(), "");
@@ -1023,7 +1027,7 @@ static void rm_menu(pg_env& e, float t) {
     // the middle column: what the focused one holds, dim as Reach's
     static const char* ARMORY[12] = { "HELMET...", "LEFT SHOULDER...", "RIGHT SHOULDER...", "CHEST...", "WRIST...",
                                       "UTILITY...", "VISOR COLOR...", "KNEE GUARDS...", "ARMOR EFFECT...",
-                                      "FIREFIGHT VOICE...", "EMBLEM...", "COLORS..." };
+                                      "ELITE ARMOR...", "EMBLEM...", "COLORS..." };
     static const char* PLAYER[2] = { "SERVICE RECORD...", "COMMENDATIONS..." };
     static const char* CHAL[2] = { "DAILY...", "WEEKLY..." };
     static const char* PG[5] = { "INVITE PLAYER...", "CHALLENGES...", "COMMENDATIONS...", "SIMULATE MATCHES...", "GAME SIZE..." };
@@ -1166,6 +1170,308 @@ static void rm_diff(pg_env& e, float t) {
     if (rm_exit_prompt()) rm_exit();
 }
 
+// ------------------------------------------------------------------ phase 3: the Armory
+// (Nov 19, the owner's 17 frames of Reach's Armory and his design: "I do want all the items in the game to be
+// purchasable and unlockable ... everything on MCC is actually already unlocked, but we make it to where you can't
+// equip it until you purchase it through our menu ... when we go to equip an item that we have not purchased or
+// locked, it just doesn't do anything") ARMORY: the slots, the player's Spartan wearing what is equipped; a slot's
+// page lists its items (the helmet its helmets, each opening its variants), each EQUIPPED, PURCHASED or its price,
+// locked by rank or by the item it needs first; the focused item tried on the Spartan; a purchase asked about first.
+// Reach's own prices and rank gates (the Editing Kit's supply depot tag, tools/reach_prices.py), the credits the
+// Service Record's (native/armory.cpp, its ledger); what is equipped is worn in Proving Grounds' Halo: Reach matches
+// (reach.cpp). Emblem and colours stay MCC's own, as Reach never sold them.
+static const char* ARM_TITLE[ARM_NSLOTS] = { "HELMET", "LEFT SHOULDER", "RIGHT SHOULDER", "CHEST", "WRIST", "UTILITY",
+                                             "VISOR COLOR", "KNEE GUARDS", "ARMOR EFFECT", "ELITE ARMOR" };
+static int g_arm_slot, g_arm_family = -1;       // the item page's slot; the variants page's helmet family
+static int g_arm_buy = -1, g_arm_back_focus;     // the purchase being asked about (-1 none); the focus to go back to
+static int g_arm_scroll;                         // the item list's first row shown
+static float g_arm_yaw = 0.35f;
+static std::string g_arm_note;                   // a line after a purchase, shown a few seconds
+static double g_arm_note_t;
+
+static void arm_rows(int slot, int family, std::vector<int>& out) {   // a page's items: a helmet's families (each
+    out.clear();                                                         // its base) or one family, else the slot's
+    const std::vector<arm_item>& it = armory_items();
+    for (int i = 0; i < (int)it.size(); i++) {
+        if (it[i].slot != ARM_SLOTS[slot]) continue;
+        if (slot == 0 && (family < 0 ? it[i].variant != 0 : it[i].family != family)) continue;
+        out.push_back(i);
+    }
+}
+static int arm_family_state(int i) {             // a helmet family's row: EQUIPPED when any of it is worn
+    const std::vector<arm_item>& it = armory_items();
+    int w = armory_worn("helmet");
+    if (w >= 0 && it[w].family == it[i].family) return ARM_EQUIPPED;
+    return armory_state(i, me_name());
+}
+static void arm_lock(float cx, float cy, float s, ImU32 c) {   // (our own padlock, drawn)
+    g_dl->AddRectFilled(P(cx - s * 0.42f, cy - s * 0.02f), P(cx + s * 0.42f, cy + s * 0.52f), A(c), U(2));
+    g_dl->PathArcTo(P(cx, cy - s * 0.02f), U(s * 0.27f), 3.14159f, 6.28318f, 12);
+    g_dl->PathStroke(A(c), 0, U(s * 0.11f));
+}
+// a row's state at its right: EQUIPPED (gold), PURCHASED, else the price (a lock before it when locked)
+static void arm_state_text(float x1, float y, float fs, int st, int cost, bool focus) {
+    if (st == ARM_EQUIPPED) { text(g_fl, fs, x1, y, C_GOLD, "EQUIPPED", 2); return; }
+    if (st == ARM_OWNED) { text(g_fl, fs, x1, y, focus ? C_TEXT : C_DIM, "PURCHASED", 2); return; }
+    std::string s = cost ? cr_text(cost) + " cR" : "FREE";
+    bool locked = st == ARM_LOCKED_RANK || st == ARM_LOCKED_NEEDS;
+    bool short_of = !locked && cost > armory_balance(me_name());
+    ImU32 c = locked ? IM_COL32(150, 156, 162, 190) : short_of ? IM_COL32(226, 120, 96, 255) : focus ? C_TEXT : C_DIM;
+    text(g_fl, fs, x1, y, c, s.c_str(), 2);
+    if (locked) arm_lock(x1 - text_w(g_fl, fs, s.c_str()) / g_pg.s - 18, y + fs * 0.42f, fs * 0.8f, c);
+}
+// the Spartan in its frame, turned with the right stick (or Q / E)
+static void arm_figure(pg_env& e, float x0, float y0, float x1, float y1) {
+    panel(x0, y0, x1, y1, IM_COL32(16, 22, 28, 200));
+    float dt = ImGui::GetIO().DeltaTime;
+    if (!g_inert) {
+        if (ImGui::IsKeyDown(ImGuiKey_GamepadRStickLeft) || ImGui::IsKeyDown(ImGuiKey_Q)) g_arm_yaw -= 2.2f * dt;
+        if (ImGui::IsKeyDown(ImGuiKey_GamepadRStickRight) || ImGui::IsKeyDown(ImGuiKey_E)) g_arm_yaw += 2.2f * dt;
+    }
+    if (!e.figure) return;
+    if (unsigned long long fig = e.figure(me_name(), false, g_arm_yaw, (int)(x1 - x0), (int)(y1 - y0)))
+        g_dl->AddImage((ImTextureID)fig, P(x0, y0), P(x1, y1), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
+    else rm_diamonds((x0 + x1) * 0.5f, (y0 + y1) * 0.5f, 150, IM_COL32(120, 176, 230, 120));
+}
+static bool arm_ready() {                        // the data is there; else the page says why
+    if (armory_load()) return true;
+    rm_wrap(g_fl, 25, 808, 175, 700, IM_COL32(222, 226, 230, 255),
+            "The Armory opens once the Service Record site has been built: it is built after every Proving Grounds "
+            "match (or run tools\\service_record.py).");
+    return false;
+}
+
+static void rm_armory(pg_env& e, float t) {
+    (void)t;
+    rm_small_header("ARMORY", "MENU");
+    static const char* L[12] = { "HELMET", "LEFT SHOULDER", "RIGHT SHOULDER", "CHEST", "WRIST", "UTILITY", "VISOR COLOR",
+                                 "KNEE GUARDS", "ARMOR EFFECT", "ELITE ARMOR", "EMBLEM", "COLORS" };
+    static const bool ON[12] = { true, true, true, true, true, true, true, true, true, true, false, false };
+    int base = (int)g_items.size();
+    int focus = rm_list(L, ON, 12), f = focus >= 0 ? focus : 0;
+    bool ready = arm_ready();
+    if (ready) {
+        armory_try(f == 9 ? armory_worn("elite_armor") : -1);   // (the Elite's armor shown on the Elite)
+        arm_figure(e, 1080, 140, 1515, 800);
+        if (f < ARM_NSLOTS) {
+            int own = 0, all = 0;                    // (every item of the slot, the helmets' variants too)
+            for (int i = 0; i < (int)armory_items().size(); i++)
+                if (armory_items()[i].slot == ARM_SLOTS[f]) { all++; own += armory_state(i, me_name()) >= ARM_OWNED; }
+            int w = armory_worn(ARM_SLOTS[f]);
+            text(g_fl, 21, 808, 150, IM_COL32(176, 182, 188, 200), "EQUIPPED");
+            rm_wrap(g_fl, 28, 808, 176, 255, C_TEXT, w >= 0 ? armory_items()[w].name.c_str() : "Nothing");
+            char own_s[48];
+            sprintf_s(own_s, "%d of %d owned", own, all);
+            text(g_fl, 22, 808, 268, C_DIM, own_s);
+        } else {
+            rm_wrap(g_fl, 24, 808, 150, 255, IM_COL32(200, 206, 212, 220),
+                    "Reach never sold emblems or colours: set them in MCC's own Customization. The Armory keeps them.");
+        }
+    }
+    rm_band(ready ? armory_balance(me_name()) : -1);
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { armory_try(-1); rm_exit(); return; }
+    for (int k = 0; k < 12; k++) {
+        if (!pressed(base + k)) continue;
+        if (!ready || k >= ARM_NSLOTS) { sound(PS_ERROR); continue; }
+        sound(PS_SELECT);
+        g_arm_slot = k; g_arm_family = -1; g_arm_scroll = 0;
+        g_rpage = RP_ARM_ITEMS;
+        std::vector<int> rows;                       // (the focus on what is worn)
+        arm_rows(k, -1, rows);
+        int w = armory_worn(ARM_SLOTS[k]), at = 0;
+        for (int r = 0; r < (int)rows.size(); r++)
+            if (rows[r] == w || (k == 0 && w >= 0 && armory_items()[rows[r]].family == armory_items()[w].family)) at = r;
+        g_focus_after = at;
+    }
+}
+
+// the description under the Spartan: the name, where its price comes from, what it needs (met or not), its cost
+static void arm_describe(int i, float y) {
+    const arm_item& it = armory_items()[i];
+    const char* me = me_name();
+    g_dl->AddRectFilled(P(815, y), P(1515, y + 222), A(IM_COL32(12, 16, 20, 205)));
+    g_dl->AddRect(P(815, y), P(1515, y + 222), A(IM_COL32(150, 158, 166, 80)), 0, 0, U(1));
+    bool helmets = g_rpage == RP_ARM_ITEMS && g_arm_slot == 0;
+    int st = helmets ? arm_family_state(i) : armory_state(i, me);
+    text(g_fl, 30, 830, y + 8, C_TEXT, it.name.c_str());
+    arm_state_text(1500, y + 12, 24, st, it.cost, true);
+    if (helmets) {                                   // (a helmet: how many of its variants are owned)
+        std::vector<int> v;
+        arm_rows(0, it.family, v);
+        int own = 0;
+        for (int j : v) own += armory_state(j, me) >= ARM_OWNED;
+        char c[48];
+        sprintf_s(c, "%d of %d owned", own, (int)v.size());
+        text(g_fs, 19, 1500, y + 48, IM_COL32(176, 182, 188, 220), c, 2);
+    }
+    bool mcc = it.id.rfind("mcc_", 0) == 0 || it.id == "chest_01" || it.id == "chest_02";   // (never in the 2010 Armory)
+    const char* src = mcc ? "Added by MCC: Proving Grounds' own price"
+                    : it.ours ? "Not sold for credits in 2010: Proving Grounds' own price"
+                    : it.def ? "Every Spartan's from the start" : "Halo: Reach's own price and rank";
+    text(g_fs, 19, 830, y + 48, IM_COL32(176, 182, 188, 220), src);
+    text(g_fl, 20, 830, y + 80, IM_COL32(176, 182, 188, 220), "PREREQUISITES");
+    int step = 0;
+    armory_me(me, &step, nullptr, nullptr);
+    bool rank_ok = step >= it.gate_step;
+    auto met = [&](float yy, bool ok) {
+        text(g_fl, 20, 1500, yy, ok ? IM_COL32(150, 214, 120, 255) : IM_COL32(226, 120, 96, 255), ok ? "MET" : "NOT MET", 2);
+    };
+    text(g_fl, 22, 830, y + 106, C_TEXT, ("Rank: " + it.gate).c_str());
+    met(y + 107, rank_ok);
+    if (!it.needs.empty()) {
+        int have = 0;
+        for (int n : it.needs) have += armory_state(n, me) >= ARM_OWNED;
+        std::string need = it.needs.size() == 1 ? "Requires: " + armory_items()[it.needs[0]].name
+                                                : "Requires: " + std::to_string(it.needs.size()) + " other items (" +
+                                                      std::to_string(have) + " owned)";
+        text(g_fl, 22, 830, y + 136, C_TEXT, need.c_str());
+        met(y + 137, have == (int)it.needs.size());
+    }
+    g_dl->AddLine(P(827, y + 172), P(1503, y + 172), A(IM_COL32(150, 158, 166, 60)), U(1));
+    int bal = armory_balance(me);
+    std::string cost = it.autobuy ? "Earned by reaching the rank" : "COST  " + (it.cost ? cr_text(it.cost) + " cR" : std::string("FREE"));
+    text(g_fl, 22, 830, y + 182, C_TEXT, cost.c_str());
+    text(g_fl, 22, 1500, y + 182, it.cost > bal && st == ARM_FOR_SALE ? IM_COL32(226, 120, 96, 255) : C_DIM,
+         ("You have " + cr_text(bal) + " cR").c_str(), 2);
+}
+
+// A on an item: the helmet list opens a family; else buy (asked first), equip, or nothing when locked
+static void arm_act(int i) {
+    const char* me = me_name();
+    if (g_rpage == RP_ARM_ITEMS && g_arm_slot == 0) {
+        sound(PS_SELECT);
+        g_arm_family = armory_items()[i].family;
+        g_rpage = RP_ARM_FAMILY;
+        std::vector<int> rows;
+        arm_rows(0, g_arm_family, rows);
+        int w = armory_worn("helmet"), at = 0;
+        for (int r = 0; r < (int)rows.size(); r++) if (rows[r] == w) at = r;
+        g_focus_after = at;
+        return;
+    }
+    int st = armory_state(i, me);
+    if (st == ARM_EQUIPPED) { sound(PS_SELECT); return; }
+    if (st == ARM_OWNED) {
+        if (armory_equip(i, me)) { sound(PS_SELECT); g_arm_note = "Equipped: " + armory_items()[i].name; g_arm_note_t = ImGui::GetTime(); }
+        return;
+    }
+    if (st == ARM_FOR_SALE && armory_items()[i].cost <= armory_balance(me) && !armory_items()[i].autobuy) {
+        sound(PS_SELECT);
+        g_arm_buy = i;
+        g_arm_back_focus = g_focus;
+        g_focus_after = 0;
+        return;
+    }
+    sound(PS_ERROR);                                 // (locked, or too few credits: nothing happens)
+}
+
+// the purchase, asked about first: PURCHASE AND EQUIP or CANCEL
+static void arm_confirm() {
+    const arm_item& it = armory_items()[g_arm_buy];
+    g_dl->AddRectFilled(P(0, 0), P(1920, 1080), A(IM_COL32(0, 0, 0, 120)));
+    g_dl->AddRectFilledMultiColor(P(600, 330), P(1320, 700), A(IM_COL32(34, 46, 58, 245)), A(IM_COL32(26, 36, 46, 245)),
+                                  A(IM_COL32(14, 20, 26, 245)), A(IM_COL32(20, 28, 36, 245)));
+    g_dl->AddRect(P(600, 330), P(1320, 700), A(IM_COL32(170, 190, 210, 120)), 0, 0, U(1.2f));
+    rm_diamonds(648, 378, 44, IM_COL32(120, 176, 230, 255));
+    text(g_fl, 40, 690, 352, C_TEXT, "PURCHASE");
+    text(g_fl, 30, 630, 420, C_TEXT, it.name.c_str());
+    int bal = armory_balance(me_name());
+    text(g_fl, 24, 630, 466, C_DIM, ("Cost: " + cr_text(it.cost) + " cR").c_str());
+    text(g_fl, 24, 630, 498, C_DIM, ("Left after: " + cr_text(bal - it.cost) + " cR").c_str());
+    int base = (int)g_items.size();
+    bool f0 = item(630, 552, 1290, 594), f1 = item(630, 600, 1290, 642);
+    rm_row(630, 552, 1290, 594, f0, "PURCHASE AND EQUIP");
+    rm_row(630, 600, 1290, 642, f1, "CANCEL");
+    float x = prompt(630, 652, "A", "Enter", "Select", nullptr);
+    prompt(x, 652, "B", "Esc", "Cancel", &g_footer_back);
+    if (pressed(base + 0)) {
+        if (armory_buy(g_arm_buy, me_name())) {
+            armory_equip(g_arm_buy, me_name());
+            sound(PS_SELECT);
+            g_arm_note = "Purchased and equipped: " + it.name;
+        } else {
+            sound(PS_ERROR);
+            g_arm_note = "Not purchased: " + it.name;
+        }
+        g_arm_note_t = ImGui::GetTime();
+        g_arm_buy = -1;
+        g_focus_after = g_arm_back_focus;
+    }
+    if (pressed(base + 1)) { sound(PS_BACK); g_arm_buy = -1; g_focus_after = g_arm_back_focus; }
+}
+
+static void rm_arm_items(pg_env& e, float t) {
+    (void)t;
+    bool fam = g_rpage == RP_ARM_FAMILY;
+    if (!arm_ready()) { rm_small_header(ARM_TITLE[g_arm_slot], "ARMORY \xC2\xB7 MENU"); rm_band(); return; }
+    std::vector<int> rows;
+    arm_rows(g_arm_slot, fam ? g_arm_family : -1, rows);
+    if (rows.empty()) { g_rpage = RP_ARMORY; return; }
+    const std::vector<arm_item>& it = armory_items();
+    std::string title = fam ? it[rows[0]].name : ARM_TITLE[g_arm_slot];
+    for (auto& ch : title) ch = (char)toupper((unsigned char)ch);
+    rm_small_header(title.c_str(), fam ? "HELMET \xC2\xB7 ARMORY \xC2\xB7 MENU" : "ARMORY \xC2\xB7 MENU");
+    bool asking = g_arm_buy >= 0;
+    bool inert_was = g_inert;
+    if (asking) g_inert = true;
+    // the list, 15 rows at a time, scrolled to keep the focus in view
+    const int V = 15;
+    int n = (int)rows.size(), base = (int)g_items.size();
+    int f = (asking ? g_arm_back_focus : g_focus) - base;   // (the dialog has the focus while it is up)
+    if (f < 0 || f >= n) f = 0;
+    if (f < g_arm_scroll) g_arm_scroll = f;
+    if (f >= g_arm_scroll + V) g_arm_scroll = f - V + 1;
+    if (g_arm_scroll > (n > V ? n - V : 0)) g_arm_scroll = n > V ? n - V : 0;
+    int focus = -1;
+    for (int k = 0; k < n; k++) {
+        bool shown = k >= g_arm_scroll && k < g_arm_scroll + V;
+        float y = 145 + 41.0f * (k - g_arm_scroll);
+        bool fo = shown ? item(390, y, 775, y + 38) : item(-2000, -2000, -1990, -1990);   // (rows out of view: never
+        if (fo) focus = k;                                                                   // under the mouse)
+        if (!shown) continue;
+        int i = rows[k];
+        std::string label = fam && it[i].variant > 0 ? it[i].name.substr(it[i].name.find(" / ") != std::string::npos
+                                                                         ? it[i].name.find(" / ") + 3 : 0)
+                                                     : it[i].name;
+        if (fam && it[i].variant == 0) label += " (BASE)";
+        int st = !fam && g_arm_slot == 0 ? arm_family_state(i) : armory_state(i, me_name());
+        bool lit = st >= ARM_FOR_SALE;
+        rm_row(390, y, 795, y + 38, fo, "", lit || fo);
+        arm_state_text(785, y + 8, 21, st, it[i].cost, fo);   // (the state at the row's right, the name cut before it)
+        g_dl->PushClipRect(P(390, y), P(st >= ARM_OWNED ? 640.0f : 655.0f, y + 38), true);
+        ImU32 lc = !(lit || fo) ? IM_COL32(150, 156, 162, 120) : fo ? C_TEXT : C_DIM;
+        text(g_fl, 25, 400, y + 5, lc, label.c_str());
+        g_dl->PopClipRect();
+    }
+    if (g_arm_scroll > 0)                            // (more above, more below: small arrows by the list)
+        g_dl->AddTriangleFilled(P(592, 128), P(582, 140), P(602, 140), A(C_DIM));
+    if (g_arm_scroll + V < n)
+        g_dl->AddTriangleFilled(P(582, 150 + 41.0f * V), P(602, 150 + 41.0f * V), P(592, 162 + 41.0f * V), A(C_DIM));
+    int sel = rows[focus >= 0 ? focus : f];
+    armory_try(sel);
+    arm_figure(e, 815, 140, 1515, 585);
+    arm_describe(sel, 600);
+    if (!g_arm_note.empty() && ImGui::GetTime() - g_arm_note_t < 4.0)
+        text(g_fl, 22, 1515, 968, C_GOLD, g_arm_note.c_str(), 2);
+    g_inert = inert_was;
+    if (asking) {
+        rm_band(armory_balance(me_name()));
+        arm_confirm();
+        return;
+    }
+    rm_band(armory_balance(me_name()));
+    int st = !fam && g_arm_slot == 0 ? 99 : armory_state(sel, me_name());
+    const char* a = st == 99 ? "Select" : st == ARM_OWNED ? "Equip" : st == ARM_FOR_SALE && !it[sel].autobuy ? "Purchase" : nullptr;
+    float x = 318;
+    if (a) x = prompt(x, 966, "A", "Enter", a, nullptr);
+    x = prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    prompt(x, 966, "RS", "Q E", "Turn", nullptr);
+    if (rm_exit_prompt()) { armory_try(-1); rm_exit(); return; }
+    for (int k = 0; k < n; k++) if (pressed(base + k)) arm_act(rows[k]);
+}
+
 // S_MENU's frame while one of Reach's pages is up (the invite list over it, the page held still under it)
 static void reach_menu_screen(pg_env& e, float t) {
     g_inert = g_invite;
@@ -1180,6 +1486,8 @@ static void reach_menu_screen(pg_env& e, float t) {
     case RP_SR: rm_sr(e, t); break;
     case RP_CAREER: rm_career(e, t); break;
     case RP_DIFF: rm_diff(e, t); break;
+    case RP_ARMORY: rm_armory(e, t); break;
+    case RP_ARM_ITEMS: case RP_ARM_FAMILY: rm_arm_items(e, t); break;
     default: break;
     }
     g_inert = false;
@@ -1202,6 +1510,18 @@ static bool rmenu_back() {
     case RP_SR: g_rpage = RP_MENU; g_focus_after = 1; return true;
     case RP_CAREER: g_rpage = RP_SR; g_focus_after = 0; return true;
     case RP_DIFF: g_rpage = RP_CAREER; g_focus_after = g_diff_mode ? 3 : 0; return true;
+    case RP_ARMORY: armory_try(-1); g_rpage = RP_MENU; g_focus_after = 0; return true;
+    case RP_ARM_ITEMS:
+        if (g_arm_buy >= 0) { g_arm_buy = -1; g_focus_after = g_arm_back_focus; return true; }
+        armory_try(-1); g_rpage = RP_ARMORY; g_focus_after = g_arm_slot; return true;
+    case RP_ARM_FAMILY: {
+        if (g_arm_buy >= 0) { g_arm_buy = -1; g_focus_after = g_arm_back_focus; return true; }
+        std::vector<int> rows;                       // (back on the family's own row)
+        arm_rows(0, -1, rows);
+        g_rpage = RP_ARM_ITEMS; g_focus_after = 0;
+        for (int r = 0; r < (int)rows.size(); r++) if (armory_items()[rows[r]].family == g_arm_family) g_focus_after = r;
+        return true;
+    }
     }
     return false;
 }

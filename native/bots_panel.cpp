@@ -17,6 +17,7 @@
 #include <wincodec.h>                                    // (custom, Nov 11: MCC's nameplate PNGs, read with WIC)
 #undef small                                             // (rpcndr.h's: a ui::button parameter)
 #include "bots_panel.h"
+#include "armory.h"                                      // (custom, Nov 19: the player's own Spartan, Armory-dressed)
 #include "model_view.h"
 #include "ui_layout.h"
 #include <ctype.h>
@@ -4272,10 +4273,57 @@ unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, in
     return mv;
 }
 
-// a person's Spartan for the same card: MCC does not give the mod a player's armor, so Reach's default Spartan (each
-// region's "default" piece, as the bots' looks name it) in Steel with the gold visor
-unsigned long long person_figure(bots_panel_env& e, float yaw, int w, int h) {
+// (Nov 19, the owner: "Do the in game cards first") the player's own Spartan: their configuration as they last joined
+// a Halo: Reach match (reach.cpp my_look_reach.txt: colours, body, visor), wearing what Proving Grounds' Armory has
+// equipped (armory.cpp; an item being looked at in the Armory tried on, an Elite armor one on the Elite), the pieces
+// worked out from the customization table as brain/armory.py pieces does
+static unsigned long long person_dressed(bots_panel_env& e, const char* name, float yaw, int w, int h) {
+    armory_load();
+    uint8_t cfg[0xA0];
+    char who[64] = "";
+    if (!armory_dressed(cfg, who, sizeof who) || (name && who[0] && _stricmp(name, who))) return 0;
+    int t = armory_trying();
+    bool elite = t >= 0 && armory_items()[t].slot == "elite_armor";
+    wchar_t path[300];
+    const wchar_t* rel = elite ? L"models\\reach_elite.mdl" : L"models\\reach_spartan.mdl";
+    bin_file(path, 300, rel);
+    if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) {   // beside the program (the preview), as ed_model
+        GetModuleFileNameW(nullptr, path, 300);
+        if (wchar_t* sl = wcsrchr(path, L'\\')) sl[1] = 0;
+        wcscat_s(path, rel);
+    }
+    const char *region[24], *perm[24];
+    int body = elite ? 2 : cfg[0x4C] == 1 ? 1 : 0;      // (reach.json: the body byte, 1 taken as female)
+    int np = armory_pieces(cfg, body, region, perm, 24);
+    static char buf[24][2][40];
+    mv_pick picks[24];
+    int n = 0;
+    for (int k = 0; k < np; k++) {
+        const char* use = e.model_has(path, region[k], perm[k]) ? perm[k] : e.model_has(path, region[k], "base") ? "base" : nullptr;
+        if (!use) continue;
+        strcpy_s(buf[n][0], region[k]); strcpy_s(buf[n][1], use);
+        picks[n] = { buf[n][0], buf[n][1] };
+        n++;
+    }
+    if (!n) return 0;
+    mv_colors c{};
+    ImVec4 pri = pal_rgb(REACH_COL, 30, cfg[0x49]), sec = pal_rgb(REACH_COL, 30, cfg[0x4A]);
+    float under[3] = { 0.07f + 0.10f * sec.x, 0.07f + 0.10f * sec.y, 0.08f + 0.10f * sec.z };
+    float skin[3] = { 0.24f, 0.21f, 0.19f };
+    memcpy(c.armor, &pri, 12); memcpy(c.secondary, &sec, 12); memcpy(c.lights, &sec, 12);
+    memcpy(c.undersuit, under, 12); memcpy(c.skin, skin, 12);
+    memcpy(c.visor, REACH_VISOR[cfg[0x4B] < 5 ? cfg[0x4B] : 0], 12);
+    if (e.model_zoom) e.model_zoom(0.0f);
+    if (e.model_headroom) e.model_headroom(0.0f);
+    return e.render_model(path, picks, n, c, yaw, w, h);
+}
+
+// a person's Spartan for the same card: the player's own (person_dressed); anyone else, or before the player's look
+// was ever read, Reach's default Spartan (each region's "default" piece, as the bots' looks name it) in Steel with the
+// gold visor
+unsigned long long person_figure(bots_panel_env& e, const char* name, float yaw, int w, int h) {
     if (!e.render_model || !e.model_has) return 0;
+    if (unsigned long long mine = person_dressed(e, name, yaw, w, h)) return mine;
     wchar_t path[300];
     bin_file(path, 300, L"models\\reach_spartan.mdl");
     if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) {   // beside the program (the preview), as ed_model

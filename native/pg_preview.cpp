@@ -145,7 +145,7 @@ static unsigned long long pv_figure(const char* name, bool bot, float yaw, int w
     bots_panel_env be{};
     be.make_texture = make_texture; be.render_model = pv_render; be.model_has = pv_has;
     be.model_zoom = mv_set_zoom; be.model_head = mv_head; be.model_headroom = mv_set_headroom; be.title = 5;
-    return bot ? bot_figure(be, name, yaw, w, h) : person_figure(be, yaw, w, h);
+    return bot ? bot_figure(be, name, yaw, w, h) : person_figure(be, name, yaw, w, h);
 }
 
 static bool save_png(const wchar_t* path, const unsigned char* rgba, int w, int h, int pitch) {
@@ -315,15 +315,18 @@ int main(int argc, char** argv) {
                             // (Nov 19, phase 2) the Start menu, the Service Record, Career, a difficulty page
                             "reach_menu_armory", "reach_service_record", "reach_career_matchmaking",
                             "reach_campaign_difficulty", "reach_menu_player", "reach_menu_challenges",
-                            "reach_psych_simulate" };
+                            "reach_psych_simulate",
+                            // (Nov 19, phase 3) the Armory
+                            "reach_armory", "reach_armory_helmets", "reach_armory_mark_v", "reach_armory_purchase" };
     // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
     // band (8.9 s), the promotion (11.5 s; six lines)
     const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f,
-                         3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
+                         3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                         2.0f, 2.0f, 2.0f, 2.0f };
     // (PG_ONLY=<n>: that screen alone, 1-based as its file's number)
     char only_s[8];
     int only = GetEnvironmentVariableA("PG_ONLY", only_s, sizeof only_s) ? atoi(only_s) : 0;
-    for (int s = 0; s < 29; s++) {
+    for (int s = 0; s < 33; s++) {
         if (only && s + 1 != only) continue;
         g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};

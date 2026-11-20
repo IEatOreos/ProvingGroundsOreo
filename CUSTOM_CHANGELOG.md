@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+### Proving Grounds: the player's own Spartan on the cards, and Reach's Armory (phase 3), 2026-11-19
+
+The owner: "Do the in game cards first, then start the Armory. all one phase". His Armory design: "everything on MCC is actually already unlocked, but we make it to where you can't equip it until you purchase it through our menu ... when we go to equip an item that we have not purchased or locked, it just doesn't do anything. So it's not changing the options inside the MCC menu."
+
+- **The cards (`native/bots_panel.cpp` `person_figure`, now given the name):** the player's own Spartan instead of Reach's default one: their colours, body and visor from `my_look_reach.txt`, wearing what the Armory has equipped. Anyone else on a card is still the default Spartan. Shown wherever a person's figure is drawn: the player card, the credits after a game, the Start menu's Armory picture.
+- **Prices (`tools/reach_prices.py` -> `maps/_looks/reach_prices.json`):**
+  - Read from the Halo: Reach Editing Kit's own `ui/supply_depot.cookie_purchase_globals`, taken from `HREK.7z` with 7-Zip. A reader for the kit's tag files works from the tag's own layout. For each item: its credit cost, its rank gate (grade and sub grade), the items it needs first, and its default and auto-buy flags.
+  - Each family lines up one to one with the Armory catalog botcore logged (`reach_armory.json` "writes"), so each item carries its exact configuration bytes.
+  - 189 items: 142 at Reach's own price, 47 at ours. Ours are the unlock-only originals (Military Police, CQB, Recon / UA/HUL(3), the [W] chests, Legendary and Eternal, the Officer Elite) and MCC's additions: 26 helmets in five sets, the [R] chests, Condemned, UA/Base Security, UA/Multi-Threat and the Vacuum Flask. They are in one table at the top of the tool.
+  - Examples: Mark V (internally John-117's) 130,000 cR at Major; Haunted 1 cR at grade 21 once every other helmet's last variant is owned.
+- **`tools/service_record.py` `write_game_armory`** (with every site build) writes `logs/service_record/armory.txt` with:
+  - the person's rank step and credits earned;
+  - every item with its gate as a step of the one rank table (`armory_gate_step`: grade 7 is Major);
+  - the customization table's pieces, so the game can dress the figure.
+  The game works out no rank of its own.
+- **`native/armory.cpp` / `armory.h`** (new, in both builds):
+  - Loads that file. Owned means a default item, bought, or auto-bought once its rank and its needs are met.
+  - Buying appends to `native\bin\service_record\armory_ledger.txt`. The credits to spend are the credits earned minus that ledger; the rank stays on the credits earned, as in Reach.
+  - Equipping writes `armory_equipped.txt` (a slot not set wears its free default). Equipping a locked or unbought item does nothing.
+  - Lays the equipped and tried-on bytes over the player's look, and works out the model's pieces as `brain/armory.py` does.
+- **`native/proving_grounds_reach.inc`, phase 3 pages** (the Start menu's THE ARMORY is now on):
+  - **ARMORY:** the ten slots (Emblem and Colours dim: Reach never sold them, MCC's stay). The Spartan is large; the slot's equipped item and how many are owned are listed. ELITE ARMOR shows the Elite.
+  - **A slot's page:** each item EQUIPPED (gold), PURCHASED, or its price, with a padlock when the rank or a needed item is missing and the price in red when short of credits. The list shows 15 rows at a time, with arrows. The focused item is tried on the Spartan, and RS (or Q / E) turns it.
+  - **The description box:** where the price comes from, PREREQUISITES with the rank and the needed item marked MET / NOT MET, the COST and the credits on hand.
+  - **HELMET** lists the helmets (n of m variants owned); A opens one's own page, the base and its variants.
+  - **Buying:** A asks first: PURCHASE AND EQUIP or CANCEL, with the cost and what is left. A locked item's A plays the error sound and changes nothing.
+  - The player's band shows the credits to spend and the credits earned.
+- **`native/reach.cpp` `hr_wear_armory`:**
+  - Each tick of a Halo: Reach match, the equipped pieces' bytes are laid over player 0's configuration (game globals +0x2D8) and over the copies of it in the player's own record. The copies are found once a match by name and service tag. botcore's log notes them.
+  - `native\bin\reach_menus.ini` `[armory] wear=0` turns this off.
+- **Validation:**
+  - `tools/test_service_record.py` +2 (40 pass): `armory.txt`, the gate steps, the price list (each item sets its slot's own byte, one free default a slot, needs listed, all 90 helmets). The whole suite, 986 tests, passes.
+  - A scratch program against copies of the files: a rank-locked item and a variant before its base are refused, a second purchase is refused, the purchase lands in the ledger, CQC (auto-bought at grade 1) equips free, and the wear bytes carry the bought chest.
+  - Preview screens 30-33 (the Armory, the helmets, Mark V's variants, the purchase dialog) were checked by eye. The figure tries Mark V on (the Halo CE-style helmet).
+  - `build.bat pg32` builds `botcore_pg32.dll`.
+- **Untested in game:**
+  - Whether the laid bytes reach the Spartan at all, and from which spawn. The first life may still wear MCC's choice, and other machines see MCC's.
+  - With nothing bought, every slot is on its free default (Mark V [B] and so on). The owner's own MCC look (Drengr Valdemar and the rest) is not worn in matches until it is bought here, or `wear=0` is set.
+  - The site does not show the credits to spend yet. Armor effects are not drawn on the figure.
+
 ### Service Record: the player's own Reach armor, read from the game, 2026-11-19
 
 The owner: "what the service record shows as my armor, is not correct. I do no wear what it shows on my profile. All the other bots are correct but not mine."
@@ -10,7 +50,7 @@ The owner: "what the service record shows as my armor, is not correct. I do no w
 - **`native/reach.cpp` `hr_save_my_look`:** when the bots are added to a match, player 0's configuration as they joined (`globals + 0x2D8`, the one every bot starts from) is saved to `native\bin\service_record\my_look_reach.txt` whenever it changes: the name (+0x20), service tag (+0x64) and the 0xA0 bytes.
 - **`brain/looks.py` `armory_from_config`:** a look from those bytes, each field of `maps/_looks/reach.json` read at its own byte (the colours at 0x49 / 0x4A, the body at 0x4C, each armor slot's), as a bot's look writes it, and the model pieces they put on (`brain/armory.py`), as the Spartan and as an Elite.
 - **`tools/service_record.py` `load_my_look`, `all_looks`:** the person named in that file gets that look on the site instead of the made-up one; everyone else as before.
-- **Validation:** `tools/test_service_record.py` +1 (38 pass); the whole suite, 986 tests, passes. `build.bat pg31` builds `botcore_pg31.dll`. **Untested in game:** the file is written in the next match with bots (the site reads it at its next build, after that match); whether every byte matches what MCC shows (gender 1 is still read as female, unconfirmed) is to be checked on the site against the owner's own Spartan. The game's own player card still draws Reach's default Spartan for a person.
+- **Validation:** `tools/test_service_record.py` +1 (38 pass); the whole suite, 986 tests, passes. `build.bat pg31` builds `botcore_pg31.dll`. **Live, the same day:** after a match the owner's profile on the site showed his own armor ("My armor updated on the site so thats good"). Gender 1 read as female is still unconfirmed. The game's own player card still draws Reach's default Spartan for a person.
 
 ### Service Record: Denied and Mission First get their art, 2026-11-19
 

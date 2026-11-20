@@ -1,0 +1,3406 @@
+{
+ "how": "The owner: every Reach item purchasable with credits, as in the 2010 Armory; MCC keeps everything unlocked and untouched, and Proving Grounds' own Armory decides what the player may wear. The prices and rank gates are Halo: Reach's own, read from the Halo: Reach Editing Kit's ui/supply_depot.cookie_purchase_globals (each item's credit cost, its minimum rank as a grade and sub grade, the items it needs bought first, its default / auto-buy flags). Each priced family lines up one to one with the Armory's catalog botcore logged (maps/_looks/reach_armory.json \"writes\": per slot, family and variant the configuration bytes the game's own equip sets), so each item gets the exact bytes it puts on. Names: native/look_names.h (the Armory's own names, by table index). Made by tools/reach_prices.py; do not edit.",
+ "grades": "1 Recruit, 2 Private, 3 Corporal, 4 Sergeant, 5 Warrant Officer, 6 Captain, 7 Major, 8 Lt. Colonel, 9 Commander, 10 Colonel, 11 Brigadier, 12 General, 13 Field Marshal, 14 Hero, 15 Legend, 16 Mythic, 17 Noble, 18 Eclipse, 19 Nova, 20 Forerunner, 21 Reclaimer; sub 1 the rank, 2 its Grade 1, ...",
+ "items": [
+  {
+   "id": "helmet_01_base",
+   "slot": "helmet",
+   "family": 0,
+   "variant": 0,
+   "name": "Mark V [B]",
+   "writes": {
+    "88": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_01_a",
+   "slot": "helmet",
+   "family": 0,
+   "variant": 1,
+   "name": "Mark V [B] / UA",
+   "writes": {
+    "88": 1
+   },
+   "cost": 750,
+   "grade": 1,
+   "sub": 1,
+   "needs": [
+    "helmet_01_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_01_b",
+   "slot": "helmet",
+   "family": 0,
+   "variant": 2,
+   "name": "Mark V [B] / UA/HUL",
+   "writes": {
+    "88": 2
+   },
+   "cost": 1500,
+   "grade": 2,
+   "sub": 1,
+   "needs": [
+    "helmet_01_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_02_base",
+   "slot": "helmet",
+   "family": 1,
+   "variant": 0,
+   "name": "CQC",
+   "writes": {
+    "88": 3
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_02_a",
+   "slot": "helmet",
+   "family": 1,
+   "variant": 1,
+   "name": "CQC / CBRN",
+   "writes": {
+    "88": 4
+   },
+   "cost": 750,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_02_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_02_b",
+   "slot": "helmet",
+   "family": 1,
+   "variant": 2,
+   "name": "CQC / UA/HUL",
+   "writes": {
+    "88": 5
+   },
+   "cost": 1500,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_02_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_03_base",
+   "slot": "helmet",
+   "family": 2,
+   "variant": 0,
+   "name": "ODST",
+   "writes": {
+    "88": 9
+   },
+   "cost": 2000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_03_a",
+   "slot": "helmet",
+   "family": 2,
+   "variant": 1,
+   "name": "ODST / UA/CNM",
+   "writes": {
+    "88": 10
+   },
+   "cost": 1000,
+   "grade": 2,
+   "sub": 1,
+   "needs": [
+    "helmet_03_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_03_b",
+   "slot": "helmet",
+   "family": 2,
+   "variant": 2,
+   "name": "ODST / CBRN/HUL",
+   "writes": {
+    "88": 11
+   },
+   "cost": 500,
+   "grade": 4,
+   "sub": 1,
+   "needs": [
+    "helmet_03_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_04_base",
+   "slot": "helmet",
+   "family": 3,
+   "variant": 0,
+   "name": "HAZOP",
+   "writes": {
+    "88": 12
+   },
+   "cost": 7000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_04_a",
+   "slot": "helmet",
+   "family": 3,
+   "variant": 1,
+   "name": "HAZOP / CBRN/HUL",
+   "writes": {
+    "88": 13
+   },
+   "cost": 2000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_04_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_04_b",
+   "slot": "helmet",
+   "family": 3,
+   "variant": 2,
+   "name": "HAZOP / CNM-I",
+   "writes": {
+    "88": 14
+   },
+   "cost": 1000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [
+    "helmet_04_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_05_base",
+   "slot": "helmet",
+   "family": 4,
+   "variant": 0,
+   "name": "EOD",
+   "writes": {
+    "88": 15
+   },
+   "cost": 15000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_05_a",
+   "slot": "helmet",
+   "family": 4,
+   "variant": 1,
+   "name": "EOD / CNM",
+   "writes": {
+    "88": 16
+   },
+   "cost": 5000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_05_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_05_b",
+   "slot": "helmet",
+   "family": 4,
+   "variant": 2,
+   "name": "EOD / UA/HUL",
+   "writes": {
+    "88": 17
+   },
+   "cost": 3000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_05_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_06_base",
+   "slot": "helmet",
+   "family": 5,
+   "variant": 0,
+   "name": "Operator",
+   "writes": {
+    "88": 18
+   },
+   "cost": 7000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_06_a",
+   "slot": "helmet",
+   "family": 5,
+   "variant": 1,
+   "name": "Operator / UA/HUL",
+   "writes": {
+    "88": 19
+   },
+   "cost": 2000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_06_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_06_b",
+   "slot": "helmet",
+   "family": 5,
+   "variant": 2,
+   "name": "Operator / CNM",
+   "writes": {
+    "88": 20
+   },
+   "cost": 1000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [
+    "helmet_06_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_07_base",
+   "slot": "helmet",
+   "family": 6,
+   "variant": 0,
+   "name": "Grenadier",
+   "writes": {
+    "88": 21
+   },
+   "cost": 25000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_07_a",
+   "slot": "helmet",
+   "family": 6,
+   "variant": 1,
+   "name": "Grenadier / UA",
+   "writes": {
+    "88": 22
+   },
+   "cost": 5000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [
+    "helmet_07_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_07_b",
+   "slot": "helmet",
+   "family": 6,
+   "variant": 2,
+   "name": "Grenadier / UA/FC",
+   "writes": {
+    "88": 23
+   },
+   "cost": 2000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [
+    "helmet_07_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_08_base",
+   "slot": "helmet",
+   "family": 7,
+   "variant": 0,
+   "name": "Air Assault",
+   "writes": {
+    "88": 24
+   },
+   "cost": 15000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_08_a",
+   "slot": "helmet",
+   "family": 7,
+   "variant": 1,
+   "name": "Air Assault / UA/CNM",
+   "writes": {
+    "88": 25
+   },
+   "cost": 7500,
+   "grade": 4,
+   "sub": 1,
+   "needs": [
+    "helmet_08_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_08_b",
+   "slot": "helmet",
+   "family": 7,
+   "variant": 2,
+   "name": "Air Assault / FC-I",
+   "writes": {
+    "88": 26
+   },
+   "cost": 5000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [
+    "helmet_08_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_09_base",
+   "slot": "helmet",
+   "family": 8,
+   "variant": 0,
+   "name": "Scout",
+   "writes": {
+    "88": 27
+   },
+   "cost": 40000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_09_a",
+   "slot": "helmet",
+   "family": 8,
+   "variant": 1,
+   "name": "Scout / HU/RS",
+   "writes": {
+    "88": 28
+   },
+   "cost": 5000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [
+    "helmet_09_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_09_b",
+   "slot": "helmet",
+   "family": 8,
+   "variant": 2,
+   "name": "Scout / CBRN/CNM",
+   "writes": {
+    "88": 29
+   },
+   "cost": 5000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [
+    "helmet_09_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_10_base",
+   "slot": "helmet",
+   "family": 9,
+   "variant": 0,
+   "name": "EVA",
+   "writes": {
+    "88": 30
+   },
+   "cost": 30000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_10_a",
+   "slot": "helmet",
+   "family": 9,
+   "variant": 1,
+   "name": "EVA / CNM",
+   "writes": {
+    "88": 31
+   },
+   "cost": 7000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [
+    "helmet_10_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_10_b",
+   "slot": "helmet",
+   "family": 9,
+   "variant": 2,
+   "name": "EVA / UA/HUL[3]",
+   "writes": {
+    "88": 32
+   },
+   "cost": 15000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "helmet_10_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_11_base",
+   "slot": "helmet",
+   "family": 10,
+   "variant": 0,
+   "name": "JFO",
+   "writes": {
+    "88": 33
+   },
+   "cost": 60000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_11_a",
+   "slot": "helmet",
+   "family": 10,
+   "variant": 1,
+   "name": "JFO / HUL-I",
+   "writes": {
+    "88": 34
+   },
+   "cost": 20000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "helmet_11_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_11_b",
+   "slot": "helmet",
+   "family": 10,
+   "variant": 2,
+   "name": "JFO / UA",
+   "writes": {
+    "88": 35
+   },
+   "cost": 10000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "helmet_11_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_12_base",
+   "slot": "helmet",
+   "family": 11,
+   "variant": 0,
+   "name": "Commando",
+   "writes": {
+    "88": 36
+   },
+   "cost": 85000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_12_a",
+   "slot": "helmet",
+   "family": 11,
+   "variant": 1,
+   "name": "Commando / CBRN/CNM",
+   "writes": {
+    "88": 37
+   },
+   "cost": 40000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [
+    "helmet_12_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_12_b",
+   "slot": "helmet",
+   "family": 11,
+   "variant": 2,
+   "name": "Commando / UA/FC-I[2]",
+   "writes": {
+    "88": 38
+   },
+   "cost": 40000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [
+    "helmet_12_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_21_base",
+   "slot": "helmet",
+   "family": 12,
+   "variant": 0,
+   "name": "EVA[C]",
+   "writes": {
+    "88": 61
+   },
+   "cost": 120000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_21_a",
+   "slot": "helmet",
+   "family": 12,
+   "variant": 1,
+   "name": "EVA[C] / CNM",
+   "writes": {
+    "88": 62
+   },
+   "cost": 25000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [
+    "helmet_21_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_21_b",
+   "slot": "helmet",
+   "family": 12,
+   "variant": 2,
+   "name": "EVA[C] / UA/HUL[3]",
+   "writes": {
+    "88": 63
+   },
+   "cost": 140000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [
+    "helmet_21_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_13_base",
+   "slot": "helmet",
+   "family": 13,
+   "variant": 0,
+   "name": "Mark V",
+   "writes": {
+    "88": 39
+   },
+   "cost": 130000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_13_a",
+   "slot": "helmet",
+   "family": 13,
+   "variant": 1,
+   "name": "Mark V / CNM",
+   "writes": {
+    "88": 40
+   },
+   "cost": 10000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "helmet_13_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_13_b",
+   "slot": "helmet",
+   "family": 13,
+   "variant": 2,
+   "name": "Mark V / UA",
+   "writes": {
+    "88": 41
+   },
+   "cost": 15000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "helmet_13_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_14_base",
+   "slot": "helmet",
+   "family": 14,
+   "variant": 0,
+   "name": "Pilot",
+   "writes": {
+    "88": 42
+   },
+   "cost": 90000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_14_a",
+   "slot": "helmet",
+   "family": 14,
+   "variant": 1,
+   "name": "Pilot / HUL[3]",
+   "writes": {
+    "88": 43
+   },
+   "cost": 25000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [
+    "helmet_14_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_14_b",
+   "slot": "helmet",
+   "family": 14,
+   "variant": 2,
+   "name": "Pilot / UA/HUL[3]",
+   "writes": {
+    "88": 44
+   },
+   "cost": 55000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [
+    "helmet_14_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_14_c",
+   "slot": "helmet",
+   "family": 14,
+   "variant": 3,
+   "name": "Pilot / Haunted",
+   "writes": {
+    "88": 45
+   },
+   "cost": 1,
+   "grade": 21,
+   "sub": 1,
+   "needs": [
+    "helmet_01_b",
+    "helmet_02_b",
+    "helmet_03_b",
+    "helmet_04_b",
+    "helmet_05_b",
+    "helmet_06_b",
+    "helmet_07_b",
+    "helmet_08_b",
+    "helmet_09_b",
+    "helmet_10_b",
+    "helmet_11_b",
+    "helmet_12_b",
+    "helmet_13_b",
+    "helmet_14_b",
+    "helmet_15_b",
+    "helmet_16_b",
+    "helmet_19_b",
+    "helmet_20_a",
+    "helmet_21_b"
+   ],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_20_base",
+   "slot": "helmet",
+   "family": 15,
+   "variant": 0,
+   "name": "Recon",
+   "writes": {
+    "88": 58
+   },
+   "cost": 100000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_20_a",
+   "slot": "helmet",
+   "family": 15,
+   "variant": 1,
+   "name": "Recon / HUL",
+   "writes": {
+    "88": 59
+   },
+   "cost": 75000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [
+    "helmet_20_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_20_b",
+   "slot": "helmet",
+   "family": 15,
+   "variant": 2,
+   "name": "Recon / UA/HUL(3)",
+   "writes": {
+    "88": 60
+   },
+   "cost": 100000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [
+    "helmet_20_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "preorder_helmet"
+  },
+  {
+   "id": "helmet_16_base",
+   "slot": "helmet",
+   "family": 16,
+   "variant": 0,
+   "name": "Mark VI",
+   "writes": {
+    "88": 49
+   },
+   "cost": 300000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_16_a",
+   "slot": "helmet",
+   "family": 16,
+   "variant": 1,
+   "name": "Mark VI / FC-I[2]",
+   "writes": {
+    "88": 50
+   },
+   "cost": 75000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "helmet_16_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_16_b",
+   "slot": "helmet",
+   "family": 16,
+   "variant": 2,
+   "name": "Mark VI / UA/HUL-I",
+   "writes": {
+    "88": 51
+   },
+   "cost": 75000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "helmet_16_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_19_base",
+   "slot": "helmet",
+   "family": 17,
+   "variant": 0,
+   "name": "GUNGNIR",
+   "writes": {
+    "88": 55
+   },
+   "cost": 250000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_19_a",
+   "slot": "helmet",
+   "family": 17,
+   "variant": 1,
+   "name": "GUNGNIR / HU/RS",
+   "writes": {
+    "88": 56
+   },
+   "cost": 125000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "helmet_19_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_19_b",
+   "slot": "helmet",
+   "family": 17,
+   "variant": 2,
+   "name": "GUNGNIR / CBRN",
+   "writes": {
+    "88": 57
+   },
+   "cost": 400000,
+   "grade": 15,
+   "sub": 1,
+   "needs": [
+    "helmet_19_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_15_base",
+   "slot": "helmet",
+   "family": 18,
+   "variant": 0,
+   "name": "Security",
+   "writes": {
+    "88": 46
+   },
+   "cost": 250000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_15_a",
+   "slot": "helmet",
+   "family": 18,
+   "variant": 1,
+   "name": "Security / UA/HUL",
+   "writes": {
+    "88": 47
+   },
+   "cost": 200000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [
+    "helmet_15_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_15_b",
+   "slot": "helmet",
+   "family": 18,
+   "variant": 2,
+   "name": "Security / CBRN/CNM",
+   "writes": {
+    "88": 48
+   },
+   "cost": 200000,
+   "grade": 14,
+   "sub": 1,
+   "needs": [
+    "helmet_15_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "helmet_17_base",
+   "slot": "helmet",
+   "family": 19,
+   "variant": 0,
+   "name": "Military Police",
+   "writes": {
+    "88": 6
+   },
+   "cost": 75000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "helmet_17_a",
+   "slot": "helmet",
+   "family": 19,
+   "variant": 1,
+   "name": "Military Police / CBRN/HU/RS",
+   "writes": {
+    "88": 7
+   },
+   "cost": 25000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [
+    "helmet_17_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "helmet_17_b",
+   "slot": "helmet",
+   "family": 19,
+   "variant": 2,
+   "name": "Military Police / HU/RS/CNM",
+   "writes": {
+    "88": 8
+   },
+   "cost": 25000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [
+    "helmet_17_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "helmet_18_base",
+   "slot": "helmet",
+   "family": 20,
+   "variant": 0,
+   "name": "CQB",
+   "writes": {
+    "88": 52
+   },
+   "cost": 60000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "helmet_18_a",
+   "slot": "helmet",
+   "family": 20,
+   "variant": 1,
+   "name": "CQB / HU/RS/CNM",
+   "writes": {
+    "88": 53
+   },
+   "cost": 20000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [
+    "helmet_18_base"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "helmet_18_b",
+   "slot": "helmet",
+   "family": 20,
+   "variant": 2,
+   "name": "CQB / UA/HUL",
+   "writes": {
+    "88": 54
+   },
+   "cost": 20000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [
+    "helmet_18_a"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "left_shoulder_blank",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 0,
+   "name": "Default (Mark V [B])",
+   "writes": {
+    "89": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_01",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 1,
+   "name": "FJ/PARA",
+   "writes": {
+    "89": 1
+   },
+   "cost": 250,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_02",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 2,
+   "name": "HAZOP",
+   "writes": {
+    "89": 2
+   },
+   "cost": 500,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_03",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 3,
+   "name": "JFO",
+   "writes": {
+    "89": 3
+   },
+   "cost": 1000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_04",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 4,
+   "name": "Recon",
+   "writes": {
+    "89": 4
+   },
+   "cost": 1500,
+   "grade": 2,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_05",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 5,
+   "name": "UA/Multi-Threat",
+   "writes": {
+    "89": 5
+   },
+   "cost": 2000,
+   "grade": 2,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_06",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 6,
+   "name": "Jump Jet",
+   "writes": {
+    "89": 6
+   },
+   "cost": 5000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_07",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 7,
+   "name": "EVA",
+   "writes": {
+    "89": 7
+   },
+   "cost": 3000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_08",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 8,
+   "name": "GUNGNIR",
+   "writes": {
+    "89": 8
+   },
+   "cost": 8000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_kurt",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 9,
+   "name": "ODST",
+   "writes": {
+    "89": 17
+   },
+   "cost": 25000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_09",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 10,
+   "name": "UA/Base Security",
+   "writes": {
+    "89": 9
+   },
+   "cost": 12000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_10",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 11,
+   "name": "CQC",
+   "writes": {
+    "89": 10
+   },
+   "cost": 20000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_11",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 12,
+   "name": "Operator",
+   "writes": {
+    "89": 11
+   },
+   "cost": 28000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_12",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 13,
+   "name": "Commando",
+   "writes": {
+    "89": 12
+   },
+   "cost": 40000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_13",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 14,
+   "name": "Grenadier",
+   "writes": {
+    "89": 13
+   },
+   "cost": 65000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_14",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 15,
+   "name": "Sniper",
+   "writes": {
+    "89": 14
+   },
+   "cost": 80000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_15",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 16,
+   "name": "MJOLNIR Mk. V",
+   "writes": {
+    "89": 15
+   },
+   "cost": 100000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "left_shoulder_16",
+   "slot": "left_shoulder",
+   "family": 0,
+   "variant": 17,
+   "name": "Security",
+   "writes": {
+    "89": 16
+   },
+   "cost": 70000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_blank",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 0,
+   "name": "Default (Mark V [B])",
+   "writes": {
+    "90": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_01",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 1,
+   "name": "FJ/PARA",
+   "writes": {
+    "90": 1
+   },
+   "cost": 250,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_02",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 2,
+   "name": "HAZOP",
+   "writes": {
+    "90": 2
+   },
+   "cost": 500,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_03",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 3,
+   "name": "JFO",
+   "writes": {
+    "90": 3
+   },
+   "cost": 1000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_04",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 4,
+   "name": "Recon",
+   "writes": {
+    "90": 4
+   },
+   "cost": 1500,
+   "grade": 2,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_05",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 5,
+   "name": "UA/Multi-Threat",
+   "writes": {
+    "90": 5
+   },
+   "cost": 2000,
+   "grade": 2,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_06",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 6,
+   "name": "Jump Jet",
+   "writes": {
+    "90": 6
+   },
+   "cost": 5000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_07",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 7,
+   "name": "EVA",
+   "writes": {
+    "90": 7
+   },
+   "cost": 3000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_08",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 8,
+   "name": "GUNGNIR",
+   "writes": {
+    "90": 8
+   },
+   "cost": 8000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_kurt",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 9,
+   "name": "ODST",
+   "writes": {
+    "90": 17
+   },
+   "cost": 25000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_09",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 10,
+   "name": "UA/Base Security",
+   "writes": {
+    "90": 9
+   },
+   "cost": 12000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_10",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 11,
+   "name": "CQC",
+   "writes": {
+    "90": 10
+   },
+   "cost": 20000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_11",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 12,
+   "name": "Operator",
+   "writes": {
+    "90": 11
+   },
+   "cost": 28000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_12",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 13,
+   "name": "Commando",
+   "writes": {
+    "90": 12
+   },
+   "cost": 40000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_13",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 14,
+   "name": "Grenadier",
+   "writes": {
+    "90": 13
+   },
+   "cost": 65000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_14",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 15,
+   "name": "Sniper",
+   "writes": {
+    "90": 14
+   },
+   "cost": 75000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_15",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 16,
+   "name": "MJOLNIR Mk. V",
+   "writes": {
+    "90": 15
+   },
+   "cost": 80000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "right_shoulder_16",
+   "slot": "right_shoulder",
+   "family": 0,
+   "variant": 17,
+   "name": "Security",
+   "writes": {
+    "90": 16
+   },
+   "cost": 275000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_blank",
+   "slot": "chest",
+   "family": 0,
+   "variant": 0,
+   "name": "Default",
+   "writes": {
+    "91": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_03",
+   "slot": "chest",
+   "family": 0,
+   "variant": 1,
+   "name": "HP/HALO",
+   "writes": {
+    "91": 3
+   },
+   "cost": 600,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_04",
+   "slot": "chest",
+   "family": 0,
+   "variant": 2,
+   "name": "UA/Counterassault",
+   "writes": {
+    "91": 4
+   },
+   "cost": 600,
+   "grade": 2,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_05",
+   "slot": "chest",
+   "family": 0,
+   "variant": 3,
+   "name": "Tactical/LRP",
+   "writes": {
+    "91": 5
+   },
+   "cost": 1000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_kurt",
+   "slot": "chest",
+   "family": 0,
+   "variant": 4,
+   "name": "UA/ODST",
+   "writes": {
+    "91": 19
+   },
+   "cost": 750,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_06",
+   "slot": "chest",
+   "family": 0,
+   "variant": 5,
+   "name": "Tactical/Recon",
+   "writes": {
+    "91": 6
+   },
+   "cost": 1500,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_07",
+   "slot": "chest",
+   "family": 0,
+   "variant": 6,
+   "name": "Collar/Grenadier",
+   "writes": {
+    "91": 7
+   },
+   "cost": 4000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_08",
+   "slot": "chest",
+   "family": 0,
+   "variant": 7,
+   "name": "Tactical/Patrol",
+   "writes": {
+    "91": 8
+   },
+   "cost": 4000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_09",
+   "slot": "chest",
+   "family": 0,
+   "variant": 8,
+   "name": "Collar/Breacher",
+   "writes": {
+    "91": 9
+   },
+   "cost": 8000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_10",
+   "slot": "chest",
+   "family": 0,
+   "variant": 9,
+   "name": "Assault/Sapper",
+   "writes": {
+    "91": 10
+   },
+   "cost": 14000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_11",
+   "slot": "chest",
+   "family": 0,
+   "variant": 10,
+   "name": "Assault/Commando",
+   "writes": {
+    "91": 11
+   },
+   "cost": 12000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_12",
+   "slot": "chest",
+   "family": 0,
+   "variant": 11,
+   "name": "HP/Parafoil",
+   "writes": {
+    "91": 12
+   },
+   "cost": 8000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_13",
+   "slot": "chest",
+   "family": 0,
+   "variant": 12,
+   "name": "Collar/Grenadier [UA]",
+   "writes": {
+    "91": 13
+   },
+   "cost": 40000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_14",
+   "slot": "chest",
+   "family": 0,
+   "variant": 13,
+   "name": "UA/Multi-Threat [W]",
+   "writes": {
+    "91": 14
+   },
+   "cost": 50000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "gamestop"
+  },
+  {
+   "id": "chest_15",
+   "slot": "chest",
+   "family": 0,
+   "variant": 14,
+   "name": "UA/Base Security [W]",
+   "writes": {
+    "91": 15
+   },
+   "cost": 50000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "waypoint_bit"
+  },
+  {
+   "id": "chest_16",
+   "slot": "chest",
+   "family": 0,
+   "variant": 15,
+   "name": "Collar/Breacher [R]",
+   "writes": {
+    "91": 16
+   },
+   "cost": 75000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_17",
+   "slot": "chest",
+   "family": 0,
+   "variant": 16,
+   "name": "HP/Parafoil [R]",
+   "writes": {
+    "91": 17
+   },
+   "cost": 175000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "chest_18",
+   "slot": "chest",
+   "family": 0,
+   "variant": 17,
+   "name": "Assault/Sapper [R]",
+   "writes": {
+    "91": 18
+   },
+   "cost": 250000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "wrist_blank",
+   "slot": "wrist",
+   "family": 0,
+   "variant": 0,
+   "name": "Default",
+   "writes": {
+    "92": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "wrist_1",
+   "slot": "wrist",
+   "family": 0,
+   "variant": 1,
+   "name": "UA/Buckler",
+   "writes": {
+    "92": 1
+   },
+   "cost": 5000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "wrist_2",
+   "slot": "wrist",
+   "family": 0,
+   "variant": 2,
+   "name": "UA/Bracer",
+   "writes": {
+    "92": 2
+   },
+   "cost": 10000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "wrist_3",
+   "slot": "wrist",
+   "family": 0,
+   "variant": 3,
+   "name": "Tactical/TACPAD",
+   "writes": {
+    "92": 3
+   },
+   "cost": 50000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "wrist_5",
+   "slot": "wrist",
+   "family": 0,
+   "variant": 4,
+   "name": "Tactical/UGPS",
+   "writes": {
+    "92": 5
+   },
+   "cost": 80000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "wrist_2"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "wrist_4",
+   "slot": "wrist",
+   "family": 0,
+   "variant": 5,
+   "name": "Assault/Breacher",
+   "writes": {
+    "92": 4
+   },
+   "cost": 200000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [
+    "wrist_3"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "utility_blank",
+   "slot": "utility",
+   "family": 0,
+   "variant": 0,
+   "name": "Default",
+   "writes": {
+    "93": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "utility_2",
+   "slot": "utility",
+   "family": 0,
+   "variant": 1,
+   "name": "UA/Chobham",
+   "writes": {
+    "93": 2
+   },
+   "cost": 30000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [
+    "utility_5"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "utility_5",
+   "slot": "utility",
+   "family": 0,
+   "variant": 2,
+   "name": "Tactical/Hard Case",
+   "writes": {
+    "93": 5
+   },
+   "cost": 40000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "utility_3",
+   "slot": "utility",
+   "family": 0,
+   "variant": 3,
+   "name": "UA/NxRA",
+   "writes": {
+    "93": 3
+   },
+   "cost": 40000,
+   "grade": 6,
+   "sub": 1,
+   "needs": [
+    "utility_5"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "utility_4",
+   "slot": "utility",
+   "family": 0,
+   "variant": 4,
+   "name": "Tactical/Trauma Kit",
+   "writes": {
+    "93": 4
+   },
+   "cost": 60000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [
+    "utility_5"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "utility_1",
+   "slot": "utility",
+   "family": 0,
+   "variant": 5,
+   "name": "Tactical/Soft Case",
+   "writes": {
+    "93": 1
+   },
+   "cost": 100000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [
+    "utility_5"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "visor_default",
+   "slot": "visor",
+   "family": 0,
+   "variant": 0,
+   "name": "Default",
+   "writes": {
+    "75": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "visor_1",
+   "slot": "visor",
+   "family": 0,
+   "variant": 1,
+   "name": "Silver",
+   "writes": {
+    "75": 1
+   },
+   "cost": 35000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "visor_2",
+   "slot": "visor",
+   "family": 0,
+   "variant": 2,
+   "name": "Blue",
+   "writes": {
+    "75": 2
+   },
+   "cost": 50000,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "visor_3",
+   "slot": "visor",
+   "family": 0,
+   "variant": 3,
+   "name": "Black",
+   "writes": {
+    "75": 4
+   },
+   "cost": 100000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "visor_4",
+   "slot": "visor",
+   "family": 0,
+   "variant": 4,
+   "name": "Gold",
+   "writes": {
+    "75": 3
+   },
+   "cost": 250000,
+   "grade": 9,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "knees_default",
+   "slot": "knees",
+   "family": 0,
+   "variant": 0,
+   "name": "Default",
+   "writes": {
+    "94": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "knees_1",
+   "slot": "knees",
+   "family": 0,
+   "variant": 1,
+   "name": "FJ/PARA",
+   "writes": {
+    "94": 1
+   },
+   "cost": 10000,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "knees_2",
+   "slot": "knees",
+   "family": 0,
+   "variant": 2,
+   "name": "GUNGNIR",
+   "writes": {
+    "94": 2
+   },
+   "cost": 25000,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "knees_3",
+   "slot": "knees",
+   "family": 0,
+   "variant": 3,
+   "name": "Grenadier",
+   "writes": {
+    "94": 3
+   },
+   "cost": 45000,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "armor_fx_blank",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 0,
+   "name": "None",
+   "writes": {
+    "96": 0,
+    "97": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "armor_fx_legendary",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 1,
+   "name": "Legendary (Flaming Helmet)",
+   "writes": {
+    "96": 1,
+    "97": 1
+   },
+   "cost": 1500000,
+   "grade": 13,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "legendary_flame"
+  },
+  {
+   "id": "armor_fx_blue",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 2,
+   "name": "Eternal (blue flames)",
+   "writes": {
+    "96": 2,
+    "97": 2
+   },
+   "cost": 2500000,
+   "grade": 15,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "bungie"
+  },
+  {
+   "id": "armor_fx_bday",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 3,
+   "name": "Birthday Party",
+   "writes": {
+    "96": 6,
+    "97": 6
+   },
+   "cost": 200000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "armor_fx_hearts",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 4,
+   "name": "Heart Attack",
+   "writes": {
+    "96": 3,
+    "97": 3
+   },
+   "cost": 300000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "armor_fx_stink",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 5,
+   "name": "Pestilence",
+   "writes": {
+    "96": 4,
+    "97": 4
+   },
+   "cost": 1000000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "armor_fx_weather",
+   "slot": "armor_effect",
+   "family": 0,
+   "variant": 6,
+   "name": "Inclement Weather",
+   "writes": {
+    "96": 5,
+    "97": 5
+   },
+   "cost": 2000000,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "elite_1",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 0,
+   "name": "Minor",
+   "writes": {
+    "95": 0
+   },
+   "cost": 0,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": true,
+   "auto": false,
+   "source": "2010"
+  },
+  {
+   "id": "elite_2",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 1,
+   "name": "Spec Ops",
+   "writes": {
+    "95": 1
+   },
+   "cost": 0,
+   "grade": 2,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "elite_3",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 2,
+   "name": "Ranger",
+   "writes": {
+    "95": 2
+   },
+   "cost": 0,
+   "grade": 3,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "elite_4",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 3,
+   "name": "Ultra",
+   "writes": {
+    "95": 3
+   },
+   "cost": 0,
+   "grade": 4,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "elite_5",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 4,
+   "name": "Zealot",
+   "writes": {
+    "95": 4
+   },
+   "cost": 0,
+   "grade": 5,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "elite_6",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 5,
+   "name": "General",
+   "writes": {
+    "95": 5
+   },
+   "cost": 0,
+   "grade": 6,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "elite_7",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 6,
+   "name": "Field Marshal",
+   "writes": {
+    "95": 6
+   },
+   "cost": 0,
+   "grade": 7,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": true,
+   "source": "2010"
+  },
+  {
+   "id": "elite_limited",
+   "slot": "elite_armor",
+   "family": 0,
+   "variant": 7,
+   "name": "Officer",
+   "writes": {
+    "95": 7
+   },
+   "cost": 100000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours",
+   "unlock": "limited_elite"
+  },
+  {
+   "id": "mcc_helmet_64",
+   "slot": "helmet",
+   "family": 21,
+   "variant": 0,
+   "name": "Mariner",
+   "writes": {
+    "88": 64
+   },
+   "cost": 150000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_65",
+   "slot": "helmet",
+   "family": 21,
+   "variant": 1,
+   "name": "Mariner / DEFIANT",
+   "writes": {
+    "88": 65
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_64"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_66",
+   "slot": "helmet",
+   "family": 21,
+   "variant": 2,
+   "name": "Mariner / MISTER CHIEF",
+   "writes": {
+    "88": 66
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_65"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_67",
+   "slot": "helmet",
+   "family": 21,
+   "variant": 3,
+   "name": "Mariner / OPTREX",
+   "writes": {
+    "88": 67
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_66"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_68",
+   "slot": "helmet",
+   "family": 22,
+   "variant": 0,
+   "name": "GRD",
+   "writes": {
+    "88": 68
+   },
+   "cost": 150000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_69",
+   "slot": "helmet",
+   "family": 22,
+   "variant": 1,
+   "name": "GRD / OPTREX",
+   "writes": {
+    "88": 69
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_68"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_70",
+   "slot": "helmet",
+   "family": 22,
+   "variant": 2,
+   "name": "GRD / CBRN",
+   "writes": {
+    "88": 70
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_69"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_71",
+   "slot": "helmet",
+   "family": 22,
+   "variant": 3,
+   "name": "GRD / OPTREX/CBRN",
+   "writes": {
+    "88": 71
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_70"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_72",
+   "slot": "helmet",
+   "family": 23,
+   "variant": 0,
+   "name": "Belos Heran",
+   "writes": {
+    "88": 72
+   },
+   "cost": 150000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_73",
+   "slot": "helmet",
+   "family": 23,
+   "variant": 1,
+   "name": "Belos Syntrofos",
+   "writes": {
+    "88": 73
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_72"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_74",
+   "slot": "helmet",
+   "family": 23,
+   "variant": 2,
+   "name": "Belos Kerata",
+   "writes": {
+    "88": 74
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_73"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_75",
+   "slot": "helmet",
+   "family": 23,
+   "variant": 3,
+   "name": "Belos Leontokardos",
+   "writes": {
+    "88": 75
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_74"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_76",
+   "slot": "helmet",
+   "family": 23,
+   "variant": 4,
+   "name": "Belos Stheno",
+   "writes": {
+    "88": 76
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_75"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_77",
+   "slot": "helmet",
+   "family": 23,
+   "variant": 5,
+   "name": "Belos Cerberus",
+   "writes": {
+    "88": 77
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_76"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_78",
+   "slot": "helmet",
+   "family": 24,
+   "variant": 0,
+   "name": "Blackguard Warfeast",
+   "writes": {
+    "88": 78
+   },
+   "cost": 150000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_79",
+   "slot": "helmet",
+   "family": 24,
+   "variant": 1,
+   "name": "Blackguard Fallen Equerry",
+   "writes": {
+    "88": 79
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_78"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_80",
+   "slot": "helmet",
+   "family": 24,
+   "variant": 2,
+   "name": "Blackguard Forsaken Dragon",
+   "writes": {
+    "88": 80
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_79"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_81",
+   "slot": "helmet",
+   "family": 24,
+   "variant": 3,
+   "name": "Blackguard Carrion Crow",
+   "writes": {
+    "88": 81
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_80"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_82",
+   "slot": "helmet",
+   "family": 24,
+   "variant": 4,
+   "name": "Blackguard Sorrowful Visage",
+   "writes": {
+    "88": 82
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_81"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_83",
+   "slot": "helmet",
+   "family": 24,
+   "variant": 5,
+   "name": "Blackguard Ashen Crown",
+   "writes": {
+    "88": 83
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_82"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_84",
+   "slot": "helmet",
+   "family": 25,
+   "variant": 0,
+   "name": "Drengr Skald",
+   "writes": {
+    "88": 84
+   },
+   "cost": 150000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_85",
+   "slot": "helmet",
+   "family": 25,
+   "variant": 1,
+   "name": "Drengr Valdemar",
+   "writes": {
+    "88": 85
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_84"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_86",
+   "slot": "helmet",
+   "family": 25,
+   "variant": 2,
+   "name": "Drengr Dvalinn",
+   "writes": {
+    "88": 86
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_85"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_87",
+   "slot": "helmet",
+   "family": 25,
+   "variant": 3,
+   "name": "Drengr Nari",
+   "writes": {
+    "88": 87
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_86"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_88",
+   "slot": "helmet",
+   "family": 25,
+   "variant": 4,
+   "name": "Drengr Thyra",
+   "writes": {
+    "88": 88
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_87"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_helmet_89",
+   "slot": "helmet",
+   "family": 25,
+   "variant": 5,
+   "name": "Drengr Tyr",
+   "writes": {
+    "88": 89
+   },
+   "cost": 40000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "mcc_helmet_88"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "chest_01",
+   "slot": "chest",
+   "family": 0,
+   "variant": 101,
+   "name": "UA/Base Security",
+   "writes": {
+    "91": 1
+   },
+   "cost": 400,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "chest_02",
+   "slot": "chest",
+   "family": 0,
+   "variant": 102,
+   "name": "UA/Multi-Threat",
+   "writes": {
+    "91": 2
+   },
+   "cost": 400,
+   "grade": 1,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_chest_20",
+   "slot": "chest",
+   "family": 0,
+   "variant": 120,
+   "name": "Default [R]",
+   "writes": {
+    "91": 20
+   },
+   "cost": 100000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "chest_blank"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_chest_21",
+   "slot": "chest",
+   "family": 0,
+   "variant": 121,
+   "name": "Tactical/Patrol [R]",
+   "writes": {
+    "91": 21
+   },
+   "cost": 100000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "chest_08"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_chest_22",
+   "slot": "chest",
+   "family": 0,
+   "variant": 122,
+   "name": "Tactical/Recon [R]",
+   "writes": {
+    "91": 22
+   },
+   "cost": 100000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "chest_06"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_chest_23",
+   "slot": "chest",
+   "family": 0,
+   "variant": 123,
+   "name": "Collar/Grenadier [UA] [R]",
+   "writes": {
+    "91": 23
+   },
+   "cost": 100000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "chest_13"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_chest_24",
+   "slot": "chest",
+   "family": 0,
+   "variant": 124,
+   "name": "UA/Counterassault [R]",
+   "writes": {
+    "91": 24
+   },
+   "cost": 100000,
+   "grade": 10,
+   "sub": 1,
+   "needs": [
+    "chest_04"
+   ],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_chest_25",
+   "slot": "chest",
+   "family": 0,
+   "variant": 125,
+   "name": "Condemned",
+   "writes": {
+    "91": 25
+   },
+   "cost": 150000,
+   "grade": 11,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  },
+  {
+   "id": "mcc_utility_6",
+   "slot": "utility",
+   "family": 0,
+   "variant": 106,
+   "name": "Vacuum Flask",
+   "writes": {
+    "93": 6
+   },
+   "cost": 75000,
+   "grade": 8,
+   "sub": 1,
+   "needs": [],
+   "default": false,
+   "auto": false,
+   "source": "ours"
+  }
+ ]
+}

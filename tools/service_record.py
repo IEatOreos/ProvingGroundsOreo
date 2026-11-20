@@ -2575,6 +2575,71 @@ def write_game_career(data, paths):
     os.replace(tmp, os.path.join(paths.out, "career.txt"))
 
 
+ARMORY_PRICES = os.path.join(ROOT, "maps", "_looks", "reach_prices.json")
+ARMORY_TABLE = os.path.join(ROOT, "maps", "_looks", "reach_armory.json")
+
+
+def armory_gate_step(ranks, grade, sub):
+    """The Service Record's rank step (data["ranks"]: [label, cr, the rank's number, its Grade]) that Reach's grade and
+    sub grade name (grade 1 Recruit, sub 1 the rank itself, 2 its Grade 1); past a rank's last Grade, that last one."""
+    best = None
+    for i, (label, cr, number, g) in enumerate(ranks):
+        if number == grade:
+            best = i
+            if g == sub - 1:
+                return i
+    return best if best is not None else len(ranks) - 1
+
+
+def write_game_armory(data, paths, prices_path=ARMORY_PRICES, table_path=ARMORY_TABLE):
+    """(Nov 19, the owner: "all the items in the game to be purchasable and unlockable ... you can't equip it until you
+    purchase it through our menu") <out>/armory.txt for Proving Grounds' Armory (native/armory.cpp): each listed
+    person's rank step and credits earned (the rank stays the credits earned; what the Armory spends is taken from them
+    by its own ledger, <store>/armory_ledger.txt, which botcore writes), every item of maps/_looks/reach_prices.json
+    with its rank gate as a step of this site's one rank table (ranks.json), and the customization table's pieces
+    (maps/_looks/reach_armory.json) so the game can draw the Spartan wearing what is equipped. The game works out no
+    rank of its own."""
+    prices = load_json(prices_path, {}).get("items", [])
+    table = load_json(table_path, {})
+    ranks = data["ranks"]
+    clean = lambda s: str(s).replace("\t", " ").replace("\n", " ")
+    lines = ["# made by tools/service_record.py from maps/_looks/reach_prices.json, reach_armory.json and ranks.json; "
+             "do not edit",
+             "# me<TAB>name<TAB>rank step<TAB>rank<TAB>credits earned",
+             "# item<TAB>id<TAB>slot<TAB>family<TAB>variant<TAB>name<TAB>cost<TAB>rank step needed<TAB>that rank<TAB>"
+             "needs (ids, - none)<TAB>flags (d default, a bought by itself at the rank, o our price; - none)<TAB>"
+             "configuration bytes (offset=value)",
+             "# piece<TAB>configuration offset<TAB>value<TAB>region<TAB>permutation<TAB>mask (1 male, 2 female, 4 Elite)",
+             "# base<TAB>spartan | female | elite<TAB>region<TAB>permutation<TAB>mask; bytes<TAB>spartan | elite<TAB>"
+             "the offsets whose pieces the body wears, in order"]
+    for p in data["players"]:
+        if p.get("person"):
+            step = int(p.get("rank") or 0)
+            label = ranks[step][0] if 0 <= step < len(ranks) else ""
+            lines.append(f"me\t{clean(p['name'])}\t{step}\t{label}\t{int(p.get('cr') or 0)}")
+    for it in prices:
+        step = armory_gate_step(ranks, int(it["grade"]), int(it["sub"]))
+        flags = ("d" if it.get("default") else "") + ("a" if it.get("auto") else "") + \
+                ("o" if it.get("source") == "ours" else "")
+        writes = ",".join(f"{off}={val}" for off, val in it["writes"].items())
+        lines.append("\t".join(["item", clean(it["id"]), it["slot"], str(it["family"]), str(it["variant"]),
+                                clean(it["name"]), str(int(it["cost"])), str(step), ranks[step][0],
+                                ",".join(it["needs"]) or "-", flags or "-", writes]))
+    for off, opts in sorted(table.get("options", {}).items(), key=lambda kv: int(kv[0])):
+        for value, recs in enumerate(opts):
+            for region, perm, mask in recs:
+                lines.append(f"piece\t{int(off) + 0x20}\t{value}\t{region}\t{perm}\t{mask}")
+    for body, key in (("spartan", "base"), ("female", "female"), ("elite", "elite_base")):
+        for region, perm, mask in table.get(key, []):
+            lines.append(f"base\t{body}\t{region}\t{perm}\t{mask}")
+    lines.append("bytes\tspartan\t" + ",".join(str(o + 0x20) for o in table.get("spartan_bytes", range(0x38, 0x3F))))
+    lines.append("bytes\telite\t" + ",".join(str(o + 0x20) for o in table.get("elite_bytes", [0x3F])))
+    tmp = os.path.join(paths.out, "armory.txt.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, os.path.join(paths.out, "armory.txt"))
+
+
 def write_last_match(data, paths):
     """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
     report) <out>/last_match.txt: what the newest match on the site (a Proving Grounds match) earned each listed person
@@ -2669,6 +2734,7 @@ def write_site(data, paths):
     write_game_commendations(data, paths)                    # (Nov 19: the game's Commendations page)
     write_game_locations(data, paths)                        # (Nov 19: the heat on the game's Psych Profile map)
     write_game_career(data, paths)                           # (Nov 19: the game's Service Record and Career pages)
+    write_game_armory(data, paths)                           # (Nov 19: the game's Armory: prices, rank gates, pieces)
     for name, text in (("data.js", "window.SR_DATA = " + json.dumps(data, separators=(",", ":")) + ";\n"),
                        ("stamp.js", f'window.SR_STAMP && window.SR_STAMP("{data["stamp"]}");\n')):
         tmp = os.path.join(paths.out, name + ".tmp")
