@@ -1063,13 +1063,17 @@ static void rm_menu(pg_env& e, float t) {
         if (unsigned long long fig = e.figure(me_name(), false, 0.35f + 0.25f * sinf(t * 0.4f), 350, 415))
             g_dl->AddImage((ImTextureID)fig, P(1165, 165), P(1515, 580), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
     } else if (f == 3) {
-        ctl_show(1340, 330, 320);
+        ctl_show(1340, 372, 320);
     } else {
         rm_diamonds(1340, 330, 150, IM_COL32(120, 176, 230, 120));
     }
-    g_dl->PushClipRect(P(1165, 165), P(1515, 580), true);
-    text(g_fl, 60, 1180, 492, IM_COL32(236, 240, 244, 70), RM_MENU_ITEMS[f]);
-    g_dl->PopClipRect();
+    if (f != 3) {                                    // (the owner: the word cut off on the controller's picture,
+        float fs = 60;                               // "Remove the word"; the others shrink to fit the panel)
+        while (fs > 30 && text_w(g_fl, fs, RM_MENU_ITEMS[f]) / g_pg.s > 320) fs -= 2;
+        g_dl->PushClipRect(P(1165, 165), P(1515, 580), true);
+        text(g_fl, fs, 1180, 492 + (60 - fs) * 0.8f, IM_COL32(236, 240, 244, 70), RM_MENU_ITEMS[f]);
+        g_dl->PopClipRect();
+    }
     rm_wrap(g_fl, 25, 1172, 600, 345, IM_COL32(222, 226, 230, 255), RM_MENU_DESC[f]);
     rm_band();
     float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
