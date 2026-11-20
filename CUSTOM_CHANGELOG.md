@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Proving Grounds: Reach's Custom Game lobby, and the other game lobbies (phase 5), 2026-11-19
+
+The owner: "Next phase", after the frames of Reach's CUSTOM GAME, SELECT GAME TYPE, GAME OPTIONS, FIREFIGHT, FORGE and THEATER lobbies. Then he sent four paintings: "Four original screens for the game menus as well".
+
+- **CUSTOM GAME** (`native/proving_grounds_reach.inc`; the main menu's CUSTOM GAME opens it instead of leaving for MCC's lobby):
+  - The banner shows the map's picture with the game type's icon. GAME TYPE and MAP come from MCC's own lists, the variant library that `pg_lobby.cpp` copies: built in, MCC's own and the player's saved ones.
+  - The picks are saved in `native\bin\reach_menus.ini` `[custom_game]`.
+  - START GAME starts the game through MCC's own lobby, the way matchmaking's vote winner starts (`pg_lobby_launch`). Proving Grounds then closes, as for any custom game: it is not a matchmaking match and is not on the Service Record. If MCC refuses the game, the lobby shows MCC's reason.
+- **SELECT GAME TYPE:** the families MCC has, in Reach's order. Right or A opens a family's game types, with the player's own ones marked YOURS. The picked one has a gold diamond. The card at the right holds the family's icon, the name, team game or free for all, and where it is from.
+- **SELECT MAP:** MCC's maps, 15 at a time. Maps the game type does not go on are dimmed and refuse A; this is MCC's own check (`pg_lobby_check`), asked 64 maps at a time. The map's picture is shown, with built in, MCC's or yours, and for a saved variant the map it is made on.
+- **GAME OPTIONS:** the game type, its kind of game, teams and where it is from. The rules are changed in MCC's own lobby and saved with the game type; the page says so.
+- **CAMPAIGN, FIREFIGHT, FORGE, THEATER:** their lobbies' looks only. The banner shows the mode's painting. Each has Reach's rows, dim: Forge shows the Custom Game map, Theater the newest film in Temporary History. Each says the mode is played from MCC's own menus. The main menu's six entries are all on now.
+- **Paintings:** the lobbies use `native\bin\pg_backgrounds\custom_game`, `campaign`, `firefight`, `forge` and `theater` (.png or .jpg), never in git. Where one is missing, the matchmaking painting is used. The owner's four paintings came only as pictures in the chat, so he saves them there himself.
+- **Validation:** preview screens 39-43 were checked by eye with the preview's stand-in lists; the full suite (986 tests) passes; `build.bat pg36` builds `botcore_pg36.dll`. **Untested in game:** the start from this lobby, and MCC's map check of a game type.
+
 ### Proving Grounds: Reach's File Browser, Controller and Network Status (phase 4), 2026-11-19
 
 The owner sent 17 more frames of Reach's menus: FILE BROWSER, the Start menu on CONTROLLER, NETWORK STATUS and HALO WAYPOINT, the CONTROLLER page, and the Firefight, Custom Game, Forge and Theater lobbies with their game type, mission and option pages. He was asked which to build and chose the Start menu's pages. The lobbies are not built.

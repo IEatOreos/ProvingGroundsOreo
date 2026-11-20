@@ -173,6 +173,7 @@ static const pic* rm_picture(const wchar_t* name) {
     return picture(p);
 }
 
+static const pic* rm_lobby_art();               // (phase 5, below)
 // the frame's ground for Reach's pages (false: not one of them, Proving Grounds' own ground then)
 static bool rmenu_background(float t) {
     if (g_rpage == RP_OPTIONS) return false;
@@ -180,11 +181,17 @@ static bool rmenu_background(float t) {
     if (g_rpage == RP_TITLE) { art = rm_picture(L"title"); if (!art) art = bg_picture(BG_MENU); }
     else if (g_rpage == RP_MAIN) { art = rm_picture(L"main_menu"); if (!art) art = bg_picture(BG_MATCH); }
     else if (g_rpage == RP_MM) { art = rm_picture(L"matchmaking_lobby"); if (!art) art = bg_picture(BG_MATCH); }
+    else if (g_rpage == RP_CUSTOM || g_rpage == RP_LOBBY) {   // (phase 5: the lobbies' own paintings, the owner's)
+        art = rm_lobby_art();
+        if (!art) art = bg_picture(BG_MATCH);
+    }
     if (art) painted_background(t, art);
     else rm_ground(t);
     return true;
 }
-static bool rmenu_party() { return g_rpage == RP_MAIN || g_rpage == RP_MM || g_rpage == RP_OPTIONS; }
+static bool rmenu_party() {
+    return g_rpage == RP_MAIN || g_rpage == RP_MM || g_rpage == RP_OPTIONS || g_rpage == RP_CUSTOM || g_rpage == RP_LOBBY;
+}
 
 // a list row as Reach's: the label (and a value at its right), Reach's band on the focused one; a row not in Proving
 // Grounds yet stays dim
@@ -326,14 +333,16 @@ static void rm_title(pg_env& e, float t) {
 
 static const char* RM_MAIN_ITEMS[6] = { "CAMPAIGN", "MATCHMAKING", "FIREFIGHT", "CUSTOM GAME", "FORGE", "THEATER" };
 static const char* RM_MAIN_DESC[6] = {
-    "The campaign is not in Proving Grounds yet: play it from MCC's own menus.",
+    "The campaign's lobby. The campaign itself is played from MCC's own menus.",
     "Take your party into matchmaking: Proving Grounds' playlists, a lobby of bots and the vote.",
-    "Firefight is not in Proving Grounds yet: play it from MCC's own menus.",
-    "Leave for MCC's own Halo: Reach custom game lobby: your own map, game type and bots (BOTS).",
-    "Forge is not in Proving Grounds yet: play it from MCC's own menus.",
-    "Theater is not in Proving Grounds yet: watch your films from MCC's own menus." };
-static const bool RM_MAIN_ON[6] = { false, true, false, true, false, false };
+    "Firefight's lobby. Firefight itself is played from MCC's own menus.",
+    "Your own game: pick the game type and the map, then start it with your bots.",
+    "Forge's lobby. Forge itself is played from MCC's own menus.",
+    "Theater's lobby. Your films are watched from MCC's own menus." };
+static const bool RM_MAIN_ON[6] = { true, true, true, true, true, true };
 
+static void cg_open();                           // (phase 5, below)
+static void lobby_open(int mode);
 static void rm_main(pg_env& e, float t) {
     (void)t;
     if (ros_up()) { rm_party(e, "IN MAIN MENU LOBBY", "In Main Menu Lobby"); return; }
@@ -354,7 +363,8 @@ static void rm_main(pg_env& e, float t) {
         if (!pressed(base + k)) continue;
         if (!RM_MAIN_ON[k]) { sound(PS_ERROR); continue; }
         if (k == 1) { g_rpage = RP_MM; g_focus_after = 4; sound(PS_SELECT); }   // (on START MATCHMAKING)
-        if (k == 3) { sound(PS_SELECT); g_stage = S_OFF; logf("proving grounds: closed for MCC's custom game lobby (main menu)"); }
+        if (k == 3) { sound(PS_SELECT); cg_open(); }     // (phase 5: Custom Game, the other lobbies)
+        if (k == 0 || k == 2 || k == 4 || k == 5) { sound(PS_SELECT); lobby_open(k == 0 ? 0 : k == 2 ? 1 : k == 4 ? 2 : 3); }
     }
 }
 
@@ -1874,6 +1884,388 @@ static void rm_network() {
     }
 }
 
+// ------------------------------------------------------------------ phase 5: the game lobbies
+// (Nov 19, the owner's frames of Reach's CUSTOM GAME, SELECT GAME TYPE, GAME OPTIONS, FIREFIGHT, FORGE and THEATER
+// lobbies, "Next phase", and four paintings: "Four original screens for the game menus as well") CUSTOM GAME is real:
+// its game type and map are MCC's own lists (pg_lobby.cpp copies MCC's variant library), the maps a game type does not
+// go on dimmed by MCC's own check, and START GAME starts it through MCC's own lobby (pg_lobby_launch, the way
+// matchmaking's winner starts), then Proving Grounds steps aside as for any custom game (not a matchmaking match: not on
+// the Service Record). Its game options are shown, not changed: MCC keeps them in the game type's file. CAMPAIGN,
+// FIREFIGHT, FORGE and THEATER are their lobbies' looks only, saying they are played from MCC's own menus. Their
+// paintings are this PC's own (native\bin\pg_backgrounds: custom_game, campaign, firefight, forge, theater).
+static int g_cg_gt = -1, g_cg_map = -1;          // MCC's library ids picked (-1: the saved names, else the first)
+static int g_cg_state;                           // 0 idle, 1 the start sent to MCC's lobby
+static double g_cg_t0;
+static std::string g_cg_msg;                     // why a start did not go
+static int g_cg_col, g_cg_fam = -1, g_cg_scroll;  // the game type page's column and family; the map list's scroll
+static uint8_t g_cg_fit[160];                    // MCC's check: the game type on each map (by g_lmaps index)
+static int g_cg_fit_gt = -1, g_cg_ticket, g_cg_chunk;
+static bool g_cg_fit_have;
+static int g_lobby_mode;                         // the look-only lobby: 0 campaign, 1 firefight, 2 forge, 3 theater
+
+static const int CG_ORDER[F_N] = { F_ASSAULT, F_CTF, F_HH, F_INFECTION, F_INVASION, F_JUGG, F_KING, F_ODDBALL, F_RACE,
+                                   F_SLAYER, F_STOCK, F_TERR, F_INSANE };   // (Reach's order, its names in capitals)
+static std::string cg_upper(const char* s) { std::string u = s; for (auto& c : u) c = (char)toupper((unsigned char)c); return u; }
+static std::string cg_gt_name(const pg_entry& g) {
+    char s[64];
+    if (g.name[0] == '$') gametype_show(g.name, s, sizeof s); else strcpy_s(s, g.name);
+    return cg_upper(s);
+}
+static std::string cg_map_name(const pg_entry& m) {
+    char s[64];
+    pg_map_name(m.name, m.key, s, sizeof s);
+    return cg_upper(s);
+}
+static const pg_entry* cg_find(const pg_entry* list, int n, int id) {
+    for (int i = 0; i < n; i++) if (list[i].id == id) return &list[i];
+    return nullptr;
+}
+static void cg_save() {
+    wchar_t p[MAX_PATH], v[160];
+    rm_ini(p);
+    if (const pg_entry* g = cg_find(g_lgts, g_nlgts, g_cg_gt)) {
+        swprintf_s(v, L"%d|%S", g->kind, g->name); WritePrivateProfileStringW(L"custom_game", L"gametype", v, p);
+    }
+    if (const pg_entry* m = cg_find(g_lmaps, g_nlmaps, g_cg_map)) {
+        swprintf_s(v, L"%d|%S", m->kind, m->name); WritePrivateProfileStringW(L"custom_game", L"map", v, p);
+    }
+}
+static void cg_resolve() {                       // the picks as MCC's lists have them now (the saved names first)
+    library();
+    if (g_cg_gt >= 0 && !cg_find(g_lgts, g_nlgts, g_cg_gt)) g_cg_gt = -1;
+    if (g_cg_map >= 0 && !cg_find(g_lmaps, g_nlmaps, g_cg_map)) g_cg_map = -1;
+    wchar_t p[MAX_PATH], v[160];
+    rm_ini(p);
+    for (int k = 0; k < 2; k++) {
+        int& id = k ? g_cg_map : g_cg_gt;
+        if (id >= 0) continue;
+        const pg_entry* list = k ? g_lmaps : g_lgts;
+        int n = k ? g_nlmaps : g_nlgts;
+        GetPrivateProfileStringW(L"custom_game", k ? L"map" : L"gametype", L"", v, 160, p);
+        char want[160] = "";
+        WideCharToMultiByte(CP_UTF8, 0, v, -1, want, sizeof want, nullptr, nullptr);
+        int kind = atoi(want);
+        const char* nm = strchr(want, '|') ? strchr(want, '|') + 1 : "";
+        for (int i = 0; i < n && id < 0; i++) if (list[i].kind == kind && !strcmp(list[i].name, nm)) id = list[i].id;
+        for (int i = 0; i < n && id < 0; i++)            // (none saved: MCC's SLAYER, its first map)
+            if (list[i].name[0] && (k || !strcmp(list[i].name, "SLAYER"))) id = list[i].id;
+        for (int i = 0; i < n && id < 0; i++) if (list[i].name[0]) id = list[i].id;
+    }
+}
+static void cg_fit_update() {                    // MCC's check of the game type on every map, 64 at a time
+    if (g_cg_gt < 0 || !g_nlmaps) return;
+    if (g_cg_fit_gt != g_cg_gt) { g_cg_fit_gt = g_cg_gt; g_cg_fit_have = false; g_cg_chunk = 0; g_cg_ticket = 0; }
+    if (g_cg_fit_have) return;
+    int from = g_cg_chunk * 64, n = g_nlmaps - from < 64 ? g_nlmaps - from : 64;
+    if (!g_cg_ticket) {
+        int maps[64], gts[64];
+        for (int i = 0; i < n; i++) { maps[i] = g_lmaps[from + i].id; gts[i] = g_cg_gt; }
+        g_cg_ticket = pg_lobby_check(maps, gts, n);
+        return;
+    }
+    if (pg_lobby_checked(g_cg_ticket, g_cg_fit + from, n)) {
+        g_cg_ticket = 0;
+        if (from + n >= g_nlmaps) g_cg_fit_have = true; else g_cg_chunk++;
+    }
+}
+static bool cg_fits(int map_index) { return !g_cg_fit_have || g_cg_fit[map_index]; }
+static void cg_mark(float cx, float cy) {        // (the pick: a small gold diamond, drawn)
+    g_dl->AddQuadFilled(P(cx, cy - 7), P(cx + 7, cy), P(cx, cy + 7), P(cx - 7, cy), A(C_GOLD));
+}
+
+// a lobby's banner, title and rows, as Reach's (MATCHMAKING's own layout): the art, the mark, the title, a status line,
+// the rows, a line on the focused one; the party at the right. Returns the focused row
+static int cg_lobby(pg_env& e, const char* title, const char* status, const char* const* rows, const std::string* vals,
+                    const bool* on, int n, const char* const* desc, const char* where_caps, const char* where) {
+    rm_big_header(title, "This party is offline: you and the bots you invite.", "MAIN MENU");
+    text(g_fl, 27, 256, 566, C_TEXT, status);
+    g_dl->AddLine(P(248, 606), P(940, 606), A(IM_COL32(206, 212, 218, 60)), U(1));
+    int base = (int)g_items.size(), focus = -1;
+    for (int k = 0; k < n; k++) {
+        float y = 612 + 41.0f * k;
+        bool f = item(248, y, 940, y + 38);
+        if (f) focus = k;
+        rm_row(248, y, 940, y + 38, f, rows[k], on[k], vals[k].empty() ? nullptr : vals[k].c_str());
+    }
+    (void)base;
+    g_dl->AddLine(P(248, 828), P(940, 828), A(IM_COL32(206, 212, 218, 60)), U(1));
+    if (focus >= 0) rm_wrap(g_fl, 26, 256, 842, 640, IM_COL32(222, 226, 230, 255), desc[focus]);
+    rm_party(e, where_caps, where);
+    return focus;
+}
+
+static void rm_custom(pg_env& e, float t) {
+    (void)t;
+    if (ros_up()) { rm_party(e, "IN CUSTOM GAME LOBBY", "In Custom Game Lobby"); return; }
+    cg_resolve();
+    const pg_entry* g = cg_find(g_lgts, g_nlgts, g_cg_gt);
+    const pg_entry* m = cg_find(g_lmaps, g_nlmaps, g_cg_map);
+    // the banner: the map's picture, the game type's icon on it
+    panel(243, 66, 940, 322, IM_COL32(18, 20, 23, 200));
+    if (m) if (const pic* p = map_picture(m->key)) image(p, 245, 68, 938, 320, 0.95f);
+    if (g) if (const pic* ic = family_picture(family_of(g->category))) image_fit(ic, 262, 82, 382, 202);
+    // the start, as MCC's lobby takes it
+    if (g_cg_state == 1) {
+        char why[160];
+        int s = pg_lobby_launch_state(why, sizeof why);
+        if (s == 2) {
+            g_cg_state = 0;
+            g_stage = S_OFF;
+            logf("proving grounds: closed: a custom game started from Proving Grounds' Custom Game lobby");
+            return;
+        }
+        if (s == -1) { g_cg_state = 0; g_cg_msg = why; }
+        else if (ImGui::GetTime() - g_cg_t0 > 8) {
+            g_cg_state = 0;
+            g_cg_msg = "MCC's Halo: Reach custom game lobby did not take the game. Leave Proving Grounds to check it is open.";
+        }
+    }
+    const char* L[4] = { "GAME TYPE", "MAP", "GAME OPTIONS", "START GAME" };
+    std::string V[4] = { g ? cg_gt_name(*g) : "", m ? cg_map_name(*m) : "", "", "" };
+    bool fits = true;
+    if (g && m) { cg_fit_update(); for (int i = 0; i < g_nlmaps; i++) if (g_lmaps[i].id == m->id) fits = cg_fits(i); }
+    const bool ON[4] = { g_nlgts > 0, g_nlmaps > 0, g != nullptr, g && m && fits && g_cg_state == 0 };
+    const char* D[4] = { "Choose the game type: MCC's own and the ones you saved.",
+                         "Choose the map: the maps the game type does not go on are dimmed.",
+                         "See the game type's rules.",
+                         "Start the selected game in MCC's own lobby, with the bots set in BOTS." };
+    std::string status = g_cg_state == 1 ? "Starting..." : !g_nlgts ? "Open MCC's Halo: Reach custom game lobby first."
+                       : !fits ? "That game type does not go on that map." : "Ready";
+    int base = (int)g_items.size();
+    cg_lobby(e, "CUSTOM GAME", status.c_str(), L, V, ON, 4, D, "IN CUSTOM GAME LOBBY", "In Custom Game Lobby");
+    if (!g_cg_msg.empty()) rm_wrap(g_fl, 22, 256, 896, 680, IM_COL32(226, 140, 110, 255), g_cg_msg.c_str());
+    if (rm_prompts(256, 966, true, true, true)) rm_open_options();
+    if (pressed(base + 0)) {
+        if (!g_nlgts) sound(PS_ERROR);
+        else { sound(PS_SELECT); g_rpage = RP_CG_TYPE; g_cg_col = 0; g_cg_fam = g ? family_of(g->category) : -1; g_focus_after = 0;
+               for (int k = 0, r = 0; k < F_N; k++) {
+                   bool any = false;
+                   for (int i = 0; i < g_nlgts; i++) any |= g_lgts[i].name[0] && family_of(g_lgts[i].category) == CG_ORDER[k];
+                   if (!any) continue;
+                   if (CG_ORDER[k] == g_cg_fam) g_focus_after = r;
+                   r++;
+               } }
+    }
+    if (pressed(base + 1)) {
+        if (!g_nlmaps) sound(PS_ERROR);
+        else { sound(PS_SELECT); g_rpage = RP_CG_MAP; g_cg_scroll = 0; g_focus_after = 0;
+               for (int i = 0; i < g_nlmaps; i++) if (g_lmaps[i].id == g_cg_map) g_focus_after = i; }
+    }
+    if (pressed(base + 2)) { if (g) { sound(PS_SELECT); g_rpage = RP_CG_OPTIONS; g_focus_after = 0; } else sound(PS_ERROR); }
+    if (pressed(base + 3)) {
+        if (!ON[3]) sound(PS_ERROR);
+        else if (!pg_lobby_live()) { sound(PS_ERROR); g_cg_msg = "Open MCC's Halo: Reach custom game lobby first: the game starts there."; }
+        else {
+            sound(PS_SELECT);
+            g_cg_msg.clear();
+            pg_lobby_launch(m->id, g->id);
+            g_cg_state = 1;
+            g_cg_t0 = ImGui::GetTime();
+            logf("proving grounds: custom game asked of MCC: %s on %s", g->name, m->name);
+        }
+    }
+}
+
+// SELECT GAME TYPE: the families (those MCC has), then their game types; the focused one's card at the right
+static void rm_cg_type(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("SELECT GAME TYPE", "CUSTOM GAME");
+    library();
+    int fams[F_N], nf = 0;
+    for (int k = 0; k < F_N; k++) {
+        bool any = false;
+        for (int i = 0; i < g_nlgts; i++) any |= g_lgts[i].name[0] && family_of(g_lgts[i].category) == CG_ORDER[k];
+        if (any) fams[nf++] = CG_ORDER[k];
+    }
+    int base = (int)g_items.size(), focus = -1;
+    for (int k = 0; k < nf; k++) {
+        float y = 145 + 41.0f * k;
+        bool f = g_cg_col == 0 && item(390, y, 770, y + 38);
+        if (f) { focus = k; g_cg_fam = fams[k]; }
+        if (g_cg_col == 1 && fams[k] == g_cg_fam) g_dl->AddRectFilled(P(390, y), P(770, y + 38), A(IM_COL32(214, 218, 222, 40)));
+        rm_row(390, y, 770, y + 38, f, cg_upper(FAMILY_NAME[fams[k]]).c_str(), g_cg_col == 0 || fams[k] == g_cg_fam);
+        if (g_cg_col == 0 || fams[k] == g_cg_fam) text(g_fl, 24, 760, y + 6, f ? C_TEXT : C_DIM, ">", 2);
+    }
+    std::vector<int> gts;                            // (the family's game types; names MCC lists twice: both, each its own)
+    for (int i = 0; i < g_nlgts; i++) if (g_lgts[i].name[0] && family_of(g_lgts[i].category) == g_cg_fam) gts.push_back(i);
+    int sel = -1;
+    for (int k = 0; k < (int)gts.size() && k < 16; k++) {
+        float y = 145 + 41.0f * k;
+        bool f = g_cg_col == 1 && item(782, y, 1150, y + 38);
+        if (f) sel = gts[k];
+        const pg_entry& g = g_lgts[gts[k]];
+        rm_row(782, y, 1150, y + 38, f, cg_gt_name(g).c_str(), true);
+        if (g.id == g_cg_gt) cg_mark(1132, y + 19);       // (the one picked: a gold mark)
+        if (g.kind == 3) text(g_fs, 16, g.id == g_cg_gt ? 1112.0f : 1140.0f, y + 12, C_DIM, "YOURS", 2);
+    }
+    // the card: the family's icon on white, the name, what it is
+    int show = sel >= 0 ? sel : -1;
+    g_dl->AddRectFilled(P(1162, 165), P(1515, 375), A(IM_COL32(236, 240, 244, 235)), U(10));
+    g_dl->AddRectFilled(P(1180, 180), P(1497, 360), A(IM_COL32(20, 34, 44, 255)), U(8));
+    if (g_cg_fam >= 0) if (const pic* ic = family_picture(g_cg_fam)) image_fit(ic, 1268, 200, 1408, 340);
+    std::string nm = show >= 0 ? cg_gt_name(g_lgts[show]) : g_cg_fam >= 0 ? cg_upper(FAMILY_NAME[g_cg_fam]) : "";
+    text(g_fl, 30, 1162, 392, C_TEXT, nm.c_str());
+    if (show >= 0) {
+        const pg_entry& g = g_lgts[show];
+        std::string w = std::string(g.teams == 1 ? "A team game." : g.teams == 0 ? "Every player for themselves." : "") +
+                        (g.kind == 1 ? " Built into Halo: Reach." : g.kind == 2 ? " MCC's own." : g.kind == 3 ? " One you saved." : "");
+        rm_wrap(g_fl, 22, 1162, 434, 350, IM_COL32(222, 226, 230, 255), w.c_str());
+    } else {
+        char c[48];
+        sprintf_s(c, "%d Game Type Items", (int)gts.size());
+        text(g_fl, 24, 1162, 434, C_DIM, c);
+    }
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    if (g_cg_col == 0) {
+        int c = -1;
+        for (int k = 0; k < nf; k++) if (pressed(base + k)) c = k;
+        if (c < 0 && g_left_right == 1 && focus >= 0) c = focus;
+        if (c >= 0) {
+            if (g_left_right == 1) g_lr_taken = true;
+            g_cg_fam = fams[c]; g_cg_col = 1; g_focus_after = 0; sound(PS_SELECT);
+            std::vector<int> v;
+            for (int i = 0; i < g_nlgts; i++) if (g_lgts[i].name[0] && family_of(g_lgts[i].category) == g_cg_fam) v.push_back(i);
+            for (int k = 0; k < (int)v.size(); k++) if (g_lgts[v[k]].id == g_cg_gt) g_focus_after = k;
+        }
+    } else {
+        if (g_left_right == -1) {
+            g_lr_taken = true; g_cg_col = 0; sound(PS_BACK);
+            for (int k = 0; k < nf; k++) if (fams[k] == g_cg_fam) g_focus_after = k;
+        }
+        for (int k = 0; k < (int)gts.size() && k < 16; k++) {
+            if (!pressed(base + k)) continue;
+            g_cg_gt = g_lgts[gts[k]].id;
+            cg_save();
+            sound(PS_SELECT);
+            g_rpage = RP_CUSTOM; g_focus_after = 0;
+        }
+    }
+}
+
+// SELECT MAP: MCC's maps, 15 at a time, the ones the game type does not go on dimmed; the map's picture at the right
+static void rm_cg_map(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("SELECT MAP", "CUSTOM GAME");
+    library();
+    cg_fit_update();
+    const int V = 15;
+    int n = g_nlmaps, base = (int)g_items.size(), sel = -1;
+    int ff = g_focus - base;
+    if (ff < 0 || ff >= n) ff = 0;
+    if (ff < g_cg_scroll) g_cg_scroll = ff;
+    if (ff >= g_cg_scroll + V) g_cg_scroll = ff - V + 1;
+    for (int k = 0; k < n; k++) {
+        bool shown = k >= g_cg_scroll && k < g_cg_scroll + V;
+        float y = 145 + 41.0f * (k - g_cg_scroll);
+        bool f = shown ? item(390, y, 775, y + 38) : item(-2000, -2000, -1990, -1990);
+        if (f) sel = k;
+        if (!shown) continue;
+        g_dl->PushClipRect(P(390, y), P(775, y + 38), true);
+        rm_row(390, y, 775, y + 38, f, cg_map_name(g_lmaps[k]).c_str(), cg_fits(k));
+        g_dl->PopClipRect();
+        if (g_lmaps[k].id == g_cg_map) cg_mark(757, y + 19);
+    }
+    if (g_cg_scroll > 0) g_dl->AddTriangleFilled(P(582, 128), P(572, 140), P(592, 140), A(C_DIM));
+    if (g_cg_scroll + V < n) g_dl->AddTriangleFilled(P(572, 150 + 41.0f * V), P(592, 150 + 41.0f * V), P(582, 162 + 41.0f * V), A(C_DIM));
+    int s = sel >= 0 ? sel : ff;
+    if (s >= 0 && s < n) {
+        const pg_entry& m = g_lmaps[s];
+        panel(800, 160, 1505, 560, IM_COL32(18, 20, 23, 200));
+        if (const pic* p = map_picture(m.key)) image(p, 802, 162, 1503, 558, 0.95f);
+        text(g_fl, 34, 808, 578, C_TEXT, cg_map_name(m).c_str());
+        char base_s[64] = "";                        // (the base map: the built-in map of the same key, by its name)
+        for (int i = 0; i < g_nlmaps && !base_s[0]; i++)
+            if (g_lmaps[i].kind == 1 && !strcmp(g_lmaps[i].key, m.key)) pg_map_name(g_lmaps[i].name, g_lmaps[i].key, base_s, sizeof base_s);
+        std::string w = m.kind == 1 ? "Built into Halo: Reach." : m.kind == 2 ? "A map variant MCC ships." : "A map variant you saved";
+        if (m.kind == 3 && base_s[0]) w += std::string(", on ") + base_s + ".";
+        else if (m.kind == 3) w += ".";
+        if (!cg_fits(s)) w += " The game type picked does not go on it.";
+        rm_wrap(g_fl, 23, 808, 624, 690, IM_COL32(222, 226, 230, 255), w.c_str());
+    }
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    for (int k = 0; k < n; k++) {
+        if (!pressed(base + k)) continue;
+        if (!cg_fits(k)) { sound(PS_ERROR); continue; }
+        g_cg_map = g_lmaps[k].id;
+        cg_save();
+        sound(PS_SELECT);
+        g_rpage = RP_CUSTOM; g_focus_after = 1;
+    }
+}
+
+// GAME OPTIONS: what is known of the game type; its rules are changed in MCC's own lobby
+static void rm_cg_options(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("GAME OPTIONS", "CUSTOM GAME");
+    const pg_entry* g = cg_find(g_lgts, g_nlgts, g_cg_gt);
+    const char* L[4] = { "GAME TYPE", "KIND OF GAME", "TEAMS", "FROM" };
+    std::string V[4] = { g ? cg_gt_name(*g) : "", g ? cg_upper(FAMILY_NAME[family_of(g->category)]) : "",
+                         !g || g->teams < 0 ? "NOT KNOWN" : g->teams ? "ENABLED" : "DISABLED",
+                         !g ? "" : g->kind == 1 ? "BUILT IN" : g->kind == 2 ? "MCC" : "YOUR FILES" };
+    for (int k = 0; k < 4; k++) {
+        float y = 145 + 41.0f * k;
+        bool f = item(390, y, 1515, y + 38);
+        if (f) focus_band(390, y, 1515, y + 38);
+        text(g_fl, 25, 400, y + 6, f ? C_TEXT : C_DIM, L[k]);
+        text(g_fl, 25, 980, y + 6, C_TEXT, V[k].c_str());
+    }
+    g_dl->AddLine(P(400, 322), P(1500, 322), A(IM_COL32(150, 158, 166, 70)), U(1));
+    rm_wrap(g_fl, 24, 400, 338, 1100, IM_COL32(222, 226, 230, 255),
+            "The game type's rules (score to win, weapons and vehicles, traits) are kept in its own file. Change them in "
+            "MCC's own custom game lobby, under Game Options, and save the game type: Proving Grounds starts it as saved.");
+    rm_band();
+    prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) rm_exit();
+}
+
+// CAMPAIGN, FIREFIGHT, FORGE and THEATER: their lobbies' looks; played from MCC's own menus
+static const char* LB_TITLE[4] = { "CAMPAIGN", "FIREFIGHT", "FORGE", "THEATER" };
+static const wchar_t* LB_ART[4] = { L"campaign", L"firefight", L"forge", L"theater" };
+static void cg_open() { g_rpage = RP_CUSTOM; g_focus_after = 3; g_cg_msg.clear(); g_cg_state = 0; }
+static void lobby_open(int mode) { g_lobby_mode = mode & 3; g_rpage = RP_LOBBY; g_focus_after = 0; }
+static const pic* rm_lobby_art() { return rm_picture(g_rpage == RP_CUSTOM ? L"custom_game" : LB_ART[g_lobby_mode & 3]); }
+static void rm_lobby(pg_env& e, float t) {
+    (void)t;
+    const char* caps[4] = { "IN CAMPAIGN LOBBY", "IN FIREFIGHT LOBBY", "IN FORGE LOBBY", "IN THEATER LOBBY" };
+    const char* where[4] = { "In Campaign Lobby", "In Firefight Lobby", "In Forge Lobby", "In Theater Lobby" };
+    int md = g_lobby_mode;
+    if (ros_up()) { rm_party(e, caps[md], where[md]); return; }
+    panel(243, 66, 940, 322, IM_COL32(18, 20, 23, 200));  // (the banner: the mode's painting, faint, else ours)
+    if (const pic* p = rm_picture(LB_ART[md])) image(p, 245, 68, 938, 320, 0.9f);
+    else rm_diamonds(590, 194, 150, IM_COL32(120, 176, 230, 120));
+    std::string latest;                          // (Theater: the newest film in Temporary History)
+    if (md == 3) {
+        if (!g_fb_read[0]) fb_scan(0);
+        if (!g_fb[0][2].empty()) latest = cg_upper(g_fb[0][2][0].name.c_str());
+    }
+    const char* R0[3] = { "MISSION", "DIFFICULTY", "START GAME" };
+    const char* R1[5] = { "GAME TYPE", "MISSION", "DIFFICULTY", "GAME OPTIONS", "START GAME" };
+    const char* R2[4] = { "GAME TYPE", "MAP", "GAME OPTIONS", "START GAME" };
+    const char* R3[2] = { "CHOOSE FILM", "START FILM" };
+    const char* const* R = md == 0 ? R0 : md == 1 ? R1 : md == 2 ? R2 : R3;
+    int n = md == 0 ? 3 : md == 1 ? 5 : md == 2 ? 4 : 2;
+    std::string V[5];
+    if (md == 2) { cg_resolve(); if (const pg_entry* m = cg_find(g_lmaps, g_nlmaps, g_cg_map)) V[1] = cg_map_name(*m); V[0] = "BASIC EDITING"; }
+    if (md == 3) V[0] = latest;
+    bool ON[5] = { false, false, false, false, false };
+    char d[220];
+    static const char* WORD[4] = { "The campaign", "Firefight", "Forge", "Theater" };
+    sprintf_s(d, "%s is played from MCC's own menus: leave Proving Grounds and pick Halo: Reach's %s there. Proving "
+                 "Grounds' bots do not play it yet.", WORD[md], md == 0 ? "campaign" : WORD[md]);
+    const char* D[5] = { d, d, d, d, d };
+    std::string title = LB_TITLE[md];
+    int base = (int)g_items.size();
+    cg_lobby(e, title.c_str(), "Not in Proving Grounds yet", R, V, ON, n, D, caps[md], where[md]);
+    if (rm_prompts(256, 966, false, true, true)) rm_open_options();
+    for (int k = 0; k < n; k++) if (pressed(base + k)) sound(PS_ERROR);
+}
+
 // S_MENU's frame while one of Reach's pages is up (the invite list over it, the page held still under it)
 static void reach_menu_screen(pg_env& e, float t) {
     g_inert = g_invite;
@@ -1893,6 +2285,11 @@ static void reach_menu_screen(pg_env& e, float t) {
     case RP_FILES: rm_files(e, t); break;
     case RP_FILE_LIST: rm_file_list(e, t); break;
     case RP_CONTROLLER: rm_controller(e, t); break;
+    case RP_CUSTOM: rm_custom(e, t); break;
+    case RP_CG_TYPE: rm_cg_type(e, t); break;
+    case RP_CG_MAP: rm_cg_map(e, t); break;
+    case RP_CG_OPTIONS: rm_cg_options(e, t); break;
+    case RP_LOBBY: rm_lobby(e, t); break;
     default: break;
     }
     g_inert = false;
@@ -1932,6 +2329,13 @@ static bool rmenu_back() {
         if (g_fb_col == 1) { g_fb_col = 0; g_focus_after = g_fb_kind; return true; }
         g_rpage = RP_FILES; g_focus_after = g_fb_src; return true;
     case RP_CONTROLLER: g_rpage = RP_MENU; g_focus_after = 3; return true;
+    case RP_CUSTOM: g_rpage = RP_MAIN; g_focus_after = 3; return true;
+    case RP_CG_TYPE:
+        if (g_cg_col == 1) { g_cg_col = 0; g_focus_after = 0; return true; }
+        g_rpage = RP_CUSTOM; g_focus_after = 0; return true;
+    case RP_CG_MAP: g_rpage = RP_CUSTOM; g_focus_after = 1; return true;
+    case RP_CG_OPTIONS: g_rpage = RP_CUSTOM; g_focus_after = 2; return true;
+    case RP_LOBBY: g_rpage = RP_MAIN; g_focus_after = g_lobby_mode == 0 ? 0 : g_lobby_mode == 1 ? 2 : g_lobby_mode == 2 ? 4 : 5; return true;
     }
     return false;
 }

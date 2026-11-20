@@ -588,7 +588,8 @@ static int g_npool_names;
 // (Nov 19, phase 2) Reach's Start menu and the player's Service Record, Career and its difficulty pages
 enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF,
        RP_ARMORY, RP_ARM_ITEMS, RP_ARM_FAMILY,     // (Nov 19, phase 3: the Armory, proving_grounds_reach.inc)
-       RP_FILES, RP_FILE_LIST, RP_CONTROLLER };    // (phase 4: the File Browser, the controller)
+       RP_FILES, RP_FILE_LIST, RP_CONTROLLER,      // (phase 4: the File Browser, the controller)
+       RP_CUSTOM, RP_CG_TYPE, RP_CG_MAP, RP_CG_OPTIONS, RP_LOBBY };   // (phase 5: Custom Game, the other lobbies)
 static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
 static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
 static bool rmenu_back();
@@ -3244,6 +3245,12 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 36: pg_open(); fb_scan(0); g_rpage = RP_FILE_LIST; g_fb_src = 0; g_fb_kind = 2; g_fb_col = 1; g_fb_scroll = 0;
              g_focus = 0; break;
     case 37: pg_open(); g_rpage = RP_CONTROLLER; g_focus = 0; break;
+    // (phase 5) Custom Game, Select Game Type (Capture the Flag's), Select Map, Game Options, Firefight's lobby
+    case 38: pg_open(); g_rpage = RP_CUSTOM; g_focus = 3; break;
+    case 39: pg_open(); cg_resolve(); g_rpage = RP_CG_TYPE; g_cg_col = 1; g_cg_fam = F_CTF; g_focus = 1; break;
+    case 40: pg_open(); cg_resolve(); g_rpage = RP_CG_MAP; g_cg_scroll = 0; g_focus = 6; break;
+    case 41: pg_open(); cg_resolve(); g_rpage = RP_CG_OPTIONS; g_focus = 0; break;
+    case 42: pg_open(); g_rpage = RP_LOBBY; g_lobby_mode = 1; g_focus = 0; break;
     }
     if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Proving Grounds' own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
