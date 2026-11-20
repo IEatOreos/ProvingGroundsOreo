@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Noble aims like an aimbot: every gun, seat and vehicle, 2026-11-20
+
+The owner: "I want you to make the noble difficulty to practically be an aimbot. I want their accuracy to be close to 100%. With all vehicles and all weapons that are precision based."
+
+- `brain/bot.py` `Aim.noble_lock` (new), called from `Aim.step` for a Noble with a target: the view is set every tick to the exact angles from the shot's origin (the eye, a turret's pivot, a vehicle's camera) to the caller's point (head, chest, an explosive's feet, Halo 4's real point), with no error, tremor or flick. It leads by the shot's whole flight to where he will be (solved three times, `NOBLE_LEAD_ITERS`) plus the 0.034 s read delay (`DEMON_LEAD_S`) where the caller had not led it already. Hitscan precision guns (`PRECISION` without a `PROJECTILE_SPEED`) lead by no flight. Every caller of `Aim.step` with a target gets it: on foot, driver guns (Banshee, Ghost, Wraith, Scorpion, Reach's own bolt speeds), gunner and passenger seats. Demon itself leads nothing (`DEMON_AIM` lead 0); Noble's lead is the main change for projectiles and vehicles.
+- `Bot.aim_head`: Noble with a precision gun aims at the head of a man on foot from the first shot (Demon: the chest until his shield is down, 97%).
+- `brain/profiles.py` `NOBLE_TURN` 3000 deg/s (Demon 700): `Bot.turn_cap` lets the lock reach a new man in about two ticks.
+- Kept: Demon and every other difficulty unchanged; Noble keeps Demon's DMR/sniper head correction, Reach direct fire, Halo 4 lock and Warthog-gun lock (it is a Demon to those). Firing pace (DMR bloom pacing) and the game's own spread are not changed, so real hit rates will be under 100%.
+- Validation: `tools/test_noble_difficulty.py` aimbot tests (a still head at once, a strafing man with the DMR, a Banshee-speed bolt meeting a running man within 0.02 u where Demon's misses by over 1 u, rockets at the feet, a caller's point kept, a juking man tracked every tick within the turn cap, the head from the first shot). Full suite 1014 OK; `live_bots` imports. **Untested in game.**
+
 ### Vehicle guns skip men they cannot hit; boarded gunners get out; tanks run boarders down, 2026-11-20
 
 The owner's F9s on Boneyard (`reach_70_boneyard_20261120-164229`): a screenshot of a Warthog gunner (Partyland) "the gunn aims straight down even when their reticle in the right plac.e", and "Acsencion didnt shoot at the bot closest to him when in the scorpion and got jacked"; then "Yes, fix it".

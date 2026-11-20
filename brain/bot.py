@@ -1059,6 +1059,7 @@ DEMON_LEAD_S = 0.034     # s: read-to-shot lead, one brain tick of his and our o
 LEAD_VEL_MAX = 8.0       # u/s: a velocity read past this is a teleport or respawn, not motion to lead
 RIDER_VEL_MAX = 25.0     # u/s: ... for a man riding a vehicle (a Warthog runs about 11 u/s, a boosted Ghost more)
 PART_DRY_S, PART_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without a hit on him: the other part this long
+NOBLE_LEAD_ITERS = 3     # (custom, Nov 20) Noble's lead: the shot's flight to where he will be, solved this many times
 # Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
 # our live view, led like a man on foot, both parts his head (his body sits in the vehicle), and no shot where the round
 # would go through the vehicle first (vehicles.hull_blocks). His Gore Valley CTF: Demons spent 44% of their on-foot fight
@@ -1522,6 +1523,9 @@ class Aim:
             point = target_point if target_point is not None else tpos + Vec(0, 0, aim_height(True, crouched))
             s.target, s.goal, s.flick = target_id, angles_to(origin or eye(me), point), None
             return s.goal
+        if target_id is not None and profiles.fixed_noble(s.p):
+            return s.noble_lock(now, me, target_id, tpos, tvel, aim_head, gun, origin, crouched, target_point,
+                                splash_at_feet, shot_speed)
         if target_id != s.target:
             s.target, s.focus = target_id, 0.0
         s.focus = min(1.0, s.focus + dt / 1.5)
@@ -1610,6 +1614,33 @@ class Aim:
         fixed_high = unerring
         tremor = s.rng.gauss(0, TREMOR * (p.extra or {}).get("tremor_k", 1.0)) if target_id is not None and not fixed_high else 0.0
         return me.yaw + dy * gain + tremor, me.pitch + dp * gain + tremor * 0.5
+
+    def noble_lock(s, now, me, target_id, tpos, tvel, aim_head, gun, origin, crouched, target_point, splash_at_feet,
+                   shot_speed):
+        """(custom, Nov 20, owner: "make the noble difficulty to practically be an aimbot ... close to 100%. With all
+        vehicles and all weapons that are precision based") Noble's view on the point every tick, with every gun, seat
+        and vehicle that aims through step: exact angles from the shot's origin (else the eye) to the caller's point (a
+        head, a chest, an explosive's feet, Halo 4's real point), led by the shot's whole flight to where he will be
+        (NOBLE_LEAD_ITERS) and by the read delay (DEMON_LEAD_S) where the caller did not lead it already; no error, no
+        tremor, no flick. Hitscan precision guns (PRECISION, no PROJECTILE_SPEED) lead by no flight."""
+        gun = gun or me.weapon
+        vel = tvel if tvel is not None and tvel.length() <= RIDER_VEL_MAX else Vec()   # (a teleport or respawn read)
+        delay = DEMON_LEAD_S if target_point is None or me.vehicle != -1 else 0.0   # (lead_ray / h4_ray: led on foot)
+        o = origin or eye(me)
+        if target_point is None:
+            o = o + (me.vel if me.vel.length() <= LEAD_VEL_MAX else Vec()) * DEMON_LEAD_S
+            h = 0.05 if gun in SPLASH and splash_at_feet else aim_height(aim_head, crouched)
+            point = tpos + Vec(0, 0, h)
+        else:
+            point = target_point
+        speed = shot_speed or PROJECTILE_SPEED.get(gun, None if gun in PRECISION else 360.0)
+        t = delay
+        for _ in range(NOBLE_LEAD_ITERS):              # the flight to where he will be, not to where he is
+            t = delay + (dist(o, point + vel * t) / speed if speed else 0.0)
+        s.target, s.flick, s.focus = target_id, None, 1.0
+        s.goal = angles_to(o, point + vel * t)
+        s.goal_rate, s.goal_prev = 0.0, (s.goal[0], now)
+        return s.goal
 
     def lock(s, me, target_id, point, tvel, origin=None, gun=None):
         """(custom, Nov 18, owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner
@@ -7493,6 +7524,8 @@ class Bot:
         first shot), then the head as often as the tier knows to. Automatic weapons: chest."""
         if target is None or me.weapon not in PRECISION:
             return False
+        if profiles.fixed_noble(s.p) and target.vehicle in (None, -1):
+            return True                       # (custom, Nov 20) Noble: a precision gun at a man on foot, his head always
         bare = target.shield <= 0.0
         key = (tid, me.weapon, bare)
         if getattr(s, "head_key", None) != key:

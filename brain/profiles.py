@@ -147,6 +147,9 @@ MYTHIC_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "de
 # fixed_demon, so every Demon rule, its aim and hands) under its own label "noble". In game only (the BOTS panel, botcore,
 # botctl); not offered on the Service Record site. Its training goes behind fixed_noble so Demon stays as it is
 NOBLE = "noble"
+# (Nov 20, owner: "make the noble difficulty to practically be an aimbot ... close to 100%") Noble's view turns this fast
+# (Bot.turn_cap; Demon 700 deg/s): its lock (Aim.noble_lock) is on a man within about two ticks wherever he appears
+NOBLE_TURN = math.radians(3000)
 
 
 def arc_spot(prof):
@@ -331,7 +334,8 @@ def make_profile(tier, personality, rng=random):
     if tier == MYTHIC:
         return mythic_profile(personality, rng)
     if tier == NOBLE:
-        return replace(make_profile(DEMON, personality, rng), label=NOBLE)   # (Nov 20) Demon's base, its own name
+        # (Nov 20) Demon's base, its own name; its aim locks on (bot.Aim.noble_lock), its view turns at NOBLE_TURN
+        return replace(make_profile(DEMON, personality, rng), label=NOBLE, turn=NOBLE_TURN)
     if tier == DEMON and personality == "wheelman":
         # (custom, Nov 14, owner: "bots that dont drive passenger vehicles cannot get wheelman") a Demon drives no
         # Warthog, Mongoose or Ghost (vehicles.DEMON_NO_DRIVE), so no Wheelman: the style it plays on foot, Flanker
