@@ -312,7 +312,7 @@ static bool in_ce_menus() {
 }
 
 static const char* DIFF_NAME[HB_TIERS + 1] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling", "Demon", "Blind",
-                                               "Tactician", "Mythic", "Mixed" };   // (bots_panel.cpp tiers, then Mixed)
+                                               "Tactician", "Mythic", "Noble", "Mixed" };   // (bots_panel.cpp tiers, then Mixed)
 
 // MCC lays its menus out on the back buffer; the window shows that buffer stretched to its client area. The two differ
 // when the window was moved or resized without MCC resizing its buffer (a borderless window put on another monitor):

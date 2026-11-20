@@ -46,16 +46,18 @@ static const ImU32 TEAM_COL[HB_TEAMS_MAX] = {
 // 7 Tactician (custom, Nov 10): Legendary's game sense, its aim and hands between Heroic's and Legendary's
 // (brain/profiles.py TACTICIAN)
 // 8 Mythic (custom, Nov 13): Legendary with its aim and hands halfway to Demon's and Demon's eyes (brain/profiles.py MYTHIC)
+// 9 Noble (custom, Nov 20): the testing difficulty, Demon's base under its own name (brain/profiles.py NOBLE); in game only
 static const char* TIER_NAME[HB_TIERS] = { "Easy", "Normal", "Heroic", "Legendary", "Scaling", "Demon", "Blind", "Tactician",
-                                           "Mythic" };
+                                           "Mythic", "Noble" };
 static const ImU32 SCALE_COL = IM_COL32(196, 206, 216, 255);   // neutral: no rank colour
 static const ImU32 DEMON_COL = IM_COL32(200, 30, 60, 255);     // custom: deep crimson
 static const ImU32 BLIND_COL = IM_COL32(168, 92, 220, 255);    // custom: violet, between Legendary and Demon
 static const ImU32 TACT_COL = IM_COL32(64, 196, 180, 255);     // custom: teal, its own (the brain, not the hands)
 static const ImU32 MYTHIC_COL = IM_COL32(232, 62, 132, 255);   // custom: rose, between Legendary's red and Demon's crimson
+static const ImU32 NOBLE_COL = IM_COL32(222, 178, 72, 255);    // custom: old gold, its own (the testing difficulty)
 static const ImU32 TIER_COL[HB_TIERS] = { IM_COL32(95, 224, 138, 255), IM_COL32(110, 200, 255, 255),
                                           IM_COL32(255, 154, 61, 255), IM_COL32(255, 91, 75, 255), SCALE_COL, DEMON_COL,
-                                          BLIND_COL, TACT_COL, MYTHIC_COL };
+                                          BLIND_COL, TACT_COL, MYTHIC_COL, NOBLE_COL };
 // brain/profiles.py TIERS, CRAFT and REACTION: what each level knows and does (Scaling: brain/scaling.py)
 static const char* SCALE_ABOUT = "A difficulty of its own. Legendary's game sense, with reaction, aim and turn speed set "
                                  "by your K/D: after every game they rise or fall, without limit, until your games even "
@@ -71,6 +73,8 @@ static const char* TACT_ABOUT = "Legendary's game sense and decisions: map contr
 static const char* MYTHIC_ABOUT = "Between Legendary and Demon. Legendary's game sense, with its reactions, aim and "
                                   "decisions halfway to Demon's, and Demon's eyes: a wider view and every motion tracker "
                                   "dot noticed.";
+static const char* NOBLE_ABOUT = "The testing difficulty. Starts as an exact copy of Demon, under its own name, and "
+                                 "changes as it is trained.";
 static const char* TIER_ABOUT[HB_TIERS] = {
     "Plays for itself. Reacts a beat slower than a good player, never jumps, walks straight at you and fights in "
     "the open. No motion tracker, no teamwork. You should win most fights.",
@@ -80,7 +84,7 @@ static const char* TIER_ABOUT[HB_TIERS] = {
     "knows when power weapons come back.",
     "Reacts about a third faster than a good player and uses everything: focus fire with the team, sneaky routes, "
     "constant awareness and every power weapon and respawn timed.",
-    SCALE_ABOUT, DEMON_ABOUT, BLIND_ABOUT, TACT_ABOUT, MYTHIC_ABOUT };
+    SCALE_ABOUT, DEMON_ABOUT, BLIND_ABOUT, TACT_ABOUT, MYTHIC_ABOUT, NOBLE_ABOUT };
 // brain/profiles.py PERSONALITIES order (rusher, camper, flanker, objector, spammer, grudger, sniper, wheelman: Nov 13)
 static const char* STYLE_KEY[HB_STYLES] = { "rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper",
                                             "wheelman", "any" };
@@ -95,30 +99,30 @@ static const char* TITLE_NAME[9] = { "", "HALO: CE", "HALO 2", "HALO 3", "", "HA
                                      "HALO 3: ODST" };   // (8: ODST, Firefight only: overlay.cpp title_of)
 
 static const char* TIER_KEY[HB_TIERS] = { "novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician",
-                                          "mythic" };
+                                          "mythic", "noble" };
 const char* team_name(int t) { return t >= 0 && t < HB_TEAMS_MAX ? TEAM_NAME[t] : "?"; }
 uint32_t team_colour(int t) { return TEAM_COL[t >= 0 && t < HB_TEAMS_MAX ? t : 0]; }   // (the lobby's bot rows)
 const char* tier_name(int t) { return t >= 0 && t < HB_TIERS ? TIER_NAME[t] : "?"; }
 const char* tier_key(int t) { return t >= 0 && t < HB_TIERS ? TIER_KEY[t] : "top"; }
 
 // The "for everyone" difficulty (shared.h difficulty: 0..3 the ranks, 4 Mixed, 5 Scaling, 6 Demon, 7 Blind,
-// 8 Tactician, 9 Mythic) <-> a
+// 8 Tactician, 9 Mythic, 10 Noble) <-> a
 // bot's tier
 int roster_difficulty_tier(uint32_t d, int k) {
     return d < 4 ? (int)d : d == 5 ? HB_TIER_SCALING : d == 6 ? HB_TIER_DEMON : d == 7 ? HB_TIER_BLIND
-         : d == 8 ? HB_TIER_TACTICIAN : d == 9 ? HB_TIER_MYTHIC : roster_mixed_tier(k);
+         : d == 8 ? HB_TIER_TACTICIAN : d == 9 ? HB_TIER_MYTHIC : d == 10 ? HB_TIER_NOBLE : roster_mixed_tier(k);
 }
 static uint32_t tier_difficulty(int tier) {
     return tier == HB_TIER_SCALING ? 5u : tier == HB_TIER_DEMON ? 6u : tier == HB_TIER_BLIND ? 7u : tier == HB_TIER_TACTICIAN ? 8u
-         : tier == HB_TIER_MYTHIC ? 9u : (uint32_t)tier;
+         : tier == HB_TIER_MYTHIC ? 9u : tier == HB_TIER_NOBLE ? 10u : (uint32_t)tier;
 }
 // the difficulty pickers' buttons in rank order (Tactician between Heroic and Legendary, Blind, Mythic, then Demon
-// after Legendary), Scaling last: its hover box is the last item's
-#define DIFF_CHOICES 10
-static const uint32_t DIFF_SHOWN[DIFF_CHOICES] = { 0, 1, 2, 8, 3, 7, 9, 6, 4, 5 };
+// after Legendary, then Noble, the testing difficulty: Nov 20), Mixed, Scaling last: its hover box is the last item's
+#define DIFF_CHOICES 11
+static const uint32_t DIFF_SHOWN[DIFF_CHOICES] = { 0, 1, 2, 8, 3, 7, 9, 6, 10, 4, 5 };
 static int difficulty_slot(uint32_t d) {
     for (int i = 0; i < DIFF_CHOICES; i++) if (DIFF_SHOWN[i] == d) return i;
-    return 8;                                                 // (Mixed)
+    return 9;                                                 // (Mixed)
 }
 const char* style_name(int s) { return s >= 0 && s < HB_STYLES ? STYLE_KEY[s] : "any"; }
 int roster_max_teams(int title) { return hb_panel_firefight ? 1 : title == 1 ? 2 : HB_TEAMS_MAX; }   // (Firefight: yours)
@@ -1343,8 +1347,9 @@ static bool g_rank_max[12];                              // the tour has no leve
 static ULONGLONG g_rank_asked = 0, g_rank_check = 0;
 // the tours each difficulty's bots are drawn from, [first, last] (tier order: Easy, Normal, Heroic, Legendary, Scaling,
 // Demon, Blind, Tactician, Mythic): Demon the top two (the eagle, or tour 10 near General), Mythic between Legendary's
-// and Demon's
-static const int RANK_TOURS[HB_TIERS][2] = { {1, 2}, {2, 4}, {4, 6}, {6, 9}, {5, 8}, {10, 11}, {6, 9}, {5, 7}, {8, 10} };
+// and Demon's; Noble (Nov 20) Demon's
+static const int RANK_TOURS[HB_TIERS][2] = { {1, 2}, {2, 4}, {4, 6}, {6, 9}, {5, 8}, {10, 11}, {6, 9}, {5, 7}, {8, 10},
+                                             {10, 11} };
 
 static void ranks_load() {
     wchar_t p[300];
@@ -1406,7 +1411,7 @@ void bot_rank(const char* name, int tier, int* tour, int* level) {
     int lo = RANK_TOURS[tier][0], hi = RANK_TOURS[tier][1];
     int t = lo + (int)(s % (uint32_t)(hi - lo + 1));
     int lv = 1 + (int)((s >> 8) % 30u);
-    if (tier == HB_TIER_DEMON && t == 10 && lv < 20) lv = 20 + (int)((s >> 16) % 11u);
+    if ((tier == HB_TIER_DEMON || tier == HB_TIER_NOBLE) && t == 10 && lv < 20) lv = 20 + (int)((s >> 16) % 11u);
     bool max = t == 11 && (g_rank_tours ? g_rank_max[11] : true);
     *tour = t;
     *level = max ? 0 : lv;
@@ -1560,9 +1565,12 @@ static uint32_t& pool_rng() {
     if (!g_pool_rng) g_pool_rng = (GetTickCount() * 2654435761u) | 1;
     return g_pool_rng;
 }
-// novice average strong top scaling demon blind tactician mythic ((custom, Nov 13, owner) Mythic 10)
-static const int TIER_POINTS[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5, 10 };
+// novice average strong top scaling demon blind tactician mythic noble ((custom, Nov 13, owner) Mythic 10; Nov 20: Noble
+// Demon's 12)
+static const int TIER_POINTS[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5, 10, 12 };
 int tier_points(int tier) { return tier >= 0 && tier < HB_TIERS ? TIER_POINTS[tier] : TIER_POINTS[3]; }
+// a Demon for the balance's Demon stacking: Demon, and Noble (Nov 20: Demon's base)
+static int demon_base(int tier) { return tier == HB_TIER_DEMON || tier == HB_TIER_NOBLE; }
 int roster_team_points(const hb_roster& r, int team) {
     int p = bot_pool_humans(team) * HB_HUMAN_POINTS;
     for (int i = 0; i < r.n; i++) if (r.bot[i].team == team) p += tier_points(r.bot[i].tier);
@@ -1620,7 +1628,7 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
         pb_block& b = bl[k];
         b.seat[b.n++] = i;
         b.pts += tier_points(r.bot[i].tier);
-        b.demons += r.bot[i].tier == HB_TIER_DEMON;
+        b.demons += demon_base(r.bot[i].tier);
     }
     // (Nov 16) parties that cannot all go whole onto a team each (a lobby made by hand: Bot Matchmaking never deals one):
     // the biggest gives its last bots up, one at a time, until they fit; the note says which clan was split
@@ -1642,12 +1650,12 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
             pb_block& b = bl[big];
             int s = b.seat[--b.n];
             b.pts -= tier_points(r.bot[s].tier);
-            b.demons -= r.bot[s].tier == HB_TIER_DEMON;
+            b.demons -= demon_base(r.bot[s].tier);
             pb_block one{};
             one.pin = -1;
             one.seat[one.n++] = s;
             one.pts = tier_points(r.bot[s].tier);
-            one.demons = r.bot[s].tier == HB_TIER_DEMON;
+            one.demons = demon_base(r.bot[s].tier);
             bl.push_back(one); clans.push_back("");
             sprintf_s(g_balance_note, "[%s] had more bots than fit on one team: %s and any more were split off.",
                       profile_clan_of(r.bot[s].name), r.bot[s].name);
@@ -2245,9 +2253,9 @@ void chevrons(ImDrawList* dl, ImVec2 c, int tier, float scale_ = 1.0f) {
         dl->AddCircleFilled(o, px(2.2f) * scale_, TIER_COL[4]);
         return;
     }
-    int n = tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC ? 5 : tier == HB_TIER_BLIND ? 4 : tier == HB_TIER_TACTICIAN ? 3
-          : tier + 1;
-    // (Blind: Legendary's four, violet; Tactician: Heroic's three, teal; Mythic: Demon's five, rose)
+    int n = tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC || tier == HB_TIER_NOBLE ? 5 : tier == HB_TIER_BLIND ? 4
+          : tier == HB_TIER_TACTICIAN ? 3 : tier + 1;
+    // (Blind: Legendary's four, violet; Tactician: Heroic's three, teal; Mythic: Demon's five, rose; Noble: five, gold)
     float top = c.y - (n - 1) * gap * 0.5f;
     for (int k = 0; k < n; k++) {
         float y = top + k * gap;
@@ -2666,6 +2674,14 @@ static void inspector(bots_panel_env& e, bool& changed) {
         if (pooled) bot_pool_remember(b);
     }
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
+    // (custom, Nov 20) Noble, the testing difficulty, on a row of its own under Scaling
+    static const char* NOBLE_NAME[1] = { "Noble" };
+    static const ImU32 NOBLE_ROW_COL[1] = { NOBLE_COL };
+    int nobled = tier == HB_TIER_NOBLE ? 0 : -1;
+    if (segmented("tier_nb", NOBLE_NAME, 1, &nobled, W, NOBLE_ROW_COL)) {
+        b.tier = HB_TIER_NOBLE; sync_difficulty(e); changed = true;
+        if (pooled) bot_pool_remember(b);
+    }
     tier = b.tier < HB_TIERS ? b.tier : 3;
     muted(TIER_ABOUT[tier]);
     if (tier == 4) {
@@ -2716,7 +2732,8 @@ static void inspector(bots_panel_env& e, bool& changed) {
 static void quick_setup(bots_panel_env& e, bool& changed) {
     using namespace ui;
     hb_roster& r = *e.roster;
-    ImGui::SetNextWindowSize(ImVec2(px(680), 0));             // (Mythic, Nov 13: 620 -> 680, the 10 difficulty buttons)
+    ImGui::SetNextWindowSize(ImVec2(px(740), 0));             // (Mythic, Nov 13: 620 -> 680, the 10 difficulty buttons;
+                                                             //  Noble, Nov 20: 740, 11)
     if (!ImGui::BeginPopupModal("Quick setup", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
         return;
     float W = ImGui::GetContentRegionAvail().x;
@@ -2743,15 +2760,15 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     ImGui::Dummy(ImVec2(0, px(4)));
     caption("Difficulty");
     static const char* DN[DIFF_CHOICES] = { "Easy", "Normal", "Heroic", "Tactician", "Legendary", "Blind", "Mythic", "Demon",
-                                            "Mixed", "Scaling" };   // (DIFF_SHOWN)
+                                            "Noble", "Mixed", "Scaling" };   // (DIFF_SHOWN)
     static const ImU32 DC[DIFF_CHOICES] = { TIER_COL[0], TIER_COL[1], TIER_COL[2], TACT_COL, TIER_COL[3], BLIND_COL,
-                                            MYTHIC_COL, DEMON_COL, ACCENT, SCALE_COL };
+                                            MYTHIC_COL, DEMON_COL, NOBLE_COL, ACCENT, SCALE_COL };
     int qslot = difficulty_slot((uint32_t)qs_tier);
     if (segmented("qtier", DN, DIFF_CHOICES, &qslot, W, DC)) qs_tier = (int)DIFF_SHOWN[qslot];
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
     muted(qs_tier < 4 ? TIER_ABOUT[qs_tier] : qs_tier == 4 ? "A mix of Easy to Demon and Blind, like a real lobby."
           : qs_tier == 6 ? DEMON_ABOUT : qs_tier == 7 ? BLIND_ABOUT : qs_tier == 8 ? TACT_ABOUT
-          : qs_tier == 9 ? MYTHIC_ABOUT : SCALE_ABOUT);
+          : qs_tier == 9 ? MYTHIC_ABOUT : qs_tier == 10 ? NOBLE_ABOUT : SCALE_ABOUT);
     if (qs_tier == 5) scale_games_setting(e, changed);
     ImGui::Dummy(ImVec2(0, px(4)));
     caption("Play style");
@@ -2765,8 +2782,8 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
     ImGui::PushStyleColor(ImGuiCol_Header, v4(alpha(ACCENT, 0.16f)));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, v4(HOVER));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
-    bool qs_demon = qs_tier == 6 || qs_tier == 9;            // (custom, Nov 14: all Demon, no Wheelman; Nov 18: nor all
-                                                             //  Mythic, Demon's rules; Mixed's Demons
+    bool qs_demon = qs_tier == 6 || qs_tier == 9 || qs_tier == 10;   // (custom, Nov 14: all Demon, no Wheelman; Nov 18:
+                                                             //  nor all Mythic, Demon's rules; Nov 20: nor Noble; Mixed's Demons
     if (qs_demon && qs_style == HB_STYLE_WHEELMAN) qs_style = HB_STYLE_ANY;   //  get Any style: bots_panel)
     if (ImGui::BeginCombo("##qstyle", STYLE_NAME[qs_style])) {
         g_list_frame = ImGui::GetFrameCount();
@@ -4937,7 +4954,7 @@ bool bots_panel(bots_panel_env& e) {
             int most = 0;
             for (int t = 0; t < r.teams; t++) most = roster_on_team(r, t) > most ? roster_on_team(r, t) : most;
             qs_per = most ? most : 4;
-            qs_tier = (int)(*e.difficulty <= 9 ? *e.difficulty : 4);
+            qs_tier = (int)(*e.difficulty <= 10 ? *e.difficulty : 4);
             ImGui::OpenPopup("Quick setup");
         }
         ImGui::SameLine(0, px(14));
@@ -5037,7 +5054,7 @@ bool bots_panel(bots_panel_env& e) {
         ImGui::SetCursorScreenPos(ImVec2(body0.x + (grid_w - px(220)) * 0.5f, body0.y + body_h * 0.36f + px(92)));
         if (button("Quick setup##empty", PRIMARY, ImVec2(px(220), px(46)))) {
             qs_teams = hb_panel_firefight ? 1 : 2; qs_per = hb_panel_firefight ? 3 : 4;
-            qs_tier = (int)(*e.difficulty <= 9 ? *e.difficulty : 4);
+            qs_tier = (int)(*e.difficulty <= 10 ? *e.difficulty : 4);
             ImGui::OpenPopup("Quick setup");
         }
     } else {
@@ -5074,13 +5091,13 @@ bool bots_panel(bots_panel_env& e) {
     ImGui::SetCursorScreenPos(ImVec2(f0.x, f0.y + (rowh - px(18)) * 0.5f));
     caption("Difficulty");
     static const char* DN[DIFF_CHOICES] = { "Easy", "Normal", "Heroic", "Tactician", "Legendary", "Blind", "Mythic", "Demon",
-                                            "Mixed", "Scaling" };   // (DIFF_SHOWN)
+                                            "Noble", "Mixed", "Scaling" };   // (DIFF_SHOWN)
     static const ImU32 DC[DIFF_CHOICES] = { TIER_COL[0], TIER_COL[1], TIER_COL[2], TACT_COL, TIER_COL[3], BLIND_COL,
-                                            MYTHIC_COL, DEMON_COL, ACCENT, SCALE_COL };
-    int d = difficulty_slot(*e.difficulty <= 9 ? *e.difficulty : 4);
+                                            MYTHIC_COL, DEMON_COL, NOBLE_COL, ACCENT, SCALE_COL };
+    int d = difficulty_slot(*e.difficulty <= 10 ? *e.difficulty : 4);
     ImGui::SetCursorScreenPos(ImVec2(f0.x + px(140), f0.y + (rowh - px(36)) * 0.5f));
     ImGui::BeginDisabled(r.n == 0 || *e.lidar_mode);
-    if (segmented("all", DN, DIFF_CHOICES, &d, px(660), DC)) {   // (Mythic: 600 -> 660, the buttons as wide as before)
+    if (segmented("all", DN, DIFF_CHOICES, &d, px(720), DC)) {   // (Mythic: 600 -> 660, Noble: 720, the buttons as wide as before)
         *e.difficulty = DIFF_SHOWN[d];
         for (int i = 0; i < r.n; i++) r.bot[i].tier = (uint8_t)roster_difficulty_tier(*e.difficulty, i);   // (both teams)
         changed = true;

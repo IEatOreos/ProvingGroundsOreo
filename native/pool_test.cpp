@@ -273,9 +273,9 @@ int main(int argc, char** argv) {
     }
 
     // 20. (Nov 13) the owner's points: Easy 1, Normal 2, Heroic 3, Legendary 8, Scaling 8, Demon 12, Blind 8, Tactician 5,
-    // Mythic 10; a human 20
+    // Mythic 10; (Nov 20) Noble, Demon's base, 12; a human 20
     {
-        const int want20[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5, 10 };
+        const int want20[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5, 10, 12 };
         for (int t = 0; t < HB_TIERS; t++) CHECK(tier_points(t) == want20[t], "tier %d points %d", t, tier_points(t));
         CHECK(HB_HUMAN_POINTS == 20, "human points");
     }

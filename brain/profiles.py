@@ -142,6 +142,12 @@ MYTHIC = "mythic"
 MYTHIC_TOWARD = 0.5
 MYTHIC_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "decide")   # and turn (TURN, not jittered)
 
+# (custom, Nov 20, owner: "Add a new difficulty only to our in game. It's our new testing difficulty We will call it
+# Noble. Make its base the same as a demon bot and then we will train it.") Noble: a Demon (tier "demon", extra None:
+# fixed_demon, so every Demon rule, its aim and hands) under its own label "noble". In game only (the BOTS panel, botcore,
+# botctl); not offered on the Service Record site. Its training goes behind fixed_noble so Demon stays as it is
+NOBLE = "noble"
+
 
 def arc_spot(prof):
     """(custom, Nov 12, owner) Easy, Normal and Heroic find the man hurting them without the off-to-the-side delay, as a
@@ -160,6 +166,11 @@ def fixed_tactician(prof):
 
 def fixed_mythic(prof):
     return prof.label == MYTHIC and prof.extra is None
+
+
+def fixed_noble(prof):
+    """(custom, Nov 20) Noble, the testing difficulty: a Demon under its own label (fixed_demon is true for it too)."""
+    return prof.label == NOBLE and prof.tier == DEMON and prof.extra is None
 
 
 def demon_eyes(prof):
@@ -319,6 +330,8 @@ def make_profile(tier, personality, rng=random):
         return tactician_profile(personality, rng)
     if tier == MYTHIC:
         return mythic_profile(personality, rng)
+    if tier == NOBLE:
+        return replace(make_profile(DEMON, personality, rng), label=NOBLE)   # (Nov 20) Demon's base, its own name
     if tier == DEMON and personality == "wheelman":
         # (custom, Nov 14, owner: "bots that dont drive passenger vehicles cannot get wheelman") a Demon drives no
         # Warthog, Mongoose or Ghost (vehicles.DEMON_NO_DRIVE), so no Wheelman: the style it plays on foot, Flanker

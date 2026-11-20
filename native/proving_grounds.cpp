@@ -460,7 +460,7 @@ static float hfloat(const char* name, uint32_t salt) { return (hash_of(name, sal
 
 // how much a bot leans into competitive play: its difficulty's, a little of its own
 static float sweat_of(const hb_bot& b) {
-    static const float BY_TIER[HB_TIERS] = { -0.7f, -0.35f, 0.0f, 0.45f, 0.2f, 0.85f, 0.45f, 0.3f, 0.65f };
+    static const float BY_TIER[HB_TIERS] = { -0.7f, -0.35f, 0.0f, 0.45f, 0.2f, 0.85f, 0.45f, 0.3f, 0.65f, 0.85f };   // (Noble: Demon's)
     return (b.tier < HB_TIERS ? BY_TIER[b.tier] : 0.0f) + (hfloat(b.name, 7) - 0.5f) * 0.4f;
 }
 

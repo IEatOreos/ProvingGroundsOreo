@@ -79,8 +79,9 @@ GUNS = {"reach": (REACH_GUNS, REACH_FINISH)}
 # (tools/death_autopsy.py: the owner 5.00, Demon 2.15, Legendary 1.51, Heroic 0.96, Blind 0.61, Tactician 0.50, Normal
 # 0.42, Easy 0.23; Mythic, not measured, between Legendary and Demon)
 REACH_ACC = {"novice": 0.17, "average": 0.23, "tactician": 0.25, "blind": 0.28, "strong": 0.35, "top": 0.44,
-             "mythic": 0.48, "demon": 0.52}
-OWN_ACC = {"demon": DEMON_ACC, "mythic": 0.9}   # its own pace (Demon's calibrated 1.0; Mythic's hands halfway to it)
+             "mythic": 0.48, "demon": 0.52, "noble": 0.52}   # (Nov 20: Noble, Demon's base, Demon's share)
+OWN_ACC = {"demon": DEMON_ACC, "mythic": 0.9, "noble": DEMON_ACC}   # its own pace (Demon's calibrated 1.0; Mythic's hands
+                                                                    # halfway to it; Noble Demon's)
 DANGER_ACC = 0.3                # Reach: a man under this share of the pace (Normal and below, Blind, Tactician) is weak
 
 

@@ -56,8 +56,8 @@ class ProfileTests(unittest.TestCase):
             self.assertTrue(profiles.wheelman(profiles.make_profile(t, "wheelman", random.Random(1))), t)
         header = (ROOT / "native" / "bots_panel.h").read_text(encoding="utf-8", errors="replace")
         self.assertIn("#define HB_STYLE_WHEELMAN 7", header)
-        self.assertIn("return !((tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC) && style == HB_STYLE_WHEELMAN);",
-                      header)
+        self.assertIn("return !((tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC || tier == HB_TIER_NOBLE) && style == "
+                      "HB_STYLE_WHEELMAN);", header)                  # (Nov 20: Noble, a Demon)
 
     def test_menus_and_not_dealt_to_any(self):
         self.assertEqual(botctl.STYLE_KEYS[-2:], ("wheelman", "any"))

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Noble: a testing difficulty, Demon's base, in game only, 2026-11-20
+
+The owner: "Add a new difficulty only to our in game. It's our new testing difficulty We will call it Noble. Make its base the same as a demon bot and then we will train it."
+
+- `brain/profiles.py`: `NOBLE = "noble"`; `make_profile("noble", ...)` is `make_profile("demon", ...)` with `label="noble"` (tier `demon`, extra None), so every Demon rule, aim, hand and timing applies unchanged (`fixed_demon`, `demon_rules`, `demon_eyes` all true; never a Wheelman). New `fixed_noble(prof)` is where its training goes, so Demon stays as it is. `brain/odds.py`: Noble's Reach pace share and own pace are Demon's.
+- BOTS panel (`native/bots_panel.h`, `bots_panel.cpp`): `HB_TIER_NOBLE 9`, `HB_TIERS 10`; "for everyone" difficulty 10 (`shared.h`, `botcore.cpp` launch table and ini read, `% 11`). Noble has its own gold row under Scaling in the bot inspector, and a button after Demon in Quick setup and the footer (`DIFF_CHOICES 11`; Quick setup 680 -> 740 px wide, footer row 660 -> 720). Like Demon: no Wheelman style, 12 matchmaking points, counted as a Demon by the team balance's Demon stacking, five chevrons, Demon's rank tours (10-11), Demon's lobby "sweat" (`proving_grounds.cpp`). Not in Mixed. `overlay.cpp` lobby line names it; `tools/botctl.py` keys; `observer.py`, `player_stats.py`, `match_export.py` show "Noble".
+- **Not on the Service Record site:** its difficulty editor (`service_record.TIER_KEYS`, `app.js` `TIER_NAMES`) and the bot simulation (`tools/bot_sim.py`, `sim_engine.py`) are unchanged. A pool bot saved as Noble in game shows no difficulty name on the site and is simulated as a Mixed bot.
+- Validation: `tools/test_noble_difficulty.py` (new: a Noble equals a Demon from the same seed field for field except the label; panel, launch and points tables; not on the site); difficulty, ranks, Wheelman, matchmaking and Tactician table tests updated. Full suite 1000 OK. Native pool checks pass (`build_pool_test.bat` itself fails to link: it lacks `armory.cpp` since the Armory change, run here with it added). Built `native/bin/botcore_pg39.dll`. **Loads at MCC's next start; not yet seen in game.**
+
 ### The Mixed bots get their own difficulty, Heroic to Mythic; the simulation finds every saved one, 2026-11-19
 
 The owner: "Distribute the mixed difficulties randomly across Heroic up to Mythic. Make the cooler names mythics."

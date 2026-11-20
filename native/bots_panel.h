@@ -18,12 +18,14 @@ struct ImFont;
 #define HB_TIER_BLIND 6         // hb_bot.tier: Blind (custom, Nov 10: Legendary, its aim and hands drawn per bot)
 #define HB_TIER_TACTICIAN 7     // hb_bot.tier: Tactician (custom, Nov 10: Legendary's brain, hands Heroic-Legendary)
 #define HB_TIER_MYTHIC 8        // hb_bot.tier: Mythic (custom, Nov 13: Legendary, hands halfway to Demon, Demon's eyes)
-#define HB_TIERS 9
+#define HB_TIER_NOBLE 9         // hb_bot.tier: Noble (custom, Nov 20: the testing difficulty, Demon's base under its own
+                                // name: brain/profiles.py NOBLE; in game only, not on the Service Record site)
+#define HB_TIERS 10
 #define HB_STYLE_WHEELMAN 7     // (custom, Nov 14) the Wheelman play style: never a Demon's (it drives no Warthog,
                                 // Mongoose or Ghost: brain/profiles.py make_profile); (Nov 18) nor a Mythic's, which plays by
-                                // Demon's rules (profiles.demon_rules, mythic_profile)
+                                // Demon's rules (profiles.demon_rules, mythic_profile); (Nov 20) nor a Noble's, a Demon
 static inline bool hb_style_fits(int tier, int style) {
-    return !((tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC) && style == HB_STYLE_WHEELMAN);
+    return !((tier == HB_TIER_DEMON || tier == HB_TIER_MYTHIC || tier == HB_TIER_NOBLE) && style == HB_STYLE_WHEELMAN);
 }
 
 struct hb_bot {
@@ -44,7 +46,7 @@ struct bots_panel_env {
     hb_roster* roster;
     uint32_t* enabled;          // bots join at all
     uint32_t* difficulty;       // the last "for everyone" choice, 0..3, 4 mixed, 5 scaling, 6 demon, 7 blind, 8 tactician,
-                                // 9 mythic
+                                // 9 mythic, 10 noble
     uint32_t* lidar_mode;       // mapping bots instead of fighters
     uint32_t* lidar_players;    // players in all in LiDAR mode (2..16)
     uint32_t* collector;        // records the player each match for the Observer (tools/collector.py); may be null

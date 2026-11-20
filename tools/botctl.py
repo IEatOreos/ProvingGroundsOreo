@@ -50,7 +50,7 @@ def player_cap(game, firefight=False):
 
 OFF_SETTINGS = 752
 DIFFICULTY_TIERS = ["novice", "average", "strong", "top", "strong,average,top,novice", "scaling", "demon", "blind", "tactician",
-                    "mythic"]
+                    "mythic", "noble"]
 
 
 OFF_NAME = 772
@@ -116,7 +116,7 @@ def settings(m):
 
 
 TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician",
-             "mythic")   # (Demon, Blind, Tactician, Mythic: brain/profiles.py)
+             "mythic", "noble")   # (Demon, Blind, Tactician, Mythic, Noble: brain/profiles.py)
 STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "wheelman", "any")   # (Wheelman: Nov 13)
 
 

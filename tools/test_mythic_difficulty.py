@@ -109,10 +109,10 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(botctl.DIFFICULTY_TIERS[9], "mythic")
         self.assertIn("d == 9 ? HB_TIER_MYTHIC", panel)
         pts = re.search(r"TIER_POINTS\[HB_TIERS\]\s*=\s*\{([^}]*)\}", panel).group(1)
-        self.assertEqual([int(x) for x in pts.split(",")], [1, 2, 3, 8, 8, 12, 8, 5, 10])
+        self.assertEqual([int(x) for x in pts.split(",")], [1, 2, 3, 8, 8, 12, 8, 5, 10, 12])   # (Nov 20: Noble 12)
         overlay = (ROOT / "native" / "overlay.cpp").read_text(encoding="utf-8", errors="replace")
         names = re.findall(r'"([^"]*)"', re.search(r"DIFF_NAME\[HB_TIERS \+ 1\]\s*=\s*\{([^}]*)\}", overlay).group(1))
-        self.assertEqual(names[8:], ["Mythic", "Mixed"])
+        self.assertEqual(names[8:], ["Mythic", "Noble", "Mixed"])
 
     def test_names_in_the_tools(self):
         import match_export  # noqa: F401

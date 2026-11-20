@@ -40,8 +40,8 @@ class WiringTests(unittest.TestCase):
         panel = src("bots_panel.cpp")
         self.assertIn("uint32_t hb_matchmaking = 1;", panel)          # on unless switched off
         self.assertIn("if (hb_matchmaking && !hb_panel_firefight && pool_take(r, i)) return;", panel)
-        # the three difficulty rows (Scaling its own since Mythic, Nov 13) and the play style
-        self.assertEqual(panel.count("bot_pool_remember(b);"), 4)
+        # the four difficulty rows (Scaling its own since Mythic, Nov 13; Noble's, Nov 20) and the play style
+        self.assertEqual(panel.count("bot_pool_remember(b);"), 5)
         self.assertIn('caption("Bot Matchmaking");', panel)
         self.assertIn("POOL_SEED_N = 60", panel)
 

@@ -29,9 +29,10 @@ class Names(unittest.TestCase):
 
     def test_native_ranges(self):
         src = (ROOT / "native" / "bots_panel.cpp").read_text(encoding="utf-8", errors="replace")
-        # (Nov 13) Mythic's {8, 10}, between Legendary's and Demon's
-        self.assertIn("RANK_TOURS[HB_TIERS][2] = { {1, 2}, {2, 4}, {4, 6}, {6, 9}, {5, 8}, {10, 11}, {6, 9}, {5, 7}, {8, 10} };",
-                      src)
+        # (Nov 13) Mythic's {8, 10}, between Legendary's and Demon's; (Nov 20) Noble's Demon's {10, 11}
+        flat = " ".join(src.split())
+        self.assertIn("RANK_TOURS[HB_TIERS][2] = { {1, 2}, {2, 4}, {4, 6}, {6, 9}, {5, 8}, {10, 11}, {6, 9}, {5, 7}, {8, 10}, "
+                      "{10, 11} };", flat)
         self.assertIn('\\\\tools\\\\mcc_ranks.py\\" extract', src)
         overlay = (ROOT / "native" / "overlay.cpp").read_text(encoding="utf-8", errors="replace")
         self.assertIn("rank_badge(dl, ImVec2(r.x - 38 * u, (r.y + r.w) * 0.5f), 46 * u, rtour, rlevel, a);", overlay)
