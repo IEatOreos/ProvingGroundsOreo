@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Sword Base: level data rebuilt (8 floor levels, its render glass), 2026-11-19
+
+The owner's F9 "Partyland doesnt shoot at me again when he can clearly see my head" (`reach_20_sword_slayer_20261119-211332`, 166 s), and "some ledges are glass see through but he could clearly see my head even when crouching. I could shoot him if I wanted"; then "Yes, rebuild it".
+
+- **Found:** 26 of the 28 Reach heightmaps were built on Oct 22, when `tools/heightmap.py` kept 4 floor levels per cell (it keeps 8 now); only Island and Boneyard were rebuilt (Nov 5). Sword Base stacks 8-9 levels and lost the most: 37 of its 310 spawn spots had no floor. The old grid also ended 1-2 u past the play area, with the sword alcove on its edge. Its `wall_kinds.json` came from the kit's collision materials only (5 glass and grate shaders). The map's render glass (`conference_table_glass` 30,924 triangles, `table_top_glass`, `m20_glass_panel_high_opacity` and others) was solid to the bots. The bots' data blocked 25 of 46 real kill lines there at chest and head (last night's map 8%).
+- **Rebuilt** from MCC's `20_sword_slayer.map`, the main and `_shared` structures (`_hidden` cannot be read by the tool and is not used):
+  - the mesh with `tools/map_tools/bsp2obj.exe`, into `maps/reach_20_sword_slayer/source/`;
+  - `heightmap.npz` and `topdown.png` with `tools/heightmap.py` at today's 8 floor levels and a 6 u margin. The default 40 u would have made a grid 28 times the old one for nothing; the new one is 150 × 153 cells against 108 × 119.
+  - `wall_kinds.json`: the render glass merged in (`bsp2obj --glass`; upright faces as windows, flat ones as glass decks). That adds 889 window cells and 637 deck cells, and widens 1,087 existing ones. All see-through triangles are taken, since the export names no material per triangle; lights and high-opacity panels are about 1,400 of the 35,260. Also `glass.json`.
+  - The old files are in `logs/sword_base_rebuild_20261119/before`.
+- **Measured** (base map and variant `v04abd98b`): spawn spots off the floor 37 → 0 of 310. The sword is reachable, and paths end 0.1-0.55 u from it. Kill lines blocked 25 → 22-23 of 46. On Partyland's line from 140-167 s, the exact level mesh (glass left out) shows a clear line in 67 of 100 rows, the bots' data 57 before and 58 after. The terrain builds in 0.7-4 s; three walks to the sword take 0.02 s.
+- **Partyland, not fixed by the data alone:** at 143.6-145 s he faced the owner (7-9 u, 5-14° off) with the owner's head clear in the bots' data and his chest flickering between clear and blocked. One unseen tick drops the notice timer (`Perception.update`, `pending`), so a man showing only his head over a ledge is never noticed. At 166 s itself a real solid wall stood between them (the mesh agrees).
+- `heightmap.npz`, `topdown.png`, `glass.json` and `source/` are map-pack data (git-ignored): this checkout has them; a release needs them in the map pack. Validation: 986 tests OK; `live_bots` imports. **Untested in a match.**
+
 ### Proving Grounds: Reach's Custom Game lobby, and the other game lobbies (phase 5), 2026-11-19
 
 The owner: "Next phase", after the frames of Reach's CUSTOM GAME, SELECT GAME TYPE, GAME OPTIONS, FIREFIGHT, FORGE and THEATER lobbies. Then he sent four paintings: "Four original screens for the game menus as well".
