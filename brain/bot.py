@@ -17,6 +17,9 @@ from . import nade
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
 SIGHT_RANGE = 80.0
+# (custom, Nov 19) s: a man being noticed (Perception.pending) may drop out of sight this long, in view, and the notice
+# goes on (a head over a ledge, a chest flickering behind it); longer, or through active camo, it starts again
+NOTICE_GAP = 0.4
 RADAR_RANGE = 25.0               # CE motion tracker, world units
 RADAR_TRACK_GAP = 0.5            # s: a tracker dot unseen longer than this starts a new heading (Perception.radar_heading)
 # (lo, hi) world units (1 = 10 ft) the weapon wins at: past hi the bot closes in, under lo it backs off (and
@@ -1168,6 +1171,7 @@ class Perception:
         s.p, s.rng = prof, rng
         s.beliefs = {}
         s.pending = {}       # enemy id -> time recognition completes
+        s.pending_gap = {}   # (custom, Nov 19) enemy id -> since when a man being noticed is out of sight (NOTICE_GAP)
         s.recognized = set()
         s.lost_at = {}
         s.dropped = {}       # enemy id -> when recognition lapsed (quick to pick up again)
@@ -1339,7 +1343,7 @@ class Perception:
         for e in snap.players:
             if e.team == me.team or not e.alive:
                 s.beliefs.pop(e.id, None) if not e.alive else None
-                s.recognized.discard(e.id); s.pending.pop(e.id, None)
+                s.recognized.discard(e.id); s.pending.pop(e.id, None); s.pending_gap.pop(e.id, None)
                 continue
             d = dist(me.pos, e.pos)
             yaw, _ = angles_to(me.pos, e.pos)
@@ -1382,9 +1386,11 @@ class Perception:
             if line:
                 s.clear_at[e.id] = now
             visible = in_view and (shooting or line)
+            camo_miss = False
             if visible and e.camo_until > now and d > 4 and s.rng.random() < 0.9:
-                visible = False     # active camo: only a shimmer, mostly missed past a few units
+                visible, camo_miss = False, True     # active camo: only a shimmer, mostly missed past a few units
             if visible:
+                s.pending_gap.pop(e.id, None)
                 s.lost_at.pop(e.id, None)
                 if e.id in s.recognized:
                     s.beliefs[e.id] = Belief(e.pos, e.vel, now, True, "eyes")
@@ -1413,7 +1419,18 @@ class Perception:
                     s.beliefs[e.id] = Belief(e.pos, e.vel, now, False, "marker")   # (not noticed yet: still his emblem)
                 continue
             # not visible: lose recognition after a short grace, keep the memory
-            s.pending.pop(e.id, None)
+            # (custom, Nov 19, the owner's F9 "Partyland doesnt shoot at me again when he can clearly see my head": a man
+            # half in view, his head over a ledge, his chest flickering behind it, is still being noticed: the notice
+            # timer runs on through gaps up to NOTICE_GAP s, in view. One unseen tick dropped it: live Sword Base
+            # 20261119-211332, 143.6-145 s, a Demon 7-9 u from the owner, 5-14 degrees off his view, never noticed him.
+            # Not through active camo's misses (still only a shimmer) nor once he is out of the view)
+            if e.id in s.pending:
+                gap0 = s.pending_gap.setdefault(e.id, now)
+                if camo_miss or not in_view or now - gap0 > NOTICE_GAP:
+                    s.pending.pop(e.id, None)
+                    s.pending_gap.pop(e.id, None)
+            else:
+                s.pending_gap.pop(e.id, None)
             if e.id in s.recognized:
                 s.lost_at.setdefault(e.id, now)
                 if now - s.lost_at[e.id] > 1.2:    # a strafe or a jump out of view is not forgetting

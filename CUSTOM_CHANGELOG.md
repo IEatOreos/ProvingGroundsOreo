@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### A man half in view is still noticed (the notice timer through short gaps), 2026-11-19
+
+The owner's F9 "Partyland doesnt shoot at me again when he can clearly see my head" (Sword Base `20261119-211332`), and "he could clearly see my head even when crouching"; then "Yes, fix it".
+
+- **Found:** at 143.6-145 s Partyland (Demon) walked toward the owner 7-9 u off, 5-14° from the middle of its view. The bots' data had the owner's head clear and his chest flickering between clear and blocked behind a glass ledge. A bot notices a man only once it has seen him through its reaction time (`Perception.pending`; Demon's is 0, so two seen ticks in a row), and any unseen tick dropped the notice. A Demon seeing a man every other tick never noticed him; it held only a radar dot of him.
+- `brain/bot.py` `Perception.update`, `NOTICE_GAP` 0.4 s, `Perception.pending_gap`: the notice runs on while the man is out of sight for up to 0.4 s at a time and still inside the view. The deadline set at the first sight is kept, so a bot notices him on the next tick it sees him after it. A longer gap, leaving the view, or a miss through active camo (still only a shimmer past 4 u) starts it again, as before. Every tier.
+- Validation: `tools/test_notice_gap.py` (new, 5: a Demon notices a man seen every other tick within 4 ticks, and with no grace it fails as before; a gap over `NOTICE_GAP` starts it again; Legendary's real reaction time kept through short gaps; leaving the view; active camo). Full suite 991 OK; `live_bots` imports. **Untested in a match.**
+
 ### Sword Base: level data rebuilt (8 floor levels, its render glass), 2026-11-19
 
 The owner's F9 "Partyland doesnt shoot at me again when he can clearly see my head" (`reach_20_sword_slayer_20261119-211332`, 166 s), and "some ledges are glass see through but he could clearly see my head even when crouching. I could shoot him if I wanted"; then "Yes, rebuild it".
