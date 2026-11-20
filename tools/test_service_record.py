@@ -792,6 +792,42 @@ def test_game_reads_the_sites_career():
         assert "\\\\logs\\\\service_record\\\\career.txt" in f.read()
 
 
+def test_the_persons_own_reach_look():
+    """(Nov 19) the person's look on the site is the one botcore saved from their own configuration (my_look_reach.txt),
+    each field read at its byte, not a look made up from their name; with no file, or another name, it is as before."""
+    import types
+    sys.path.insert(0, os.path.join(HERE, ".."))
+    from brain import looks as brain_looks
+    with open(os.path.join(HERE, "..", "maps", "_looks", "reach.json"), encoding="utf-8") as f:
+        fields = {x["name"]: x["at"] for x in json.load(f)["fields"]}
+    cfg = bytearray(0xA0)
+    cfg[0x20:0x20 + 8] = "Me".encode("utf-16-le").ljust(8, b"\0")
+    want = {"primary": 22, "secondary": 3, "gender": 0, "helmet": 7, "chest": 4, "visor": 2, "knees": 1}
+    for k, v in want.items():
+        cfg[fields[k]] = v
+    views = brain_looks.armory_from_config(bytes(cfg))
+    assert len(views) == 2 and views[0].startswith("species=0") and views[1].startswith("species=1")
+    got = dict(kv.split("=", 1) for kv in views[0].split(";"))
+    assert all(got[k] == str(v) for k, v in want.items()), got
+    assert brain_looks.armory_from_config(b"\0" * 10) == []
+    with tempfile.TemporaryDirectory() as tmp:
+        store = os.path.join(tmp, "store")
+        os.makedirs(store)
+        looks_ini = os.path.join(tmp, "bot_looks.ini")
+        with open(looks_ini, "w", encoding="utf-8") as f:
+            f.write("; none\n")
+        with open(os.path.join(store, "my_look_reach.txt"), "w", encoding="utf-8") as f:
+            f.write(f"# test\nname\tMe\ntag\tA113\nconfig\t{bytes(cfg).hex()}\n")
+        paths = types.SimpleNamespace(store=store, looks=looks_ini, profiles=os.path.join(tmp, "no_profiles.ini"))
+        assert sr.load_my_look(paths) == ("Me", bytes(cfg))
+        out = sr.all_looks(paths, ["Me"])
+        with open(out, encoding="utf-8") as f:
+            mine = [l for l in f.read().splitlines() if l.startswith("Me|reach|own|")]
+        assert len(mine) == 1 and ";helmet=7;" in mine[0] and ";primary=22;" in mine[0], mine
+        os.remove(os.path.join(store, "my_look_reach.txt"))
+        assert sr.load_my_look(paths) is None
+
+
 def test_game_reads_the_sites_home_states():
     """(Nov 19) <site>/locations.txt, the heat on Proving Grounds' Psych Profile map: every state of states.json with
     how many listed players have it as their home state (the site's own pick or the one set by hand), and each person's

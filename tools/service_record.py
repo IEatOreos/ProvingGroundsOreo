@@ -2189,6 +2189,19 @@ def set_bot_difficulty(paths, name, tier, running=None):
     return tier
 
 
+def load_my_look(paths):
+    """(name, the 0xA0 configuration bytes) of the player's own look, as botcore saved it in their last Halo: Reach
+    match (<store>/my_look_reach.txt, native/reach.cpp hr_save_my_look); None when there is none or it does not read."""
+    try:
+        with open(os.path.join(paths.store, "my_look_reach.txt"), encoding="utf-8", errors="replace") as f:
+            rows = dict(line.rstrip("\r\n").split("\t", 1) for line in f if "\t" in line and not line.startswith("#"))
+        cfg = bytes.fromhex(rows.get("config", ""))
+    except (OSError, ValueError):
+        return None
+    name = rows.get("name", "").strip()
+    return (name, cfg) if name and len(cfg) >= 0xA0 else None
+
+
 def all_looks(paths, names):
     """The looks file the site draws from: bot_looks.ini (the bots panel's: the profile bots) and, for every listed bot
     that has no Reach look there (a matchmaking pool bot with no profile), the Reach look it wears in game, worked out
@@ -2204,6 +2217,21 @@ def all_looks(paths, names):
     have = {line.split("|", 1)[0] for line in base.splitlines() if "|reach|own|" in line}
     missing = [n for n in names if n and n not in have and "|" not in n and "\n" not in n]
     extra = []
+    # (Nov 19, the owner: "what the service record shows as my armor, is not correct ... All the other bots are correct
+    # but not mine") the person's own look as MCC set it, from the bytes botcore saved in a match (my_look_reach), not a
+    # look made up from the name
+    mine = load_my_look(paths)
+    if mine and mine[0] in missing:
+        try:
+            if ROOT not in sys.path:
+                sys.path.insert(0, ROOT)
+            from brain import looks as brain_looks
+            views = brain_looks.armory_from_config(mine[1])
+            if views:
+                extra += [f"{mine[0]}|reach|{view}|{kv}" for view, kv in zip(("own", "other"), views)]
+                missing.remove(mine[0])
+        except (ImportError, OSError, ValueError, KeyError, TypeError, IndexError):
+            pass
     if missing:
         try:
             if ROOT not in sys.path:

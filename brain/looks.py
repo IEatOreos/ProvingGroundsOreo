@@ -354,6 +354,25 @@ def armory_view(name, game, path=PROFILES, looks_dir=LOOKS):
             for h, s in zip(head, (sp, 1 - sp))]
 
 
+def armory_from_config(cfg, game="reach", looks_dir=LOOKS):
+    """(Nov 19, the owner: the Service Record showed armor he does not wear) a person's own look from the bytes of their
+    player configuration as MCC set it (botcore native/reach.cpp hr_save_my_look: player 0's 0xA0 bytes as they joined
+    a match), as armory_view's two lines (their Spartan, then as an Elite): each field of <game>.json read at its own
+    byte, as a bot's look writes it, and the model pieces those bytes put on (brain/armory.py). [] when the bytes are
+    too short or the game has no tables."""
+    t = armory.table(os.path.join(looks_dir, game + "_armory.json"))
+    spec = os.path.join(looks_dir, game + ".json")
+    if t is None or not os.path.exists(spec) or len(cfg) < 0xA0:
+        return []
+    layout = json.load(open(spec, encoding="utf-8"))
+    vals = {f["name"]: cfg[f["at"]] for f in layout["fields"] if f["at"] < len(cfg)}
+    app = {i - 0x20: cfg[i] for i in range(0x20, 0xA0)}
+    body = lambda s: "elite" if s else "female" if vals.get("gender") == 1 else "male"
+    common = "".join(f";{k}={v}" for k, v in vals.items())
+    return [f"species={s};rolled_species=0" + common
+            + ";pieces=" + ",".join(f"{r}:{p}" for r, p in armory.pieces(app, body(s), t)) for s in (0, 1)]
+
+
 def table_pieces(name, game, species=None, path=PROFILES, looks_dir=LOOKS):
     """";pieces=region:permutation,..." a decoded look wears by its game's customization table (Halo 3, H2A: their bytes
     are the table's values, maps/_looks/<game>_armory.json), the hand-set values in (the view shows what the bot wears;

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Service Record: the player's own Reach armor, read from the game, 2026-11-19
+
+The owner: "what the service record shows as my armor, is not correct. I do no wear what it shows on my profile. All the other bots are correct but not mine."
+
+- **Found:** the site gave every listed name without a bot profile the look a bot of that name would roll (`all_looks` -> `brain/looks.py armory_view`), the person included: TheNobleOreo's helmet 53, chest 4 and colours were made up from the name. Nothing read the person's real armor.
+- **`native/reach.cpp` `hr_save_my_look`:** when the bots are added to a match, player 0's configuration as they joined (`globals + 0x2D8`, the one every bot starts from) is saved to `native\bin\service_record\my_look_reach.txt` whenever it changes: the name (+0x20), service tag (+0x64) and the 0xA0 bytes.
+- **`brain/looks.py` `armory_from_config`:** a look from those bytes, each field of `maps/_looks/reach.json` read at its own byte (the colours at 0x49 / 0x4A, the body at 0x4C, each armor slot's), as a bot's look writes it, and the model pieces they put on (`brain/armory.py`), as the Spartan and as an Elite.
+- **`tools/service_record.py` `load_my_look`, `all_looks`:** the person named in that file gets that look on the site instead of the made-up one; everyone else as before.
+- **Validation:** `tools/test_service_record.py` +1 (38 pass); the whole suite, 986 tests, passes. `build.bat pg31` builds `botcore_pg31.dll`. **Untested in game:** the file is written in the next match with bots (the site reads it at its next build, after that match); whether every byte matches what MCC shows (gender 1 is still read as female, unconfirmed) is to be checked on the site against the owner's own Spartan. The game's own player card still draws Reach's default Spartan for a person.
+
 ### Service Record: Denied and Mission First get their art, 2026-11-19
 
 The owner sent a tier sheet for each: "Here is denied and mission first". Each sheet is six emblems in a row, Iron to Max, already cut out: see-through around them (white under the clear part), with no title and no names.

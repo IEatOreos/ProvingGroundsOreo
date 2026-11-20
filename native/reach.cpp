@@ -636,11 +636,55 @@ static void hr_net_relay(uint8_t* tls, uint8_t* actions) {
     if (mask) ((hr_relay_fn)(g_hr + HR_SIM_RELAY))(w, mask, actions + 0x10);
 }
 
+// (Nov 19, the owner: "what the service record shows as my armor, is not correct ... All the other bots are correct
+// but not mine") the player's own look as MCC set it: player 0's configuration as they joined (the one every bot starts
+// from), saved to <bin>\service_record\my_look_reach.txt whenever it changes. Its bytes are the same fields a bot's look
+// writes (maps/_looks/reach.json "at": the colours at 0x49 / 0x4A, the body at 0x4C, each armor slot's byte), so the
+// Service Record decodes them as it does a bot's (brain/looks.py armory_from_config) instead of making a look up from
+// the name. The name (+0x20, 16 UTF-16 characters) and service tag (+0x64, 4) say whose it is.
+static void hr_save_my_look(const uint8_t* cfg) {
+    static uint8_t last[HR_CONFIG];
+    static bool saved;
+    if (saved && !memcmp(last, cfg, HR_CONFIG)) return;
+    wchar_t dir[MAX_PATH];
+    HMODULE self = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                       (LPCWSTR)&hr_save_my_look, &self);
+    if (!GetModuleFileNameW(self, dir, MAX_PATH)) return;
+    if (wchar_t* sl = wcsrchr(dir, L'\\')) sl[1] = 0;
+    wchar_t p[MAX_PATH], tmp[MAX_PATH];
+    swprintf_s(p, L"%sservice_record", dir);
+    CreateDirectoryW(p, nullptr);
+    swprintf_s(p, L"%sservice_record\\my_look_reach.txt", dir);
+    swprintf_s(tmp, L"%s.tmp", p);
+    wchar_t wname[17] = {}, wtag[5] = {};
+    memcpy(wname, cfg + 0x20, 32);
+    memcpy(wtag, cfg + 0x64, 8);
+    char name[64] = {}, tag[16] = {};
+    WideCharToMultiByte(CP_UTF8, 0, wname, -1, name, sizeof name, nullptr, nullptr);
+    WideCharToMultiByte(CP_UTF8, 0, wtag, -1, tag, sizeof tag, nullptr, nullptr);
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, tmp, L"wb") || !f) return;
+    fprintf(f, "# made by botcore (native/reach.cpp) from the player's own configuration as they joined a Halo: Reach match"
+               "\n# (their armor, colours and service tag as MCC set them); tools/service_record.py reads it\n");
+    fprintf(f, "name\t%s\ntag\t%s\nconfig\t", name, tag);
+    for (size_t i = 0; i < HR_CONFIG; i++) fprintf(f, "%02x", cfg[i]);
+    fprintf(f, "\n");
+    fclose(f);
+    if (MoveFileExW(tmp, p, MOVEFILE_REPLACE_EXISTING)) {
+        memcpy(last, cfg, HR_CONFIG);
+        saved = true;
+        logf("reach: the player's own look saved (%s)", name);
+    }
+}
+
 static int64_t hr_add_bot(uint8_t* tls, int arg) {
     uint8_t* globals = *(uint8_t**)(tls + 0x48);
     uint8_t* me = hr_player(tls, 0);
     int slot = hr_free_slot();
     if (!globals || !me || slot < 0) return -2;
+    __try { hr_save_my_look(globals + 0x2D8); }       // (the player's own look, for the Service Record)
+    __except (EXCEPTION_EXECUTE_HANDLER) {}
     int index = -1;
     for (int i = 1; i < HB_MAX_PLAYERS; i++) if (hr_player(tls, i) && !hr_live(tls, i)) { index = i; break; }
     if (index < 0) return -3;
