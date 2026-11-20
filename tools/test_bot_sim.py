@@ -149,6 +149,9 @@ class Engine(unittest.TestCase):
         self.assertGreater(m.skill["r0"], se.TIER_SKILL["strong"] + 0.3)
         self.assertLess(m.skill["r1"], se.TIER_SKILL["strong"])
         self.assertEqual(m.weapons["r0"], {6: 60})
+        # (Nov 19, the owner: simulated strength is the difficulty's alone: the fitted skill above changes nothing)
+        self.assertEqual(m.inputs_of("r0", "strong")["s"], se.TIER_SKILL["strong"])
+        self.assertEqual(m.inputs_of("r1", "demon")["s"], se.TIER_SKILL["demon"])
 
 
 class Population(unittest.TestCase):
@@ -157,13 +160,63 @@ class Population(unittest.TestCase):
             w = World(tmp, names=400)
             bots = bot_sim.population(w.paths, w.settings)
             self.assertEqual(len(bots), 400)                  # (the person left out)
-            self.assertAlmostEqual(sum(b.pace for b in bots) / len(bots), w.settings["pace"], places=6)
+            paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND]   # (Demons: every round, pace 1)
+            self.assertAlmostEqual(sum(b.pace for b in paced) / len(paced), w.settings["pace"], places=6)
+            self.assertTrue(all(b.pace == 1.0 for b in bots if b.tier in bot_sim.EVERY_ROUND))
             top = [b for b in bots if b.tier in se.TOP_TIERS]
             rest = [b for b in bots if b.tier not in se.TOP_TIERS]
             if len(top) > 40 and len(rest) > 40:
                 self.assertGreater(sum(b.grinder for b in top) / len(top), sum(b.grinder for b in rest) / len(rest))
             self.assertEqual(next(b for b in bots if b.name == "SimBot000").tier, "demon")
             self.assertEqual(next(b for b in bots if b.name == "SimBot001").style, "wheelman")
+
+    def test_saved_difficulty_found_as_the_panel_finds_it(self):
+        """A pool name with a trailing space or another case takes its saved line (the BOTS panel's pool_clean and no
+        case), not a Mixed deal."""
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp, names=4)
+            with open(w.paths.bot_pool, "a", encoding="utf-8") as f:
+                f.write("Moose Tail Cat Z\nDeath Adder\n")             # (cut to 15: "Moose Tail Cat ")
+            with open(w.paths.pool, "a", encoding="utf-8") as f:
+                f.write("saved=mythic,any,Moose Tail Cat\nsaved=scaling,objector,Death adder\n")
+            bots = {b.name: b for b in bot_sim.population(w.paths, w.settings)}
+            self.assertEqual(bots["Moose Tail Cat "].tier, "mythic")
+            self.assertEqual((bots["Death Adder"].tier, bots["Death Adder"].style), ("scaling", "objector"))
+
+    def test_demons_play_a_game_every_round(self):
+        """(Nov 19, the owner: "all the demon difficulties ... play 1 game to my 1 game") Every Demon bot is entered
+        every round; one a lobby could not seat plays first the next round; one in the owner's match sits that round
+        out. Never two games a round."""
+        rng = se.Rng(5)
+        demon, other = bot_sim.Bot(), bot_sim.Bot()
+        demon.tier, demon.pace, other.tier, other.pace = "demon", 1.0, "top", 0.0
+        self.assertEqual([bot_sim.games_this_round(demon, rng) for _ in range(50)], [1] * 50)
+        self.assertEqual([bot_sim.games_this_round(other, rng) for _ in range(50)], [0] * 50)
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp, names=200)
+            demons = {b.name for b in bot_sim.population(w.paths, w.settings) if b.tier == "demon"}
+            self.assertIn("SimBot000", demons)
+            rounds, played = 4, {n: 0 for n in demons}
+            for r in range(rounds):
+                got = w.round(seed=11 + r)
+                _, details, _ = bot_sim.site_entries(w.paths)
+                per_round = {}
+                for gid, *_ in got:
+                    for p in details[gid]["players"]:
+                        per_round[p["name"]] = per_round.get(p["name"], 0) + 1
+                self.assertLessEqual(max(per_round.values()), 1)          # (one game a round at most)
+                for n in demons:
+                    played[n] += per_round.get(n, 0)
+            # (a Demon a short lobby holds changes places with a non-Demon of a full one; a clan party with no match
+            # of its size can still miss a round: nearly all every round)
+            self.assertGreaterEqual(sum(played.values()), 0.95 * rounds * len(demons), played)
+            self.assertGreaterEqual(min(played.values()), rounds - 1, played)
+            now = time.time()
+            sat = bot_sim.play_round(w.paths, (now - 900, now - 600), 99, settings=dict(w.settings),
+                                     playlists=w.playlists, sit_out=("SimBot000",))
+            _, details, _ = bot_sim.site_entries(w.paths)
+            self.assertTrue(sat)
+            self.assertFalse(any(p["name"] == "SimBot000" for gid, *_ in sat for p in details[gid]["players"]))
 
     def test_a_round_people_clans_storage_and_the_site(self):
         with tempfile.TemporaryDirectory() as tmp:

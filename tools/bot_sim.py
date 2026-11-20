@@ -4,7 +4,8 @@ docs/BOT_SIMULATION_PLAN.md). The match itself is tools/sim_engine.py's; this fi
 together, holds the vote, and keeps the results.
 
 Who plays: every bot of Bot Matchmaking's pool (people never), each at its own pace around a third of yours (one round =
-one match of yours); grinders are three times as likely among Legendary, Blind, Mythic and Demon bots. Lobbies as
+one match of yours); grinders are three times as likely among Legendary, Blind and Mythic bots; Demon bots play every
+round, one game to each of yours (Nov 19, the owner; EVERY_ROUND). Lobbies as
 yours: (Nov 19, the owner) one game a round at most (a bot's pace is its chance of a game), and the bots of the
 match of yours a round goes alongside sit it out. Arena 4v4 or Big Team Battle 8v8 from proving_grounds.ini's playlists, clans together (85%, up to a team),
 teams balanced by skill, a map and gametype by the same vote as yours (native/proving_grounds.cpp liking / bot_vote,
@@ -92,6 +93,9 @@ PG_FAMILY = ["slayer", "ctf", "assault", "koth", "oddball", "territories", "stoc
 # proving_grounds.ini sim.<key>= (the plan's numbers)
 SETTINGS = {"pace": 1 / 3, "grinder_pace": 1.0, "grinder_top": 0.30, "grinder_other": 0.10, "btb_lean": 0.35,
             "spread": 0.6, "after_match": 1}      # (sim.after_match=0: no round alongside your matches; the button still)
+# tiers that play a game every round, one to each match of yours (Nov 19, the owner: "I would like all the demon
+# difficulties to play just as much as me. So they play 1 game to my 1 game"); a lobby that cannot seat one queues it
+EVERY_ROUND = {"demon"}
 
 
 # ---------------------------------------------------------------- settings, playlists
@@ -190,9 +194,11 @@ def default_difficulty():
 
 def tier_of(name, saved, difficulty):
     """A bot's tier as its lobbies give it: its saved difficulty (bot_pool_saved.ini), else the "for everyone" one;
-    under Mixed, one of Mixed's six for good, from its name."""
-    if name in saved and saved[name][0] in se.TIERS:
-        return saved[name][0]
+    under Mixed, one of Mixed's six for good, from its name. saved is keyed as population keys it (pool_name, no case:
+    the BOTS panel's own match, so "ii Toxic Moose " and "Death Adder" find their lines)."""
+    key = sr.pool_name(name).lower()
+    if key in saved and saved[key][0] in se.TIERS:
+        return saved[key][0]
     d = {0: "novice", 1: "average", 2: "strong", 3: "top", 5: "scaling", 6: "demon", 7: "blind", 8: "tactician",
          9: "mythic"}.get(difficulty)
     return d or se.MIXED[se.hash_of(name, 31) % len(se.MIXED)]
@@ -207,7 +213,7 @@ def population(paths, settings, model=None):
     """[Bot] of the pool, people left out, each with its pace (games a round, on average), whether it grinds, and its
     lean toward Big Team Battle; all from its name, so they stay the same."""
     names = sr.read_pool_names(paths.bot_pool)
-    saved = sr.read_pool(paths.pool)
+    saved = {sr.pool_name(k).lower(): v for k, v in sr.read_pool(paths.pool).items()}   # (as the panel matches)
     clans = sr.read_profiles(paths.profiles)
     people = people_names(paths)
     diff = default_difficulty()
@@ -218,7 +224,7 @@ def population(paths, settings, model=None):
             continue
         b = Bot()
         b.name, b.tier = n, tier_of(n, saved, diff)
-        b.style = saved.get(n, ("", "any"))[1] or "any"
+        b.style = saved.get(sr.pool_name(n).lower(), ("", "any"))[1] or "any"
         b.style = b.style if b.style in se.STYLES else "any"
         b.clan = clans.get(n, "") or ""
         p_grind = settings["grinder_top"] if b.tier in se.TOP_TIERS else settings["grinder_other"]
@@ -227,17 +233,30 @@ def population(paths, settings, model=None):
         b.pace = math.exp(sp * se.Rng(se.hash_of(n, 43)).gauss())    # (its own spread; the median set below)
         bots.append(b)
     # grinders at their median pace; the others' median whatever brings everyone's average to the pace asked for
-    target = settings["pace"] * len(bots)
-    g_sum = sum(b.pace * settings["grinder_pace"] for b in bots if b.grinder)
-    c_sum = sum(b.pace for b in bots if not b.grinder)
+    # (EVERY_ROUND tiers left out of it: they play every round, and the rest keep the pace they had)
+    rest = [b for b in bots if b.tier not in EVERY_ROUND]
+    target = settings["pace"] * len(rest)
+    g_sum = sum(b.pace * settings["grinder_pace"] for b in rest if b.grinder)
+    c_sum = sum(b.pace for b in rest if not b.grinder)
     if g_sum > target * 0.9:                                         # (grinders alone would use it all)
         k = target * 0.9 / g_sum if g_sum else 1.0
         g_scale, c_med = settings["grinder_pace"] * k, (target * 0.1 / c_sum if c_sum else 0.0)
     else:
         g_scale, c_med = settings["grinder_pace"], ((target - g_sum) / c_sum if c_sum else 0.0)
     for b in bots:
-        b.pace *= g_scale if b.grinder else c_med
+        if b.tier in EVERY_ROUND:
+            b.pace = 1.0
+        else:
+            b.pace *= g_scale if b.grinder else c_med
     return bots
+
+
+def games_this_round(b, rng):
+    """0 or 1: whether a bot plays this round (one game a round at most). An EVERY_ROUND tier always; the others by
+    their pace (a Poisson draw, so a pace is the chance 1 - e^-pace)."""
+    if b.tier in EVERY_ROUND:
+        return 1
+    return min(1, rng.poisson(b.pace))
 
 
 def people_names(paths):
@@ -431,9 +450,10 @@ def parties_of(bots, size, rng):
     return rng.shuffle(out)
 
 
-def lobbies_of(bots, size, rng, skill):
+def lobbies_of(bots, size, rng, skill, first=None):
     """([[team 0 bots], [team 1 bots]] per lobby, bots left waiting): parties seated first come first, teams dealt by
-    skill with each party on one team."""
+    skill with each party on one team. first(bot): a party with one is never left waiting while a full lobby holds a
+    party of its size without one (they change places; the Demons' game every round, EVERY_ROUND)."""
     lobbies, open_ = [], []
     for party in parties_of(bots, size, rng):
         home = next((lb for lb in open_ if 2 * size - sum(len(p) for p in lb) >= len(party)), None)
@@ -444,6 +464,20 @@ def lobbies_of(bots, size, rng, skill):
         home.append(party)
         if sum(len(p) for p in home) == 2 * size:
             open_.remove(home)
+    if first:
+        filled = [lb for lb in lobbies if sum(len(p) for p in lb) == 2 * size]
+        for lb in lobbies:
+            if lb in filled:
+                continue
+            for i, party in enumerate(lb):
+                if not any(first(b) for b in party):
+                    continue
+                for f in filled:
+                    j = next((j for j, q in enumerate(f) if len(q) == len(party) and not any(first(b) for b in q)),
+                             None)
+                    if j is not None:
+                        f[j], lb[i] = party, f[j]
+                        break
     full, waiting = [], []
     for lb in lobbies:
         if sum(len(p) for p in lb) < 2 * size:
@@ -658,14 +692,14 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, s
     layouts = forge_layouts(paths)
     by_name = {b.name: b for b in bots}
     rng = se.Rng(seed)
-    skill = lambda b: model.skill.get(b.name, se.TIER_SKILL.get(b.tier, 0.0))
+    skill = lambda b: se.TIER_SKILL.get(b.tier, 0.0)    # (its difficulty only, as the match plays it)
     stored = []
     con = connect(paths)
     try:
         taken = used_starts(paths, con)
         queue = [by_name[n] for n in meta_get(con, "queue", []) if n in by_name]
         sit = {n.lower() for n in sit_out}
-        games = {b.name: min(1, rng.poisson(b.pace)) for b in bots}  # (one game a round at most)
+        games = {b.name: games_this_round(b, rng) for b in bots}    # (one game a round at most; Demons every round)
         for b in bots:
             if b.name.lower() in sit:                                # (in your match: that is its game this round)
                 games[b.name] = 0
@@ -691,7 +725,7 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, s
                     waiting += members
                     continue
                 size = pl["size"]
-                full, left = lobbies_of(members, size, rng, skill)
+                full, left = lobbies_of(members, size, rng, skill, first=lambda b: b.tier in EVERY_ROUND)
                 waiting += left
                 for teams in full:
                     n_lobby += 1
@@ -834,7 +868,7 @@ def stats(paths):
     med = lambda xs: xs[len(xs) // 2] if xs else 0
     print(f"games per match of yours: everyone {mean:.3f} on average; grinders' median {med(gp):.2f}, "
           f"the others' {med(cp):.3f}")
-    plays = lambda b: 1.0 - math.exp(-b.pace)                       # (one game a round at most: its chance of one)
+    plays = lambda b: 1.0 if b.tier in EVERY_ROUND else 1.0 - math.exp(-b.pace)   # (one a round at most: its chance)
     print(f"per round about {sum(plays(b) for b in bots):.0f} seats: about {sum(plays(b) * (1 - b.lean) for b in bots) / 8:.0f}"
           f" Arena and {sum(plays(b) * b.lean for b in bots) / 16:.0f} Big Team Battle lobbies")
     print(f"model: kills a player a minute {model.kpm:.3f}; by family { {k: round(v, 3) for k, v in model.kpm_by.items()} }")

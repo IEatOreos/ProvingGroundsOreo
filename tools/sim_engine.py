@@ -5,8 +5,8 @@ match fight by fight (play).
 
 What it knows, and where from (the plan's ladder: Reach's rules, then the bot's own real matches, then its tier's, then
 the map and gametype's; otherwise nothing):
-  - skill: a Bradley-Terry fit of who killed whom in the real matches (the kill record; K and D against the other team
-    where a match has none), around each tier's starting value. Only real matches feed it, never a simulated one.
+  - skill: the bot's difficulty (TIER_SKILL), nothing else (the owner, Nov 19). fit still works out a Bradley-Terry
+    skill from the real matches (Model.skill), but no simulated match uses it.
   - pace, assists, suicides, betrayals, headshots, weapon mix, the medals the rules cannot work out: each bot's real
     numbers, shrunk toward its tier's and everyone's ((own + C * typical) / (count + C)).
   - each map's weapons and vehicles, with their respawn times: the game's own files (maps/<map>/objects.json from the
@@ -124,8 +124,8 @@ TIER_NAME = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "
              "demon": "Demon", "blind": "Blind", "tactician": "Tactician", "mythic": "Mythic"}
 MIXED = ["average", "novice", "strong", "top", "demon", "blind"]
 TOP_TIERS = {"top", "blind", "mythic", "demon"}          # (the owner: "Legendary and above")
-# where each tier's skill starts (logit units: a 1.0 edge wins 73% of even fights), in the difficulty picker's order;
-# real matches then move each bot from there
+# each tier's skill (logit units: a 1.0 edge wins 73% of even fights), in the difficulty picker's order: a simulated
+# bot plays at its tier's, whatever its real matches
 TIER_SKILL = {"novice": -1.2, "average": -0.6, "strong": 0.0, "tactician": 0.3, "top": 0.6, "scaling": 0.6,
               "blind": 0.5, "mythic": 0.85, "demon": 1.1}
 SWEAT = {"novice": -0.7, "average": -0.35, "strong": 0.0, "top": 0.45, "scaling": 0.2, "demon": 0.85, "blind": 0.45,
@@ -373,7 +373,9 @@ class Model:
     def inputs_of(self, name, tier):
         """What the match uses of one bot (stored with each simulated match, so it can be played again)."""
         d = self.defaults
-        return {"s": round(self.skill.get(name, TIER_SKILL.get(tier, 0.0)), 4),
+        # (Nov 19, the owner: "Simulated strength should be based on their difficulty": a bot's tier alone, never
+        # its fitted self.skill, which a few bad real games pulled a Demon below Heroic with)
+        return {"s": round(TIER_SKILL.get(tier, 0.0), 4),
                 "a": round(self.agg.get(name, (d.get("agg") or {}).get(tier, 1.0)), 4),
                 "q": round(self.assist.get(name, d.get("assist", 0.15)), 4),
                 "su": round(self.suicide.get(name, d.get("suicide", 0.02)), 5),

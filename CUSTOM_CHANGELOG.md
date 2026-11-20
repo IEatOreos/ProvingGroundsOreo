@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### The Mixed bots get their own difficulty, Heroic to Mythic; the simulation finds every saved one, 2026-11-19
+
+The owner: "Distribute the mixed difficulties randomly across Heroic up to Mythic. Make the cooler names mythics."
+
+- **Local data only (git-ignored `native/bin/`):** the 571 pool bots with no saved difficulty (they took the lobby's Mixed) each got a `saved=` line in `bot_pool_saved.ini`, written by `service_record.set_bot_difficulty` with MCC closed (so `botcore.ini`'s lobby list follows too). 91 hand-picked names are Mythic (the edgier ones: Reaper343, VoidHunter9, GodofInjustice, Bl4dePh4ze, NullExecution, ScytheWarden and the like); the other 480 were shuffled (seed 20261119) and dealt evenly, 80 each, to Heroic, Legendary, Scaling, Demon, Blind and Tactician. Bots already saved kept theirs. Backups: `bot_pool_saved.ini.before_mixed_deal_20261119`, `botcore.ini.before_mixed_deal_20261119`. Pool now: Demon 127, Blind 117, Legendary 109, Mythic 106, Tactician 100, Heroic 93, Scaling 80, Normal 19, Easy 2.
+- `tools/bot_sim.py` `population` / `tier_of`: a saved line is found as the BOTS panel finds it (`pool_name`, no case). Five pool names cut to 15 with a trailing space (`ii Toxic Moose `) and `Death Adder` (saved as `Death adder`) had been dealt a Mixed tier by the simulation; the site and the simulation now count the same tiers.
+- Validation: `test_bot_sim` `test_saved_difficulty_found_as_the_panel_finds_it` (new); every one of the 571 read back with its dealt tier; site rebuilt. Full suite 993 OK; `bot_sim` imports. **In game from MCC's next start; not yet seen in a lobby.**
+
+### Bot simulation: Demon bots play one game to each of yours, 2026-11-19
+
+The owner: "I would like all the demon difficulties to play just as much as me. So they play 1 game to my 1 game."
+
+- `tools/bot_sim.py` `EVERY_ROUND = {"demon"}`: a Demon bot (its saved difficulty, or the lobby's when it has none) plays a game every round; one round runs per Proving Grounds match of yours. `games_this_round` replaces the pace draw for them; the other bots' pace is worked out without them, so theirs is unchanged (about a third of yours on average). One game a round at most and the bots of your match sitting that round out still hold.
+- `lobbies_of(first=...)`: parties are shuffled into lobbies, so a short lobby left a few bots waiting. A Demon in a short lobby now changes places with a non-Demon party of the same size in a full one, so Demons still play mixed lobbies. A clan party of Demons with no same-size party to change with can still miss a round.
+- Validation: `test_bot_sim` `test_demons_play_a_game_every_round` (new: always entered; never two games a round; 95%+ of rounds played, none missing two of four; sits out the owner's match), `test_pace_averages_what_is_asked` updated. A 750-bot test world: 131 Demons played 783 of 786 possible games over 6 rounds. Full suite 992 OK; `bot_sim`, `sim_engine`, `bot_career`, `service_record` import. **Not yet seen after a real match.**
+
+### Bot simulation: a bot plays at its difficulty's strength, 2026-11-19
+
+The owner: "Banevent has a 0.40 kd when he is a demon", then "Simulated strength should be based on their difficulty".
+
+- **Found:** the simulation started each bot at its tier's skill (`TIER_SKILL`) and then fitted it by name from its real matches, all of them kept through stat resets. Banevent's 7 real games (56 kills, 112 deaths; the four on Nov 15 at a tier the logs do not record) put a Demon (+1.1) at −0.36, below Heroic, so he went 37-93 in his 5 simulated games. The logs record no tier per match, and the fit counts each kill and death as one fight, so a few games outweighed the difficulty.
+- `tools/sim_engine.py` `Model.inputs_of` and `tools/bot_sim.py` (team balance): a bot's strength is its difficulty's `TIER_SKILL` only. A change on the site's difficulty picker applies from the next simulated round. `fit` still works out `Model.skill`; nothing simulated uses it. Pace, assists, weapons and the other per-bot numbers still come from real matches. Simulated matches already stored keep their own numbers.
+- Validation: `test_bot_sim` `test_the_model_learns_from_real_fights` also checks that `inputs_of` gives the tier's strength for a bot whose fit is far above or below it. Full suite 991 OK; `sim_engine` and `bot_sim` import. **Not yet seen after a real match** (the next round runs after your next Proving Grounds match).
+
 ### A man half in view is still noticed (the notice timer through short gaps), 2026-11-19
 
 The owner's F9 "Partyland doesnt shoot at me again when he can clearly see my head" (Sword Base `20261119-211332`), and "he could clearly see my head even when crouching"; then "Yes, fix it".
