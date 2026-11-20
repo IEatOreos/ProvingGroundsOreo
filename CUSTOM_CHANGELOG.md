@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Vehicle guns skip men they cannot hit; boarded gunners get out; tanks run boarders down, 2026-11-20
+
+The owner's F9s on Boneyard (`reach_70_boneyard_20261120-164229`): a screenshot of a Warthog gunner (Partyland) "the gunn aims straight down even when their reticle in the right plac.e", and "Acsencion didnt shoot at the bot closest to him when in the scorpion and got jacked"; then "Yes, fix it".
+
+- **Found:**
+  - At 341.7 s Tower 2 (the other team) boarded Partyland's Warthog. Partyland, in the turret (Demon, with the chaingun lock), kept him as its target and aimed at his chest inside its own Warthog, as far as 65° down (343.6-346 s, 5:47 on the theater bar); also at 331.6 s at a man 0.8 u beside it.
+  - In that match gunners spent 149 aiming ticks on a man inside their own vehicle and 168 more than 0.6 rad down. Normal-aim gunners never went past 0.36.
+  - Ascension (Demon) driving a Scorpion backed away at full reverse from Sh4d0wLux walking at it (3.9 → 0 u, 248-251.7 s). It never fired, since the cannon's 0.1 s settle never held, and it was jacked.
+- `brain/bot.py`:
+  - `Bot.gun_reach`, used by `crew_target`: a vehicle seat takes no man in its own vehicle. A mounted gun also takes none more than `GUN_DEPRESS` 0.6 rad below where its shot leaves (`turret_origin`, else the seat's gun height); another man in sight is taken instead.
+  - `Bot.boarded_by`: a gunner or passenger with an enemy in its vehicle holds Use to get out (as every get-out) and fights on foot, with no ride again for 5 s.
+  - A Scorpion's or Wraith's driver (the artillery role) runs a man on foot within `vehicles.BOARD_D` (6 u) down, at full throttle toward where he will be, with no shell at that range. Not a man in Armor Lock (the rammer dies); Easy backs off as before.
+- Validation: `tools/test_vehicle_gun_reach.py` (new, 6):
+  - not a man in our own vehicle nor one at the wheels under the gun, another taken;
+  - a boarded gunner gets out, none without a boarder;
+  - a tank runs a man at 3 u down without a shell;
+  - Easy and Armor Lock still back off, and far men are shelled as before.
+
+  Full suite 1006 OK; `live_bots` imports. **Untested in a match.**
+
 ### Noble: a testing difficulty, Demon's base, in game only, 2026-11-20
 
 The owner: "Add a new difficulty only to our in game. It's our new testing difficulty We will call it Noble. Make its base the same as a demon bot and then we will train it."

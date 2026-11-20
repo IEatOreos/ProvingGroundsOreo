@@ -149,6 +149,15 @@ TANK_VEHICLE_R = 40.0
 # (its own splash)
 HOG_GUNS = ("warthog", "gauss", "rwarthog")
 HOG_FOOT_R, HOG_VEHICLE_R = 10.0, 60.0
+# (custom, Nov 20, the owner's F9s on Boneyard 20261120-164229: a gunner "aims straight down even when their reticle in
+# the right place", and a Scorpion driver that "didnt shoot at the bot closest to him ... and got jacked") A vehicle's gun
+# does not take a man it cannot hit (Bot.gun_reach): one in our own vehicle (a boarder: Partyland's chaingun 65 degrees
+# down at the man in his Warthog's seat, 343.6-346 s), nor, for a mounted gun, one further below it than GUN_DEPRESS
+# rad from where its shot leaves (a man at the wheels). Normal-aim gunners never went past 0.36 in that match
+GUN_DEPRESS = 0.6
+# ... a gunner or passenger whose vehicle an enemy boarded gets out to fight him (Bot.drive); a tank driver runs a man on
+# foot down within vehicles.BOARD_D instead of backing off (Ascension backed off at full throttle 3.9 u -> 0 and was
+# jacked, the cannon never firing, 248-251.7 s)
 RHOG_VEHICLE_R, RHOG_FOOT_MIN = 60.0, 6.0
 # (custom, Nov 15) s a rider that got out of a parked vehicle nobody drives stays off it (Bot.veh_banned)
 PARKED_BAN = 20.0
@@ -4911,6 +4920,7 @@ class Bot:
         Falcon's), those on that side (it cannot swing across); of them the one the gun should fight (vehicle_pick:
         own, the gunner itself, or the driver steering for it), a passenger the closest. None: nobody in sight (or
         nobody worth the gun's shot)."""
+        seen = [k for k in seen if s.gun_reach(me, v, k, snap)]   # (custom, Nov 20: GUN_DEPRESS, Bot.gun_reach)
         if not seen:
             return None
         bel = s.per.beliefs
@@ -4930,6 +4940,30 @@ class Bot:
         if own or s.seat == "driver":
             return s.vehicle_pick(me, v, "gunner", seen, snap)
         return min(seen, key=lambda k: dist(me.pos, bel[k].pos))
+
+    def gun_reach(s, me, v, k, snap):
+        """(custom, Nov 20) Whether this seat's gun can hit enemy k at all: not a man in our own vehicle (a boarder), and
+        for a mounted gun not one more than GUN_DEPRESS rad below where its shot leaves (turret_origin, else the seat's
+        gun height). A passenger's own gun only the first."""
+        p, b = snap.player(k), s.per.beliefs.get(k)
+        if p is None or b is None:
+            return True
+        if me.vehicle not in (None, -1) and p.vehicle == me.vehicle:
+            return False
+        if s.seat != "gunner" or v is None:
+            return True
+        origin = getattr(me, "turret_origin", None)
+        if origin is None:
+            h = vehicles.gun_height(getattr(me, "turret", "") or "", vehicles.kind_of(v["kind"]))
+            origin = me.pos + Vec(0, 0, h if h is not None else EYE)
+        aim = b.pos + Vec(0, 0, aim_height(False, crouched(p)))
+        return math.atan2(aim.z - origin.z, max((aim - origin).flat(), 1e-3)) >= -GUN_DEPRESS
+
+    def boarded_by(s, me, snap):
+        """(custom, Nov 20) An enemy alive in our vehicle (he boarded it), or None."""
+        if me.vehicle in (None, -1):
+            return None
+        return next((p.id for p in snap.players if p.alive and p.team != me.team and p.vehicle == me.vehicle), None)
 
     FORWARD_GUNS = {"ghost", "banshee", "chopper", "gungoose", "hornet", "sabre", "seraph", "revenant"}
 
@@ -5271,6 +5305,14 @@ class Bot:
                 s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
                 s.note("vehicle: out for the power vehicle")
                 return
+            if s.boarded_by(me, snap) is not None:
+                # (custom, Nov 20) an enemy in our vehicle (he boarded it): no gun reaches him from here, out and fight him
+                act.action, act.fire = True, False
+                act.forward = act.strafe = 0.0
+                s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
+                s.vehicle_retry_at = max(getattr(s, "vehicle_retry_at", 0.0), now + 5.0)
+                s.note("vehicle: boarded by an enemy, out to fight him")
+                return
             gunner, fire, aimed = s.seat == "gunner", False, False
             tid = s.crew_target(me, snap, v, seen, own=gunner)
             if tid is not None and (gunner or not me.has_flag):
@@ -5566,6 +5608,18 @@ class Bot:
                 s.att = ["charge", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             elif passes:
                 s.air_pass(now, me, tid, b, aim_at, act, v)    # a Banshee's attack runs: a skilled player's (air_pass)
+            elif (st["role"] == "artillery" and not air and d < vehicles.BOARD_D and foe is not None
+                  and foe.vehicle == -1 and s.p.tier != "novice"
+                  and not (foe.equipment == "armor_lock" and foe.ability_on)):
+                # (custom, Nov 20, the owner: Ascension "didnt shoot at the bot closest to him when in the scorpion and
+                # got jacked") a man on foot close enough to board it: run him down (a tank is slower backing off than
+                # he walks; live Boneyard 248-251.7 s, 3.9 u -> 0 at full reverse and jacked). Not one in Armor Lock (the
+                # rammer dies, ram_ok); Easy backs off as before
+                lead = b.pos + b.vel * min(1.0, d / 10.0)
+                act.yaw = math.atan2(lead.y - me.pos.y, lead.x - me.pos.x)
+                act.forward, act.strafe = 1.0, 0.0
+                s.att = ["splatter", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
+                s.note("vehicle: a boarder close in, running him down")
             elif st["role"] == "artillery":
                 # holds its range and keeps moving side on between shots; a man close enough to board it is backed
                 # away from (research: Wraith and Scorpion are boarded from the flanks; the mortar faces its target)
@@ -5616,6 +5670,8 @@ class Bot:
                         act.fire = now - since >= vehicles.SCORPION_SETTLE
                 else:
                     act.fire = aligned or (armed and dist(me.pos, b.pos) < 15)
+                if st["role"] == "artillery" and s.att and s.att[0] == "splatter":
+                    act.fire = False        # (custom, Nov 20: running a boarder down, no shell at point blank)
             if kind == "mantis":
                 s.mantis_weapons(now, me, v, snap, tid, b, aim_at, act)
         elif seen and not (v is not None and vehicles.is_warthog(v["kind"])):
