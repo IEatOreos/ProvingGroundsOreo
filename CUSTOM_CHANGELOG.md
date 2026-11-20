@@ -15,6 +15,7 @@ The owner sent 17 more frames of Reach's menus: FILE BROWSER, the Start menu on 
   - The Start menu lists its rows beside a controller we drew. The page shows Halo: Reach's controls as MCC keeps them in `Saved\Config\WindowsNoEditor\GameUserSettings.ini`, entry 6 of each list (Reach). For example: look sensitivity 10 across and 11 up and down, hold to crouch, clench protection off.
   - The button layout shows as MCC's preset number, because MCC's names for its numbers are not known.
   - It only shows them: they are changed in MCC's own Settings, which writes that file.
+  - **Later the same day,** the owner: "Use this image for the controller on there instead of whatever you drew". His picture is drawn on the Start menu and the Controller page instead. It is cut out of its white ground (the white touching the edges made clear, the light body kept) and kept in this PC's `native\bin\pg_backgrounds\controller.png`, never in git. Our drawing is still used where that file is missing.
 - **NETWORK STATUS** is on the Start menu, as Reach's was. Matches: THIS PC. Connection needed: NONE. Your party: from MCC's own list. **SERVICE RECORD SITE** (where Reach had Halo Waypoint) is now a line of text, as Reach's entry was.
 - **Validation:** preview screens 34-38 were checked by eye with this PC's real files and settings. `build.bat pg33` builds `botcore_pg33.dll`. Untested in game.
 

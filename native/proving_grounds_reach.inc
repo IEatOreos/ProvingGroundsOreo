@@ -999,7 +999,7 @@ static void rm_challenges() {
 }
 
 static void fb_forget();                         // (phase 4, below: the File Browser, the controller, network status)
-static void ctl_pad(float cx, float cy, float s, ImU32 c);
+static void ctl_show(float cx, float cy, float s);
 static void rm_network();
 static void rm_menu_act(int k) {                 // an entry of the Start menu pressed
     if (!RM_MENU_ON[k]) { sound(PS_ERROR); return; }
@@ -1063,7 +1063,7 @@ static void rm_menu(pg_env& e, float t) {
         if (unsigned long long fig = e.figure(me_name(), false, 0.35f + 0.25f * sinf(t * 0.4f), 350, 415))
             g_dl->AddImage((ImTextureID)fig, P(1165, 165), P(1515, 580), ImVec2(0, 0), ImVec2(1, 1), A(IM_COL32(255, 255, 255, 255)));
     } else if (f == 3) {
-        ctl_pad(1340, 340, 290, IM_COL32(200, 205, 210, 255));
+        ctl_show(1340, 330, 320);
     } else {
         rm_diamonds(1340, 330, 150, IM_COL32(120, 176, 230, 120));
     }
@@ -1800,6 +1800,13 @@ static void ctl_pad(float cx, float cy, float s, ImU32 c) {   // (our own contro
     for (int k = 0; k < 4; k++) g_dl->AddCircleFilled(P(cx + s * (0.3f + bx[k]), cy + s * by[k]), U(s * 0.03f), A(fb[k]), 12);
     g_dl->AddCircleFilled(P(cx, cy - s * 0.1f), U(s * 0.05f), A(IM_COL32(150, 200, 120, 255)), 18);
 }
+// (Nov 19, the owner: "Use this image for the controller on there instead of whatever you drew") his picture of the
+// controller, this PC's own (native\bin\pg_backgrounds\controller.png, never in git, cut out of its white ground);
+// without it, ours drawn
+static void ctl_show(float cx, float cy, float s) {
+    if (const pic* p = rm_picture(L"controller")) image_fit(p, cx - s * 0.55f, cy - s * 0.37f, cx + s * 0.55f, cy + s * 0.37f);
+    else ctl_pad(cx, cy, s, IM_COL32(200, 205, 210, 255));
+}
 static const char* CTL_ROWS[8] = { "BUTTON LAYOUT", "STICK LAYOUT", "LOOK INVERSION", "LOOK SENSITIVITY", "AUTOLOOK CENTERING",
                                    "CROUCH BEHAVIOR", "CLENCH PROTECTION", "FLYING CONTROLS" };
 static std::string ctl_text(int k) {
@@ -1831,7 +1838,7 @@ static void rm_controller(pg_env& e, float t) {
         text(g_fl, 25, 400, y + 6, f ? C_TEXT : C_DIM, CTL_ROWS[k]);
         text(g_fl, 25, 950, y + 6, f ? C_TEXT : IM_COL32(222, 226, 230, 255), ctl_text(k).c_str());
     }
-    ctl_pad(940, 640, 330, IM_COL32(200, 205, 210, 255));
+    ctl_show(940, 690, 330);
     rm_wrap(g_fl, 23, 400, 500, 1050, IM_COL32(200, 206, 212, 220),
             "Halo: Reach's controls as MCC keeps them on this PC. Change them in MCC's own Settings, under Controls: "
             "Proving Grounds shows them and does not change them.");
