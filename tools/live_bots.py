@@ -1214,8 +1214,10 @@ def main():
                     try:
                         for row in kills.tick(snap):
                             trace.write(json.dumps(dict(t=round(now, 3), kill=row)) + chr(10))
-                            said = kill_record.read(row, TEAMS) if book_on else None
-                            if said is not None and said[0] == "kill" and row.get("kp") is not None:
+                            # (custom, Nov 19: was named "said", the callout counter's name; a kill made it a
+                            # tuple, the callout slice threw and the bots froze ~9 s into every match)
+                            rec = kill_record.read(row, TEAMS) if book_on else None
+                            if rec is not None and rec[0] == "kill" and row.get("kp") is not None:
                                 book.add_kill(row["vp"], row["kp"])     # (map memory: where each stood)
                         kill_fails = 0
                     except Exception as e:           # never stops the bots; a read racing the game is tried again,

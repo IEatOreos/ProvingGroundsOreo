@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fix: bots froze in every match after the first kill, 2026-11-19
+
+The owner: "The bots have frozen atleast two games in a row now in matchmaking". `logs/brain.txt` (Aftship, TU TEAM SLAYER DMR, 20261119-203501) shows the cause: `8.7s tick failed (TypeError: slice indices must be integers ...)` at `for c in comms[said:]`, then "game gone, brain stopping".
+
+- **Cause:** Map memory (3cf3035) stored each kill's `kill_record.read(...)` result in `said`. That name was already the director's count of callouts spoken, so after the first kill the count held a tuple, the callout slice threw, and the brain stopped with the bots standing.
+- **Fix (`tools/live_bots.py`):** the kill record's variable is now `rec`. Nothing else changes.
+- **Checks:** the file parses and imports, and `unittest discover` over `tools` passes 986 tests. Not yet seen in a match. It applies from the next match, since botcore starts a fresh brain for each one.
+
 ### Proving Grounds: the player's own Spartan on the cards, and Reach's Armory (phase 3), 2026-11-19
 
 The owner: "Do the in game cards first, then start the Armory. all one phase". His Armory design: "everything on MCC is actually already unlocked, but we make it to where you can't equip it until you purchase it through our menu ... when we go to equip an item that we have not purchased or locked, it just doesn't do anything. So it's not changing the options inside the MCC menu."
