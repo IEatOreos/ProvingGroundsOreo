@@ -147,9 +147,10 @@ MYTHIC_HANDS = ("reaction", "aim_err", "lag", "track", "flick", "overshoot", "de
 # fixed_demon, so every Demon rule, its aim and hands) under its own label "noble". In game only (the BOTS panel, botcore,
 # botctl); not offered on the Service Record site. Its training goes behind fixed_noble so Demon stays as it is
 NOBLE = "noble"
-# (Nov 20, owner: "make the noble difficulty to practically be an aimbot ... close to 100%") Noble's view turns this fast
-# (Bot.turn_cap; Demon 700 deg/s): its lock (Aim.noble_lock) is on a man within about two ticks wherever he appears
-NOBLE_TURN = math.radians(3000)
+# (Nov 20, owner: "make the noble difficulty to practically be an aimbot ... close to 100%") Noble's view turns at
+# Demon's speed (Bot.turn_cap; it was 3000 deg/s for a while that day, a whip the owner saw as a flick at the ground):
+# its swing onto a man is eased in, then locks (bot.Aim.noble_lock)
+NOBLE_TURN = TURN[DEMON]
 
 
 def arc_spot(prof):

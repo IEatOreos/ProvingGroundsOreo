@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Noble: a smooth swing then a lock, never a miss with precision guns, and it takes the fight, 2026-11-20
+
+The owner's Forge World report (`logs/bug_reports/reach_forge_halo_20261120-172336`, read by the bug-report session): four Nobles were in a fight goal 1-12% of the time, "they should be killing me quicker", and their aim "flick[s] directly at the ground". Then: "make noble as good as humanly possible ... never miss a shot from here on out with precision weapons."
+
+- **No flick** (`brain/bot.py` `Aim.noble_lock`, `brain/profiles.py` `NOBLE_TURN`): the 3000 deg/s turn (a ~100 deg jump in one tick onto a new man) is back to Demon's 700. The swing onto a man is eased in (`NOBLE_EASE_S` 0.06 s, within the turn speed) and locks within `NOBLE_LOCK_R` (1.5 deg). Locked, it follows him exactly while he moves under `NOBLE_HOLD_R` (20 deg) a tick. `s.goal` stays the exact point.
+- **Never a miss with precision guns** (`PRECISION`: DMR, magnum, needle rifle, BR, carbine, sniper...): Noble presses only on the tick its lock is on him (`noble_on`), never while it swings on, so Demon's protected DMR/sniper head snap after the turn cap moves it by nothing. `Bot.fire_gap`: the paced cadence at every range (DMR 0.4 s; x`NOBLE_LONG_PACE` 1.2 past 10 u), never the Short band spam, so each shot's bloom has settled. The head from the first shot (as before).
+- **It fights** (`Bot.noble_push`, new): on foot, not carrying, a man in view is fought `NOBLE_PUSH` (0.25) over its best other choice (retreat, gun, objective, hunt). Demon's back-off rules are off for Noble: the odds break-off, "not taking him on", the hunt into a group and the full-shield re-peek (`demon_odds_rules`: the team's trades and callouts kept), cover until full (`demon_recharge`), no new fight hurt (`demon_no_new_fight`), out of a second man's sight (`demon_break_second`), the peek wait (`peek_timing`), the objective cap (`demon_objective`) and the chase limits (`chase_ok`). Demon unchanged.
+- Not changed: the game's own spread beyond bloom, a head the bots' level data does not know is covered (the report's 9 rounds at 24-28 u that did nothing are not explained), and Reach riders' heads (not read: chest).
+- Validation: `tools/test_noble_difficulty.py` (smooth swing from 120 deg round within the turn speed, eased, locked in under 0.45 s; no press while swinging; paced at every range; a man in view first; the back-off rules off; the earlier lead tests on the lock's point). Full suite 1020 OK; `live_bots` imports. **Untested in game.**
+
 ### Noble aims like an aimbot: every gun, seat and vehicle, 2026-11-20
 
 The owner: "I want you to make the noble difficulty to practically be an aimbot. I want their accuracy to be close to 100%. With all vehicles and all weapons that are precision based."

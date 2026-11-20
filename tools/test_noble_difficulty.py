@@ -6,6 +6,7 @@ import math
 import random
 import re
 import sys
+import types
 import unittest
 from dataclasses import asdict
 from pathlib import Path
@@ -72,7 +73,8 @@ class AimbotTests(unittest.TestCase):
     def test_dead_on_a_still_head_at_once(self):
         a, me = self.aim(), shooter()
         foe = Vec(25, 9, 0)
-        y, p = a.step(1.0, 1 / 30, me, 1, foe, Vec(), True)
+        a.step(1.0, 1 / 30, me, 1, foe, Vec(), True)
+        y, p = a.goal                                                  # (where the lock settles: the swing ends there)
         self.assertLess(miss(eye(me), y, p, foe + Vec(0, 0, aim_height(True, False))), 1e-9)
         self.assertIsNone(a.flick)
 
@@ -91,6 +93,7 @@ class AimbotTests(unittest.TestCase):
         o = Vec(0, 0, 1.0)
         y, p = a.step(1.0, 1 / 30, me, 1, foe, vel, False, gun="plasma_rifle", origin=o, shot_speed=speed,
                       splash_at_feet=False)
+        y, p = a.goal
         chest = foe + Vec(0, 0, aim_height(False, False))
         t = bot.DEMON_LEAD_S
         for _ in range(20):
@@ -104,7 +107,8 @@ class AimbotTests(unittest.TestCase):
     def test_explosive_at_his_feet(self):
         a, me = self.aim(), shooter(weapon="rockets")
         foe = Vec(15, 0, 0)
-        y, p = a.step(1.0, 1 / 30, me, 1, foe, Vec(), False)
+        a.step(1.0, 1 / 30, me, 1, foe, Vec(), False)
+        y, p = a.goal
         self.assertLess(miss(eye(me), y, p, foe + Vec(0, 0, 0.05)), 1e-9)
 
     def test_caller_point_kept(self):
@@ -112,6 +116,7 @@ class AimbotTests(unittest.TestCase):
         a, me = self.aim(), shooter()
         o, pt = Vec(0, 0, 0.6), Vec(12, 3, 0.7)
         y, p = a.step(1.0, 1 / 30, me, 1, Vec(12, 3, 0), Vec(0, 2, 0), True, origin=o, target_point=pt)
+        y, p = a.goal
         self.assertLess(miss(o, y, p, pt), 1e-6)
 
     def test_looking_around_unchanged(self):
@@ -138,6 +143,34 @@ class AimbotTests(unittest.TestCase):
             worst = max(worst, miss(eye(me), y, p, pos + vel * bot.DEMON_LEAD_S + Vec(0, 0, aim_height(True, False))))
         self.assertLess(worst, 1e-6)
 
+    def test_swings_smoothly_onto_a_man_behind_it(self):
+        # (Nov 20, the owner's Forge World report: "flick directly at the ground ... It doesn't make their aim look
+        # smooth") a man 120 degrees round: no jump onto him, every tick's turn within Demon's turn speed, the steps
+        # easing off as the view gets there, then locked on him exactly
+        a, me = self.aim(), shooter()
+        foe = Vec(-10, 17.32, 0)
+        head = foe + Vec(0, 0, aim_height(True, False))
+        dt, steps, locked_at = 1 / 30, [], None
+        for k in range(40):
+            y, p = a.step(k * dt, dt, me, 1, foe, Vec(), True)
+            steps.append(math.hypot(bot.wrap(y - me.yaw), p - me.pitch))
+            me.yaw, me.pitch = y, p
+            if locked_at is None and miss(eye(me), y, p, head) < 1e-9:
+                locked_at = k
+        self.assertEqual(profiles.NOBLE_TURN, profiles.TURN["demon"])
+        self.assertTrue(all(st <= profiles.NOBLE_TURN * dt + 1e-9 for st in steps))
+        self.assertLess(steps[0], math.radians(120) / 2)                # (no snap)
+        self.assertIsNotNone(locked_at)
+        self.assertLess(locked_at * dt, 0.45)                          # on him inside half a second
+        tail = steps[3:locked_at]
+        self.assertTrue(all(b <= a2 + 1e-9 for a2, b in zip(tail, tail[1:])))   # eased in, slowing to the end
+
+    def test_holds_fire_until_on_him(self):
+        a, me = self.aim(), shooter()
+        foe = Vec(-10, 17.32, 0)
+        a.step(0.0, 1 / 30, me, 1, foe, Vec(), True)
+        self.assertFalse(a.on_target(me, foe))                          # (the view not there yet: no shot)
+
     def test_head_always_with_a_precision_gun(self):
         b = bot.Bot.__new__(bot.Bot)
         b.p, b.rng = make_profile("noble", "camper", random.Random(1)), random.Random(1)
@@ -147,6 +180,67 @@ class AimbotTests(unittest.TestCase):
         b.p = make_profile("demon", "camper", random.Random(1))
         b.head_key = None
         self.assertFalse(b.aim_head(0.0, me, foe, 1))                  # (Demon: the chest until his shield is down)
+
+
+class NeverMissTests(unittest.TestCase):
+    """(Nov 20, owner: "never miss a shot from here on out with precision weapons")"""
+
+    def test_paced_every_range(self):
+        b = bot.Bot.__new__(bot.Bot)
+        b.p, b.rng = make_profile("noble", "rusher", random.Random(1)), random.Random(2)
+        for w in ("dmr", "magnum", "needle_rifle", "battle_rifle", "sniper"):
+            paced = bot.FIRE_GAP.get(w, 0.2)
+            self.assertEqual(b.fire_gap(w, 2.0), paced, w)               # (no Short band spam: the bloom settles)
+            self.assertEqual(b.fire_gap(w, 8.0), paced, w)
+            self.assertAlmostEqual(b.fire_gap(w, 30.0), paced * bot.NOBLE_LONG_PACE, msg=w)
+        b.p = make_profile("demon", "rusher", random.Random(1))
+        self.assertLess(b.fire_gap("dmr", 2.0), bot.FIRE_GAP["dmr"])    # (Demon spams up close, as before)
+        self.assertEqual(b.fire_gap("assault_rifle", 2.0) <= bot.FIRE_GAP["assault_rifle"] * 1.2, True)
+
+    def test_presses_only_when_locked(self):
+        src = (ROOT / "brain" / "bot.py").read_text(encoding="utf-8")
+        self.assertIn('on = on and getattr(s.aim, "noble_on", None) == tid', src)
+        a = Aim(make_profile("noble", "rusher", random.Random(5)), random.Random(6))
+        me = shooter()
+        a.step(0.0, 1 / 30, me, 7, Vec(-10, 17.32, 0), Vec(), True)
+        self.assertIsNone(a.noble_on)                                   # swinging on: no press
+        me.yaw, me.pitch = a.goal
+        a.step(1 / 30, 1 / 30, me, 7, Vec(-10, 17.32, 0), Vec(), True)
+        self.assertEqual(a.noble_on, 7)                                 # on him: the press goes
+
+
+class PushTests(unittest.TestCase):
+    """(Nov 20, the owner's Forge World report: "they should be killing me quicker") Noble fights the man in view."""
+
+    def bot(self, tier):
+        b = bot.Bot.__new__(bot.Bot)
+        b.p = make_profile(tier, "camper", random.Random(1))
+        return b
+
+    def test_man_in_view_first(self):
+        me, snap = shooter(), types.SimpleNamespace(mode="koth")
+        scores = {("fight", 4): 1.0, ("objective", Vec(1, 1, 0)): 2.6, ("retreat", Vec(3, 0, 0)): 3.0,
+                  ("fight", 9): 0.5}
+        self.bot("noble").noble_push(me, snap, scores, {4})
+        self.assertAlmostEqual(scores[("fight", 4)], 3.0 + bot.NOBLE_PUSH)
+        self.assertEqual(scores[("fight", 9)], 0.5)                     # (not in view)
+        same = dict(scores)
+        self.bot("demon").noble_push(me, snap, same, {4})
+        self.assertEqual(same, scores)                                  # (Demon: its own rules)
+        me.has_flag = True
+        carried = {("fight", 4): 1.0, ("objective", Vec(1, 1, 0)): 2.6}
+        self.bot("noble").noble_push(me, snap, carried, {4})
+        self.assertEqual(carried[("fight", 4)], 1.0)                    # (carrying: the flag first)
+
+    def test_back_off_rules_off(self):
+        src = (ROOT / "brain" / "bot.py").read_text(encoding="utf-8")
+        for fn in ("demon_recharge", "demon_no_new_fight", "demon_break_second", "peek_timing", "demon_objective",
+                   "chase_ok", "demon_odds_rules"):
+            body = src[src.index(f"    def {fn}("):]
+            body = body[:body.index("\n    def ", 10)]
+            self.assertIn("profiles.fixed_noble(s.p)", body, fn)
+        b = self.bot("noble")
+        self.assertTrue(b.chase_ok(0.0, shooter(), None, 1))
 
 
 class InGameOnlyTests(unittest.TestCase):

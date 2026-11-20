@@ -1060,6 +1060,11 @@ LEAD_VEL_MAX = 8.0       # u/s: a velocity read past this is a teleport or respa
 RIDER_VEL_MAX = 25.0     # u/s: ... for a man riding a vehicle (a Warthog runs about 11 u/s, a boosted Ghost more)
 PART_DRY_S, PART_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without a hit on him: the other part this long
 NOBLE_LEAD_ITERS = 3     # (custom, Nov 20) Noble's lead: the shot's flight to where he will be, solved this many times
+NOBLE_EASE_S = 0.06      # s: Noble's swing onto a new man closes the gap with this time constant (eased in, no flick)
+NOBLE_LOCK_R = math.radians(1.5)    # rad: this near the point the swing ends and the view locks on him
+NOBLE_HOLD_R = math.radians(20.0)   # rad: locked, a tick's move of his this big is followed exactly (more: swing again)
+NOBLE_PUSH = 0.25        # Noble's fight with a man in view over its best other choice (Bot.noble_push)
+NOBLE_LONG_PACE = 1.2    # Noble's precision cadence past 10 u: x the paced gap (FIRE_GAP), the bloom fully settled
 # Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
 # our live view, led like a man on foot, both parts his head (his body sits in the vehicle), and no shot where the round
 # would go through the vehicle first (vehicles.hull_blocks). His Gore Valley CTF: Demons spent 44% of their on-foot fight
@@ -1525,7 +1530,7 @@ class Aim:
             return s.goal
         if target_id is not None and profiles.fixed_noble(s.p):
             return s.noble_lock(now, me, target_id, tpos, tvel, aim_head, gun, origin, crouched, target_point,
-                                splash_at_feet, shot_speed)
+                                splash_at_feet, shot_speed, dt)
         if target_id != s.target:
             s.target, s.focus = target_id, 0.0
         s.focus = min(1.0, s.focus + dt / 1.5)
@@ -1616,13 +1621,17 @@ class Aim:
         return me.yaw + dy * gain + tremor, me.pitch + dp * gain + tremor * 0.5
 
     def noble_lock(s, now, me, target_id, tpos, tvel, aim_head, gun, origin, crouched, target_point, splash_at_feet,
-                   shot_speed):
+                   shot_speed, dt=1 / 30):
         """(custom, Nov 20, owner: "make the noble difficulty to practically be an aimbot ... close to 100%. With all
         vehicles and all weapons that are precision based") Noble's view on the point every tick, with every gun, seat
         and vehicle that aims through step: exact angles from the shot's origin (else the eye) to the caller's point (a
         head, a chest, an explosive's feet, Halo 4's real point), led by the shot's whole flight to where he will be
         (NOBLE_LEAD_ITERS) and by the read delay (DEMON_LEAD_S) where the caller did not lead it already; no error, no
-        tremor, no flick. Hitscan precision guns (PRECISION, no PROJECTILE_SPEED) lead by no flight."""
+        tremor, no flick. Hitscan precision guns (PRECISION, no PROJECTILE_SPEED) lead by no flight.
+        (Nov 20, the owner's Forge World report: "flick directly at the ground ... It doesn't make their aim look
+        smooth") Onto a new man the view swings smoothly, eased in (NOBLE_EASE_S, within its turn speed: Demon's),
+        and locks once within NOBLE_LOCK_R; locked, it follows him exactly while he stays within NOBLE_HOLD_R a tick.
+        s.goal is always the exact point (the trigger waits until the view is on it: on_target)."""
         gun = gun or me.weapon
         vel = tvel if tvel is not None and tvel.length() <= RIDER_VEL_MAX else Vec()   # (a teleport or respawn read)
         delay = DEMON_LEAD_S if target_point is None or me.vehicle != -1 else 0.0   # (lead_ray / h4_ray: led on foot)
@@ -1640,7 +1649,15 @@ class Aim:
         s.target, s.flick, s.focus = target_id, None, 1.0
         s.goal = angles_to(o, point + vel * t)
         s.goal_rate, s.goal_prev = 0.0, (s.goal[0], now)
-        return s.goal
+        dy, dp = wrap(s.goal[0] - me.yaw), s.goal[1] - me.pitch
+        off = math.hypot(dy, dp)
+        locked = getattr(s, "noble_on", None) == target_id
+        if off <= NOBLE_LOCK_R or (locked and off <= NOBLE_HOLD_R):
+            s.noble_on = target_id
+            return s.goal
+        s.noble_on = None                              # (a new man, or he got away from the lock: swing onto him)
+        k = min(1.0 - math.exp(-max(dt, 1e-3) / NOBLE_EASE_S), s.p.turn * max(dt, 1e-3) / off)
+        return me.yaw + dy * k, me.pitch + dp * k
 
     def lock(s, me, target_id, point, tvel, origin=None, gun=None):
         """(custom, Nov 18, owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner
@@ -2271,7 +2288,8 @@ class Bot:
         the last DEMON_RECHARGE_HIT s leaves it to the usual rules. Not in a vehicle, carrying, standing on a loose
         objective (stay_on), in Race or Infection, or without shields."""
         hurt = getattr(s.per, "hurt_at", -99.0)
-        if (not profiles.demon_rules(s.p) or me.vehicle not in (None, -1) or me.has_flag or snap.shieldless
+        if (not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p)   # (Nov 20: Noble pushes, NOBLE_PUSH)
+                or me.vehicle not in (None, -1) or me.has_flag or snap.shieldless
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK):
             s.recharge_hold = s.recharge_out = None
@@ -2325,7 +2343,8 @@ class Bot:
         shot in the back). Not in a vehicle, carrying, standing on a loose objective, in Race or Infection, without
         shields, or while demon_recharge's hold already runs."""
         hurt = getattr(s.per, "hurt_at", -99.0)
-        if (not seen or not profiles.demon_rules(s.p) or me.vehicle not in (None, -1) or me.has_flag
+        if (not seen or not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p) or me.vehicle not in (None, -1)
+                or me.has_flag
                 or snap.shieldless or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK or now - hurt < DEMON_RECHARGE_HIT
                 or getattr(s, "recharge_hold", None) is not None):
@@ -2406,7 +2425,8 @@ class Bot:
         reach, the recharge hold, a vehicle, carrying, a loose objective under it, Race and Infection: the usual
         rules."""
         dots = s.open_dots(now, me, snap, seen) if seen else {}   # (Nov 18: a radar dot with a line on it counts too)
-        if (not profiles.demon_rules(s.p) or len(seen) + len(dots) < 2 or me.vehicle not in (None, -1) or me.has_flag
+        if (not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p)   # (Nov 20: Noble takes the 2-on-1)
+                or len(seen) + len(dots) < 2 or me.vehicle not in (None, -1) or me.has_flag
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or getattr(s, "recharge_hold", None) is not None):
             s.break_spot = None
@@ -2445,6 +2465,23 @@ class Bot:
         alone = cur is not None and open_to(spot, [snap.player(cur).pos])
         s.note(f"{len(w)} on it: out of the second man's sight" + (f", #{cur} alone" if alone else ""))
 
+    def noble_push(s, me, snap, scores, seen):
+        """(custom, Nov 20, the owner's Forge World report: four Nobles in a fight goal 1-12% of the time, "they should be
+        killing me quicker") Noble on foot, not carrying, not in Race: a man in its view is fought ahead of every other
+        choice (a retreat, a gun, the objective, a hunt), NOBLE_PUSH over the best of them. Demon's back-off rules are
+        off for it (demon_odds_rules, demon_recharge, demon_no_new_fight, demon_break_second, peek_timing,
+        demon_objective, chase_ok)."""
+        if (not profiles.fixed_noble(s.p) or not seen or me.vehicle not in (None, -1) or me.has_flag
+                or snap.mode == "race"):
+            return
+        fights = [k for k in scores if k[0] == "fight" and k[1] in seen]
+        rest = [v for k, v in scores.items() if k[0] != "fight"]
+        if not fights or not rest:
+            return
+        top = max(rest) + NOBLE_PUSH
+        for k in fights:
+            scores[k] = max(scores[k], top)
+
     def peek_timing(s, now, me, snap, scores, seen):
         """(custom, Nov 18, owner: "I know ... how long it takes for them to look away") Reach Demon and Mythic about to
         walk out on a man out of its sight (its top score a hunt or push toward where he is): when the team sees him
@@ -2452,7 +2489,7 @@ class Bot:
         is (PEEK_WAIT_SCORE) until he looks away, PEEK_WAIT_S at most; then it goes. A weak man (weak: a low difficulty,
         slow to turn on it) is not waited for. Not in a vehicle, carrying, in Race or Infection."""
         if (s.game != "reach" or not s.team_demon() or not scores or me.vehicle not in (None, -1) or me.has_flag
-                or snap.mode in ("race", "infection")):
+                or snap.mode in ("race", "infection") or profiles.fixed_noble(s.p)):   # (Nov 20: Noble goes)
             s.peek_wait = None
             return
         top = max(scores, key=scores.get)
@@ -4058,7 +4095,8 @@ class Bot:
         (on_way_target), a man at arm's length (DEMON_OBJ_ARM) still fought. Live Condemned Crazy King 20261113-204320:
         within 8 u of the hill the two Demons chose it 3% and 13% of the time (Easy to Mythic 30-85%), beaten by a gun
         grab (3.15), a stand-ground hunt (3.2) and committed fights; they stood on it 2 s and 4 s of 5 minutes."""
-        if (not profiles.demon_rules(s.p) or snap.mode in ("slayer", "race") or me.has_flag
+        if (not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p)   # (Nov 20: Noble fights the man in view)
+                or snap.mode in ("slayer", "race") or me.has_flag
                 or me.vehicle not in (None, -1) or s.order.role not in DEMON_OBJ_ROLES or s.dry(me)):
             return
         obj = [k for k in scores if k[0] == "objective" and isinstance(k[1], Vec)]
@@ -4483,6 +4521,7 @@ class Bot:
         s.demon_no_new_fight(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, hurt: no new fight, cover first)
         s.demon_break_second(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, a second man on it: out of his sight)
         s.peek_timing(now, me, snap, scores, seen)          # (custom, Nov 18: Reach Demon / Mythic: go as he looks away)
+        s.noble_push(me, snap, scores, seen)                # (custom, Nov 20: Noble: the man in view first)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         s.power_commit(now, me, snap, scores, hit_recent)   # (custom, Nov 18: a power weapon run is finished)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
@@ -6757,6 +6796,11 @@ class Bot:
             # turning, not by waiting for the aim to settle, but on his body: it fired anywhere within
             # 0.6 rad of him (34 degrees) and missed the player standing still
             on = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - act.yaw)) < math.atan2(0.2, max(d, 0.3))
+        if profiles.fixed_noble(s.p) and w in PRECISION:
+            # (custom, Nov 20, owner: "never miss a shot from here on out with precision weapons") Noble presses a
+            # precision gun only on the tick its lock is on him (Aim.noble_lock: the exact led point sent this tick),
+            # never while it swings on; the head snap after the turn cap then moves it by nothing (Bot.think)
+            on = on and getattr(s.aim, "noble_on", None) == tid
         if (on or direct_fire and seen_fire) and target is not None and not s.kit.can_shoot(now, me, target, snap):
             on = False                 # into an armor lock, through a dome, at a decoy shot once
             if direct_fire:
@@ -7228,6 +7272,10 @@ class Bot:
             return LUNGE_GAP * s.rng.uniform(0.9, 1.2)    # pressed again and again in reach, as the player does
         if s.p.tactics <= 0.15:
             return paced * s.rng.uniform(1.0, 1.5)
+        if profiles.fixed_noble(s.p) and w in PRECISION:
+            # (custom, Nov 20, owner: "never miss a shot ... with precision weapons") Noble: the paced cadence at every
+            # range, its reticle's bloom settled for each shot (no Short band spam), a little slower at Long
+            return paced * (NOBLE_LONG_PACE if d > 10.0 else 1.0)
         if d < SHORT_BAND:
             return min(paced, FIRE_FAST.get(w, paced)) * s.rng.uniform(1.0, 1.2)
         return paced * (s.rng.uniform(1.1, 1.35) if d > 10.0 else s.rng.uniform(0.95, 1.2))
@@ -8311,7 +8359,7 @@ class Bot:
         stand between it and a headshot: the owner, Nov 8; without shields, its body), winning against him alone round
         the corner (CHASE_ODDS, him aware), and with no other enemy known within CHASE_CLEAR_R of where he went. True
         for every other bot (their chase rules as before). (Nov 18: Reach Demon and Mythic too, team_demon.)"""
-        if not s.team_demon():
+        if profiles.fixed_noble(s.p) or not s.team_demon():   # (Nov 20: Noble chases as other bots do)
             return True
         b = s.per.beliefs.get(k)
         guard = me.health if snap.shieldless else odds_model.shield_left(me)
@@ -8334,6 +8382,11 @@ class Bot:
         The owner, Nov 8: "they play recklessly they pursue losing fights, they challenge another player even when one
         shot". (Nov 18: Reach Demon and Mythic too, team_demon; the power grab stays Halo 4's.)"""
         if not s.team_demon() or me.vehicle not in (None, -1) or me.has_flag or snap.mode in ("race", "infection"):
+            return
+        if profiles.fixed_noble(s.p):
+            # (custom, Nov 20, the owner's Forge World report: "they should be killing me quicker") Noble breaks off
+            # nothing by the odds, drops no hunt and waits for no full shield: the team's trades and callouts only
+            s.team_play(now, me, snap, scores, seen)
             return
         o, th = s.fight_odds(now, me, snap, seen)
         s.last_odds = round(o, 2)
