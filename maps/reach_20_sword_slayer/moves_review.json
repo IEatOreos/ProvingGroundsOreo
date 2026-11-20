@@ -1,0 +1,22 @@
+{
+ "reviews": [
+  {
+   "id": "sword-base-sword-alcove",
+   "kind": "floor",
+   "ok": true,
+   "cells": [
+    [-127.0, 27.75, 24.0], [-126.75, 27.5, 24.0], [-126.5, 27.25, 24.0], [-126.25, 27.25, 24.0], [-126.0, 27.25, 24.0],
+    [-125.75, 27.0, 24.0], [-125.5, 27.0, 24.0], [-125.25, 27.0, 24.0], [-125.0, 26.75, 24.0], [-124.75, 26.75, 24.0],
+    [-124.5, 26.5, 24.0], [-124.5, 26.75, 24.0], [-124.25, 26.5, 24.0], [-124.25, 28.0, 24.0], [-124.0, 26.25, 24.0],
+    [-124.0, 27.75, 24.0], [-124.0, 28.0, 24.0], [-123.75, 26.25, 24.0], [-123.75, 27.75, 24.0], [-123.5, 26.25, 24.0],
+    [-123.5, 27.25, 24.0], [-123.5, 27.5, 24.0], [-123.5, 27.75, 24.0], [-123.25, 26.25, 24.0], [-123.25, 27.0, 24.0],
+    [-123.25, 27.25, 24.0], [-123.0, 26.25, 24.0], [-123.0, 26.5, 24.0], [-123.0, 26.75, 24.0], [-123.0, 27.0, 24.0],
+    [-125.0, 28.25, 24.0], [-124.5, 28.25, 24.0], [-123.5, 28.25, 24.0], [-123.25, 28.25, 24.0], [-123.0, 28.25, 24.0],
+    [-123.0, 28.0, 24.0]
+   ],
+   "why": "The energy sword's alcove floor (z 24.0) under the 26.0 surface over it: the level data has only that upper surface there, so the nav ended 2.35 u from the sword at (-123.2, 26.15, 24.13) and bots stood at the path's end for most of a match (logs/bug_reports/reach_20_sword_slayer_20261119-203930: 345 s within 4.5 u, never within 1 u). The cells are the owner's own LiDAR walk there (variants/v04abd98b/lidar.json, kind 1: a person); player spawns stand on it too (-123.29, 27.22), (-124.49, 26.16), (-125.52, 26.59). The last six cells are the way in at y 28.0-28.25, where the level data has no floor either: players stood there in that match (world rows: (-123.25, 28.25, 24.0) 167 times, (-123.0, 28.0) 10), and without them the alcove's floor was an island no path entered. The owner: \"the lidar doesnt allow the bots to get to the sword\"",
+   "by": "owner",
+   "at": "2026-11-19"
+  }
+ ]
+}

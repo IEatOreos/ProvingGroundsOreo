@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Sword Base: bots can reach the energy sword, 2026-11-19
+
+The owner's F9 reports on Sword Base (`reach_20_sword_slayer_20261119-203930`: "Bots congregate on swordbase here and get stuck", "I defy evil wouldnt shoot me at all. barely moved"), then: "the lidar doesnt allow the bots to get to the sword".
+
+- **Found:** the energy sword's alcove floor (z 24.0) sits under a surface at 26.0, and the level data kept only that upper surface. The row at y 28.0-28.25, the way in, had no floor either. The bots' path ended 2.35 u from the sword at (-123.2, 26.15, 24.13). Two Demons and a Blind stood there 40-52% of the match, held by the power-weapon run (`Bot.power_commit`), and nobody got within 1 u (345 s within 4.5 u). In the variant the alcove was an island no path entered; the base map reached it only because spawn points sit inside it.
+- `maps/reach_20_sword_slayer/moves_review.json` (new): an approved floor review (`maps._build` reviewed floor, read for the base map and its variants). It holds the owner's own LiDAR walk in the alcove (30 cells, `variants/v04abd98b/lidar.json` kind 1), plus 6 cells at the way in where players stood in that match ((-123.25, 28.25, 24.0) 167 times). The owner confirmed the floor is real.
+- Also checked: the window and fence labels never block walking; Sword Base's walkway glass is real (the owner), so a bot that sees a man through it holds fire as it should. Sword Base is still missing other floor: 37 of 310 spawn spots (12%, other Reach maps 0-1%), including part of Red's spawn room (x -120 to -117, y 47-51) and the lower level (z 22). Not changed.
+- Validation: both builds (the base map and variant `v04abd98b`) now walk the nav to within 0.54 u of the sword from the old path end, the atrium (-128, 33) and Red's spawn (-120, 50). The sword item reads `reachable`. 986 tests OK; `live_bots` imports. **Untested in a match.**
+
 ### Fix: bots froze in every match after the first kill, 2026-11-19
 
 The owner: "The bots have frozen atleast two games in a row now in matchmaking". `logs/brain.txt` (Aftship, TU TEAM SLAYER DMR, 20261119-203501) shows the cause: `8.7s tick failed (TypeError: slice indices must be integers ...)` at `for c in comms[said:]`, then "game gone, brain stopping".
