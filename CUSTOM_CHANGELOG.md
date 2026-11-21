@@ -10,7 +10,7 @@ MCC would not save the owner's calibration map, so the rotation test runs the ot
 - **`tools/forge_printer/mvar.py`:** `MapVariant.add_object` (first free slot) and `join_up` (a raw up vector from face, u, v).
 - **Made for the owner:** `FP_Turn_Test.mvar` from his own variant, on its floor in front of its spawn points; kept in `E:\Proving Grounds\re_tools\forge_printer`, not in the repository. `check` reads it back (30 objects, no problems).
 - **Validation:** `tools/test_forge_printer_turn_test.py` (new, 8 tests on a hand-built Forge World variant); full suite 1135 OK.
-- **Untested in game:** everything about this file. It is the first one with objects added (new quota counts, a guessed budget), so it may not load; if it loads, what the owner sees settles the turn direction and the up-vector axes. The plan lists what each piece should look like if the current guesses hold.
+- **Tested in game by the owner, 2026-11-21:** "It loaded fine": a file with eleven objects added (three palette rows, quotas recounted, a guessed budget) loads in Reach Forge. **Not yet known:** which way each ramp and antenna points, which is what settles the turn direction and the up-vector axes. The plan lists what each piece should look like if the current guesses hold.
 
 ### Reach Forge Printer, phase 3 part 3: which palette row and item each piece is, 2026-11-21
 

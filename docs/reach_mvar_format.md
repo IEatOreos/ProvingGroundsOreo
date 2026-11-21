@@ -261,9 +261,12 @@ not known: a file with a deliberately wrong hash has not been tried.
 
 ## Still unknown
 
-- Only one kind of change has been through the game: a new title and one
-  object's height. Adding or removing objects, changing the quota table, labels
-  or budget, and any rotation have not.
+- Two kinds of change have been through the game: a new title with one
+  object's height changed, and (2026-11-21, "It loaded fine") eleven objects
+  added in three palette rows with the quota table recounted, the budget
+  raised by a guessed amount, and turns and up vectors set. Removing objects
+  and changing labels have not. What the game does with a budget figure that
+  does not match its own prices is not known; it did not refuse the file.
 - What MCC puts in the hash field of the files it saves, and whether it checks
   the field at all.
 - The 128-bit block version 32 adds; the 32-bit field that is always

@@ -107,8 +107,9 @@ Do not start Phase 2 on Fable.
         surfaces sorted (`forge_printer surfaces`)
   - [x] palette row/item → piece (from ten variants already on the PC; the
         calibration map was not needed for it)
-  - [ ] rotation axes and turn direction — test file written
-        (`FP_Turn_Test.mvar`), waiting for the owner to load it
+  - [x] a file with objects added loads in the game ("It loaded fine")
+  - [ ] rotation axes and turn direction — `FP_Turn_Test.mvar` loaded; waiting
+        for what the owner saw (which way each ramp and antenna points)
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices
   - [ ] piece fitting
@@ -469,6 +470,10 @@ the map: the spawn points are on the +x side, the pillars on the +y side):
 | B4 antenna | next | face 2, 90 steps along u | upright, leaning about 23° one way |
 | B5 antenna | last | face 2, 90 steps along v | upright, leaning about 23° another way |
 | 3 pillars (Block 1x1 Tall) | 3.5 to the +y side of the ramps | | markers only |
+
+**The owner, 2026-11-21: "It loaded fine."** So a file with objects added
+(new rows used, quotas recounted, a guessed budget) loads in Reach Forge.
+Which way each ramp and antenna points has not been reported yet.
 
 A ramp climbs towards its model's +x; an antenna's thin tip is its model's +z,
 which is what the file calls "up". Reading the answers: A1 and A2 give where a
