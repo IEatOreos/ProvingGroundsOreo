@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Reach Forge Printer: the slope test passed in game; Guardian's ramps are tilted faces, 2026-11-21
+
+The owner, on the slope test: "It loaded and here is one side, and one from the top. Each was all flush so I dont think I needed to capture them all. What is our next step?" HUD $29,630 as predicted.
+
+- **Seen:** in his top-down picture all eight tilted ramps lie straight between their platforms, the four leaning in x and y at once included; his side-on picture, enlarged, shows one ramp meeting both platforms with a clean crease. The other joins rest on his word. `docs/reach_mvar_format.md` 4.2 and 4.3 now say the step law and the turn rule are seen working.
+- **`tools/forge_printer/fit.py`:** `fit_slopes(..., tilted=True)`, which `build` now uses. A slope up to 44 degrees is one flat face from the upper floor's edge to the lower floor's, at the slope's own angle: 1-wide flat blocks (5x1, 3x1, 2x1, or a 2x2 across two lanes) tilted to it, laid from the top edge down, the last running on under the lower floor (`_tilted_lengths`). Steeper slopes keep the ramp pieces. A placement carries `up`; `add_to` writes it and the boxes OBJ draws it.
+- **Guardian:** 21 tilted blocks in 13 runs (10 to 29 degrees) replace 48 ramp pieces; 270 pieces in all, budget 2,700. A check that reads `fit.json` alone: every run's top edge within 0.006 of the floor or landing past it, no upper floor block on a ramp's face, every foot under its floor. Two ramp tops still have no floor past them.
+- **Made for the owner:** `FP_Guardian_7.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 289 objects; `check` reads it back with no problems. Expected HUD $27,170.
+- **Validation:** `TiltedRamps` (4 tests) and two command tests updated in `tools/test_forge_printer_fit.py`; full suite 1200 OK.
+- **Untested in game:** the seventh print. Guardian in the sixth print was never pictured, so the floor heights changed then are first seen here too.
+
 ### Reach Forge Printer: a slope test print for tilted ramps, 2026-11-21
 
 The owner, after the tilt test was read: "What do you need me to do". A small print to load, before Guardian's ramps are changed.

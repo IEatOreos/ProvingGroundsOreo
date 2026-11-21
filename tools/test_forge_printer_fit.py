@@ -511,7 +511,74 @@ class Limits(unittest.TestCase):
         self.assertEqual((len(kept), report["unpriced"], report["cost"]), (1, ["Dish"], 0))
 
 
+def top_corners(placement):
+    """The four corners of a placed piece's top face, in the world: low end's two, then high end's two."""
+    piece = pieces.by_name()[placement["piece"]]
+    ax = mvar.axes(placement.get("up", (0.0, 0.0, 1.0)), math.radians(placement["turn"]))
+    return [tuple(placement["origin"][i] + x * ax[0][i] + y * ax[1][i] + piece["max"][2] * ax[2][i] for i in range(3))
+            for x in (piece["min"][0], piece["max"][0]) for y in (piece["min"][1], piece["max"][1])]
+
+
+class TiltedRamps(unittest.TestCase):
+    def test_lengths(self):
+        self.assertEqual(fit._tilted_lengths(4.47), [5.0])
+        self.assertEqual(fit._tilted_lengths(1.4), [2.0])
+        self.assertEqual(fit._tilted_lengths(2.4), [3.0])
+        self.assertEqual(fit._tilted_lengths(3.5), [2.0, 2.0])               # one 5 would run 1.5 past the foot
+        self.assertEqual(fit._tilted_lengths(5.0), [5.0])
+        self.assertEqual(fit._tilted_lengths(7.6), [5.0, 3.0])
+        for tenths in range(5, 150, 7):
+            got = fit._tilted_lengths(tenths / 10.0)
+            self.assertGreaterEqual(sum(got) + 0.02, tenths / 10.0)
+            self.assertLess(sum(got) - tenths / 10.0, 2.0)
+            self.assertEqual(got, sorted(got, reverse=True))
+
+    def test_a_slope_is_one_face_from_floor_edge_to_floor_edge(self):
+        # 2.9 long and 1.56 up (28.3 degrees): no mix of ramp pieces fits it; a tilted face does, exactly
+        a = analysed(court(ramp=(8, 3, 10.9, 5, 1.56)))
+        floors, _ = fit.fit_floors(a)
+        placements, report = fit.fit_slopes(a, floors=floors, tilted=True)
+        ramps = [p for p in placements if p["part"] == "slope"]
+        self.assertEqual([p["piece"] for p in ramps], ["Block 2x2 Flat", "Block 2x2 Flat"])   # 3.29 of face, 2 wide
+        tops = [top_corners(p) for p in ramps]
+        for corners in tops:
+            for x, y, z in corners:                                  # every corner lies in the slope's own plane
+                self.assertAlmostEqual(z, 1.56 * (x - 8.0) / 2.9, delta=0.02)
+        self.assertAlmostEqual(max(c[0] for corners in tops for c in corners), 10.9, delta=0.01)   # top edge at the floor's
+        self.assertAlmostEqual(max(c[2] for corners in tops for c in corners), 1.56, delta=0.01)   # edge and height
+        self.assertLess(min(c[2] for corners in tops for c in corners), 0.0)                       # its foot under the floor
+        self.assertEqual(sorted({round(c[1], 2) for corners in tops for c in corners}), [3.0, 5.0])     # its full width
+        self.assertAlmostEqual(report["coverage"], 1.0, delta=0.02)
+
+    def test_slopes_at_any_heading_and_a_wide_one(self):
+        m = Mesh()                                                   # a ramp climbing at 30 degrees round from +x
+        m.quad(*slab(-8, -8, 0, 8))
+        c, s = math.cos(math.radians(30)), math.sin(math.radians(30))
+        corners = [(0, -1), (4, -1), (4, 1), (0, 1)]                 # along, across; 4 long, 2 wide, 1.2 up
+        m.quad(*[(a * c - t * s, a * s + t * c, 1.2 * a / 4.0) for a, t in corners])
+        placements, _ = fit.fit_slopes(analysed(m, spawns=((-4.0, 0.0, 0.05),)), tilted=True)
+        self.assertEqual([p["piece"] for p in placements], ["Block 5x1 Flat", "Block 5x1 Flat"])
+        for p in placements:
+            for x, y, z in top_corners(p):
+                self.assertAlmostEqual(z, 1.2 * (x * c + y * s) / 4.0, delta=0.02)           # in the slope's plane
+            up = p["up"]
+            self.assertAlmostEqual(math.degrees(math.atan2(-up[1], -up[0])), 30.0, delta=0.5)   # leaning back down it
+        # the yard's 8-wide ramp: one 5x1 a lane, all in one plane
+        placements, _ = fit.fit_slopes(analysed(yard()), tilted=True)
+        self.assertEqual(len(placements), 8)
+        self.assertEqual(len({tuple(p["up"]) for p in placements}), 1)
+
+    def test_a_slope_too_steep_to_tilt_keeps_its_ramp_pieces(self):
+        placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 10, 5, 2.0))), tilted=True)    # 45 degrees
+        self.assertEqual({p["piece"] for p in placements}, {"Ramp 2x2 Steep"})
+        self.assertEqual({"up" in p for p in placements}, {False})
+
+
 class Commands(unittest.TestCase):
+    def near(self, got, want, places=2):
+        for g, w in zip(got, want):
+            self.assertAlmostEqual(g, w, places=places)
+
     def test_fit_writes_the_list_and_the_boxes(self):
         with folder_with(yard()) as folder:
             out = fit.build(folder)
@@ -521,16 +588,18 @@ class Commands(unittest.TestCase):
             self.assertEqual(floors["floor_area"], 96.0)                 # the 8 x 8 floor and the 4 x 8 one
             self.assertEqual(floors["coverage"], 1.0)
             self.assertEqual(sorted({p["top"] for p in out["placements"] if p["part"] == "floor"}), [0.0, 2.0])
-            # the yard's ramp (4 long, 8 wide, 26.6 degrees) takes eight Ramp 2x2, its wall two Wall Double
+            # the yard's ramp (4 long, 8 wide, 26.6 degrees) takes eight tilted 5x1 blocks, one a lane (its face
+            # is 4.47 long), its wall two Wall Double
             self.assertEqual(out["report"]["slopes"]["pieces"], 8)
             self.assertEqual(out["report"]["walls"]["pieces"], 2)
             self.assertEqual(out["report"]["pieces"], floors["pieces"] + 10)
             self.assertEqual({(p["part"], p["piece"]) for p in out["placements"] if p["part"] != "floor"},
-                             {("slope", "Ramp 2x2"), ("wall", "Wall Double")})
+                             {("slope", "Block 5x1 Flat"), ("wall", "Wall Double")})
+            self.assertEqual({"up" in p for p in out["placements"] if p["part"] == "slope"}, {True})
             v, t = surfaces.load_obj(os.path.join(folder, out["mesh"]))
             self.assertEqual(len(v), 8 * out["report"]["pieces"])
             self.assertEqual(len(t), 12 * out["report"]["pieces"])       # six faces a box, two triangles each
-            self.assertAlmostEqual(float(v[:, 2].max()), 2.0, places=3)  # box tops are the floors
+            self.assertAlmostEqual(float(v[:, 2].max()), 2.0, delta=0.01)  # box tops are the floors, the ramps' too
             first = {n: open(os.path.join(folder, n), "rb").read() for n in ("fit.json", out["mesh"])}
             fit.build(folder)
             for name, data in first.items():
@@ -555,8 +624,14 @@ class Commands(unittest.TestCase):
         self.assertEqual(back.variant.header.title, "Yard print")
         self.assertEqual(len(back.variant.placed_objects()), 2 + out["report"]["pieces"])
         self.assertEqual(back.variant.problems(), [])
-        self.assertEqual(back.variant.quotas[70].placed, out["report"]["floors"]["pieces"])   # Building Blocks
-        self.assertEqual(back.variant.quotas[75].placed, 8)                                   # Inclines
+        self.assertEqual(back.variant.quotas[70].placed, out["report"]["floors"]["pieces"] + 8)   # Building Blocks: the
+        five = pieces.by_name()["Block 5x1 Flat"]                                                 # floor and 8 tilted
+        tilted = [o for o in back.variant.objects if o is not None and o.up is not None
+                  and (o.type_index, o.variant_index) == (five["row"], five["item"])]
+        self.assertEqual(len(tilted), 8)
+        for o in tilted:                                                                      # 26.6 degrees, leaning to -x
+            self.near(mvar.up_vector(o.up), (-math.sin(math.atan(0.5)), 0.0, math.cos(math.atan(0.5))))
+        self.assertEqual(back.variant.quotas[75].placed, 0)                                   # Inclines: none now
         self.assertEqual(back.variant.quotas[74].placed, 1 + 2)                               # the template's wall and two
         cost, unpriced = pieces.cost([p["piece"] for p in out["placements"]])
         self.assertEqual(back.variant.budget_spent, 130 + cost)                               # the stored figure follows

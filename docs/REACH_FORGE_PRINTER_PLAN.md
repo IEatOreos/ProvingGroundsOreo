@@ -1091,5 +1091,50 @@ platforms' edges to 0.01.
 
 `E:\Proving Grounds\re_tools\forge_printer\FP_Slope_Test.mvar` (local only),
 title "FP Slope Test", 43 objects, on the owner's testing map at the same
-spot as the earlier tests, 4 units up. **Not loaded in the game yet.**
-Expected HUD: $29,630 (24 pieces at 10 on top of 130).
+spot as the earlier tests, 4 units up. Expected HUD: $29,630 (24 pieces at 10
+on top of 130).
+
+### Phase 3, part 12: the slope test passed; Guardian's ramps tilted (2026-11-21, written by Fable 5.2)
+
+**The slope test in the game.** The owner: "It loaded and here is one side,
+and one from the top. Each was all flush so I dont think I needed to capture
+them all." HUD $29,630 as predicted. In the top-down picture all eight ramps
+lie straight between their platforms, the four that lean in x and y at once
+included. The side-on picture, enlarged, shows one ramp meeting both
+platforms with a clean crease and no lip. The other seven joins rest on the
+owner's word, not on a picture. So the step law and the turn rule are good
+enough to build with (`reach_mvar_format.md` 4.2, 4.3).
+
+**Guardian's ramps are now tilted faces (`fit_slopes(..., tilted=True)`,
+used by `build`).** A slope up to 44 degrees is one flat face from the upper
+floor's edge (after `_onto_slope`) to the lower floor's edge, at the slope's
+own angle: 1-wide flat blocks (5x1, 3x1, 2x1; a 2x2 where two lanes both take
+a 2) tilted to it, laid from the top edge down, the last running on under the
+lower floor. `_tilted_lengths` picks the fewest pieces that reach the foot
+without running far past it. No mix of 14, 27 and 45 degree pieces, no
+lift, no ramp made longer to dodge a lip. A slope steeper than 44 degrees
+keeps the ramp pieces (an up vector leans 45 degrees at most). Landings as
+before. A placement carries `"up"` (the unit vector the file will hold);
+`add_to` writes it and the boxes OBJ draws it.
+
+**Guardian now:** 192 floor blocks, 21 tilted ramp blocks in 13 runs (10 to
+29 degrees), 20 landings, 37 walls: 270 pieces, budget 2,700 (296 pieces
+before). No Inclines pieces at all.
+
+**Checked from `fit.json` alone (`tilted_check.py`, scratch):** every run's
+top edge is within 0.006 of the floor or landing past it; no upper floor
+block stands on a ramp's face; every foot is under its lower floor. Two tops
+have no floor past them (the fifth lane of the 5-wide ramp, and the ramp at
+(9.4, -14)), as before. Not re-checked: floors of another height beside a
+ramp, and the one sunk foot coming out past a narrow floor block (part 10).
+
+Tests: `TiltedRamps` (the lengths; a 2.9-long, 1.56-high slope as one face
+with every corner in the slope's plane; a slope at 30 degrees round; an
+8-wide one; a 45-degree slope keeping its ramp pieces) and the two command
+tests updated. Full suite 1200 OK.
+
+**The seventh print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_7.mvar`**
+(local only), title "FP Guardian 7", 289 objects, same place, without the
+tilt test's pieces. **Not loaded in the game yet.** Expected HUD: $27,170
+(270 pieces at 10 on top of 130). Guardian in the sixth print was never
+pictured, so the floor heights changed in part 10 are also first seen here.

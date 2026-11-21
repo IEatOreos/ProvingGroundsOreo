@@ -241,8 +241,13 @@ and +y north; up +X turn +90 has +x north and +y up; up +Y turn 0 has +x down
 and +y west (three ramps, each matched corner for corner against a fitted
 camera); an antenna leaning east from +Z keeps its +x east, one leaning north
 has it north (read from where the antenna's box sits, once, less sure). The
-rule fits all of these and upright. It has not been seen for an up vector
-leaning in both x and y at once.
+rule fits all of these and upright.
+
+The slope test (2026-11-21, `turntest --test slope`) then used the rule to lay
+eight tilted 5-long blocks between pairs of platforms, four of them with up
+leaning in x and y at once (climbing at 30, 60, 150 and 240 degrees round from
++x). In the game all eight lie straight between their platforms (one top-down
+screenshot) and the owner found every end flush.
 
 ### 4.3 Up vector
 
@@ -279,8 +284,13 @@ rms), each antenna's direction solved from where its tip is seen:
 The three half-way readings are good to a degree or two each and straddle
 26.6°; an even 45°/208 per step would give 22.5° and does not fit. An earlier
 reading by eye of 9° and 14° for 90 steps, from screenshots with no camera
-fit, is withdrawn. Not yet tested to better than about 2°: a tilted piece
-laid against known heights would show it.
+fit, is withdrawn.
+
+The slope test (2026-11-21) tightened it: 5-long blocks written at 10°, 15°,
+20°, 25° and 35° with this reading, each to run from one platform's top edge
+to another's, meet both platforms flush in the game (the owner looked at all
+eight; one side-on screenshot, enlarged, shows a clean crease at both ends).
+One degree out would be 0.04 of lip at each end.
 
 ### 4.4 Boundary sizes
 
@@ -319,9 +329,8 @@ not known: a file with a deliberately wrong hash has not been tried.
   the field at all.
 - The 128-bit block version 32 adds; the 32-bit field that is always
   0xFFFFFFFF; the two flags; the 10-bit field in each object; the 2-bit flags.
-- On the up vector: u and v on faces 1, 3, 4 and 5; the size of a step to
-  better than about 2°; the turn's starting direction for an up vector that
-  leans in x and y at once (4.2, 4.3).
+- On the up vector: u and v on faces 1, 3, 4 and 5 (4.3). Nothing a ramp
+  needs: every slope up to 45° is on face 2.
 - Budget: the game shows its own total, not the stored one (a file saying 240
   spent showed 440). Whether the stored figure matters anywhere is not known.
 - Names of the multiplayer object kinds other than weapon and teleporter, and

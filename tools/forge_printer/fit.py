@@ -71,6 +71,9 @@ LANDING_MATCH = 0.03   # a floor block within this of the floor's height already
 LANDING_REACH = 0.15   # the reference has floor there if its own floor is within this of that height
 LANDING_DROP = 0.005   # a landing sits this far under the floor's height: never level with a block or a tucked one
 ONTO_MAX = 0.6         # a floor block's edge or corner hanging this far out over a slope's top is still its edge
+TILT_MAX = 44.0        # tilted ramps: an up vector can lean 45 degrees from +Z and no further
+TILTED_PIECES = {5.0: "Block 5x1 Flat", 3.0: "Block 3x1 Flat", 2.0: "Block 2x1 Flat"}   # length up the slope: 1-wide block
+TILTED_PAST_COST = 1.5 # a unit of block running on past the slope's foot counts as this many extra pieces
 SLOPE_MIN_AREA = 1.5   # a sloping patch smaller than this is left for hand work, u2
 SLOPE_FILL = 0.6       # the slope must be at least this share of a ramp's run and of its lane's width
 
@@ -356,7 +359,26 @@ def _onto_slope(floors, height, along, across, s_top, t_mid, lanes):
     return reach
 
 
-def fit_slopes(analysis, table=None, floors=()):
+def _tilted_lengths(surface):
+    """The lengths of flat blocks to lay down a tilted face `surface` long, longest first: the fewest
+    pieces that reach its foot without running far past it."""
+    sizes = sorted(TILTED_PIECES, reverse=True)
+    best = None
+    stack = [()]
+    while stack:
+        combo = stack.pop()
+        total = sum(combo)
+        if total >= surface - 0.02:
+            key = (len(combo) + TILTED_PAST_COST * max(0.0, total - surface), combo)
+            if best is None or key < best:
+                best = key
+            continue
+        if len(combo) < 8:
+            stack.extend(combo + (size,) for size in sizes if not combo or size <= combo[-1])
+    return list(best[1])
+
+
+def fit_slopes(analysis, table=None, floors=(), tilted=False):
     """Ramps for the walked slopes of an analysed reference, each run of ramps tied to the floors
     it joins. `floors` are the floor placements already fitted (fit_floors); without them a
     slope's own ends are used.
@@ -448,14 +470,19 @@ def fit_slopes(analysis, table=None, floors=()):
             continue
         lanes = max(1, int(round(width)))
         rises = [0.0, 0.5, 1.0]
-        if angle > GENTLE_MAX_TILT:                              # only the 2-wide steep ramp climbs faster than 1 in 2
-            lanes = max(2, 2 * int(round(width / 2.0)))
-            rises.append(2.0)
         # the run starts where the upper floor's blocks really end: at the reference's edge, or at the
         # furthest block corner hanging out over the slope
         onto = _onto_slope(floors, high, along, across, s_high, t_mid, lanes) if len(floors) else 0.0
+        as_tilt = tilted and math.degrees(math.atan2(high - low, length - onto)) <= TILT_MAX
+        if angle > GENTLE_MAX_TILT and not as_tilt:              # only the 2-wide steep ramp climbs faster than 1 in 2
+            lanes = max(2, 2 * int(round(width / 2.0)))
+            rises.append(2.0)
+            onto = _onto_slope(floors, high, along, across, s_high, t_mid, lanes) if len(floors) else 0.0
         s_top = s_high - onto
-        chosen, lift = _best_run(rises, length - onto, high - low)
+        if as_tilt:
+            chosen, lift = [], 0.0
+        else:
+            chosen, lift = _best_run(rises, length - onto, high - low)
         count = len(chosen)
         top = high + lift
 
@@ -496,13 +523,43 @@ def fit_slopes(analysis, table=None, floors=()):
                         origin = origin_of({"centre": [float(mid[0]), float(mid[1])], "top": upper, "turn": turn}, piece)
                     placements.append({"part": "slope", "piece": piece["name"], "turn": round(turn, 2),
                                        "origin": [round(c, 3) for c in origin]})
-        covered_area = min(length, count * RAMP_RUN) * min(width, float(lanes)) / math.cos(math.radians(angle))
+        if as_tilt:
+            # one flat face from the upper floor's edge to the lower floor's, at the slope's own angle: flat
+            # blocks tilted to it, laid from the top edge down, the last one running on under the lower floor
+            run, rise = length - onto, high - low
+            lean = math.atan2(rise, run)
+            climb = (float(along[0]), float(along[1]))
+            up = mvar.up_vector(mvar.up_raw((-math.sin(lean) * climb[0], -math.sin(lean) * climb[1], math.cos(lean))))
+            turn = mvar.decode_angle(mvar.encode_angle(
+                mvar.turn_for(up, (math.cos(lean) * climb[0], math.cos(lean) * climb[1], math.sin(lean)))))
+            x_axis, y_axis, z_axis = mvar.axes(up, turn)         # up the slope, level across it, out of its face
+            edge = along * s_top + across * t_mid                # the middle of the run's top edge
+            for t_at, covered in spots:
+                down = 0.0
+                for size in _tilted_lengths(math.hypot(run, rise)):
+                    if covered == 2 and size == 2.0:
+                        laid = [(flat2, t_at)]
+                    else:
+                        piece = known[TILTED_PIECES[size]]
+                        laid = [(piece, t_at - 0.5), (piece, t_at + 0.5)] if covered == 2 else [(piece, t_at)]
+                    for piece, t_spot in laid:
+                        middle = ((piece["min"][0] + piece["max"][0]) / 2.0, (piece["min"][1] + piece["max"][1]) / 2.0,
+                                  piece["max"][2])
+                        centre = [float(edge[0]), float(edge[1]), high]
+                        origin = [centre[i] + (t_spot - t_mid) * y_axis[i] - (down + size / 2.0) * x_axis[i]
+                                  - middle[0] * x_axis[i] - middle[1] * y_axis[i] - middle[2] * z_axis[i] for i in range(3)]
+                        placements.append({"part": "slope", "piece": piece["name"], "turn": round(math.degrees(turn), 3),
+                                           "up": [round(c, 6) for c in up], "origin": [round(c, 3) for c in origin]})
+                    down += size
+            covered_area = length * min(width, float(lanes)) / math.cos(math.radians(angle))
+        else:
+            covered_area = min(length, count * RAMP_RUN) * min(width, float(lanes)) / math.cos(math.radians(angle))
         fitted += min(patch["area"], covered_area)
 
         if not len(floors):
             continue
         # landings: where the run meets each floor, a block under the join if the floor blocks stop short of it
-        foot = None                                              # where the run's face comes down to the lower floor
+        foot = s_low if as_tilt else None                        # where the run's face comes down to the lower floor
         for step, upper, s_mid in steps:
             if step > 0.0 and upper >= low >= upper - step:
                 foot = s_mid + RAMP_RUN / 2.0 - (upper - low) / step * RAMP_RUN
@@ -614,13 +671,12 @@ def boxes_obj(path, placements, table):
     lines, faces, n = [], {}, 0
     for p in placements:
         piece = known[p["piece"]]
-        ox, oy, oz = p["origin"]
-        turn = math.radians(p["turn"])
-        c, s = math.cos(turn), math.sin(turn)
+        ax = mvar.axes(p.get("up", (0.0, 0.0, 1.0)), math.radians(p["turn"]))
         for z in (piece["min"][2], piece["max"][2]):
             for x, y in ((piece["min"][0], piece["min"][1]), (piece["max"][0], piece["min"][1]),
                          (piece["max"][0], piece["max"][1]), (piece["min"][0], piece["max"][1])):
-                lines.append("v %.4f %.4f %.4f\n" % (ox + x * c - y * s + 0.0, oy + x * s + y * c + 0.0, oz + z + 0.0))
+                lines.append("v %.4f %.4f %.4f\n" % tuple(
+                    p["origin"][i] + x * ax[0][i] + y * ax[1][i] + z * ax[2][i] + 0.0 for i in range(3)))
         b = n + 1
         quads = [(b + 4, b + 5, b + 6, b + 7), (b + 3, b + 2, b + 1, b), (b, b + 1, b + 5, b + 4),
                  (b + 1, b + 2, b + 6, b + 5), (b + 2, b + 3, b + 7, b + 6), (b + 3, b, b + 4, b + 7)]
@@ -641,7 +697,7 @@ def build(folder):
     except (surfaces.SurfaceError, pieces.PieceError) as error:
         raise FitError(str(error))
     floors, floor_report = fit_floors(analysis, table)
-    slopes, slope_report = fit_slopes(analysis, table, floors)
+    slopes, slope_report = fit_slopes(analysis, table, floors, tilted=True)
     walls, wall_report = fit_walls(analysis, table)
     placements = floors + slopes + walls
     counts = {}
@@ -655,7 +711,8 @@ def build(folder):
     name = ref["source"]["map"]
     out = {"source": ref["source"], "mesh": name + "_fit.obj",
            "rules": {"grid": GRID, "height_step": HEIGHT_STEP, "overhang": OVERHANG, "floor_pieces": FLOOR_PIECES,
-                     "gentle_ramps": GENTLE_RAMPS, "steep_ramps": STEEP_RAMPS},
+                     "gentle_ramps": GENTLE_RAMPS, "steep_ramps": STEEP_RAMPS,
+                     "tilted_ramps": sorted(TILTED_PIECES.values()), "tilt_max": TILT_MAX},
            "report": report, "placements": placements}
     boxes_obj(os.path.join(folder, out["mesh"]), placements, table)
     with open(os.path.join(folder, "fit.json"), "w", encoding="utf-8", newline="\n") as f:
@@ -719,6 +776,8 @@ def add_to(variant, placements, offset, table=None):
             raise FitError("a piece at (%.1f, %.1f, %.1f) is outside Forge World: change the offset" % (
                 x + offset[0], y + offset[1], z + offset[2]))
         obj.angle = mvar.encode_angle(math.radians(p["turn"]))
+        if "up" in p:                                            # a tilted piece: where its own +z points
+            obj.up = mvar.up_raw(p["up"])
         slots.append(variant.add_object(obj))
     variant.recount_quotas()
     return slots
