@@ -109,8 +109,10 @@ Do not start Phase 2 on Fable.
         calibration map was not needed for it)
   - [x] a file with objects added loads in the game ("It loaded fine")
   - [x] turn direction and the up vector's faces (the owner's screenshot)
-  - [ ] the rest of the up vector: sign of v, size of a step, the turn under a
-        tilted up (a screenshot from above, then a second test if needed)
+  - [x] on face 2, u is +x and v is +y (the owner's screenshot from above)
+  - [ ] the size of an up-vector step (measured about half of expected) and
+        what a turn means under a tilted up: a second test, when tilted
+        pieces are needed
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices
   - [ ] piece fitting
@@ -497,6 +499,24 @@ after this one view: the sign of v on face 2, how far 90 steps really lean
 (B4 looks nearer 10° than the 23° a plain cube-face reading gives, but a view
 from the side cannot measure it), and A2/A3/B2 would be plainer from above.
 A screenshot from straight above settles all of these.
+
+**The owner's second screenshot (2026-11-21), from above**, read together with
+an enlargement of the first:
+
+- Confirmed plainly: A2 climbs towards the pillars and A3 between A1 and A2
+  (turns are counter-clockwise); B2's thin mast runs from its base towards the
+  pillars (face 1 is +Y); B3 hangs tip-down.
+- B4 (face 2, u + 90 steps) leans towards +x and not along y. B5 (face 2,
+  v + 90 steps) leans towards +y, the pillars, and not along x. So on face 2,
+  u is x and v is y, both positive the plain way.
+- **How far they lean is not what was expected.** Measured off the two views,
+  B4 leans about 9° and B5 about 14° (each good to perhaps ±4°), where reading
+  the grid as x/z running -1..1 across a face gives 23°. So a step is worth
+  roughly half of that near the face's middle, or the grid is not even. Not
+  settled; a second test with larger steps (a piece at a face's edge, where
+  every reading says 45°, and one halfway) and a level, side-on screenshot
+  would settle it. Until then only up vectors at face middles are safe to
+  write: upright, lying on a side, upside down.
 
 **The game works out the budget itself.** The file said 240 spent; the HUD
 shows $29,560 left of 30,000, so 440 spent. The stored figure is therefore

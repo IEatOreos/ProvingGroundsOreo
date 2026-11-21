@@ -234,9 +234,11 @@ vectors sit at the face centres. The up vector is where the piece's own +z
 points. The faces are +X, +Y, +Z, -X, -Y, -Z in that order: faces 0, 1, 2
 and 5 were seen in the game (2026-11-21, antennas written with each), 3 and 4
 follow the pattern and fit a variant whose flat-lying walls use them. On face
-2, more u leans the vector towards +x and more v leans it along y (which way
-is not yet seen); how far a step leans it, and u and v on the other faces,
-are not worked out.
+2, more u leans the vector towards +x and more v towards +y (seen in the
+game). How far a step leans it is not settled: 90 steps off the middle were
+measured at about 9° and 14° on two screenshots, where reading the grid as
+x/z from -1 to 1 across the face gives 23°. Only the face middles are safe to
+write for now. u and v on the other faces are not worked out.
 
 ### 4.4 Boundary sizes
 
@@ -275,8 +277,8 @@ not known: a file with a deliberately wrong hash has not been tried.
   the field at all.
 - The 128-bit block version 32 adds; the 32-bit field that is always
   0xFFFFFFFF; the two flags; the 10-bit field in each object; the 2-bit flags.
-- On the up vector: the sign of v, the size of a step, u and v off face 2, and
-  what the turn means once up is tilted (4.2, 4.3).
+- On the up vector: the size of a step, u and v off face 2, and what the turn
+  means once up is tilted (4.2, 4.3).
 - Budget: the game shows its own total, not the stored one (a file saying 240
   spent showed 440). Whether the stored figure matters anywhere is not known.
 - Names of the multiplayer object kinds other than weapon and teleporter, and
