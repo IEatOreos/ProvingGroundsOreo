@@ -1069,3 +1069,27 @@ would settle the first and third in one picture.
 **What this opens:** a slope can be one flat piece (or a ramp piece) tilted
 to the slope's own angle, instead of a mix of 14, 27 and 45 degree pieces
 that is a little long or a little steep. Not built yet.
+
+**The slope test (`turntest --test slope`, `turn_test.SLOPE_CHECKS`).** Before
+Guardian's ramps are changed, a small print that settles the two open points
+in one go. Eight tilted ramps, each a Block 5x1 Flat written to lie from the
+top edge of a lower Block 2x2 Flat platform to the top edge of an upper one,
+floating in two rows of four:
+
+| ramp | climbs towards | slope | checks |
+|------|----------------|-------|--------|
+| S1, S2, S3 | +x | 10, 20, 35 degrees | the size of a step |
+| S4 | +y | 20 | the turn's other starting direction |
+| S5, S6 | 30 and 60 degrees round from +x | 20 | up leaning in x and y at once |
+| S7, S8 | 240 and 150 degrees round | 15, 25 | the same, leaning the other ways |
+
+If the reading is right every ramp meets both platforms flush with its sides
+in line with theirs. One degree out in the step law is 0.04 of lip at each
+end of the 5-long ramp; a wrong turn shows as a ramp lying askew. A test
+holds that, by the code's own arithmetic, each ramp's ends lie on its
+platforms' edges to 0.01.
+
+`E:\Proving Grounds\re_tools\forge_printer\FP_Slope_Test.mvar` (local only),
+title "FP Slope Test", 43 objects, on the owner's testing map at the same
+spot as the earlier tests, 4 units up. **Not loaded in the game yet.**
+Expected HUD: $29,630 (24 pieces at 10 on top of 130).

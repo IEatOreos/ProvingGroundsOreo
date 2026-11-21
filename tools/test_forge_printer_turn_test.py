@@ -140,6 +140,47 @@ class TurnTest(unittest.TestCase):
                 self.assertEqual(turn_test.main(source, out, ORIGIN, test="tilt"), 0)
             self.assertEqual(mvar.MvarFile.read(out).variant.header.title, "FP Tilt Test")
 
+    def test_the_slope_test_ramps_meet_their_platforms(self):
+        v = forge_world()
+        placed = turn_test.add_to(v, ORIGIN, "slope")
+        self.assertEqual(len(placed), 3 * len(turn_test.SLOPE_CHECKS))
+        self.assertEqual(v.problems(), [])
+        known = pieces.by_name()
+        ramp, flat = known[turn_test.SLOPE_RAMP], known[turn_test.SLOPE_PLATFORM]
+        slots = {label: v.objects[slot] for label, slot, _, _ in placed}
+
+        def corner(obj, piece, x, y, z):
+            """A point of a piece's own box in the world, from what the variant now holds."""
+            up = (0.0, 0.0, 1.0) if obj.up is None else mvar.up_vector(obj.up)
+            ax = mvar.axes(up, mvar.decode_angle(obj.angle))
+            at = v.world_position(obj)
+            return tuple(at[i] + x * ax[0][i] + y * ax[1][i] + z * ax[2][i] for i in range(3))
+
+        for label, heading, slope in turn_test.SLOPE_CHECKS:
+            tilted, low, high = slots[label], slots[label + " low"], slots[label + " high"]
+            self.assertEqual(mvar.split_up(tilted.up)[0], 2)
+            top = ramp["max"][2]
+            foot = corner(tilted, ramp, ramp["min"][0], 0.0, top)
+            head = corner(tilted, ramp, ramp["max"][0], 0.0, top)
+            # it climbs the way and at the angle asked, to within what the grid of up vectors allows
+            run = math.hypot(head[0] - foot[0], head[1] - foot[1])
+            self.assertAlmostEqual(math.degrees(math.atan2(head[2] - foot[2], run)), slope, delta=0.3)
+            self.assertAlmostEqual(math.degrees(math.atan2(head[1] - foot[1], head[0] - foot[0])) % 360.0, heading, delta=0.5)
+            # its sides are level: the two corners of each end are at one height
+            for x in (ramp["min"][0], ramp["max"][0]):
+                self.assertAlmostEqual(corner(tilted, ramp, x, -0.5, top)[2], corner(tilted, ramp, x, 0.5, top)[2], delta=0.01)
+            # and each end of its top lies on the top edge of its platform
+            for end, platform, x in ((foot, low, flat["max"][0]), (head, high, flat["min"][0])):
+                edge = corner(platform, flat, x, 0.0, flat["max"][2])
+                for a, b in zip(end, edge):
+                    self.assertAlmostEqual(a, b, delta=0.01)
+        with tempfile.TemporaryDirectory() as tmp:
+            source, out = os.path.join(tmp, "yard.mvar"), os.path.join(tmp, "slope.mvar")
+            mvar.MvarFile(variant=forge_world(), chdr=mvar.build_chdr(v.header)).write(source)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(turn_test.main(source, out, ORIGIN, test="slope"), 0)
+            self.assertEqual(mvar.MvarFile.read(out).variant.header.title, "FP Slope Test")
+
     def test_only_todays_forge_world_palette(self):
         v = forge_world()
         v.quotas.pop()

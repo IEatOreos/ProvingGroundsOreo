@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reach Forge Printer: a slope test print for tilted ramps, 2026-11-21
+
+The owner, after the tilt test was read: "What do you need me to do". A small print to load, before Guardian's ramps are changed.
+
+- `tools/forge_printer/turn_test.py`: a third test, `turntest --test slope`. Eight tilted ramps (`SLOPE_CHECKS`), each a Block 5x1 Flat written to lie from the top edge of a lower Block 2x2 Flat platform to the top edge of an upper one: three climbing +x at 10, 20 and 35 degrees, one climbing +y, four climbing at 30, 60, 150 and 240 degrees round. `add_to` now takes raw turns and up vectors, so the first two tests write what they wrote before.
+- **What it settles:** the tilt test's reading is good to about 2 degrees and has not been seen for an up vector leaning in x and y at once. If it is right, every ramp meets both platforms flush with its sides in line; one degree out is 0.04 of lip at each end, a wrong turn a ramp lying askew.
+- **Made for the owner:** `FP_Slope_Test.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 43 objects; `check` reads it back with no problems. Expected HUD $29,630.
+- **Validation:** one new test in `tools/test_forge_printer_turn_test.py` (10 in all): from what the variant holds, each ramp climbs the way and at the angle asked, its sides are level, and each end of its top lies on its platform's edge to 0.01. Full suite 1196 OK.
+- **Untested in game:** all of it. The test checks the code against itself; only the game can say the reading is right.
+
 ### Noble: leads a strafing man by the read's real age; the reticle fix seen live, 2026-11-21
 - The reticle-target fix (botcore_pg41) in the owner's next Asylum match (logs/trace_reach_forge_halo_20261121-153537; "it was the better match"): Noble rounds at him landed 55% (32 of 58; before 45% in both matches), 50% with his reticle on the shooter and 62% without (before 27-36% vs 47-55%).
 - The owner: "It seems like noble only misses when Im strafing at full speed, doesnt have to be back and fourth just max speed to one side". With him moving sideways over 1.5 u/s Noble hit 0 of 3 that match and 3 of 16 the one before (about 35-40% slower). Noble's precision shot (the final snap and the fight aim, `lead_ray`) led him by the fixed DEMON_LEAD_S, 0.034 s; the snapshot is older than that by the time a bot's action goes out (`tools/live_bots.py` reads the game, does the tick's other work, then thinks and sends bot by bot; the loop 34 ms median, 77 ms p90), and a full strafe moves about 0.1 u, a head's half-width, in 0.04 s. Its own view follows a sent aim within one row (measured: median error 0 at 0.01-0.03 s), so the gap is the read's age, not the turn.

@@ -214,8 +214,9 @@ def main(argv=None):
     p.add_argument("--origin", type=float, nargs=3, required=True, metavar=("X", "Y", "Z"),
                    help="a point on a flat floor with room towards -x and -y")
     p.add_argument("--title")
-    p.add_argument("--test", choices=("turn", "tilt"), default="turn",
-                   help="turn: turns and the up vector's faces; tilt: leaning up vectors and turns under a tilt")
+    p.add_argument("--test", choices=("turn", "tilt", "slope"), default="turn",
+                   help="turn: turns and the up vector's faces; tilt: leaning up vectors and turns under a tilt; "
+                        "slope: eight tilted ramps that should meet their platforms flush")
     p.set_defaults(run=cmd_turntest)
     args = parser.parse_args(argv)
     return args.run(args)
