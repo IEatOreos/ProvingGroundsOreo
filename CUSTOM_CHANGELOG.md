@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Reach Forge Printer: fuller floors, curved ramps joined, and a 255-piece limit per category, 2026-11-21
+
+The owner, on the seventh Guardian print (HUD $27,170, as predicted): "The Ramps were all good. Some of the floor just seems like its not all there yet. Maybe just because were going in steps but Im assuming its spots that have very small inclines like from the original guardian".
+
+- **Measured:** of 693 u2 of walked ground 284 was bare. 150 of it is level floor, 9 leans 1 to 10 degrees, 42 is gentle slope in small facets (curved ramps), 82 is steep rims and braces that are not floor. About 74 u2 of the bare level floor is strips under half a block wide.
+- **`tools/forge_printer/fit.py`:**
+  - a fourth floor pass: 1x1 and 2x1 blocks put where each covers the most bare floor, a quarter of the block allowed past the edge, kept off the heads of ramps (`FILL_*`); such placements carry `fill`;
+  - `_joined_slopes`: small sloping patches that touch and lean nearly alike are fitted as one tilted slope (8 on Guardian);
+  - `fit_slopes` reports why each unfitted slope was left; `_onto_slope` counts tucked blocks too.
+- **A limit found:** a variant counts a palette row's pieces in 8 bits, and every Forge World flat block is in one row, so 255 Building Blocks is the most a file can hold. The fit asked for 299 and the writer failed. `within_limits` now takes the room left in each row and drops fill blocks first; `mvar.problems()` names a row over `ROW_MAX`. Noted in `docs/reach_mvar_format.md` 3.5.
+- **Guardian:** fit 336 pieces, floor coverage 75% (68% before), covered ground 448 of 693 u2. Printed 292: 44 fill blocks left out for the row limit.
+- **Made for the owner:** `FP_Guardian_8.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 311 objects; `check` reads it back with no problems. Expected HUD $26,950.
+- **Validation:** new tests for the fill pass, joined facets, and the row limit in both places; full suite 1206 OK.
+- **Untested in game:** the eighth print, and 255 pieces in one row (233 is the most seen loading).
+
 ### Noble: the game-time speed checked in a 1v1; the sprint tap after its own held sprint, 2026-11-21
 - The owner's 1v1 against Cedercare (Noble) on Asylum, him using a jetpack too (logs/trace_reach_forge_halo_20261121-165238): Noble DMR rounds at him landed 33 of 38 within 15 u (87%); with him moving sideways over 1.5 u/s 11 of 14 (79%; the match before 7 of 21, 33%); rising or falling 5 of 6, 1 u or more over it 9 of 10; his reticle on it 16 of 19. One short match: a small sample.
 - The sprint tap (`Bot.noble_sprint_off`) fired 3 times; twice the run away's own sprint button was still down, so the tap was no new press and the sprint stayed on 0.4 s to the retap (a trigger press lost at 108.04 s). Now with the button down the tick before it lets go first and taps the next tick.

@@ -30,6 +30,7 @@ ANGLE_BITS = 14
 UP_BITS = 20
 UP_FACE_SPAN = (1 << UP_BITS) // 6   # 174762 values per cube face
 UP_GRID = 417                        # grid points per face edge
+ROW_MAX = 255                        # a quota row's counts are 8 bits: the most pieces one palette row can hold
 
 DIMENSION_BITS = 11
 DIMENSION_MAX = 200.0
@@ -369,6 +370,9 @@ class MapVariant:
         for index, quota in enumerate(self.quotas):
             if quota.placed != counts.get(index, 0):
                 out.append("quota %d says %d placed, the objects number %d" % (index, quota.placed, counts.get(index, 0)))
+            if max(quota.minimum, quota.maximum, quota.placed) > ROW_MAX:
+                out.append("quota %d counts %d pieces, a palette row holds %d at most" % (
+                    index, max(quota.minimum, quota.maximum, quota.placed), ROW_MAX))
         return out
 
     # -- stream --

@@ -42,6 +42,9 @@ LEVEL_BIN = 0.05     # a level's blocks all sit at the height most of its floor 
 OVERHANG = 0.10      # share of a block allowed past the floor's edge, in the second pass
 TUCK_NEW = 0.35      # a block tucked under its neighbours must cover at least this share of new floor
 TUCK_DROP = 0.01     # how much lower each tucked layer sits, world units
+FILL_CELLS = 32      # the last pass fills with blocks up to this many cells (2x1 and 1x1)
+FILL_PAST = 0.25     # ... each allowed this share of itself past the floor's edge
+FILL_NEW = 0.3       # ... and worth placing if at least this share of it is floor nothing covers yet
 PLACEMENT_FLAGS = 204
 
 # flat blocks, largest first: their tops are the floor
@@ -71,7 +74,13 @@ LANDING_MATCH = 0.03   # a floor block within this of the floor's height already
 LANDING_REACH = 0.15   # the reference has floor there if its own floor is within this of that height
 LANDING_DROP = 0.005   # a landing sits this far under the floor's height: never level with a block or a tucked one
 ONTO_MAX = 0.6         # a floor block's edge or corner hanging this far out over a slope's top is still its edge
+ONTO_MATCH = 0.06      # ... if its top is within this of the floor's height (tucked blocks sit a few hundredths low)
 TILT_MAX = 44.0        # tilted ramps: an up vector can lean 45 degrees from +Z and no further
+JOIN_ANGLE = 14.0      # small sloping patches that touch and lean within this of each other are one slope,
+JOIN_OFF = 0.15        # ... while their corners stay within this of the one plane,
+JOIN_MAX_TILT = 32.0   # ... each leaning no more than this (steeper small faces are rims, roots and braces),
+JOIN_MIN_AREA = 1.0    # ... and together at least this big, u2,
+JOIN_FILL = 0.55       # ... filling at least this share of the rectangle a ramp would cover
 TILTED_PIECES = {5.0: "Block 5x1 Flat", 3.0: "Block 3x1 Flat", 2.0: "Block 2x1 Flat"}   # length up the slope: 1-wide block
 TILTED_PAST_COST = 1.5 # a unit of block running on past the slope's foot counts as this many extra pieces
 SLOPE_MIN_AREA = 1.5   # a sloping patch smaller than this is left for hand work, u2
@@ -142,13 +151,16 @@ def _window_sums(grid, w, d):
     return s[d:, w:] - s[:-d, w:] - s[d:, :-w] + s[:-d, :-w]
 
 
-def cover(floor, shapes):
+def cover(floor, shapes, keep_off=None):
     """Covers a level's floor grid with blocks. `shapes` is [(name, cells wide, cells deep, turn)],
-    largest first. Returns [(name, low cell x, low cell y, cells wide, cells deep, turn, sunk)]:
+    largest first. Returns [(name, low cell x, low cell y, cells wide, cells deep, turn, sunk, fill)]:
     `sunk` is 0 for a block that touches no other, and 1, 2, ... for one laid partly under
-    blocks already there (each a hair lower than the ones it meets, so no two tops fight)."""
+    blocks already there (each a hair lower than the ones it meets, so no two tops fight);
+    `fill` is true for the last pass's blocks, the first to go when a variant has no room.
+    `keep_off` marks cells the last pass's blocks must not reach over (a ramp going down from the floor)."""
     covered = np.zeros_like(floor, dtype=bool)
     depth = np.zeros(floor.shape, dtype=np.int16)
+    taken = np.zeros(floor.shape, dtype=np.uint32)             # bit k: a block sunk k steps lies over the cell
     placed = []
     # 1 and 2: side by side, wholly on the floor, then with a little allowed past its edge
     for allowance in (0.0, OVERHANG):
@@ -165,7 +177,8 @@ def cover(floor, shapes):
                     continue
                 covered[y:y + d, x:x + w] = True
                 free[y:y + d, x:x + w] = False
-                placed.append((name, int(x), int(y), w, d, turn, 0))
+                taken[y:y + d, x:x + w] |= 1
+                placed.append((name, int(x), int(y), w, d, turn, 0, False))
     # 3: the strips left between blocks, too narrow for a block of their own: a block wholly on the
     # floor that tucks under its neighbours, as long as enough of it is new floor
     for name, w, d, turn in shapes:
@@ -180,7 +193,37 @@ def cover(floor, shapes):
             sunk = int(depth[y:y + d, x:x + w][window].max()) + 1 if window.any() else 0
             covered[y:y + d, x:x + w] = True
             depth[y:y + d, x:x + w] = np.maximum(depth[y:y + d, x:x + w], sunk)
-            placed.append((name, int(x), int(y), w, d, turn, sunk))
+            taken[y:y + d, x:x + w] |= np.uint32(1 << min(sunk, 31))
+            placed.append((name, int(x), int(y), w, d, turn, sunk, False))
+    # 4: what is still bare lies along edges no block sits square to (a slanting or rounded edge, a strip
+    # under a block wide). The smallest blocks, each where it covers the most bare floor, allowed further
+    # past the edge and under its neighbours; the best spot first, until no spot is worth a block
+    small = []
+    for name, w, d, turn in shapes:
+        on_floor = _window_sums(floor, w, d)
+        if w * d <= FILL_CELLS and on_floor.size:
+            allowed = on_floor >= int(math.ceil(w * d * (1.0 - FILL_PAST)))
+            if keep_off is not None:                       # a short row of its cells may, no more: a quarter unit
+                allowed &= _window_sums(keep_off, w, d) <= min(w, d)
+            small.append((name, w, d, turn, allowed))
+    while small:
+        bare = floor & ~covered
+        best = None
+        for name, w, d, turn, allowed in small:
+            new = _window_sums(bare, w, d) * allowed
+            y, x = np.unravel_index(int(np.argmax(new)), new.shape)
+            gain = int(new[y, x])
+            if gain >= int(math.ceil(w * d * FILL_NEW)) and (best is None or (gain, -w * d) > best[0]):
+                best = ((gain, -w * d), name, int(x), int(y), w, d, turn)      # the most bare floor, the smaller block
+        if best is None:
+            break
+        _, name, x, y, w, d, turn = best
+        met = int(np.bitwise_or.reduce(taken[y:y + d, x:x + w], axis=None))
+        sunk = next(k for k in range(32) if not met >> k & 1)   # the highest step none of the blocks it meets is on
+        covered[y:y + d, x:x + w] = True
+        depth[y:y + d, x:x + w] = np.maximum(depth[y:y + d, x:x + w], sunk)
+        taken[y:y + d, x:x + w] |= np.uint32(1 << sunk)
+        placed.append((name, x, y, w, d, turn, sunk, True))
     return placed
 
 
@@ -207,6 +250,21 @@ def fit_floors(analysis, table=None):
     chosen = np.nonzero((a["kinds"] == surfaces.FLOOR) & a["walked"])[0]
     x0, y0, layers = floor_layers(a["verts"], a["tris"], chosen)
     floor_cells = sum(int(np.isfinite(layer).sum()) for layer in layers.values())
+    sloping = np.nonzero((a["kinds"] == surfaces.SLOPE) & a["walked"])[0]
+    slope_x, slope_y, slope_layers = floor_layers(a["verts"], a["tris"], sloping)
+
+    def slope_below(shape, top):
+        """The cells of the floor grid where the reference has walked slope from a unit under `top` up
+        to it: the head of a ramp going down from this floor."""
+        out = np.zeros(shape, dtype=bool)
+        dx, dy = int(round((slope_x - x0) / GRID)), int(round((slope_y - y0) / GRID))
+        for layer in slope_layers.values():
+            ys, xs = np.nonzero((np.nan_to_num(layer, nan=1e9) <= top + 0.05) & (np.nan_to_num(layer, nan=-1e9) >= top - 1.0))
+            ys, xs = ys + dy, xs + dx
+            inside = (ys >= 0) & (ys < shape[0]) & (xs >= 0) & (xs < shape[1])
+            out[ys[inside], xs[inside]] = True
+        return out
+
     shapes = shapes_for(table)
     known = pieces.by_name(table)
     left = {step: np.isfinite(layer) for step, layer in layers.items()}
@@ -233,7 +291,7 @@ def fit_floors(analysis, table=None):
             floor |= mine[s]
         if not floor.any():
             continue
-        for name, x, y, w, d, turn, sunk in cover(floor, shapes):
+        for name, x, y, w, d, turn, sunk, fill in cover(floor, shapes, slope_below(floor.shape, level_top) & ~floor):
             block = floor[y:y + d, x:x + w]
             top = level_top - sunk * TUCK_DROP
             overhang_cells += int(block.size - block.sum())
@@ -246,6 +304,8 @@ def fit_floors(analysis, table=None):
                          "turn": turn,
                          "size": [round(w * GRID, 3), round(d * GRID, 3)],
                          "tucked": sunk}
+            if fill:
+                placement["fill"] = True
             placement["origin"] = [round(c, 3) for c in origin_of(placement, known[name])]
             placements.append(placement)
     counts = {}
@@ -340,7 +400,7 @@ def _onto_slope(floors, height, along, across, s_top, t_mid, lanes):
     reach = 0.0
     half = lanes / 2.0 - 0.05
     for p in floors:
-        if abs(p["top"] - height) > LANDING_MATCH:
+        if abs(p["top"] - height) > ONTO_MATCH:
             continue
         cx, cy = p["centre"]
         hx, hy = p["size"][0] / 2.0, p["size"][1] / 2.0
@@ -357,6 +417,74 @@ def _onto_slope(floors, height, along, across, s_top, t_mid, lanes):
         if deepest <= ONTO_MAX:
             reach = max(reach, deepest)
     return reach
+
+
+def _joined_slopes(a):
+    """Small sloping patches that touch and lean nearly alike, taken together as one slope each: a
+    curved or faceted ramp is many small flat patches, none big enough for a ramp of its own.
+    Returns [(patch, its triangles, the numbers of the patches it is made of)]; the patch is a dict
+    like surfaces.patches() gives, with the group's own plane."""
+    patches, owner = a["patches"], a["owner"]
+    small = {n for n, p in enumerate(patches) if p["kind"] == "slope" and p.get("walked")
+             and p["area"] < SLOPE_MIN_AREA and p["tilt"] <= JOIN_MAX_TILT}
+    if not small:
+        return []
+    verts, tris, areas, normals, centres = a["verts"], a["tris"], a["areas"], a["normals"], a["centres"]
+    members = {n: [] for n in small}
+    edges = {}
+    for t in np.nonzero(np.isin(owner, list(small)))[0]:
+        n = int(owner[t])
+        members[n].append(int(t))
+        corners = [tuple(np.round(verts[i], 3) + 0.0) for i in tris[t]]
+        for i in range(3):
+            edge = tuple(sorted((corners[i], corners[(i + 1) % 3])))
+            edges.setdefault(edge, set()).add(n)
+    beside = {n: set() for n in small}
+    for group in edges.values():
+        for n in group:
+            beside[n] |= group - {n}
+    near = math.cos(math.radians(JOIN_ANGLE))
+    taken, out = set(), []
+    for seed in sorted(small, key=lambda n: (-patches[n]["area"], n)):
+        if seed in taken:
+            continue
+        group, stack = [seed], [seed]
+        taken.add(seed)
+        while stack:
+            idx = np.array([t for n in group for t in members[n]])
+            mean = (normals[idx] * areas[idx][:, None]).sum(axis=0)
+            mean /= max(float(np.linalg.norm(mean)), 1e-12)
+            middle = (centres[idx] * areas[idx][:, None]).sum(axis=0) / float(areas[idx].sum())
+            at = stack.pop()
+            for other in sorted(beside[at]):
+                if other in taken:
+                    continue
+                o = np.array(members[other])
+                lean = (normals[o] * areas[o][:, None]).sum(axis=0)
+                lean /= max(float(np.linalg.norm(lean)), 1e-12)
+                if float(lean @ mean) < near:
+                    continue
+                if float(np.abs((verts[tris[o]].reshape(-1, 3) - middle) @ mean).max()) > JOIN_OFF:
+                    continue
+                taken.add(other)
+                group.append(other)
+                stack.append(other)
+        idx = np.array([t for n in group for t in members[n]])
+        area = float(areas[idx].sum())
+        if len(group) < 2 or area < JOIN_MIN_AREA:
+            taken -= set(group[1:])                               # let its neighbours try with another seed
+            continue
+        mean = (normals[idx] * areas[idx][:, None]).sum(axis=0)
+        mean /= max(float(np.linalg.norm(mean)), 1e-12)
+        pts = verts[tris[idx]].reshape(-1, 3)
+        patch = {"kind": "slope", "walked": True, "area": round(area, 3), "triangles": len(idx),
+                 "normal": [round(float(c), 4) + 0.0 for c in mean],
+                 "offset": round(float((centres[idx] @ mean * areas[idx]).sum() / area), 3),
+                 "tilt": round(math.degrees(math.acos(max(-1.0, min(1.0, float(mean[2]))))), 1),
+                 "min": [round(float(c), 3) for c in pts.min(axis=0)], "max": [round(float(c), 3) for c in pts.max(axis=0)],
+                 "uphill": round(math.degrees(math.atan2(-mean[1], -mean[0])) % 360.0, 1), "joined": len(group)}
+        out.append((patch, idx, sorted(group)))
+    return out
 
 
 def _tilted_lengths(surface):
@@ -429,13 +557,25 @@ def fit_slopes(analysis, table=None, floors=(), tilted=False):
     placements = []
     total = fitted = 0.0
     landings = 0
+    left = {}                                                    # why a slope got nothing: {reason: area}
+
+    def leave(reason, patch):
+        left[reason] = round(left.get(reason, 0.0) + patch["area"], 1)
+
+    slopes = []                                                  # (patch, its triangles, made of several patches?)
+    joined = _joined_slopes(a) if tilted else []                 # a curved or faceted ramp: small patches as one slope
+    in_joined = {number for _, _, numbers in joined for number in numbers}
     for number, patch in enumerate(a["patches"]):
-        if patch["kind"] != "slope" or not patch.get("walked"):
+        if patch["kind"] == "slope" and patch.get("walked"):
+            total += patch["area"]
+            if number not in in_joined:
+                slopes.append((patch, np.nonzero(a["owner"] == number)[0], False))
+    slopes.extend((patch, members, True) for patch, members, _ in joined)
+    for patch, members, several in slopes:
+        if not several and (patch["area"] < SLOPE_MIN_AREA or patch["tilt"] > SLOPE_MAX_TILT):
+            leave("smaller than %s u2" % SLOPE_MIN_AREA if patch["area"] < SLOPE_MIN_AREA else "steeper than a ramp", patch)
             continue
-        total += patch["area"]
-        if patch["area"] < SLOPE_MIN_AREA or patch["tilt"] > SLOPE_MAX_TILT:
-            continue
-        pts = a["verts"][a["tris"][a["owner"] == number]].reshape(-1, 3)
+        pts = a["verts"][a["tris"][members]].reshape(-1, 3)
         climb = math.radians(patch["uphill"])
         along = np.array([math.cos(climb), math.sin(climb)])
         across = np.array([-along[1], along[0]])
@@ -443,6 +583,10 @@ def fit_slopes(analysis, table=None, floors=(), tilted=False):
         s_low, s_high = float(s.min()), float(s.max())
         length, width = s_high - s_low, float(t.max() - t.min())
         if length < RAMP_RUN * SLOPE_FILL or width < SLOPE_FILL:
+            leave("too short or too narrow", patch)
+            continue
+        if several and patch["area"] < JOIN_FILL * length * width / max(0.2, math.cos(math.radians(patch["tilt"]))):
+            leave("joined patches that do not fill a rectangle", patch)
             continue
         t_mid = float(t.min() + t.max()) / 2.0
         nx, ny, nz = patch["normal"]
@@ -464,9 +608,11 @@ def fit_slopes(analysis, table=None, floors=(), tilted=False):
             ends.append(min(near, key=lambda top: abs(top - own)) if near else own)
         low, high = ends
         if dives or high - low < 0.1:
+            leave("dives under a floor" if dives else "its floors are level with each other", patch)
             continue
         angle = math.degrees(math.atan2(high - low, length))
         if angle > SLOPE_MAX_TILT:
+            leave("steeper than a ramp", patch)
             continue
         lanes = max(1, int(round(width)))
         rises = [0.0, 0.5, 1.0]
@@ -474,6 +620,9 @@ def fit_slopes(analysis, table=None, floors=(), tilted=False):
         # furthest block corner hanging out over the slope
         onto = _onto_slope(floors, high, along, across, s_high, t_mid, lanes) if len(floors) else 0.0
         as_tilt = tilted and math.degrees(math.atan2(high - low, length - onto)) <= TILT_MAX
+        if several and not as_tilt:
+            leave("steeper than a ramp", patch)
+            continue
         if angle > GENTLE_MAX_TILT and not as_tilt:              # only the 2-wide steep ramp climbs faster than 1 in 2
             lanes = max(2, 2 * int(round(width / 2.0)))
             rises.append(2.0)
@@ -586,7 +735,7 @@ def fit_slopes(analysis, table=None, floors=(), tilted=False):
                 landings += 1
     return placements, {"slope_area": round(total, 1), "fitted_area": round(fitted, 1),
                         "coverage": round(fitted / total, 3) if total else 0.0, "pieces": len(placements),
-                        "landings": landings}
+                        "landings": landings, "left": {k: left[k] for k in sorted(left)}}
 
 
 def fit_walls(analysis, table=None):
@@ -721,18 +870,22 @@ def build(folder):
     return out
 
 
-def within_limits(placements, free_slots, budget_left):
+def within_limits(placements, free_slots, budget_left, row_room=None, table=None):
     """The placements a variant has room and money for, and what had to be left out.
-    Floors are kept before ramps and ramps before walls, the larger floor blocks first; a piece
-    with no known price is counted as free and named in the report. Returns (kept, report):
-    kept is in the placements' own order, report is {"kept", "left_out", "by_part", "ran_out_of",
-    "cost", "unpriced"}."""
+    Floors are kept before ramps and ramps before walls, the larger floor blocks first, and the
+    last pass's fill blocks after everything else; a piece with no known price is counted as free
+    and named in the report. `row_room` is {palette row: pieces it can still take}: a variant
+    counts a row's pieces in 8 bits, so a row holds mvar.ROW_MAX at most (Forge World's flat
+    blocks all share one row). Returns (kept, report): kept is in the placements' own order,
+    report is {"kept", "left_out", "by_part", "ran_out_of", "cost", "unpriced"}."""
     rank = {"floor": 0, "slope": 1, "landing": 1, "wall": 2}
+    known = pieces.by_name(table or pieces.load()) if row_room is not None else {}
+    room = dict(row_room or {})
 
     def worth(item):
         index, p = item
         size = p.get("size", [0.0, 0.0])
-        return (rank.get(p.get("part"), 3), -size[0] * size[1], index)
+        return (4 if p.get("fill") else rank.get(p.get("part"), 3), -size[0] * size[1], index)
 
     kept, cost, ran_out, unpriced = set(), 0, None, set()
     for index, p in sorted(enumerate(placements), key=worth):
@@ -740,13 +893,18 @@ def within_limits(placements, free_slots, budget_left):
         if value is None:
             unpriced.add(p["piece"])
             value = 0
+        row = known[p["piece"]]["row"] if known else None
         if len(kept) >= free_slots:
             ran_out = ran_out or "object slots"
         elif cost + value > budget_left:
             ran_out = ran_out or "budget"
+        elif row is not None and room.get(row, mvar.ROW_MAX) < 1:
+            ran_out = ran_out or "room in a palette row (%d pieces of one category)" % mvar.ROW_MAX
         else:
             kept.add(index)
             cost += value
+            if row is not None:
+                room[row] = room.get(row, mvar.ROW_MAX) - 1
     left = [p for i, p in enumerate(placements) if i not in kept]
     by_part = {}
     for p in left:
@@ -821,7 +979,9 @@ def print_main(folder, template, out, offset, title=None):
         f = mvar.MvarFile.read(template)
         v = f.variant
         free = sum(1 for o in v.objects if o is None)
-        kept, limits = within_limits(fit["placements"], free, v.budget_max - v.budget_spent)
+        v.recount_quotas()
+        room = {row: mvar.ROW_MAX - quota.placed for row, quota in enumerate(v.quotas)}
+        kept, limits = within_limits(fit["placements"], free, v.budget_max - v.budget_spent, room)
         if not kept:
             raise FitError("the template has no room for any piece (%d free slots, %d of budget left)" % (
                 free, v.budget_max - v.budget_spent))

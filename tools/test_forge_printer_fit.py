@@ -124,6 +124,23 @@ class Floors(unittest.TestCase):
         self.assertEqual([p["piece"] for p in placements], ["Block 2x1 Flat"])
         self.assertLess(report["coverage"], 1.0)
 
+    def test_a_strip_under_a_block_wide_is_filled_with_small_blocks_a_little_past_its_edge(self):
+        # 3 long and 0.75 wide: no block sits wholly on it, and a tenth past the edge is not enough
+        strip = slab(0, 0, 3, 0.75)
+        old = fit.FILL_PAST
+        try:
+            fit.FILL_PAST = 0.0                                      # without the last pass
+            self.assertEqual(fitted(strip)[0], [])
+        finally:
+            fit.FILL_PAST = old
+        placements, report = fitted(strip)
+        self.assertEqual([(p["piece"], p["size"]) for p in placements],
+                         [("Block 2x1 Flat", [2.0, 1.0]), ("Block 1x1 Flat", [1.0, 1.0])])
+        self.assertEqual(report["coverage"], 1.0)
+        self.assertEqual(report["overhang_area"], 0.8)               # 0.75 u2: a quarter of each block, and no more
+        # ... and half a unit wide is too thin: a block would be half off the floor
+        self.assertEqual(fitted(slab(0, 0, 3, 0.5))[0], [])
+
     def test_blocks_of_one_level_all_sit_at_one_height(self):
         # most of the floor at 0, a strip a tenth higher: one level, every block's top where most of it is
         placements, _ = fitted(slab(0, 0, 6, 4, z=0.0), slab(6, 0, 8, 4, z=0.1))
@@ -505,6 +522,24 @@ class Limits(unittest.TestCase):
         self.assertEqual((report["cost"], report["left_out"], report["ran_out_of"]), (40, 1, "budget"))
         self.assertEqual(fit.within_limits(placements, 600, 5)[0], [])
 
+    def test_a_palette_row_holds_255_pieces_and_fill_blocks_go_first(self):
+        placements = self.pieces_for_a_yard()                         # ramp, 5x5, 2x2, 1x1, wall
+        fill = {"part": "floor", "piece": "Block 2x1 Flat", "turn": 0.0, "origin": [0.0, 0.0, 0.0],
+                "size": [2.0, 1.0], "fill": True}
+        placements = [fill] + placements
+        blocks, inclines = pieces.by_name()["Block 1x1 Flat"]["row"], pieces.by_name()["Ramp 1x2"]["row"]
+        kept, report = fit.within_limits(placements, 600, 29000, {blocks: 3})
+        # the three real floor blocks take the row's last three places; the fill block, though bigger than one, waits
+        self.assertEqual(sorted(p["piece"] for p in kept if p["part"] == "floor"),
+                         ["Block 1x1 Flat", "Block 2x2 Flat", "Block 5x5 Flat"])
+        self.assertEqual((report["left_out"], report["by_part"]), (1, {"floor": 1}))
+        self.assertIn("palette row", report["ran_out_of"])
+        self.assertEqual(len([p for p in kept if p["part"] in ("slope", "wall")]), 2)      # other rows are not touched
+        kept, report = fit.within_limits(placements, 600, 29000, {blocks: 250, inclines: 0})
+        self.assertEqual((report["left_out"], report["by_part"]), (1, {"slope": 1}))
+        self.assertEqual(fit.within_limits(placements, 600, 29000)[1]["left_out"], 0)      # no rows given: no row limit
+        self.assertEqual(mvar.ROW_MAX, 255)
+
     def test_a_piece_with_no_known_price_is_named(self):
         dish = {"part": "floor", "piece": "Dish", "turn": 0.0, "origin": [0.0, 0.0, 0.0], "size": [11.7, 5.9]}
         kept, report = fit.within_limits([dish], 10, 0)
@@ -567,6 +602,37 @@ class TiltedRamps(unittest.TestCase):
         placements, _ = fit.fit_slopes(analysed(yard()), tilted=True)
         self.assertEqual(len(placements), 8)
         self.assertEqual(len({tuple(p["up"]) for p in placements}), 1)
+
+    def test_small_patches_that_curve_together_are_one_slope(self):
+        # a ramp in two facets, 14 then 21 degrees, each too small for a ramp of its own (1.3 u2)
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        first, second = math.tan(math.radians(14.0)), math.tan(math.radians(14.0)) + math.tan(math.radians(21.0))
+        m.quad((8, 3, 0), (9, 3, first), (9, 4.3, first), (8, 4.3, 0))
+        m.quad((9, 3, first), (10, 3, second), (10, 4.3, second), (9, 4.3, first))
+        m.quad(*slab(10, 0, 14, 8, z=second))
+        a = analysed(m)
+        self.assertEqual(sorted(p["area"] < fit.SLOPE_MIN_AREA for p in a["patches"] if p["kind"] == "slope"), [True, True])
+        (patch, members, numbers), = fit._joined_slopes(a)
+        self.assertEqual((patch["joined"], len(numbers), len(members)), (2, 2, 4))
+        self.assertAlmostEqual(patch["uphill"], 0.0, delta=0.5)
+        self.assertAlmostEqual(patch["tilt"], 17.5, delta=1.5)
+        floors, _ = fit.fit_floors(a)
+        self.assertEqual(fit.fit_slopes(a, floors=floors)[0], [])                    # ramp pieces: nothing fits either facet
+        placements, report = fit.fit_slopes(a, floors=floors, tilted=True)
+        ramps = [p for p in placements if p["part"] == "slope"]
+        self.assertEqual([p["piece"] for p in ramps], ["Block 3x1 Flat"])           # one face, floor edge to floor edge
+        corners = top_corners(ramps[0])
+        self.assertAlmostEqual(max(c[0] for c in corners), 10.0, delta=0.02)
+        self.assertAlmostEqual(max(c[2] for c in corners), second, delta=0.02)
+        for x, y, z in corners:
+            self.assertAlmostEqual(z, second * (x - 8.0) / 2.0, delta=0.02)          # from (8, 0) straight to the top
+        self.assertEqual(report["left"], {})
+        # a lone small facet, or two that lean too differently, stay as they are
+        lone = Mesh()
+        lone.quad(*slab(0, 0, 8, 8))
+        lone.quad((8, 3, 0), (9, 3, first), (9, 4.3, first), (8, 4.3, 0))
+        self.assertEqual(fit._joined_slopes(analysed(lone)), [])
 
     def test_a_slope_too_steep_to_tilt_keeps_its_ramp_pieces(self):
         placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 10, 5, 2.0))), tilted=True)    # 45 degrees

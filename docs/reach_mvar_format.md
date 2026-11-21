@@ -194,6 +194,13 @@ One row per palette entry, three bytes: minimum count, maximum count, number
 placed. "Placed" equals the number of objects of that type in every file.
 Prices are not in the file.
 
+Each count is 8 bits, so one row can hold 255 objects at most (`mvar.ROW_MAX`).
+On Forge World a row is a whole Forge category (row 70 is every Building
+Block), so a variant cannot carry more than 255 pieces of one category; a
+print that asked for 299 Building Blocks could not be written (2026-11-21).
+The game has loaded 233 in that row; nothing between 234 and 255 has been
+tried.
+
 ## 4. Turning the numbers into world units
 
 ### 4.1 Position

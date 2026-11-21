@@ -282,6 +282,12 @@ class VariantStreamTest(unittest.TestCase):
         self.assertIn("quota 4", text)
         self.assertIn("label 9", text)
         self.assertIn("type 40", text)
+        # a row's counts are 8 bits: 256 pieces of one palette row cannot be written, and problems() says so first
+        v = sample_variant()
+        v.quotas[0].maximum = mvar.ROW_MAX + 1
+        self.assertIn("a palette row holds 255 at most", " | ".join(v.problems()))
+        with self.assertRaises(ValueError):
+            v.to_stream()
 
     def test_broken_streams_are_refused(self):
         stream = sample_variant().to_stream()

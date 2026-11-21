@@ -1138,3 +1138,77 @@ tests updated. Full suite 1200 OK.
 tilt test's pieces. **Not loaded in the game yet.** Expected HUD: $27,170
 (270 pieces at 10 on top of 130). Guardian in the sixth print was never
 pictured, so the floor heights changed in part 10 are also first seen here.
+
+### Phase 3, part 13: where the floor is missing; fill, joined slopes, and a 255 limit (2026-11-21, written by Fable 5.2)
+
+**The seventh print in the game.** The owner, with one overview screenshot:
+"$27170. The Ramps were all good. Some of the floor just seems like its not
+all there yet. Maybe just because were going in steps but Im assuming its
+spots that have very small inclines like from the original guardian". HUD as
+predicted. The tilted ramps are confirmed by his word; the overview is too
+far off to check a join.
+
+**Measured (`gaps.py`, scratch: every walked floor or slope triangle sampled
+on an eighth-unit grid, each sample asked whether any placed piece's top is
+at it).** Of 693 u2 of walked ground seen from above, 410 was covered, 284
+bare. His guess is part of it, not most:
+
+| ground | bare |
+|--------|------|
+| level floor (under 1 degree) | 150 u2 |
+| 1 to 10 degrees | 9 |
+| 10 to 30 degrees (ramps, mostly curved, in small facets) | 42 |
+| 30 to 56 degrees (rims, roots, braces: walkable by the rule, not floor) | 82 |
+
+Of the bare level floor about 74 u2 is strips under half a block wide (the
+big ring, trims along walkway edges, beam tops) that no block can make, and
+the rest lies along edges no square block sits against. 131 u2 of the walked
+slope is in patches under 1.5 u2 each.
+
+**Done:**
+
+- **A fourth floor pass, the fill (`cover`, `FILL_*`).** The 1x1 and 2x1
+  blocks, each put where it covers the most bare floor, allowed a quarter of
+  itself past the floor's edge and under its neighbours, the best spot first,
+  until no spot gives a block 30% of new floor. A fill block takes the
+  highest tuck step none of the blocks it meets is on (not one below the
+  deepest). It may not reach over the head of a ramp going down from the
+  floor by more than a short row of cells. Floor placements from this pass
+  carry `"fill"`.
+- **Joined slopes (`_joined_slopes`, `JOIN_*`).** Small sloping patches that
+  share an edge, lean within 14 degrees of the group and stay within 0.15 of
+  its plane are one slope, fitted with a tilted face like any other, if they
+  fill 55% of the rectangle. Guardian: 8 groups, 12 u2.
+- `fit_slopes` reports why a slope got nothing (`report["left"]`).
+- `_onto_slope` also counts tucked blocks (within 0.06 of the floor).
+
+**A hard limit found: 255 pieces per palette row.** The quota table counts a
+row's pieces in 8 bits and on Forge World every flat block is in row 70. The
+fit now asks for 299 Building Blocks (254 floor, 24 tilted, 21 landings); the
+writer cannot hold that. `within_limits` takes the room left in each row,
+keeps real floor, ramps, landings and walls first and fill blocks last;
+`problems()` names a row over 255 instead of the writer failing.
+
+**Guardian now (fit):** 254 floor blocks covering 75% of the walked floor
+(68% before), 24 tilted blocks in 16 runs, 21 landings, 37 walls: 336
+pieces. Covered ground 448 of 693 u2. **Printed: 292**, with 44 fill blocks
+left out for the row limit (18 of 62 fit). Ramp check from `fit.json`: tops
+within 0.006, no floor block on a ramp face.
+
+**Not done, and why:**
+
+- The other 44 fill blocks, and any more floor: needs floor pieces from
+  another palette row (walls laid flat, bridges, platforms; their looks and
+  prices are not known yet), or fewer, larger blocks in the base fit.
+- About 36 u2 of gentle slope in facets too small or too twisted to join.
+- The thin strips and the steep rims are left bare on purpose.
+
+Tests: the fill pass on a strip under a block wide; two facets joined into
+one slope; the row limit in `within_limits` and in `problems()`. Full suite
+1206 OK.
+
+**The eighth print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_8.mvar`**
+(local only), title "FP Guardian 8", 311 objects. **Not loaded in the game
+yet.** Expected HUD: $26,950 (292 pieces at 10 on top of 130). It puts 255
+pieces in the Building Blocks row; the most the game has been seen to load
+there is 233.
