@@ -25,7 +25,7 @@ void pg_preview_odds(const hb_roster& r);
 void logf(const char* fmt, ...) {
     va_list a; va_start(a, fmt); vprintf(fmt, a); va_end(a); printf("\n");
 }
-const char* mcc_player_name() { return "TheNobleOreo"; }
+const char* mcc_player_name() { return "Player"; }
 // (Nov 17) a stand-in for the person's look as MCC's lookup gives it (report.cpp): an emblem's five and a nameplate
 bool mcc_player_look(int32_t emblem[5], int* nameplate) {
     const int32_t e[5] = { 149, 602, 17, 27, 29 };

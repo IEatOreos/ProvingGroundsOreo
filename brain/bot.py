@@ -331,7 +331,7 @@ DEMON_BREAK_SCORE = 3.55           # over recharge (3.5), hunts, a trade and pus
 # comes into view, man_appears' way), its aim held there; one behind walls with a long way round is left. In a fight a
 # dot with an open line counts as a second man for demon_break_second. The owner's Forge World 20261118-180057: in all
 # 8 of N1ghtR4ven's deaths shot first his radar had the killer within 0.5 u, and dot_glance's 2 s per man turned him at
-# 88.2 s from TheNobleOreo's dot to PacMan's 14 u off, Oreo's sniper 1 s later from 3.8 u
+# 88.2 s from the owner's dot to PacMan's 14 u off, Oreo's sniper 1 s later from 3.8 u
 DEMON_RADAR = True
 # (custom, Nov 18, owner: "commit to them unless an enemy is close") a run at a power weapon is finished (power_commit)
 POWER_COMMIT = True
