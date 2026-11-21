@@ -409,6 +409,21 @@ class SprintOffTests(unittest.TestCase):
         b.noble_sprint_off(10.0 + bot.NOBLE_SPRINT_RETAP + 0.01, me, act, "fight")
         self.assertTrue(act.equipment)
 
+    def test_button_still_held_lets_go_first(self):
+        # (the owner's 1v1: the run away's sprint still held, a tap on top of it was no new press) let go, then tap
+        b, me, Action = self.setup()
+        act = Action()
+        act.equipment = True                                      # (the kit's own hold, a tick before the fight)
+        b.noble_sprint_off(9.97, me, act, "retreat")
+        act = Action()
+        act.equipment = True                                      # (still held as the fight starts)
+        b.noble_sprint_off(10.0, me, act, "fight")
+        self.assertFalse(act.equipment)
+        act = Action()
+        b.noble_sprint_off(10.03, me, act, "fight")
+        self.assertTrue(act.equipment)
+        self.assertIn("sprint: tapped off, a man in view", b.notes)
+
     def test_left_alone_otherwise(self):
         for tier, on, seen, kind in (("demon", True, True, "fight"), ("noble", False, True, "fight"),
                                      ("noble", True, False, "fight"), ("noble", True, True, "retreat")):

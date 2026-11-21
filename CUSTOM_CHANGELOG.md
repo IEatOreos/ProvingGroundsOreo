@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Noble: the game-time speed checked in a 1v1; the sprint tap after its own held sprint, 2026-11-21
+- The owner's 1v1 against Cedercare (Noble) on Asylum, him using a jetpack too (logs/trace_reach_forge_halo_20261121-165238): Noble DMR rounds at him landed 33 of 38 within 15 u (87%); with him moving sideways over 1.5 u/s 11 of 14 (79%; the match before 7 of 21, 33%); rising or falling 5 of 6, 1 u or more over it 9 of 10; his reticle on it 16 of 19. One short match: a small sample.
+- The sprint tap (`Bot.noble_sprint_off`) fired 3 times; twice the run away's own sprint button was still down, so the tap was no new press and the sprint stayed on 0.4 s to the retap (a trigger press lost at 108.04 s). Now with the button down the tick before it lets go first and taps the next tick.
+- Validation: `SprintOffTests.test_button_still_held_lets_go_first` (new); full suite 1204 OK. **Untested in game.**
+
 ### Noble: a man's speed over the game's own time between reads, 2026-11-21
 - The read-age lead (above) in the owner's next Asylum match (logs/trace_reach_forge_halo_20261121-163837; won 50-45, "felt better"): Noble's `lead` ran 0.029 s median, 0.019 p10, 0.073 p90. Its rounds at him with him moving sideways over 1.5 u/s landed 7 of 21 (33%; before 3 of 19), slower 20 of 37 (54%). His reticle on the shooter no longer mattered (30 of 51 vs 36 of 64).
 - His report "Queen of darkness missed two while hard strafing left": at 146.7 and 147.1 s Queen of Dark's two head shots for the kill, 10 u off, his shield already down and him strafing left at 2.0 u/s, both missed (its body shots in that fight landed 4 of 5).

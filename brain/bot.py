@@ -2658,17 +2658,26 @@ class Bot:
         2.5 u, sprint on, the magazine full, and died (0 of 45 DMR presses with sprint on fired in that match, 40 of
         them Noble's). A second press ends it (77 of 79 live within 0.2 s). Noble in a fight with a man in view taps the
         button once, again only after NOBLE_SPRINT_RETAP while it still reads on. Not its own sprint held to close a gap."""
+        held, s.noble_eq_prev = getattr(s, "noble_eq_prev", False), act.equipment
         if not (profiles.fixed_noble(s.p) and getattr(s, "game", None) == "reach" and me.equipment == "sprint"
                 and me.ability_on and kind == "fight" and me.vehicle in (None, -1) and s.per.visible_enemies()):
             return
         press = getattr(s.kit, "press", None)
         if press is not None and press[0] == "sprint" and now < getattr(s.kit, "hold_until", 0.0):
             return
+        if held and now - getattr(s, "noble_sprint_tap", -9.0) >= NOBLE_SPRINT_RETAP:
+            # (Nov 21, the owner's 1v1: its own sprint's button still down from the run away, the tap on top of it was
+            # no new press: sprint on 0.4 s more, until the retap) let go this tick, tap the next
+            act.equipment = act.ability = False
+            s.noble_eq_prev = False
+            return
         if now - getattr(s, "noble_sprint_tap", -9.0) < NOBLE_SPRINT_RETAP:
             act.equipment = act.ability = False            # (let go between taps: each tap a new press)
+            s.noble_eq_prev = False
             return
         s.noble_sprint_tap = now
         act.equipment, act.ability = True, hold_bit(s.game, "sprint")
+        s.noble_eq_prev = True
         s.notes.append("sprint: tapped off, a man in view")
 
     def peek_timing(s, now, me, snap, scores, seen):
