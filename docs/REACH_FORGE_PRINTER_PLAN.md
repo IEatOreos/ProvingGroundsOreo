@@ -119,7 +119,11 @@ Do not start Phase 2 on Fable.
   - [x] piece fitting, floors, first version (`forge_printer fit`, `print`):
         Guardian 71% of walked floor with 185 flat blocks — printed, waiting
         for the owner to load it
-  - [ ] piece fitting: slopes, walls, pieces not square to the axes
+  - [x] piece fitting, ramps and walls, first version: Guardian 37 ramps on
+        27% of its walked slope, 37 wall pieces — printed (`FP_Guardian_2.mvar`),
+        waiting for the owner to load it
+  - [ ] piece fitting: curved and odd-angle slopes, floor pieces not square to
+        the axes, railings, ceilings
   - [ ] budget and limit solver (the first print already uses more Building
         Blocks than any variant on disk)
 - [ ] Phase 4 — Blender addon
@@ -636,3 +640,55 @@ The tilt test (`turntest --test tilt`), nearest the spawn first:
 | D3 ramp | up = face 1, turn 0 | the same reference for up = +Y |
 
 A level, side-on screenshot from the south and one from above read all seven.
+
+### Phase 3, part 6: ramps and walls (2026-11-21, written by Fable 5.2)
+
+The owner, 2026-11-21, asked whether to fit ramps and walls next: "Yes, ramps
+and walls".
+
+**Done**
+
+- `pieces.py` measures each incline's sloping face (`slope` in the table:
+  lean, the way it climbs in the piece's own axes, run, width, low and high,
+  middle). Ramp 1x2 and Ramp 2x2 climb at 26.6°, Ramp 1x2 Shallow at 13.9°,
+  Ramp 2x2 Steep at 45°, each towards its own +x. The Ramp Bridges, Ramp XL,
+  Ramp Stunt, the Banks and the Circular ramps are measured but not used: their
+  sloping face is not a plain rectangle from foot to top.
+- `fit.fit_slopes`: each walked sloping patch of 1.5 u² or more takes the ramp
+  whose lean is within 7° of its tilt (the nearer, then the larger), turned to
+  climb the same way and repeated along and across; each ramp's sloping face is
+  set in the patch's plane. Any turn is used, not only quarter turns.
+- `fit.fit_walls`: a wall patch that is upright within 2°, at least 1.5 long
+  and 1.5 high, roughly a filled rectangle, and has walked ground within a
+  unit of its foot, takes Wall Double (4 × 2) and Wall (2 × 2) pieces along
+  it, their face on its face, up to two rows (4 units) high. The two faces of
+  one thin wall make one wall.
+- `fit.json` placements now carry `part` (floor, slope, wall) and `origin`
+  (where Forge's placing point goes); the report is split the same way.
+- Tests: 9 more in `tools/test_forge_printer_fit.py` (26). Full suite 1162 OK.
+
+**Guardian**
+
+- Slopes: 224 u² walked, 60 u² fitted (27%) by 37 ramps (24 Ramp 1x2 Shallow,
+  5 Ramp 2x2, 8 Ramp 2x2 Steep). The straight walkway ramps are taken; what is
+  left is curved ramps (many small facets, each under 1.5 u²), slopes between
+  the ramps' leans (about 33° to 38°), and steep trim counted as walked.
+- Walls: 37 pieces (Wall and Wall Double) along 64 units of wall.
+- With the floors: 259 pieces.
+  Pictures: `guardian_fit_top.png`, `guardian_fit_angle.png` in the views folder.
+
+**Known limits**
+
+- A ramp piece is a solid wedge down to its foot; where Guardian's slope is a
+  thin bridge the wedge fills the space under it.
+- Some ramps land on tree roots and other natural slopes that count as walked.
+- Tree trunk facets that happen to be upright beside a floor become walls.
+- Railings and low kerbs (under 1.5 high) get nothing; ceilings get nothing.
+
+**The second print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_2.mvar`**
+(local only), title "FP Guardian 2", 288 objects: the owner's variant (19),
+259 fitted pieces moved by (-39, -135, +8), and the same tilt test as the
+first print. **Not loaded in the game yet.** Expected HUD budget if every
+piece is 10 and the small antenna 50: 130 + 2,590 + 260 = 2,980 spent,
+$27,020 left; a different figure gives the price of Wall, Wall Double or the
+ramps.

@@ -61,8 +61,8 @@ class Grid(unittest.TestCase):
 class Floors(unittest.TestCase):
     def test_a_floor_the_size_of_a_block_takes_that_block(self):
         placements, report = fitted(slab(0, 0, 5, 5))
-        self.assertEqual(placements, [{"piece": "Block 5x5 Flat", "centre": [2.5, 2.5], "top": 0.0, "turn": 0.0,
-                                       "size": [5.0, 5.0], "tucked": 0}])
+        self.assertEqual(placements, [{"part": "floor", "piece": "Block 5x5 Flat", "centre": [2.5, 2.5], "top": 0.0,
+                                       "turn": 0.0, "size": [5.0, 5.0], "tucked": 0, "origin": [2.5, 2.5, -0.1]}])
         self.assertEqual((report["coverage"], report["pieces"], report["overhang_area"]), (1.0, 1, 0.0))
 
     def test_a_long_block_turns_to_lie_along_the_floor(self):
@@ -125,6 +125,110 @@ class Floors(unittest.TestCase):
         self.assertEqual(report["floor_area"], 16.0)
 
 
+def analysed(mesh, spawns=((2.0, 2.0, 0.05),)):
+    """surfaces.analyse() run for real on a hand-built mesh."""
+    reference = {"source": {"game": "halo3", "map": "h3_yard", "scale_from_source": 1.0}, "mesh": "h3_yard.obj",
+                 "spawns": [{"pos": list(p), "facing": 0.0, "team": 0, "games": []} for p in spawns],
+                 "weapons": [], "objectives": [], "other": []}
+    with folder_with(mesh, reference) as folder:
+        return surfaces.analyse(folder)
+
+
+def court(ramp=(8, 3, 12, 5, 2.0)):
+    """An 8 x 8 floor, a ramp up from its +x edge (x0, y0, x1, y1, rise) and a floor at the top."""
+    m = Mesh()
+    m.quad(*slab(0, 0, 8, 8))
+    x0, y0, x1, y1, rise = ramp
+    m.quad((x0, y0, 0), (x1, y0, rise), (x1, y1, rise), (x0, y1, 0))
+    m.quad(*slab(x1, 0, x1 + 4, 8, z=rise))
+    return m
+
+
+class Slopes(unittest.TestCase):
+    def test_a_ramp_sized_slope_takes_ramps_that_climb_the_same_way(self):
+        placements, report = fit.fit_slopes(analysed(court()))
+        self.assertEqual([(p["part"], p["piece"], p["turn"]) for p in placements],
+                         [("slope", "Ramp 2x2", 0.0), ("slope", "Ramp 2x2", 0.0)])     # 4 long, 2 wide, 26.6 degrees
+        # each ramp's sloping face lies in the slope: middles at x 9 and 11, heights 0.5 and 1.5
+        face = pieces.by_name()["Ramp 2x2"]["slope"]
+        for p, (x, z) in zip(placements, ((9.0, 0.5), (11.0, 1.5))):
+            self.assertAlmostEqual(p["origin"][0], x, delta=0.01)
+            self.assertAlmostEqual(p["origin"][1], 4.0, delta=0.01)
+            self.assertAlmostEqual(p["origin"][2] + (face["low"] + face["high"]) / 2.0, z, delta=0.01)
+        self.assertEqual(report["pieces"], 2)
+        self.assertAlmostEqual(report["coverage"], 1.0, delta=0.01)
+
+    def test_a_narrow_slope_takes_the_narrow_ramp_and_a_gentle_one_the_shallow_ramp(self):
+        placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 4, 2.0))))
+        self.assertEqual([p["piece"] for p in placements], ["Ramp 1x2", "Ramp 1x2"])
+        placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 4, 1.0))))
+        self.assertEqual([p["piece"] for p in placements], ["Ramp 1x2 Shallow", "Ramp 1x2 Shallow"])
+
+    def test_a_slope_the_other_way_turns_the_ramp(self):
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad((3, 8, 0), (5, 8, 0), (5, 12, 2), (3, 12, 2))                          # climbs towards +y
+        m.quad(*slab(0, 12, 8, 16, z=2.0))
+        placements, _ = fit.fit_slopes(analysed(m))
+        self.assertEqual([(p["piece"], p["turn"]) for p in placements], [("Ramp 2x2", 90.0), ("Ramp 2x2", 90.0)])
+        self.assertAlmostEqual(placements[0]["origin"][1], 9.0, delta=0.01)
+
+    def test_slopes_no_ramp_matches_are_left(self):
+        steep = analysed(court(ramp=(8, 3, 9.2, 5, 2.0)))                             # 59 degrees: a wall to the fitter
+        self.assertEqual(fit.fit_slopes(steep)[0], [])
+        between = analysed(court(ramp=(8, 3, 12, 5, 2.9)))                            # 35.9 degrees: between ramps
+        placements, report = fit.fit_slopes(between)
+        self.assertEqual(placements, [])
+        self.assertGreater(report["slope_area"], 0.0)
+        self.assertEqual(report["coverage"], 0.0)
+
+
+class Walls(unittest.TestCase):
+    def mesh(self, length=8.0, height=3.0):
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad((0, 0, 0), (0, length, 0), (0, length, height), (0, 0, height))        # at x = 0, facing +x
+        return m
+
+    def test_a_wall_beside_the_floor_takes_wall_pieces_along_it(self):
+        placements, report = fit.fit_walls(analysed(self.mesh()))
+        self.assertEqual([(p["part"], p["piece"], p["turn"]) for p in placements],
+                         [("wall", "Wall Double", 90.0), ("wall", "Wall Double", 90.0)])
+        thick = pieces.by_name()["Wall Double"]["size"][1]
+        self.assertEqual([p["origin"][1] for p in placements], [2.0, 6.0])
+        for p in placements:
+            self.assertAlmostEqual(p["origin"][0], -thick / 2.0, delta=0.001)         # its face on the wall's face
+            self.assertAlmostEqual(p["origin"][2], 1.0, delta=0.01)                   # standing on the floor
+        self.assertEqual(report, {"pieces": 2, "length": 8.0})
+
+    def test_length_and_height_choose_the_pieces(self):
+        got = lambda length, height: [p["piece"] for p in fit.fit_walls(analysed(self.mesh(length, height)))[0]]
+        self.assertEqual(got(6.0, 2.0), ["Wall Double", "Wall"])
+        self.assertEqual(got(2.0, 2.0), ["Wall"])
+        self.assertEqual(got(8.0, 4.0), ["Wall Double"] * 4)                          # two rows
+        self.assertEqual(got(8.0, 12.0), ["Wall Double"] * 4)                         # no higher than two rows
+        self.assertEqual(got(8.0, 1.0), [])                                           # a kerb, not a wall
+        self.assertEqual(got(1.0, 3.0), [])
+
+    def test_both_faces_of_a_thin_wall_make_one_wall(self):
+        m = self.mesh()
+        m.quad((-0.2, 0, 0), (-0.2, 0, 3), (-0.2, 8, 3), (-0.2, 8, 0))                # its back, facing -x
+        placements, _ = fit.fit_walls(analysed(m))
+        self.assertEqual(len(placements), 2)
+
+    def test_a_wall_nobody_walks_beside_is_left(self):
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad((4, 0, 5), (4, 8, 5), (4, 8, 8), (4, 0, 8))                            # hanging 5 above the floor
+        self.assertEqual(fit.fit_walls(analysed(m))[0], [])
+
+    def test_a_leaning_wall_is_left(self):
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad((0, 0, 0), (0, 8, 0), (-0.5, 8, 3), (-0.5, 0, 3))                      # 9.5 degrees off upright
+        self.assertEqual(fit.fit_walls(analysed(m))[0], [])
+
+
 class Placing(unittest.TestCase):
     def test_the_placing_point_allows_for_a_piece_that_is_not_centred(self):
         table = pieces.load()
@@ -181,9 +285,16 @@ class Commands(unittest.TestCase):
             out = fit.build(folder)
             with open(os.path.join(folder, "fit.json")) as f:
                 self.assertEqual(json.load(f), out)
-            self.assertEqual(out["report"]["floor_area"], 96.0)          # the 8 x 8 floor and the 4 x 8 one
-            self.assertEqual(out["report"]["coverage"], 1.0)
-            self.assertEqual(sorted({p["top"] for p in out["placements"]}), [0.0, 2.0])
+            floors = out["report"]["floors"]
+            self.assertEqual(floors["floor_area"], 96.0)                 # the 8 x 8 floor and the 4 x 8 one
+            self.assertEqual(floors["coverage"], 1.0)
+            self.assertEqual(sorted({p["top"] for p in out["placements"] if p["part"] == "floor"}), [0.0, 2.0])
+            # the yard's ramp (4 long, 8 wide, 26.6 degrees) takes eight Ramp 2x2, its wall two Wall Double
+            self.assertEqual(out["report"]["slopes"]["pieces"], 8)
+            self.assertEqual(out["report"]["walls"]["pieces"], 2)
+            self.assertEqual(out["report"]["pieces"], floors["pieces"] + 10)
+            self.assertEqual({(p["part"], p["piece"]) for p in out["placements"] if p["part"] != "floor"},
+                             {("slope", "Ramp 2x2"), ("wall", "Wall Double")})
             v, t = surfaces.load_obj(os.path.join(folder, out["mesh"]))
             self.assertEqual(len(v), 8 * out["report"]["pieces"])
             self.assertEqual(len(t), 12 * out["report"]["pieces"])       # six faces a box, two triangles each
@@ -212,7 +323,9 @@ class Commands(unittest.TestCase):
         self.assertEqual(back.variant.header.title, "Yard print")
         self.assertEqual(len(back.variant.placed_objects()), 2 + out["report"]["pieces"])
         self.assertEqual(back.variant.problems(), [])
-        self.assertEqual(back.variant.quotas[70].placed, out["report"]["pieces"])
+        self.assertEqual(back.variant.quotas[70].placed, out["report"]["floors"]["pieces"])   # Building Blocks
+        self.assertEqual(back.variant.quotas[75].placed, 8)                                   # Inclines
+        self.assertEqual(back.variant.quotas[74].placed, 1 + 2)                               # the template's wall and two
 
     def test_missing_things_end_in_one_line(self):
         with tempfile.TemporaryDirectory() as empty:

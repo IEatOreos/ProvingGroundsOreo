@@ -45,6 +45,21 @@ PLACEMENT_FLAGS = 204
 FLOOR_PIECES = ["Block 5x5 Flat", "Block 4x4 Flat", "Block 3x3 Flat", "Block 5x1 Flat", "Block 2x2 Flat",
                 "Block 3x1 Flat", "Block 2x1 Flat", "Block 1x1 Flat"]
 
+# ramps: the ones whose sloping face is a plain rectangle from their foot to their top
+RAMP_PIECES = ["Ramp 2x2", "Ramp 1x2", "Ramp 1x2 Shallow", "Ramp 2x2 Steep"]
+SLOPE_MIN_AREA = 1.5   # a sloping patch smaller than this is left for hand work, u2
+LEAN_MATCH = 7.0       # a ramp may be this many degrees steeper or shallower than the slope it stands in for
+SLOPE_FILL = 0.6       # the slope must be at least this share of the ramp's run and of its width
+
+# walls: Wall (2 long, 2 tall) and Wall Double (4 long, 2 tall), stood along the wall
+WALL_UPRIGHT = 2.0     # a wall leans at most this many degrees
+WALL_MIN_AREA = 2.0
+WALL_MIN_LENGTH = 1.5
+WALL_MIN_HEIGHT = 1.5
+WALL_FILL = 0.5        # its triangles fill at least this share of its length x height (and at most 1 / this)
+WALL_FOOT = 1.0        # walked ground within this of its foot, up or down
+WALL_MAX_ROWS = 2      # a wall is built no higher than this many pieces (4 units): above that nobody touches it
+
 
 class FitError(Exception):
     """A clear one-line reason the fit could not be made."""
@@ -167,6 +182,7 @@ def fit_floors(analysis, table=None):
     x0, y0, layers = floor_layers(a["verts"], a["tris"], chosen)
     floor_cells = sum(int(np.isfinite(layer).sum()) for layer in layers.values())
     shapes = shapes_for(table)
+    known = pieces.by_name(table)
     left = {step: np.isfinite(layer) for step, layer in layers.items()}
     placements = []
     covered_cells = 0
@@ -187,12 +203,14 @@ def fit_floors(analysis, table=None):
             for s in near:
                 covered_cells += int(left[s][y:y + d, x:x + w].sum())
                 left[s][y:y + d, x:x + w] = False
-            placements.append({"piece": name,
-                               "centre": [round(x0 + (x + w / 2.0) * GRID, 3), round(y0 + (y + d / 2.0) * GRID, 3)],
-                               "top": round(top, 3),
-                               "turn": turn,
-                               "size": [round(w * GRID, 3), round(d * GRID, 3)],
-                               "tucked": sunk})
+            placement = {"part": "floor", "piece": name,
+                         "centre": [round(x0 + (x + w / 2.0) * GRID, 3), round(y0 + (y + d / 2.0) * GRID, 3)],
+                         "top": round(top, 3),
+                         "turn": turn,
+                         "size": [round(w * GRID, 3), round(d * GRID, 3)],
+                         "tucked": sunk}
+            placement["origin"] = [round(c, 3) for c in origin_of(placement, known[name])]
+            placements.append(placement)
     counts = {}
     for p in placements:
         counts[p["piece"]] = counts.get(p["piece"], 0) + 1
@@ -206,6 +224,125 @@ def fit_floors(analysis, table=None):
               "by_piece": {name: counts[name] for name in FLOOR_PIECES if name in counts},
               "levels": len(layers)}
     return placements, report
+
+
+def _turned(x, y, degrees):
+    r = math.radians(degrees)
+    return x * math.cos(r) - y * math.sin(r), x * math.sin(r) + y * math.cos(r)
+
+
+def fit_slopes(analysis, table=None):
+    """Ramps for the walked slopes of an analysed reference: each flat sloping patch that is big
+    enough takes the ramp whose own slope is nearest its tilt, turned to climb the same way and
+    repeated along and across it. Returns (placements, report)."""
+    table = table or pieces.load()
+    a = analysis
+    known = pieces.by_name(table)
+    ramps = [known[name] for name in RAMP_PIECES]
+    placements = []
+    total = fitted = 0.0
+    for number, patch in enumerate(a["patches"]):
+        if patch["kind"] != "slope" or not patch.get("walked"):
+            continue
+        total += patch["area"]
+        if patch["area"] < SLOPE_MIN_AREA:
+            continue
+        pts = a["verts"][a["tris"][a["owner"] == number]].reshape(-1, 3)
+        climb = math.radians(patch["uphill"])
+        along = np.array([math.cos(climb), math.sin(climb)])
+        across = np.array([-along[1], along[0]])
+        s, t = pts[:, :2] @ along, pts[:, :2] @ across
+        length, width = float(s.max() - s.min()), float(t.max() - t.min())
+        fits = [r for r in ramps if abs(r["slope"]["lean"] - patch["tilt"]) <= LEAN_MATCH
+                and r["slope"]["run"] * SLOPE_FILL <= length and r["slope"]["width"] * SLOPE_FILL <= width]
+        if not fits:
+            continue
+        ramp = min(fits, key=lambda r: (abs(r["slope"]["lean"] - patch["tilt"]) > 1.0,     # a near-exact slope first,
+                                        -r["slope"]["run"] * r["slope"]["width"]))          # then the largest
+        face = ramp["slope"]
+        n_along = max(1, int(round(length / face["run"])))
+        n_across = max(1, int(round(width / face["width"])))
+        s_start = float(s.min() + s.max()) / 2.0 - n_along * face["run"] / 2.0
+        t_start = float(t.min() + t.max()) / 2.0 - n_across * face["width"] / 2.0
+        nx, ny, nz = patch["normal"]
+        turn = (patch["uphill"] - face["uphill"]) % 360.0
+        off_x, off_y = _turned(face["centre"][0], face["centre"][1], turn)
+        for i in range(n_along):
+            for j in range(n_across):
+                mid = along * (s_start + (i + 0.5) * face["run"]) + across * (t_start + (j + 0.5) * face["width"])
+                z = (patch["offset"] - nx * mid[0] - ny * mid[1]) / nz
+                placements.append({"part": "slope", "piece": ramp["name"], "turn": round(turn, 2),
+                                   "origin": [round(float(mid[0]) - off_x, 3), round(float(mid[1]) - off_y, 3),
+                                              round(z - (face["low"] + face["high"]) / 2.0, 3)]})
+        laid = n_along * n_across * face["run"] * face["width"] / math.cos(math.radians(face["lean"]))
+        fitted += min(patch["area"], laid)
+    return placements, {"slope_area": round(total, 1), "fitted_area": round(fitted, 1),
+                        "coverage": round(fitted / total, 3) if total else 0.0, "pieces": len(placements)}
+
+
+def fit_walls(analysis, table=None):
+    """Wall pieces for the upright, roughly rectangular walls that stand beside walked ground.
+    Returns (placements, report)."""
+    table = table or pieces.load()
+    a = analysis
+    known = pieces.by_name(table)
+    double, single = known["Wall Double"], known["Wall"]
+    ground = {}
+    for cell, z in a["reached"]:
+        ground.setdefault(cell, []).append(z)
+    placements, seen = [], set()
+    length_fitted = 0.0
+    for number, patch in enumerate(a["patches"]):
+        if patch["kind"] != "wall" or abs(patch["tilt"] - 90.0) > WALL_UPRIGHT or patch["area"] < WALL_MIN_AREA:
+            continue
+        pts = a["verts"][a["tris"][a["owner"] == number]].reshape(-1, 3)
+        face = np.array(patch["normal"][:2], dtype=float)
+        face /= np.linalg.norm(face)                           # the way the wall faces, on the ground
+        run = np.array([-face[1], face[0]])                    # along the wall
+        s = pts[:, :2] @ run
+        length, low = float(s.max() - s.min()), float(pts[:, 2].min())
+        height = float(pts[:, 2].max()) - low
+        if length < WALL_MIN_LENGTH or height < WALL_MIN_HEIGHT:
+            continue
+        if not WALL_FILL <= patch["area"] / (length * height) <= 1.0 / WALL_FILL:
+            continue
+        front = float((pts[:, :2] @ face).mean())
+        # does anyone walk at its foot? look half a unit in front of it and behind it, along its length
+        foot = False
+        for k in range(int(length / surfaces.CELL) + 1):
+            along = float(s.min()) + min(length, (k + 0.5) * surfaces.CELL)
+            for side in (0.5, -0.5):
+                p = run * along + face * (front + side)
+                if surfaces._under(ground, (p[0], p[1], low + 0.3), above=WALL_FOOT, below=WALL_FOOT):
+                    foot = True
+        if not foot:
+            continue
+        rows = min(WALL_MAX_ROWS, int((height + 0.5) // single["size"][2]))
+        doubles = int(length // double["size"][0])
+        rest = length - doubles * double["size"][0]
+        if rest >= double["size"][0] - 0.5:
+            doubles, rest = doubles + 1, 0.0
+        singles = 1 if rest >= WALL_MIN_LENGTH else 0
+        if rows < 1 or doubles + singles == 0:
+            continue
+        laid = doubles * double["size"][0] + singles * single["size"][0]
+        turn = math.degrees(math.atan2(run[1], run[0])) % 360.0
+        at = float(s.min() + s.max()) / 2.0 - laid / 2.0
+        row_pieces = [double] * doubles + [single] * singles
+        for row in range(rows):
+            along = at
+            for piece in row_pieces:
+                mid = run * (along + piece["size"][0] / 2.0) + face * (front - piece["size"][1] / 2.0)
+                along += piece["size"][0]
+                z = low + row * piece["size"][2] - piece["min"][2]
+                key = (round(float(mid[0]) * 2), round(float(mid[1]) * 2), round(z * 2), int(round(turn % 180.0 / 5.0)) % 36)
+                if key in seen:                                # the other face of the same thin wall
+                    continue
+                seen.add(key)
+                placements.append({"part": "wall", "piece": piece["name"], "turn": round(turn, 2),
+                                   "origin": [round(float(mid[0]), 3), round(float(mid[1]), 3), round(z, 3)]})
+        length_fitted += laid
+    return placements, {"pieces": len(placements), "length": round(length_fitted, 1)}
 
 
 def origin_of(placement, piece):
@@ -225,7 +362,7 @@ def boxes_obj(path, placements, table):
     lines, faces, n = [], {}, 0
     for p in placements:
         piece = known[p["piece"]]
-        ox, oy, oz = origin_of(p, piece)
+        ox, oy, oz = p["origin"]
         turn = math.radians(p["turn"])
         c, s = math.cos(turn), math.sin(turn)
         for z in (piece["min"][2], piece["max"][2]):
@@ -239,10 +376,9 @@ def boxes_obj(path, placements, table):
         n += 8
     with open(path, "w", encoding="ascii", newline="\n") as f:
         f.writelines(lines)
-        for name in FLOOR_PIECES:
-            if name in faces:
-                f.write("g %s\n" % name.replace(" ", "_"))
-                f.writelines(faces[name])
+        for name in sorted(faces):
+            f.write("g %s\n" % name.replace(" ", "_"))
+            f.writelines(faces[name])
 
 
 def build(folder):
@@ -252,11 +388,20 @@ def build(folder):
         table = pieces.load()
     except (surfaces.SurfaceError, pieces.PieceError) as error:
         raise FitError(str(error))
-    placements, report = fit_floors(analysis, table)
+    floors, floor_report = fit_floors(analysis, table)
+    slopes, slope_report = fit_slopes(analysis, table)
+    walls, wall_report = fit_walls(analysis, table)
+    placements = floors + slopes + walls
+    counts = {}
+    for p in placements:
+        counts[p["piece"]] = counts.get(p["piece"], 0) + 1
+    report = {"floors": floor_report, "slopes": slope_report, "walls": wall_report,
+              "pieces": len(placements), "by_piece": {name: counts[name] for name in sorted(counts)}}
     ref = analysis["ref"]
     name = ref["source"]["map"]
     out = {"source": ref["source"], "mesh": name + "_fit.obj",
-           "rules": {"grid": GRID, "height_step": HEIGHT_STEP, "overhang": OVERHANG, "pieces": FLOOR_PIECES},
+           "rules": {"grid": GRID, "height_step": HEIGHT_STEP, "overhang": OVERHANG, "floor_pieces": FLOOR_PIECES,
+                     "ramp_pieces": RAMP_PIECES, "lean_match": LEAN_MATCH},
            "report": report, "placements": placements}
     boxes_obj(os.path.join(folder, out["mesh"]), placements, table)
     with open(os.path.join(folder, "fit.json"), "w", encoding="utf-8", newline="\n") as f:
@@ -278,7 +423,7 @@ def add_to(variant, placements, offset, table=None):
     for p in placements:
         piece = known[p["piece"]]
         obj = mvar.ForgeObject(type_index=piece["row"], variant_index=piece["item"], placement_flags=PLACEMENT_FLAGS)
-        x, y, z = origin_of(p, piece)
+        x, y, z = p["origin"]
         try:
             variant.set_world_position(obj, x + offset[0], y + offset[1], z + offset[2])
         except ValueError:
@@ -296,13 +441,19 @@ def main(folder):
     except FitError as error:
         print("fit: %s" % error)
         return 1
-    r = out["report"]
+    report = out["report"]
+    r = report["floors"]
     print("wrote fit.json and %s in %s" % (out["mesh"], folder))
-    print("walked floor   %.1f u2 on %d height steps" % (r["floor_area"], r["levels"]))
-    print("covered        %.1f u2 (%.0f%%), with %.1f u2 of block hanging past an edge" % (
-        r["covered_area"], 100 * r["coverage"], r["overhang_area"]))
-    print("pieces         %d (%d of them tucked under a neighbour)" % (r["pieces"], r["tucked"]))
-    for name, count in r["by_piece"].items():
+    print("floors   %.1f u2 walked on %d height steps; %.1f u2 covered (%.0f%%) by %d blocks, %d tucked, "
+          "%.1f u2 hanging past an edge" % (r["floor_area"], r["levels"], r["covered_area"], 100 * r["coverage"],
+                                           r["pieces"], r["tucked"], r["overhang_area"]))
+    r = report["slopes"]
+    print("slopes   %.1f u2 walked; %.1f u2 fitted (%.0f%%) by %d ramps" % (
+        r["slope_area"], r["fitted_area"], 100 * r["coverage"], r["pieces"]))
+    r = report["walls"]
+    print("walls    %d pieces along %.1f units of wall" % (r["pieces"], r["length"]))
+    print("pieces   %d" % report["pieces"])
+    for name, count in report["by_piece"].items():
         print("  %-18s %d" % (name, count))
     return 0
 

@@ -143,6 +143,46 @@ def obj_box(path):
     return lo, hi, count
 
 
+def obj_slope(path):
+    """The sloping face of a ramp model: the largest group of triangles that lean the same way.
+    A dict: lean (degrees from level), uphill (the compass direction it climbs in the model's own
+    axes, degrees counter-clockwise from +x), run and width (its size on the ground, along and
+    across the climb), low and high (its heights), centre (the middle of it on the ground, x y).
+    None for a model with no such face."""
+    import math
+
+    import numpy as np
+
+    from . import surfaces
+    verts, tris = surfaces.load_obj(path)
+    normals, areas, _ = surfaces.geometry(verts, tris)
+    lean = surfaces.lean(normals)
+    sloped = (lean > 8.0) & (lean < 60.0)
+    if not sloped.any():
+        return None
+    uphill = np.degrees(np.arctan2(-normals[:, 1], -normals[:, 0])) % 360.0
+    groups = {}
+    for t in np.nonzero(sloped)[0]:
+        key = (int(round(lean[t] / 3.0)), int(round(uphill[t] / 15.0)) % 24)
+        groups[key] = groups.get(key, 0.0) + float(areas[t])
+    best = max(sorted(groups), key=lambda k: groups[k])
+    chosen = np.array([t for t in np.nonzero(sloped)[0]
+                       if (int(round(lean[t] / 3.0)), int(round(uphill[t] / 15.0)) % 24) == best])
+    mean = (normals[chosen] * areas[chosen][:, None]).sum(axis=0)
+    mean /= np.linalg.norm(mean)
+    climb = math.atan2(-mean[1], -mean[0])
+    along = np.array([math.cos(climb), math.sin(climb)])
+    across = np.array([-along[1], along[0]])
+    pts = verts[tris[chosen]].reshape(-1, 3)
+    s, a = pts[:, :2] @ along, pts[:, :2] @ across
+    mid = along * (s.min() + s.max()) / 2.0 + across * (a.min() + a.max()) / 2.0
+    return {"lean": round(math.degrees(math.acos(float(mean[2]))), 1),
+            "uphill": round(math.degrees(climb) % 360.0, 1) % 360.0,
+            "run": tidy(float(s.max() - s.min())), "width": tidy(float(a.max() - a.min())),
+            "low": tidy(float(pts[:, 2].min())), "high": tidy(float(pts[:, 2].max())),
+            "centre": [tidy(float(mid[0])), tidy(float(mid[1]))]}
+
+
 def tidy(value):
     """A measured length to the millimetre-ish, with the exporter's 0.00005 slop taken off round sizes."""
     return round(value, 3) + 0.0
@@ -187,6 +227,10 @@ def measure(keep=DEFAULT_KEEP, mcc_dir=None, model2obj=None, models=None):
         piece["min"] = [tidy(c) for c in lo]
         piece["max"] = [tidy(c) for c in hi]
         piece["size"] = [tidy(hi[i] - lo[i]) for i in range(3)]
+        if piece["category"] == "Inclines":
+            slope = obj_slope(out)
+            if slope:
+                piece["slope"] = slope
         pieces.append(piece)
     return {"map": "forge_halo",
             "units": "Halo: Reach world units",

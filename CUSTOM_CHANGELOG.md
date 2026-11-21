@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 3 part 6: ramps and walls fitted, 2026-11-21
+
+The owner, asked whether to fit Guardian's ramps and walls next: "Yes, ramps and walls".
+
+- **`tools/forge_printer/pieces.py`:** `--measure` now also measures each incline's sloping face (its lean, the way it climbs, its run and width, its low and high edge) into the table as `slope`. Ramp 1x2 and Ramp 2x2 climb at 26.6°, Ramp 1x2 Shallow at 13.9°, Ramp 2x2 Steep at 45°.
+- **`tools/forge_printer/fit.py`:**
+  - `fit_slopes`: each walked sloping patch of 1.5 u² or more takes the ramp whose lean is within 7° of its tilt, turned to climb the same way (any turn, not only quarter turns) and repeated along and across it, the ramp's sloping face set in the patch's plane.
+  - `fit_walls`: an upright, roughly rectangular wall at least 1.5 long and high with walked ground at its foot takes Wall Double and Wall pieces along it, up to two rows high; the two faces of a thin wall make one wall.
+  - `fit.json` placements carry `part` and `origin`; the report is split into floors, slopes and walls.
+- **Guardian:** 37 ramps on 60 of its 224 u² of walked slope (27%: the straight walkway ramps; curved ramps and in-between leans are left) and 37 wall pieces along 64 units of wall, on top of the 185 floor blocks: 259 pieces.
+- **Made for the owner:** `FP_Guardian_2.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 288 objects; `check` reads it back with no problems.
+- **Validation:** 9 new tests in `tools/test_forge_printer_fit.py` (ramps chosen by lean and width and turned to the slope, walls by length and height, walls nobody walks beside left alone); full suite 1162 OK. `pieces --measure` re-ran: 109 of 109.
+- **Untested in game:** this print. **Known limits:** a ramp piece is a solid wedge, so it fills the space under a thin sloping bridge; some ramps land on tree roots; railings, kerbs and ceilings get nothing.
+
 ### Reach Forge Printer, phase 3 part 5: Guardian's floors fitted with Forge blocks and printed, 2026-11-21
 
 The owner, asked whether to start fitting pieces to Guardian's floors: "Yes, start fitting"; and of which test to run, "you pick".
