@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Noble: locks on up close, and joins a teammate's fight instead of waiting, 2026-11-21
+From the owner's bug reports on Asylum (logs/bug_reports/reach_forge_halo_20261121-135535, owner + 3 Demon vs 4 Noble, 50-25):
+- "Cedercare doesnt shoot while jetpacking": at 225.5-226.6 s Cedercare's view sat within a few degrees of the owner 2-3 u off for over a second and it never fired. Noble presses a precision gun only on its exact lock (Aim.noble_lock); up close the man's move each tick was bigger than NOBLE_LOCK_R (1.5 deg) and the view read back is a tick behind, so the swing never got inside it. Across the match, ticks of a DMR fight with a clear line where the trigger was free: Noble 30% under 3 u, 70% at 3-6 u, 86% at 6-12 u; Demon 100% at every range. Now the lock takes him once the gap left is no more than his own move over two ticks (NOBLE_LOCK_TICKS) plus his part's half-width at his range (NOBLE_PART_HALF 0.1 u). Noble only.
+- "Cedercare and Morshix didnt shoot at me": Morbix took a third party on the owner (fighting Cedercare 3 u off), and peek_timing cancelled it because his face was turned its way, so it waited out of sight. Noble now does not wait for a man a teammate fights right now (TEAM_TARGETS, TEAM_FRESH). Demon unchanged. Cedercare's own 1 s without a round there was the gun coming back up after its pre-nade, not a bug.
+- "Sword shoots the ground twice" (the owner's theater shots, 71.6 s and 72.1 s): the trace has Sword's view on the owner's head both times (within 1 deg, steady 0.5 s), matching its theater view; the owner's shield was untouched by those two, hit by the next two. Where the game sent those rounds is not in the trace: not fixed, open.
+- Validation: `test_noble_difficulty.py` `test_locks_on_a_man_circling_it_up_close` (failed before the change at 1/30 s and 0.1 s ticks), `test_reach_team_demon.py` `test_noble_does_not_wait_for_a_man_a_teammate_fights`; full suite 1169 OK. Not checked in a live match yet.
+
 ### Reach Forge Printer: ramps that join end to end, 2026-11-21
 
 The owner sent three screenshots of the second Guardian print's ramps. They climb the right way and reach the floors, but in one, two Ramp 2x2 on the same slope did not join: the second started about half a unit below where the first ended.

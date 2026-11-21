@@ -1120,6 +1120,8 @@ NOBLE_LEAD_ITERS = 3     # (custom, Nov 20) Noble's lead: the shot's flight to w
 NOBLE_EASE_S = 0.06      # s: Noble's swing onto a new man closes the gap with this time constant (eased in, no flick)
 NOBLE_LOCK_R = math.radians(1.5)    # rad: this near the point the swing ends and the view locks on him
 NOBLE_HOLD_R = math.radians(20.0)   # rad: locked, a tick's move of his this big is followed exactly (more: swing again)
+NOBLE_PART_HALF = 0.1    # u: (Nov 21) the aimed part's half-width; up close its angle widens the lock (Aim.noble_lock)
+NOBLE_LOCK_TICKS = 2     # (Nov 21) the man's own move over this many ticks also counts as on him (the read-back lag)
 NOBLE_PUSH = 0.25        # Noble's fight with a man in view over its best other choice (Bot.noble_push)
 NOBLE_LONG_PACE = 1.2    # Noble's precision cadence past 10 u: x the paced gap (FIRE_GAP), the bloom fully settled
 # Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
@@ -1709,7 +1711,16 @@ class Aim:
         dy, dp = wrap(s.goal[0] - me.yaw), s.goal[1] - me.pitch
         off = math.hypot(dy, dp)
         locked = getattr(s, "noble_on", None) == target_id
-        if off <= NOBLE_LOCK_R or (locked and off <= NOBLE_HOLD_R):
+        # (Nov 21, the owner's report "Cedercare doesnt shoot while jetpacking": up close a man crossing its view moves
+        # the point more each tick than NOBLE_LOCK_R, and the view read back is a tick behind, so the swing never got
+        # within it: on target 30% of DMR fight ticks under 3 u live, Demon 100%) the lock takes him once the gap left
+        # is no more than his own move over two ticks (NOBLE_LOCK_TICKS) plus his part's half-width at his range
+        prev = getattr(s, "noble_goal_prev", None)
+        moved = (min(math.hypot(wrap(s.goal[0] - prev[1][0]), s.goal[1] - prev[1][1]), NOBLE_HOLD_R)
+                 if prev is not None and prev[0] == target_id else 0.0)
+        s.noble_goal_prev = (target_id, s.goal)
+        lock_r = max(NOBLE_LOCK_R, math.atan2(NOBLE_PART_HALF, max(dist(o, point), 0.3))) + NOBLE_LOCK_TICKS * moved
+        if off <= lock_r or (locked and off <= NOBLE_HOLD_R):
             s.noble_on = target_id
             return s.goal
         s.noble_on = None                              # (a new man, or he got away from the lock: swing onto him)
@@ -2636,7 +2647,17 @@ class Bot:
             return
         k = min(near)[1]
         e = snap.player(k)
-        f = TEAM_FACING.get(((s.map or {}).get("name"), me.team), {}).get(k)
+        team = ((s.map or {}).get("name"), me.team)
+        if profiles.fixed_noble(s.p) and any(j != me.id and kk == k and 0.0 <= now - t <= TEAM_FRESH
+                                             for j, (t, kk) in TEAM_TARGETS.get(team, {}).items()):
+            # (Nov 21, the owner's report "Cedercare and Morshix didnt shoot at me": Morbix's third party on him was
+            # cancelled by this wait, his face turned its way while he fought Cedercare at 3 u) a man a teammate fights
+            # now is not waited for: he is busy, the angle is the point
+            if getattr(s, "peek_wait", None) is not None:
+                s.note(f"peek: #{k} is fighting a teammate, go")
+            s.peek_wait = None
+            return
+        f = TEAM_FACING.get(team, {}).get(k)
         if e is None or not e.alive or s.weak(e) or f is None or not 0.0 <= now - f[0] <= PEEK_FRESH \
                 or dist(me.pos, f[2]) > PEEK_R:
             s.peek_wait = None

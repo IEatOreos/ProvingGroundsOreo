@@ -172,6 +172,21 @@ class PeekTests(Clean):
         botmod.TEAM_FACING.clear()                             # (nobody on the team sees him: no wallhack)
         self.assertIn(("hunt", Vec(-10.0, 0.0, 0.0)), self.peek(b, me, snap))
 
+    def test_noble_does_not_wait_for_a_man_a_teammate_fights(self):
+        # (Nov 21, the owner's report "Cedercare and Morshix didnt shoot at me": the wait cancelled Morbix's third party)
+        try:
+            for tier, waits in (("noble", False), ("demon", True)):          # (Demon unchanged)
+                with self.subTest(tier=tier):
+                    b, me, snap = self.setup(tier=tier)
+                    botmod.TEAM_TARGETS[("reach_test", 0)] = {5: (49.9, 1)}  # (teammate #5 on him now)
+                    scores = self.peek(b, me, snap)
+                    self.assertEqual(("hunt", Vec(-10.0, 0.0, 0.0)) in scores, not waits)
+                    botmod.TEAM_TARGETS[("reach_test", 0)] = {5: (49.9 - botmod.TEAM_FRESH - 1.0, 1)}   # (stale)
+                    b.peek_wait = None
+                    self.assertIn(("retreat", me.pos), self.peek(b, me, snap))
+        finally:
+            botmod.TEAM_TARGETS.clear()
+
     def test_mythic_waits_legendary_and_halo_4_do_not(self):
         b, me, snap = self.setup(tier="mythic")
         self.assertIn(("retreat", me.pos), self.peek(b, me, snap))

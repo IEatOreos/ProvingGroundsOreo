@@ -184,6 +184,30 @@ class AimbotTests(unittest.TestCase):
         tail = steps[3:locked_at]
         self.assertTrue(all(b <= a2 + 1e-9 for a2, b in zip(tail, tail[1:])))   # eased in, slowing to the end
 
+    def test_locks_on_a_man_circling_it_up_close(self):
+        # (Nov 21, the owner's report "Cedercare doesnt shoot while jetpacking": a man 2.5 u off crossing its view at
+        # 4 u/s; the game's view read back a tick behind what was sent) the swing catches him and the lock holds:
+        # the trigger is free (noble_on) inside 0.3 s and stays free. Live before: on target 30% of DMR fight ticks
+        # under 3 u, Demon 100%
+        for dt in (1 / 30, 0.1):
+            with self.subTest(dt=dt):
+                a, me = self.aim(), shooter()
+                r, w = 2.5, 4.0 / 2.5
+                sent, first, held = (0.0, 0.0), None, 0
+                n = int(1.5 / dt)
+                for k in range(n):
+                    ang = math.radians(40) + w * k * dt
+                    pos = Vec(r * math.cos(ang), r * math.sin(ang), 0)
+                    vel = Vec(-r * w * math.sin(ang), r * w * math.cos(ang), 0)
+                    me.yaw, me.pitch = sent                       # (last tick's angles, as the game reads them back)
+                    sent = a.step(k * dt, dt, me, 1, pos, vel, True)
+                    if a.noble_on == 1:
+                        first = k if first is None else first
+                        held += 1
+                self.assertIsNotNone(first)
+                self.assertLess(first * dt, 0.3)
+                self.assertEqual(held, n - first)                 # (never lost once on)
+
     def test_holds_fire_until_on_him(self):
         a, me = self.aim(), shooter()
         foe = Vec(-10, 17.32, 0)
