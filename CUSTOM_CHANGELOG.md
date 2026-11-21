@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 1: read and write Reach map variants (.mvar), 2026-11-21
+
+The owner's plan (`docs/REACH_FORGE_PRINTER_PLAN.md`): build Halo: Reach Forge maps in Blender and write the map variant file MCC loads, with no keystroke bot. Phase 1 is the file itself. A separate tool: nothing in the bot imports it.
+
+- **New `tools/forge_printer/`:** `mvar.py` reads and writes a whole `.mvar` (the BLF chunks, plain or zlib-packed; the bit-packed content header, bounds, budget, Forge label table, all 651 object slots and the quota table), with every field kept as the file's raw number and helpers for world positions, turns and boundary sizes. `bitstream.py` is the bit reader/writer. `python\python.exe tools\forge_printer info|check|move` describes a variant, round-trips files and compares bytes, or writes a copy with one object moved (it never changes its input).
+- **New `docs/reach_mvar_format.md`:** the layout field by field, how each value turns into world units, and what is still unknown (what MCC puts in the hash field, a 128-bit block version 32 adds, the up-vector axes, which palette row is which Forge piece and its price).
+- **Validation:** `tools/test_forge_printer.py` (new, 28 tests, variants built by hand in the test); full suite 1071 OK. `check` on the 34 Reach map variants in this PC's MCC folder (Xbox 360 era and MCC-saved, seven maps): each parses to its last bit, its object counts match its own quota table, and each written back is byte for byte the same.
+- **Untested in game:** whether MCC loads a variant this tool changed. Two test copies of an MCC-saved Forge World variant with one wall lifted 6 units are in `E:\Proving Grounds\re_tools\forge_printer` (local only, not in the repository) for the owner to try; the plan's handoff note says how to read the result.
+
 ## 0.2.2-custom.12 — Project Reach: Reach's own menus, Noble, the Banshee pilot, bot simulation and Service Record, 2026-11-21
 
 ### Release build: map-pack tests skip without the map pack, 2026-11-21
