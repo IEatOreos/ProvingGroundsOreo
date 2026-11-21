@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Noble: a man's speed over the game's own time between reads, 2026-11-21
+- The read-age lead (above) in the owner's next Asylum match (logs/trace_reach_forge_halo_20261121-163837; won 50-45, "felt better"): Noble's `lead` ran 0.029 s median, 0.019 p10, 0.073 p90. Its rounds at him with him moving sideways over 1.5 u/s landed 7 of 21 (33%; before 3 of 19), slower 20 of 37 (54%). His reticle on the shooter no longer mattered (30 of 51 vs 36 of 64).
+- His report "Queen of darkness missed two while hard strafing left": at 146.7 and 147.1 s Queen of Dark's two head shots for the kill, 10 u off, his shield already down and him strafing left at 2.0 u/s, both missed (its body shots in that fight landed 4 of 5).
+- Cause found reading the lead's other half: `tools/live_bots.py` `snapshot` made every player's velocity his move since the last read x HZ (30), every read gap taken for 1/30 s; the loop runs 34 ms median, 77 ms p90 (2.3x his speed), and two reads of the same game tick gave 0. Now each read also gets `vel_t`, his move over the game time between the reads (botcore's tick count, GAME_HZ 60; a re-read of one tick keeps the last), and Noble's `lead_ray` leads with it. Demon and everything else keep `vel` as it was.
+- Validation: `test_noble_difficulty.py` `GameTimeVelocityTests` (2 new: a 5-tick gap read right where x HZ read 2.5x, a re-read kept; Noble led by it, Demon not); full suite 1202 OK; `live_bots` imports. **Untested in game.**
+
 ### Reach Forge Printer: the slope test passed in game; Guardian's ramps are tilted faces, 2026-11-21
 
 The owner, on the slope test: "It loaded and here is one side, and one from the top. Each was all flush so I dont think I needed to capture them all. What is our next step?" HUD $29,630 as predicted.

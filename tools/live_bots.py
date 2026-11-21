@@ -37,6 +37,7 @@ from brain.modes import Watch as ModeWatch, OBJECT_MODES, mode_of, stands_by_spa
 import botctl  # noqa: E402
 
 HZ = 30
+GAME_HZ = 60.0   # (custom, Nov 21) the game's ticks a second (botcore's tick count: 60.0 measured over a Reach match)
 MAX_DT = 4 / HZ      # the longest step the bots think with: a longer gap (a hitch) is not made up in one step
 PAUSE_TICKS = 9      # loop passes (0.3 s) with botcore's game tick standing still: the game is paused
 
@@ -131,7 +132,10 @@ def horn_call(now, players, vehicles, person, horn):
     return {c[0]: c[1]}
 
 
-def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_horn=None):
+VEL_T = {}     # (custom, Nov 21) each player's last game-time velocity (snapshot's vel_t), kept over a read of one tick
+
+
+def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_horn=None, read_dt=None):
     """crouch: the bots crouching (their last command); person_crouch: the person holds his crouch key (the games read
     no stance: crouched heads were shot over at standing height). ponytail: with more people on the machine's network
     the host's key is read for the first of them; their own stance needs the game's unit read."""
@@ -191,9 +195,23 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
             d["pos"] = (q.x, q.y, q.z) if alive else None
         pos = Vec(*d["pos"]) if alive else prev.get(d["index"], Vec())
         vel = Vec()
+        vel_t = None
         if alive and d["index"] in prev:
             q = prev[d["index"]]
             vel = Vec((pos.x - q.x) * HZ, (pos.y - q.y) * HZ, (pos.z - q.z) * HZ)
+            # (custom, Nov 21) the move over the game time between the reads (read_dt, from botcore's tick count): x HZ
+            # took every gap for 1/30 s, but the loop runs 34 ms median, 77 ms p90 (2.3x his speed), and two reads of
+            # one game tick gave 0. Noble's lead reads this one (brain/bot.py lead_ray); a read of the same tick keeps
+            # the last
+            if read_dt is not None and read_dt > 0:
+                vel_t = (pos - q) * (1.0 / read_dt)
+            elif read_dt == 0:
+                vel_t = VEL_T.get(d["index"])
+        if vel_t is not None and vel_t.length() <= 30.0:
+            VEL_T[d["index"]] = vel_t
+        else:
+            VEL_T.pop(d["index"], None)
+            vel_t = None
         fx, fy, fz = d["aim"] or (1.0, 0.0, 0.0)
         on = d.get("ability_on", False)
         players.append(PlayerState(d["index"], d["team"], d["name"], pos, vel,
@@ -211,6 +229,7 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
                                    head_pos=Vec(*d["head_pos"]) if d.get("head_pos") is not None else None,
                                    view_pos=Vec(*d["view_pos"]) if d.get("view_pos") is not None else None,
                                    camo_until=now + 0.3 if on and d.get("equipment") == "active_camo" else 0.0))
+        players[-1].vel_t = vel_t
     bad = ability_misread(players, now)
     for p in players:
         if p.equipment in bad:
@@ -1058,6 +1077,7 @@ def main():
     inv_spawns, spawn_state = honor_spawns(MAP.get("base") or MAP["name"]) if inv_layout else None, {}
     mode_watch, mode_check = [None], [-9.0]      # Territories, Assault, Stockpile, Headhunter, Infection (brain/modes.py)
     bug_check, grow_check = [-9.0, None], [-9.0]     # bug_check[1]: the last tick's mode once read (see below)
+    read_gt = [None]                                  # (custom, Nov 21) botcore's tick count at the last read
     import bug_reports
     startup_mark("first tick")
     _STARTUP[1] = False
@@ -1069,8 +1089,14 @@ def main():
                 st = botctl.status(m)
                 oc = botctl.owner_crouch(m)             # H2A / Halo 4: his own action's crouch bit; elsewhere his key
                 read_t0 = time.time()
+                # (custom, Nov 21) the game time since the last read, by botcore's tick count (60 a second): the
+                # snapshot's vel_t, Noble's lead
+                gt_now, gt_was = st["game_tick"], read_gt[0]
+                read_dt = (gt_now - gt_was) / GAME_HZ if gt_was is not None and 0 <= gt_now - gt_was <= 30 else None
+                read_gt[0] = gt_now
                 snap = snapshot(live, now, prev, set(st["bots"].values()), {i for i, c in crouch_cmd.items() if c},
-                                oc if oc is not None else crouch_now(), person_horn=botctl.owner_horn(m))
+                                oc if oc is not None else crouch_now(), person_horn=botctl.owner_horn(m),
+                                read_dt=read_dt)
                 # (custom, Nov 21) when the game was read (the read's middle): Noble leads a man by the snapshot's real
                 # age when its action goes out (Bot.noble_lead_s)
                 snap.read_wall = (read_t0 + time.time()) / 2

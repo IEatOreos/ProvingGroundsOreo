@@ -1144,12 +1144,18 @@ def lead_ray(me, target, ray, lead_s=None):
     """A (origin, point) shot ray with both ends moved on by DEMON_LEAD_S of our and his read velocity (lead_s: Noble's
     measured read-to-shot time instead, Bot.noble_lead_s)."""
     k = DEMON_LEAD_S if lead_s is None else lead_s
+    mv, tv = me.vel, target.vel
+    if lead_s is not None:
+        # (custom, Nov 21) Noble: the velocities over the game's own time between reads (tools/live_bots.py vel_t)
+        # where read; the plain one took every read gap for 1/30 s (2.3x his speed after a 77 ms gap, 0 on a re-read)
+        mv = mv if getattr(me, "vel_t", None) is None else me.vel_t
+        tv = tv if getattr(target, "vel_t", None) is None else target.vel_t
 
     def step(v, vmax):
         n = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
         return v * k if n <= vmax else Vec()
     riding = getattr(target, "vehicle", -1) not in (None, -1)
-    return ray[0] + step(me.vel, LEAD_VEL_MAX), ray[1] + step(target.vel, RIDER_VEL_MAX if riding else LEAD_VEL_MAX)
+    return ray[0] + step(mv, LEAD_VEL_MAX), ray[1] + step(tv, RIDER_VEL_MAX if riding else LEAD_VEL_MAX)
 
 
 def h4_rider(me, target):

@@ -339,6 +339,49 @@ class LeadTests(unittest.TestCase):
         self.assertEqual(bot.lead_ray(me, him, ray, None), bot.lead_ray(me, him, ray))   # (Demon: unchanged)
 
 
+class GameTimeVelocityTests(unittest.TestCase):
+    """(Nov 21) live_bots.snapshot's vel_t: a man's move over the game time between reads (botcore's tick count), not x
+    HZ (every read gap taken for 1/30 s); Noble's lead_ray reads it."""
+
+    class Live:
+        def __init__(self):
+            self.x = 0.0
+
+        def players(self):
+            return [dict(index=0, team=0, name="him", pos=(self.x, 0.0, 0.0), aim=(1.0, 0.0, 0.0), shield=1.0,
+                         health=1.0, weapon="dmr", unit=1)]
+
+        def flags(self, raw, stands=None):
+            return []
+
+        def objects(self, types):
+            return []
+
+    def test_speed_over_the_real_gap(self):
+        import live_bots
+        live_bots.VEL_T.clear()
+        live, prev = self.Live(), {}
+        snap = live_bots.snapshot(live, 0.0, prev, set(), read_dt=None)
+        prev = {p.id: p.pos for p in snap.players}
+        live.x = 2.5 * (5 / 60)                                   # 2.5 u/s over a 5-tick (83 ms) gap
+        snap = live_bots.snapshot(live, 0.08, prev, set(), read_dt=5 / 60)
+        him = snap.player(0)
+        self.assertAlmostEqual(him.vel_t.x, 2.5, places=6)
+        self.assertAlmostEqual(him.vel.x, 2.5 * (5 / 60) * live_bots.HZ, places=6)   # (the old one: 6.25, 2.5x)
+        prev = {p.id: p.pos for p in snap.players}
+        snap = live_bots.snapshot(live, 0.09, prev, set(), read_dt=0.0)   # (the same game tick read again)
+        self.assertAlmostEqual(snap.player(0).vel_t.x, 2.5, places=6)
+        self.assertEqual(snap.player(0).vel.x, 0.0)
+        live_bots.VEL_T.clear()
+
+    def test_noble_leads_by_it_demon_does_not(self):
+        me, him = shooter(), shooter(Vec(8, 0, 0), vel=Vec(0, 6.25, 0))
+        him.vel_t = Vec(0, 2.5, 0)
+        ray = (eye(me), him.pos + Vec(0, 0, 0.62))
+        self.assertLess((bot.lead_ray(me, him, ray, 0.05)[1] - (ray[1] + Vec(0, 2.5 * 0.05, 0))).length(), 1e-9)
+        self.assertLess((bot.lead_ray(me, him, ray)[1] - (ray[1] + Vec(0, 6.25 * bot.DEMON_LEAD_S, 0))).length(), 1e-9)
+
+
 class SprintOffTests(unittest.TestCase):
     """(Nov 21, the owner's report "queen just refuses to shoot me": Reach's sprint ran on after the press, no shot
     fires while it is on) Bot.noble_sprint_off."""
