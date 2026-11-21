@@ -17,6 +17,8 @@ from brain.profiles import make_profile
 GUN = Vec(-27.3, 14.6, 7.6)
 
 
+@unittest.skipUnless((Path(__file__).resolve().parents[1] / "maps" / "reach_cex_headlong" / "heightmap.npz").exists(),
+                     "SKIP: no Headlong heightmap (map pack not installed)")
 class ShootBackTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

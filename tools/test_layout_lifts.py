@@ -130,7 +130,8 @@ class LiftChanceTests(unittest.TestCase):
 class MapRideTests(unittest.TestCase):
     """maps.map_lift_rides: a lift nobody rode gets its solved ride in matches (Launch Station had none)."""
 
-    @unittest.skipUnless(os.path.exists(ROOT / "maps" / "reach_45_launch_station" / "phantoms.json"), "no data")
+    @unittest.skipUnless(os.path.exists(ROOT / "maps" / "reach_45_launch_station" / "phantoms.json")
+                         and os.path.exists(ROOT / "maps" / "reach_45_launch_station" / "heightmap.npz"), "no data")
     def test_launch_stations_lift_is_in_the_nav(self):
         T = maps.terrain(maps.get_map("reach_45_launch_station"))
         self.assertTrue([k for _, _, k, _ in T.hjumps if k.get("found_by") == "map" and k.get("ride")])

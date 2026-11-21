@@ -180,6 +180,8 @@ class UnreachableGunTests(unittest.TestCase):
         self.assertTrue(director.fetch_reachable(Vec(20, 0, 0), Vec()))
 
 
+@unittest.skipUnless((Path(__file__).resolve().parents[1] / "maps" / "reach_cex_headlong" / "heightmap.npz").exists(),
+                     "SKIP: no Headlong heightmap (map pack not installed)")
 class DemonFetchCommitTests(unittest.TestCase):
     """(Custom) a Demon a few steps from the gun it was sent for takes it before a new fight (Bot.decide, a real map)."""
 

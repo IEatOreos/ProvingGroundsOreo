@@ -4,6 +4,11 @@
 
 ## 0.2.2-custom.12 — Project Reach: Reach's own menus, Noble, the Banshee pilot, bot simulation and Service Record, 2026-11-21
 
+### Release build: map-pack tests skip without the map pack, 2026-11-21
+
+- `tools/build_installer.py`'s test gate runs on a clean `git archive` copy, which has no git-ignored heightmaps. Eleven tests that load Blood Gulch, Launch Station, Boneyard or Headlong's heightmap errored there (`test_tank_drive`, `test_owner_routes`, `test_shoot_back`, `test_legendary_power_fetch`, `test_map_memory`, `test_layout_lifts`); they now skip without it, as the other map-pack tests do. Test files only.
+- Validation: full suite 1043 OK in the working tree; 1043 OK, 45 skipped on a clean HEAD copy.
+
 ### Reach bots' reload press reaches the game, 2026-11-20
 
 - Found: `maps/_inputs/reach.json` had no `reload` entry and `native/reach.cpp` writes none, so a bot's reload press never reached the game (of ~190 "reload between fights" presses a match, 8-26 were followed by a fuller magazine: the game's own reload of an empty one; Asylum 20261120-232338).

@@ -13,6 +13,8 @@ from brain import maps  # noqa: E402
 from brain.core import Vec  # noqa: E402
 
 _T = {}
+HAS_GULCH = (Path(__file__).resolve().parents[1] / "maps" / "bloodgulch" / "heightmap.npz").exists()
+NEEDS_GULCH = unittest.skipUnless(HAS_GULCH, "SKIP: no Blood Gulch heightmap (map pack not installed)")
 
 
 def fresh():
@@ -36,6 +38,7 @@ def open_spot(T, far=8.0):
     raise AssertionError("no open spot")
 
 
+@NEEDS_GULCH
 class GroundTests(unittest.TestCase):
     def test_tank_ground_is_smaller_and_inside_the_cars(self):
         T = fresh()
@@ -50,6 +53,7 @@ class GroundTests(unittest.TestCase):
         self.assertTrue((T.vroomy == car).all())
 
 
+@NEEDS_GULCH
 class WedgeTests(unittest.TestCase):
     def test_a_wedge_is_a_wall_ahead_for_every_size_and_survives_a_rebuild(self):
         T = fresh()
@@ -71,6 +75,7 @@ class WedgeTests(unittest.TestCase):
         self.assertIsNone(T.vwedge(p, 0.0))                  # (marked once)
 
 
+@NEEDS_GULCH
 class BlockerTests(unittest.TestCase):
     """The owner's vehicle blockers (Edit spots, maps/<map>/vehicle_blocks.json): no ground vehicle of any size in."""
 

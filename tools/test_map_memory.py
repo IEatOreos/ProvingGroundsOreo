@@ -277,6 +277,8 @@ class JumpTests(unittest.TestCase):
         self.assertEqual(b0.jumps, {"3.0,4.0": [1, 1]})
 
 
+@unittest.skipUnless((Path(__file__).resolve().parents[1] / "maps" / "reach_70_boneyard" / "heightmap.npz").exists(),
+                     "SKIP: no Boneyard heightmap (map pack not installed)")
 class AvoidNavTests(unittest.TestCase):
     """Terrain.nav avoid on a real layout: round a disk when about as short, the plain way when not."""
     @classmethod

@@ -116,6 +116,8 @@ class LayerTests(unittest.TestCase):
         self.assertEqual(sorted(drive), [(1.0, 0.0, 0.0), (5.0, 0.0, 0.0)])     # both still drivable ground
 
 
+@unittest.skipUnless((ROOT / "maps" / "bloodgulch" / "heightmap.npz").exists(),
+                     "SKIP: no Blood Gulch heightmap (map pack not installed)")
 class StickTests(unittest.TestCase):
     """Blood Gulch: a route bent well off the straight line between two open spots is driven, not cut."""
 
