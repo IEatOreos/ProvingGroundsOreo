@@ -178,11 +178,21 @@ class ShotWatch:
         s.game = game
         s.pending = []        # dicts: t, tid, vit, weapon, band, pace, part, mates {id: rounds}
         s.last_press = {}     # weapon: when it last pressed it
-        s.hits = s.misses = s.skipped = 0
+        s.hits = s.misses = s.skipped = s.dry_presses = 0
 
     @staticmethod
     def rounds(p):
         return sum(m for m in (p.mag or []) if m is not None and m >= 0)
+
+    @staticmethod
+    def mag_of(p, weapon):
+        """Rounds in weapon's magazine (-1: not known, or not carried)."""
+        w = list(p.weapons or [])
+        if weapon not in w:
+            return -1
+        i = w.index(weapon)
+        m = (p.mag or [])[i] if i < len(p.mag or []) else -1
+        return m if m is not None else -1
 
     def pressed(s, now, snap, me, tid, d, weapon, head, base_gap):
         """A press of a precision gun at tid d u off, aiming at the head (or the chest), its base gap base_gap s."""
@@ -195,7 +205,7 @@ class ShotWatch:
         ratio = (now - last) / max(base_gap, 1e-3) if last is not None else REST
         mates = {p.id: s.rounds(p) for p in snap.players if p.team == me.team and p.id != me.id and p.alive}
         s.pending.append(dict(t=now, tid=tid, vit=vit(target), weapon=weapon, band=band(d), pace=pace_bin(ratio),
-                              part="head" if head else "chest", mates=mates))
+                              part="head" if head else "chest", mates=mates, mag=s.mag_of(me, weapon)))
 
     def mate_fired(s, snap, shot):
         """A teammate fired at him since the press (his rounds went down and he faces him): not ours to count."""
@@ -223,6 +233,12 @@ class ShotWatch:
                 continue
             if target is None or s.mate_fired(snap, shot):
                 s.skipped += 1
+                continue
+            m0, m1 = shot.get("mag", -1), s.mag_of(me, shot["weapon"])
+            if m0 >= 0 and m1 >= 0 and m1 >= m0:
+                # (Nov 20, live: presses while a grenade left the hand, or on an empty magazine, fired no round: 10-12
+                # in a row, all counted as misses) his magazine never went down: no round, not a shot
+                s.dry_presses += 1
                 continue
             if dropped:
                 s.hits += 1

@@ -68,17 +68,19 @@ class ShotTests(Folder):
     def setUp(self):
         super().setUp()
         self.me, self.foe = man(1, 0, Vec()), man(2, 1, Vec(10, 0, 0))
+        self.shot = man(1, 0, Vec(), mag=(9,))                              # (the round left: one fewer)
 
     def test_hit_and_miss(self):
         w = noble.ShotWatch("reach")
         w.pressed(0.0, snap(0.0, self.me, self.foe), self.me, 2, 10.0, "dmr", True, 0.4)
         hurt = man(2, 1, Vec(10, 0, 0), shield=0.75)
-        w.resolve(0.1, snap(0.1, self.me, hurt), self.me)
+        w.resolve(0.1, snap(0.1, self.shot, hurt), self.shot)
         self.assertEqual((w.hits, w.misses), (1, 0))
-        w.pressed(0.5, snap(0.5, self.me, hurt), self.me, 2, 10.0, "dmr", True, 0.4)
-        w.resolve(0.7, snap(0.7, self.me, hurt), self.me)
+        two = man(1, 0, Vec(), mag=(8,))
+        w.pressed(0.5, snap(0.5, self.shot, hurt), self.shot, 2, 10.0, "dmr", True, 0.4)
+        w.resolve(0.7, snap(0.7, two, hurt), two)
         self.assertEqual((w.hits, w.misses), (1, 0))                        # (still in its window)
-        w.resolve(0.9, snap(0.9, self.me, hurt), self.me)
+        w.resolve(0.9, snap(0.9, two, hurt), two)
         self.assertEqual((w.hits, w.misses), (1, 1))
         cells = noble.book().counts("reach", "dmr")
         self.assertEqual(cells["2|rest|head"], [1, 1])                      # (the first shot: "rest")
@@ -89,21 +91,33 @@ class ShotTests(Folder):
         w.pressed(0.0, snap(0.0, self.me, self.foe), self.me, 2, 5.0, "dmr", False, 0.4)
         dead = man(2, 1, Vec(10, 0, 0))
         dead.alive = False
-        w.resolve(0.05, snap(0.05, self.me, dead), self.me)
+        w.resolve(0.05, snap(0.05, self.shot, dead), self.shot)
         self.assertEqual(w.hits, 1)
         self.assertEqual(noble.book().counts("reach", "dmr")["1|rest|chest"], [1, 1])
+
+    def test_a_press_that_fired_nothing_is_not_a_shot(self):
+        # (live Nov 20: presses as a grenade left the hand, and on an empty magazine: the magazine never went down)
+        w = noble.ShotWatch("reach")
+        w.pressed(0.0, snap(0.0, self.me, self.foe), self.me, 2, 10.0, "dmr", True, 0.4)
+        w.resolve(0.5, snap(0.5, self.me, self.foe), self.me)
+        self.assertEqual((w.hits, w.misses, w.dry_presses), (0, 0, 1))
+        self.assertEqual(noble.book().counts("reach", "dmr"), {})
+        blind = man(1, 0, Vec(), mag=(-1,))                                 # (a magazine not read: counted)
+        w.pressed(1.0, snap(1.0, blind, self.foe), blind, 2, 10.0, "dmr", True, 0.4)
+        w.resolve(1.5, snap(1.5, blind, self.foe), blind)
+        self.assertEqual(w.misses, 1)
 
     def test_a_mates_round_not_counted(self):
         mate = man(3, 0, Vec(0, 2, 0), yaw=-0.2, mag=(8,))                  # (facing him)
         w = noble.ShotWatch("reach")
         w.pressed(0.0, snap(0.0, self.me, self.foe, mate), self.me, 2, 10.0, "dmr", True, 0.4)
         fired = man(3, 0, Vec(0, 2, 0), yaw=-0.2, mag=(7,))
-        w.resolve(0.1, snap(0.1, self.me, man(2, 1, Vec(10, 0, 0), shield=0.75), fired), self.me)
+        w.resolve(0.1, snap(0.1, self.shot, man(2, 1, Vec(10, 0, 0), shield=0.75), fired), self.shot)
         self.assertEqual((w.hits, w.misses, w.skipped), (0, 0, 1))
         away = man(3, 0, Vec(0, 2, 0), yaw=3.0, mag=(8,))                   # (firing the other way: ours)
         w.pressed(1.0, snap(1.0, self.me, self.foe, away), self.me, 2, 10.0, "dmr", True, 0.4)
-        w.resolve(1.1, snap(1.1, self.me, man(2, 1, Vec(10, 0, 0), shield=0.75), man(3, 0, Vec(0, 2, 0), yaw=3.0, mag=(7,))),
-                  self.me)
+        w.resolve(1.1, snap(1.1, self.shot, man(2, 1, Vec(10, 0, 0), shield=0.75),
+                            man(3, 0, Vec(0, 2, 0), yaw=3.0, mag=(7,))), self.shot)
         self.assertEqual(w.hits, 1)
 
     def test_written_and_read_back(self):
@@ -243,8 +257,19 @@ class BotHookTests(Folder):
         self.assertEqual(len(b.noble_watch.pending), 1)
         b.noble_fired(0.03, sn, types.SimpleNamespace(fire=True), True)     # (a held press: once)
         self.assertEqual(len(b.noble_watch.pending), 1)
-        b.noble_learn(0.1, snap(0.1, me, man(2, 1, Vec(10, 0, 0), shield=0.75)))
+        b.noble_learn(0.1, snap(0.1, man(1, 0, Vec(), mag=(9,)), man(2, 1, Vec(10, 0, 0), shield=0.75)))
         self.assertEqual(b.noble_watch.hits, 1)
+
+    def test_eyes_at_head_height(self):
+        # (live Nov 20: "Staticwolf shot the ground": its look points chest high or on a corner's floor, 7-12 deg down)
+        b = bot.Bot.__new__(bot.Bot)
+        b.T = lambda: types.SimpleNamespace(nav_z=lambda x, y, z: 2.0)
+        self.assertAlmostEqual(b.noble_head_height(Vec(5, 0, 2.0)).z, 2.0 + bot.EYE)       # a corner's floor
+        self.assertAlmostEqual(b.noble_head_height(Vec(5, 0, 2.35)).z, 2.0 + bot.EYE)      # chest high
+        self.assertAlmostEqual(b.noble_head_height(Vec(5, 0, 3.5)).z, 3.5)                 # higher already: kept
+        self.assertAlmostEqual(b.noble_head_height(Vec(5, 0, 9.0)).z, 9.0)                 # no floor near: as it is
+        src = (ROOT / "brain" / "bot.py").read_text(encoding="utf-8")
+        self.assertIn("if dl > 1.0 and not noble_eyes:", src)                              # (no eye wander for Noble)
 
     def test_part_hook_in_fight(self):
         src = (ROOT / "brain" / "bot.py").read_text(encoding="utf-8")

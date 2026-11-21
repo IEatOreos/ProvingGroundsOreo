@@ -2523,6 +2523,20 @@ class Bot:
         scores[("retreat", h["spot"])] = scores[top] + 0.05
         s.note(f"spot: {h['rate']:.0%} won here, held for the man ahead")
 
+    def noble_head_height(s, look):
+        """(custom, Nov 20, the owner's live report: "Staticwolf shot the ground then stared at me") Noble's eyes off a
+        fight: where it looks, at the height of a standing man's eyes over the floor there (EYE), never lower. Its look
+        points were chest high over a man's feet or a corner's floor (looked at from 5 u: 7 deg down) and a person's
+        up and down wander came on top (-7.5 to +9 deg): live it met men 11 deg under them and swung up 0.17 s before
+        the first shot. A look point with no floor found (in the air, off the nav): as it is."""
+        try:
+            floor = s.T().nav_z(look.x, look.y, look.z)
+        except Exception:
+            return look
+        if floor is None or abs(floor - look.z) > 2.0:
+            return look
+        return Vec(look.x, look.y, max(look.z, floor + EYE))
+
     def noble_learn(s, now, snap):
         """(custom, Nov 20) Noble's shot learning (brain/noble.py ShotWatch): its presses resolved, hit or miss."""
         me = snap.player(s.id)
@@ -3264,13 +3278,16 @@ class Bot:
             glance = s.dot_glance(now, me)          # (custom: Demon, a radar dot close behind it: a look its way)
             if glance is not None:
                 look = glance
+            noble_eyes = profiles.fixed_noble(s.p)
+            if noble_eyes:
+                look = s.noble_head_height(look)   # (custom, Nov 20: Noble pre-aims a standing man's head, not the floor)
             # a person's eyes go up and down as he moves: a ledge, the floor above, a doorway, the ground ahead. Bots
             # held one height (look pitch spread 4.7 degrees to the player's 9.5, live Spire): a new height every
-            # 1.2-3.5 s, -9 to +11 degrees, carried by the aim's own smoothing
+            # 1.2-3.5 s, -9 to +11 degrees, carried by the aim's own smoothing (not Noble's: noble_head_height)
             if now >= getattr(s, "pitch_next", 0.0):
                 s.pitch_next, s.pitch_off = now + s.rng.uniform(1.2, 3.5), math.radians(s.rng.uniform(-7.5, 9.0))
             dl = (look - me.pos).flat()
-            if dl > 1.0:
+            if dl > 1.0 and not noble_eyes:
                 look = Vec(look.x, look.y, look.z + dl * math.tan(getattr(s, "pitch_off", 0.0)))
             # (the quick turn only on the move with no man half-noticed: standing at spawn it swung away from the
             # enemy in front before it could see him, tools/test_focus.py)
