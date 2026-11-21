@@ -13,6 +13,7 @@ from . import vehicles
 from . import anticipate
 from . import odds as odds_model
 from . import nade
+from . import noble          # (custom, Nov 20) Noble, the testing bot: its tune, shot learning, winning spots
 
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
@@ -2288,7 +2289,7 @@ class Bot:
         the last DEMON_RECHARGE_HIT s leaves it to the usual rules. Not in a vehicle, carrying, standing on a loose
         objective (stay_on), in Race or Infection, or without shields."""
         hurt = getattr(s.per, "hurt_at", -99.0)
-        if (not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p)   # (Nov 20: Noble pushes, NOBLE_PUSH)
+        if (not profiles.demon_rules(s.p) or noble.skips(s.p, "recharge", getattr(s, "game", None))   # (Nov 20: Noble's tune, noble.py)
                 or me.vehicle not in (None, -1) or me.has_flag or snap.shieldless
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK):
@@ -2343,7 +2344,8 @@ class Bot:
         shot in the back). Not in a vehicle, carrying, standing on a loose objective, in Race or Infection, without
         shields, or while demon_recharge's hold already runs."""
         hurt = getattr(s.per, "hurt_at", -99.0)
-        if (not seen or not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p) or me.vehicle not in (None, -1)
+        if (not seen or not profiles.demon_rules(s.p) or noble.skips(s.p, "no_new_fight", getattr(s, "game", None))
+                or me.vehicle not in (None, -1)
                 or me.has_flag
                 or snap.shieldless or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or me.shield >= DEMON_FULL or now - hurt > SHIELD_BACK or now - hurt < DEMON_RECHARGE_HIT
@@ -2425,7 +2427,7 @@ class Bot:
         reach, the recharge hold, a vehicle, carrying, a loose objective under it, Race and Infection: the usual
         rules."""
         dots = s.open_dots(now, me, snap, seen) if seen else {}   # (Nov 18: a radar dot with a line on it counts too)
-        if (not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p)   # (Nov 20: Noble takes the 2-on-1)
+        if (not profiles.demon_rules(s.p) or noble.skips(s.p, "break_second", getattr(s, "game", None))   # (Nov 20: Noble's tune)
                 or len(seen) + len(dots) < 2 or me.vehicle not in (None, -1) or me.has_flag
                 or snap.mode in ("race", "infection") or getattr(s, "stay_at", None) is not None
                 or getattr(s, "recharge_hold", None) is not None):
@@ -2468,19 +2470,80 @@ class Bot:
     def noble_push(s, me, snap, scores, seen):
         """(custom, Nov 20, the owner's Forge World report: four Nobles in a fight goal 1-12% of the time, "they should be
         killing me quicker") Noble on foot, not carrying, not in Race: a man in its view is fought ahead of every other
-        choice (a retreat, a gun, the objective, a hunt), NOBLE_PUSH over the best of them. Demon's back-off rules are
-        off for it (demon_odds_rules, demon_recharge, demon_no_new_fight, demon_break_second, peek_timing,
-        demon_objective, chase_ok)."""
-        if (not profiles.fixed_noble(s.p) or not seen or me.vehicle not in (None, -1) or me.has_flag
-                or snap.mode == "race"):
+        choice (a retreat, a gun, the objective, a hunt), its tune's push over the best of them. (Nov 20, the 4v4 Asylum
+        sims and the owner's three live games: pushing with Demon's back-off rules off lost to Demon 4-0 and 3-0; its
+        tune, brain/noble.py, now says how hard it pushes, 0 by default, and only at push_shield or more.)"""
+        st = noble.tune(getattr(s, "game", None)) if profiles.fixed_noble(s.p) else None
+        if (st is None or st["push"] <= 0.0 or not seen or me.vehicle not in (None, -1) or me.has_flag
+                or snap.mode == "race" or me.shield < st["push_shield"]):
             return
         fights = [k for k in scores if k[0] == "fight" and k[1] in seen]
         rest = [v for k, v in scores.items() if k[0] != "fight"]
         if not fights or not rest:
             return
-        top = max(rest) + NOBLE_PUSH
+        top = max(rest) + st["push"]
         for k in fights:
             scores[k] = max(scores[k], top)
+
+    NOBLE_SPOT_WALK_S = 6.0      # s: the walk to a winning spot it gives up after (it could not get there)
+    NOBLE_SPOT_BAN_S = 8.0       # s: a spot held or given up is not taken again for this long
+
+    def noble_spot(s, now, me, snap, scores, seen):
+        """(custom, Nov 20, owner: "DO ... 4", where it wins fights) Noble with nobody in view about to walk at a man it
+        knows of (its top choice a hunt at a place): the best winning cell of the layout's map memory within reach
+        (brain/noble.py spot_for: its kills and deaths there, a line onto where he is) is taken and held instead, its
+        tune's spot_hold_s once there, then the hunt goes on. Live Nov 20 (game 2, C2IR at 61 s): it walked at a radar
+        dot 7.5 u off and was shot first from where the Demon held. Not in a vehicle, carrying, Race or Infection."""
+        st = noble.tune(getattr(s, "game", None)) if profiles.fixed_noble(s.p) else None
+        if (st is None or not st["spots"] or seen or not scores or me.vehicle not in (None, -1) or me.has_flag
+                or snap.mode in ("race", "infection")):
+            s.noble_hold = None
+            return
+        top = max(scores, key=scores.get)
+        lb = s.lore()
+        if top[0] != "hunt" or not isinstance(top[1], Vec) or lb is None or not lb.trusted():
+            s.noble_hold = None
+            return
+        bans = s.__dict__.setdefault("noble_spot_bans", {})
+        h = getattr(s, "noble_hold", None)
+        if h is not None and (dist(h["threat"], top[1]) > 6.0 or now > h["give_up"]
+                              or (h["at"] is not None and now - h["at"] > st["spot_hold_s"])):
+            bans[h["key"]] = now + s.NOBLE_SPOT_BAN_S
+            h = s.noble_hold = None
+        if h is None:
+            T = s.T()
+            got = noble.spot_for(lb, me.pos, top[1] + Vec(0.0, 0.0, 0.35), T.los,
+                                 banned={k for k, t in bans.items() if t > now})
+            if got is None:
+                return
+            h = s.noble_hold = dict(spot=got[0], rate=got[1], key=got[2], threat=top[1], at=None,
+                                    give_up=now + s.NOBLE_SPOT_WALK_S)
+        if h["at"] is None and (me.pos - h["spot"]).flat() < 0.8:
+            h["at"] = now
+        scores[("retreat", h["spot"])] = scores[top] + 0.05
+        s.note(f"spot: {h['rate']:.0%} won here, held for the man ahead")
+
+    def noble_learn(s, now, snap):
+        """(custom, Nov 20) Noble's shot learning (brain/noble.py ShotWatch): its presses resolved, hit or miss."""
+        me = snap.player(s.id)
+        w = getattr(s, "noble_watch", None)
+        if w is not None and me is not None:
+            w.resolve(now, snap, me)
+
+    def noble_fired(s, now, snap, act, was_firing):
+        """(custom, Nov 20) A Noble press of a precision gun at the man it fights: watched (noble_learn)."""
+        me = snap.player(s.id)
+        part_ = getattr(s, "shot_part", None)
+        if (not act.fire or was_firing or me is None or not me.alive or me.weapon not in PRECISION or part_ is None
+                or me.vehicle not in (None, -1) or not noble.tune(getattr(s, "game", None))["shot_learn"]):
+            return
+        target = snap.player(part_[0])
+        if target is None:
+            return
+        if getattr(s, "noble_watch", None) is None:
+            s.noble_watch = noble.ShotWatch(getattr(s, "game", None))
+        s.noble_watch.pressed(now, snap, me, part_[0], dist(me.pos, target.pos), me.weapon, part_[1],
+                              FIRE_GAP.get(me.weapon, 0.2))
 
     def peek_timing(s, now, me, snap, scores, seen):
         """(custom, Nov 18, owner: "I know ... how long it takes for them to look away") Reach Demon and Mythic about to
@@ -2489,7 +2552,7 @@ class Bot:
         is (PEEK_WAIT_SCORE) until he looks away, PEEK_WAIT_S at most; then it goes. A weak man (weak: a low difficulty,
         slow to turn on it) is not waited for. Not in a vehicle, carrying, in Race or Infection."""
         if (s.game != "reach" or not s.team_demon() or not scores or me.vehicle not in (None, -1) or me.has_flag
-                or snap.mode in ("race", "infection") or profiles.fixed_noble(s.p)):   # (Nov 20: Noble goes)
+                or snap.mode in ("race", "infection") or noble.skips(s.p, "peek", getattr(s, "game", None))):   # (Nov 20: Noble's tune)
             s.peek_wait = None
             return
         top = max(scores, key=scores.get)
@@ -2604,6 +2667,9 @@ class Bot:
         if lanes:       # (custom, Nov 19) Legendary and up: round the lanes the most people died in, when about as short
             nav = (lambda nav0: lambda a, b, **kw: nav0(a, b, avoid=lanes, **kw))(nav)
         s.kill_check(now, snap)
+        noble_on = profiles.fixed_noble(s.p)
+        if noble_on:
+            s.noble_learn(now, snap)          # (custom, Nov 20: Noble's shots resolved, brain/noble.py)
         me = snap.player(s.id)
         if me and me.alive:
             # Observe full magazines during fights too, before reload_check needs the
@@ -2614,6 +2680,9 @@ class Bot:
                     top[w] = max(top.get(w, 0), mag)
         previous_shot = getattr(s, "last_shot_t", -9.0)
         act = s.plan(now, dt, snap, los, nav, callouts, items)
+        if noble_on:
+            s.noble_fired(now, snap, act, getattr(s, "noble_fire_was", False))   # (custom, Nov 20: a press watched)
+            s.noble_fire_was = bool(act.fire)
         s.sniper_missed_last = False
         me = snap.player(s.id)
         if not s.grenades_allowed():
@@ -4095,7 +4164,7 @@ class Bot:
         (on_way_target), a man at arm's length (DEMON_OBJ_ARM) still fought. Live Condemned Crazy King 20261113-204320:
         within 8 u of the hill the two Demons chose it 3% and 13% of the time (Easy to Mythic 30-85%), beaten by a gun
         grab (3.15), a stand-ground hunt (3.2) and committed fights; they stood on it 2 s and 4 s of 5 minutes."""
-        if (not profiles.demon_rules(s.p) or profiles.fixed_noble(s.p)   # (Nov 20: Noble fights the man in view)
+        if (not profiles.demon_rules(s.p) or noble.skips(s.p, "objective", getattr(s, "game", None))   # (Nov 20: Noble's tune)
                 or snap.mode in ("slayer", "race") or me.has_flag
                 or me.vehicle not in (None, -1) or s.order.role not in DEMON_OBJ_ROLES or s.dry(me)):
             return
@@ -4522,6 +4591,7 @@ class Bot:
         s.demon_break_second(now, me, snap, scores, seen)   # (custom, Nov 18: Demon, a second man on it: out of his sight)
         s.peek_timing(now, me, snap, scores, seen)          # (custom, Nov 18: Reach Demon / Mythic: go as he looks away)
         s.noble_push(me, snap, scores, seen)                # (custom, Nov 20: Noble: the man in view first)
+        s.noble_spot(now, me, snap, scores, seen)           # (custom, Nov 20: Noble: a winning spot, not a walk at him)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         s.power_commit(now, me, snap, scores, hit_recent)   # (custom, Nov 18: a power weapon run is finished)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
@@ -6609,6 +6679,14 @@ class Bot:
                 head_clear = s.line_clear(now, me, tid, snap, head=True)
                 head = not chest_only and head_clear and (target.shield <= 0.0 or not chest_clear)
                 can_learn_block = chest_clear and head_clear
+            nflip = getattr(s, "part_flip", None)
+            if (profiles.fixed_noble(s.p) and me.weapon in PRECISION and target.vehicle in (None, -1)
+                    and not (nflip is not None and nflip[0] == tid and now < nflip[2])):
+                # (custom, Nov 20) Noble's learned part (brain/noble.py part): while his shield holds, the part its shots
+                # land on more in this band; the head once it is down
+                n_open = head_only and not direct_fire     # (head_only: no line test made, both taken as open)
+                head = noble.part(getattr(s, "game", None), me.weapon, d, target.shield > 0.05, head,
+                                  True if n_open else chest_clear, True if n_open else head_clear, s.rng)
             s.shot_part = (tid, head)
             part_key = (tid, head, crouched(target))
             if getattr(s.aim, "part_key", None) != part_key:
@@ -7274,8 +7352,9 @@ class Bot:
             return paced * s.rng.uniform(1.0, 1.5)
         if profiles.fixed_noble(s.p) and w in PRECISION:
             # (custom, Nov 20, owner: "never miss a shot ... with precision weapons") Noble: the paced cadence at every
-            # range, its reticle's bloom settled for each shot (no Short band spam), a little slower at Long
-            return paced * (NOBLE_LONG_PACE if d > 10.0 else 1.0)
+            # range, its reticle's bloom settled for each shot (no Short band spam), a little slower at Long (its tune's
+            # long_pace); the pace that lands the most rounds a second as its own shots have taught it (noble.gap)
+            return noble.gap(getattr(s, "game", None), w, d, paced, s.rng)
         if d < SHORT_BAND:
             return min(paced, FIRE_FAST.get(w, paced)) * s.rng.uniform(1.0, 1.2)
         return paced * (s.rng.uniform(1.1, 1.35) if d > 10.0 else s.rng.uniform(0.95, 1.2))
@@ -8359,7 +8438,7 @@ class Bot:
         stand between it and a headshot: the owner, Nov 8; without shields, its body), winning against him alone round
         the corner (CHASE_ODDS, him aware), and with no other enemy known within CHASE_CLEAR_R of where he went. True
         for every other bot (their chase rules as before). (Nov 18: Reach Demon and Mythic too, team_demon.)"""
-        if profiles.fixed_noble(s.p) or not s.team_demon():   # (Nov 20: Noble chases as other bots do)
+        if noble.skips(s.p, "chase", getattr(s, "game", None)) or not s.team_demon():   # (Nov 20: Noble's tune: chases as others do)
             return True
         b = s.per.beliefs.get(k)
         guard = me.health if snap.shieldless else odds_model.shield_left(me)
@@ -8383,9 +8462,9 @@ class Bot:
         shot". (Nov 18: Reach Demon and Mythic too, team_demon; the power grab stays Halo 4's.)"""
         if not s.team_demon() or me.vehicle not in (None, -1) or me.has_flag or snap.mode in ("race", "infection"):
             return
-        if profiles.fixed_noble(s.p):
-            # (custom, Nov 20, the owner's Forge World report: "they should be killing me quicker") Noble breaks off
-            # nothing by the odds, drops no hunt and waits for no full shield: the team's trades and callouts only
+        if noble.skips(s.p, "odds", getattr(s, "game", None)):
+            # (custom, Nov 20, the owner's Forge World report: "they should be killing me quicker") Noble with the odds
+            # tuned off (brain/noble.py) breaks off nothing by them and drops no hunt: the team's trades and callouts only
             s.team_play(now, me, snap, scores, seen)
             return
         o, th = s.fight_odds(now, me, snap, seen)

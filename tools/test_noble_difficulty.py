@@ -20,6 +20,25 @@ from brain.core import PlayerState, Vec  # noqa: E402
 from brain.profiles import PERSONALITIES, make_profile  # noqa: E402
 import botctl  # noqa: E402
 import service_record  # noqa: E402
+from brain import noble  # noqa: E402
+import tempfile  # noqa: E402
+
+_TMP = None
+
+
+def setUpModule():
+    """(Nov 20) Noble's learned files in a folder of the tests' own: user/ is never read or written."""
+    global _TMP
+    _TMP = tempfile.TemporaryDirectory()
+    noble.STORE_DIR, noble.OVERRIDE = _TMP.name, None
+    noble.reload()
+
+
+def tearDownModule():
+    noble.OVERRIDE = None
+    noble.STORE_DIR = noble.os.path.join(noble.ROOT, "user")
+    noble.reload()
+    _TMP.cleanup()
 
 
 class ProfileTests(unittest.TestCase):
@@ -188,11 +207,16 @@ class NeverMissTests(unittest.TestCase):
     def test_paced_every_range(self):
         b = bot.Bot.__new__(bot.Bot)
         b.p, b.rng = make_profile("noble", "rusher", random.Random(1)), random.Random(2)
-        for w in ("dmr", "magnum", "needle_rifle", "battle_rifle", "sniper"):
-            paced = bot.FIRE_GAP.get(w, 0.2)
-            self.assertEqual(b.fire_gap(w, 2.0), paced, w)               # (no Short band spam: the bloom settles)
-            self.assertEqual(b.fire_gap(w, 8.0), paced, w)
-            self.assertAlmostEqual(b.fire_gap(w, 30.0), paced * bot.NOBLE_LONG_PACE, msg=w)
+        noble.OVERRIDE = dict(shot_learn=0)                              # (its learned pace: test_noble_learning.py)
+        try:
+            for w in ("dmr", "magnum", "needle_rifle", "battle_rifle", "sniper"):
+                paced = bot.FIRE_GAP.get(w, 0.2)
+                self.assertEqual(b.fire_gap(w, 2.0), paced, w)           # (no Short band spam: the bloom settles)
+                self.assertEqual(b.fire_gap(w, 8.0), paced, w)
+                self.assertAlmostEqual(b.fire_gap(w, 30.0), paced * bot.NOBLE_LONG_PACE, msg=w)
+        finally:
+            noble.OVERRIDE = None
+        self.assertEqual(noble.DEFAULTS["long_pace"], bot.NOBLE_LONG_PACE)
         b.p = make_profile("demon", "rusher", random.Random(1))
         self.assertLess(b.fire_gap("dmr", 2.0), bot.FIRE_GAP["dmr"])    # (Demon spams up close, as before)
         self.assertEqual(b.fire_gap("assault_rifle", 2.0) <= bot.FIRE_GAP["assault_rifle"] * 1.2, True)
@@ -210,35 +234,56 @@ class NeverMissTests(unittest.TestCase):
 
 
 class PushTests(unittest.TestCase):
-    """(Nov 20, the owner's Forge World report: "they should be killing me quicker") Noble fights the man in view."""
+    """(Nov 20, the owner's Forge World report: "they should be killing me quicker") Noble fights the man in view, as
+    hard as its tune says (brain/noble.py: push 0 by default since the 4v4 sims and live games, Demon 4-0 and 3-0)."""
 
     def bot(self, tier):
         b = bot.Bot.__new__(bot.Bot)
         b.p = make_profile(tier, "camper", random.Random(1))
         return b
 
+    def tearDown(self):
+        noble.OVERRIDE = None
+
     def test_man_in_view_first(self):
         me, snap = shooter(), types.SimpleNamespace(mode="koth")
+        me.shield = 1.0
         scores = {("fight", 4): 1.0, ("objective", Vec(1, 1, 0)): 2.6, ("retreat", Vec(3, 0, 0)): 3.0,
                   ("fight", 9): 0.5}
+        plain = dict(scores)
+        self.bot("noble").noble_push(me, snap, plain, {4})
+        self.assertEqual(plain, scores)                                 # (its default tune: no push, Demon's choice)
+        noble.OVERRIDE = dict(push=0.25)
         self.bot("noble").noble_push(me, snap, scores, {4})
-        self.assertAlmostEqual(scores[("fight", 4)], 3.0 + bot.NOBLE_PUSH)
+        self.assertAlmostEqual(scores[("fight", 4)], 3.0 + 0.25)
         self.assertEqual(scores[("fight", 9)], 0.5)                     # (not in view)
         same = dict(scores)
         self.bot("demon").noble_push(me, snap, same, {4})
         self.assertEqual(same, scores)                                  # (Demon: its own rules)
-        me.has_flag = True
+        hurt = {("fight", 4): 1.0, ("retreat", Vec(3, 0, 0)): 3.0}
+        me.shield = 0.5
+        self.bot("noble").noble_push(me, snap, hurt, {4})
+        self.assertEqual(hurt[("fight", 4)], 1.0)                       # (under push_shield: no push)
+        me.shield, me.has_flag = 1.0, True
         carried = {("fight", 4): 1.0, ("objective", Vec(1, 1, 0)): 2.6}
         self.bot("noble").noble_push(me, snap, carried, {4})
         self.assertEqual(carried[("fight", 4)], 1.0)                    # (carrying: the flag first)
 
-    def test_back_off_rules_off(self):
+    def test_back_off_rules_by_tune(self):
         src = (ROOT / "brain" / "bot.py").read_text(encoding="utf-8")
-        for fn in ("demon_recharge", "demon_no_new_fight", "demon_break_second", "peek_timing", "demon_objective",
-                   "chase_ok", "demon_odds_rules"):
+        for fn, rule in (("demon_recharge", "recharge"), ("demon_no_new_fight", "no_new_fight"),
+                         ("demon_break_second", "break_second"), ("peek_timing", "peek"),
+                         ("demon_objective", "objective"), ("chase_ok", "chase"), ("demon_odds_rules", "odds")):
             body = src[src.index(f"    def {fn}("):]
             body = body[:body.index("\n    def ", 10)]
-            self.assertIn("profiles.fixed_noble(s.p)", body, fn)
+            self.assertIn(f'noble.skips(s.p, "{rule}"', body, fn)
+        n, d = make_profile("noble", "camper", random.Random(1)), make_profile("demon", "camper", random.Random(1))
+        for rule in noble.RULES:
+            self.assertFalse(noble.skips(n, rule))                      # (by default Noble keeps every Demon rule)
+            noble.OVERRIDE = {rule: 0}
+            self.assertTrue(noble.skips(n, rule), rule)
+            self.assertFalse(noble.skips(d, rule), rule)                # (Demon never)
+        noble.OVERRIDE = dict(chase=0)
         b = self.bot("noble")
         self.assertTrue(b.chase_ok(0.0, shooter(), None, 1))
 
