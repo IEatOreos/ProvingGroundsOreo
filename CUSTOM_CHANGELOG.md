@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 2: a Halo 3 map as a Blender tracing reference, 2026-11-21
+
+Phase 2 of `docs/REACH_FORGE_PRINTER_PLAN.md` (brief: `docs/REACH_FORGE_PRINTER_PHASE2_BRIEF.md`). A separate tool: nothing in the bot imports it, and nothing under `brain/`, `native/` or `maps/` changed.
+
+- **New `tools/forge_printer/h3_reference.py`, run as `python\python.exe tools\forge_printer reference <map> [--out FOLDER]`:** runs `bsp2obj` as its own program and writes the map's level mesh (`<map>.obj`) plus `reference.json` (spawns, weapons, objectives and other placements from `maps/<map>/objects.json` and `features.json`, facings converted from degrees to radians), all in Reach units through one constant, `H3_TO_REACH_SCALE`. Output goes to `E:\Proving Grounds\re_tools\forge_printer\reference\<map>\` by default and is never committed. Halo 3 maps only.
+- **New `tools/forge_printer/blender_import_reference.py`:** `blender --background --python <script> -- <folder>` loads the mesh (Z up, 1 Blender unit = 1 world unit) and one named empty per placement in the collections spawns / weapons / objectives / other.
+- **Validation:** `tools/test_forge_printer_reference.py` (new, 13 tests on hand-built inputs, one real-Guardian test that skips without MCC); full suite 1084 OK. Guardian: 115,250 triangles (as `bsp2obj` reports), 58 spawns, 21 weapons, 23 objectives, 14 other, none outside the mesh box; a second run is byte-identical; Blender 5.1 headless loads it with a mesh box equal to `bounds`.
+- **Scale still open:** `H3_TO_REACH_SCALE` is 1.0 pending the owner's decision. The player models measure 0.761 u (Halo 3) and 0.742 u (Reach), 2.5% apart; the numbers are in the plan's Phase 2 handoff note. **Untested:** any map but Guardian, and Blender with its UI open.
+
 ### Reach Forge Printer, phase 1: read and write Reach map variants (.mvar), 2026-11-21
 
 The owner's plan (`docs/REACH_FORGE_PRINTER_PLAN.md`): build Halo: Reach Forge maps in Blender and write the map variant file MCC loads, with no keystroke bot. Phase 1 is the file itself. A separate tool: nothing in the bot imports it.

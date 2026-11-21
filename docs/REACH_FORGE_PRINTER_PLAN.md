@@ -100,7 +100,8 @@ Do not start Phase 2 on Fable.
       loaded, and did move"
 - [x] Format doc written (`docs/reach_mvar_format.md`)
 - [x] Phase 1 committed locally
-- [ ] Phase 2 — H3 reference import
+- [x] Phase 2 — H3 reference import (scale 1.0 pending the owner's call; see
+      the Phase 2 → Phase 3 note)
 - [ ] Phase 3 — auto-builder core (Guardian test)
 - [ ] Phase 4 — Blender addon
 
@@ -162,3 +163,67 @@ Gravemind's library (the git-ignored `tools/map_tools` already holds
 one Halo 3 map — Guardian — to a local `.obj` plus a JSON of spawns, weapons
 and objectives, under `E:\Proving Grounds\re_tools`, and work out the Halo 3 →
 Reach unit scale by measuring a known feature in both rather than assuming it.
+
+### Phase 2 → Phase 3 (2026-11-21, written by Opus 5.5)
+
+**Done**
+
+- `tools/forge_printer/h3_reference.py`, run as
+  `python\python.exe tools\forge_printer reference <map> [--out FOLDER]`:
+  runs `bsp2obj`, writes `<map>.obj` (vertices in Reach units, LF line ends)
+  and `reference.json` (spawns, weapons, objectives, other; facings converted
+  from degrees to radians). Default output
+  `E:\Proving Grounds\re_tools\forge_printer\reference\<map>\` (local only).
+  Halo 3 maps only (`maps/h3_*`).
+- `tools/forge_printer/blender_import_reference.py`:
+  `blender --background --python <script> -- <folder>` loads the mesh into
+  collection `level` and one empty per placement into `spawns`, `weapons`,
+  `objectives`, `other` (each empty keeps its source fields as `ref_*`
+  custom properties).
+- `tools/test_forge_printer_reference.py`: 13 tests (a hand-built OBJ, a
+  fake `bsp2obj`, one real-Guardian test that skips without MCC or the map
+  tools). Full suite 1084 OK.
+
+**Guardian results**
+
+- `reference h3_guardian`: exit 0; 115,250 triangles, the same as `bsp2obj`
+  reports; 58 spawns, 21 weapons, 23 objectives, 14 other (8 grenades, 3
+  powerups, 2 launchers, 1 lift); none outside the mesh box + 2 u. A second
+  run gives byte-identical files. (The OBJ differs from bsp2obj's raw file
+  only in formatting: CRLF → LF and every coordinate written with 4 decimals.)
+- Bounds (Reach units, scale 1.0): x -19.44..20.60, y -39.21..93.79,
+  z -6.23..36.18, size 40.0 × 133.0 × 42.4. Forge World's box is
+  x -203.60..277.66, y -360.83..324.92, z -25.01..117.79, so Guardian fits
+  easily. The long y side is far-off backdrop geometry; the play space is
+  much smaller. Phase 3 should crop it.
+- Blender 5.1 headless: 117 objects (1 mesh, 116 empties: spawns 58,
+  weapons 21, objectives 23, other 14), 115,250 triangles, mesh box equal to
+  `bounds` (max difference 0.0000).
+- Errors are one line each: missing map folder, `.map` not in MCC (e.g.
+  `h3_s3d_avalanche`: the DLC map isn't installed here), MCC not found,
+  `bsp2obj.exe` not found, non-Halo 3 map.
+
+**The scale: OWNER'S DECISION PENDING**
+
+`H3_TO_REACH_SCALE = 1.0` for now. One measurement: the player models,
+exported with `model2obj` into `E:\Proving Grounds\re_tools\forge_printer\scale\`:
+
+| Model | Max vertex height | 99.9th percentile |
+|---|---|---|
+| Halo 3 `objects\characters\masterchief\mp_masterchief\mp_masterchief` (guardian.map) | 0.803 u | 0.761 u |
+| Reach `objects\characters\spartans\spartans` (forge_halo.map) | 0.764 u | 0.742 u |
+
+That's a ratio of 0.975 by the percentile and 0.952 by the max: 2.5–5% apart,
+not a clean number. The models are different armour designs, so this alone
+can't separate "same unit, different suits" from a real unit change. No
+second per-game measurement was found on this PC (the bot records Reach's
+gravity, 4.1 u/s², but no Halo 3 figure). Per the brief, I didn't pick one.
+Changing it is one constant; re-run `reference` afterwards.
+
+**For Phase 3 (Fable 5.2)**
+
+- Read `reference.json` plus the OBJ. Crop the backdrop first.
+- The three in-game items from the Phase 1 note are still needed: palette
+  row/item → Forge piece, prices, up-vector axes and turn direction.
+- Not tested: any map but Guardian; a Blender run with the UI open (only
+  headless was run).

@@ -3,6 +3,7 @@
     python\\python.exe tools\\forge_printer info  FILE [--objects]
     python\\python.exe tools\\forge_printer check FILE_OR_FOLDER ...
     python\\python.exe tools\\forge_printer move  FILE OUT --slot N [--dx 0] [--dy 0] [--dz 0] [--title TEXT] [--keep-hash]
+    python\\python.exe tools\\forge_printer reference MAP [--out FOLDER]
 
 `check` reads each file, writes it back in memory and compares the bytes.
 `move` never touches FILE: it writes a changed copy to OUT.
@@ -15,9 +16,9 @@ import sys
 
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from forge_printer import mvar
+    from forge_printer import h3_reference, mvar
 else:
-    from . import mvar
+    from . import h3_reference, mvar
 
 
 def _mvar_files(paths):
@@ -102,6 +103,10 @@ def cmd_move(args):
     return 0
 
 
+def cmd_reference(args):
+    return h3_reference.main(args.map, args.out)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="forge_printer", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -122,6 +127,10 @@ def main(argv=None):
     p.add_argument("--title", help="new name for the copy, so it is easy to tell apart in game")
     p.add_argument("--keep-hash", action="store_true", help="leave the source file's hash bytes as they are")
     p.set_defaults(run=cmd_move)
+    p = sub.add_parser("reference", help="a Halo 3 map as a Blender tracing reference (mesh + placements)")
+    p.add_argument("map", help="a maps/ folder name, e.g. h3_guardian")
+    p.add_argument("--out", help="output folder (default: re_tools\\forge_printer\\reference\\<map>)")
+    p.set_defaults(run=cmd_reference)
     args = parser.parse_args(argv)
     return args.run(args)
 
