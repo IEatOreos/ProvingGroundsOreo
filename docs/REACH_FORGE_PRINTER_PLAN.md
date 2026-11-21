@@ -106,7 +106,8 @@ Do not start Phase 2 on Fable.
   - [x] reference mesh turned Z up (a phase 2 mistake), play space cut out,
         surfaces sorted (`forge_printer surfaces`)
   - [ ] calibration map read: palette row/item → piece, rotation axes
-  - [ ] piece sizes and prices
+  - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
+  - [ ] piece prices
   - [ ] piece fitting
   - [ ] budget and limit solver
 - [ ] Phase 4 — Blender addon
@@ -310,3 +311,72 @@ What the map can and cannot settle:
    largest blocks that fit, then ramps on walked slopes, then walls beside
    walked ground.
 4. Check one known Guardian jump against the 0.975 scale.
+
+### Phase 3, part 2: piece sizes (2026-11-21, written by Fable 5.2)
+
+**Done**
+
+- `tools/forge_printer/pieces.py`, run as
+  `python\python.exe tools\forge_printer pieces [--measure]`. `--measure`
+  exports each piece's model from MCC's `forge_halo.map` with `model2obj`
+  (about a second each; the models go to
+  `E:\Proving Grounds\re_tools\forge_printer\pieces\`, local only), measures
+  its box and rewrites `tools/forge_printer/forge_world_pieces.json`. Without
+  it the command prints the table.
+- The table is in the repository: names and sizes only, 108 pieces — the
+  owner's 97, two more whose menu names are known (Block 4x4 Short, Window
+  Coliseum) and nine decorative ones known only by model name. Each row has
+  the box the piece fills, measured from the point Forge places it by, in
+  world units and the piece's own axes.
+- Tests: `tools/test_forge_printer_pieces.py` (15). Full suite 1123 OK.
+
+**What the sizes say**
+
+- A block's name is its footprint in world units: Block 2x2 is 2.00 × 2.00 ×
+  1.00. Flat blocks are 0.20–0.30 tall, Short 0.50, plain 1.00, Tall 2.5–3.0.
+  The smallest blocks carry 0.02 of trim (Block 1x1 is 1.018 wide).
+- Not every piece is centred on its placing point: a Block 1x1 Short sits on
+  it (z 0..0.5), a Bank hangs to one side of it (x -1..0, y 0..1). The fitter
+  must use `min` and `max`, not `size`.
+- Wall Coliseum is 10 × 0.5 × 12, standing. The owner's own variant uses
+  thirteen of them lying flat as a floor, 10 by 12 apart, which agrees.
+
+**How names were paired with models, and where that is unsure**
+
+Within a category the map file lists the models in the Forge menu's order
+(the one pairing a saved variant confirms, Wall Coliseum = item 8, fits it),
+so names were paired by order and by the obvious likeness of name and model.
+Differences from the owner's notes:
+
+- `ff_plat_4x4_short` (Block 4x4 Short) sits between 4x4 Flat and 4x4 Tall and
+  is not in the notes. If it was not placed, the calibration map's Building
+  Blocks will simply skip item 22.
+- The notes say "Block 5x1 Short"; the model is `ff_plat_5x1_flat`, 0.22 tall
+  like the other Flat blocks. The table calls it Block 5x1 Flat.
+- Door / Door Double: paired by order (`ff_door_2`, then `ff_wall_2x1_door`),
+  but `ff_door_2` is the taller one (2 × 2 against 2 × 1), and the "Double"
+  window is the taller window. They may be the other way round. One look in
+  the game settles it.
+- Window Coliseum (`ff_arena_window`) is between Wall Coliseum and Tunnel
+  Short and is not in the notes: the tunnels should be items 10 and 11.
+- Nine decorative models (antenna, braces, crenellations, sloped cover,
+  teleporter frame, walkway cover) are not in the notes; their menu names and
+  places are not claimed.
+
+The calibration map gives item number → the owner's name. It does not show
+which model an item uses, so the pairings above stay as argued here unless a
+piece's resting height or the game itself says otherwise.
+
+**A first look at rotation, from the Coliseum floor**
+
+In the owner's own variant the flat-lying Coliseum walls have their up vector
+on faces 1 and 4 (and 3 for the two turned a quarter), with the turn at -90°.
+The wall's height is its model z, so "up" in the file is where the model's z
+points, and faces 1/4 lie along the world's y, face 3 along x: the order
++X, +Y, +Z, -X, -Y, -Z still fits. Signs and the turn's direction wait for the
+five ramps.
+
+**Still needed**
+
+- Prices (not in any file read so far).
+- The calibration map, for row numbers, items, and rotation.

@@ -5,6 +5,7 @@
     python\\python.exe tools\\forge_printer move  FILE OUT --slot N [--dx 0] [--dy 0] [--dz 0] [--title TEXT] [--keep-hash]
     python\\python.exe tools\\forge_printer reference MAP [--out FOLDER]
     python\\python.exe tools\\forge_printer surfaces FOLDER [--side 4] [--below 3] [--above 8]
+    python\\python.exe tools\\forge_printer pieces [--measure] [--keep FOLDER]
 
 `check` reads each file, writes it back in memory and compares the bytes.
 `move` never touches FILE: it writes a changed copy to OUT.
@@ -116,6 +117,14 @@ def cmd_surfaces(args):
     return surfaces.main(args.folder, args.side, args.below, args.above)
 
 
+def cmd_pieces(args):
+    if __package__ in (None, ""):
+        from forge_printer import pieces
+    else:
+        from . import pieces
+    return pieces.main(args.measure, args.keep)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="forge_printer", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -146,6 +155,10 @@ def main(argv=None):
     p.add_argument("--below", type=float, default=3.0, help="... below it")
     p.add_argument("--above", type=float, default=8.0, help="... above it")
     p.set_defaults(run=cmd_surfaces)
+    p = sub.add_parser("pieces", help="the Forge World building pieces and their sizes")
+    p.add_argument("--measure", action="store_true", help="export each piece's model from MCC and rewrite the table")
+    p.add_argument("--keep", help="where the exported models go (default: re_tools\\forge_printer\\pieces)")
+    p.set_defaults(run=cmd_pieces)
     args = parser.parse_args(argv)
     return args.run(args)
 
