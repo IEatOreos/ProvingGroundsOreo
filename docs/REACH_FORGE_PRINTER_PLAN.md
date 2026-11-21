@@ -2,10 +2,12 @@
 
 Status: Phase 1 done (2026-11-21): built, committed locally, and the edited
 variant loaded in Reach Forge with its wall moved. Phase 2 done (Halo 3
-reference, scale 0.975). Phase 3 core done (2026-11-21): Guardian's floors,
-straight ramps and walls are fitted with Forge pieces and three prints have
-loaded in the game; see "Phase 3, part 7" for what is left. Phase 4 not
-started. Separate tool from the Project Reach bot code.
+reference, scale 0.975). Phase 3 done as far as the plan asks (2026-11-21):
+Guardian's floors, ramps (as tilted faces) and walls are fitted with Forge
+pieces and seven prints have loaded in the game; the "Phase 3 → Phase 4" note
+at the end says what is proven, what is left and what Phase 4 starts from.
+Phase 4 not started; its brief is `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
+Separate tool from the Project Reach bot code.
 
 ## Goal
 
@@ -103,7 +105,8 @@ Do not start Phase 2 on Fable.
 - [x] Format doc written (`docs/reach_mvar_format.md`)
 - [x] Phase 1 committed locally
 - [x] Phase 2 — H3 reference import (scale 0.975, the owner's choice)
-- [ ] Phase 3 — auto-builder core (Guardian test)
+- [x] Phase 3 — auto-builder core (Guardian test): done as far as the plan
+      asks; the unticked lines below are polish, listed in the handoff note
   - [x] reference mesh turned Z up (a phase 2 mistake), play space cut out,
         surfaces sorted (`forge_printer surfaces`)
   - [x] palette row/item → piece (from ten variants already on the PC; the
@@ -111,9 +114,9 @@ Do not start Phase 2 on Fable.
   - [x] a file with objects added loads in the game ("It loaded fine")
   - [x] turn direction and the up vector's faces (the owner's screenshot)
   - [x] on face 2, u is +x and v is +y (the owner's screenshot from above)
-  - [ ] the size of an up-vector step (measured about half of expected) and
-        what a turn means under a tilted up: a second test, when tilted
-        pieces are needed
+  - [x] the size of an up-vector step and what a turn means under a tilted
+        up (the tilt test read with a fitted camera, then the slope test:
+        eight tilted ramps flush in the game)
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices — sixteen known from four HUD totals (`pieces.PRICES`:
         the Flat blocks used, Block 1x1 Tall, four ramps, Wall, Wall Double,
@@ -124,11 +127,14 @@ Do not start Phase 2 on Fable.
   - [x] piece fitting, ramps and walls, first version: Guardian 37 ramps on
         27% of its walked slope, 37 wall pieces — printed (`FP_Guardian_2.mvar`),
         waiting for the owner to load it
-  - [ ] piece fitting: curved and odd-angle slopes, floor pieces not square to
-        the axes, railings, ceilings
+  - [x] slopes at any angle and heading as tilted flat faces, flush with their
+        floors ("The Ramps were all good", seventh print)
+  - [ ] piece fitting: the rest of the curved ramps (some are joined from
+        facets), floor pieces not square to the axes, railings, ceilings,
+        floor from a second palette row
   - [x] ramps join end to end on any slope (seen in the third print)
-  - [x] budget and limit solver: slots, budget, map bounds
-        (`fit.within_limits`); no piece caps are known, 185 Building Blocks load
+  - [x] budget and limit solver: slots, budget, map bounds, and 255 pieces a
+        palette row (`fit.within_limits`)
 - [ ] Phase 4 — Blender addon
 
 ## Handoff notes
@@ -777,7 +783,9 @@ never read (it needs a close side-on and a top-down screenshot), so slanted
 pieces are still not safe to write; 93 of 109 pieces have no price; the owner
 has not said whether tucked floor blocks flicker.
 
-**For Phase 4 (Opus 5.5), when the owner switches**
+**For Phase 4 (Opus 5.5), when the owner switches** (written before parts 8
+to 13; the "Phase 3 → Phase 4" note at the end of this file replaces it, and
+its "only upright up vectors" rule no longer holds)
 
 - The pipeline, all under `tools/forge_printer`, run with
   `python\python.exe tools\forge_printer <command>`:
@@ -1212,3 +1220,88 @@ one slope; the row limit in `within_limits` and in `problems()`. Full suite
 yet.** Expected HUD: $26,950 (292 pieces at 10 on top of 130). It puts 255
 pieces in the Building Blocks row; the most the game has been seen to load
 there is 233.
+
+### Phase 3 → Phase 4 (2026-11-21, written by Fable 5.2)
+
+The owner, after the eighth print was made: "can we prep for Phase 3 or do we
+need to keep going through these steps?" (he means the next phase). Phase 3's
+plan items are met, so this is the handoff. The task for Phase 4 is written
+out in `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
+
+**What works, end to end**
+
+`reference <map>` → `surfaces <folder>` → `fit <folder>` → `print <folder>
+<template> <out> --offset DX DY DZ`, all under `tools/forge_printer`, run as
+`python\python.exe tools\forge_printer <command>`. For Guardian the fit is 336
+pieces: 254 flat floor blocks (75% of the walked floor), 24 tilted blocks in
+16 ramps, 21 landings, 37 walls.
+
+**Proven in the game (the owner's screenshots and words)**
+
+- A written variant loads: objects added, quotas recounted, up to 233 pieces
+  in one palette row, 289 objects in all. The HUD budget has matched the
+  prediction on every one of nine prints.
+- Turn: degrees counter-clockwise from world +x seen from above.
+- Up vector: `mvar.up_vector` / `up_raw` (a step leans it by atan(steps /
+  208)); with a tilted up the turn starts from `mvar.reference_axes(up)`.
+  Eight tilted ramps at five slopes and six headings met their platforms
+  flush (slope test); Guardian's 13 tilted ramps: "The Ramps were all good".
+- Prices: every flat block used, Block 1x1 Tall, the four ramps, Wall, Wall
+  Double and Wall Coliseum cost 10; the small antenna 50 (`pieces.PRICES`).
+
+**Limits a writer must keep**
+
+- 651 object slots; 255 pieces per palette row (a Forge category), because
+  the quota counts are 8 bits; the budget the game shows is its own sum of
+  prices, not the stored figure.
+- Up vectors: within 45 degrees of +X or +Z, or an exact axis. u and v on the
+  other four cube faces are not worked out.
+- The template must be a Forge World variant the owner's MCC saved (map 3006,
+  145 quota rows). Files go into MCC's Reach `Map` folder with MCC closed.
+
+**Not seen in the game yet**
+
+- The eighth print (`FP_Guardian_8.mvar`): the fill blocks, the joined curved
+  ramps, floors at their own heights (changed in part 10; the owner's
+  overview of the seventh print is too far off to judge them), and 255 pieces
+  in one row.
+- Whether tucked blocks (0.01 apart) or landings (0.005 under the floor)
+  flicker. Nobody has reported it; nobody has looked for it.
+
+**What a Guardian first pass still leaves bare** (measured, part 13): thin
+strips under half a block wide (about 74 u2: the big ring, edge trims, beam
+tops); about 36 u2 of curved ramp in facets too small or twisted to join;
+floor along slanted and rounded edges that needs either turned blocks or
+pieces from a second palette row (44 fill blocks did not fit in row 70);
+railings, kerbs, ceilings; everything gameplay (spawns, weapons, objectives
+are in `reference.json` and are not placed).
+
+**Open offers the owner has agreed to but that are not built:** floor from
+walls laid on their side (a Wall is a 2 x 2 slab in row 74), "That would be
+fine". Their look as floor is not known; it needs one small print.
+
+**Where things are**
+
+- Code: `tools/forge_printer/` (`mvar.py`, `pieces.py`, `surfaces.py`,
+  `fit.py`, `turn_test.py`, `h3_reference.py`, `blender_import_reference.py`,
+  `forge_world_pieces.json`). Tests: `tools/test_forge_printer*.py`, 150 of
+  the suite's 1206.
+- Format notes: `docs/reach_mvar_format.md`.
+- Local only, never committed, under `E:\Proving Grounds\re_tools\forge_printer\`:
+  `reference\h3_guardian\` (mesh, `reference.json`, `surfaces.json`,
+  `fit.json`, the fit as boxes), `pieces\*.obj` (the real piece models), the
+  printed variants, and `checks\` (the scripts this phase measured with:
+  `gaps.py` covered and bare walked ground by lean, `bare_map.py` a top-down
+  picture of it, `tilted_check.py` ramp tops against floors, `lips2.py` floor
+  edges over ramp faces, `tilt_fit.py` a camera fitted to a screenshot,
+  `crop.py` / `crop2.py` enlarging a screenshot inside Blender). They are
+  scratch: paths are written into them.
+
+**Lessons that cost a print each**
+
+- A screenshot is not read by looking at it whole. Cut out and enlarge every
+  place two pieces meet, and measure from the placements where they exist.
+- A check that uses the fitter's own arithmetic agrees with the fitter. The
+  faults were found by checks that read `fit.json` alone.
+- A matching HUD budget says the pieces exist, not that they are in the
+  right place.

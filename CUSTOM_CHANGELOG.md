@@ -1,5 +1,17 @@
 # Custom release history
 
+## Unreleased
+
+### Reach Forge Printer: Phase 3 closed, Phase 4 brief written, 2026-11-21
+
+The owner: "can we prep for Phase 3 or do we need to keep going through these steps?" (the next phase, Phase 4 in the plan). The plan's Phase 3 items are met, so the remaining fit work is polish and need not hold the next phase up.
+
+- `docs/REACH_FORGE_PRINTER_PLAN.md`: status and checklist brought up to date (Phase 3 ticked, with what is still polish left unticked); a "Phase 3 → Phase 4" note at the end with what is proven in the game, the limits a writer must keep, what has not been seen yet, what a Guardian first pass still leaves bare, and where everything is. The older "For Phase 4" list in part 7 is marked as replaced: its "only upright up vectors" rule no longer holds.
+- `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md` (new): the task for the Phase 4 session in three milestones with a stop after each (open, edit, count and export in Blender; gameplay objects; gap, overlap and lip finders), its rules, a checkable "done when" list for milestone 1, and what is carried over.
+- The scripts this phase measured with were copied from a temporary folder to `E:\Proving Grounds\re_tools\forge_printer\checks\` (local, not in the repository).
+- **Validation:** documents only; no code changed. The brief's facts were checked against the code as it stands (commands, function names, 336 placements, 150 Forge Printer tests of 1206).
+- **Not done:** floor from walls laid on their side, which the owner agreed to ("That would be fine"), is listed as carried over, not built. The eighth print is still not loaded in the game.
+
 ## 0.2.2-custom.13 — Bots that hit what they aim at, matches that start at once, and the Reach Forge Printer, 2026-11-21
 
 ### Reach Forge Printer: fuller floors, curved ramps joined, and a 255-piece limit per category, 2026-11-21
