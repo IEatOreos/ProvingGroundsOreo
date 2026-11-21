@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 3 part 3: which palette row and item each piece is, 2026-11-21
+
+The owner on his calibration map, which MCC refused to save ("private storage is full"): "It probably wont let me save it." So what the map was for was looked for in files already on the PC.
+
+- **Found:** ten Forge World variants on today's palette (MCC's five built-in Forge World maps as its session copies under `LocalLow\MCC\Temporary`, and five in the private folder) keep every building piece in quota rows 70 to 76, and the highest item each row uses is exactly one less than the number of models the map file has for the matching category (26, 21, 11, 16, 12, 15, 8). With Wall Coliseum = row 74 item 8 in the owner's own variant, a piece is (its category's row, its place in the category).
+- **`tools/forge_printer/pieces.py`:** the rows (`ROWS`); every piece in the table now has `row` and `item`; `pieces.at(row, item)` finds a piece; the sixteenth decorative model (`ff_dish_antenna`) is added, so the table has 109 pieces. `forge_printer info --objects` names each building piece of a Forge World variant (the owner's own lists thirteen "Wall Coliseum").
+- **Validation:** three new tests in `tools/test_forge_printer_pieces.py` (18 in all); full suite 1127 OK. `pieces --measure` re-ran: 109 of 109.
+- **Unsure:** where the decorative pieces the owner did not place sit in row 73. **Still needs the game:** which way a turn and a tilt go (the calibration map, or a test file this tool writes for the owner to look at), and prices. The plan also notes what the storage numbers suggest (a 2,000,000-byte or 100-file limit), which is not proven.
+
 ### Reach Forge Printer, phase 3 part 2: the Forge World pieces' sizes, 2026-11-21
 
 The owner, asked whether to work out the 97 pieces' sizes while his calibration map is unsaved: "Yes, piece sizes". A separate tool: nothing in the bot imports it.

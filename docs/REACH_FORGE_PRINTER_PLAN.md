@@ -105,7 +105,9 @@ Do not start Phase 2 on Fable.
 - [ ] Phase 3 — auto-builder core (Guardian test)
   - [x] reference mesh turned Z up (a phase 2 mistake), play space cut out,
         surfaces sorted (`forge_printer surfaces`)
-  - [ ] calibration map read: palette row/item → piece, rotation axes
+  - [x] palette row/item → piece (from ten variants already on the PC; the
+        calibration map was not needed for it)
+  - [ ] rotation axes and turn direction (calibration map, or a printed test)
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices
   - [ ] piece fitting
@@ -389,3 +391,54 @@ five ramps.
 
 - Prices (not in any file read so far).
 - The calibration map, for row numbers, items, and rotation.
+
+### Phase 3, part 3: rows and items without the calibration map (2026-11-21, written by Fable 5.2)
+
+The owner, 2026-11-21, on the calibration map: "It probably wont let me save
+it." So what it was for was looked for elsewhere.
+
+**Rows and items: settled from files already on the PC.** Ten Forge World
+variants on today's palette (145 quota rows, checksum 0x8B33E8AC: MCC's five
+built-in Forge World maps as its session copies in
+`LocalLow\MCC\Temporary\UserContent\HaloReach\Map`, and five in the private
+folder) were read. Only rows 70 to 76 hold objects with many different items,
+and the highest item each row uses is exactly one less than the number of
+models the map file has for the matching category:
+
+| Row | Category | Highest item used | Models |
+|---|---|---|---|
+| 70 | Building Blocks | 25 | 26 |
+| 71 | Bridges and Platforms | 20 | 21 |
+| 72 | Buildings | 10 | 11 |
+| 73 | Decorative | 15 | 16 |
+| 74 | Doors, Windows and Walls | 11 | 12 |
+| 75 | Inclines | 14 | 15 |
+| 76 | Nature | 7 | 8 |
+
+With Wall Coliseum = row 74 item 8 (the owner's own variant) and the owner's
+naming of the first six wall models in the map file's order, a piece is
+(its category's row, its place in the category). `pieces.py` holds the rows
+(`ROWS`), the table has `row` and `item` for all 109 pieces (the sixteenth
+decorative model, `ff_dish_antenna`, was added), `pieces.at(row, item)` looks
+one up, and `info --objects` now names each building piece.
+
+Unsure: where the unplaced decorative pieces sit (items 1 and 6 to 9 of row
+73); the other rows' orders are the map file's, confirmed at seven points.
+Other rows seen: 54 and 55 are spawn points (most objects of all), 56/57/60/61
+spawn and objective zones, 0 to 22 weapons and grenades, 32 to 39 vehicles;
+none of that is in the table.
+
+**Why MCC said storage was full (not proven).** The private folder
+(`LocalLow\MCC\LocalFiles\<account>\`, Reach and Halo 4 maps and game types
+together) held 105 files, 2,008,660 bytes, when the save was refused; after
+the owner removed three Reach maps it holds 102 files, 1,958,680 bytes. That
+fits a limit of 2,000,000 bytes (a save should now work, once) or of 100
+files (three more must go first). Not tried since.
+
+**Rotation still needs the game.** Two ways: the calibration map if it saves,
+or the reverse — this tool writes five Ramp 1x2 (row 75 item 4) at chosen
+turns next to marker blocks into a copy of the owner's variant, and the owner
+loads it and says which way each ramp points. The second needs no saving but
+is the first time objects are added to a file, which is itself untested.
+
+**Prices** still have no source.

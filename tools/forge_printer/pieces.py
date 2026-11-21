@@ -31,6 +31,18 @@ TAG_FOLDER = "objects\\levels\\forge\\"
 #   "menu"   not in the owner's notes; the name is the Forge menu's as best remembered
 #   "model"  not in the owner's notes and the menu name is not known: named after its model
 NOTED, MENU, MODEL = "noted", "menu", "model"
+
+# Where a variant file keeps each category: the row of Forge World's quota table (the object's "type"),
+# for today's MCC palette (145 rows, map checksum 0x8B33E8AC). A piece's "item" is its place in its
+# category, counting from 0. Read off ten Forge World variants on the owner's PC, 2026-11-21: rows 70 to
+# 76 are the only ones with many items, and the highest item each uses is one less than the number of
+# models the map file has for that category (25, 20, 10, 15, 11, 14, 7). The owner's own variant uses
+# row 74 item 8 for Wall Coliseum.
+FORGE_WORLD_MAP_ID = 3006
+FORGE_WORLD_QUOTA_ROWS = 145
+ROWS = {"Building Blocks": 70, "Bridges and Platforms": 71, "Buildings": 72, "Decorative": 73,
+        "Doors, Windows and Walls": 74, "Inclines": 75, "Nature": 76}
+
 CATEGORIES = [
     ("Building Blocks", [
         ("Block 1x1", "ff_plat_1x1", NOTED), ("Block 1x1 Flat", "ff_plat_1x1_flat", NOTED),
@@ -66,8 +78,12 @@ CATEGORIES = [
         ("Tower 2 Story", "ff_tower", NOTED), ("Tower 3 Story", "ff_tower_3_story", NOTED),
         ("Tower Tall", "ff_tower_tall", NOTED), ("Room Double", "ff_room_double", NOTED),
         ("Room Triple", "ff_room_triple", NOTED)]),
+    # Sixteen items, as the variants show. The map file lists ff_dish_antenna apart from the rest; it is
+    # put second here because the menu has two antennas first. The items from the sixth to the tenth
+    # (column, covers, crenellations) are in the map file's order, which nothing has confirmed.
     ("Decorative", [
-        ("ff_antenna", "ff_antenna", MODEL), ("ff_brace", "ff_brace", MODEL),
+        ("ff_antenna", "ff_antenna", MODEL), ("ff_dish_antenna", "ff_dish_antenna", MODEL),
+        ("ff_brace", "ff_brace", MODEL),
         ("ff_large_brace", "ff_large_brace", MODEL), ("ff_arch_brace", "ff_arch_brace", MODEL),
         ("Column", "ff_column", NOTED), ("ff_crenel_full", "ff_crenel_full", MODEL),
         ("ff_crenel_notch", "ff_crenel_notch", MODEL), ("Cover", "ff_cover_2", NOTED),
@@ -106,9 +122,10 @@ class PieceError(Exception):
 
 
 def catalogue():
-    """Every piece as a dict (category, name, model, name_from), in menu order."""
-    return [{"category": category, "name": name, "model": model, "name_from": source}
-            for category, items in CATEGORIES for name, model, source in items]
+    """Every piece as a dict (category, row, item, name, model, name_from), in menu order."""
+    return [{"category": category, "row": ROWS[category], "item": item, "name": name, "model": model,
+             "name_from": source}
+            for category, items in CATEGORIES for item, (name, model, source) in enumerate(items)]
 
 
 def obj_box(path):
@@ -174,13 +191,15 @@ def measure(keep=DEFAULT_KEEP, mcc_dir=None, model2obj=None, models=None):
     return {"map": "forge_halo",
             "units": "Halo: Reach world units",
             "axes": "each piece's own model axes; min and max are measured from the point Forge places it by",
+            "palette": "row and item are a variant file's type and item on Forge World's 145-row palette",
             "pieces": pieces}
 
 
 def save(table, path=None):
     with open(path or TABLE, "w", encoding="utf-8", newline="\n") as f:
-        f.write('{\n "map": %s,\n "units": %s,\n "axes": %s,\n "pieces": [\n' % (
-            json.dumps(table["map"]), json.dumps(table["units"]), json.dumps(table["axes"])))
+        f.write('{\n "map": %s,\n "units": %s,\n "axes": %s,\n "palette": %s,\n "pieces": [\n' % (
+            json.dumps(table["map"]), json.dumps(table["units"]), json.dumps(table["axes"]),
+            json.dumps(table["palette"])))
         rows = [json.dumps(p) for p in table["pieces"]]        # one piece per line: readable diffs
         f.write(",\n".join("  " + row for row in rows))
         f.write("\n ]\n}\n")
@@ -201,15 +220,29 @@ def by_name(table=None):
     return {p["name"]: p for p in table["pieces"] if p["name_from"] != MODEL}
 
 
+def at(row, item, table=None):
+    """The piece a Forge World variant means by (type row, item), or None."""
+    table = table or load()
+    for p in table["pieces"]:
+        if p["row"] == row and p["item"] == item:
+            return p
+    return None
+
+
+def is_forge_world(variant):
+    """Whether a variant uses the palette this table describes."""
+    return variant.map_id == FORGE_WORLD_MAP_ID and len(variant.quotas) == FORGE_WORLD_QUOTA_ROWS
+
+
 def show(table):
     category = None
     for p in table["pieces"]:
         if p["category"] != category:
             category = p["category"]
-            print("%s" % category)
+            print("%s (row %d)" % (category, p["row"]))
         mark = {NOTED: " ", MENU: "~", MODEL: "?"}[p["name_from"]]
-        print(" %s %-24s %-22s %6.2f x %6.2f x %6.2f   x %6.2f..%-6.2f y %6.2f..%-6.2f z %6.2f..%-6.2f" % (
-            mark, p["name"], p["model"], p["size"][0], p["size"][1], p["size"][2],
+        print(" %s %2d %-24s %-22s %6.2f x %6.2f x %6.2f   x %6.2f..%-6.2f y %6.2f..%-6.2f z %6.2f..%-6.2f" % (
+            mark, p["item"], p["name"], p["model"], p["size"][0], p["size"][1], p["size"][2],
             p["min"][0], p["max"][0], p["min"][1], p["max"][1], p["min"][2], p["max"][2]))
     names = [p["name_from"] for p in table["pieces"]]
     print("%d pieces: %d from the owner's notes, %d named from the menu (~), %d known only by model (?)" % (

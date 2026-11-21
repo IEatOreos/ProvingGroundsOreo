@@ -50,14 +50,25 @@ def cmd_info(args):
     print("problems     %s" % ("; ".join(problems) if problems else "none"))
     if args.objects:
         names = v.labels.names()
-        print("slot type.var      x         y         z    angle  up      mp  team label")
+        table = None
+        if __package__ in (None, ""):
+            from forge_printer import pieces
+        else:
+            from . import pieces
+        if pieces.is_forge_world(v):
+            try:
+                table = pieces.load()
+            except pieces.PieceError:
+                table = None
+        print("slot type.var      x         y         z    angle  up      mp  team label  piece")
         for slot, o in placed:
             x, y, z = v.world_position(o)
             up = "world" if o.up is None else "f%d" % mvar.split_up(o.up)[0]
             label = "" if o.label is None else names[o.label]
-            print("%4d %3d.%-2d %9.3f %9.3f %9.3f %7.1f  %-6s %3d %4d  %s" % (
+            piece = pieces.at(o.type_index, o.variant_index, table) if table else None
+            print("%4d %3d.%-2d %9.3f %9.3f %9.3f %7.1f  %-6s %3d %4d  %-6s %s" % (
                 slot, o.type_index, o.variant_index, x, y, z, math.degrees(mvar.decode_angle(o.angle)), up,
-                o.mp_type, o.team - 1, label))
+                o.mp_type, o.team - 1, label, piece["name"] if piece else ""))
     return 0
 
 

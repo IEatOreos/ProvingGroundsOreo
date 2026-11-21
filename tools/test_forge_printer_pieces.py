@@ -58,7 +58,17 @@ class Catalogue(unittest.TestCase):
         self.assertEqual(dict(noted), {"Building Blocks": 25, "Bridges and Platforms": 21, "Buildings": 11,
                                        "Decorative": 6, "Doors, Windows and Walls": 11, "Inclines": 15, "Nature": 8})
         self.assertEqual(sum(noted.values()), 97)
-        self.assertEqual(len(cat), 108)
+        self.assertEqual(len(cat), 109)
+
+    def test_rows_and_items_as_saved_variants_use_them(self):
+        # ten Forge World variants on the owner's PC use rows 70-76, and in each the highest item is one
+        # less than these counts
+        cat = pieces.catalogue()
+        per_row = Counter(p["row"] for p in cat)
+        self.assertEqual(dict(per_row), {70: 26, 71: 21, 72: 11, 73: 16, 74: 12, 75: 15, 76: 8})
+        for row in per_row:
+            self.assertEqual(sorted(p["item"] for p in cat if p["row"] == row), list(range(per_row[row])))
+        self.assertEqual(len({p["category"] for p in cat}), 7)
 
     def test_names_and_models_are_each_used_once(self):
         cat = pieces.catalogue()
@@ -153,8 +163,8 @@ class KeptTable(unittest.TestCase):
         cls.named = pieces.by_name(cls.table)
 
     def test_it_is_the_catalogue_measured(self):
-        self.assertEqual([{k: p[k] for k in ("category", "name", "model", "name_from")} for p in self.table["pieces"]],
-                         pieces.catalogue())
+        keys = ("category", "row", "item", "name", "model", "name_from")
+        self.assertEqual([{k: p[k] for k in keys} for p in self.table["pieces"]], pieces.catalogue())
         for p in self.table["pieces"]:
             for i in range(3):
                 self.assertGreater(p["size"][i], 0.0, p["name"])
@@ -169,6 +179,38 @@ class KeptTable(unittest.TestCase):
         self.assertGreater(self.named["Door"]["size"][2], self.named["Door Double"]["size"][2])
         self.assertAlmostEqual(self.named["Wall Double"]["size"][0], 2 * self.named["Wall"]["size"][0], delta=0.01)
         self.assertAlmostEqual(self.named["Wall Double"]["size"][2], self.named["Wall"]["size"][2], delta=0.01)
+
+    def test_a_variants_type_and_item_find_the_piece(self):
+        self.assertEqual(pieces.at(74, 8, self.table)["name"], "Wall Coliseum")     # the owner's own variant
+        self.assertEqual(pieces.at(70, 0, self.table)["name"], "Block 1x1")
+        self.assertEqual(pieces.at(75, 4, self.table)["name"], "Ramp 1x2")
+        self.assertIsNone(pieces.at(74, 12, self.table))
+        self.assertIsNone(pieces.at(54, 0, self.table))                             # a spawn point: not a building piece
+
+    def test_info_names_the_pieces_of_a_forge_world_variant(self):
+        from forge_printer import __main__ as cli
+        from forge_printer import mvar
+        v = mvar.MapVariant()
+        v.version, v.v32_block, v.map_id = 32, 0, pieces.FORGE_WORLD_MAP_ID
+        v.header = mvar.ContentHeader(map_id=v.map_id, title="Yard")
+        v.bounds = (-200.0, 280.0, -360.0, 325.0, -25.0, 118.0)
+        v.quotas = [mvar.Quota() for _ in range(pieces.FORGE_WORLD_QUOTA_ROWS)]
+        v.objects[0] = mvar.ForgeObject(type_index=74, variant_index=8)
+        v.objects[1] = mvar.ForgeObject(type_index=54, variant_index=0)
+        v.recount_quotas()
+        self.assertTrue(pieces.is_forge_world(v))
+        f = mvar.MvarFile(variant=v, chdr=mvar.build_chdr(v.header))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "yard.mvar")
+            f.write(path)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(cli.main(["info", path, "--objects"]), 0)
+        lines = buf.getvalue().splitlines()
+        self.assertTrue(any(line.rstrip().endswith("Wall Coliseum") for line in lines))
+        self.assertEqual(sum(1 for line in lines if "Wall Coliseum" in line), 1)
+        v.quotas.pop()
+        self.assertFalse(pieces.is_forge_world(v))                                  # an older palette: rows differ
 
     def test_pieces_known_only_by_model_are_not_offered_by_name(self):
         self.assertEqual(len(self.named), 99)
