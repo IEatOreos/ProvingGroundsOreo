@@ -933,5 +933,24 @@ blocks reach, none in mid air). Full suite 1186 OK.
 
 **The fifth print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_5.mvar`**
 (local only), title "FP Guardian 5", 320 objects, same place and tilt test.
-**Not loaded in the game yet.** Expected HUD: $26,700 (291 pieces at 10 on top
-of 130 and the tilt test's 260).
+Expected HUD: $26,700 (291 pieces at 10 on top of 130 and the tilt test's 260).
+
+**The fifth print in the game (2026-11-21).** The owner loaded it and sent
+three screenshots: HUD $26,700 as predicted, and "All seem pretty good".
+Each join in them was cut out and enlarged:
+
+- Three ramp feet (one per picture): the shallow ramp comes up out of the
+  floor block with no step; the floor's top runs straight into the ramp's
+  face. One is seen side-on with the ramp's sunk foot showing under the floor
+  block, as intended.
+- Two ramp tops: level with the floor block past them as far as the pictures
+  can show (a hair of ramp above the floor in one, about what the 0.02 lift
+  would be; the camera angle allows no better reading).
+- A far run of three pieces joins end to end and reaches its platform.
+
+Not shown or not identifiable in these three pictures, so still only
+measured: the faults listed above (the two angled ramp tops, the ramp foot
+in the tangle of small floors, the three tops with no floor past them).
+Flicker at a landing cannot be judged from a still; none of the landings in
+view shows a torn surface. The tilt test stands in this print too and is
+still unread.

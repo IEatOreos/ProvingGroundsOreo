@@ -16,7 +16,8 @@ The owner loaded the fourth Guardian print (HUD $26,980, as predicted) and sent 
 - **Still wrong, measured, not fixed** (listed in the plan, phase 3 part 9): floor block corners 0.05 to 0.12 proud of two ramps that meet their floor at an angle (needs turned floor blocks); floor blocks hanging 0.1 over one ramp top (0.05 proud); one ramp foot in a tangle of small floors with the floor 0.22 proud over half its width; three ramp tops with no floor past them; floors at another height overlapping four ramps' sides.
 - **Made for the owner:** `FP_Guardian_5.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 320 objects; `check` reads it back with no problems. Expected HUD $26,700.
 - **Validation:** `tools/test_forge_printer_fit.py`: the best run judged at the floor's edge over a sweep of lengths and rises, the gentle, steep and odd-length slope tests updated for the new rule, four landing cases; 43 tests. Full suite 1186 OK.
-- **Untested in game:** the fifth print. The landings' flicker-free height (0.005 under the floor) is reasoned, not seen.
+- **Seen in game (owner, three screenshots, "All seem pretty good"):** HUD $26,700 as predicted. Enlarged, three ramp feet come up out of their floor blocks with no step, two ramp tops are level with their floors as far as the pictures can show, and a far run of three pieces joins end to end.
+- **Not seen in game:** the faults listed above are not identifiable in those pictures. Whether a landing flickers cannot be judged from a still; none in view shows a torn surface.
 
 ### The bots' terrain from a cache at match start; start-up times in the brain's log, 2026-11-21
 
