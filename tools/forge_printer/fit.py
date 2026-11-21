@@ -37,6 +37,7 @@ GRID = 0.25          # the floor is sampled this far apart, world units
 HEIGHT_STEP = 0.1    # floor heights are told apart to this
 LEVEL_REACH = 1      # a level takes floor this many height steps above and below its own: a kerb is
                      # levelled, a ledge of a quarter unit or more (waist high to a Spartan) stays a ledge
+LEVEL_NEAR = 0.105   # ... and only floor within this of the level's height is the level's, world units
 LEVEL_BIN = 0.05     # a level's blocks all sit at the height most of its floor shares, told apart to this
 OVERHANG = 0.10      # share of a block allowed past the floor's edge, in the second pass
 TUCK_NEW = 0.35      # a block tucked under its neighbours must cover at least this share of new floor
@@ -69,6 +70,7 @@ LANDING = 1.0          # a landing block reaches this far along the floor from w
 LANDING_MATCH = 0.03   # a floor block within this of the floor's height already does a landing's job
 LANDING_REACH = 0.15   # the reference has floor there if its own floor is within this of that height
 LANDING_DROP = 0.005   # a landing sits this far under the floor's height: never level with a block or a tucked one
+ONTO_MAX = 0.6         # a floor block's edge or corner hanging this far out over a slope's top is still its edge
 SLOPE_MIN_AREA = 1.5   # a sloping patch smaller than this is left for hand work, u2
 SLOPE_FILL = 0.6       # the slope must be at least this share of a ramp's run and of its lane's width
 
@@ -220,13 +222,21 @@ def fit_floors(analysis, table=None):
         bins = np.round(heights / LEVEL_BIN).astype(np.int64)
         values, counts = np.unique(bins, return_counts=True)
         level_top = float(heights[bins == values[int(np.argmax(counts))]].mean())
+        # only floor really within reach of that height: two neighbouring height steps can be nearly
+        # two steps apart, and such floor is another level's (it stays for that level's turn)
+        mine = {s: left[s] & (np.abs(np.nan_to_num(layers[s], nan=1e9) - level_top) <= LEVEL_NEAR) for s in near}
+        floor = np.zeros_like(left[step])
+        for s in near:
+            floor |= mine[s]
+        if not floor.any():
+            continue
         for name, x, y, w, d, turn, sunk in cover(floor, shapes):
             block = floor[y:y + d, x:x + w]
             top = level_top - sunk * TUCK_DROP
             overhang_cells += int(block.size - block.sum())
             for s in near:
-                covered_cells += int(left[s][y:y + d, x:x + w].sum())
-                left[s][y:y + d, x:x + w] = False
+                covered_cells += int((left[s][y:y + d, x:x + w] & mine[s][y:y + d, x:x + w]).sum())
+                left[s][y:y + d, x:x + w] &= ~mine[s][y:y + d, x:x + w]
             placement = {"part": "floor", "piece": name,
                          "centre": [round(x0 + (x + w / 2.0) * GRID, 3), round(y0 + (y + d / 2.0) * GRID, 3)],
                          "top": round(top, 3),
@@ -316,6 +326,36 @@ def _floor_tops_at(floors, x, y, reach):
     return out
 
 
+def _onto_slope(floors, height, along, across, s_top, t_mid, lanes):
+    """How far the upper floor's blocks stand out over a slope's top edge, within its lanes.
+
+    Floor blocks are square to the map and may hang a little past the floor's edge, so where a
+    slope meets its floor at an angle their corners reach out over the slope (and a block can
+    hang over a square-on slope too). A ramp starting at the reference's edge would have those
+    corners standing proud of it. Returns the reach of the furthest one, 0.0 if none; a block
+    more than ONTO_MAX out over the slope is not an edge hanging past and is left out."""
+    reach = 0.0
+    half = lanes / 2.0 - 0.05
+    for p in floors:
+        if abs(p["top"] - height) > LANDING_MATCH:
+            continue
+        cx, cy = p["centre"]
+        hx, hy = p["size"][0] / 2.0, p["size"][1] / 2.0
+        if abs(cx * along[0] + cy * along[1] - s_top) > hx + hy + ONTO_MAX:
+            continue
+        gx, gy = np.meshgrid(np.linspace(cx - hx, cx + hx, int(hx * 2 / 0.05) + 1),
+                             np.linspace(cy - hy, cy + hy, int(hy * 2 / 0.05) + 1))
+        s = gx * along[0] + gy * along[1]
+        t = gx * across[0] + gy * across[1]
+        over = (np.abs(t - t_mid) <= half) & (s < s_top - 1e-6)
+        if not over.any():
+            continue
+        deepest = s_top - float(s[over].min())
+        if deepest <= ONTO_MAX:
+            reach = max(reach, deepest)
+    return reach
+
+
 def fit_slopes(analysis, table=None, floors=()):
     """Ramps for the walked slopes of an analysed reference, each run of ramps tied to the floors
     it joins. `floors` are the floor placements already fitted (fit_floors); without them a
@@ -333,6 +373,10 @@ def fit_slopes(analysis, table=None, floors=()):
     A slope 2 or more wide is laid in pairs of lanes (Ramp 2x2 for a rise of 1, Ramp 2x2 Steep for
     2, two 1-wide pieces side by side for the rest); the steep piece needs a pair. A slope that
     dives under a floor instead of meeting it (a root, a brace) gets nothing.
+
+    With fitted floors, the run's top is where the upper floor's blocks really end: the reference's
+    edge, or the furthest block corner hanging out over the slope (see _onto_slope), so no block
+    stands proud of the ramp's top.
 
     With fitted floors, a run also gets landings (part "landing"): the floor blocks are laid on a
     grid and can stop short of where the ramp's face meets the floor, which leaves the ramp's
@@ -407,7 +451,11 @@ def fit_slopes(analysis, table=None, floors=()):
         if angle > GENTLE_MAX_TILT:                              # only the 2-wide steep ramp climbs faster than 1 in 2
             lanes = max(2, 2 * int(round(width / 2.0)))
             rises.append(2.0)
-        chosen, lift = _best_run(rises, length, high - low)
+        # the run starts where the upper floor's blocks really end: at the reference's edge, or at the
+        # furthest block corner hanging out over the slope
+        onto = _onto_slope(floors, high, along, across, s_high, t_mid, lanes) if len(floors) else 0.0
+        s_top = s_high - onto
+        chosen, lift = _best_run(rises, length - onto, high - low)
         count = len(chosen)
         top = high + lift
 
@@ -424,7 +472,7 @@ def fit_slopes(analysis, table=None, floors=()):
         steps = []
         at = top
         for i, step in enumerate(chosen):
-            steps.append((step, at, s_high - (i + 0.5) * RAMP_RUN))   # rise, height of its high end, its middle
+            steps.append((step, at, s_top - (i + 0.5) * RAMP_RUN))    # rise, height of its high end, its middle
             at -= step
         for step, upper, s_mid in reversed(steps):               # listed from the bottom up
             for t_at, covered in spots:
@@ -459,7 +507,7 @@ def fit_slopes(analysis, table=None, floors=()):
             if step > 0.0 and upper >= low >= upper - step:
                 foot = s_mid + RAMP_RUN / 2.0 - (upper - low) / step * RAMP_RUN
                 break
-        for s_from, height in ((None if foot is None else foot - LANDING, low), (s_high, high)):
+        for s_from, height in ((None if foot is None else foot - LANDING, low), (s_top, high)):
             if s_from is None:
                 continue
             for t_at, covered in spots:

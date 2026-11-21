@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Reach Forge Printer: ramp tops clear of overhanging floor blocks; floor levels by real height, 2026-11-21
+
+The owner, asked whether to read the tilt test or fix the angled ramp tops next: "You pick". The tilt test needs two screenshots from him, so the ramp tops were done meanwhile.
+
+- **Measured first:** Guardian's floor is not at an angle. 44% of the walked floor's outer edges run square to the map, 11% at 45 degrees, the rest every way (round platforms). So no turned floor grid; the fault is where a ramp meets blocks that hang past the floor's edge.
+- **`tools/forge_printer/fit.py`:**
+  - `_onto_slope`: a run's top edge is now the furthest corner of the upper floor's blocks hanging out over the slope within its lanes (up to 0.6), not the reference's edge. Block corners stood 0.05 to 0.12 proud of two ramps that meet their floor at an angle, and of one square-on Ramp 2x2. The turned landing fills the notches between corners.
+  - `LEVEL_NEAR`: a level takes only floor within 0.105 of its height by real distance. Levels were grouped by rounded height steps, and two neighbouring steps can be 0.2 apart. The lower floor of the ramp in the fourth print's screenshot is at 16.13 in the reference and had been laid at 16.24: most of that picture's 0.15 lip. A floor at 17.84 had been laid at 17.65, which gave its ramp the wrong piece and a 0.22 lip.
+- **Guardian:** 192 floor blocks at 23 heights (18 before), 68% of the walked floor (70% before: small floors once swept into a neighbour's level are now too small for a block); 48 ramp pieces, 19 landings, 37 walls; 296 pieces, budget 2,960. The check that reads `fit.json` alone finds no floor block edge across a ramp's upper face.
+- **Still flagged by that check, not fixed** (plan, phase 3 part 10): one ramp's sunk foot coming out 0.26 under a one-unit-deep floor block's far edge; floors at another height overlapping five ramps' sides; three ramp tops with no floor block past them.
+- **Made for the owner:** `FP_Guardian_6.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 325 objects; `check` reads it back with no problems. Expected HUD $26,650.
+- **Validation:** three new tests in `tools/test_forge_printer_fit.py` (44 in all); full suite 1189 OK.
+- **Untested in game:** the sixth print. Floors the owner saw as good in the fifth print have moved where they had been levelled with a neighbour more than 0.1 away.
+
 ### Reach Forge Printer: no floor standing proud of a ramp; landings where the floor blocks stop short, 2026-11-21
 
 The owner loaded the fourth Guardian print (HUD $26,980, as predicted) and sent two screenshots. Enlarged, the ramps reach their floors, but on the 4.15-long ramp the lower floor block still stands about 0.15 proud of the ramp where they meet; the fitter's own numbers say the same (run at 16.09 at the floor's edge, floor at 16.24).

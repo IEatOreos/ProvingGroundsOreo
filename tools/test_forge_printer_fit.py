@@ -93,6 +93,11 @@ class Floors(unittest.TestCase):
         self.assertEqual([p["piece"] for p in placements], ["Block 4x4 Flat"])
         placements, _ = fitted(slab(0, 0, 2, 4, z=0.0), slab(2, 0, 4, 4, z=0.3))       # a ledge: kept
         self.assertEqual(sorted({p["top"] for p in placements}), [0.0, 0.3])
+        # 0.04 and 0.14 are neighbouring height steps but 0.18 apart with 0.22: that is a ledge too, not a kerb
+        # (Guardian: a floor at 16.13 was laid at 16.24 with its neighbour, and stood proud of its ramp)
+        placements, report = fitted(slab(0, 0, 2, 4, z=0.04), slab(2, 0, 4, 4, z=0.22))
+        self.assertEqual(sorted({p["top"] for p in placements}), [0.04, 0.22])
+        self.assertEqual(report["coverage"], 1.0)
         placements, _ = fitted(slab(0, 0, 2, 4, z=0.0), slab(2, 0, 4, 4, z=0.5))
         self.assertEqual(sorted(p["top"] for p in placements), [0.0, 0.0, 0.5, 0.5])
         self.assertEqual({p["piece"] for p in placements}, {"Block 2x2 Flat"})
@@ -291,6 +296,29 @@ class Slopes(unittest.TestCase):
         self.assertEqual((landing["piece"], landing["turn"], landing["top"]), ("Block 2x1 Flat", 90.0, -0.005))
         self.assertAlmostEqual(landing["origin"][0], 8.0 - 0.5, delta=0.03)      # the unit of floor before the ramp
         self.assertAlmostEqual(landing["origin"][1], 4.0, delta=0.01)
+
+    def test_a_run_starts_where_the_upper_floor_blocks_end_not_under_them(self):
+        a = analysed(court(ramp=(8, 3, 12, 5, 2.0)))
+        floors, _ = fit.fit_floors(a)
+        square, _ = fit.fit_slopes(a, floors=floors)
+        self.assertAlmostEqual(square[-1]["origin"][0], 11.0, delta=0.01)        # top edge at 12, the reference's
+        # say an upper block hangs a quarter unit out over the slope: it would stand 0.125 proud of the ramp
+        hanging = [dict(p) for p in floors]
+        for p in hanging:
+            if (p["top"] == 2.0 and p["centre"][0] - p["size"][0] / 2.0 == 12.0
+                    and abs(p["centre"][1] - 4.0) < 0.5 + p["size"][1] / 2.0):
+                p["centre"] = [p["centre"][0] - 0.25, p["centre"][1]]
+                break
+        else:
+            self.fail("no upper block beside the ramp")
+        shifted, _ = fit.fit_slopes(a, floors=hanging)
+        ramps = [p for p in shifted if p["part"] == "slope"]
+        self.assertAlmostEqual(ramps[-1]["origin"][0], 10.75, delta=0.01)        # the run's top is at the block's edge
+        self.assertAlmostEqual(self.ends(ramps)[-1][1], 2.0, delta=0.03)         # and still at the floor's height
+        along = np.array([1.0, 0.0])
+        self.assertEqual(fit._onto_slope(floors, 2.0, along, np.array([0.0, 1.0]), 12.0, 4.0, 2), 0.0)
+        self.assertAlmostEqual(fit._onto_slope(hanging, 2.0, along, np.array([0.0, 1.0]), 12.0, 4.0, 2), 0.25, places=6)
+        self.assertEqual(fit._onto_slope(hanging, 0.0, along, np.array([0.0, 1.0]), 12.0, 4.0, 2), 0.0)   # another height
 
     def test_no_landing_where_the_reference_has_no_floor(self):
         m = Mesh()                                                   # a ramp that ends in mid air: nothing at its top

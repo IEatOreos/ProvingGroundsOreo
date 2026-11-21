@@ -954,3 +954,72 @@ in the tangle of small floors, the three tops with no floor past them).
 Flicker at a landing cannot be judged from a still; none of the landings in
 view shows a torn surface. The tilt test stands in this print too and is
 still unread.
+
+### Phase 3, part 10: ramp tops at an angle; levels by real height (2026-11-21, written by Fable 5.2)
+
+The owner, asked whether to read the tilt test or fix the angled ramp tops
+next: "You pick". The tilt test needs two screenshots from him, so the
+angled tops were done meanwhile.
+
+**Measured first: Guardian's floor is not at an angle.** Of the walked
+floor's outer edges, 44% run square to the map, 11% at 45 degrees, the rest
+are spread over every direction (the round platforms). Laying whole floor
+regions on a turned grid would gain little; the fault is local to the place
+a ramp meets blocks that hang past the floor's edge.
+
+**Fixed 1: a run starts where the upper floor's blocks really end
+(`_onto_slope`).** Floor blocks are square to the map and may hang a tenth
+of their area past the floor's edge. Where a slope meets its floor at an
+angle, block corners reach out over the slope's top (up to 0.46 on
+Guardian), and a block can hang 0.1 over a square-on slope. A ramp starting
+at the reference's edge had those corners 0.05 to 0.12 proud of it. The
+run's top edge is now the furthest such corner within its lanes (blocks at
+the upper floor's height, up to 0.6 out); the turned landing under the join
+fills the notches between corners. The ramp moves downhill by that much; its
+pieces are chosen for the shorter length.
+
+**Fixed 2: a level is floor within 0.105 of its height, by real distance
+(`LEVEL_NEAR`).** Levels were grouped by rounded height steps, and two
+neighbouring steps can be 0.2 apart. Found at two places:
+
+- The 4.15-long ramp's lower floor is at 16.13 in the reference. It had been
+  laid at 16.24 with its neighbour. That 0.11 was most of the 0.15 lip in
+  the fourth print's screenshot; part 9's longer, shallower ramp worked
+  around a floor that was itself too high. The ramp is now a shallow row, a
+  Ramp 2x2 and a sunk Ramp 2x2, meeting the floor at the reference's foot
+  within 0.01.
+- The ramp at reference (-8, -5.7), part 9's "tangle of small floors": a
+  floor at 17.84 had been laid at 17.65, the ramp was tied to that and came
+  out as a 27-degree Ramp 2x2 with the floor 0.22 proud. It is now two
+  shallow rows from the 18.2 floor.
+
+Floors after this: 192 blocks at 23 heights (18 before), 68% of the walked
+floor (70% before: some small floors that were swept into a neighbour's
+level are now too small for a block of their own).
+
+**Guardian now:** 192 floor blocks, 48 ramp pieces (42 shallow, 6 Ramp 2x2),
+19 landings, 37 walls: 296 pieces, budget 2,960.
+
+**The `fit.json` check (landings not counted, it only knows square-on
+blocks):** no floor block edge crosses a ramp's upper face any more: both
+angled tops and the overhung Ramp 2x2 top are clean. What it still flags:
+
+- sunk ramp feet under the far edge of a floor block (three places). Two
+  have a landing over the gap. The third, the ramp at (-10, -6.2), has its
+  sunk foot coming out past a floor block one unit deep, 0.26 under that
+  floor's level, into ground the check has no block for.
+- floors at another height beside a ramp, overlapping its sides by 0.2 to
+  0.3 (five places). Not in the walking direction.
+- three ramp tops with no floor block past them (a fifth lane, and the two
+  lanes of the ramp at (9.4, -14)).
+
+Tests: a level split by real distance (0.04 and 0.22 stay apart, coverage
+still 1.0), a run starting at a hanging block's edge, `_onto_slope` itself.
+`tools/test_forge_printer_fit.py` 44 tests; full suite 1189 OK.
+
+**The sixth print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_6.mvar`**
+(local only), title "FP Guardian 6", 325 objects, same place and tilt test.
+**Not loaded in the game yet.** Expected HUD: $26,650 (296 pieces at 10 on top
+of 130 and the tilt test's 260). Floors the owner saw as good in the fifth
+print have moved: any floor that was levelled with a neighbour more than 0.1
+away now sits at its own height.
