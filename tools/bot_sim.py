@@ -4,10 +4,11 @@ docs/BOT_SIMULATION_PLAN.md). The match itself is tools/sim_engine.py's; this fi
 together, holds the vote, and keeps the results.
 
 Who plays: every bot of Bot Matchmaking's pool (people never), each at its own pace around a third of yours (one round =
-one match of yours); grinders are three times as likely among Legendary, Blind and Mythic bots; Demon bots play every
+one match of yours); whether a bot grinds is one roll at its difficulty's chance (GRINDER_CHANCE); Demon bots play every
 round, one game to each of yours (Nov 19, the owner; EVERY_ROUND). Lobbies as
 yours: (Nov 19, the owner) one game a round at most (a bot's pace is its chance of a game), and the bots of the
-match of yours a round goes alongside sit it out. Arena 4v4 or Big Team Battle 8v8 from proving_grounds.ini's playlists, clans together (85%, up to a team),
+match of yours a round goes alongside sit it out. Arena 4v4 or Big Team Battle 8v8 from proving_grounds.ini's playlists, clans as one group (85% of rounds: all in when
+one plays, one playlist, parties up to a team; clans_together),
 teams balanced by skill, a map and gametype by the same vote as yours (native/proving_grounds.cpp liking / bot_vote,
 None of the Above included). Bots a lobby cannot seat wait for the next round.
 
@@ -72,6 +73,7 @@ MAP_FILES = {
     "Paradiso": ("reach_forge_halo", "hr_forgeWorld_paradiso.mvar", 23),
     "Pinnacle": ("reach_forge_halo", "hr_forgeWorld_pinnacle.mvar", 24),
     "The Cage": ("reach_forge_halo", "hr_forgeWorld_theCage.mvar", 25),
+    "Utopie": ("reach_forge_halo", "Utopie.mvar", None),    # (the owner's own Forge map, LocalFiles\...\Map)
     "Beaver Creek": ("reach_cex_beaver_creek", "beaver_creek_cl_031.mvar", None),
     "Damnation": ("reach_cex_damnation", "damnation_cl_031.mvar", None),
     "Hang 'Em High": ("reach_cex_hangemhigh", "hang_em_high_cl_031.mvar", None),
@@ -91,8 +93,14 @@ FEEL = {"Boardwalk": (1, 0, 1), "Boneyard": (2, 2, 0), "Countdown": (1, 0, 2), "
 PG_FAMILY = ["slayer", "ctf", "assault", "koth", "oddball", "territories", "stockpile", "headhunter", "juggernaut",
              "infection", "race", "invasion", "insane"]
 # proving_grounds.ini sim.<key>= (the plan's numbers)
-SETTINGS = {"pace": 1 / 3, "grinder_pace": 1.0, "grinder_top": 0.30, "grinder_other": 0.10, "btb_lean": 0.35,
+SETTINGS = {"pace": 1 / 3, "grinder_pace": 1.0, "other_pace": 0.074, "btb_lean": 0.35,
             "spread": 0.6, "after_match": 1}      # (sim.after_match=0: no round alongside your matches; the button still)
+# a bot's chance to be a grinder, by its difficulty: one roll a bot, from its name, so it keeps it (Nov 20, the owner:
+# "every single bot doing like a percentage roll ... demon ... 75% ... mythic ... 65% ... legendary ... 50% ...
+# Tactician will also have a 50% chance. Then heroic, normal will both have a 25% chance. An easy 5%"; Blind and
+# Scaling, not named, as Legendary). sim.grinder_<tier>= in proving_grounds.ini changes one.
+GRINDER_CHANCE = {"demon": 0.75, "mythic": 0.65, "top": 0.50, "tactician": 0.50, "blind": 0.50, "scaling": 0.50,
+                  "strong": 0.25, "average": 0.25, "novice": 0.05}
 # tiers that play a game every round, one to each match of yours (Nov 19, the owner: "I would like all the demon
 # difficulties to play just as much as me. So they play 1 game to my 1 game"); a lobby that cannot seat one queues it
 EVERY_ROUND = {"demon"}
@@ -227,28 +235,30 @@ def population(paths, settings, model=None):
         b.style = saved.get(sr.pool_name(n).lower(), ("", "any"))[1] or "any"
         b.style = b.style if b.style in se.STYLES else "any"
         b.clan = clans.get(n, "") or ""
-        p_grind = settings["grinder_top"] if b.tier in se.TOP_TIERS else settings["grinder_other"]
-        b.grinder = se.hfloat(n, 41) < p_grind
+        b.grinder = se.hfloat(n, 41) < grinder_chance(b.tier, settings)
         b.lean = min(0.9, max(0.05, settings["btb_lean"] + (se.hfloat(n, 44) - 0.5) * 0.5))
         b.pace = math.exp(sp * se.Rng(se.hash_of(n, 43)).gauss())    # (its own spread; the median set below)
         bots.append(b)
-    # grinders at their median pace; the others' median whatever brings everyone's average to the pace asked for
+    # grinders always at their median pace; the others' median whatever brings everyone's average to the pace asked
+    # for, but never under other_pace: with many grinders the round grows instead of the grinders shrinking (Nov 20,
+    # the owner, "make it bigger"; other_pace is what the others had under the old 30%/10% grinder chances)
     # (EVERY_ROUND tiers left out of it: they play every round, and the rest keep the pace they had)
     rest = [b for b in bots if b.tier not in EVERY_ROUND]
     target = settings["pace"] * len(rest)
     g_sum = sum(b.pace * settings["grinder_pace"] for b in rest if b.grinder)
     c_sum = sum(b.pace for b in rest if not b.grinder)
-    if g_sum > target * 0.9:                                         # (grinders alone would use it all)
-        k = target * 0.9 / g_sum if g_sum else 1.0
-        g_scale, c_med = settings["grinder_pace"] * k, (target * 0.1 / c_sum if c_sum else 0.0)
-    else:
-        g_scale, c_med = settings["grinder_pace"], ((target - g_sum) / c_sum if c_sum else 0.0)
+    c_med = max(settings["other_pace"], (target - g_sum) / c_sum) if c_sum else 0.0
     for b in bots:
         if b.tier in EVERY_ROUND:
             b.pace = 1.0
         else:
-            b.pace *= g_scale if b.grinder else c_med
+            b.pace *= settings["grinder_pace"] if b.grinder else c_med
     return bots
+
+
+def grinder_chance(tier, settings):
+    """A tier's chance to grind: GRINDER_CHANCE, or proving_grounds.ini's sim.grinder_<tier>=."""
+    return settings.get("grinder_" + tier, GRINDER_CHANCE.get(tier, 0.25))
 
 
 def games_this_round(b, rng):
@@ -389,7 +399,8 @@ def bot_vote(b, opts, nota, fav_maps, rng):
 
 def draw_options(pl, rng, fits):
     """Three options as Project Reach draws them: gametypes by the playlist's weights, maps at random, a pair the map
-    can hold (fits), a map at most once while there is a choice."""
+    can hold (fits), a map at most once while there is a choice. A gametype may fill more than one option (Nov 19:
+    each option its own roll of the weights)."""
     gts, maps = pl["gametypes"], pl["maps"]
     if not gts or not maps:
         return []
@@ -406,7 +417,7 @@ def draw_options(pl, rng, fits):
         for m, g in cands:
             if len(opts) >= 3:
                 break
-            used = any((o["map"] == m or o["gametype"] == g) if pass_ == 0 else (o["map"] == m and o["gametype"] == g)
+            used = any(o["map"] == m if pass_ == 0 else (o["map"] == m and o["gametype"] == g)
                        for o in opts)
             if not used:
                 opts.append({"map": m, "gametype": g, "family": sr.family(g)})
@@ -433,16 +444,33 @@ def vote(lobby, pl, rng, fits):
     return opts[0]
 
 
-def parties_of(bots, size, rng):
-    """[[Bot]]: a clan queues together 85% of the time, in parties of a team at most; everyone else alone."""
+CLAN_TOGETHER = 0.85                    # (a clan's chance a round to queue as one group)
+
+
+def clans_together(bots, rng):
+    """{clan, lowercased}: the clans (two members or more) that queue as one group this round, each CLAN_TOGETHER.
+    Such a clan plays the round when any member would, every member in it (but those in your match), all in one
+    playlist and in parties of a team at most (Nov 20, the owner: clanmates had each rolled their own round and
+    playlist, so they met in 37 of 984 simulated matches)."""
+    count = {}
+    for b in bots:
+        if b.clan:
+            count[b.clan.lower()] = count.get(b.clan.lower(), 0) + 1
+    return {c for c in sorted(count) if count[c] > 1 and rng.chance(CLAN_TOGETHER)}
+
+
+def parties_of(bots, size, rng, together=None):
+    """[[Bot]]: a clan queues together (CLAN_TOGETHER of the time, or as together, clans_together's, says), in parties
+    of a team at most; everyone else alone."""
     by_clan, out = {}, []
     for b in bots:
         if b.clan:
             by_clan.setdefault(b.clan.lower(), []).append(b)
         else:
             out.append([b])
-    for members in by_clan.values():
-        if len(members) > 1 and rng.chance(0.85):
+    for clan, members in by_clan.items():
+        grouped = clan in together if together is not None else rng.chance(CLAN_TOGETHER)
+        if len(members) > 1 and grouped:
             for i in range(0, len(members), size):
                 out.append(members[i:i + size])
         else:
@@ -450,13 +478,34 @@ def parties_of(bots, size, rng):
     return rng.shuffle(out)
 
 
-def lobbies_of(bots, size, rng, skill, first=None):
-    """([[team 0 bots], [team 1 bots]] per lobby, bots left waiting): parties seated first come first, teams dealt by
-    skill with each party on one team. first(bot): a party with one is never left waiting while a full lobby holds a
-    party of its size without one (they change places; the Demons' game every round, EVERY_ROUND)."""
+def team_split(parties, size, skill):
+    """The parties of two or more (indexes into parties) that make team 0, so that both teams can be filled to size
+    with the lone bots, the two teams' skill closest; None when they cannot be (3 + 3 + 2 into 4 + 4)."""
+    multi = [i for i, p in enumerate(parties) if len(p) > 1]
+    total = sum(len(parties[i]) for i in multi)
+    best = None
+    for mask in range(1 << len(multi)):
+        side = [multi[k] for k in range(len(multi)) if mask >> k & 1]
+        n0 = sum(len(parties[i]) for i in side)
+        if n0 > size or total - n0 > size:
+            continue
+        s0 = sum(skill(b) for i in side for b in parties[i])
+        s1 = sum(skill(b) for i in multi if i not in side for b in parties[i])
+        if best is None or abs(s0 - s1) < best[0]:
+            best = (abs(s0 - s1), side)
+    return None if best is None else best[1]
+
+
+def lobbies_of(bots, size, rng, skill, first=None, together=None):
+    """([[team 0 bots], [team 1 bots]] per lobby, bots left waiting): parties seated first come first (in a lobby whose
+    teams can still be made: team_split), teams dealt by skill with each party on one team. first(bot): a party with
+    one is never left waiting while a full lobby holds a party of its size without one, or as many lone bots (they
+    change places; the Demons' game every round, EVERY_ROUND)."""
+    fits = lambda lb: team_split(lb, size, lambda b: 0.0) is not None
     lobbies, open_ = [], []
-    for party in parties_of(bots, size, rng):
-        home = next((lb for lb in open_ if 2 * size - sum(len(p) for p in lb) >= len(party)), None)
+    for party in parties_of(bots, size, rng, together):
+        home = next((lb for lb in open_ if 2 * size - sum(len(p) for p in lb) >= len(party)
+                     and (len(party) == 1 or fits(lb + [party]))), None)
         if home is None:
             home = []
             open_.append(home)
@@ -478,18 +527,31 @@ def lobbies_of(bots, size, rng, skill, first=None):
                     if j is not None:
                         f[j], lb[i] = party, f[j]
                         break
+                    # (else as many lone bots without one: a clan party of a Demon, Nov 20)
+                    lone = [j for j, q in enumerate(f) if len(q) == 1 and not first(q[0])][:len(party)]
+                    rest = [q for j, q in enumerate(f) if j not in lone] + [party]
+                    if len(party) > 1 and len(lone) == len(party) and fits(rest):
+                        out = [f[j] for j in lone]
+                        f[:] = rest
+                        lb[i:i + 1] = out
+                        break
     full, waiting = [], []
     for lb in lobbies:
-        if sum(len(p) for p in lb) < 2 * size:
+        side = team_split(lb, size, skill) if sum(len(p) for p in lb) == 2 * size else None
+        if side is None:
             waiting += [b for p in lb for b in p]
             continue
         teams, tot = [[], []], [0.0, 0.0]
-        for party in sorted(lb, key=lambda p: -sum(skill(b) for b in p)):
+        for i, party in enumerate(lb):                               # (the parties of two or more as team_split says)
+            if len(party) > 1:
+                t = 0 if i in side else 1
+                teams[t] += party
+                tot[t] += sum(skill(b) for b in party)
+        for party in sorted((p for p in lb if len(p) == 1), key=lambda p: -skill(p[0])):
             room = [size - len(teams[0]), size - len(teams[1])]
-            fit = [t for t in (0, 1) if room[t] >= len(party)]
-            t = min(fit, key=lambda x: tot[x]) if fit else (0 if room[0] >= room[1] else 1)
+            t = min((x for x in (0, 1) if room[x] > 0), key=lambda x: tot[x])
             teams[t] += party
-            tot[t] += sum(skill(b) for b in party)
+            tot[t] += skill(party[0])
         for _ in range(20):                                          # (swaps of two lone bots that even the teams)
             gap, best = tot[0] - tot[1], None
             lone = [{b.name for p in lb if len(p) == 1 for b in p}]
@@ -706,6 +768,12 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, s
         for q in queue:                                              # (last round's waiting bots: their game now)
             if q.name.lower() not in sit:
                 games[q.name] = 1
+        together = clans_together(bots, rng)                         # (these clans play as one group this round)
+        clan_of = lambda b: b.clan.lower() if b.clan and b.clan.lower() in together else ""
+        playing = {clan_of(b) for b in bots if clan_of(b) and games[b.name]}
+        for b in bots:
+            if clan_of(b) in playing and b.name.lower() not in sit:
+                games[b.name] = 1
         layers = max(games.values()) if games else 0
         waiting = [q for q in queue if q.name.lower() in sit]        # (queued but in your match: first next round)
         rows_mm, n_lobby = [], 0
@@ -716,16 +784,22 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, s
                 if b.name not in seen:
                     seen.add(b.name)
                     uniq.append(b)
-            split = {"arena": [], "btb": []}
+            split, clan_pick = {"arena": [], "btb": []}, {}
             for b in uniq:
-                split["btb" if rng.chance(b.lean) else "arena"].append(b)
+                c = clan_of(b)
+                if c and c not in clan_pick:                         # (one playlist for the clan: its members' lean)
+                    leans = [m.lean for m in uniq if clan_of(m) == c]
+                    clan_pick[c] = "btb" if rng.chance(sum(leans) / len(leans)) else "arena"
+                pick = clan_pick[c] if c else "btb" if rng.chance(b.lean) else "arena"
+                split[pick].append(b)
             for key, members in split.items():
                 pl = playlists.get(key)
                 if not pl or not pl["maps"] or not pl["gametypes"]:
                     waiting += members
                     continue
                 size = pl["size"]
-                full, left = lobbies_of(members, size, rng, skill, first=lambda b: b.tier in EVERY_ROUND)
+                full, left = lobbies_of(members, size, rng, skill, first=lambda b: b.tier in EVERY_ROUND,
+                                        together=together)
                 waiting += left
                 for teams in full:
                     n_lobby += 1
@@ -859,9 +933,13 @@ def stats(paths):
     top = [b for b in bots if b.tier in se.TOP_TIERS]
     grind = [b for b in bots if b.grinder]
     print(f"{n} bots (people left out); {len(top)} Legendary and above")
-    print(f"grinders: {len(grind)} ({100 * len(grind) / max(1, n):.0f}%): "
-          f"{100 * sum(1 for b in grind if b.tier in se.TOP_TIERS) / max(1, len(top)):.0f}% of the top tiers, "
-          f"{100 * sum(1 for b in grind if b.tier not in se.TOP_TIERS) / max(1, n - len(top)):.0f}% of the rest")
+    by = {}
+    for b in bots:
+        by.setdefault(b.tier, [0, 0])[0] += b.grinder
+        by[b.tier][1] += 1
+    print(f"grinders: {len(grind)} ({100 * len(grind) / max(1, n):.0f}%): " + ", ".join(
+        f"{t} {g}/{c} ({100 * g / c:.0f}%, chance {100 * grinder_chance(t, settings):.0f}%)"
+        for t, (g, c) in sorted(by.items(), key=lambda x: -grinder_chance(x[0], settings))))
     mean = sum(b.pace for b in bots) / max(1, n)
     gp = sorted(b.pace for b in grind)
     cp = sorted(b.pace for b in bots if not b.grinder)

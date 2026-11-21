@@ -744,3 +744,13 @@ def stands_by_spawn(spots, players):
     best = min(itertools.permutations(teams, min(len(spots), len(teams))),
                key=lambda ts: sum((spots[k] - cent[t]).flat() for k, t in enumerate(ts)))
     return {t: spots[k] for k, t in enumerate(best)}
+
+
+def spawn_bases(players):
+    """{team: Vec} each team's players' middle (players: [(team, Vec)], read at spawn): a base for a team the Forge
+    variant gives no stand (One Flag has one flag, so one stand; custom, Nov 18)."""
+    cent = {}
+    for t, p in players:
+        cent.setdefault(t, []).append(p)
+    return {t: Vec(sum(p.x for p in ps) / len(ps), sum(p.y for p in ps) / len(ps), sum(p.z for p in ps) / len(ps))
+            for t, ps in cent.items() if t is not None and t >= 0}

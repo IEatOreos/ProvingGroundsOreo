@@ -60,6 +60,24 @@ class ReloadTimingTests(unittest.TestCase):
         b.reload_check(50.0, me, act)
         self.assertFalse(act.reload)
 
+    def test_reach_reload_reaches_the_game(self):
+        # (custom, Nov 20) Reach had no reload entry and native/reach.cpp writes none: the press never reached the game
+        import json
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import botctl
+        import live_bots
+        rows = json.loads((Path(__file__).resolve().parents[1] / "maps" / "_inputs" / "reach.json").read_text())
+        self.assertEqual([(r["off"], r["mask"], r["press"]) for r in rows["reload"]], [(0x40, 0x10010, False)])
+        self.assertFalse(0x10010 & 0x100000)              # (Use held: reach.cpp's, never cleared by this entry)
+        for name, entries in rows.items():
+            if name != "reload":
+                for r in entries:
+                    if r["off"] == 0x40:
+                        self.assertFalse(r["mask"] & 0x10010, name)
+        got = [e for e in live_bots.decoded_buttons("reach") if e[1] == "reload"]
+        self.assertEqual(got, [("reach", "reload", 0x40, 0x10010, False)])
+        self.assertEqual(botctl.BTN["reload"], 64)        # (shared.h HB_BTN_RELOAD = 1 << 6)
+
     def test_empty_pocket_gun_comes_out_in_a_retreat(self):
         b = Bot(0, 0, make_profile("strong", "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
         b.notes = []

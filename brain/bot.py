@@ -856,6 +856,62 @@ REACH_BOMB_OVER = 6.5
 # (custom, Nov 17) a pilot's run stays on its man out of sight this long while another is in sight (Bot.run_hold): C2IR
 # (Boneyard 20261117-185650) switched its run's man 10 times among six in a 22 s ride, finishing no run
 AIR_RUN_HOLD_S = 2.5
+# (custom, Nov 19) ... unless a man in sight is within AIR_RUN_SWITCH_R: on him (Bot.run_hold). In tools/banshee_sim.py's
+# Boneyard drills a pilot had no man of its run in sight on half its ticks; when it had none at all, another stood in the
+# open within 30 u a quarter of the time, and one within the bomb's 18 u on 17% of every tick
+AIR_RUN_SWITCH_R = 22.0
+# (custom, Nov 20) a Reach bomber's: tools/banshee_sim.py, Boneyard (10 games): 1203 runs, median 0.7 s; 799 ended on a
+# switch to another man while the old one lived, the new one farther in 469 and 13 u from the old (median), half of
+# them with the old man in sight the row before (he dropped out of the filtered sight list for a tick)
+AIR_BOMBER_SWITCH_R = 9.0
+AIR_STUCK_OUT = 15.0   # s: (custom, Nov 19) a pilot still this long low down, no enemy seen in 5 s, gets out (Bot.drive)
+# (custom, Nov 19) a pilot with no man in sight and none of its run kept flies its run at the nearest enemy its beliefs
+# hold from the last AIR_HUNT_S (radar, a teammate's callout, a sound) within AIR_HUNT_R (Bot.air_hunt). In
+# tools/banshee_sim.py's Boneyard games a Demon pilot saw nobody 80% of its flying while it held ~4 such beliefs, exact to
+# 0.1 u, and flew its trip: 68% of the men stood on open sky where a Banshee could see them, 7% were in its sight
+AIR_HUNT_S, AIR_HUNT_R = 3.0, 60.0
+# (custom, Nov 19) a man out of sight whose run needed air_guard's recovery (stuck, boxed in) in the last AIR_BAN_REC s is
+# let go AIR_BAN_S (air_keep / air_hunt): tools/banshee_sim.py pilots after unseen men into the scaffolding west of
+# Boneyard's middle (256-272, 84-100, the soft kill 1 u over them) sat boxed in 190-370 s of a ride
+AIR_BAN_REC, AIR_BAN_S = 3.0, 8.0
+# (custom, Nov 19) a pilot's new run goes at the man nearest by distance + AIR_CROWD_W u per other enemy within AIR_CROWD_R
+# of him (known in the last 2 s: Bot.air_pick), and a Banshee that lost AIR_HOT_LOSS of its body in the last AIR_HOT_S
+# with AIR_HOT_MEN or more in sight breaks off AIR_HOT_OUT s, away from them (air_pass). tools/banshee_sim.py, Boneyard:
+# a Demon's first runs dived into Normal's whole team at its spawn, 4-8 of them with a line to it, 100-150 of its 2200
+# body a second, dead at 27-36 s with 1-3 kills
+AIR_CROWD_R, AIR_CROWD_W = 10.0, 12.0
+AIR_CROWD_MAX, AIR_CROWD_OFF = 3, 30.0   # (custom, Nov 19) a bunch: a bomb run only, off within this far (air_pass)
+AIR_BUNCH_MATE, AIR_HOLD_R = 25.0, 8.0   # (custom, Nov 19) a bunch with none of ours this near: held off, round ours
+AIR_HOT_S, AIR_HOT_LOSS, AIR_HOT_MEN, AIR_HOT_OUT = 2.0, 0.08, 3, 3.0
+AIR_BOMBER_TURN = 0.6    # (custom, Nov 20) Reach Banshee's throttle turning back onto its man (air_pass), not reverse
+AIR_BOMBER_TIGHT_R = 25.0   # (custom, Nov 20) u flat: a Reach bomber's pulled-back turn only on a man this near
+# (custom, Nov 20) a Reach bomber's dive: air_guard's look for the ground stops this short of its man, but never under
+# AIR_PULL_MIN_S of flight (a hill or a deck between still pulls it out)
+AIR_BOMBER_PULL_SPARE, AIR_PULL_MIN_S = 5.0, 0.4
+AIR_BOMB_HOLD = 0.4   # (custom, Nov 20) s: a Reach bomber's selected bomb waits this long for a man under its aim (fuel_rod)
+# (custom, Nov 20) u: the farthest a Reach bomber lets its bomb go (air_pass). Opening bombs from 13-16 u flat killed
+# 0-1; the 2-3 kill ones came from 8-9 u flat over a bunch
+AIR_BOMBER_DROP_R = 11.0
+AIR_SKY_EVERY = 0.5         # (custom, Nov 20) s: a Reach bomber's recheck of the open air over a man (air_open_sky)
+AIR_SKY_RAYS = (2, 80.0)    # (custom, Nov 20) clear rays of 4 needed, their angle up in degrees (air_open_sky)
+AIR_OVER_R = 6.0            # (custom, Nov 20) u flat: a Reach bomber with no line to its man flies level till this near
+AIR_DETOUR_PAD = 6.0        # (custom, Nov 20) u: round a no-fly box by its corners this far out (Bot.nofly_detour)
+AIR_BOOST_OPEN = 20.0       # (custom, Nov 20) u open ahead for a Reach bomber's boost, ~1.5 s at 13 u/s (Bot.boost_open)
+
+# (custom, Nov 20) a Reach bomber with nobody to go after (Bot.air_seek): AIR_SEEK_AHEAD half-unit cells ahead on the
+# learned air. A run's man not seen with its own eyes for AIR_CHASE_S of the run is let go AIR_BAN_S (Bot.air_keep): one
+# 197 s ride spent 54% of its rows on "out of sight, the run goes on", no kill
+AIR_SEEK_AHEAD, AIR_CHASE_S = 10, 8.0
+# (custom, Nov 20) its spot by their base (Bot.air_open_spots): AIR_SEEK_OPEN u open round it, AIR_SEEK_NOFLY u off a
+# no-fly box, AIR_SEEK_STEP spots checked a call; held over it within AIR_SEEK_SIT u (Bot.air_seek)
+AIR_SEEK_OPEN, AIR_SEEK_NOFLY, AIR_SEEK_STEP, AIR_SEEK_SIT = 12.0, 8.0, 12, 3.0
+# (custom, Nov 20) its spot by their men, not their base (Bot.air_fight_mid): enemies known in the last AIR_SEEK_KNOWN
+# s; a spot kept while within AIR_SEEK_KEEP u as near them as the nearest
+AIR_SEEK_KNOWN, AIR_SEEK_KEEP = 15.0, 8.0
+# (custom, Nov 20) a Reach bomber's pick (air_pick): AIR_BUNCH_W u nearer for each other enemy within AIR_BUNCH_R of the
+# man, the bomb's blast. tools/banshee_sim.py's 17-, 15- and 14-kill games each opened with one bomb on Normal's team
+# walking out of its spawn, 3-5 kills at 8 s; their kills came 13-17 u from the nearest enemy, 4-8 within 45 u
+AIR_BUNCH_R, AIR_BUNCH_W = 4.0, 15.0
 
 
 def fuelrod_times(game):
@@ -3054,6 +3110,7 @@ class Bot:
             s.air_guard(me, act, snap)
             s.spire_approach(me, act, snap)
             s.air_roof_guard(me, act, snap)
+            s.air_snap_bomb(now, me, act, snap)    # (custom, Nov 19: Reach, the bomb on whoever is under the nose)
             s.air_snap_fire(now, me, act, snap)
             s.fire_gate(now, me, act, snap)
             return act
@@ -4638,7 +4695,13 @@ class Bot:
         # the director called it onto a gun or a seat (a honk): it goes unless the fight is close. Any fight used to
         # win: live, Boneyard, two bots called to a Warthog's gun traded shots 25 u away and never got there
         close_fight = best[0] == "fight" and best[1] in s.per.beliefs and dist(me.pos, s.per.beliefs[best[1]].pos) < 8.0
-        close_fight = close_fight or (shot_back and best[0] == "fight")     # (custom: the man shooting it, shoot_back)
+        # (custom, Nov 19) not on its way to drive the team's aircraft (director.crew_orders): a shot at it from afar
+        # does not stop that walk, only a fight within 8 u. In tools/banshee_sim.py's Boneyard games the Banshee went
+        # unflown in 3 of 5 matches: its drivers came to 7-10 u under the pad, turned for the long way up through the
+        # middle, were shot at, fought there and died
+        air_job = s.order.role == "drive" and any(
+            v["handle"] == s.order.target and (vehicles.spec(v["kind"]) or {}).get("move") == "air" for v in snap.vehicles)
+        close_fight = close_fight or (shot_back and best[0] == "fight" and not air_job)     # (custom: shoot_back)
         # (the core at stake: on foot, by the lift and the drops; on a loose objective: no seat, no ride, stay_on)
         urgent = s.urgent(me, snap) or getattr(s, "stay_at", None) is not None
         if s.order.role in ("ride", "board", "drive") and not close_fight and not urgent:
@@ -5426,6 +5489,7 @@ class Bot:
                 s.drive_to = s.patrol_point(me)
         s.scorpion_turn = scorpion and s.seat == "driver"
         seen = s.per.visible_enemies()
+        s.air_snap = snap                        # (custom, Nov 19: air_away's teammates)
         bt = getattr(s, "board_try", None)
         if (bt is not None and bt[0] == me.vehicle and now - bt[1] < 15.0
                 and any(p.vehicle == me.vehicle and p.alive and p.team != me.team for p in snap.players)):
@@ -5695,11 +5759,34 @@ class Bot:
             s.landing, s.air_dest = False, room
             s.note("air: bomb run on the objective room")
             return
+        if seen and air and st.get("role") == "air" and s.game == "reach" and vehicles.air_nofly(s.base_map()):
+            # (custom, Nov 19) a man in or under the map's no-fly air (vehicles.AIR_NOFLY) is no pilot's: its runs at men
+            # under Boneyard's scaffolding pressed it against the box's edge
+            seen = [k for k in seen if k not in s.per.beliefs or not s.in_nofly(s.per.beliefs[k].pos, floor_band=6.0)]
+        if seen and air and st.get("role") == "air" and s.reach_bomber():
+            # (custom, Nov 20) a man on foot under a roof is no bomber's (air_open_sky)
+            seen = [k for k in seen if (snap.player(k) is not None and snap.player(k).vehicle not in (None, -1))
+                    or s.air_open_sky(now, k)]
         if not seen and air and st.get("role") == "air" and not easy and not transit:
             keep = s.air_keep(now, me, snap)     # (custom, Nov 13) the run's man out of sight: the attack goes on
             if keep is not None:
                 seen = [keep]
                 s.note("air: out of sight, the run goes on")
+            else:
+                hunt = s.air_hunt(now, me, snap)  # (custom, Nov 19) a man the team knows of: a run at him
+                if hunt is not None:
+                    seen = [hunt]
+                    s.note("air: on a man the team knows of")
+                elif (s.reach_bomber() and s.order.role != "ferry" and not s.urgent(me, snap)
+                      and s.air_seek(now, me, snap, act)):
+                    return                    # (custom, Nov 20: off to where they were last known, air_seek)
+                elif (s.game == "reach" and s.seat == "driver" and s.order.role != "ferry" and not s.urgent(me, snap)
+                      and s.air_over_mates(me, snap, act)):
+                    # (custom, Nov 19) nobody to go after: over its teammates, where the fights come, not the trip to
+                    # the objective. Slayer's is Boneyard's middle, by the scaffolding its pilots sat boxed in at,
+                    # "path" on 47-65% of a ride's rows in tools/banshee_sim.py
+                    s.note("air: nobody to go after, over ours")
+                    return
         if seen and not gunned:                  # its own gun (or none): by the vehicle's role (vehicles.STRATEGY)
             # (custom, Nov 13) a pilot keeps its run's man while he is in sight (each tick's pick flipped between men:
             # 108 of Valhalla's 174 runs ended on a new target)
@@ -5710,6 +5797,15 @@ class Bot:
                     s.note("air: on the run's man, another in sight")
             tid = held if held is not None else (s.vehicle_pick(me, v, "driver", seen, snap) if armed else None) or \
                 min(seen, key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
+            if held is None and air and st.get("role") == "air" and not easy and s.game == "reach":
+                foe0 = snap.player(tid)
+                if foe0 is None or foe0.vehicle in (None, -1):
+                    tid = s.air_pick(now, me, seen)   # (custom, Nov 19: a man on foot: the loneliest near one)
+            if (air and st.get("role") == "air" and not easy and s.game == "reach" and isinstance(tid, int)
+                    and not s.reach_bomber() and s.air_hold_off(now, me, tid, snap, act)):
+                # (custom, Nov 19: their bunch on its own: held off with ours. Nov 20: not a Reach Banshee, whose bomb on
+                # their bunch was the best games' opening, 3-5 kills: air_pick goes for it)
+                return
             b = s.per.beliefs[tid]
             # (an explosive shot on a tank goes to its back hatch when we are behind it: weak_point)
             aim_at = s.weak_point(me, tid, b, snap, vehicles.seat_gun(vehicles.kind_of(v["kind"]), "driver")) \
@@ -5907,7 +6003,7 @@ class Bot:
                 learned = getattr(T, "air_heights", None)
                 # (no flying learned here: a skilled player's median height in this kind, vehicles.CLEARANCE
                 # travel)
-                cl = vehicles.clearance(vehicles.kind_of(v["kind"])) if v else vehicles.clearance("banshee")
+                cl = vehicles.clearance(vehicles.kind_of(v["kind"]) if v else "banshee", s.base_map())
                 # (nothing learned: over this map's own buildings and hills, Terrain.air_levels, never under people's
                 # travel height in this kind)
                 want = learned[1] if learned else max(cl["travel"], T.air_levels()[1])
@@ -5940,7 +6036,12 @@ class Bot:
             s.wedge_spot, s.reversed_n = None, 0       # got away from where it was wedged
         # (aircraft too, after 4 s: a Banshee sat 252 s at full throttle and climb under Spire's spire, 3% of it moving,
         # live; since air_guard backs it off: here a pilot stuck low down gets out)
-        stuck = now - s.drive_since > (4.0 if air else 2.5)
+        # (custom, Nov 19) a Banshee only after AIR_STUCK_OUT s, and not with an enemy seen in the last 5 s: air_guard's
+        # pocket recovery gets it out first, and a pilot circling slowly over a fight is not stuck. At 4 s, in
+        # tools/banshee_sim.py's Boneyard drills, pilots got out of working Banshees 46 times in 46 minutes, 0.6-2.4 u
+        # over the floor, 24 times at one spot in one run
+        fighting = now - max(s.per.last_seen.values(), default=-99.0) < 5.0
+        stuck = now - s.drive_since > ((AIR_STUCK_OUT if not fighting else math.inf) if air else 2.5)
         if air and s.order.role != "ferry":
             # over its destination and not getting to it: give that place up after 5 s (Spire: under the spire's
             # overhang, the goal on its top 20 u above, it circled 10 s with its heading flipping, never "stuck":
@@ -6129,12 +6230,373 @@ class Bot:
         p = snap.player(tid) if b is not None else None
         if p is None or not p.alive or p.team == me.team or now - b.t > AIR_KEEP_S or dist(me.pos, b.pos) > AIR_KEEP_R:
             return None
+        if s.air_banned(now, tid):
+            return None
+        if s.reach_bomber():
+            # (custom, Nov 20) not seen with its own eyes for AIR_CHASE_S of the run: let go (AIR_CHASE_S)
+            ch = getattr(s, "air_chase", None)
+            if ch is None or ch[0] != tid:
+                ch = s.air_chase = (tid, now)
+            if now - max(ch[1], s.per.last_seen.get(tid, -99.0)) > AIR_CHASE_S:
+                s.__dict__.setdefault("air_ban", {})[tid] = now + AIR_BAN_S
+                s.note("air: never in sight, letting him go")
+                return None
         return tid
+
+    def air_banned(s, now, tid):
+        """(custom, Nov 19) Whether the unseen man tid is let go (AIR_BAN_S): his run needed air_guard's recovery in the
+        last AIR_BAN_REC s (air_rec), now or before within AIR_BAN_S."""
+        ban = s.__dict__.setdefault("air_ban", {})
+        rec = getattr(s, "air_rec", None)
+        run = getattr(s, "air_run", None)
+        if rec is not None and now - rec[1] < AIR_BAN_REC and run is not None and run[1] == tid:
+            ban[tid] = now + AIR_BAN_S
+            s.note("air: boxed in after him, letting him go")
+        b = s.per.beliefs.get(tid)
+        if b is not None and any(t[1] > now and (b.pos - t[0]).flat() < s.AIR_TRAP_R and abs(b.pos.z - t[0].z) < 12.0
+                                 for t in getattr(s, "air_traps", ())):
+            return True                          # (in a trap of ours: air_trap_note)
+        if b is not None and s.in_nofly(b.pos, floor_band=6.0):
+            return True                          # (in or under the map's no-fly air: vehicles.AIR_NOFLY)
+        if not s.air_open_sky(now, tid):
+            return True                          # (custom, Nov 20: a Reach bomber's man under a roof)
+        return ban.get(tid, 0.0) > now
+
+    def nofly_detour(s, a, p):
+        """(custom, Nov 20) Where a pilot at a goes first on its way to p when the flat line between crosses a no-fly box:
+        the box corner AIR_DETOUR_PAD u out that makes the shorter way with both legs clear of it; None when the line
+        is clear (or no corner clears it). tools/banshee_sim.py, Boneyard: over the top to men south of the scaffolding
+        from north of it, a Demon pilot flew straight into the box (272, 88, -4) and sat there, a 417 s ride, no kill;
+        letting those men go instead halved its kills."""
+        if not s.nofly_across(a, p):
+            return None
+        best = None
+        for x0, y0, x1, y1, _, _ in vehicles.air_nofly(s.base_map()):
+            for cx in (x0 - AIR_DETOUR_PAD, x1 + AIR_DETOUR_PAD):
+                for cy in (y0 - AIR_DETOUR_PAD, y1 + AIR_DETOUR_PAD):
+                    c = Vec(cx, cy, a.z)
+                    if s.nofly_across(a, c):
+                        continue
+                    n = (c - a).flat() + (p - c).flat()
+                    if best is None or n < best[0]:
+                        best = (n, c)
+        return best[1] if best is not None else None
+
+    def nofly_across(s, a, p, step=2.0):
+        """(custom, Nov 20) The flat line a-p through one of the map's no-fly boxes (vehicles.AIR_NOFLY)."""
+        boxes = vehicles.air_nofly(s.base_map())
+        n = max(1, int((p - a).flat() / step))
+        for k in range(1, n):
+            x, y = a.x + (p.x - a.x) * k / n, a.y + (p.y - a.y) * k / n
+            if any(x0 <= x <= x1 and y0 <= y <= y1 for x0, y0, x1, y1, _, _ in boxes):
+                return True
+        return False
+
+    def air_line_clear(s, now, me, p):
+        """(custom, Nov 20) A Reach bomber's round's line from it to the man at p (Terrain.aim_hit from its middle to
+        his chest: shot_los read lines this steep blocked), rechecked every AIR_SKY_EVERY s or once he moved 1 u."""
+        c = getattr(s, "air_line", None)
+        if c is not None and now - c[0] < AIR_SKY_EVERY and (c[1] - p).flat() < 1.0 and (c[2] - me.pos).length() < 2.0:
+            return c[3]
+        T = s.air_terrain()
+        if not hasattr(T, "aim_hit"):
+            return True
+        tgt = p + Vec(0.0, 0.0, CHEST)
+        d = dist(me.pos, tgt)
+        hit = T.aim_hit(me.pos, math.atan2(tgt.y - me.pos.y, tgt.x - me.pos.x),
+                        math.atan2(tgt.z - me.pos.z, max((tgt - me.pos).flat(), 1e-6)), reach=d)
+        ok = hit is None or dist(hit, tgt) < 1.0
+        s.air_line = (now, p, me.pos, ok)
+        return ok
+
+    def air_open_sky(s, now, tid):
+        """(custom, Nov 20) For a Reach bomber: whether the man tid has open air over him, AIR_SKY_RAYS[0] or more of 4
+        rays from his eye clear REACH_BOMB_OVER u at AIR_SKY_RAYS[1] deg up (Terrain.aim_hit, a round's: shot_los up a
+        line that steep read blocked over men in the open); rechecked every AIR_SKY_EVERY s. True for any other pilot.
+        tools/banshee_sim.py, Boneyard: the Demon pilot's 270-310 s rides at Normal's base and over the blue one, a
+        kill each, spent 40-50% of their rows on "out of sight, the run goes on", on men under its decks."""
+        if not s.reach_bomber() or not isinstance(tid, int):
+            return True
+        c = s.__dict__.setdefault("air_sky", {})
+        e = c.get(tid)
+        b = s.per.beliefs.get(tid)
+        if b is None:
+            return True
+        if e is None or now - e[0] >= AIR_SKY_EVERY or (e[2] - b.pos).flat() > 1.0:
+            T = s.air_terrain()
+            if not hasattr(T, "aim_hit"):
+                return True
+            at = b.pos + Vec(0.0, 0.0, EYE)
+            n = sum(1 for k in range(4) if T.aim_hit(at, k * math.pi / 2, math.radians(AIR_SKY_RAYS[1]),
+                                                    reach=REACH_BOMB_OVER) is None)
+            e = c[tid] = (now, n >= AIR_SKY_RAYS[0], b.pos)
+        return e[1]
+
+    def air_hunt(s, now, me, snap):
+        """(custom, Nov 19) A pilot's man while none is in sight and its run keeps none (air_keep): the nearest living
+        enemy its beliefs hold from the last AIR_HUNT_S within AIR_HUNT_R, else None. Its run flies at him to get its
+        eyes on him; its guns wait for the clear line (fire_gate) as on a kept man."""
+        best = None
+        for k, b in s.per.beliefs.items():
+            if not isinstance(k, int) or now - b.t > AIR_HUNT_S:
+                continue
+            p = snap.player(k)
+            if p is None or not p.alive or p.team == me.team or s.air_banned(now, k):
+                continue
+            d = dist(me.pos, b.pos)
+            if d <= AIR_HUNT_R and (best is None or d + s.air_crowd(now, me, k) < best[0]):
+                best = (d + s.air_crowd(now, me, k), k)
+        return best[1] if best is not None else None
+
+    def air_crowd(s, now, me, tid):
+        """(custom, Nov 19) AIR_CROWD_W u for each other enemy known in the last 2 s within AIR_CROWD_R of man tid."""
+        if s.reach_bomber():
+            # (custom, Nov 20) a Reach bomber's bomb kills a bunch: men by him draw it in (AIR_BUNCH_W each in its
+            # blast), not off
+            return -AIR_BUNCH_W * s.air_near_n(now, tid, AIR_BUNCH_R)
+        return AIR_CROWD_W * s.air_near_n(now, tid, AIR_CROWD_R)
+
+    def air_near_n(s, now, tid, r):
+        """(custom, Nov 20) How many other enemies known in the last 2 s stand within r of man tid."""
+        b = s.per.beliefs.get(tid)
+        if b is None:
+            return 0
+        return sum(1 for k, o in s.per.beliefs.items() if k != tid and isinstance(k, int) and now - o.t < 2.0
+                   and dist(o.pos, b.pos) < r)
+
+    def air_pick(s, now, me, seen):
+        """(custom, Nov 19) A pilot's man for a new run among those in sight: the nearest by distance + air_crowd (a
+        Reach bomber: the nearest less the bunch round him)."""
+        return min(seen, key=lambda k: dist(me.pos, s.per.beliefs[k].pos) + s.air_crowd(now, me, k))
+
+    def air_hot(s, now, me, v, snap):
+        """(custom, Nov 19) A Banshee that lost AIR_HOT_LOSS of its body ("left") in the last AIR_HOT_S with AIR_HOT_MEN
+        or more enemies in sight: the heading away from them (their middle), else None."""
+        left = v.get("left") if v is not None else None
+        if not isinstance(left, (int, float)) or isinstance(left, bool):
+            return None
+        hist = s.__dict__.setdefault("air_left", [])
+        hist.append((now, float(left)))
+        while hist and now - hist[0][0] > AIR_HOT_S:
+            hist.pop(0)
+        seen = [s.per.beliefs[k].pos for k in s.per.visible_enemies() if k in s.per.beliefs]
+        if len(seen) < AIR_HOT_MEN or hist[0][1] - left < AIR_HOT_LOSS:
+            return None
+        cx, cy = sum(p.x for p in seen) / len(seen), sum(p.y for p in seen) / len(seen)
+        return s.air_away(me, Vec(cx, cy, me.pos.z))
+
+    def air_hold_off(s, now, me, tid, snap, act):
+        """(custom, Nov 19) A Reach pilot's man in a bunch (AIR_CROWD_MAX or more of his within AIR_CROWD_R) with none of
+        ours on foot within AIR_BUNCH_MATE of him: no run. It flies to its teammates on foot (their middle), at the map's
+        travel height, round them once there, guns off, till the bunch is in a fight with ours or a man strays.
+        tools/banshee_sim.py, Boneyard: the Demon pilot's first ride went straight at Normal's whole team at its spawn
+        and died at 27-46 s in four of six games, the Banshee then gone 180 s. True when it took over."""
+        b = s.per.beliefs.get(tid)
+        if b is None or s.air_near_n(now, tid, AIR_CROWD_R) < AIR_CROWD_MAX:
+            return False
+        mates = [p.pos for p in snap.players if p.team == me.team and p.alive and p.id != me.id
+                 and p.vehicle in (None, -1)]
+        if not mates or any(dist(q, b.pos) < AIR_BUNCH_MATE for q in mates):
+            return False
+        if not s.air_over_mates(me, snap, act, tid):
+            return False
+        s.note("air: their bunch on its own, holding off with ours")
+        return True
+
+    def reach_bomber(s):
+        """(custom, Nov 20) A Reach Banshee's pilot: its kills are its bomb's, its body 38 DMR rounds (the owner)."""
+        return s.game == "reach" and getattr(s, "veh_kind", "banshee") == "banshee" and getattr(s, "seat", "") == "driver"
+
+    def boost_open(s, me, v, yaw):
+        """(custom, Nov 20) A Reach bomber's boost only with AIR_BOOST_OPEN u open along yaw at its height (fly_probe,
+        the wing tips too). tools/banshee_sim.py, Boneyard: boosted at 13 u/s across Normal's spawn it overshot into a
+        slot in their base's west side, walls 0.6-4 u off on 15 of 16 headings, and never got out (400 s)."""
+        Ta = s.air_terrain()
+        if not hasattr(Ta, "fly_clear"):
+            return True
+        floor = me.pos.z - Ta.height_over(me.pos.x, me.pos.y, me.pos.z)
+        avoid = (Ta.oob_avoid() if hasattr(Ta, "oob_avoid") else []) + \
+            [("box",) + tuple(bx) for bx in vehicles.air_nofly(s.base_map())]
+        return s.fly_probe(Ta, me.pos, yaw, AIR_BOOST_OPEN, floor, avoid, (-0.6, 0.0, 0.8)) >= AIR_BOOST_OPEN
+
+    def air_seek(s, now, me, snap, act):
+        """(custom, Nov 20) A Reach bomber with nobody to go after: to their base (the map's flag of their team), where
+        their dead come back in, along the learned high air (fly_way) at the map's travel height, full throttle; round it
+        once there, guns off, its eyes out for them. The owner: "I don't want the Banshee to survive long if they have
+        zero presence on the map". tools/banshee_sim.py, Boneyard: the 17-, 15- and 14-kill games' kills and a 7-kill
+        ride came by Normal's spawn, men walking out in the open; over its own team (air_over_mates) the Demon pilots
+        sat boxed in by the scaffolding at 0.1-0.4 u/s for 100-220 s of a ride, and to where men were last known it
+        flew 200-300 s rides over the blue base at men under its decks, a kill a ride. False with no base known.
+        Its spot: the open air (air_loiter_spots) nearest their base: the base flag itself, inside Normal's base
+        structures, held pilots wedged in its walls at 0.1 u/s for whole rides, and off the learned air at the map's
+        east edge another crawled 491 s. To the middle of the men it knew of instead, its goal swung between the two
+        bases into the scaffolding (90 s, no kill, after a 10-kill start over their spawn)."""
+        mid = s.air_fight_mid(now, me, snap) or (s.map.get("flags") or {}).get((s.team + 1) % 2)
+        if mid is None:
+            return False
+        Ta = s.air_terrain()
+        # (the most open spots, AIR_SEEK_OPEN u on 8 headings, while they are being found the loiter spots: one 6 u
+        # open by Normal's flag had walls just west and held pilots circling into them)
+        spots = s.air_open_spots(Ta) or s.air_loiter_spots(Ta)
+        goal = min(spots, key=lambda q: (q - mid).flat()) if spots else mid
+        # (custom, Nov 20) the spot kept while it is within AIR_SEEK_KEEP u as near their men as the nearest (their
+        # middle moves every tick; a new spot each tick swung the pilot between them)
+        old = getattr(s, "_air_seek_goal", None)
+        if old is not None and spots and old in spots and (old - mid).flat() <= (goal - mid).flat() + AIR_SEEK_KEEP:
+            goal = old
+        s._air_seek_goal = goal
+        own = vehicles.CLEARANCE_MAP.get(s.base_map(), {}).get(getattr(s, "veh_kind", None) or "banshee")
+        up = own["travel"] if own is not None else s.air_heights(Ta)[1]
+        flat = (goal - me.pos).flat()
+        way = Ta.fly_way(me.pos, goal, "high", ahead=AIR_SEEK_AHEAD) if flat > AIR_HOLD_R else None
+        # (a spot is at the travel height already; the learned air's cells and a bare place are floors)
+        aim, aim_z = (way, way.z + up) if way is not None else (goal, goal.z + (0.0 if spots else up))
+        det = s.nofly_detour(me.pos, aim)            # (round a no-fly box, not through it)
+        if det is not None:
+            aim = det
+        to = math.atan2(aim.y - me.pos.y, aim.x - me.pos.x)
+        act.pitch = max(-0.3, min(0.4, math.atan2(aim_z - me.pos.z, max((aim - me.pos).flat(), 4.0)) * 1.5))
+        if flat > AIR_SEEK_SIT:
+            act.yaw, act.forward = to, min(1.0, 0.3 + flat / AIR_HOLD_R)
+        else:
+            # there: held over it, the nose on their base for their next men out (round it, it flew into walls)
+            act.yaw, act.forward = math.atan2(mid.y - me.pos.y, mid.x - me.pos.x), 0.0
+            act.pitch = max(-0.3, min(0.3, (goal.z - me.pos.z) * 0.3))
+        act.strafe, act.fire = 0.0, False
+        s.air_run = None
+        s.att = ["seek", None, round(goal.x, 1), round(goal.y, 1)]
+        s.note("air: nobody in sight, to where they were")
+        return True
+
+    def air_fight_mid(s, now, me, snap):
+        """(custom, Nov 20) Where a Reach bomber's men are: the middle (median x and y, the floor height of the nearest)
+        of the living enemies on foot its beliefs hold from the last AIR_SEEK_KNOWN s, else None. tools/banshee_sim.py,
+        Boneyard: held by Normal's base it waited there 290 s of a 445 s ride, one kill, while Normal fought 35-50 u
+        off round the scaffolding and its runs at them from there ran out of time (AIR_CHASE_S) on the way."""
+        ps = []
+        for k, b in s.per.beliefs.items():
+            if not isinstance(k, int) or now - b.t > AIR_SEEK_KNOWN:
+                continue
+            p = snap.player(k)
+            if p is not None and p.alive and p.team != me.team and p.vehicle in (None, -1):
+                ps.append(b.pos)
+        if not ps:
+            return None
+        xs, ys = sorted(q.x for q in ps), sorted(q.y for q in ps)
+        m = Vec(xs[len(xs) // 2], ys[len(ys) // 2], 0.0)
+        return Vec(m.x, m.y, min(ps, key=lambda q: (q - m).flat()).z)
+
+    def air_open_spots(s, T):
+        """(custom, Nov 20) Of the loiter spots (air_loiter_spots, once all found), those AIR_SEEK_OPEN u open on 8
+        headings (out of bounds and the no-fly boxes counted) and AIR_SEEK_NOFLY u or more off a no-fly box; found
+        AIR_SEEK_STEP spots a call, kept on the terrain. Empty until then."""
+        st = T.__dict__.get("_air_open")
+        lo = T.__dict__.get("_air_loiter")
+        if st is None:
+            if lo is None or lo["todo"]:
+                s.air_loiter_spots(T)
+                return []
+            st = T._air_open = {"todo": list(lo["spots"]), "spots": []}
+        if st["todo"]:
+            avoid = (T.oob_avoid() if hasattr(T, "oob_avoid") else []) + \
+                [("box",) + tuple(bx) for bx in vehicles.air_nofly(s.base_map())]
+            batch, st["todo"] = st["todo"][:AIR_SEEK_STEP], st["todo"][AIR_SEEK_STEP:]
+            for p in batch:
+                if not s.in_nofly(p, pad=AIR_SEEK_NOFLY) and all(
+                        T.fly_clear(p, k * math.pi / 4, AIR_SEEK_OPEN, avoid=avoid) >= AIR_SEEK_OPEN for k in range(8)):
+                    st["spots"].append(p)
+            if st["todo"]:
+                return []
+        return st["spots"]
+
+    AIR_LOITER_OPEN, AIR_LOITER_EVERY, AIR_LOITER_STEP = 6.0, 3, 8   # (custom, Nov 19) air_loiter_spots
+
+    def air_loiter_spots(s, T):
+        """(custom, Nov 19) Open air a pilot may wait in on this map: the learned "high" fly cells (people's and bots'
+        flying, maps rides.json), every AIR_LOITER_EVERY-th, at the map's travel height over their floor, with no kill
+        volume at or AIR_HEADROOM over it and AIR_LOITER_OPEN u open on 8 headings. Kept on the terrain, built
+        AIR_LOITER_STEP cells a call (all at once took 3.5 s on Boneyard: a live tick stalled); the spots so far until
+        then. Empty where the map has none learned."""
+        st = T.__dict__.get("_air_loiter")
+        if st is None:
+            cells = (getattr(T, "fly_cells", {}) or {}).get("high") or {}
+            st = T._air_loiter = {"todo": sorted(cells.items())[::s.AIR_LOITER_EVERY], "spots": []}
+        if st["todo"]:
+            from .terrain import AIR_HEADROOM
+            own = vehicles.CLEARANCE_MAP.get(s.base_map(), {}).get(getattr(s, "veh_kind", None) or "banshee")
+            up = own["travel"] if own is not None else s.air_heights(T)[1]
+            avoid = T.oob_avoid() if hasattr(T, "oob_avoid") else []
+            batch, st["todo"] = st["todo"][:s.AIR_LOITER_STEP], st["todo"][s.AIR_LOITER_STEP:]
+            for (cx, cy), fz in batch:
+                p = Vec(cx / 2.0, cy / 2.0, fz + up)
+                if s.in_nofly(p, pad=2.0):
+                    continue
+                if hasattr(T, "kill_hit") and T.has_kill_volumes() and (
+                        T.kill_hit([p.x], [p.y], p.z)[0] or T.kill_hit([p.x], [p.y], p.z + AIR_HEADROOM, safes=False)[0]):
+                    continue
+                if all(T.fly_clear(p, k * math.pi / 4, s.AIR_LOITER_OPEN, avoid=avoid) >= s.AIR_LOITER_OPEN
+                       for k in range(8)):
+                    st["spots"].append(p)
+        return st["spots"]
+
+    def air_over_mates(s, me, snap, act, tid=None):
+        """(custom, Nov 19) A Reach pilot to its teammates on foot (their middle) at the map's travel height, round them
+        once there, guns off (air_hold_off; and with nobody to go after, Bot.drive). False with none."""
+        mates = [p.pos for p in snap.players if p.team == me.team and p.alive and p.id != me.id
+                 and p.vehicle in (None, -1)]
+        if not mates:
+            return False
+        c = Vec(sum(q.x for q in mates) / len(mates), sum(q.y for q in mates) / len(mates),
+                sum(q.z for q in mates) / len(mates))
+        Ta = s.air_terrain()
+        h = Ta.height_over(me.pos.x, me.pos.y, me.pos.z)
+        own = vehicles.CLEARANCE_MAP.get(s.base_map(), {}).get(getattr(s, "veh_kind", None) or "banshee")
+        want = own["travel"] if own is not None else s.air_heights(Ta)[1]
+        # (custom, Nov 19) the open air nearest them (air_loiter_spots), not their middle: on Boneyard that fell in the
+        # scaffolding west of the middle, and the pilot held over it boxed in, 72% of a 644 s ride at 0.1 u/s
+        spots = s.air_loiter_spots(Ta)
+        spot = min(spots, key=lambda q: (q - c).flat()) if spots else None
+        goal = spot if spot is not None else c
+        flat = (goal - me.pos).flat()
+        way = Ta.fly_way(me.pos, goal, "high") if spot is not None and flat > 3 * AIR_HOLD_R else None
+        aim = way if way is not None else goal
+        to = math.atan2(aim.y - me.pos.y, aim.x - me.pos.x)
+        act.yaw = to if flat > AIR_HOLD_R else to + math.pi / 2       # (round them once there)
+        act.pitch = (max(-0.3, min(0.4, math.atan2(goal.z - me.pos.z, max(flat, 4.0)) * 1.5)) if spot is not None
+                     else max(-0.3, min(0.4, (want - h) * 0.1)))
+        # (custom, Nov 20: full throttle round them too, 0.7 held it ~5 u/s, the speed the men's guns hit hardest)
+        act.forward, act.strafe, act.fire = 1.0, 0.0, False
+        s.air_run = None
+        s.att = ["hold", tid, round(c.x, 1), round(c.y, 1)]
+        return True
+
+    def air_away(s, me, frm):
+        """(custom, Nov 19) A pilot's way off from frm: away from it plus toward its living teammates (their middle, when
+        5 u off or more). Straight away from Normal's bunch at its spawn took a Banshee over their base and into the
+        map's edge kill zones, 6-8 of them with a line to it (tools/banshee_sim.py)."""
+        ax, ay = me.pos.x - frm.x, me.pos.y - frm.y
+        n = math.hypot(ax, ay) or 1.0
+        ax, ay = ax / n, ay / n
+        snap = getattr(s, "air_snap", None)
+        mates = [p.pos for p in (snap.players if snap is not None else ()) if p.team == me.team and p.alive and p.id != me.id
+                 and p.vehicle in (None, -1)]
+        if mates:
+            fx = sum(p.x for p in mates) / len(mates) - me.pos.x
+            fy = sum(p.y for p in mates) / len(mates) - me.pos.y
+            m = math.hypot(fx, fy)
+            if m > 5.0:
+                ax, ay = ax + fx / m, ay + fy / m
+        return math.atan2(ay, ax)
 
     def run_hold(s, now, me, snap):
         """(custom, Nov 17) The man of a pilot's attack run while he is out of its sight and another man is in it: kept
         (air_keep) and last seen within AIR_RUN_HOLD_S; else None (a new man is picked)."""
         tid = s.air_keep(now, me, snap)
+        # (custom, Nov 20) a Reach bomber's only for a man in sight already in its bomb's reach (AIR_BOMBER_SWITCH_R)
+        sw = AIR_BOMBER_SWITCH_R if s.reach_bomber() else AIR_RUN_SWITCH_R
+        if tid is not None and any(k in s.per.beliefs and dist(me.pos, s.per.beliefs[k].pos) < sw
+                                   for k in s.per.visible_enemies()):
+            return None                      # (custom, Nov 19: a man in sight near enough: him, AIR_RUN_SWITCH_R)
         return tid if tid is not None and now - s.per.last_seen.get(tid, -99.0) < AIR_RUN_HOLD_S else None
 
     def run_target(s, seen):
@@ -6170,6 +6632,12 @@ class Bot:
         # (the next run starts from the player's run height: 10-35 u up; flown in a harness the old 0.3 climb to 22 u
         # off left it 3-8 u over the floor, his median was 26)
         start_h = max(PASS_START_MIN, min(travel, PASS_START_H))   # (a map with no flying learned: travel 9 u)
+        own = vehicles.CLEARANCE_MAP.get(s.base_map(), {}).get(getattr(s, "veh_kind", None) or "banshee")
+        if own is not None:
+            # (custom, Nov 19) where the player's own flying on this map is known (vehicles.CLEARANCE_MAP), his height
+            # there: Boneyard's 7 u (the bomb from 6.5 u over him, REACH_BOMB_OVER), not 12 u up inside the soft kill
+            # boxes over its structures (tools/banshee_sim.py: 44% of a long ride's ticks levelled under them)
+            start_h = own["travel"]
         # (custom) never over the room the map's roof leaves (air_ceiling): Halo 4 Blood Crash's soft kill from 12.2 z
         # holds a pilot under 9.7 z over floors at 0, and a run start 11 u up was never reached, so every way out ran
         # its whole PASS_OUT_S with the guns off and the pull up fought the roof guard (live 20261108-024522: 567 of
@@ -6177,8 +6645,33 @@ class Bot:
         room = s.air_ceiling(me.pos.x, me.pos.y, Ta) - (me.pos.z - h)
         if math.isfinite(room):
             start_h = max(AIR_ROOM_MIN, min(start_h, room - AIR_ROOM_SPARE))
-        far = flat >= PASS_EXTEND and h >= start_h - 1.0
-        if run[0] == "out" and (far or now - run[2] > PASS_OUT_S):
+        # (custom, Nov 19) or as high as it may go here: its climb held level by a kill volume over it or the roof's band
+        # (kill_climb_guard / air_roof_guard, climb_capped). Boneyard's start height (~0.5 z) is inside the soft kill
+        # boxes over its structures: never reached, every way out ran its whole PASS_OUT_S with the guns off
+        capped = now - getattr(s, "climb_capped", -9.0) < 0.5
+        # (custom, Nov 19) the player's own way out on this map where known (vehicles.CLEARANCE_MAP extend / out_s)
+        extend, out_s = (own.get("extend", PASS_EXTEND), own.get("out_s", PASS_OUT_S)) if own else (PASS_EXTEND, PASS_OUT_S)
+        far = flat >= extend and (h >= start_h - 1.0 or capped)
+        # (custom, Nov 19) Reach: shot up by several at once, out away from them AIR_HOT_OUT s (air_hot)
+        # (custom, Nov 20: not a Reach bomber, its kills first, the owner: shot at by Normal's team walking out of its
+        # spawn it broke off 23 u short of the bomb's reach, the bomb ready, and died at 10 s without one)
+        hot = s.air_hot(now, me, v, None) if (s.game == "reach" and not s.reach_bomber()
+                                              and now >= getattr(s, "air_hot_until", 0.0)) else None
+        if hot is not None:
+            s.air_hot_until, s.air_hot_yaw = now + AIR_HOT_OUT, hot
+        # (custom, Nov 19) a man among AIR_CROWD_MAX or more of his: a bomb run only. With the bomb not ready (just
+        # dropped, recharging) off away from them, out of their guns' sight, until it is
+        if (s.game == "reach" and isinstance(tid, int) and getattr(s, "rod", None) is None
+                and now < getattr(s, "rod_next", 0.0) and now >= getattr(s, "air_hot_until", 0.0)
+                and s.air_near_n(now, tid, AIR_CROWD_R) >= AIR_CROWD_MAX and dist(me.pos, b.pos) < AIR_CROWD_OFF):
+            s.air_hot_until = now + min(AIR_HOT_OUT, getattr(s, "rod_next", now) - now + 0.3)
+            s.air_hot_yaw = s.air_away(me, b.pos)
+            s.note("air: bombed the bunch, off till the next")
+        if now < getattr(s, "air_hot_until", 0.0):
+            if run[0] != "out" or run[3] != s.air_hot_yaw:
+                run[:] = ["out", tid, now, s.air_hot_yaw]
+            s.note("air: shot up by several, breaking off")
+        if run[0] == "out" and (far or now - run[2] > out_s) and now >= getattr(s, "air_hot_until", 0.0):
             run[:] = ["in", tid, now, me.yaw]                  # far and high enough: the turn back into the next run
         act.strafe = 0.0
         # shot at (its shield or body down since the last tick): a jink, a side swerve held AIR_JINK_S, outside its own
@@ -6193,8 +6686,10 @@ class Bot:
             act.yaw, act.pitch, act.forward = run[3], (0.6 if h < start_h else 0.0), 1.0
             act.fire = False
             act.fire2 = now < getattr(s, "fire2_until", 0.0)   # (a press already going is held through)
-            # (custom, Nov 15) Reach: boosted out, as the player, once a bomb under way is done
-            act.fire2 = act.fire2 or (s.game == "reach" and getattr(s, "rod", None) is None)
+            # (custom, Nov 15) Reach: boosted out, as the player, once a bomb under way is done (Nov 20: a bomber only
+            # with its way open, boost_open)
+            act.fire2 = act.fire2 or (s.game == "reach" and getattr(s, "rod", None) is None
+                                      and (not s.reach_bomber() or s.boost_open(me, v, run[3])))
             if jinking:
                 act.yaw += AIR_JINK * jink[1]
                 act.fire2 = act.fire2 or s.game == "reach"
@@ -6202,8 +6697,13 @@ class Bot:
             s.boost(act)
             s.att = ["pass", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             return
-        act.forward = 0.5 if now - run[2] < 1.0 else 1.0
-        if dist(me.pos, b.pos) <= CANNON_R:
+        # (custom, Nov 20) Reach's Banshee, whose bomb is its kill (every Banshee kill in tools/banshee_sim.py): in at
+        # full throttle, no half-throttle first second and no AIR_RUN_SPEED governor (the owner's Halo 4 cannon dives).
+        # The sim's Normal men hit a Banshee at 0-6 u/s about twice as hard per man as at 9+ u/s, and with the owner's
+        # count of its body (38 DMR rounds) the Demon pilot's median 4.4 u/s on its runs died in 16-48 s
+        reach_bomber = s.game == "reach" and getattr(s, "veh_kind", "banshee") == "banshee"
+        act.forward = 0.5 if now - run[2] < 1.0 and not reach_bomber else 1.0
+        if dist(me.pos, b.pos) <= CANNON_R and not reach_bomber:
             # (custom, Nov 8) in gun range the dive slows to the owner's AIR_RUN_SPEED (his Halo 4 Blood Crash dives,
             # 20261108-144947, his F9s "This is how you should use the banshee": 63 rows with his crosshair on a man,
             # 10-19 u off, 4.6-9.6 u up, nose 23-46 deg down, 4.6-10 u/s, median 5.8). At full throttle, about 12 u/s,
@@ -6222,15 +6722,36 @@ class Bot:
         # dives onto him as the owner's bomb kills did; under that height and short of the bomb's reach it climbs
         # toward that height over him. Once there in this run (bomb_dive: the run's start) it dives, no climbing back
         bomb_lo, bomb_hi = REACH_BOMB_R if s.game == "reach" else FUELROD_R
+        if reach_bomber:
+            # (custom, Nov 20) tools/banshee_sim.py, 8 Demon games: bombs let go 15-18 u flat off killed 1 in 14, 12-15 u
+            # 36%, 6-9 u 2 of 3
+            bomb_hi = min(bomb_hi, AIR_BOMBER_DROP_R)
         over = me.pos.z - b.pos.z
         if over >= REACH_BOMB_OVER:
             s.bomb_dive = run[2]
         if (s.game == "reach" and getattr(s, "veh_kind", "banshee") == "banshee" and getattr(s, "rod", None) is None
                 and now >= getattr(s, "rod_next", 0.0) and getattr(s, "bomb_dive", None) != run[2]
-                and over < REACH_BOMB_OVER and flat > bomb_lo and dist(me.pos, b.pos) <= CANNON_R):
+                and over < REACH_BOMB_OVER and flat > bomb_lo and dist(me.pos, b.pos) <= CANNON_R
+                # (custom, Nov 20) a Reach bomber climbs only short of the bomb's reach; inside it the nose stays on him.
+                # Climbing inside it, the nose never came onto him: tools/banshee_sim.py, bomb ready, flown over its man
+                # 1-4 u flat and 5-7 u up, no bomb, run after run
+                and not (reach_bomber and dist(me.pos, b.pos) <= bomb_hi)):
             up = math.atan2(b.pos.z + REACH_BOMB_OVER - me.pos.z, max(flat, 1.0))
             act.pitch = max(act.pitch, min(0.35, up + 0.05))
             s.note("air: bomb ready, climbing over him")
+        if reach_bomber and flat > AIR_OVER_R and not s.air_line_clear(now, me, b.pos):
+            # (custom, Nov 20) its line to him blocked (the level between), his sky open (air_open_sky): over the top to
+            # him at its start height, then down on him from over him as the owner's bomb kills came (REACH_BOMB_OVER).
+            # tools/banshee_sim.py, Boneyard: of the Normal men within 40 u of the Banshee 1 in 5 had a round's line
+            # from it, the rest behind the structures, while most stood under open sky; nosed at them through the
+            # structures it turned off walls ("wall ahead") on 20-25% of its rows
+            act.pitch = max(-0.2, min(0.4, (start_h - h) * 0.12))
+            act.fire = False
+            way = s.nofly_detour(me.pos, b.pos)      # (round a no-fly box, not through it)
+            if way is not None:
+                act.yaw = math.atan2(way.y - me.pos.y, way.x - me.pos.x)
+                s.note("air: round the no-fly box to him")
+            s.note("air: over the top to him")
         if jinking:
             act.yaw += AIR_JINK * jink[1]
             act.fire2 = act.fire2 or s.game == "reach"
@@ -6253,14 +6774,25 @@ class Bot:
             # turn: AIR_TIGHT_TURN)
             ya_way = math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x)
             off_nose = abs(wrap(ya_way - s.heading(me, v))) if v is not None else 0.0
-            if off_nose > AIR_TIGHT_TURN:
-                act.forward, act.fire2 = AIR_TIGHT_THROTTLE, False
+            # (custom, Nov 20) a Reach bomber turns back hard only on a man near it; one far off is turned onto at speed
+            # (pulled back 40-55 u out it sat at 4-5 u/s for seconds under their guns)
+            if off_nose > AIR_TIGHT_TURN and (not reach_bomber or flat < AIR_BOMBER_TIGHT_R):
+                # (custom, Nov 20) a Banshee rolls round at AIR_BOMBER_TURN throttle (~93 deg/s in the owner's turn
+                # rates), not stopped on full reverse: a pilot turning back sat at 3-4 u/s under the men's guns
+                act.forward, act.fire2 = (AIR_BOMBER_TURN if reach_bomber else AIR_TIGHT_THROTTLE), False
                 act.fire = False
                 s.note("air: pulled back, turning tight")
-            elif d > CANNON_R and off_nose < TRAVEL_BOOST_CONE and getattr(s, "rod", None) is None:
+            elif ((d > CANNON_R or (reach_bomber and s.boost_open(me, v, act.yaw))) and off_nose < TRAVEL_BOOST_CONE
+                  and getattr(s, "rod", None) is None):
                 act.fire2 = True                     # (not while the bomb is up: its shot goes first)
         rb = math.atan2(BOMB_GUN_R, max(d, 1.0))     # (custom, Nov 13: the bomb's wider window, its blast)
         bomb_on = on or (abs(wrap(ya - act.yaw)) < rb and abs(pa - act.pitch) < rb)
+        fwd = v.get("fwd") if v is not None else None
+        if reach_bomber and fwd is not None and len(fwd) == 3:
+            # (custom, Nov 20) the bomb leaves along the craft's own nose, which lags the view: let go only with that nose
+            # on him (the view on him with the nose still swinging sent it wide)
+            ny, np_ = math.atan2(fwd[1], fwd[0]), math.atan2(fwd[2], math.hypot(fwd[0], fwd[1]))
+            bomb_on = abs(wrap(ya - ny)) < rb and abs(pa - np_) < rb
         if (getattr(s, "can_cycle", s.game == "reach") and getattr(s, "veh_kind", "banshee") == "banshee" and bomb_on
                 and bomb_lo <= d <= bomb_hi and getattr(s, "rod", None) is None
                 and now >= getattr(s, "rod_next", 0.0) and (s.game == "reach" or me.pos.z - b.pos.z >= 2.0)):
@@ -6430,6 +6962,15 @@ class Bot:
         _, fire_at, shot, back = fuelrod_times(s.game)     # (custom, Nov 15: Reach's controller rhythm)
         if r[0] == "to":
             act.cycle = k < 1e-6                     # (the press, on the tick it started)
+            on_man = isinstance((getattr(s, "air_run", None) or [None, None])[1], int)   # (not a room bomb)
+            if k >= fire_at and on_man and s.reach_bomber() and not s.bomb_lined(act):
+                # (custom, Nov 20) a Reach bomber's shot waits for a man under its aim again (bomb_lined), up to
+                # AIR_BOMB_HOLD s; none by then: back on the cannons unfired, the bomb kept. The owner, live Boneyard:
+                # "the third shot was a miss because he shot right as he flicked his aim away"
+                if k >= fire_at + AIR_BOMB_HOLD:
+                    act.cycle, s.rod, s.rod_next = True, None, now
+                    s.note("air: off him before the shot, the bomb kept")
+                return
             if k >= fire_at:
                 r[:] = ["shot", now]
                 act.fire = True
@@ -6439,6 +6980,27 @@ class Bot:
                 r[:] = ["back", now]
         elif k >= back:
             act.cycle, s.rod = True, None            # back on the cannons
+
+    def bomb_lined(s, act):
+        """(custom, Nov 20) An enemy on foot within REACH_BOMB_R under the view (act's yaw / pitch) within BOMB_GUN_R
+        of his feet, by the pilot's last snapshot (s.air_snap); True when there is no snapshot to judge by."""
+        snap = getattr(s, "air_snap", None)
+        me = snap.player(s.id) if snap is not None else None
+        if me is None:
+            return True
+        lo, hi = REACH_BOMB_R
+        o = eye(me)
+        for e in snap.players:
+            if e.team == me.team or not e.alive or e.vehicle not in (None, -1):
+                continue
+            d = dist(me.pos, e.pos)
+            if not lo <= d <= hi:
+                continue
+            ya, pa = angles_to(o, e.pos)
+            r = math.atan2(BOMB_GUN_R, max(d, 1.0))
+            if abs(wrap(ya - act.yaw)) < r and abs(pa - act.pitch) < r:
+                return True
+        return False
 
     def patrol_point(s, me):
         """Where a vehicle goes when its trip is over and it cannot get out: the latest enemy it knows of, else the
@@ -7891,18 +8453,121 @@ class Bot:
     # under the middle arch at full throttle: drive's old recovery backed off twice a spot, then pushed on at the same
     # wall for good)
     AIR_STALL, AIR_BACK, AIR_OUT, AIR_BLOCK_S, AIR_BLOCK_R = (1.5, 0.4), 0.8, 1.6, 30.0, 2.5
+    AIR_POCKET, AIR_POCKET_OUT = (4.0, 3.0), 2.0   # (custom, Nov 19) boxed in: (s, u) and the way out's seconds (air_guard)
+    # (custom, Nov 19) a trap: AIR_TRAP_N recoveries (stuck, boxed in, backing off) within AIR_TRAP_WIN s and AIR_TRAP_NEAR u
+    # make a disc AIR_TRAP_R round them (AIR_TRAP_DZ of its height) its probe keeps out of AIR_TRAP_S s, and an unseen man
+    # in it is let go (air_banned). tools/banshee_sim.py, Boneyard: pilots sat 0-3 u/s in the scaffolding west of the
+    # middle (256-272, 84-104, the soft kill 1 u over it) 190-370 s of a ride, back in it after every way out
+    AIR_TRAP_N, AIR_TRAP_WIN, AIR_TRAP_NEAR, AIR_TRAP_R, AIR_TRAP_DZ, AIR_TRAP_S = 3, 15.0, 6.0, 6.0, 4.0, 120.0
+
+    AIR_WING = 0.7   # u: (custom, Nov 19) a Banshee's wing tips off its middle for the recoveries' probes (wide_clear)
+
+    @staticmethod
+    def wide_clear(T, p, yaw, far, floor=None, avoid=(), dzs=(-0.6, 0.0, 0.8)):
+        """(custom, Nov 19) Terrain.fly_clear along yaw from p's middle and from its wing tips (AIR_WING to each side):
+        the least. Probed through the middle only, a way out read open where its wings caught the walls, and an escaping
+        Banshee sat still 40 s at Boneyard's scaffolding (tools/banshee_sim.py)."""
+        sx, sy = -math.sin(yaw) * Bot.AIR_WING, math.cos(yaw) * Bot.AIR_WING
+        return min(T.fly_clear(Vec(p.x + k * sx, p.y + k * sy, p.z), yaw, far, dzs=dzs, floor=floor, avoid=avoid)
+                   for k in (0.0, -1.0, 1.0))
+
+    def air_trap_note(s, now, p):
+        """(custom, Nov 19) A recovery at p; the AIR_TRAP_N-th within AIR_TRAP_WIN s and AIR_TRAP_NEAR u makes a trap."""
+        recs = [r for r in getattr(s, "air_recs", ()) if now - r[0] < s.AIR_TRAP_WIN] + [(now, p)]
+        near = [r[1] for r in recs if (r[1] - p).flat() < s.AIR_TRAP_NEAR]
+        if len(near) >= s.AIR_TRAP_N:
+            c = Vec(sum(q.x for q in near) / len(near), sum(q.y for q in near) / len(near), sum(q.z for q in near) / len(near))
+            s.air_traps = [t for t in getattr(s, "air_traps", ()) if (t[0] - c).flat() > s.AIR_TRAP_R] + \
+                [(c, now + s.AIR_TRAP_S)]
+            recs = [r for r in recs if (r[1] - p).flat() >= s.AIR_TRAP_NEAR]
+            s.note("air: boxed in here again, keeping out of it")
+            # back out the way it came: its trail from the newest on, to the first point clear of the trap
+            trail = list(reversed(getattr(s, "air_trail", [])))
+            way = []
+            for t_, q in trail:
+                way.append(q)
+                if (q - c).flat() > s.AIR_TRAP_R + 1.0:
+                    break
+            if way and (way[-1] - c).flat() > s.AIR_TRAP_R + 1.0:
+                s.air_back = [way, now + s.AIR_BACK_S, now, p]
+        s.air_recs = recs
+
+    AIR_TRAIL_S, AIR_TRAIL_STEP, AIR_BACK_S = 25.0, 0.5, 10.0   # (custom, Nov 19) the trail kept and the way back's limit
+
+    def in_nofly(s, p, pad=0.0, floor_band=None):
+        """(custom, Nov 19) p in one of the map's no-fly boxes (vehicles.AIR_NOFLY), grown by pad; floor_band: u under
+        the box's bottom that count too (a man under it)."""
+        for x0, y0, x1, y1, z0, z1 in vehicles.air_nofly(s.base_map()):
+            lo = z0 - (floor_band or 0.0)
+            if x0 - pad <= p.x <= x1 + pad and y0 - pad <= p.y <= y1 + pad and lo - pad <= p.z <= z1 + pad:
+                return True
+        return False
+
+    def air_backtrack(s, now, me, act, vtol):
+        """(custom, Nov 19) A pilot's trail (every AIR_TRAIL_STEP u it flew, AIR_TRAIL_S s), and the way back along it out
+        of a trap that just formed round it (air_trap_note: s.air_back): its points in turn at 0.6 throttle, no guns, no
+        boost, until clear of the trap, AIR_BACK_S s, or 2 s without getting nearer. tools/banshee_sim.py, Boneyard: a
+        Banshee flew in at 10 u/s through a gap of the scaffolding west of the middle and never found it again from inside
+        (every heading of 16, middle and wing tips, shut within 0.2-3.5 u), 110 s still. True when it took over."""
+        trail = s.__dict__.setdefault("air_trail", [])
+        if not trail or (me.pos - trail[-1][1]).length() >= s.AIR_TRAIL_STEP:
+            trail.append((now, me.pos))
+        while trail and now - trail[0][0] > s.AIR_TRAIL_S:
+            trail.pop(0)
+        back = getattr(s, "air_back", None)
+        if back is None and s.in_nofly(me.pos) and now >= getattr(s, "nofly_back_at", 0.0):
+            # (in the map's no-fly air, vehicles.AIR_NOFLY: back along its trail to the first point out of it)
+            way = []
+            for t_, q in reversed(trail):
+                way.append(q)
+                if not s.in_nofly(q, pad=1.0):
+                    break
+            s.nofly_back_at = now + 3.0
+            if way and not s.in_nofly(way[-1], pad=1.0):
+                back = s.air_back = [way, now + s.AIR_BACK_S, now, me.pos]
+        if back is None:
+            return False
+        way, until, prog_t, prog_p = back
+        while way and (me.pos - way[0]).length() < 0.8:
+            way.pop(0)
+        if not way or now > until:
+            s.air_back = None
+            return False
+        if (me.pos - prog_p).length() > 0.4:
+            back[2], back[3] = now, me.pos
+        elif now - prog_t > 2.0:
+            s.air_back = None
+            return False
+        q = way[0]
+        act.yaw = math.atan2(q.y - me.pos.y, q.x - me.pos.x)
+        act.pitch = max(-0.6, min(0.6, math.atan2(q.z - me.pos.z, max(0.5, (q - me.pos).flat()))))
+        act.forward, act.strafe, act.fire = 0.6, 0.0, False
+        s.air_unboost(act, vtol, act.yaw)
+        if vtol:
+            act.vertical = max(-1.0, min(1.0, q.z - me.pos.z))
+        s.note("air: out of a trap the way it came")
+        return True
+
+    def fly_probe(s, T, p, yaw, far, floor=None, avoid=(), dzs=(-0.6, 0.0, 0.8)):
+        """(custom, Nov 19) The pilot's look along yaw: a Reach Banshee's from its middle and wing tips (wide_clear),
+        any other craft's from its middle (Terrain.fly_clear). Through its middle only, a Banshee went into gaps of
+        Boneyard's structures its wings did not fit and stuck there (tools/banshee_sim.py: rides of 15-20 s, pinned and
+        out, again and again)."""
+        if s.game == "reach" and getattr(s, "veh_kind", None) == "banshee":
+            return s.wide_clear(T, p, yaw, far, floor=floor, avoid=avoid, dzs=dzs)
+        return T.fly_clear(p, yaw, far, dzs=dzs, floor=floor, avoid=avoid)
 
     def air_open(s, T, p, yaw, floor, avoid, need, skip=None):
         """The heading nearest yaw (30-180 degrees off, one side then the other) with `need` u of clear air at the
         craft's height (Terrain.fly_clear), else the clearest one if it beats yaw's by 1 u; None if nothing does.
         skip: a heading not to take again (within 60 degrees of it: the wall it was stuck on)."""
         far = max(12.0, need)                    # (a Sabre's need is 60 u: its 3 s at speed)
-        here, best = T.fly_clear(p, yaw, far, floor=floor, avoid=avoid), None
+        here, best = s.fly_probe(T, p, yaw, far, floor=floor, avoid=avoid), None
         for off in (0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.3, -2.3, math.pi):
             w = yaw + off
             if skip is not None and abs(wrap(w - skip)) < 1.05:
                 continue
-            c = T.fly_clear(p, w, far, floor=floor, avoid=avoid)
+            c = s.fly_probe(T, p, w, far, floor=floor, avoid=avoid)
             if c >= need:
                 return w
             if best is None or c > best[0]:
@@ -8015,6 +8680,97 @@ class Bot:
         if way is not None and run is not None and run[0] == "out":
             run[3] = way
 
+    OOB_OUT_R = (1.5, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 45.0)   # u: how far an aircraft out of bounds looks for a way in
+    OOB_OUT_HOLD = 1.0                        # s: the way out kept while it stays the way out (no flip each tick)
+
+    def oob_escape(s, now, T, me, act, floor, vtol):
+        """(custom, Nov 19) An aircraft inside one of the map's kill volumes or within its body of one (Terrain.kill_hit:
+        a soft kill's countdown running, or about to) flies out by the shortest open way: the nearest point clear of them, of 16
+        headings at OOB_OUT_R, the level open to it on the way (fly_clear, without the probe's out of bounds discs: from
+        inside one every heading read blocked), or under it when the floor leaves room. Full throttle, no guns, no
+        boost; held OOB_OUT_HOLD s. Before, the probe's avoid discs blocked every heading from inside, air_guard backed
+        off with the nose on the wall it had stopped at, and the countdown ran out (tools/banshee_sim.py, Boneyard: a
+        Banshee reversed into the soft kill box over the blue base's roof, 2.4 z inside a box from 0.8 z, 5 s backing
+        off in place, dead). True when it took over."""
+        import numpy as np
+        if not hasattr(T, "kill_hit") or not T.has_kill_volumes():
+            return False
+        p = me.pos
+
+        def inside(P):
+            # (each point by its own height: Terrain.kill_hit, the volumes grown by the craft's body, KILL_PAD)
+            P = np.asarray(P, float).reshape(-1, 3)
+            hit = np.zeros(len(P), bool)
+            for z in np.unique(P[:, 2]):
+                k = P[:, 2] == z
+                hit[k] = T.kill_hit(P[k, 0], P[k, 1], float(z))
+            return hit
+        if not inside((p.x, p.y, p.z))[0]:
+            s.oob_out = None
+            return False
+        held = getattr(s, "oob_out", None)
+        # (custom, Nov 19) no headway on the way picked (under 0.3 u in 1.5 s): that heading is given up for this escape
+        fails = s.__dict__.setdefault("oob_fails", [])
+        prog = getattr(s, "oob_prog", None)
+        if held is None or prog is None or prog[2] is not held:
+            s.oob_prog = (now, p, held)
+        elif now - prog[0] > 1.5:
+            if (p - prog[1]).flat() < 0.3 and held[0] == "way":
+                fails.append((held[3], now + 10.0))
+                held = None
+            s.oob_prog = (now, p, held)
+        fails[:] = [f for f in fails if f[1] > now]
+        if held is None or now >= held[1] or inside(held[2])[0]:
+            yaws = [k * math.pi / 8 for k in range(16)]
+            room = p.z - floor
+            # (level, or lower where the floor leaves room: over a kill box on a roof and over the safe top at once, every
+            # level way out is still out; down and out together is the way)
+            dzs = [0.0] + [-d for d in (2.0, 4.0, 6.0, 9.0) if room - d > 0.8]
+            pts = [(p.x + math.cos(y) * r, p.y + math.sin(y) * r, p.z + dz) for dz in dzs for r in s.OOB_OUT_R
+                   for y in yaws]
+            # (only where nothing of the level is under it: Boneyard's blue base reads as walls under a craft over it, and
+            # a "down" there pressed it on the roof until the countdown ran out)
+            under = T.aim_hit(p, me.yaw, -math.pi / 2, reach=9.0) if hasattr(T, "aim_hit") else None
+            open_down = (p.z - under.z - 0.8) if under is not None else room
+            downs = [(p.x, p.y, p.z - d) for d in (1.0, 2.0, 3.0, 5.0, 8.0) if room - d > 0.8 and open_down - d > 0.0]
+            out = ~inside(pts + downs)
+            per = len(s.OOB_OUT_R) * 16
+            cands = []
+            for k, ok in enumerate(out[:len(pts)]):
+                if ok:
+                    dz, r, y = dzs[k // per], s.OOB_OUT_R[(k % per) // 16], yaws[k % 16]
+                    cands.append(((math.hypot(r, dz), abs(wrap(y - me.yaw))), y, pts[k], dz, r))
+            cands.sort(key=lambda c: c[0])
+            # (the nearest whose way the level leaves open: probed in that order, the first that passes)
+            cands = [c for c in cands if all(abs(wrap(c[1] - f[0])) > math.pi / 9 for f in fails)]
+            best = next((c[:4] for c in cands if s.wide_clear(T, p, c[1], c[4], floor=floor) >= c[4]), None)
+            down = next((d for d, ok in zip(downs, out[len(pts):]) if ok), None)
+            if down is not None and (best is None or p.z - down[2] < best[0][0]):
+                s.oob_out = ("down", now + s.OOB_OUT_HOLD, down)
+            elif best is not None:
+                s.oob_out = ("way", now + s.OOB_OUT_HOLD, best[2], best[1], best[3])
+            else:
+                s.oob_out = None
+                return False
+        held = s.oob_out
+        act.fire = False
+        s.air_unboost(act, vtol, held[3] if held[0] == "way" else None)   # (Reach's boost let go, its vertical too)
+        if held[0] == "down":
+            act.forward, act.strafe, act.pitch = 0.6, 0.0, -0.9
+            if vtol:
+                act.vertical = -1.0
+            s.note("air: in a kill zone, down out of it")
+        else:
+            act.yaw, act.forward, act.strafe = held[3], 1.0, 0.0
+            # (down to its height on the way when the way out is lower)
+            drop = held[4] if len(held) > 4 else 0.0
+            act.pitch = math.atan2(drop, max(1.0, (Vec(held[2][0], held[2][1], 0) - Vec(p.x, p.y, 0)).flat())) \
+                if drop < 0 else max(-0.3, min(0.3, act.pitch))
+            if vtol:
+                act.vertical = -1.0 if drop < 0 else 0.5
+            s.note("air: in a kill zone, out the nearest way")
+        return True
+
     def air_guard(s, me, act, snap):
         """Every flyer's driver (Banshee, Hornet, Falcon, any "air" vehicle): a short-sighted LiDAR ahead every tick and a
         stall detector. The probe (Terrain.fly_clear along where it flies, 4-12 u by its speed, at its height, 0.6 u
@@ -8036,6 +8792,15 @@ class Bot:
         floor = me.pos.z - T.height_over(me.pos.x, me.pos.y, me.pos.z)
         s.air_blocks = [b for b in getattr(s, "air_blocks", ()) if b[2] > now]
         avoid = [(b[0], s.AIR_BLOCK_R) for b in s.air_blocks] + T.oob_avoid()   # (and out of bounds: brain/oob.py)
+        # (custom, Nov 19) where it was boxed in again and again (air_trap_note): kept out of, never while in one
+        s.air_traps = [t for t in getattr(s, "air_traps", ()) if t[1] > now]
+        avoid += [(t[0], s.AIR_TRAP_R, s.AIR_TRAP_DZ) for t in s.air_traps if (me.pos - t[0]).flat() > s.AIR_TRAP_R]
+        if not s.in_nofly(me.pos):                # (custom, Nov 19: the map's no-fly air, vehicles.AIR_NOFLY)
+            avoid += [("box",) + tuple(bx) for bx in vehicles.air_nofly(s.base_map())]
+        if not landing and s.air_backtrack(now, me, act, vtol):     # (custom, Nov 19: out of a trap the way it came)
+            return
+        if not landing and s.oob_escape(now, T, me, act, floor, vtol):     # (custom, Nov 19: in a kill volume: out first)
+            return
 
         def climb():
             act.pitch = max(act.pitch, 0.45)
@@ -8043,7 +8808,7 @@ class Bot:
                 act.vertical = 1.0
         up_ok = lambda yaw: T.fly_clear(me.pos, yaw, 1.5, dzs=(1.0, 2.0, 3.0), floor=me.pos.z - 0.5, start=0.0) >= 1.5
         kind = vehicles.kind_of(v["kind"])
-        cl = vehicles.clearance(kind)
+        cl = vehicles.clearance(kind, s.base_map())  # (custom, Nov 19: the map's own where the player flew it, CLEARANCE_MAP)
         env = vehicles.envelope(s.map.get("name"))   # (his flying on this map: vehicles.AIR_ENVELOPE)
         # (seconds since it got in, or since it last sat waiting for crew: hold_for_crew)
         t_in = now - max(getattr(s, "seat_since", now), getattr(s, "air_held", -1e9))
@@ -8083,8 +8848,27 @@ class Bot:
                 s.air_blocks.append((spot, into, now + s.AIR_BLOCK_S))
                 avoid.append((spot, s.AIR_BLOCK_R))
                 out = s.air_open(T, me.pos, into, floor, avoid, 6.0, skip=into)
-                s.air_rec = rec = (now + s.AIR_BACK, now + s.AIR_BACK + s.AIR_OUT, into if out is None else out, into)
+                # (custom, Nov 19: no backing when behind is shut too, a wall or out of bounds: straight to the way out)
+                back = s.AIR_BACK if T.fly_clear(me.pos, into + math.pi, 3.0, floor=floor, avoid=avoid) >= 2.0 else 0.0
+                s.air_rec = rec = (now + back, now + back + s.AIR_OUT, into if out is None else out, into)
                 s.air_still = None
+                s.air_trap_note(now, me.pos)
+            # (custom, Nov 19) boxed in: under AIR_POCKET[1] u from where it was AIR_POCKET[0] s ago with its throttle
+            # either way (the stall above needs it pushing on and still: a pilot rocking between its man and the probe's
+            # back-off moved enough each second), out the most open of 16 headings, AIR_POCKET_OUT s, no backing first.
+            # tools/banshee_sim.py, Boneyard by the blue base: 80 s of one ride backing off in one pocket
+            moving = abs(act.forward) > 0.3 and not landing and now - getattr(s, "seat_since", now) > 3.0
+            pk = getattr(s, "air_pocket", None)
+            if not moving or pk is None or dist(me.pos, pk[1]) > s.AIR_POCKET[1]:
+                s.air_pocket = (now, me.pos) if moving else None
+            elif now - pk[0] > s.AIR_POCKET[0]:
+                ways = [(s.wide_clear(T, me.pos, k * math.pi / 8, 15.0, floor=floor, avoid=avoid), k * math.pi / 8)
+                        for k in range(16)]
+                best = max(ways, key=lambda w: (w[0], -abs(wrap(w[1] - act.yaw))))[1]
+                s.air_rec = rec = (now, now + s.AIR_POCKET_OUT, best, best)
+                s.air_pocket = None
+                s.air_trap_note(now, me.pos)
+                s.note("air: boxed in, out the most open way")
         if rec is not None and now < rec[1]:
             # (a Banshee backed off 0.9 u in a second on full reverse, live Sidewinder at 33 s: it does back up)
             back = now < rec[0]
@@ -8104,7 +8888,7 @@ class Bot:
                 # setting down: only what stands between it and the spot (over Spire's core the stand's ring and pillars
                 # read solid 0.2-2.4 u round it at the craft's height: a full probe would never let it land)
                 look = min(look, (dest - me.pos).flat())
-            d = look if look < 0.5 else T.fly_clear(me.pos, move, look, dzs=(0.0, 0.8) if landing else (-0.6, 0.0, 0.8),
+            d = look if look < 0.5 else s.fly_probe(T, me.pos, move, look, dzs=(0.0, 0.8) if landing else (-0.6, 0.0, 0.8),
                                                     floor=floor, avoid=avoid)
             if d < look:
                 # throttle eased only within a second of contact (or 3 u): replayed over tonight's live pilots the probe
@@ -8125,14 +8909,29 @@ class Bot:
                     turn = getattr(s, "air_turn", None)
                     need = min(look, d + 3.0)
                     w = turn[0] if turn is not None and now < turn[1] and \
-                        T.fly_clear(me.pos, turn[0], need, floor=floor, avoid=avoid) >= need else \
+                        s.fly_probe(T, me.pos, turn[0], need, floor=floor, avoid=avoid) >= need else \
                         s.air_open(T, me.pos, move, floor, avoid, need)
                     if w is not None and (turn is None or w != turn[0]):
                         s.air_turn = (w, now + 1.0)
-                    if w is None:
+                    ways = [(s.wide_clear(T, me.pos, k * math.pi / 8, 8.0, floor=floor, avoid=avoid), k * math.pi / 8)
+                            for k in range(16)] if w is None and not vtol else []
+                    most = max(ways, key=lambda q: (q[0], -abs(wrap(q[1] - move)))) if ways else (0.0, move)
+                    if w is None and most[0] >= 2.0:
+                        # (custom, Nov 19) no heading open as far as it wants: the most open one (of 16, 8 u), at
+                        # 0.6 throttle, the turn held a second as any (air_turn), not backing off. Backing off unlooked
+                        # took tools/banshee_sim.py's Banshees 26 u out past Boneyard's safe zone, the countdown run out;
+                        # turning out at a crawl held them under 3 u/s (a Banshee turns fastest slow, but not stopped)
+                        act.yaw, act.forward, act.strafe = most[1], 0.6, 0.0
+                        s.air_turn = (most[1], now + 1.0)
+                        s.air_unboost(act, vtol, most[1])
+                        s.note("air: shut ahead, out the most open way")
+                    elif w is None:
                         act.forward, act.strafe = -1.0, 0.0
                         s.air_unboost(act, vtol)
                         s.note("air: wall ahead, backing off")
+                        if now - getattr(s, "air_back_t", -9.0) > 2.0:
+                            s.air_back_t = now
+                            s.air_trap_note(now, me.pos)
                     else:
                         if vtol:                    # (a Falcon keeps its facing for its gunners: the stick turns)
                             m = math.hypot(act.forward, act.strafe) * min(1.0, ease + 0.2)
@@ -8165,8 +8964,21 @@ class Bot:
             # an attack run (air_pass): only the ground on its own path counts, AIR_PULL_S along the nose at its speed
             # (a dive goes down to him; the travel rule below held it 6.8 u over every roof near its line)
             spd, cp = max(me.vel.length(), 4.0), math.cos(act.pitch)
+            # (custom, Nov 20) a Reach bomber diving on its man: the ground at his feet is where its nose is meant to
+            # be, so the look stops AIR_BOMBER_PULL_SPARE u short of him (never under AIR_PULL_MIN_S of flight). The
+            # owner, live Boneyard 20261120-164229: "it gets a glimpse of one shoots at it then flicks away ... by
+            # shooting then gaining height it moves its reticle upwards"; its view left its man within 1.2 s 39 times,
+            # 18 of them on this pull-out, 10.5 u over him and 17 u off
+            reach = spd * AIR_PULL_S
+            run = getattr(s, "air_run", None)
+            tb = s.per.beliefs.get(run[1]) if (s.reach_bomber() and run is not None and run[0] == "in"
+                                               and isinstance(run[1], int)) else None
+            if tb is not None:
+                reach = min(reach, max(spd * AIR_PULL_MIN_S, dist(me.pos, tb.pos) - AIR_BOMBER_PULL_SPARE))
             for k in range(1, int(AIR_PULL_S / 0.2) + 1):
                 f = k * 0.2 * spd
+                if f > reach:
+                    break
                 p = Vec(me.pos.x + math.cos(act.yaw) * cp * f, me.pos.y + math.sin(act.yaw) * cp * f,
                         me.pos.z + math.sin(act.pitch) * f)
                 # (where a player flew the map: those runs' lowest pull-out, vehicles.AIR_ENVELOPE run_floor)
@@ -8229,7 +9041,17 @@ class Bot:
         top = max([me.pos.z - T.height_over(me.pos.x, me.pos.y, me.pos.z)] +
                   [T.top_near(me.pos.x + math.cos(act.yaw) * reach * f, me.pos.y + math.sin(act.yaw) * reach * f, 2.0,
                               zmax=None if line < reach * f + 2.0 and not kept else cap) for f in (1 / 3, 2 / 3, 1.0)])
-        if me.pos.z < top + (1.0 if slow else cl["over"]):   # (slow: a Falcon hovers low for its gunners)
+        want_z = top + (1.0 if slow else cl["over"])
+        if me.pos.z < want_z and line >= reach and hasattr(T, "kill_hit") and T.has_kill_volumes() and bool(
+                T.kill_hit([me.pos.x + math.cos(act.yaw) * reach * f for f in (0.0, 1 / 3, 2 / 3, 1.0)],
+                           [me.pos.y + math.sin(act.yaw) * reach * f for f in (0.0, 1 / 3, 2 / 3, 1.0)],
+                           min(want_z, me.pos.z + 2.5), safes=False).any()):
+            # (custom, Nov 19) over it is a kill volume (Boneyard's soft kill from 0.3 u over its decks) and its own line
+            # is open at its height: on by it level, not pulling up at half throttle into the kill guard's cap.
+            # tools/banshee_sim.py: "a structure by us, pull up" and "a kill zone over the climb, level" on 724 and 1500
+            # of a 320 s ride's rows, 2.4 u/s, 2 kills
+            s.note("air: a structure by us under a kill zone, on by it level")
+        elif me.pos.z < want_z:   # (slow: a Falcon hovers low for its gunners)
             act.pitch = max(act.pitch, 0.35)
             if me.pos.z < top + 1.0:
                 act.forward = min(act.forward, 0.5)
@@ -8297,6 +9119,52 @@ class Bot:
             act.pitch = min(act.pitch, 0.0)
             if sp.get("vtol"):
                 act.vertical = min(getattr(act, "vertical", 0.5), 0.5)
+            s.climb_capped = getattr(s, "now", 0.0)                         # (custom, Nov 19: air_pass's way out)
+        s.kill_climb_guard(me, act, sp)
+
+    KILL_LOOK_S = (0.3, 0.6, 0.9, 1.2)   # s: (custom, Nov 19) the climb's path looked along for a kill volume
+
+    def kill_climb_guard(s, me, act, sp):
+        """(custom, Nov 19) No climb into a kill volume over the way ahead: the path the nose now points (act.yaw / pitch)
+        at its speed (4 u/s at least), KILL_LOOK_S on, reaches one (Terrain.kill_hit, the volume grown by the craft's
+        body) where the same path level does not: level (pitch 0). Both reach one: the nose 0.3 down. The map's roof
+        (air_ceiling) leaves these out where a volume starts on a structure's top, the whole column over the roof out
+        of bounds (Boneyard's soft kill boxes over its middle structures, 0.9-4.0 z over a 1.0 z roof): in tools/
+        banshee_sim.py a run's way out, climbing to its start height, went up into them 144 times in 33 minutes of
+        flying, and one Banshee in two died of the countdown."""
+        T = s.T()
+        if not hasattr(T, "kill_hit") or not T.has_kill_volumes():
+            return
+        v_up = me.vel.z if me.vel is not None else 0.0
+        if v_up > 1.0:
+            # (its own climb, whatever the nose says now: at 13 u/s boosted and 0.6 up it rose 7 u/s and went on 1.5 u
+            # after a level nose, into Boneyard's blue base box; the way it is going, 0.3-0.9 s on: the nose down)
+            hits = any(bool(T.kill_hit([me.pos.x + me.vel.x * t], [me.pos.y + me.vel.y * t], me.pos.z + v_up * t,
+                                       safes=False)[0]) for t in (0.3, 0.6, 0.9))
+            if hits:
+                act.pitch = min(act.pitch, -0.4)
+                s.air_unboost(act, sp.get("vtol"))
+                s.climb_capped = getattr(s, "now", 0.0)
+                s.note("air: climbing into a kill zone, nose down")
+                return
+        if act.pitch <= 0.05:
+            return
+        spd = max(me.vel.length(), 4.0)
+
+        def reaches(pitch):
+            cp, sn = math.cos(pitch), math.sin(pitch)
+            fs = [k * spd for k in s.KILL_LOOK_S]
+            xs = [me.pos.x + math.cos(act.yaw) * cp * f for f in fs]
+            ys = [me.pos.y + math.sin(act.yaw) * cp * f for f in fs]
+            # (the kill volumes only: the safe zone's top is the roof guard's, air_ceiling and its margins)
+            return any(bool(T.kill_hit([x], [y], me.pos.z + sn * f, safes=False)[0]) for x, y, f in zip(xs, ys, fs))
+        if not reaches(act.pitch):
+            return
+        act.pitch = 0.0 if not reaches(0.0) else -0.3
+        if sp.get("vtol"):
+            act.vertical = min(getattr(act, "vertical", 0.5), 0.5)
+        s.climb_capped = getattr(s, "now", 0.0)                             # (air_pass's way out: as high as it goes)
+        s.note("air: a kill zone over the climb, level")
 
     def odds_threats(s, now, me, snap, seen, only=None, all_aware=False):
         """(custom) The men who can shoot us now for brain/odds.py: in sight (aware: aiming at us, or the man who hit us
@@ -8765,6 +9633,10 @@ class Bot:
             lim = min(lim, env["ceiling"])   # (the highest he flew any aircraft here, his flag)
         return lim
 
+    def base_map(s):
+        """(custom, Nov 19) The built-in map this match is on: a Forge layout's ("<map>/variants/<v>") its base's name."""
+        return ((s.map or {}).get("name") or "").split("/")[0]
+
     def roof_margin(s, T, x, y):
         """(custom, Nov 18) (margin, no-climb band) under the map's roof at (x, y): in Reach a soft roof's (Terrain.
         air_roof_soft, a countdown over it) AIR_ROOF_SOFT_M and AIR_ROOF_SOFT_BAND, else AIR_ROOF_M and AIR_ROOF_BAND."""
@@ -8772,6 +9644,36 @@ class Bot:
         if soft is not None and soft(x, y):
             return AIR_ROOF_SOFT_M, AIR_ROOF_SOFT_BAND
         return AIR_ROOF_M, AIR_ROOF_BAND
+
+    def air_snap_bomb(s, now, me, act, snap):
+        """(custom, Nov 19) Reach: a Banshee's bomb ready (rod_next) goes on any enemy on foot under the nose, after
+        every guard has steered it, whatever the run is doing (its way out and its turn back too): REACH_BOMB_R off,
+        the nose within BOMB_GUN_R of his feet, a clear line (line_clear). The cycle press goes out this tick (fuel_rod
+        did its tick already), the shot REACH_FUELROD's rhythm after. air_pass's bomb waited for a run's own man in its
+        window; in tools/banshee_sim.py's Boneyard drills a ride spent half its time on the way out of a run (guns
+        off, no bomb) and an enemy was in the open within 18 u on 17% of its ticks; the owner's bomb kills came from
+        3.8-17.3 u, and his bomb-first spam was one every 3.1 s."""
+        if (s.game != "reach" or getattr(s, "seat", "driver") != "driver" or getattr(s, "rod", None) is not None
+                or now < getattr(s, "rod_next", 0.0) or not getattr(s, "can_cycle", True)):
+            return
+        v = next((x for x in snap.vehicles if x["handle"] == me.vehicle), None)
+        if v is None or vehicles.kind_of(v["kind"]) != "banshee" or now < getattr(s, "exit_until", 0.0):
+            return
+        lo, hi = REACH_BOMB_R
+        o = eye(me)
+        for e in snap.players:
+            if e.team == me.team or not e.alive or e.id == me.id or e.vehicle not in (None, -1):
+                continue
+            d = dist(me.pos, e.pos)
+            if not lo <= d <= hi or not s.line_clear(now, me, e.id, snap):
+                continue
+            ya, pa = angles_to(o, e.pos)
+            r = math.atan2(BOMB_GUN_R, max(d, 1.0))
+            if abs(wrap(ya - act.yaw)) < r and abs(pa - act.pitch) < r:
+                s.rod, s.rod_next = ["to", now - 1e-3], now + fuelrod_times(s.game)[0]
+                act.cycle, act.fire, act.fire2 = True, False, False
+                s.note("air: him under the nose, the bomb")
+                return
 
     def air_snap_fire(s, now, me, act, snap):
         """(custom) An aircraft's pilot fires whenever its nose, after every guard has steered it, is on an enemy inside

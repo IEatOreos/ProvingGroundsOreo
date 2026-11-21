@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from brain.bot import AIR_RUN_HOLD_S, FUELROD_R, REACH_BOMB_OVER, REACH_BOMB_R, Belief  # noqa: E402
+from brain.bot import AIR_BOMBER_DROP_R, AIR_RUN_HOLD_S, FUELROD_R, REACH_BOMB_OVER, REACH_BOMB_R, Belief  # noqa: E402
 from brain.core import PlayerState, Snapshot, Vec, angles_to  # noqa: E402
 from test_demon_vehicles import Act, bot, LowRoofAir  # noqa: E402
 
@@ -39,7 +39,12 @@ class RangeTests(unittest.TestCase):
     def test_reach_bombs_from_his_range(self):
         self.assertEqual(REACH_BOMB_R, (6.0, 18.0))
         self.assertIsNotNone(run("reach_test", Vec(6.0, 0, 6.5))[0].rod)       # 8.8 u: was never (10 u at least)
-        self.assertIsNotNone(run("reach_test", Vec(14.0, 0, 7.0))[0].rod)      # 15.7 u
+        self.assertIsNotNone(run("reach_test", Vec(8.0, 0, 7.0))[0].rod)       # 10.6 u
+        # (custom, Nov 20) a Reach Banshee's bomb no farther than AIR_BOMBER_DROP_R (sim: 15-18 u flat killed 1 in 14,
+        # the 2-3 kill bombs came from 8-9 u flat)
+        self.assertEqual(AIR_BOMBER_DROP_R, 11.0)
+        self.assertIsNone(getattr(run("reach_test", Vec(11.0, 0, 7.0))[0], "rod", None))   # 13.0 u
+        self.assertIsNone(getattr(run("reach_test", Vec(14.0, 0, 7.0))[0], "rod", None))   # 15.7 u: was a bomb
         self.assertIsNone(getattr(run("reach_test", Vec(20.0, 0, 7.0))[0], "rod", None))   # 21.2 u: was a bomb
 
     def test_halo4_keeps_its_range(self):

@@ -1226,11 +1226,14 @@ static char __fastcall h_hr_localdrop(uint8_t* s, int user) {
                 // change (One Bomb, Pinnacle, botcore_pg14.log) the 3 s ran out, every bot member and the stand-in went,
                 // and round 2 had 3 bots that never respawned and, on the joined friend's screen, bots skating under a
                 // red reticle (no member, no relayed input). MCC builds the post-game results before the game drops
-                // the bots at a match's end (every other match that day): until then a pause of up to 30 s keeps them
+                // the bots at a match's end (every other match that day): until then a pause keeps them. (Nov 18
+                // evening, botcore_pg17.log: One Flag on Ivory Tower and Assault on Condemned paused over 30 s at the
+                // round change and lost 3 bots each; the limit is now HR_ROUND_PAUSE_MS, only for a match left midway)
+                static const ULONGLONG HR_ROUND_PAUSE_MS = 180000;
                 ULONGLONG last = g_hr_tick_ms, now = GetTickCount64(), idle = now > last ? now - last : 0;
                 long built = report_results_built();
                 bool results = built < 0 || built != g_hr_results_at_add;
-                if (idle < 3000 || (!results && idle < 30000)) {
+                if (idle < 3000 || (!results && idle < HR_ROUND_PAUSE_MS)) {
                     if (!g_hr_drop_kept[user]) { g_hr_drop_kept[user] = 1; logf("netmembers: kept bot member %d (user slot %d)", index, user); }
                     static ULONGLONG paused_at;
                     if (idle >= 3000 && paused_at != last) {

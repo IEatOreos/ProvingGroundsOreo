@@ -208,9 +208,34 @@ TAKE_OFF = {"falcon": ("up", 2.5), "hornet": ("up", 2.5), "banshee": ("forward",
 TAKE_OFF_S = 2.0
 
 
-def clearance(kind):
-    """The aircraft's CLEARANCE (any other flyer: the Banshee's)."""
-    return CLEARANCE.get(kind, CLEARANCE["banshee"])
+# (custom, Nov 19) A map's own clearances where the player's flying there differs from Forge World's: the owner's
+# Boneyard Banshee (trace_reach_70_boneyard_20261115-044159, his 163 s and 99 s rides, 831 samples over 3 u/s, the same
+# 10th percentiles; scratchpad owner_clear.py): 1.4 u off anything round it, 0.57 s open ahead, 1.9 u over the floor,
+# his median height 6.9 u. Forge World's (8.4 u, 2.5 s, 6.8 u) held bot pilots at a median 2.6-3.2 u/s there (live
+# 20261107-014245, 20261112-215423, 20261115-195851), "wall ahead" on 25-77% of their ticks; his was 8.2.
+# extend / out_s: his way out of a run there (scratchpad owner_legs.py, 40 passes under 12 u of the nearest enemy):
+# out to a median 12.7 u flat (p75 22) and 3.1 s from pass to pass (p75 6.3); the bot's PASS_EXTEND 22 u and PASS_OUT_S
+# 6 s were the far end of that, with the guns off
+CLEARANCE_MAP = {"reach_70_boneyard": {"banshee": dict(near=1.5, ttc=0.6, over=2.0, travel=7.0, extend=13.0,
+                                                       out_s=3.5)}}
+
+
+# (custom, Nov 19) Air a map's pilots keep out of (Bot.air_guard's probe, never while in it; one in it backs out the way it
+# came): (x0, y0, x1, y1, z0, z1). Boneyard's scaffolding west of the middle, under the soft kill 1-2 z over its decks:
+# tools/banshee_sim.py pilots sat under 0.5 u/s there for 3 s or more in 3-7 of 18 games per 4 u cell (x 260-272, y
+# 76-108, z -4.5 to 0.5; scratchpad stuck_agg.py), whole rides lost to it
+AIR_NOFLY = {"reach_70_boneyard": [(257.0, 74.0, 273.5, 110.0, -8.0, 2.0)]}
+
+
+def air_nofly(map_name):
+    """The map's AIR_NOFLY boxes (a variant's: its base map's)."""
+    return AIR_NOFLY.get(str(map_name or "").replace("\\", "/").partition("/")[0], [])
+
+
+def clearance(kind, map_name=None):
+    """The aircraft's CLEARANCE (any other flyer: the Banshee's); a map's own (CLEARANCE_MAP) where it has one."""
+    own = CLEARANCE_MAP.get(map_name or "", {})
+    return own.get(kind) or CLEARANCE.get(kind, CLEARANCE["banshee"])
 # an enemy's ground vehicle a man on foot boards (Halo 2 on: Bot.board_check): hijacks, and the tanks' hulls
 BOARDABLE = {"warthog", "gauss", "rwarthog", "thog", "mongoose", "gungoose", "ghost", "chopper", "revenant", "spectre",
              "prowler", "scorpion", "wraith"}

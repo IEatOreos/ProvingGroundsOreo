@@ -33,7 +33,7 @@ from brain import nade  # noqa: E402
 from brain.live import Live, LiveH2, LiveH3, LiveReach, LiveODST, LiveH4F, WEAPON_ALIAS  # noqa: E402
 from brain.invasion import layout as invasion_layout, Watch, clear_barriers, honor_spawn, honor_spawns, \
     ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR  # noqa: E402
-from brain.modes import Watch as ModeWatch, OBJECT_MODES, mode_of, stands_by_spawn  # noqa: E402
+from brain.modes import Watch as ModeWatch, OBJECT_MODES, mode_of, stands_by_spawn, spawn_bases  # noqa: E402
 import botctl  # noqa: E402
 
 HZ = 30
@@ -151,12 +151,19 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
         # a Forge canvas's variant (Forge World; Halo 4's, H2A's) has stands of its own, not the blank canvas's in the
         # export (Paradiso CTF played as Slayer): where its flags lie at the start, each to the team that spawned
         # nearest
+        at = [(d["team"], Vec(*d["pos"])) for d in raw if d.get("pos") is not None]
+        if at and "forge_spawn_at" not in MAP:
+            MAP["forge_spawn_at"] = at                   # (the teams where they spawned: One Flag's other base)
         try:
-            stands = stands_by_spawn([Vec(*q) for q in live.loose_flags()],
-                                     [(d["team"], Vec(*d["pos"])) for d in raw if d.get("pos") is not None])
+            stands = stands_by_spawn([Vec(*q) for q in live.loose_flags()], at)
         except Exception:
             stands = {}
         if len(stands) >= 2 or (stands and now > 10.0):
+            # (custom, Nov 18, Forge World One Flag "TU ONE FLAG CTF (4-10)", 20261118-205428: one flag, so one stand;
+            # the director's every tick failed on the other team's missing stand from 10.7 s, KeyError 1, and the bots
+            # froze) a team without a stand gets where its players spawned
+            for t, q in spawn_bases(MAP.get("forge_spawn_at") or at).items():
+                stands.setdefault(t, q)
             MAP["flags"], MAP["forge_stands"] = stands, True
             print(f"Forge CTF stands: {stands}", flush=True)
     found = live.flags(raw, stands=MAP["flags"] if on else None)

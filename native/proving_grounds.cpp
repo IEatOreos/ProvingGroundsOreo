@@ -664,7 +664,9 @@ static void draw_candidates() {
     g_check_ticket = pg_lobby_check(mp, gt, n);
 }
 
-// the checked candidates into three options (a map at most once when there is a choice)
+// the checked candidates into three options (a map at most once when there is a choice). (Nov 19, the owner: "Make it
+// to where any mode can appear on any vote tab. So if a 46% chance happens to be slayer all three times make it so")
+// a gametype may fill more than one option: each option is its own roll of the playlist's weights
 static bool take_options() {
     if (g_nopt) return true;
     if (!g_check_ticket) return false;
@@ -677,7 +679,7 @@ static bool take_options() {
             if (g_nopt >= 3) break;
             bool used = false;
             for (int k = 0; k < g_nopt; k++)
-                used |= pass == 0 ? g_opt[k].map == g_cands[i].first || g_opt[k].gametype == g_cands[i].second
+                used |= pass == 0 ? g_opt[k].map == g_cands[i].first
                                   : g_opt[k].map == g_cands[i].first && g_opt[k].gametype == g_cands[i].second;
             if (used) continue;
             const pg_entry *m = nullptr, *g = nullptr;
@@ -1315,11 +1317,9 @@ static void player_row(float x0, float y0, float x1, float y1, const char* name,
         }
     }
     if (party) text(g_fl, 14 * u, x1 - 8 * u, y0 + 3 * u, C_GOLD, "PARTY", 2);
-    if (!you && tier >= 0) {                             // (left of the bar, where MCC puts a player's rank)
-        int tour, level;
-        bot_rank(name, tier, &tour, &level);
-        rank_badge(g_dl, P(x1 - 370 * u, (y0 + y1) * 0.5f), U(46 * u), tour, level, g_alpha);
-    }
+    // (Nov 19, the owner: "leave the reach ranks but remove the ones mcc has from inside our mod launcher") no MCC
+    // tour/level badge left of the bar any more; the Reach rank's cell above is the row's only rank
+    (void)tier;
     g_alpha = keep;
 }
 

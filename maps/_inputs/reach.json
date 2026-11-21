@@ -63,6 +63,14 @@
    "how": "the same capture: +0x24, the left trigger's float, 1.0 (0x3F800000, this u64's high half) on every boost hold; the bits are cleared off the hold, so the person's own trigger in the template action never reaches a bot"
   }
  ],
+ "reload": [
+  {
+   "off": 64,
+   "mask": 65552,
+   "press": false,
+   "how": "decoded live 2026-11-20 (tools/reload_capture.py, logs/reload_capture_20261120-234526, the owner's own reload, a solo Reach game): every one of his 10 reloads set +0x40 0x110010 (bits 4, 16, 20) for ~0.12 s, 1.11-1.16 s before the magazine filled, and his 5 taps on a full magazine set the same and did nothing; nothing else came on with them (+0x28 bit 8 rises with each shot: fire). Bit 20 (0x100000) is Use held, which native/reach.cpp writes for a bot's action and this table would clear every tick, so it is left out: bits 4 and 16 only. Before: no reload entry and reach.cpp writes none, so a bot's reload press never reached the game (8-26 of ~190 presses a match followed by a fuller magazine: the game's own reload of an empty one). Live check pending: a bot's magazine up within ~1.2 s of its press"
+  }
+ ],
  "ability": [
   {
    "off": 8,

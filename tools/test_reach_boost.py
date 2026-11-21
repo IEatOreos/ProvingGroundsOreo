@@ -14,7 +14,7 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from brain.bot import AIR_TIGHT_THROTTLE, CANNON_R, REACH_GHOST_BOLT, Aim, Belief  # noqa: E402
+from brain.bot import AIR_BOMBER_TURN, AIR_TIGHT_THROTTLE, CANNON_R, REACH_GHOST_BOLT, Aim, Belief  # noqa: E402
 from brain.core import PlayerState, Vec  # noqa: E402
 from brain.profiles import make_profile  # noqa: E402
 from test_demon_vehicles import Act, LowRoofAir, bot  # noqa: E402
@@ -118,15 +118,23 @@ class RunTests(unittest.TestCase):
         self.assertTrue(act.fire2)
         self.assertGreater(act.vertical, 0.5)                   # (Bot.boost's +0x3C, as the person's)
 
-    def test_not_in_the_dive(self):
+    def test_in_the_dive_too(self):
+        # (custom, Nov 20: a Reach Banshee boosts in on its man inside gun range too, full throttle, no governor)
         _, act = self.run_at(Vec(CANNON_R - 8.0, 0, 9.0))
-        self.assertFalse(act.fire2)
+        self.assertTrue(act.fire2)
+        self.assertEqual(act.forward, 1.0)
 
-    def test_turning_back_it_pulls_the_throttle(self):
-        b, act = self.run_at(Vec(CANNON_R + 10.0, 0, 9.0), nose=(1.0, 0.0, 0.0))     # (him behind the nose)
-        self.assertEqual(act.forward, AIR_TIGHT_THROTTLE)
+    def test_turning_back_on_a_near_man_it_rolls_round(self):
+        # (custom, Nov 20: AIR_BOMBER_TURN, not full reverse; only for a man within AIR_BOMBER_TIGHT_R)
+        b, act = self.run_at(Vec(CANNON_R - 8.0, 0, 9.0), nose=(1.0, 0.0, 0.0))      # (him behind the nose, 20 u)
+        self.assertEqual(act.forward, AIR_BOMBER_TURN)
         self.assertFalse(act.fire2)
         self.assertIn("air: pulled back, turning tight", b.notes)
+
+    def test_a_far_man_behind_is_turned_onto_at_speed(self):
+        b, act = self.run_at(Vec(CANNON_R + 10.0, 0, 9.0), nose=(1.0, 0.0, 0.0))     # (38 u)
+        self.assertNotIn("air: pulled back, turning tight", b.notes)
+        self.assertGreater(act.forward, AIR_BOMBER_TURN)
 
     def test_boosted_out(self):
         _, act = self.run_at(Vec(3.0, 0, 9.0), phase="out")
@@ -169,7 +177,9 @@ class BombFirstTests(unittest.TestCase):
 
     def test_every_run_from_3_2_s_and_no_boost_into_it(self):
         # (custom, Nov 17: in the owner's bomb reach, REACH_BOMB_R 6-18 u; 29.4 u, past gun range, was one before)
-        b, act = RunTests().run_at(Vec(12.0, 0, 9.0))         # (15 u, nose on)
+        # (10.6 u, the craft's own nose on him: a Reach bomber lets go on its nose, Nov 20; AIR_BOMBER_DROP_R 11)
+        n = math.hypot(8.0, 7.0)
+        b, act = RunTests().run_at(Vec(8.0, 0, 7.0), nose=(-8.0 / n, 0.0, -7.0 / n))
         self.assertIsNotNone(b.rod)
         self.assertAlmostEqual(b.rod_next - 50.0, 3.2)
         self.assertFalse(act.fire2)

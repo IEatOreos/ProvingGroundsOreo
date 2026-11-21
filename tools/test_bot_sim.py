@@ -158,15 +158,36 @@ class Population(unittest.TestCase):
     def test_pace_averages_what_is_asked(self):
         with tempfile.TemporaryDirectory() as tmp:
             w = World(tmp, names=400)
-            bots = bot_sim.population(w.paths, w.settings)
+            few = dict(w.settings, **{"grinder_" + t: 0.05 for t in bot_sim.GRINDER_CHANCE})
+            bots = bot_sim.population(w.paths, few)
             self.assertEqual(len(bots), 400)                  # (the person left out)
             paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND]   # (Demons: every round, pace 1)
             self.assertAlmostEqual(sum(b.pace for b in paced) / len(paced), w.settings["pace"], places=6)
             self.assertTrue(all(b.pace == 1.0 for b in bots if b.tier in bot_sim.EVERY_ROUND))
-            top = [b for b in bots if b.tier in se.TOP_TIERS]
-            rest = [b for b in bots if b.tier not in se.TOP_TIERS]
-            if len(top) > 40 and len(rest) > 40:
-                self.assertGreater(sum(b.grinder for b in top) / len(top), sum(b.grinder for b in rest) / len(rest))
+            # (Nov 20, the owner, "make it bigger": many grinders keep their full pace and the round grows; the others
+            # never drop under other_pace)
+            bots = bot_sim.population(w.paths, w.settings)
+            base = lambda b: __import__("math").exp(w.settings["spread"] * se.Rng(se.hash_of(b.name, 43)).gauss())
+            paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND]
+            self.assertGreater(sum(b.grinder for b in paced), 100)
+            for b in paced:
+                want = w.settings["grinder_pace"] if b.grinder else w.settings["other_pace"]
+                if b.grinder:
+                    self.assertAlmostEqual(b.pace, base(b) * want, places=9, msg=b.name)
+                else:
+                    self.assertGreaterEqual(b.pace, base(b) * want - 1e-12, b.name)
+            self.assertGreater(sum(b.pace for b in paced) / len(paced), w.settings["pace"])
+            # (Nov 20, the owner: one roll a bot at its difficulty's chance, Demon 75% down to Easy 5%)
+            for b in bots:
+                self.assertEqual(b.grinder, se.hfloat(b.name, 41) < bot_sim.GRINDER_CHANCE[b.tier], b.name)
+            self.assertEqual(bot_sim.grinder_chance("novice", w.settings), 0.05)
+            self.assertEqual(bot_sim.grinder_chance("novice", dict(w.settings, grinder_novice=0.5)), 0.5)
+            rates = {}
+            for b in bots:
+                rates.setdefault(b.tier, []).append(b.grinder)
+            for t, gs in rates.items():
+                if len(gs) >= 40:
+                    self.assertAlmostEqual(sum(gs) / len(gs), bot_sim.GRINDER_CHANCE[t], delta=0.2, msg=t)
             self.assertEqual(next(b for b in bots if b.name == "SimBot000").tier, "demon")
             self.assertEqual(next(b for b in bots if b.name == "SimBot001").style, "wheelman")
 
@@ -217,6 +238,31 @@ class Population(unittest.TestCase):
             _, details, _ = bot_sim.site_entries(w.paths)
             self.assertTrue(sat)
             self.assertFalse(any(p["name"] == "SimBot000" for gid, *_ in sat for p in details[gid]["players"]))
+
+    def test_a_clan_queues_as_one_group(self):
+        """(Nov 20, the owner) A clan that queues together plays the round when any member would, every member, one
+        playlist, one team: clan ABC's SimBot000 is a Demon (every round), so SimBot001 and SimBot002, at a pace that
+        alone would almost never play, join it most rounds."""
+        rng = se.Rng(3)
+        self.assertEqual(bot_sim.clans_together([], rng), set())
+        picks = [bot_sim.clans_together([type("B", (), {"clan": c})() for c in ("A", "a", "B")], rng)
+                 for _ in range(400)]
+        self.assertTrue(all(p <= {"a"} for p in picks))                 # (a clan of one never "queues together")
+        self.assertAlmostEqual(sum("a" in p for p in picks) / 400, bot_sim.CLAN_TOGETHER, delta=0.06)
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp, names=240)
+            w.settings.update({"grinder_" + t: 0.0 for t in bot_sim.GRINDER_CHANCE}, other_pace=0.0)
+            rounds, whole, apart = 12, 0, 0
+            for r in range(rounds):
+                got = w.round(seed=31 + r, pace=0.02)
+                _, details, _ = bot_sim.site_entries(w.paths)
+                for gid, *_ in got:
+                    abc = [p["team"] for p in details[gid]["players"]
+                           if p["name"] in ("SimBot000", "SimBot001", "SimBot002")]
+                    whole += len(abc) == 3 and len(set(abc)) == 1         # (a party is on one team)
+                    apart += len(set(abc)) > 1                            # (a round it queued alone: 15%)
+            self.assertGreaterEqual(whole, rounds // 2)
+            self.assertLessEqual(apart, rounds // 4)
 
     def test_a_round_people_clans_storage_and_the_site(self):
         with tempfile.TemporaryDirectory() as tmp:

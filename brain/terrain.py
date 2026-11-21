@@ -24,6 +24,9 @@ LIFT_DROP = 1.0   # u: ... from more than this over its floor (a step down onto 
                   # small lifts sit 0.44 u under the floor round them)
 RAIL = (0.35, 0.45)  # heights over a ledge's floor where a wall is a handrail (0.25 u wall bins: clear of the step below)
 NAV_CELL = 0.25  # path grid spacing = heightmap cell (the base ramps are 0.83 wide, doors about 1)
+OOB_VOLUMES = ("kill volumes",)   # (custom, Nov 19) fly_clear's avoid entry for the known kill volumes (oob_avoid)
+KILL_PAD = 1.0   # u: (custom, Nov 19) a craft's body round its middle: a kill volume this near it is reached (kill_hit)
+AIR_HEADROOM = 2.0   # u: (custom, Nov 19) a pilot's probe keeps out of air with a kill volume this near over its body
 ROAD_COST = 0.4  # a vehicle edge on floor a person drove costs this much of its length: their lines are the roads
 OWNER_ROAD_COST = 0.12  # (custom, Nov 17) one on the owner's routes (his LiDAR-mode drives): the bots keep to them
 MAX_RISE = 0.18   # most a path may climb per grid edge, straight or diagonal: the base ramps rise
@@ -815,6 +818,20 @@ class Terrain:
                 hit |= np.any(np.isfinite(col) & (np.abs(col - z) < 0.4) & (col > base), axis=0)
                 hit |= np.isfinite(low) & (z < low) & (low > base)
         for a in avoid:                                  # (spot, r) or (spot, r, height band: out of bounds)
+            if a is OOB_VOLUMES:                         # (custom, Nov 19) the kill volumes themselves (kill_hit)
+                # (at its own height: KILL_PAD is its body. At every dz too, under a box 0.8-2.0 z every heading read
+                # shut within 1.8 u under its bottom, and a replayed Banshee backed off on a quarter of its ticks)
+                hit |= s.kill_hit(xs, ys, p.z)
+                # (and a kill volume's bottom within AIR_HEADROOM over its body: air with no room to climb, Boneyard's
+                # scaffolding west of the middle under the soft kill 1-2 z; its pilots sat boxed in there 190-490 s of
+                # a ride in tools/banshee_sim.py. Not while it is in such air itself: its way out stays open)
+                if not s.kill_hit([p.x], [p.y], p.z + AIR_HEADROOM, safes=False)[0]:
+                    hit |= s.kill_hit(xs, ys, p.z + AIR_HEADROOM, safes=False)
+                continue
+            if isinstance(a, tuple) and a and a[0] == "box":   # (custom, Nov 19) ("box", x0, y0, x1, y1, z0, z1)
+                if a[5] <= p.z <= a[6]:
+                    hit |= (xs >= a[1]) & (xs <= a[3]) & (ys >= a[2]) & (ys <= a[4])
+                continue
             q, r, band = a if len(a) == 3 else (a[0], a[1], 3.0)
             if abs(q.z - p.z) < band and (q.x - p.x) ** 2 + (q.y - p.y) ** 2 < (far + r) ** 2:   # (in reach only:
                 hit |= (xs - q.x) ** 2 + (ys - q.y) ** 2 < r * r              # a map's kill zones are 100s of discs)
@@ -1923,6 +1940,9 @@ class Terrain:
             s._oob_vols = volumes
             s._oob_vmask = O.floor_mask(volumes, s.lz, s.x0, s.y0, NAV_CELL) if volumes else None
             s._oob_air = [(Vec(x, y, z), r, band) for x, y, z, r, band in O.air_discs(volumes)]
+            s._oob_kills = [(v, *O.bounds(v)) for v in volumes or () if v["kind"] in O.KILLS]   # (kill_hit)
+            s._oob_safes = {k: [v for v in volumes or () if v["kind"] == k] for k in O.SAFES}   # (kill_hit)
+            s._oob_safes = {k: vs for k, vs in s._oob_safes.items() if vs}
             s._oob_version = None
         if version is not None and getattr(s, "_oob_version", None) == version:
             return
@@ -1964,9 +1984,43 @@ class Terrain:
 
     def oob_avoid(s):
         """The out of bounds spots for a pilot's probe (fly_clear's avoid): (spot, oob.R, oob.AIR_DZ), and the known
-        volumes' discs (oob.air_discs)."""
+        kill volumes (OOB_VOLUMES: fly_clear tests the volumes themselves, kill_hit). (custom, Nov 19) Not the volumes'
+        discs (oob.air_discs) any more: tiles taken in up to half a tile outside a volume, each a disc of three quarters
+        of a tile, reached 7-8 u past Boneyard's soft kill boxes over its structures, the gaps between them read shut,
+        and its bot pilots crept at a median 2.6-3.2 u/s with "wall ahead" on 25-77% of their ticks (live 20261107-014245,
+        20261112-215423, 20261115-195851; the owner's own flying: 8.3 u/s)."""
         from . import oob as O
-        return [(q, O.R, O.AIR_DZ) for q in getattr(s, "oob_spots", ())] + getattr(s, "_oob_air", [])
+        spots = [(q, O.R, O.AIR_DZ) for q in getattr(s, "oob_spots", ())]
+        return spots + ([OOB_VOLUMES] if s.has_kill_volumes() else [])
+
+    def has_kill_volumes(s):
+        """(custom, Nov 19) The map has known kill volumes or safe zones for kill_hit."""
+        return bool(getattr(s, "_oob_kills", None) or getattr(s, "_oob_safes", None))
+
+    def kill_hit(s, xs, ys, z, safes=True):
+        """(custom, Nov 19) Which of the points (xs[k], ys[k], z) are out of bounds for a craft's body: inside one of the
+        map's kill volumes (set_oob's, hard or soft) grown by KILL_PAD, or, where the map has safe zones of a kind
+        (oob.where's rule: out of every one of them is out), within KILL_PAD of leaving all of that kind (Boneyard's
+        soft_safe box: its sides and its 4.0 z top; banshee_sim Banshees out past its side 9-14 z up, the roof read
+        none there); safes False: the kill volumes only. Only volumes whose box the points reach are tested."""
+        from . import oob as O
+        xs, ys = np.asarray(xs, float), np.asarray(ys, float)
+        out = np.zeros(len(xs), bool)
+        if not len(xs):
+            return out
+        x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+        P = np.c_[xs, ys, np.full(len(xs), z)]
+        for v, lo, hi in getattr(s, "_oob_kills", ()):
+            if (x1 < lo[0] - KILL_PAD or x0 > hi[0] + KILL_PAD or y1 < lo[1] - KILL_PAD or y0 > hi[1] + KILL_PAD
+                    or z < lo[2] - KILL_PAD or z > hi[2] + KILL_PAD):
+                continue
+            out |= O.contains(v, P, pad=KILL_PAD)
+        for kind, vs in (getattr(s, "_oob_safes", {}) if safes else {}).items():
+            inn = np.zeros(len(xs), bool)
+            for v in vs:
+                inn |= O.contains(v, P, pad=-KILL_PAD)
+            out |= ~inn
+        return out
 
     def air_roof(s, x, y):
         """The highest an aircraft may be at (x, y) by the map's known volumes (set_oob): the top of the safe zone over
@@ -2007,10 +2061,15 @@ class Terrain:
             mid = (lo[2] + hi[2]) / 2.0
             if not O.contains(v, (x, y, mid)).any():
                 continue
-            if v["kind"] in O.SAFES and hi[2] > top + 2.0:
+            # (custom, Nov 19) any safe top or kill volume over the column's highest floor: a kill volume that starts on
+            # or under that roof and goes on over it kills everything over the roof (its roof is the roof's own height).
+            # Over Boneyard's blue base (roof 3.9 z) and its middle structures (1.0 z, a soft box from 0.9) the old 2 u
+            # over the floor left the roof unknown, and tools/banshee_sim.py Banshees climbed to 5-12 z there, dead of
+            # the soft kill's countdown
+            if v["kind"] in O.SAFES and hi[2] > top:
                 safe.append((float(hi[2]), v["kind"] == "soft_safe"))
-            elif v["kind"] in O.KILLS and lo[2] > top + 2.0 and float(lo[2]) < roof:
-                roof, soft = float(lo[2]), v["kind"] == "soft"
+            elif v["kind"] in O.KILLS and hi[2] > top and max(float(lo[2]), top) < roof:
+                roof, soft = max(float(lo[2]), top), v["kind"] == "soft"
         if safe:
             hi, hi_soft = max(safe)
             if hi < roof:
