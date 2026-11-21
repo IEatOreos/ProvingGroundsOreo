@@ -160,6 +160,16 @@ class KeptTable(unittest.TestCase):
                 self.assertGreater(p["size"][i], 0.0, p["name"])
                 self.assertAlmostEqual(p["size"][i], p["max"][i] - p["min"][i], delta=0.0015, msg=p["name"])
 
+    def test_doors_windows_and_walls_as_the_owner_named_them_from_a_picture(self):
+        got = [(p["name"], p["model"]) for p in self.table["pieces"] if p["category"] == "Doors, Windows and Walls"][:6]
+        self.assertEqual(got, [("Door", "ff_door_2"), ("Door Double", "ff_wall_2x1_door"),
+                               ("Window", "ff_wall_2x1_window"), ("Window Double", "ff_wall_2x2_window"),
+                               ("Wall", "ff_wall_2x2"), ("Wall Double", "ff_wall_2x4")])
+        # "the door is taller than the double door"; a double wall is a wall twice as wide
+        self.assertGreater(self.named["Door"]["size"][2], self.named["Door Double"]["size"][2])
+        self.assertAlmostEqual(self.named["Wall Double"]["size"][0], 2 * self.named["Wall"]["size"][0], delta=0.01)
+        self.assertAlmostEqual(self.named["Wall Double"]["size"][2], self.named["Wall"]["size"][2], delta=0.01)
+
     def test_pieces_known_only_by_model_are_not_offered_by_name(self):
         self.assertEqual(len(self.named), 99)
         self.assertNotIn("ff_antenna", self.named)

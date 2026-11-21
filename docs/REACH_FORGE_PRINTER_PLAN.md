@@ -357,16 +357,15 @@ Differences from the owner's notes:
   but `ff_door_2` is the taller one (2 × 2 against 2 × 1), and the "Double"
   window is the taller window. They may be the other way round. One look in
   the game settles it.
-  **Open (2026-11-21).** Asked which is taller, the owner said: "Same height
-  just double is wider". Neither pairing gives that: both models are 2 wide,
-  `ff_door_2` is a 2-tall arch with one opening and `ff_wall_2x1_door` a
-  1-tall piece whose opening is about a Spartan high (the 2x1 window is the
-  same piece with a sill). The only same-height, twice-as-wide pair in the
-  category is Wall (2 × 2) and Wall Double (4 × 2). So either the menu's Door
-  or Door Double is a model not in this list, or the two were judged by eye.
-  A picture of the six door, window and wall models side by side is in
-  `re_tools\forge_printer\pieces\views\doors_windows_walls.png` for the owner
-  to name; until then treat both door pairings as unconfirmed.
+  **Settled (2026-11-21).** Shown the six door, window and wall models side by
+  side (`re_tools\forge_printer\pieces\views\doors_windows_walls.png`), the
+  owner named them left to right: "Door, Double door, window, window double,
+  wall, wall double … the door is taller than the double door". That is the
+  map file's order, so the table was right: Door = `ff_door_2` (2 × 2 arch),
+  Door Double = `ff_wall_2x1_door` (2 × 1), Window = `ff_wall_2x1_window`,
+  Window Double = `ff_wall_2x2_window`, Wall = `ff_wall_2x2`, Wall Double =
+  `ff_wall_2x4`. Six more pairings confirmed by eye, and more support for
+  "the map file's order is the menu's order".
 - Window Coliseum (`ff_arena_window`) is between Wall Coliseum and Tunnel
   Short and is not in the notes: the tunnels should be items 10 and 11.
 - Nine decorative models (antenna, braces, crenellations, sloped cover,

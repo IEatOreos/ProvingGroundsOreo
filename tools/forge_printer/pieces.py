@@ -76,8 +76,8 @@ CATEGORIES = [
         ("ff_teleport_frame", "ff_teleport_frame", MODEL), ("Strut", "ff_base_strut", NOTED),
         ("ff_walkway_small_cover", "ff_walkway_small_cover", MODEL)]),
     ("Doors, Windows and Walls", [
-        # paired by the map file's order; by size the two could be the other way round (ff_door_2 is the
-        # taller, 2 x 2, and a "Double" window is the taller window): to be checked against the game
+        # the first six were named by the owner from a picture of the models, 2026-11-21: Door is the tall
+        # arch (2 x 2), Door Double the low one (2 x 1)
         ("Door", "ff_door_2", NOTED), ("Door Double", "ff_wall_2x1_door", NOTED),
         ("Window", "ff_wall_2x1_window", NOTED), ("Window Double", "ff_wall_2x2_window", NOTED),
         ("Wall", "ff_wall_2x2", NOTED), ("Wall Double", "ff_wall_2x4", NOTED),
