@@ -14,7 +14,7 @@ The owner, asked whether to start fitting pieces to Guardian's floors: "Yes, sta
 - **Guardian:** 71% of its 484 u² of walked floor covered by 185 flat blocks (a 1x1 lying wholly on floor can reach 76%); a second run writes the same bytes; a top-down render shows the blocks on the platforms.
 - **Made for the owner:** `FP_Guardian_Floors.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository): his own variant with Guardian's floor blocks hanging about 18 units above its floor, and the tilt test below. `check` reads it back (214 objects, no problems).
 - **Validation:** `tools/test_forge_printer_fit.py` (new, 17 tests on hand-built floors) and one more turn-test test; full suite 1153 OK.
-- **In game, the owner, 2026-11-21:** the print loads and "the floor is somewhat printed"; whether every block is there is not known yet. **Known limits:** blocks square to the map's axes only, flat blocks only, no slopes, walls or ceilings, and no piece limits (185 Building Blocks where no variant on this PC holds more than 92).
+- **In game, the owner, 2026-11-21:** the print loads and "the floor is somewhat printed". His screenshot from above matches a render of the file from the same viewpoint, and the HUD's budget (2,240 spent) is exactly the thirteen walls, all 185 floor blocks at 10 each and the tilt test, so the game counted every block and more Building Blocks than any variant on this PC holds (92) do load. Each block cannot be checked by eye from that height. **Known limits:** blocks square to the map's axes only, flat blocks only, no slopes, walls or ceilings, and no piece limits (185 Building Blocks where no variant on this PC holds more than 92).
 
 ### Reach Forge Printer, phase 3 part 4: a test map for turns and tilts, 2026-11-21
 

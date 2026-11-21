@@ -114,7 +114,8 @@ Do not start Phase 2 on Fable.
         what a turn means under a tilted up: a second test, when tilted
         pieces are needed
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
-  - [ ] piece prices
+  - [ ] piece prices — the HUD after two prints fits: Flat blocks, Ramp 1x2,
+        Block 1x1 Tall, Wall Coliseum 10 each, small antenna 50; the rest unknown
   - [x] piece fitting, floors, first version (`forge_printer fit`, `print`):
         Guardian 71% of walked floor with 185 flat blocks — printed, waiting
         for the owner to load it
@@ -595,6 +596,28 @@ but the floor is somewhat printed." So a variant with 214 objects, 185 of
 them added Building Blocks, loads and shows floors. Not known yet: whether
 all 185 are there, the HUD's budget, whether tucked blocks flicker, and the
 tilt test's reading. Screenshots asked for.
+
+**The owner's screenshot of the print from above (2026-11-21), south at the
+top, HUD budget $27,760.**
+
+- The arrangement matches a render of the same file from the same viewpoint
+  (both 5x5 blocks, the walkway between, the lone pair off to one side, the
+  clusters over the west building, the tilt test's pieces at the floor's
+  edge). Block by block it cannot be checked from this height: several kinds
+  of Flat block are as dark as the Coliseum floor behind them, and blocks
+  tucked under a neighbour show only as thin strips.
+- **Budget: 2,240 spent.** That is exactly 130 (the thirteen walls) + 185 × 10
+  (every floor block, at 10 each) + 260 (the tilt test with small antenna 50,
+  Ramp 1x2 10, Block 1x1 Tall 10, which is also the plain reading of the
+  first test's 310). So the game counted all 185 floor blocks, and more
+  Building Blocks than any variant on disk (92) do load. Prices this fits:
+  every Flat block 10, Ramp 1x2 10, Block 1x1 Tall 10, Wall Coliseum 10, small
+  antenna 50. One total cannot prove each of those apart, but two files now
+  agree with them.
+- MCC does not keep a copy of a Forge session's variant under
+  `Temporary\UserContent` (only of custom games'), so there is no file to read
+  the game's own view of the print from.
+- Not read yet: the tilt test (too small in this picture), flicker.
 
 What to look for in the floors: are they all there (count the gaps against
 the picture), are the heights right relative to each other, do tucked blocks
