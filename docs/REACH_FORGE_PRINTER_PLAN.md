@@ -854,3 +854,84 @@ top of 130 and the tilt test's 260).
 **Lesson for whoever reads the next screenshots:** enlarge every junction and
 compare heights before saying a print is right; a budget that matches only
 says the pieces exist.
+
+### Phase 3, part 9: no floor standing proud of a ramp; landings (2026-11-21, written by Fable 5.2)
+
+**The fourth print in the game (owner's two screenshots, HUD $26,980 as
+predicted).** Enlarged: the ramps now reach their floors, but on the 4.15-long
+ramp the lower floor block still stands about 0.15 proud of the ramp where
+they meet. The numbers agree (run at 16.09 at the floor's edge, floor at
+16.24).
+
+**Cause 1: the mix of pieces was chosen for the wrong place.** Part 8 picked
+the mix whose total drop was nearest the slope's drop over the run's whole
+length, but the run is longer than the slope (its last piece goes on under the
+lower floor), so that total is reached somewhere under the floor. What a
+player sees is where the run stands at the lower floor's edge.
+
+**Fixed: `_best_run(rises, length, rise)` returns (run, lift)** and judges a
+run at the lower floor's edge, `length` down from the top:
+
+- above the floor there: fine. The ramp comes up out of the floor a little
+  further on (its foot must still get down under the floor);
+- under the floor there: the floor would stand proud. Up to 0.06 in all is
+  let pass, half of it moved to the top by lifting the run (0.03 at each
+  end); more than that is all but ruled out;
+- among runs that pass, the one nearest the slope's own line, and whose
+  piece that goes into the floor keeps the slope's angle, wins.
+
+So a slope the pieces do not fit becomes a slightly longer, slightly
+shallower ramp instead of a ramp with a lip. Guardian's 4.15-long, 1.42-high
+ramp is now three shallow rows: level with its upper floor, 0.38 above the
+lower floor at the reference's foot, down to the floor 1.5 further on. This
+is a change of shape and it is deliberate; the alternative with these pieces
+is a 0.04 lip at each end.
+
+**Cause 2, found by a second check that reads `fit.json` alone** (every floor
+block edge against every ramp face, not the fitter's own arithmetic): floor
+blocks are laid on a quarter-unit grid and cover 70% of the floor, so they
+can stop short of where a ramp's face meets the floor. Then the ramp's sunk
+foot shows in a gap in front of the floor block (a lip as high as the foot is
+deep there), or a ramp's top has no block past it.
+
+**Fixed: landings.** With fitted floors, `fit_slopes` also puts a flat block
+(part `"landing"`, Block 2x1 Flat across a pair of lanes, Block 1x1 Flat for
+a single lane) at each end of a run, turned with the ramp, 1 long, 0.005 under
+the floor's height (never level with a block or a tucked block, so no
+flicker): at the foot from where the ramp's face comes down to the floor's
+height, at the top from the run's top edge. Only where the reference has
+walked floor at that height under at least half of it, and no fitted block
+at that height already covers all of it. Guardian gets 19.
+
+**Guardian now:** 190 floor blocks, 45 ramp pieces (40 shallow, 5 Ramp 2x2),
+19 landings, 37 walls: 291 pieces, budget 2,910. By the fitter's arithmetic
+no run is more than 0.02 under its lower floor at the edge and no top more
+than 0.02 over its upper floor.
+
+**Still wrong, measured and not fixed (the `fit.json` check, before
+landings; landings are not in that check, it only knows square-on blocks):**
+
+- Two ramps meet their upper floor at an angle (the 5-wide one turned 113
+  degrees, the 2-wide one turned 44). Floor blocks are square to the map, so
+  their corners overlap the ramp's top and stand 0.05 to 0.12 proud there.
+  Needs turned floor blocks at such edges (the "non-axis floors" item).
+- A Ramp 2x2's top has floor blocks hanging 0.1 over it: 0.05 proud.
+- The Ramp 2x2 at reference (-7.97, -5.68): the floor in front of its foot
+  covers half its width and stops 0.5 short, 0.22 proud. The reference there
+  is a tangle of small floors at 17.46, 17.66 and 17.84, so no landing was
+  given. Hand work, or a better reading of that corner.
+- Three ramp tops (one a fifth lane) have no floor block past them and the
+  reference has no walked floor at their height there either.
+- Floors beside a ramp at another height overlap its sides by 0.2 to 0.3 in
+  four places (the ramp is rounded up to whole lanes). Not a lip in the
+  walking direction.
+
+Tests: `_best_run` at the floor's edge over a sweep of lengths and rises; the
+gentle, steep and odd-length slope tests updated for the new rule; landings
+(a slit past a ramp's top, a missing floor at a foot, none where the floor
+blocks reach, none in mid air). Full suite 1186 OK.
+
+**The fifth print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_5.mvar`**
+(local only), title "FP Guardian 5", 320 objects, same place and tilt test.
+**Not loaded in the game yet.** Expected HUD: $26,700 (291 pieces at 10 on top
+of 130 and the tilt test's 260).

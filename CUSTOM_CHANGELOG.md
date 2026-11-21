@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Reach Forge Printer: no floor standing proud of a ramp; landings where the floor blocks stop short, 2026-11-21
+
+The owner loaded the fourth Guardian print (HUD $26,980, as predicted) and sent two screenshots. Enlarged, the ramps reach their floors, but on the 4.15-long ramp the lower floor block still stands about 0.15 proud of the ramp where they meet; the fitter's own numbers say the same (run at 16.09 at the floor's edge, floor at 16.24).
+
+- **Found:**
+  - The mix of ramp pieces was chosen for the run's whole length, but a run is longer than its slope (the last piece goes on under the lower floor), so the drop it was matched to is reached under the floor, not at the floor's edge where the two meet.
+  - A second check that reads `fit.json` alone, every floor block edge against every ramp face, found what the fitter's arithmetic cannot: floor blocks sit on a quarter-unit grid and cover 70% of the floor, so they can stop short of a ramp. The ramp's sunk foot then shows in a gap in front of the block, or a ramp top has no block past it.
+- **Fixed in `tools/forge_printer/fit.py`:**
+  - `_best_run(rises, length, rise)` now returns (run, lift) and judges a run where it stands at the lower floor's edge. Above the floor there is fine: the ramp comes up out of the floor a little further on. Under it, up to 0.06 in all is let pass (half moved to the top by lifting the run), more is all but ruled out. So a slope the pieces do not fit becomes a slightly longer, shallower ramp instead of one with a lip.
+  - Landings: with fitted floors, `fit_slopes` adds a flat block (part `landing`) at a run's foot and top, turned with the ramp, 1 long and 0.005 under the floor's height, where the reference has walked floor at that height and no fitted block already covers the spot. `within_limits` ranks them with the ramps.
+- **Guardian:** 190 floor blocks, 45 ramp pieces, 19 landings, 37 walls: 291 pieces, budget 2,910. By the fitter's arithmetic no run is more than 0.02 under its lower floor at the edge. The 4.15-long ramp is now three shallow rows that reach the floor 1.5 past the reference's foot: a deliberate change of shape.
+- **Still wrong, measured, not fixed** (listed in the plan, phase 3 part 9): floor block corners 0.05 to 0.12 proud of two ramps that meet their floor at an angle (needs turned floor blocks); floor blocks hanging 0.1 over one ramp top (0.05 proud); one ramp foot in a tangle of small floors with the floor 0.22 proud over half its width; three ramp tops with no floor past them; floors at another height overlapping four ramps' sides.
+- **Made for the owner:** `FP_Guardian_5.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 320 objects; `check` reads it back with no problems. Expected HUD $26,700.
+- **Validation:** `tools/test_forge_printer_fit.py`: the best run judged at the floor's edge over a sweep of lengths and rises, the gentle, steep and odd-length slope tests updated for the new rule, four landing cases; 43 tests. Full suite 1186 OK.
+- **Untested in game:** the fifth print. The landings' flicker-free height (0.005 under the floor) is reasoned, not seen.
+
 ### The bots' terrain from a cache at match start; start-up times in the brain's log, 2026-11-21
 
 The owner: "We have to figure out why the bots dont play the game right from the start. It happened on my last asylum game. It happens quite a bit still", then "They stand still"; then "Yes, add both".
