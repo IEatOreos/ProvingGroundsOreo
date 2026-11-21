@@ -107,6 +107,7 @@ The owner's plan (`docs/REACH_FORGE_PRINTER_PLAN.md`): build Halo: Reach Forge m
 - Found: `maps/_inputs/reach.json` had no `reload` entry and `native/reach.cpp` writes none, so a bot's reload press never reached the game (of ~190 "reload between fights" presses a match, 8-26 were followed by a fuller magazine: the game's own reload of an empty one; Asylum 20261120-232338).
 - New `tools/reload_capture.py` (read-only, player 0's raw action and magazine each tick) decoded the owner's own reloads: +0x40 bits 4, 16, 20 for ~0.12 s. Bit 20 is Use held (reach.cpp's), so `reach.json`'s new `reload` entry is +0x40 mask 0x10010 only.
 - Validation: `tools/test_reload_capture.py` (new) and `tools/test_reload_timing.py` `test_reach_reload_reaches_the_game`; full suite 1043 OK. **Live check pending:** a bot's magazine up within ~1.2 s of its press.
+- Live check Nov 21 (logs/trace_reach_forge_halo_20261121-135535, Asylum, owner + 3 Demon vs 4 Noble): 102 of 110 between-fight reload presses filled the magazine (Demon 50 of 52, Noble 52 of 58), median 1.19 s / 1.22 s after the press, the owner's own 1.11-1.16 s. Before: 8-26 of ~190 a match. Reach reloads confirmed working.
 
 ### Sword Base: the owner's patrol points and spots, 2026-11-19
 
