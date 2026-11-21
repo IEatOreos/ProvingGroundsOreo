@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reach Forge Printer: a Blender add-on that opens, edits, counts and exports (Phase 4, milestone 1), 2026-11-21
+
+Milestone 1 of `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`: edit an auto-built map in Blender and export it as a `.mvar`.
+
+- **`tools/forge_printer/blender_addon/` (new):** installed by one step, `python\python.exe tools\forge_printer\blender_addon\install.py` with Blender closed (a link from Blender's add-ons folder to this folder, enabled and saved in its preferences; `--remove` undoes it). Sidebar (N), tab Forge: **Open fit.json** (one object per placement at Forge's placing point, in a collection per part, the reference's play space behind it as an unclickable backdrop, wire by default), a **palette** of the 99 pieces with known menu names (adds at the 3D cursor), **live counts** (objects of 651, pieces per category of 255, budget with unpriced pieces shown apart), **Export .mvar** (a new file each time, never over one).
+- The export goes through the proven code only: `fit.within_limits` chooses, `fit.add_to` writes into a fresh copy of the template, `problems()` must be empty. Pieces that cannot be written (scaled, mirrored, reshaped, leaning past what an up value holds, outside Forge World) and pieces that do not fit are listed in a dialog and selected first; nothing is written unless the owner presses "Export the rest".
+- `convert.py` and `export.py` hold everything that does not need Blender; `ui.py` only moves numbers between Blender and them. `mvar.py` and `fit.py` are unchanged.
+- **Validation:** `tools/test_forge_printer_addon.py` (22 tests) and `tools/test_forge_printer_addon_blender.py` (runs `headless_check.py` in Blender 5.1.1 headless, about a second; skips without Blender); full suite 1229 OK. Guardian, opened and exported unedited in headless Blender (Bot Testing Grounds, offset -39 -135 8): 336 objects, 292 written, equal to `print`'s 292 (310 of 311 objects identical raw, one position one step off), the same 44 fill blocks left out and named. The eight slope-test orientations export the slope test's raw turn and up exactly. The install step was tried in a throwaway Blender profile (enabled at the next start, removed cleanly). Blender's window was run once by script: the counts react to adding, scaling and moving, the export dialog lists and selects before writing.
+- **Untested in game:** no variant exported from the add-on has been loaded yet; the owner's check is an export with pieces moved and turned by hand, compared with Blender.
+
 ### Reach Forge Printer: Phase 3 closed, Phase 4 brief written, 2026-11-21
 
 The owner: "can we prep for Phase 3 or do we need to keep going through these steps?" (the next phase, Phase 4 in the plan). The plan's Phase 3 items are met, so the remaining fit work is polish and need not hold the next phase up.

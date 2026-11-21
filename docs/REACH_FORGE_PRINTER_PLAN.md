@@ -6,7 +6,10 @@ reference, scale 0.975). Phase 3 done as far as the plan asks (2026-11-21):
 Guardian's floors, ramps (as tilted faces) and walls are fitted with Forge
 pieces and seven prints have loaded in the game; the "Phase 3 → Phase 4" note
 at the end says what is proven, what is left and what Phase 4 starts from.
-Phase 4 not started; its brief is `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
+Phase 4 milestone 1 built (2026-11-21): the Blender add-on opens, edits,
+counts and exports, checked headless against `print`; waiting for the owner to
+load an edited export in the game (the "Phase 4, milestone 1" note at the
+end). Its brief is `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
 Separate tool from the Project Reach bot code.
 
 ## Goal
@@ -136,6 +139,14 @@ Do not start Phase 2 on Fable.
   - [x] budget and limit solver: slots, budget, map bounds, and 255 pieces a
         palette row (`fit.within_limits`)
 - [ ] Phase 4 — Blender addon
+  - [x] milestone 1 built: open a fit.json, edit, add, delete, live counts,
+        export through `fit.within_limits` / `fit.add_to`
+        (`tools/forge_printer/blender_addon/`); Guardian opened and exported
+        unedited equals `print` (292 of 292 objects, the same 44 left out)
+  - [ ] milestone 1 in the game: an export edited by hand loaded and compared
+        with Blender (the owner)
+  - [ ] milestone 2 — gameplay objects (not started: waits for the owner)
+  - [ ] milestone 3 — gap, overlap and lip finders (not started)
 
 ## Handoff notes
 
@@ -1305,3 +1316,80 @@ fine". Their look as floor is not known; it needs one small print.
   faults were found by checks that read `fit.json` alone.
 - A matching HUD budget says the pieces exist, not that they are in the
   right place.
+
+### Phase 4, milestone 1: the Blender add-on (2026-11-21, written by Opus 5.5)
+
+**Built:** `tools/forge_printer/blender_addon/` (how to use it:
+`README.md` there). Enabled by one step, Blender closed:
+`python\python.exe tools\forge_printer\blender_addon\install.py` (a link from
+Blender's own add-ons folder to this folder, then Blender run once in the
+background to enable it and save its preferences; `--remove` undoes it). In
+Blender: sidebar (N), tab Forge.
+
+- **Open fit.json:** one object per placement, named after its piece, in a
+  collection per part; the object's origin is Forge's placing point and its
+  axes are `mvar.axes(up, turn)`, its mesh the piece's box from the table, or
+  the real model from `re_tools\forge_printer\pieces\` when it is there. The
+  reference's play space comes in behind as a backdrop nobody can click, drawn
+  as wire by default (Forge floor tops lie in the reference floors, so solid
+  floors hid them; the panel switches to solid floors or hidden).
+- **Palette:** the 99 pieces with a known menu name by category; a click adds
+  one at the 3D cursor, selected. The 10 known only by model name (Decorative)
+  are not offered: `fit.add_to` looks pieces up by menu name.
+- **Edit:** Blender's own tools. Every piece's world matrix is read back by
+  `convert.placement_from`: `mvar.up_raw` for up (exactly "the world's up" when
+  it rounds to the +Z face's middle, as `print` writes untilted pieces),
+  `mvar.turn_for` against the decoded up for the turn, rounded to 0.0001
+  degree.
+- **Counts, live:** objects of 651, pieces per Forge category of 255 (the
+  template's included), budget from `pieces.PRICES` with the unpriced pieces
+  shown beside it. Redrawn on every scene change.
+- **Export:** `fit.within_limits` (with the template's free slots, budget left
+  and room per row) chooses, `fit.add_to` writes into a fresh copy of the
+  template, `problems()` must be empty, the file is created new (`open "xb"`)
+  and read back. What cannot be written (scaled, mirrored or reshaped; leaning
+  past what an up value holds; outside Forge World after the offset) and what
+  does not fit (row, slots, budget) is listed in a dialog with those pieces
+  selected; nothing is written unless the owner presses "Export the rest". A
+  piece whose up is exactly -X, -Y or -Z is written with a warning (the turn
+  under those faces is not seen in the game).
+
+**Done-when list (brief, milestone 1):**
+
+1. Headless Blender 5.1.1 enables it and prints the six classes
+   (`headless_check.py`; also through the installed link, tried in a
+   throwaway Blender profile, where it was still enabled at the next start).
+2. Guardian's fit.json opens as 336 objects (floor 254, slope 24, landing 21,
+   wall 37); exported at once with Bot Testing Grounds and offset -39 -135 8 it
+   writes 292 pieces; `print` with the same fit, template and offset writes 292;
+   `export.differences` finds 0 objects differing beyond the brief's
+   tolerances. Raw values: 310 of 311 objects identical, one position one raw
+   step apart (0.0003). Both leave out the same 44 fill blocks for row 70 and
+   the export names them. Before the 0.0001-degree rounding 41 walls at
+   exactly +90 came out one turn step low (89.99999 in Blender's 32-bit
+   matrix; +90 sits on a step boundary).
+3. The eight slope-test cases, oriented in Blender and read back from
+   Blender's own matrix: raw turn and up identical to what the slope test wrote
+   (not just within a step).
+4. The counter against `within_limits` on Guardian: 44 pieces over the row
+   limit = 44 left out; and in tests for a scene that fits (cost, unpriced
+   names), slots over (51 = 51) and budget over.
+5. Refusals shown by tests and inside Blender: 256 in one row (1 left out), a
+   piece leaning 50 degrees towards -y (refused; 50 towards +x is 40 from +X
+   and is written on the +X face), scaled 1.2, outside the bounds; also
+   mirrored, reshaped, unknown piece.
+6. `tools/test_forge_printer_addon.py` (22 tests, no Blender) and
+   `tools/test_forge_printer_addon_blender.py` (runs `headless_check.py`, about
+   a second; skips without Blender).
+7. This note and the checklist.
+8. **Not done: the owner has not loaded an export from the add-on.** The
+   check: open Guardian, move and turn a few pieces by hand (one tilted),
+   export, load it in Forge and compare with Blender.
+
+Also checked by running Blender's window once with a script (screenshots,
+local): the panel's counts react to adding, scaling and moving, and the export
+dialog lists and selects the pieces before anything is written.
+
+**Not done / for later:** gameplay objects (milestone 2) and the cleanup
+helpers (milestone 3) wait for the owner. The 10 model-named Decorative
+pieces have no palette button. A hidden piece is still exported.
