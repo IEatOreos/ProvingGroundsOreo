@@ -588,7 +588,13 @@ is not evidence for any exact size.
 (local only), title "FP Guardian Floors", 214 objects: the owner's variant
 (19), Guardian's 185 floor blocks moved by (-39, -135, +8) so they hang about
 18 above his floor, and the second rotation test (10 pieces) on the floor
-below, where the first test stood. **Not loaded in the game yet.**
+below, where the first test stood.
+
+**The owner, 2026-11-21, after loading it:** "Im not sure if any ar missing
+but the floor is somewhat printed." So a variant with 214 objects, 185 of
+them added Building Blocks, loads and shows floors. Not known yet: whether
+all 185 are there, the HUD's budget, whether tucked blocks flicker, and the
+tilt test's reading. Screenshots asked for.
 
 What to look for in the floors: are they all there (count the gaps against
 the picture), are the heights right relative to each other, do tucked blocks
