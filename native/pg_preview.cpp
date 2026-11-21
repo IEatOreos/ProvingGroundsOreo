@@ -1,4 +1,4 @@
-// pg_preview.cpp (custom, Nov 16): Proving Grounds' screens drawn offscreen to PNGs, for checking them without MCC.
+// pg_preview.cpp (custom, Nov 16): Project Reach's screens drawn offscreen to PNGs, for checking them without MCC.
 // Links the real proving_grounds.cpp and bots_panel.cpp; MCC's side (pg_lobby.cpp) is stood in for by the Halo: Reach
 // lists MCC gave in the owner's lobby test (Nov 16). The pool is a copy (the owner's own files are only read).
 // usage: native\bin\pg_preview.exe <out folder>   (build: native\build_pg_preview.bat)
@@ -309,7 +309,7 @@ int main(int argc, char** argv) {
     const char* names[] = { "menu", "invite", "search", "vote", "result", "error", "roster_details", "roster_card",
                             "roster_you", "credits", "challenges", "commendations", "credits_total", "credits_promoted",
                             "friend_vote",
-                            // (Nov 19) Halo: Reach's own pages around Proving Grounds (proving_grounds_reach.inc)
+                            // (Nov 19) Halo: Reach's own pages around Project Reach (proving_grounds_reach.inc)
                             "reach_title", "reach_main_menu", "reach_matchmaking", "reach_playlist_categories",
                             "reach_playlist_lists", "reach_search_restrictions", "reach_psych_profile",
                             // (Nov 19, phase 2) the Start menu, the Service Record, Career, a difficulty page

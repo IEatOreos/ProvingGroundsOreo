@@ -6,7 +6,7 @@ noncommercial purpose; selling it, charging for access to it or earning money fr
 
 ## Halo and Microsoft
 
-Halo: The Master Chief Collection © Microsoft Corporation. Project Proving Grounds was created under Microsoft's "Game
+Halo: The Master Chief Collection © Microsoft Corporation. Project Reach was created under Microsoft's "Game
 Content Usage Rules" using assets from Halo: The Master Chief Collection, and it is not endorsed by or affiliated with
 Microsoft. Game Content Usage Rules: https://www.xbox.com/en-US/developers/rules
 
@@ -27,7 +27,7 @@ These components keep their own licenses; the PolyForm Noncommercial terms cover
 
 ## Map data
 
-The world map on Proving Grounds' Psych Profile page (native/world_map.h, made by tools/world_map.py) is made from
+The world map on Project Reach's Psych Profile page (native/world_map.h, made by tools/world_map.py) is made from
 [Natural Earth](https://www.naturalearthdata.com/)'s 1:110m land and admin-1 states data, which is in the public domain.
 
 ## The map tools (a separate program)

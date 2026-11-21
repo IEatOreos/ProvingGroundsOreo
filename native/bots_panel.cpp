@@ -1610,7 +1610,7 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
     }
     if (tl.size() < 2) return;
     // the blocks: a party (one clan tag) moves as one, whole (Nov 16: it was cut to the biggest team's size); everyone
-    // else alone. (Nov 16, Proving Grounds) pinned seats (the person's invited party) are one block that keeps its team
+    // else alone. (Nov 16, Project Reach) pinned seats (the person's invited party) are one block that keeps its team
     std::vector<pb_block> bl;
     std::vector<std::string> clans;
     for (int i = 0; i < r.n; i++) {
@@ -1814,7 +1814,7 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty) {
     return false;
 }
 
-// (custom, Nov 16, Proving Grounds: proving_grounds.cpp) a matchmade lobby: two teams of `size` players, the person on
+// (custom, Nov 16, Project Reach: proving_grounds.cpp) a matchmade lobby: two teams of `size` players, the person on
 // party_team (a seat less of bots there). The person's invited party first, pinned to their team; then of the last
 // lobby's other bots each clan (or bot alone) stays keep_pct% of the time; the seats left take the pool's next bots as
 // bot_pool_rotate takes them (a clan's first bot pulls its clanmates 85% of the time, a lobby never more of a clan than
@@ -1912,7 +1912,7 @@ int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int npar
     return filled;
 }
 
-// (custom, Nov 16, Proving Grounds' invites) the pool's bots, each once, in the file's order
+// (custom, Nov 16, Project Reach's invites) the pool's bots, each once, in the file's order
 int bot_pool_names(char (*out)[16], int cap) {
     bot_pool_load(g_pool_dir);
     std::unordered_set<std::string> seen;
@@ -4271,7 +4271,7 @@ bool bot_card(bots_panel_env& e, const hb_bot& b) {
 }
 
 // (Nov 17, the owner's Halo: Reach roster pictures: a player picked in the list shows their Spartan) a bot's own Reach
-// figure for Proving Grounds' player card, drawn as bot_card draws it: its Armory roll's pieces and colours, the whole
+// figure for Project Reach's player card, drawn as bot_card draws it: its Armory roll's pieces and colours, the whole
 // figure, turned to yaw. A bot with no profile gets one (profile_ensure), as on the card. 0: no look yet or no 3D view
 unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, int w, int h) {
     g_make_texture = e.make_texture;
@@ -4291,7 +4291,7 @@ unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, in
 }
 
 // (Nov 19, the owner: "Do the in game cards first") the player's own Spartan: their configuration as they last joined
-// a Halo: Reach match (reach.cpp my_look_reach.txt: colours, body, visor), wearing what Proving Grounds' Armory has
+// a Halo: Reach match (reach.cpp my_look_reach.txt: colours, body, visor), wearing what Project Reach's Armory has
 // equipped (armory.cpp; an item being looked at in the Armory tried on, an Elite armor one on the Elite), the pieces
 // worked out from the customization table as brain/armory.py pieces does
 static unsigned long long person_dressed(bots_panel_env& e, const char* name, float yaw, int w, int h) {

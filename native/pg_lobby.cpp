@@ -1,4 +1,4 @@
-// pg_lobby.cpp (custom, Nov 16): Proving Grounds' side of MCC's Halo: Reach custom game lobby (proving_grounds.h).
+// pg_lobby.cpp (custom, Nov 16): Project Reach's side of MCC's Halo: Reach custom game lobby (proving_grounds.h).
 // The owner: "Yes, study it", "Yes, build the test", then "Build the entire thing start to finish Map voting and all".
 // MCC-Win64-Shipping.exe (Oct 31 2026 file; static read with dumpbin, proved by three live runs of the lobby test,
 // Nov 16: the third launched SLAYER on Sword Base from a lobby set to CTF on Boardwalk):
@@ -15,7 +15,7 @@
 //    apply step, then Start unless the lobby's settings (FUN_14034CEF8(1)) say a countdown runs (FUN_14034D1E4).
 // Everything here that touches MCC runs inside that Update: the library copied every 2 s, the pairing checks
 // (FUN_14043E768(lib, title, map, gametype)) and the launch (the picks set as MCC's own picks set them, its apply step,
-// its Start). Any byte mismatch (another MCC build) leaves MCC untouched and Proving Grounds says so.
+// its Start). Any byte mismatch (another MCC build) leaves MCC untouched and Project Reach says so.
 #include <windows.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -134,7 +134,7 @@ static void dump(int t) {                        // native\bin\lobby_library.txt
     swprintf_s(path, L"%s\\lobby_library.txt", g_bin);
     FILE* f = nullptr;
     if (_wfopen_s(&f, path, L"w") || !f) return;
-    fprintf(f, "MCC's Halo: Reach variant library as Proving Grounds read it (pg_lobby.cpp), title index %d.\n"
+    fprintf(f, "MCC's Halo: Reach variant library as Project Reach read it (pg_lobby.cpp), title index %d.\n"
                "kind: 1 built in, 2 shipped, 3 the player's. teams: 1 team game, 0 free for all, -1 not read.\n\n== maps\n", t);
     for (int i = 0; i < g_nmaps; i++) fprintf(f, "  #%d kind %d \"%s\" %s\n", g_maps[i].id, g_maps[i].kind, g_maps[i].name, g_maps[i].key);
     fprintf(f, "\n== gametypes (category, teams)\n");
@@ -226,7 +226,7 @@ static void launch(uint8_t* screen, uint8_t* lib, uint8_t* host, int t) {
         logf("proving grounds: MCC's countdown started: map #%d (%s), gametype #%d (%s); host map #%d, gametype #%d",
              g_launch_map, m, g_launch_gt, g, *(int32_t*)(host + HOST_MAP), *(int32_t*)(host + HOST_GT));
     } else {
-        fail("MCC did not start the game. Leave Proving Grounds to see any message its lobby shows.");
+        fail("MCC did not start the game. Leave Project Reach to see any message its lobby shows.");
     }
 }
 
@@ -318,7 +318,7 @@ void pg_lobby_launch(int map, int gametype) {
     LeaveCriticalSection(&g_lock);
 }
 int pg_lobby_launch_state(char* why, int cap) {
-    if (!g_ok) { if (why) strcpy_s(why, cap, "This MCC build is not the one Proving Grounds was made for."); return -1; }
+    if (!g_ok) { if (why) strcpy_s(why, cap, "This MCC build is not the one Project Reach was made for."); return -1; }
     EnterCriticalSection(&g_lock);
     int s = g_launch_state;
     if (why) strcpy_s(why, cap, g_launch_why);

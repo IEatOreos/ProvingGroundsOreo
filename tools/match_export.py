@@ -175,7 +175,7 @@ def git_version():
         return "unknown"
 
 
-README = """Project Proving Grounds: one recorded match, exported for sharing (format {fmt}).
+README = """Project Reach: one recorded match, exported for sharing (format {fmt}).
 
 Read manifest.json first: the match (game, map, modes, score, length), every player marked "human" (a person) or
 "bot" (an AI bot of the mod, with its difficulty and play style), every file in this zip and the format of each row.

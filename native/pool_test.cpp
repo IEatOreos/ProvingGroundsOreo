@@ -499,7 +499,7 @@ int main(int argc, char** argv) {
         CHECK(!strcmp(bot_pool_upcoming(0), next4), "4v4 place kept: %s want %s", bot_pool_upcoming(0), next4);
     }
 
-    // 25. (Nov 16, Proving Grounds) bot_pool_matchmake: two teams of 4 (or 8) with the person on Red: 3 / 4 bots (7 / 8);
+    // 25. (Nov 16, Project Reach) bot_pool_matchmake: two teams of 4 (or 8) with the person on Red: 3 / 4 bots (7 / 8);
     // the invited party pinned to Red every time; a clan whole on one team (a clan of 3 with a party of 2 on Red: Blue);
     // no name twice; keep 100: every last-lobby bot stays (teams dealt again), keep 0: a new lobby but the party
     {

@@ -1,5 +1,5 @@
 // pglink.cpp (custom, Nov 18): the link test. Can the host's mod and a joined PC friend's mod pass data to each other
-// while both are in MCC? (The owner wants Proving Grounds' search, vote and level-up on a PC friend's screen, following
+// while both are in MCC? (The owner wants Project Reach's search, vote and level-up on a PC friend's screen, following
 // the host: "we need this to work in order to expand it even further".) It is a DLL of its own (pglink.dll, loaded by
 // pglink_load.exe next to it), so a friend on an older install can run it without a new botcore. It changes nothing
 // in MCC's games and logs to pglink.log next to itself. Two links are tested:

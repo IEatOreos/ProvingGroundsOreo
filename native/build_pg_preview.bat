@@ -1,5 +1,5 @@
 @echo off
-rem Builds pg_preview.exe into native\bin (custom, Nov 16): Proving Grounds' screens drawn offscreen to PNGs, with the
+rem Builds pg_preview.exe into native\bin (custom, Nov 16): Project Reach's screens drawn offscreen to PNGs, with the
 rem real proving_grounds.cpp and bots_panel.cpp (MCC's side stood in for). usage: build_pg_preview.bat <out folder>
 setlocal
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"

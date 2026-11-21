@@ -148,7 +148,7 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty);   // seat i: the n
 // (custom, Nov 11) the lobby's bot card, full screen: MCC's Player Details for a bot (its name, emblem, difficulty, play
 // style, team, its armor in 3D in the lobby's game). False once closed (Back, Esc, the pad's B)
 bool bot_card(bots_panel_env& e, const hb_bot& b);
-// (custom, Nov 17) a bot's Reach figure in 3D, its own look, for Proving Grounds' player card (0: none yet)
+// (custom, Nov 17) a bot's Reach figure in 3D, its own look, for Project Reach's player card (0: none yet)
 unsigned long long bot_figure(bots_panel_env& e, const char* name, float yaw, int w, int h);
 unsigned long long person_figure(bots_panel_env& e, const char* name, float yaw, int w, int h);   // a person: the
                                                      // player's own Spartan (Armory-dressed), else Reach's default
@@ -163,7 +163,7 @@ int  tier_points(int tier);                             // Easy 1, Normal 2, Her
                                                         // Scaling 8, Mythic 10, Demon 12
 int  bot_pool_humans(int team);                         // the people on that team in the last match
 int  roster_team_points(const hb_roster& r, int team);  // its bots' points and its people's
-// (Nov 16) pinned[i]: seat i keeps its team (Proving Grounds' invited party, all on the person's team); null: none
+// (Nov 16) pinned[i]: seat i keeps its team (Project Reach's invited party, all on the person's team); null: none
 void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng, const uint8_t* pinned = nullptr);
 void bot_pool_seed(uint32_t s);                         // (tests) the parties' and the deal's random draws
 // (custom, Nov 16) the owner: "choose between a bot text file formatted for 4v4 or 8v8", "clan parties to be up to 4 or
@@ -179,7 +179,7 @@ void bot_pool_set_format(uint32_t fmt);                 // read that format's fi
 int  bot_pool_reshuffle();                              // Settings "Reshuffle clans": both files made again, a new spread;
                                                         // the clans, -1 the files not written
 const char* roster_balance_note();                      // the last balance's split or swap, "" none
-// (custom, Nov 16) Proving Grounds (proving_grounds.cpp): a matchmade lobby of two teams of size (4 or 8) players, the
+// (custom, Nov 16) Project Reach (proving_grounds.cpp): a matchmade lobby of two teams of size (4 or 8) players, the
 // person on party_team: their invited party pinned there, keep_pct% of the last lobby's clans and lone bots kept, the
 // rest from the pool (clans whole), teams dealt by points. pinned[i]: seat i is the party's. Returns the new bots.
 // (Nov 17) people: the other people in the lobby (friends who joined), npeople of them, each the team MCC has them on

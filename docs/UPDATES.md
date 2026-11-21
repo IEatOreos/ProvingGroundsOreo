@@ -152,7 +152,7 @@ s181 was updated eight times, on November 6 and 7. Everything new and fixed sinc
 - **Firefight**: the BOTS tile and panel now show in the Reach and ODST Firefight lobbies, with up to 3 bots (Firefight holds 4 players). Teammates follow you, and while you're down they hold a safe spot nearby instead of running into the open.
 - **Observer**: the game list shows games only. A game with bug reports has a flag, and a **Bug reports** section lists each report with its time; click one to jump to that moment.
 - **A real player's guide**: **Read the guide** in the launcher opens a searchable guide in the mod's own window.
-- **The launcher** in the Proving Grounds art's colours, with the sign as the app icon.
+- **The launcher** in the Project Reach art's colours, with the sign as the app icon.
 - **Flight heights from the map**: aircraft pick their attack and travel heights from the ground under them; painting airspace is optional.
 
 ### Fixed

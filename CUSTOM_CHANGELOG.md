@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Rebrand: Project Reach, 2026-11-20
+
+The owner: "Starting here I would like to rebrand Everything that says Project Proving Grounds, or anything similar in code, on launchers, anywhere to our new title. Project Reach". Asked, he chose to rename it all, the matchmaking mode's name included; to change text only (file names, identifiers such as `proving_grounds.cpp`, `pg_*` and `botcore_pgNN`, the installer's data folder `ProjectProvingGrounds` and its `ProjectProvingGrounds-Setup-*` file names stay); and to keep the folders and the GitHub repository's name for now.
+
+- **What a player or reader sees** now says Project Reach (252 places in 58 files): the in-game screens, the Service Record site's title and brand, the launcher's and tools' windows, the installer's name, shortcuts and default folder, README, the docs and code comments. Possessives read "Project Reach's"; the title screen and the standalone launcher's boot screen and splash read PROJECT above REACH.
+- **Kept as they were:**
+  - NOTICE.md's "Required Notice: Copyright 2026 the Project Proving Grounds contributors" (the PolyForm license wants it word for word), and every "Project Proving Grounds contributors" credit, the installer's publisher included;
+  - the upstream credit ("a customized build of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds)", "upstream Project Proving Grounds 0.2.2-s181"), and the 2026-11-05 handoff's sentence about customizing the upstream mod;
+  - the separate GPL project's name, Proving Grounds Map Tools;
+  - every folder path (E:\Proving Grounds\...);
+  - this changelog's past entries, as history.
+- **The standalone launcher** (E:\Proving Grounds\PPG Launcher, its own repository) got the same rename in its README, settings comments, console title, boot screen, route status lines and tests; its splash was drawn again.
+- **Not changed:** pictures with the old name drawn into them (docs/banner.jpg, the launcher art), and on an existing install the old Start-menu shortcut's name stays until the next install.
+- **Validation:** the full suite (1038 tests) passes. `tools/test_service_record.py` stops at `test_game_reads_the_sites_challenges`: its one test match makes no progress on today's drawn daily challenges, which comes from the date and not from the rename (that file's only changes are docstrings). `build.bat pg37` builds `botcore_pg37.dll`. The preview's title, Proving Grounds menu (now PROJECT REACH), Matchmaking and Start menu screens were checked by eye. The standalone launcher builds and its boot tests pass. The site was rebuilt with the new title.
+
 ### Noble: a smooth swing then a lock, never a miss with precision guns, and it takes the fight, 2026-11-20
 
 The owner's Forge World report (`logs/bug_reports/reach_forge_halo_20261120-172336`, read by the bug-report session): four Nobles were in a fight goal 1-12% of the time, "they should be killing me quicker", and their aim "flick[s] directly at the ground". Then: "make noble as good as humanly possible ... never miss a shot from here on out with precision weapons."

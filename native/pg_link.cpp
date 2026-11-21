@@ -1,4 +1,4 @@
-// pg_link.cpp (custom, Nov 18): the link between the host's Proving Grounds and a joined PC friend's, so the friend sees
+// pg_link.cpp (custom, Nov 18): the link between the host's Project Reach and a joined PC friend's, so the friend sees
 // the host's search, vote and loading screens (proving_grounds.cpp follow mode). The owner: "we need this to work in
 // order to expand it even further". The channel is MCC's own PlayFab Party text chat (PartyWin.dll 1.4.13), as the link
 // test (native/pglink.cpp) found and proved live on Nov 18, host and friend: a handshake within 1 s of the join, about
@@ -13,7 +13,7 @@
 //    not make it), and only while the lobby has exactly one other player: the host. pglink=1 (the default) answers a
 //    hello and never speaks first; pglink=0 hooks nothing.
 //  - Messages: "pgl2 hello" (the friend, 3 at most, 20 s apart), "pgl2 ok" (the host's answer), "pgl2 st n=" with the
-//    host's Proving Grounds state as a data buffer (proving_grounds.cpp pgs_state: on a change, at most 5 a second, and
+//    host's Project Reach state as a data buffer (proving_grounds.cpp pgs_state: on a change, at most 5 a second, and
 //    every second), "pgl2 vote" (the friend's vote, to the host).
 #include <windows.h>
 #include <stdio.h>
@@ -177,7 +177,7 @@ static void got(const uint64_t* q, int slot, const char* text) {
     }
     if (from >= 0 && !g_peers[from].answered) {
         g_peers[from].answered = true;
-        logf("pg link: linked with another PC running Proving Grounds' link");
+        logf("pg link: linked with another PC running Project Reach's link");
     }
     unsigned id = 0;
     if (!strncmp(text, "pgl2 hello", 10)) {

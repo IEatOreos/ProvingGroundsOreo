@@ -346,12 +346,12 @@ static int64_t rank_xp(int tour, int level) {
     return -1;
 }
 
-// (custom, Nov 17, the owner: "add my nameplate and emblem" to Proving Grounds' rows) the person's own, as MCC's lookup
+// (custom, Nov 17, the owner: "add my nameplate and emblem" to Project Reach's rows) the person's own, as MCC's lookup
 // answers for their id (session_watch.cpp mcc_player_id): the emblem's five at +0x00 and the nameplate at +0x18, kept
 // each time MCC asks (its roster and cards do, every lobby). Nothing is called that MCC does not call itself
 uint64_t mcc_player_id();                                  // session_watch.cpp
 bool mcc_session_has(uint64_t id);                         // session_watch.cpp: another person in the session
-// (Nov 17, a friend in Proving Grounds' lobby) the people's looks by id: the player's and any joined friend's
+// (Nov 17, a friend in Project Reach's lobby) the people's looks by id: the player's and any joined friend's
 struct person_look { uint64_t id; int32_t v[6]; };         // v: the emblem's five, the nameplate
 static SRWLOCK g_look_lock = SRWLOCK_INIT;
 static person_look g_looks[9];

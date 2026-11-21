@@ -1,4 +1,4 @@
-// armory.cpp (custom, Nov 19): Proving Grounds' Halo: Reach Armory, its data (armory.h).
+// armory.cpp (custom, Nov 19): Project Reach's Halo: Reach Armory, its data (armory.h).
 //
 // The owner's design: "make it to where everything on MCC is actually already unlocked, but we make it to where you
 // can't equip it until you purchase it through our menu ... when we go to equip an item that we have not purchased or
@@ -245,7 +245,7 @@ void write_equipped(const state& s) {
     swprintf_s(tmp, L"%s.tmp", p);
     FILE* f = nullptr;
     if (_wfopen_s(&f, tmp, L"wb") || !f) return;
-    fprintf(f, "# Proving Grounds' Armory (native/armory.cpp): what the player wears in Halo: Reach matches; slot<TAB>id\n");
+    fprintf(f, "# Project Reach's Armory (native/armory.cpp): what the player wears in Halo: Reach matches; slot<TAB>id\n");
     for (int k = 0; k < ARM_NSLOTS; k++)
         if (s.equipped[k] >= 0) fprintf(f, "%s\t%s\n", ARM_SLOTS[k], s.items[s.equipped[k]].id.c_str());
     fclose(f);
@@ -314,7 +314,7 @@ bool armory_buy(int i, const char* name) {
     FILE* f = nullptr;
     if (_wfopen_s(&f, p, L"ab") || !f) return false;
     if (fresh)
-        fprintf(f, "# Proving Grounds' Armory (native/armory.cpp): what was bought with the Service Record's credits;\n"
+        fprintf(f, "# Project Reach's Armory (native/armory.cpp): what was bought with the Service Record's credits;\n"
                    "# buy<TAB>name<TAB>item id<TAB>credits<TAB>unix time. The rank stays the credits earned.\n");
     fprintf(f, "buy\t%s\t%s\t%d\t%lld\n", name, it.id.c_str(), it.cost, (long long)time(nullptr));
     fclose(f);

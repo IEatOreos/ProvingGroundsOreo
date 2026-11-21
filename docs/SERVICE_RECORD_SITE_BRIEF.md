@@ -152,7 +152,7 @@ All of these live on the owner's PC. Paths are relative to the repo root.
 
 Each has a suggested default. The owner decides.
 
-1. **Name of the site** (not Bungie's). Suggested: "Proving Grounds Service Record".
+1. **Name of the site** (not Bungie's). Suggested: "Project Reach Service Record".
 2. **Website or desktop app?** Suggested: the local website above.
 3. **Who can see it?** Only the owner's PC, a zipped copy for friends, or a private host? Suggested: the owner's PC
    first; sharing later, only on the owner's OK.

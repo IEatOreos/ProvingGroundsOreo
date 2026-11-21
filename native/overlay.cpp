@@ -418,10 +418,10 @@ static void draw_tile(float t) {
     if (g_hover_tile && ImGui::IsMouseClicked(0)) g_panel = true;
 }
 
-// (custom, Nov 16) Proving Grounds (proving_grounds.cpp): its tile in Halo: Reach's custom game lobby, the slot right
+// (custom, Nov 16) Project Reach (proving_grounds.cpp): its tile in Halo: Reach's custom game lobby, the slot right
 // of BOTS, drawn as the stock tiles are; a click or P opens it
 static void play_sound(int kind, uint32_t volume);
-static bool g_hover_pg;                  // the mouse is on the PROVING GROUNDS tile (its clicks are ours)
+static bool g_hover_pg;                  // the mouse is on the PROJECT REACH tile (its clicks are ours)
 static volatile bool g_pg_open_req;      // P pressed (wndproc): opened on the next frame
 static bool reach_lobby() { return g_session == 5 && !g_ff_lobby; }
 static void draw_pg_tile(float t) {
@@ -448,7 +448,7 @@ static void draw_pg_tile(float t) {
     dl->AddLine(ImVec2(c.x - rr * 0.45f, c.y + rr * 0.38f), ImVec2(c.x + rr * 0.45f, c.y + rr * 0.38f), icon, h * 0.025f);
     float fs = h * 0.105f;
     dl->AddRectFilled(ImVec2(a.x + 1, b.y - fs * 1.55f), ImVec2(b.x - 1, b.y - 1), IM_COL32(4, 8, 12, 200));
-    dl->AddText(g_font_label, fs, ImVec2(a.x + fs * 0.35f, b.y - fs * 1.35f), IM_COL32(112, 178, 222, 255), "PROVING GROUNDS");
+    dl->AddText(g_font_label, fs, ImVec2(a.x + fs * 0.35f, b.y - fs * 1.35f), IM_COL32(112, 178, 222, 255), "PROJECT REACH");
     float ks = h * 0.115f * 0.85f, ky = b.y + h * 0.10f;
     {                                                        // (Nov 19: the pad's too, both triggers: pad_frame)
         const char* key = g_pad_last ? "LT+RT" : "P";
@@ -685,13 +685,13 @@ static void panel_env(bots_panel_env& e) {
     e.f_title = e.f_head = e.f_body = e.f_small = g_font_small;
     e.open = &g_panel;
 }
-// (custom, Nov 17) a bot's Reach figure for Proving Grounds' player card (bots_panel.cpp bot_figure, on MCC's device)
+// (custom, Nov 17) a bot's Reach figure for Project Reach's player card (bots_panel.cpp bot_figure, on MCC's device)
 static unsigned long long pg_figure(const char* name, bool bot, float yaw, int w, int h) {
     bots_panel_env e{};
     panel_env(e);
     return bot ? bot_figure(e, name, yaw, w, h) : person_figure(e, name, yaw, w, h);
 }
-// (custom, Nov 16) what Proving Grounds' screens work with
+// (custom, Nov 16) what Project Reach's screens work with
 static void pg_env_fill(pg_env& e, bool lobby_visible) {
     e.roster = &g_roster;
     e.difficulty = g_shm->difficulty;
@@ -727,7 +727,7 @@ static void draw_card() {
 extern volatile LONG g_pool_due;
 static void pool_after_match() {
     if (!InterlockedExchange(&g_pool_due, 0)) return;
-    // (custom, Nov 16) a Proving Grounds session: its own lobby between matches (some stay, new ones come, teams again)
+    // (custom, Nov 16) a Project Reach session: its own lobby between matches (some stay, new ones come, teams again)
     if (pg_running() && !g_ff_lobby && g_shm && g_shm->bots_enabled && !g_shm->lidar_mode) {
         if (pg_after_match(g_roster, g_shm->difficulty)) { g_shm->settings_seq++; save_settings(); }
         return;
@@ -836,7 +836,7 @@ static void pad_frame() {
     bool any = false;
     for (int k = ImGuiKey_GamepadStart; k <= ImGuiKey_GamepadRStickDown; k++) any |= ImGui::IsKeyDown((ImGuiKey)k);
     if (any) g_pad_last = true;
-    if (g_show_tile && !pg_visible()) {                  // (Proving Grounds' screens take the pad themselves)
+    if (g_show_tile && !pg_visible()) {                  // (Project Reach's screens take the pad themselves)
         bool l3 = ImGui::IsKeyDown(ImGuiKey_GamepadL3), r3 = ImGui::IsKeyDown(ImGuiKey_GamepadR3);
         if ((l3 && ImGui::IsKeyPressed(ImGuiKey_GamepadR3, false)) || (r3 && ImGui::IsKeyPressed(ImGuiKey_GamepadL3, false))) {
             if (g_panel) play_sound(PS_BACK, g_sounds);
@@ -845,7 +845,7 @@ static void pad_frame() {
             g_panel = false;
             play_sound(PS_BACK, g_sounds);
         }
-        // (Nov 19, the owner: "we mostly use controllers") both triggers together open Proving Grounds in Halo: Reach's
+        // (Nov 19, the owner: "we mostly use controllers") both triggers together open Project Reach in Halo: Reach's
         // custom game lobby, as both sticks open BOTS (P on the keys); taken on this frame (g_pg_open_req)
         bool lt = ImGui::IsKeyDown(ImGuiKey_GamepadL2), rt = ImGui::IsKeyDown(ImGuiKey_GamepadR2);
         if (reach_lobby() && !g_panel && !bot_ui() &&
@@ -876,7 +876,7 @@ static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     // mouse goes to our frame, a click on a bot row is ours; a bot's menu or card open takes every key and click, and Esc
     // closes it (the card first) without reaching MCC (its release too: g_esc_eat)
     bool bots_ui = g_ready && bot_ui();
-    // (custom, Nov 16) Proving Grounds' screens up: every key, click and the raw mouse are theirs (Esc too: its release
+    // (custom, Nov 16) Project Reach's screens up: every key, click and the raw mouse are theirs (Esc too: its release
     // kept from MCC, which would back out of the lobby on it)
     if (g_ready && pg_visible()) {
         if (msg == WM_KEYDOWN && wp == VK_ESCAPE) g_esc_eat = GetTickCount() | 1;
@@ -1054,12 +1054,12 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             g_show_tile = in_ce_menus();
             if (!g_show_tile) g_panel = false;
             if (!lobby || g_panel) { g_bot_menu = -1; g_bot_card = false; }   // (a bot's menu, card: the lobby's only)
-            // (custom, Nov 16) Proving Grounds: its screens over Halo: Reach's lobby; away from it (a match, the carnage
+            // (custom, Nov 16) Project Reach: its screens over Halo: Reach's lobby; away from it (a match, the carnage
             // report) its session still moves on (the launch, the match's end), with nothing drawn
             // (custom, Nov 18) the launch: MCC's countdown greys its OPTIONS tile (probe_lobby "not seen"), so Proving
             // Grounds' launch screen is kept up over the countdown by this, in Reach's menus, till the game
             bool pg_hold = pg_launching() && reach_lobby() && bots_title(g_session) && mcc_menu_state() == 0 && !g_playback;
-            // (custom, Nov 18) a joined PC friend's copy follows the host's Proving Grounds (pg_link.cpp): its screens in
+            // (custom, Nov 18) a joined PC friend's copy follows the host's Project Reach (pg_link.cpp): its screens in
             // MCC's menus here, whether or not this PC's lobby probe or title read sees a guest's lobby (the host's state
             // comes only while the two share its Reach lobby: 4 s without it, the following ends)
             EnterCriticalSection(&g_imgui_lock); held = true;
@@ -1146,7 +1146,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 if (g_show_tile && g_panel) draw_panel();
                 if (pg_lobby && g_pg_open_req && !g_panel && !bot_ui()) { pg_open(); play_sound(PS_OPEN, g_sounds); }
                 g_pg_open_req = false;
-                if (pg_lobby && pg_running()) {                      // (Proving Grounds over everything of ours)
+                if (pg_lobby && pg_running()) {                      // (Project Reach over everything of ours)
                     pg_env pe{};
                     pg_env_fill(pe, true);
                     if (pg_frame(pe)) { g_shm->settings_seq++; save_settings(); }

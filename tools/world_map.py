@@ -1,4 +1,4 @@
-"""(Nov 19, the owner: on Proving Grounds' Psych Profile page "id like the same world map. and then a static heat map
+"""(Nov 19, the owner: on Project Reach's Psych Profile page "id like the same world map. and then a static heat map
 of the service websites player locations") Writes native/world_map.h, the world map built into botcore: the land and
 the US states' outlines and centres, from Natural Earth's 1:110m vector data (public domain, naturalearthdata.com;
 github.com/nvkelso/natural-earth-vector, geojson/ne_110m_land.geojson and geojson/ne_110m_admin_1_states_provinces.geojson).
@@ -76,7 +76,7 @@ def build(land_path, states_path):
     rows = ",\n".join(f'    {{"{c}", {la}, {lo}, {r0}, {n}}}' for c, la, lo, r0, n in states)
     return f"""// world_map.h: made by tools/world_map.py, do not edit. The world's land and the US states' outlines and label
 // points, from Natural Earth's 1:110m vector data (public domain, naturalearthdata.com): each polygon's outer ring at a
-// tenth of a degree (lon * 10, lat * 10). Drawn on Proving Grounds' Psych Profile page (proving_grounds_reach.inc).
+// tenth of a degree (lon * 10, lat * 10). Drawn on Project Reach's Psych Profile page (proving_grounds_reach.inc).
 #pragma once
 #include <stdint.h>
 

@@ -1,4 +1,4 @@
-; Project Proving Grounds' Windows installer (Inno Setup 6). Built by tools/build_installer.py, which stages the files
+; Project Reach's Windows installer (Inno Setup 6). Built by tools/build_installer.py, which stages the files
 ; (Payload) and passes the version: ISCC /DAppVersion=0.1.0 /DPayload=<folder> /DBuildDir=<folder> this file.
 ;
 ; Installs for the current user (no administrator rights needed) into %LOCALAPPDATA%\Programs\Project Proving Grounds,
@@ -21,9 +21,9 @@
 
 [Setup]
 AppId={{8C3B2F7E-5A41-4D8E-9C6B-1F2E3D4C5B6A}
-AppName=Project Proving Grounds
+AppName=Project Reach
 AppVersion={#AppVersion}
-AppVerName=Project Proving Grounds {#AppVersion}
+AppVerName=Project Reach {#AppVersion}
 AppPublisher=The Project Proving Grounds contributors
 DefaultDirName={autopf}\Project Proving Grounds
 DisableProgramGroupPage=yes
@@ -40,7 +40,7 @@ MinVersion=10.0
 LicenseFile={#BuildDir}\license.txt
 SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\installer\icon.ico
-UninstallDisplayName=Project Proving Grounds
+UninstallDisplayName=Project Reach
 WizardStyle=modern
 CloseApplications=yes
 
@@ -79,7 +79,7 @@ Name: "{autoprograms}\Project Proving Grounds"; Filename: "{app}\python\pythonw.
 Name: "{autodesktop}\Project Proving Grounds"; Filename: "{app}\python\pythonw.exe"; Parameters: "-I ""{app}\tools\launcher.py"""; WorkingDir: "{app}"; IconFilename: "{app}\installer\icon.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\python\pythonw.exe"; Parameters: "-I ""{app}\tools\launcher.py"" --setup"; WorkingDir: "{app}"; Description: "Open Project Proving Grounds and run the first-time setup"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\python\pythonw.exe"; Parameters: "-I ""{app}\tools\launcher.py"" --setup"; WorkingDir: "{app}"; Description: "Open Project Reach and run the first-time setup"; Flags: postinstall nowait skipifsilent
 ; an update from the launcher (tools/launcher.py: Setup /SILENT /UPDATE=1): the launcher opens again when it is done
 Filename: "{app}\python\pythonw.exe"; Parameters: "-I ""{app}\tools\launcher.py"""; WorkingDir: "{app}"; Flags: nowait; Check: LauncherUpdate
 
@@ -139,7 +139,7 @@ procedure InitializeWizard;
 begin
   SecurityPage := CreateInputOptionPage(wpSelectTasks, 'Windows Security exclusion (required)',
     'The bots can''t load into the game without it.',
-    'Project Proving Grounds loads its bots into Halo: MCC with a small program called an injector. Windows Security ' +
+    'Project Reach loads its bots into Halo: MCC with a small program called an injector. Windows Security ' +
     'treats injectors as suspicious and usually deletes them, and then the bots can''t load.' + #13#10 + #13#10 +
     'Setup adds one exclusion, for the mod''s own program folder (native\bin), and nothing else. Windows asks for ' +
     'administrator permission when Setup adds it, and uninstalling removes it again.' + #13#10 + #13#10 +

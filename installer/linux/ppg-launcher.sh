@@ -1,5 +1,5 @@
 #!/bin/bash
-# Opens Project Proving Grounds' launcher on Linux and Steam Deck (the desktop entry runs this): the launcher runs in
+# Opens Project Reach's launcher on Linux and Steam Deck (the desktop entry runs this): the launcher runs in
 # the mod's own Wine prefix with MCC's Proton and shows in the system's browser (there is no WebView2 under Wine).
 # The first start of the prefix takes a minute. Output: logs/launcher/linux.txt in the mod's folder.
 

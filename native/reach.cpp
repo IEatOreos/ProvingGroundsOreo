@@ -679,7 +679,7 @@ static void hr_save_my_look(const uint8_t* cfg) {
     }
 }
 
-// (custom, Nov 19) Proving Grounds' Armory (armory.cpp): the player wears what was bought and equipped there, not what
+// (custom, Nov 19) Project Reach's Armory (armory.cpp): the player wears what was bought and equipped there, not what
 // MCC's own Customization has on (MCC keeps everything unlocked; only this Armory's choices are worn). Each tick the
 // equipped pieces' bytes are laid over player 0's configuration in the match (game globals +0x2D8, which bots and
 // later joins start from) and over the copies of it in player 0's own record, found once a match by the player's name

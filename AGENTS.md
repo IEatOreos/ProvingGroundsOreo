@@ -1,4 +1,4 @@
-# Custom Project Proving Grounds workflow
+# Custom Project Reach workflow
 
 This is a customized installation based on upstream Project Proving Grounds 0.2.2-s181.
 Read CUSTOMIZATIONS.md and docs/CUSTOM_RELEASE_WORKFLOW.md before making changes.

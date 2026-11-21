@@ -17,7 +17,7 @@ its ledger row and its report and kill rows (compressed), and a mark when a rese
 tools/bot_career.py read the database as they build (site_entries, ledger_entries): a simulated match shows exactly
 like a real one, and never teaches the model (sim_engine.fit reads real matches only).
 
-usage: python -I bot_sim.py --after <GameUniqueId>   one round alongside that match of yours (Proving Grounds, as it ends)
+usage: python -I bot_sim.py --after <GameUniqueId>   one round alongside that match of yours (Project Reach, as it ends)
        python -I bot_sim.py --rounds N               N rounds now (the menu row, the site's button)
        python -I bot_sim.py --stats                  who plays how often, and the model's numbers
        python -I bot_sim.py --check                  the model against the real matches (kills a minute, wins)
@@ -104,7 +104,7 @@ def ini_path():
 
 
 def read_ini(path=None):
-    """(playlists {key: {"size", "gametypes" [(name, weight)], "maps" [name]}}, settings) as Proving Grounds reads
+    """(playlists {key: {"size", "gametypes" [(name, weight)], "maps" [name]}}, settings) as Project Reach reads
     proving_grounds.ini (its default_playlists, then <playlist>.gametype= / addgametype= / removegametype= and the maps
     the same way), and the sim.<key>= settings."""
     pls = {k: {"size": v["size"], "gametypes": list(v["gametypes"]), "maps": list(v["maps"])}
@@ -388,7 +388,7 @@ def bot_vote(b, opts, nota, fav_maps, rng):
 
 
 def draw_options(pl, rng, fits):
-    """Three options as Proving Grounds draws them: gametypes by the playlist's weights, maps at random, a pair the map
+    """Three options as Project Reach draws them: gametypes by the playlist's weights, maps at random, a pair the map
     can hold (fits), a map at most once while there is a choice."""
     gts, maps = pl["gametypes"], pl["maps"]
     if not gts or not maps:
@@ -604,7 +604,7 @@ def add_to_matchmaking(paths, rows):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "a", encoding="utf-8") as f:
         if fresh:
-            f.write("# The matches Proving Grounds started (native/proving_grounds.cpp), by MCC's GameUniqueId: the "
+            f.write("# The matches Project Reach started (native/proving_grounds.cpp), by MCC's GameUniqueId: the "
                     "Service\n# Record (tools/service_record.py) counts only these. id<TAB>when<TAB>playlist\n")
         for gid, t, playlist in rows:
             f.write(f"{gid}\t{time.strftime('%Y-%m-%d %H:%M', time.localtime(t))}\t{playlist}\n")
@@ -786,7 +786,7 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, s
 
 
 def write_status(paths, n):
-    """sim_status.txt: what the last run did (Proving Grounds' menu row shows it)."""
+    """sim_status.txt: what the last run did (Project Reach's menu row shows it)."""
     path = os.path.join(paths.store, "sim_status.txt")
     try:
         total = sqlite3.connect(db_path(paths)).execute("SELECT COUNT(*) FROM matches").fetchone()[0]

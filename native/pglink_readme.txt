@@ -1,8 +1,8 @@
-Proving Grounds link test (Nov 18, test 3)
+Project Reach link test (Nov 18, test 3)
 ==========================================
 
 What it is: a small test that checks whether two PCs running the mod can pass data to each other while you are both
-in MCC. It is needed before Proving Grounds' search and vote can show up on a friend's screen. It does not change
+in MCC. It is needed before Project Reach's search and vote can show up on a friend's screen. It does not change
 your games or your install. It writes a log file and sends short test messages over MCC's own chat connection.
 
 Who speaks first: only the friend's copy (the one with pglink_friend.txt in its folder) sends the first message. The
@@ -15,7 +15,7 @@ arrives, so use it only with the two of you in the lobby. No Xbox players.
 2. Friend: start MCC with the mod, wait for the main menu, and double-click pglink_load.exe in your folder (the one
    with pglink_friend.txt). Only then join the host's lobby.
 3. Stay in the lobby together for 2 minutes.
-4. Play one match from the Proving Grounds tab. Stay through the carnage report and back to the lobby.
+4. Play one match from the Project Reach tab. Stay through the carnage report and back to the lobby.
 5. Close MCC.
 6. Friend: send pglink.log from your folder to the host.
 
