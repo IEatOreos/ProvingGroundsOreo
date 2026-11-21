@@ -326,6 +326,43 @@ class Placing(unittest.TestCase):
             fit.add_to(old, placements, (0.0, 0.0, 0.0))
 
 
+class Limits(unittest.TestCase):
+    def pieces_for_a_yard(self):
+        floors, _ = fitted(slab(0, 0, 5, 5), slab(6, 0, 8, 2), slab(9, 0, 10, 1))      # a 5x5, a 2x2 and a 1x1
+        ramp = {"part": "slope", "piece": "Ramp 1x2", "turn": 0.0, "origin": [0.0, 0.0, 0.0]}
+        wall = {"part": "wall", "piece": "Wall", "turn": 0.0, "origin": [0.0, 0.0, 0.0]}
+        return [wall, ramp] + floors[::-1]                                             # in no helpful order
+
+    def test_everything_fits_when_there_is_room(self):
+        placements = self.pieces_for_a_yard()
+        kept, report = fit.within_limits(placements, 600, 29000)
+        self.assertEqual(kept, placements)
+        self.assertEqual(report, {"kept": 5, "left_out": 0, "by_part": {}, "ran_out_of": None, "cost": 50,
+                                  "unpriced": []})
+
+    def test_slots_run_out_walls_first_then_ramps_then_the_smallest_floors(self):
+        placements = self.pieces_for_a_yard()
+        kept, report = fit.within_limits(placements, 3, 29000)
+        self.assertEqual(sorted(p["piece"] for p in kept), ["Block 1x1 Flat", "Block 2x2 Flat", "Block 5x5 Flat"])
+        self.assertEqual((report["left_out"], report["by_part"], report["ran_out_of"]),
+                         (2, {"slope": 1, "wall": 1}, "object slots"))
+        kept, report = fit.within_limits(placements, 1, 29000)
+        self.assertEqual([p["piece"] for p in kept], ["Block 5x5 Flat"])
+        self.assertEqual(report["by_part"], {"floor": 2, "slope": 1, "wall": 1})
+
+    def test_budget_runs_out_the_same_way(self):
+        placements = self.pieces_for_a_yard()
+        kept, report = fit.within_limits(placements, 600, 40)
+        self.assertEqual([p["part"] for p in kept], ["slope", "floor", "floor", "floor"])   # kept in their own order
+        self.assertEqual((report["cost"], report["left_out"], report["ran_out_of"]), (40, 1, "budget"))
+        self.assertEqual(fit.within_limits(placements, 600, 5)[0], [])
+
+    def test_a_piece_with_no_known_price_is_named(self):
+        dish = {"part": "floor", "piece": "Dish", "turn": 0.0, "origin": [0.0, 0.0, 0.0], "size": [11.7, 5.9]}
+        kept, report = fit.within_limits([dish], 10, 0)
+        self.assertEqual((len(kept), report["unpriced"], report["cost"]), (1, ["Dish"], 0))
+
+
 class Commands(unittest.TestCase):
     def test_fit_writes_the_list_and_the_boxes(self):
         with folder_with(yard()) as folder:
@@ -373,6 +410,30 @@ class Commands(unittest.TestCase):
         self.assertEqual(back.variant.quotas[70].placed, out["report"]["floors"]["pieces"])   # Building Blocks
         self.assertEqual(back.variant.quotas[75].placed, 8)                                   # Inclines
         self.assertEqual(back.variant.quotas[74].placed, 1 + 2)                               # the template's wall and two
+        cost, unpriced = pieces.cost([p["piece"] for p in out["placements"]])
+        self.assertEqual(back.variant.budget_spent, 130 + cost)                               # the stored figure follows
+        self.assertEqual(unpriced, ["Block 4x4 Flat"])                                        # not yet seen on the HUD
+        self.assertIn("budget %d of 30000 spent" % back.variant.budget_spent, buf.getvalue())
+        self.assertIn("no price known for Block 4x4 Flat", buf.getvalue())
+        self.assertNotIn("LEFT OUT", buf.getvalue())
+
+    def test_print_says_what_it_left_out_when_the_budget_runs_short(self):
+        with folder_with(yard()) as folder:
+            out = fit.build(folder)
+            v = forge_world()
+            v.budget_max = v.budget_spent + 50                     # room for five pieces
+            template, printed = os.path.join(folder, "template.mvar"), os.path.join(folder, "printed.mvar")
+            mvar.MvarFile(variant=v, chdr=mvar.build_chdr(v.header)).write(template)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(fit.print_main(folder, template, printed, (-40.0, -140.0, 10.0)), 0)
+            back = mvar.MvarFile.read(printed)
+        added = len(back.variant.placed_objects()) - 2
+        free = sum(1 for p in out["placements"] if p["piece"] == "Block 4x4 Flat")            # no price known: not counted
+        self.assertEqual(added, 5 + free)
+        self.assertEqual(back.variant.budget_spent, back.variant.budget_max)
+        self.assertIn("LEFT OUT %d pieces, out of budget" % (out["report"]["pieces"] - added), buf.getvalue())
+        self.assertEqual(back.variant.quotas[75].placed, 0)                                   # floors are kept first
 
     def test_missing_things_end_in_one_line(self):
         with tempfile.TemporaryDirectory() as empty:

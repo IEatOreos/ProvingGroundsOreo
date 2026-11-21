@@ -461,6 +461,41 @@ def build(folder):
     return out
 
 
+def within_limits(placements, free_slots, budget_left):
+    """The placements a variant has room and money for, and what had to be left out.
+    Floors are kept before ramps and ramps before walls, the larger floor blocks first; a piece
+    with no known price is counted as free and named in the report. Returns (kept, report):
+    kept is in the placements' own order, report is {"kept", "left_out", "by_part", "ran_out_of",
+    "cost", "unpriced"}."""
+    rank = {"floor": 0, "slope": 1, "wall": 2}
+
+    def worth(item):
+        index, p = item
+        size = p.get("size", [0.0, 0.0])
+        return (rank.get(p.get("part"), 3), -size[0] * size[1], index)
+
+    kept, cost, ran_out, unpriced = set(), 0, None, set()
+    for index, p in sorted(enumerate(placements), key=worth):
+        value = pieces.price(p["piece"])
+        if value is None:
+            unpriced.add(p["piece"])
+            value = 0
+        if len(kept) >= free_slots:
+            ran_out = ran_out or "object slots"
+        elif cost + value > budget_left:
+            ran_out = ran_out or "budget"
+        else:
+            kept.add(index)
+            cost += value
+    left = [p for i, p in enumerate(placements) if i not in kept]
+    by_part = {}
+    for p in left:
+        by_part[p.get("part", "piece")] = by_part.get(p.get("part", "piece"), 0) + 1
+    return ([p for i, p in enumerate(placements) if i in kept],
+            {"kept": len(kept), "left_out": len(left), "by_part": by_part, "ran_out_of": ran_out,
+             "cost": cost, "unpriced": sorted(unpriced)})
+
+
 def add_to(variant, placements, offset, table=None):
     """Adds the placements to a Forge World variant, moved by offset. Returns the slots used."""
     if not pieces.is_forge_world(variant):
@@ -522,7 +557,14 @@ def print_main(folder, template, out, offset, title=None):
         return 1
     try:
         f = mvar.MvarFile.read(template)
-        slots = add_to(f.variant, fit["placements"], offset)
+        v = f.variant
+        free = sum(1 for o in v.objects if o is None)
+        kept, limits = within_limits(fit["placements"], free, v.budget_max - v.budget_spent)
+        if not kept:
+            raise FitError("the template has no room for any piece (%d free slots, %d of budget left)" % (
+                free, v.budget_max - v.budget_spent))
+        slots = add_to(v, kept, offset)
+        v.budget_spent += limits["cost"]
     except (OSError, mvar.FormatError, FitError, pieces.PieceError) as error:
         print("print: %s" % error)
         return 1
@@ -535,4 +577,11 @@ def print_main(folder, template, out, offset, title=None):
     print("wrote %s: %d pieces added in slots %d..%d, %d of %d slots used, title %r" % (
         out, len(slots), slots[0], slots[-1], len(f.variant.placed_objects()), mvar.OBJECT_SLOTS,
         f.variant.header.title))
+    print("budget %d of %d spent (%d for these pieces%s)" % (
+        v.budget_spent, v.budget_max, limits["cost"],
+        "; no price known for " + ", ".join(limits["unpriced"]) if limits["unpriced"] else ""))
+    if limits["left_out"]:
+        print("LEFT OUT %d pieces, out of %s: %s" % (
+            limits["left_out"], limits["ran_out_of"],
+            ", ".join("%d %s" % (n, part) for part, n in sorted(limits["by_part"].items()))))
     return 0

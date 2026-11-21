@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Reach Forge Printer: slot and budget limits when printing; the third print seen in game, 2026-11-21
+
+- **In game, the owner's four screenshots of `FP Guardian 3`:** the two ramps that stepped now join (a Ramp 1x2 Shallow running into a Ramp 2x2), a ramp's low tip meets the floor block below it, the long walkway ramp runs unbroken, and the HUD reads $27,020 as predicted.
+- **New `fit.within_limits`:** keeps the pieces a variant has free slots and budget for, floors before ramps before walls and larger floor blocks first; a piece with no known price counts as free and is named. `forge_printer print` uses it, raises the variant's stored budget by the cost of what it placed, prints the budget, and says in capitals what it left out and whether slots or budget ran out. Guardian needs 259 of 632 free slots and 2,590 of the budget, so nothing is left out.
+- **`docs/REACH_FORGE_PRINTER_PLAN.md`:** where phase 3 stands against the plan, what a first pass still leaves for hand work, and what phase 4 needs from this code.
+- **Validation:** seven new tests in `tools/test_forge_printer_fit.py` (limits by slots and by budget, the order pieces are dropped in, an unpriced piece named, print's stored budget and its left-out line); full suite 1174 OK.
+- **Not applied:** per-piece or per-category limits, because none has been seen (185 Building Blocks loaded). **Still unread:** the tilt test.
+
 ### Noble: locks on up close, and joins a teammate's fight instead of waiting, 2026-11-21
 From the owner's bug reports on Asylum (logs/bug_reports/reach_forge_halo_20261121-135535, owner + 3 Demon vs 4 Noble, 50-25):
 - "Cedercare doesnt shoot while jetpacking": at 225.5-226.6 s Cedercare's view sat within a few degrees of the owner 2-3 u off for over a second and it never fired. Noble presses a precision gun only on its exact lock (Aim.noble_lock); up close the man's move each tick was bigger than NOBLE_LOCK_R (1.5 deg) and the view read back is a tick behind, so the swing never got inside it. Across the match, ticks of a DMR fight with a clear line where the trigger was free: Noble 30% under 3 u, 70% at 3-6 u, 86% at 6-12 u; Demon 100% at every range. Now the lock takes him once the gap left is no more than his own move over two ticks (NOBLE_LOCK_TICKS) plus his part's half-width at his range (NOBLE_PART_HALF 0.1 u). Noble only.

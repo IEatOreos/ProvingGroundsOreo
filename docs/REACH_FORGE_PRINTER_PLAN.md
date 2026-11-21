@@ -2,9 +2,10 @@
 
 Status: Phase 1 done (2026-11-21): built, committed locally, and the edited
 variant loaded in Reach Forge with its wall moved. Phase 2 done (Halo 3
-reference, scale 0.975). Phase 3 started: the play space is cut out and sorted
-into surfaces; the calibration map is built but not saved yet; no piece
-fitting yet. Separate tool from the Project Reach bot code.
+reference, scale 0.975). Phase 3 core done (2026-11-21): Guardian's floors,
+straight ramps and walls are fitted with Forge pieces and three prints have
+loaded in the game; see "Phase 3, part 7" for what is left. Phase 4 not
+started. Separate tool from the Project Reach bot code.
 
 ## Goal
 
@@ -125,8 +126,9 @@ Do not start Phase 2 on Fable.
         waiting for the owner to load it
   - [ ] piece fitting: curved and odd-angle slopes, floor pieces not square to
         the axes, railings, ceilings
-  - [ ] budget and limit solver (the first print already uses more Building
-        Blocks than any variant on disk)
+  - [x] ramps join end to end on any slope (seen in the third print)
+  - [x] budget and limit solver: slots, budget, map bounds
+        (`fit.within_limits`); no piece caps are known, 185 Building Blocks load
 - [ ] Phase 4 — Blender addon
 
 ## Handoff notes
@@ -731,5 +733,63 @@ ramps meet the floors, and the tilt test.
 
 **The third print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_3.mvar`**
 (local only), title "FP Guardian 3", 288 objects, same place and same tilt
-test as the second. **Not loaded in the game yet.** Expected HUD: $27,020
-again (the same number of pieces, all at 10).
+test as the second. Expected HUD: $27,020 again (the same number of pieces,
+all at 10).
+
+**The owner's four screenshots of the third print (2026-11-21), HUD $27,020.**
+The pair that stepped now joins: a Ramp 1x2 Shallow runs straight into a Ramp
+2x2 with only a change of angle between them. A ramp's low tip meets the edge
+of the floor block below it, a few hundredths above its top. The long walkway
+ramp still runs unbroken between its two floors. Nothing in the four pictures
+is out of place. Not shown: the top end of the mixed pair, the walls, the
+tilt test.
+
+### Phase 3, part 7: limits, and where Phase 3 stands (2026-11-21, written by Fable 5.2)
+
+**Limits.** `fit.within_limits(placements, free slots, budget left)` keeps what
+a variant has room and money for: floors before ramps before walls, larger
+floor blocks first; a piece with no known price counts as free and is named.
+`print` uses it, raises the stored budget by the cost of what it placed, and
+says what it left out and whether slots or budget ran out. Guardian needs 259
+of 632 free slots and 2,590 of 29,870, so nothing is left out. No per-piece or
+per-category limit is applied because none has been seen: 185 Building Blocks
+loaded where no variant on disk holds more than 92. Seven new tests; full
+suite 1174 OK.
+
+**Phase 3 against the plan**
+
+| Plan item | State |
+|---|---|
+| Surface classification | done (`surfaces`) |
+| Piece fitting, largest first, ramps for slopes, no scaling | done for floors, straight slopes and upright walls (`fit`) |
+| Budget and limit solver | done for slots, budget and map bounds; no piece caps known |
+| Guardian, about 70-80% | floors 71%; slopes 27%; 259 pieces; three prints loaded in game |
+
+**What a first pass still leaves for hand work** (each could be automated
+later): curved ramps; floors and blocks not square to the map's axes (round
+rooms, diagonals); railings, kerbs and ceilings; thin sloping bridges (a ramp
+piece is a solid wedge); trees and rocks that pass for structure; gameplay
+objects (spawns, weapons, objectives are in `reference.json` but not placed).
+
+**Still open from the tests:** the tilt test has been in all three prints and
+never read (it needs a close side-on and a top-down screenshot), so slanted
+pieces are still not safe to write; 93 of 109 pieces have no price; the owner
+has not said whether tucked floor blocks flicker.
+
+**For Phase 4 (Opus 5.5), when the owner switches**
+
+- The pipeline, all under `tools/forge_printer`, run with
+  `python\python.exe tools\forge_printer <command>`:
+  `reference <map>` → `surfaces <folder>` → `fit <folder>` →
+  `print <folder> <template> <out> --offset DX DY DZ`. `pieces` prints the
+  piece table; `info --objects` reads any variant back with piece names.
+- What an addon needs from here: `pieces.load()` (names, row, item, box,
+  ramp faces), `pieces.PRICES`, `fit.origin_of` and the placement format in
+  `fit.json`, `fit.add_to` and `fit.within_limits` for writing, and
+  `mvar.MvarFile` for the file. `blender_import_reference.py` already loads
+  the level, the classified play space, the placements and the fitted boxes.
+- Rules that have been proven in the game and must be kept: a turn is degrees
+  counter-clockwise from world +x; only upright, on-its-side and upside-down
+  up vectors; the template must be a Forge World variant the owner's MCC
+  saved (145 quota rows); files copied in with MCC closed.
+- Everything made from the game stays in `E:\Proving Grounds\re_tools`.
