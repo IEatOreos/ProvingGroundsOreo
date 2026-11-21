@@ -357,6 +357,16 @@ Differences from the owner's notes:
   but `ff_door_2` is the taller one (2 × 2 against 2 × 1), and the "Double"
   window is the taller window. They may be the other way round. One look in
   the game settles it.
+  **Open (2026-11-21).** Asked which is taller, the owner said: "Same height
+  just double is wider". Neither pairing gives that: both models are 2 wide,
+  `ff_door_2` is a 2-tall arch with one opening and `ff_wall_2x1_door` a
+  1-tall piece whose opening is about a Spartan high (the 2x1 window is the
+  same piece with a sill). The only same-height, twice-as-wide pair in the
+  category is Wall (2 × 2) and Wall Double (4 × 2). So either the menu's Door
+  or Door Double is a model not in this list, or the two were judged by eye.
+  A picture of the six door, window and wall models side by side is in
+  `re_tools\forge_printer\pieces\views\doors_windows_walls.png` for the owner
+  to name; until then treat both door pairings as unconfirmed.
 - Window Coliseum (`ff_arena_window`) is between Wall Coliseum and Tunnel
   Short and is not in the notes: the tunnels should be items 10 and 11.
 - Nine decorative models (antenna, braces, crenellations, sloped cover,
