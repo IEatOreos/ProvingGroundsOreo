@@ -701,3 +701,35 @@ prices the four HUD totals agree on (fifteen pieces at 10, the small antenna
 at 50), `pieces.cost()` adds a list of pieces up, and `fit` reports the
 budget of what it placed (Guardian: 2,590). Not reported yet: whether the
 ramps meet the floors, and the tilt test.
+
+**The owner's three screenshots of the second print's ramps (2026-11-21).**
+
+- The ramps climb the right way and reach the floors: a long shallow walkway
+  ramp runs unbroken from an upper floor down to a lower one, and a ramp's low
+  tip sits about 0.1 below the floor block it meets.
+- **Fault found:** two Ramp 2x2 one after the other on one slope did not
+  join; the second started about half a unit below where the first ended.
+  The slope there is about 20°, between the Shallow ramp's 13.9° and the
+  Ramp 2x2's 26.6°; the fitter set each ramp in the slope's plane on its own,
+  so a ramp steeper than its slope overshot at the top and undershot at the
+  bottom. (Its choice was also wrong: it took the larger ramp, not the nearer
+  angle.)
+- **Fixed in `fit.fit_slopes`:** a slope is now climbed in steps of one ramp's
+  run, each step starting where the last one stopped and taking whichever
+  piece of its family brings the run of ramps nearest the slope's own height
+  at the step's end. Gentle slopes (to 27.5°) use a 1-wide family of rise 0
+  (Block 2x1 Flat), 0.5 (Ramp 1x2 Shallow) and 1 (Ramp 1x2; two lanes side by
+  side become one Ramp 2x2); steeper ones (to 48°) a 2-wide family of rise 1
+  (Ramp 2x2) and 2 (Ramp 2x2 Steep). So any angle is followed by a mix, the
+  ramps join end to end, and the run stays within a quarter unit of a gentle
+  slope and half a unit of a steep one. This also takes in the 33° to 38°
+  slopes no single ramp matched.
+- Guardian after the fix: 37 ramps (26 Ramp 1x2 Shallow, 5 Ramp 2x2, 6 Ramp
+  2x2 Steep) on 61 of 224 u² of walked slope; 259 pieces, budget 2,590.
+  Five new tests on slopes between and beyond the ramps' own angles; full
+  suite 1167 OK.
+
+**The third print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_3.mvar`**
+(local only), title "FP Guardian 3", 288 objects, same place and same tilt
+test as the second. **Not loaded in the game yet.** Expected HUD: $27,020
+again (the same number of pieces, all at 10).

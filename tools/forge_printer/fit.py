@@ -45,11 +45,18 @@ PLACEMENT_FLAGS = 204
 FLOOR_PIECES = ["Block 5x5 Flat", "Block 4x4 Flat", "Block 3x3 Flat", "Block 5x1 Flat", "Block 2x2 Flat",
                 "Block 3x1 Flat", "Block 2x1 Flat", "Block 1x1 Flat"]
 
-# ramps: the ones whose sloping face is a plain rectangle from their foot to their top
-RAMP_PIECES = ["Ramp 2x2", "Ramp 1x2", "Ramp 1x2 Shallow", "Ramp 2x2 Steep"]
+# ramps: the ones whose sloping face is a plain rectangle from their foot to their top, all 2 long.
+# A slope is climbed with whichever of a family's pieces keeps the run of ramps nearest it, so any
+# angle up to the family's steepest piece can be followed without a step between pieces.
+GENTLE_RAMPS = ["Block 2x1 Flat", "Ramp 1x2 Shallow", "Ramp 1x2"]   # 1 wide: rise 0, 0.5, 1 over the 2-unit run
+STEEP_RAMPS = ["Ramp 2x2", "Ramp 2x2 Steep"]                        # 2 wide: rise 1, 2
+WIDE_RAMP = "Ramp 2x2"                                              # stands for two Ramp 1x2 side by side
+RAMP_PIECES = ["Ramp 1x2 Shallow", "Ramp 1x2", "Ramp 2x2", "Ramp 2x2 Steep"]
+RAMP_RUN = 2.0
+GENTLE_MAX_TILT = 27.5  # slopes up to here use the 1-wide family (its steepest piece climbs at 26.6 degrees)
+SLOPE_MAX_TILT = 48.0   # steeper than the steepest ramp (45 degrees) by more than this is not a ramp's job
 SLOPE_MIN_AREA = 1.5   # a sloping patch smaller than this is left for hand work, u2
-LEAN_MATCH = 7.0       # a ramp may be this many degrees steeper or shallower than the slope it stands in for
-SLOPE_FILL = 0.6       # the slope must be at least this share of the ramp's run and of its width
+SLOPE_FILL = 0.6       # the slope must be at least this share of a ramp's run and of its lane's width
 
 # walls: Wall (2 long, 2 tall) and Wall Double (4 long, 2 tall), stood along the wall
 WALL_UPRIGHT = 2.0     # a wall leans at most this many degrees
@@ -232,49 +239,91 @@ def _turned(x, y, degrees):
 
 
 def fit_slopes(analysis, table=None):
-    """Ramps for the walked slopes of an analysed reference: each flat sloping patch that is big
-    enough takes the ramp whose own slope is nearest its tilt, turned to climb the same way and
-    repeated along and across it. Returns (placements, report)."""
+    """Ramps for the walked slopes of an analysed reference. A flat sloping patch that is big enough
+    is climbed in steps of one ramp's run (2 units): each step takes whichever piece of its family
+    brings the run of ramps nearest the slope's own height at the step's end, starting where the
+    last one stopped, so the ramps join end to end whatever the slope's angle. Gentle slopes use
+    the 1-wide family (a flat block, Ramp 1x2 Shallow, Ramp 1x2; two lanes side by side that both
+    take a Ramp 1x2 become one Ramp 2x2), steeper ones the 2-wide family (Ramp 2x2, Ramp 2x2 Steep).
+    Returns (placements, report)."""
     table = table or pieces.load()
     a = analysis
     known = pieces.by_name(table)
-    ramps = [known[name] for name in RAMP_PIECES]
+    gentle = [known[name] for name in GENTLE_RAMPS]
+    steep = [known[name] for name in STEEP_RAMPS]
+    wide = known[WIDE_RAMP]
+
+    def rise(piece):
+        return piece["slope"]["high"] - piece["slope"]["low"] if "slope" in piece else 0.0
+
     placements = []
     total = fitted = 0.0
     for number, patch in enumerate(a["patches"]):
         if patch["kind"] != "slope" or not patch.get("walked"):
             continue
         total += patch["area"]
-        if patch["area"] < SLOPE_MIN_AREA:
+        if patch["area"] < SLOPE_MIN_AREA or patch["tilt"] > SLOPE_MAX_TILT:
             continue
+        family, lane = (gentle, 1.0) if patch["tilt"] <= GENTLE_MAX_TILT else (steep, 2.0)
         pts = a["verts"][a["tris"][a["owner"] == number]].reshape(-1, 3)
         climb = math.radians(patch["uphill"])
         along = np.array([math.cos(climb), math.sin(climb)])
         across = np.array([-along[1], along[0]])
         s, t = pts[:, :2] @ along, pts[:, :2] @ across
         length, width = float(s.max() - s.min()), float(t.max() - t.min())
-        fits = [r for r in ramps if abs(r["slope"]["lean"] - patch["tilt"]) <= LEAN_MATCH
-                and r["slope"]["run"] * SLOPE_FILL <= length and r["slope"]["width"] * SLOPE_FILL <= width]
-        if not fits:
+        if length < RAMP_RUN * SLOPE_FILL or width < lane * SLOPE_FILL:
             continue
-        ramp = min(fits, key=lambda r: (abs(r["slope"]["lean"] - patch["tilt"]) > 1.0,     # a near-exact slope first,
-                                        -r["slope"]["run"] * r["slope"]["width"]))          # then the largest
-        face = ramp["slope"]
-        n_along = max(1, int(round(length / face["run"])))
-        n_across = max(1, int(round(width / face["width"])))
-        s_start = float(s.min() + s.max()) / 2.0 - n_along * face["run"] / 2.0
-        t_start = float(t.min() + t.max()) / 2.0 - n_across * face["width"] / 2.0
+        n_along = max(1, int(round(length / RAMP_RUN)))
+        n_across = max(1, int(round(width / lane)))
+        s_start = float(s.min() + s.max()) / 2.0 - n_along * RAMP_RUN / 2.0
+        t_start = float(t.min() + t.max()) / 2.0 - n_across * lane / 2.0
         nx, ny, nz = patch["normal"]
-        turn = (patch["uphill"] - face["uphill"]) % 360.0
-        off_x, off_y = _turned(face["centre"][0], face["centre"][1], turn)
+
+        def height(s_at, t_at):
+            p = along * s_at + across * t_at
+            return (patch["offset"] - nx * p[0] - ny * p[1]) / nz
+
+        t_mid = t_start + n_across * lane / 2.0
+        at = height(s_start, t_mid)
+        steps = []                                             # (piece, the height its low end starts at)
         for i in range(n_along):
-            for j in range(n_across):
-                mid = along * (s_start + (i + 0.5) * face["run"]) + across * (t_start + (j + 0.5) * face["width"])
-                z = (patch["offset"] - nx * mid[0] - ny * mid[1]) / nz
-                placements.append({"part": "slope", "piece": ramp["name"], "turn": round(turn, 2),
-                                   "origin": [round(float(mid[0]) - off_x, 3), round(float(mid[1]) - off_y, 3),
-                                              round(z - (face["low"] + face["high"]) / 2.0, 3)]})
-        laid = n_along * n_across * face["run"] * face["width"] / math.cos(math.radians(face["lean"]))
+            want = height(s_start + (i + 1) * RAMP_RUN, t_mid)
+            piece = min(family, key=lambda p: abs(at + rise(p) - want))
+            steps.append((piece, at))
+            at += rise(piece)
+        # across: lanes in pairs where a 2-wide ramp can stand for two 1-wide ones
+        lanes = []                                             # (middle across, lanes wide)
+        j = 0
+        while j < n_across:
+            if lane == 1.0 and j + 1 < n_across:
+                lanes.append((t_start + (j + 1) * lane, 2))
+                j += 2
+            else:
+                lanes.append((t_start + (j + 0.5) * lane, 1))
+                j += 1
+        for i, (piece, low) in enumerate(steps):
+            s_mid = s_start + (i + 0.5) * RAMP_RUN
+            for t_at, lanes_wide in lanes:
+                if lanes_wide == 2 and piece["name"] == "Ramp 1x2":
+                    spots = [(wide, t_at)]
+                elif lanes_wide == 2:
+                    spots = [(piece, t_at - lane / 2.0), (piece, t_at + lane / 2.0)]
+                else:
+                    spots = [(piece, t_at)]
+                for chosen, t_spot in spots:
+                    mid = along * s_mid + across * t_spot
+                    if "slope" in chosen:
+                        face = chosen["slope"]
+                        turn = (patch["uphill"] - face["uphill"]) % 360.0
+                        off_x, off_y = _turned(face["centre"][0], face["centre"][1], turn)
+                        origin = (float(mid[0]) - off_x, float(mid[1]) - off_y,
+                                  low + rise(chosen) / 2.0 - (face["low"] + face["high"]) / 2.0)
+                    else:                                      # a level step: a flat block, its top at the height
+                        turn = patch["uphill"] % 360.0
+                        origin = origin_of({"centre": [float(mid[0]), float(mid[1])], "top": low, "turn": turn}, chosen)
+                    placements.append({"part": "slope", "piece": chosen["name"], "turn": round(turn, 2),
+                                       "origin": [round(c, 3) for c in origin]})
+        laid = n_along * RAMP_RUN * n_across * lane / math.cos(math.radians(patch["tilt"]))
         fitted += min(patch["area"], laid)
     return placements, {"slope_area": round(total, 1), "fitted_area": round(fitted, 1),
                         "coverage": round(fitted / total, 3) if total else 0.0, "pieces": len(placements)}
@@ -403,7 +452,7 @@ def build(folder):
     name = ref["source"]["map"]
     out = {"source": ref["source"], "mesh": name + "_fit.obj",
            "rules": {"grid": GRID, "height_step": HEIGHT_STEP, "overhang": OVERHANG, "floor_pieces": FLOOR_PIECES,
-                     "ramp_pieces": RAMP_PIECES, "lean_match": LEAN_MATCH},
+                     "gentle_ramps": GENTLE_RAMPS, "steep_ramps": STEEP_RAMPS},
            "report": report, "placements": placements}
     boxes_obj(os.path.join(folder, out["mesh"]), placements, table)
     with open(os.path.join(folder, "fit.json"), "w", encoding="utf-8", newline="\n") as f:

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Reach Forge Printer: ramps that join end to end, 2026-11-21
+
+The owner sent three screenshots of the second Guardian print's ramps. They climb the right way and reach the floors, but in one, two Ramp 2x2 on the same slope did not join: the second started about half a unit below where the first ended.
+
+- **Found:** `fit.fit_slopes` set each ramp in its slope's plane on its own. That slope is about 20°, between the Shallow ramp's 13.9° and the Ramp 2x2's 26.6°, so a 26.6° ramp overshot at its top and undershot at its foot, and the next one did the same from lower down. (It had also taken the larger ramp rather than the nearer angle.)
+- **Fixed:** a slope is climbed in steps of one ramp's run, each starting where the last stopped and taking whichever piece of its family brings the run of ramps nearest the slope's height at the step's end: for gentle slopes a flat block, Ramp 1x2 Shallow or Ramp 1x2 (two lanes of Ramp 1x2 side by side become one Ramp 2x2), for steeper ones Ramp 2x2 or Ramp 2x2 Steep. Ramps now join whatever the slope's angle, and slopes between the ramps' own angles (the 33° to 38° ones included) are followed by a mix.
+- **Guardian:** 37 ramps again, now 26 Ramp 1x2 Shallow, 5 Ramp 2x2, 6 Ramp 2x2 Steep; 259 pieces, budget 2,590.
+- **Made for the owner:** `FP_Guardian_3.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 288 objects; `check` reads it back with no problems.
+- **Validation:** five new tests in `tools/test_forge_printer_fit.py` (a 20° slope takes a Shallow then a Ramp 1x2 and their ends meet; a 36° one a Ramp 2x2 then a Steep; a very gentle one a level step now and then; two lanes of Shallow stay two wide; a 49° slope is left); full suite 1167 OK.
+- **Untested in game:** the third print.
+
 ### Reach Forge Printer, phase 3 part 6: ramps and walls fitted, 2026-11-21
 
 The owner, asked whether to fit Guardian's ramps and walls next: "Yes, ramps and walls".
