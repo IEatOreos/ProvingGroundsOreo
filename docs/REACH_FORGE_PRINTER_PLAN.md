@@ -1,8 +1,9 @@
 # Reach Forge Printer — Project Plan
 
-Status: Phase 1 built and committed locally (2026-11-21); its one open item is
-the in-game load test of an edited variant. Phase 2 not started. Separate tool
-from the Project Reach bot code.
+Status: Phase 1 done (2026-11-21): built, committed locally, and the edited
+variant loaded in Reach Forge with its wall moved. Phase 2 not started; its
+brief is `docs/REACH_FORGE_PRINTER_PHASE2_BRIEF.md`. Separate tool from the
+Project Reach bot code.
 
 ## Goal
 
@@ -95,7 +96,8 @@ Do not start Phase 2 on Fable.
 - [x] File container/header understood
 - [x] Object list parsed
 - [x] Writer + byte-identical round trip (all 34 files)
-- [ ] One-object edit loads in game — **written, not yet tried in game**
+- [x] One-object edit loads in game — the owner, 2026-11-21: "FP Move Test A
+      loaded, and did move"
 - [x] Format doc written (`docs/reach_mvar_format.md`)
 - [x] Phase 1 committed locally
 - [ ] Phase 2 — H3 reference import
@@ -118,7 +120,12 @@ Do not start Phase 2 on Fable.
   files byte-identical after read → write, no problems reported.
 - `docs/reach_mvar_format.md`: every field, how sure each is, what is unknown.
 
-**The one untested item: does MCC load a file we changed?**
+**In-game result (the owner, 2026-11-21): "FP Move Test A loaded, and did
+move."** MCC lists and loads a variant this tool changed, with the Xbox 360
+hash written, so the writer's default stays as it is. Test B (old hash kept)
+was not needed and was not tried. The notes below are how the test was set up.
+
+**The test: does MCC load a file we changed?**
 
 Two copies of the owner's own Forge World variant, one wall (slot 12) lifted 6
 units, are in `E:\Proving Grounds\re_tools\forge_printer\` (local only):
@@ -149,10 +156,9 @@ suspect; see the format doc, section 5).
 
 **First task for Phase 2 (Opus 5.5)**
 
-Do not start it before the owner reports the in-game result above. Then: with
+The full brief is `docs/REACH_FORGE_PRINTER_PHASE2_BRIEF.md`. In short: with
 Gravemind's library (the git-ignored `tools/map_tools` already holds
 `Reclaimer.Blam` and the `bsp2obj`/`model2obj` exporters built on it), export
-one Halo 3 map — Guardian — to a local `.obj`/`.glb` plus a JSON of spawns,
-weapons and objectives, under `E:\Proving Grounds\re_tools`, and work out the
-Halo 3 → Reach unit scale by measuring a known feature in both rather than
-assuming it.
+one Halo 3 map — Guardian — to a local `.obj` plus a JSON of spawns, weapons
+and objectives, under `E:\Proving Grounds\re_tools`, and work out the Halo 3 →
+Reach unit scale by measuring a known feature in both rather than assuming it.

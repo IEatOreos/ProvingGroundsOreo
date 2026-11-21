@@ -8,8 +8,11 @@ Our own notes on the format, worked out for the Reach Forge Printer
 variants in one PC's MCC folder (2026-11-21): old Xbox 360 era files and files
 MCC itself saved, on seven maps. Each one parses to its last bit, the per-type
 object counts agree with the file's own quota table, and each one written back
-comes out byte for byte the same. What that does not prove is listed under
-[Still unknown](#still-unknown). Nothing here has been loaded in the game yet.
+comes out byte for byte the same. One changed file has been loaded in the game
+(2026-11-21): a copy of an MCC-saved Forge World variant with a new title and
+one wall lifted 6 units listed in Reach Forge, loaded, and showed the wall
+moved. What all of that does not prove is listed under
+[Still unknown](#still-unknown).
 
 Where MCC keeps them:
 `%USERPROFILE%\AppData\LocalLow\MCC\LocalFiles\<account id>\HaloReach\Map\*.mvar`
@@ -252,13 +255,17 @@ hold a different 20 bytes that none of the obvious SHA-1 or MD5 inputs explain.
 
 The writer leaves the hash alone when the stream is unchanged, and writes the
 Xbox 360 hash when it changed (`--keep-hash` keeps the old bytes instead).
-Whether MCC checks either is the first thing the in-game test settles.
+MCC loaded a changed MCC-saved variant carrying the Xbox 360 hash, so it
+accepts that hash on a version 32 file. Whether it checks the field at all is
+not known: a file with a deliberately wrong hash has not been tried.
 
 ## Still unknown
 
-- **Does MCC load a file we changed?** Not tested. Two test files exist for it
-  (same one-wall move, one with the Xbox 360 hash, one with the old hash kept).
-- What MCC puts in the hash field of the files it saves.
+- Only one kind of change has been through the game: a new title and one
+  object's height. Adding or removing objects, changing the quota table, labels
+  or budget, and any rotation have not.
+- What MCC puts in the hash field of the files it saves, and whether it checks
+  the field at all.
 - The 128-bit block version 32 adds; the 32-bit field that is always
   0xFFFFFFFF; the two flags; the 10-bit field in each object; the 2-bit flags.
 - The exact up-vector axes and the direction of the turn (4.2, 4.3).
