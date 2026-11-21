@@ -5,7 +5,7 @@ import random
 from dataclasses import dataclass
 
 from .core import Vec, Action, dist, angles_to, wrap, eye, CROUCH_HEAD, CROUCH_CHEST
-from .equipment import Kit, game_of
+from .equipment import Kit, game_of, hold_bit
 from .profiles import HANDS
 from . import profiles
 from .terrain import MAX_DROP, MAX_RISE, ROUTE_JUMP, ROUTE_CROUCH, EYE, CHEST
@@ -1122,6 +1122,7 @@ NOBLE_LOCK_R = math.radians(1.5)    # rad: this near the point the swing ends an
 NOBLE_HOLD_R = math.radians(20.0)   # rad: locked, a tick's move of his this big is followed exactly (more: swing again)
 NOBLE_PART_HALF = 0.1    # u: (Nov 21) the aimed part's half-width; up close its angle widens the lock (Aim.noble_lock)
 NOBLE_LOCK_TICKS = 2     # (Nov 21) the man's own move over this many ticks also counts as on him (the read-back lag)
+NOBLE_SPRINT_RETAP = 0.4 # s: (Nov 21) a sprint still on this long after Noble's tap to end it is tapped again
 NOBLE_PUSH = 0.25        # Noble's fight with a man in view over its best other choice (Bot.noble_push)
 NOBLE_LONG_PACE = 1.2    # Noble's precision cadence past 10 u: x the paced gap (FIRE_GAP), the bloom fully settled
 # Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
@@ -2626,6 +2627,25 @@ class Bot:
         s.noble_watch.pressed(now, snap, me, part_[0], dist(me.pos, target.pos), me.weapon, part_[1],
                               FIRE_GAP.get(me.weapon, 0.2))
 
+    def noble_sprint_off(s, now, me, act, kind):
+        """(custom, Nov 21, the owner's report "queen just refuses to shoot me") Reach's sprint, once on, runs on after
+        the button is let go, and no shot fires while it is on: Queen of Dark pressed the trigger 7 times in 2.5 s at
+        2.5 u, sprint on, the magazine full, and died (0 of 45 DMR presses with sprint on fired in that match, 40 of
+        them Noble's). A second press ends it (77 of 79 live within 0.2 s). Noble in a fight with a man in view taps the
+        button once, again only after NOBLE_SPRINT_RETAP while it still reads on. Not its own sprint held to close a gap."""
+        if not (profiles.fixed_noble(s.p) and getattr(s, "game", None) == "reach" and me.equipment == "sprint"
+                and me.ability_on and kind == "fight" and me.vehicle in (None, -1) and s.per.visible_enemies()):
+            return
+        press = getattr(s.kit, "press", None)
+        if press is not None and press[0] == "sprint" and now < getattr(s.kit, "hold_until", 0.0):
+            return
+        if now - getattr(s, "noble_sprint_tap", -9.0) < NOBLE_SPRINT_RETAP:
+            act.equipment = act.ability = False            # (let go between taps: each tap a new press)
+            return
+        s.noble_sprint_tap = now
+        act.equipment, act.ability = True, hold_bit(s.game, "sprint")
+        s.notes.append("sprint: tapped off, a man in view")
+
     def peek_timing(s, now, me, snap, scores, seen):
         """(custom, Nov 18, owner: "I know ... how long it takes for them to look away") Reach Demon and Mythic about to
         walk out on a man out of its sight (its top score a hunt or push toward where he is): when the team sees him
@@ -3536,6 +3556,7 @@ class Bot:
         used = s.kit.act(s, now, dt, me, snap, act)       # equipment / ability, and steering clear of mines
         if used:
             s.notes.append(used)
+        s.noble_sprint_off(now, me, act, kind)            # (custom, Nov 21: a sprint left on blocks every shot)
         s.give_way(me, snap, act)
         s.crouch_spots(me, act)
         s.own_grenade(now, me, act)

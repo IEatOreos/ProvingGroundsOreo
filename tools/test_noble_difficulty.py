@@ -312,6 +312,43 @@ class PushTests(unittest.TestCase):
         self.assertTrue(b.chase_ok(0.0, shooter(), None, 1))
 
 
+class SprintOffTests(unittest.TestCase):
+    """(Nov 21, the owner's report "queen just refuses to shoot me": Reach's sprint ran on after the press, no shot
+    fires while it is on) Bot.noble_sprint_off."""
+
+    def setup(self, tier="noble", on=True, seen=True):
+        from brain.core import Action
+        b = bot.Bot(0, 0, make_profile(tier, "rusher", random.Random(3)), {"name": "reach_test"}, random.Random(5))
+        b.notes, b.game = [], "reach"
+        b.per.visible_enemies = (lambda: [1]) if seen else (lambda: [])
+        me = shooter()
+        me.equipment, me.ability_on = "sprint", on
+        return b, me, Action
+
+    def test_taps_once_then_lets_go(self):
+        b, me, Action = self.setup()
+        act = Action()
+        b.noble_sprint_off(10.0, me, act, "fight")
+        self.assertTrue(act.equipment)
+        self.assertIn("sprint: tapped off, a man in view", b.notes)
+        act = Action()
+        act.equipment = True
+        b.noble_sprint_off(10.1, me, act, "fight")               # (still reads on: let go, a new press later)
+        self.assertFalse(act.equipment)
+        act = Action()
+        b.noble_sprint_off(10.0 + bot.NOBLE_SPRINT_RETAP + 0.01, me, act, "fight")
+        self.assertTrue(act.equipment)
+
+    def test_left_alone_otherwise(self):
+        for tier, on, seen, kind in (("demon", True, True, "fight"), ("noble", False, True, "fight"),
+                                     ("noble", True, False, "fight"), ("noble", True, True, "retreat")):
+            with self.subTest(tier=tier, on=on, seen=seen, kind=kind):
+                b, me, Action = self.setup(tier, on, seen)
+                act = Action()
+                b.noble_sprint_off(10.0, me, act, kind)
+                self.assertFalse(act.equipment)
+
+
 class InGameOnlyTests(unittest.TestCase):
     def test_panel_and_launch(self):
         panel = (ROOT / "native" / "bots_panel.cpp").read_text(encoding="utf-8", errors="replace")
