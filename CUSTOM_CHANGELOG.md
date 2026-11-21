@@ -1,6 +1,6 @@
 # Custom release history
 
-## Unreleased
+## 0.2.2-custom.13 — Bots that hit what they aim at, matches that start at once, and the Reach Forge Printer, 2026-11-21
 
 ### Reach Forge Printer: fuller floors, curved ramps joined, and a 255-piece limit per category, 2026-11-21
 
