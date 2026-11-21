@@ -295,7 +295,7 @@ z 11..24 of that. Re-run `reference` on any folder made before this fix.
 says private storage is full"). It will be in the MCC Reach `Map` folder; the
 owner gives its name. Forge World, 97 pieces in 7 rows in placement order,
 nothing deleted; the piece names row by row are the owner's notes,
-`C:\Users\marsh\Downloads\Forge Items.txt` (typos his: Blcok = Block, Medieum =
+`Forge Items.txt` in his Downloads folder (typos his: Blcok = Block, Medieum =
 Medium). Categories in order: Building Blocks (25), Bridges and Platforms (21),
 Buildings (11), Decorative (6), Doors Windows and Walls (11), Inclines (15),
 Nature (8).
