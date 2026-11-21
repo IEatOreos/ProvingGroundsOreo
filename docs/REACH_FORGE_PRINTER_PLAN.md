@@ -740,9 +740,10 @@ all at 10).
 The pair that stepped now joins: a Ramp 1x2 Shallow runs straight into a Ramp
 2x2 with only a change of angle between them. A ramp's low tip meets the edge
 of the floor block below it, a few hundredths above its top. The long walkway
-ramp still runs unbroken between its two floors. Nothing in the four pictures
-is out of place. Not shown: the top end of the mixed pair, the walls, the
-tilt test.
+ramp still runs unbroken between its two floors. ~~Nothing in the four pictures
+is out of place.~~ **That was wrong** (see part 8): the owner pointed out
+floors not flush with what they meet and a ramp that stops short of its
+floor, and the pictures do show both. Not shown: the walls, the tilt test.
 
 ### Phase 3, part 7: limits, and where Phase 3 stands (2026-11-21, written by Fable 5.2)
 
@@ -793,3 +794,63 @@ has not said whether tucked floor blocks flicker.
   up vectors; the template must be a Forge World variant the owner's MCC
   saved (145 quota rows); files copied in with MCC closed.
 - Everything made from the game stays in `E:\Proving Grounds\re_tools`.
+
+### Phase 3, part 8: ramps tied to their floors, floors flush (2026-11-21, written by Fable 5.2)
+
+**The owner, 2026-11-21, on the third print's screenshots:** "Two of those
+screenshots showed the floor not sitting flush on another object? and one of
+the ra[m]ps didnt connect to the the other floor?" He was right, and the
+reading in part 6/7 ("nothing … out of place") was wrong. Enlarged, the
+pictures show a floor block standing proud of the ramp top beside it, a
+neighbouring block at another height, and a ramp top with no floor at its
+height.
+
+**Measured, not guessed.** For every fitted slope the mesh's own ends were
+compared with the floor blocks beside them: the slope's low and high ends are
+at the floors' heights to within 0.01. So the mesh was right and the fitter
+put the ramps wrong, two ways:
+
+- A ramp piece is 2 long, Guardian's ramps are 1.3 to 5.5 long (2.9, 3.5,
+  4.15 …). The run was centred on the slope, so it stopped short at both
+  ends or overshot: on the 2.9-long ramp, one piece, its foot 0.24 above the
+  lower floor and 0.45 away from it, its top 0.32 under the upper floor.
+- The run's rise was whatever its pieces added up to from the slope's plane
+  at an arbitrary start, not what the two floors differ by.
+
+And floors: each block took the middle height of the cells under it, so
+blocks side by side on one floor could differ by a tenth or two.
+
+**Fixed (`fit.py`)**
+
+- Floors: every block of a level sits at the one height most of that level's
+  floor is at. A level takes floor within 0.1 of its busiest height (it was
+  0.2): a kerb is levelled, a ledge of a quarter unit or more stays a ledge.
+  Guardian's floors come to 18 heights (15.04 … 21.63) instead of a different
+  one per block.
+- Ramps (`fit_slopes(analysis, table, floors)`): a run is tied to the floor
+  blocks it joins. Its ends take the height of the fitted floor block just
+  past each end (within 0.35 of the slope's own height there). It starts at
+  the slope's top edge and is laid downhill, enough pieces to cover the whole
+  length; what is left of the last piece runs on under the lower floor. The
+  mix of pieces (rise 0, 0.5, 1, and 2 for a pair of lanes) is the one whose
+  total is nearest what the slope drops over the run's length, every mix
+  tried for runs of up to six pieces; what the run is still out by, a quarter
+  unit at most, is shared between its two ends. A slope whose foot is a unit
+  or more under the floor over it (two steep "ramps" that were roots or
+  braces going down through the map) gets nothing.
+- Guardian after the fix: every ramp top within 0.11 of the floor block it
+  meets, most within 0.05; feet at or under the lower floor. 190 floor
+  blocks (70%), 36 ramps, 37 walls: 263 pieces, budget 2,630.
+- Tests: six new (a 2.9-long ramp tied to both floors; ends taking a floor
+  block's height; a slope diving under a floor left alone; the best mix; one
+  height per level; a kerb levelled and a ledge kept) and five updated. Full
+  suite 1179 OK.
+
+**The fourth print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_4.mvar`**
+(local only), title "FP Guardian 4", 292 objects, same place and tilt test.
+**Not loaded in the game yet.** Expected HUD: $26,980 (263 pieces at 10 on
+top of 130 and the tilt test's 260).
+
+**Lesson for whoever reads the next screenshots:** enlarge every junction and
+compare heights before saying a print is right; a budget that matches only
+says the pieces exist.

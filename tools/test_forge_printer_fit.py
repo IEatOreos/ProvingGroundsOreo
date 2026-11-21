@@ -89,8 +89,10 @@ class Floors(unittest.TestCase):
         self.assertEqual(report["floor_area"], 32.0)
 
     def test_a_small_step_is_one_level_and_a_real_step_is_two(self):
-        placements, _ = fitted(slab(0, 0, 2, 4, z=0.0), slab(2, 0, 4, 4, z=0.15))
+        placements, _ = fitted(slab(0, 0, 2, 4, z=0.0), slab(2, 0, 4, 4, z=0.1))       # a kerb: levelled
         self.assertEqual([p["piece"] for p in placements], ["Block 4x4 Flat"])
+        placements, _ = fitted(slab(0, 0, 2, 4, z=0.0), slab(2, 0, 4, 4, z=0.3))       # a ledge: kept
+        self.assertEqual(sorted({p["top"] for p in placements}), [0.0, 0.3])
         placements, _ = fitted(slab(0, 0, 2, 4, z=0.0), slab(2, 0, 4, 4, z=0.5))
         self.assertEqual(sorted(p["top"] for p in placements), [0.0, 0.0, 0.5, 0.5])
         self.assertEqual({p["piece"] for p in placements}, {"Block 2x2 Flat"})
@@ -116,6 +118,12 @@ class Floors(unittest.TestCase):
         placements, report = fitted(slab(0, 0, 2.25, 1))
         self.assertEqual([p["piece"] for p in placements], ["Block 2x1 Flat"])
         self.assertLess(report["coverage"], 1.0)
+
+    def test_blocks_of_one_level_all_sit_at_one_height(self):
+        # most of the floor at 0, a strip a tenth higher: one level, every block's top where most of it is
+        placements, _ = fitted(slab(0, 0, 6, 4, z=0.0), slab(6, 0, 8, 4, z=0.1))
+        self.assertEqual({p["top"] for p in placements if not p["tucked"]}, {0.0})
+        self.assertGreater(len(placements), 1)
 
     def test_only_walked_floor_is_fitted(self):
         a = analysis_of(slab(0, 0, 4, 4), slab(10, 0, 14, 4))
@@ -188,16 +196,21 @@ class Slopes(unittest.TestCase):
     def test_a_slope_between_two_ramp_angles_mixes_them_and_they_still_join(self):
         # 20 degrees, where the owner's screenshot showed two 26.6-degree ramps stepping: 1.456 up over 4
         placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 4, 1.456))))
-        self.assertEqual([p["piece"] for p in placements], ["Ramp 1x2 Shallow", "Ramp 1x2"])
+        self.assertEqual([p["piece"] for p in placements], ["Ramp 1x2", "Ramp 1x2 Shallow"])   # from the bottom up
         (low1, high1), (low2, high2) = self.ends(placements)
-        self.assertAlmostEqual(low1, 0.0, delta=0.02)                                 # starts on the lower floor
+        self.assertAlmostEqual(low1, 0.0, delta=0.03)                                 # starts on the lower floor
         self.assertAlmostEqual(high1, low2, delta=0.02)                               # no step between the two
-        self.assertAlmostEqual(high2, 1.456, delta=0.06)                              # ends at the upper floor
+        self.assertAlmostEqual(high2, 1.456, delta=0.03)                              # ends at the upper floor
 
     def test_a_very_gentle_slope_takes_a_level_step_now_and_then(self):
         # 10.6 degrees: 0.75 up over 4 is a flat block's worth and a shallow ramp, or the other way round
-        placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 4, 0.75))))
-        self.assertEqual(sorted(p["piece"] for p in placements), ["Ramp 1x2 Shallow", "Ramp 1x2 Shallow"])
+        placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 4, 0.72))))
+        self.assertEqual([p["piece"] for p in placements], ["Block 2x1 Flat", "Ramp 1x2 Shallow"])
+        (low1, high1), (low2, high2) = self.ends(placements)
+        self.assertAlmostEqual(high1, low2, delta=0.02)
+        # the run rises 0.5 where the floors differ by 0.72: the 0.22 is shared between the ends
+        self.assertAlmostEqual(low1, 0.11, delta=0.02)
+        self.assertAlmostEqual(high2, 0.72 - 0.11, delta=0.02)
         placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 14, 4, 1.1))))      # 10.4 degrees over 6
         names = [p["piece"] for p in placements]
         self.assertEqual(len(names), 3)
@@ -209,16 +222,59 @@ class Slopes(unittest.TestCase):
 
     def test_a_steeper_slope_uses_the_wide_ramps_and_they_join_too(self):
         placements, report = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 5, 2.9))))   # 35.9 degrees
-        self.assertEqual([p["piece"] for p in placements], ["Ramp 2x2", "Ramp 2x2 Steep"])
+        self.assertEqual([p["piece"] for p in placements], ["Ramp 2x2 Steep", "Ramp 2x2"])     # from the bottom up
         (low1, high1), (low2, high2) = self.ends(placements)
         self.assertAlmostEqual(high1, low2, delta=0.02)
-        self.assertAlmostEqual(high2, 2.9, delta=0.15)
+        self.assertAlmostEqual(high2, 2.9, delta=0.08)
+        self.assertAlmostEqual(low1, 0.0, delta=0.08)
         self.assertGreater(report["coverage"], 0.9)
 
     def test_two_lanes_of_shallow_ramps_stay_two_pieces_wide(self):
         placements, _ = fit.fit_slopes(analysed(court(ramp=(8, 3, 12, 5, 1.0))))      # 14 degrees, 2 wide
         self.assertEqual([p["piece"] for p in placements], ["Ramp 1x2 Shallow"] * 4)
         self.assertEqual(sorted({p["origin"][1] for p in placements}), [3.5, 4.5])
+
+    def test_a_ramp_that_is_not_a_whole_number_of_pieces_long_is_tied_to_its_floors(self):
+        # 2.9 long and 1.56 up, like the one in the owner's screenshot that stopped short of its floor
+        a = analysed(court(ramp=(8, 3, 10.9, 5, 1.56)))
+        floors, _ = fit.fit_floors(a)
+        placements, _ = fit.fit_slopes(a, floors=floors)
+        table = pieces.by_name()
+        self.assertEqual(len(placements), 2)                         # two pieces: 4 units for a 2.9-unit slope
+        ends = self.ends(placements)
+        self.assertAlmostEqual(ends[-1][1], 1.56, delta=0.13)        # its top is at the upper floor
+        top = placements[-1]
+        face = table[top["piece"]]["slope"]
+        self.assertAlmostEqual(top["origin"][0] + face["run"] / 2.0, 10.9, delta=0.02)   # ... and at its edge
+        self.assertAlmostEqual(ends[0][1], ends[1][0], delta=0.02)   # the two join
+        self.assertLess(ends[0][0], 0.0)                             # its foot is under the lower floor, not above it
+        foot = placements[0]
+        self.assertLess(foot["origin"][0] - table[foot["piece"]]["slope"]["run"] / 2.0, 8.0)   # ... and reaches past its edge
+
+    def test_ramp_ends_take_the_height_of_the_floor_blocks_beside_them(self):
+        a = analysed(court(ramp=(8, 3, 12, 5, 2.0)))
+        floors, _ = fit.fit_floors(a)
+        for p in floors:
+            if p["top"] == 2.0:
+                p["top"] = 2.2                                       # say the upper floor was built a little high
+        placements, _ = fit.fit_slopes(a, floors=floors)
+        self.assertAlmostEqual(self.ends(placements)[-1][1], 2.2, delta=0.13)
+
+    def test_a_slope_that_dives_under_a_floor_is_not_a_ramp(self):
+        m = court()
+        m.quad((2, 3, -1.9), (2, 5, -1.9), (6, 5, 0.1), (6, 3, 0.1))    # a brace coming up through the lower floor
+        a = analysed(m)
+        floors, _ = fit.fit_floors(a)
+        with_floors, _ = fit.fit_slopes(a, floors=floors)
+        self.assertEqual({p["origin"][0] > 8.0 for p in with_floors}, {True})          # only the real ramp
+        self.assertEqual(len(with_floors), 2)
+
+    def test_best_run(self):
+        self.assertEqual(fit._best_run([0.0, 0.5, 1.0], 2, 1.0), [1.0, 1.0])
+        self.assertEqual(fit._best_run([0.0, 0.5, 1.0], 2, 0.728), [0.5, 1.0])        # top piece first
+        self.assertEqual(sum(fit._best_run([0.0, 0.5, 1.0, 2.0], 2, 1.25)), 2.5)      # 1 + 1 would stop half a unit short
+        self.assertEqual(sum(fit._best_run([0.0, 0.5, 1.0], 9, 0.5)), 4.5)            # a long run follows the slope
+        self.assertEqual(fit._best_run([0.0, 0.5, 1.0], 1, 0.3), [0.5])
 
     def test_slopes_no_ramp_can_follow_are_left(self):
         steep = analysed(court(ramp=(8, 3, 9.2, 5, 2.0)))                             # 59 degrees: a wall to the fitter

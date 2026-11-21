@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Reach Forge Printer: ramps tied to the floors they join, floor blocks flush, 2026-11-21
+
+The owner, on the third Guardian print's screenshots: "Two of those screenshots showed the floor not sitting flush on another object? and one of the ra[m]ps didnt connect to the the other floor?" He was right; the entry below, which reads those pictures as fine apart from the fixed step, was wrong about that.
+
+- **Found, by comparing every fitted slope's ends with the floor blocks beside them:** the reference mesh has each slope's ends at its floors' heights to within 0.01, so the fault was the fitter's.
+  - A ramp piece is 2 long and Guardian's ramps are 1.3 to 5.5 long. The run was centred on its slope, so it stopped short or overshot: on a 2.9-long ramp one piece sat with its foot 0.24 above the lower floor and 0.45 away from it, its top 0.32 under the upper floor.
+  - A run's rise was whatever its pieces added up to, not what the two floors differ by.
+  - Each floor block took the middle height of the cells under it, so neighbours on one floor could differ by a tenth or two.
+- **Fixed in `tools/forge_printer/fit.py`:**
+  - every floor block of a level sits at the height most of that level's floor is at, and a level now takes floor within 0.1 of its busiest height (was 0.2), so a kerb is levelled and a ledge of a quarter unit stays a ledge;
+  - `fit_slopes` takes the fitted floors: a run's ends take the height of the floor block just past each end; it starts at the slope's top edge and is laid downhill over the whole length, the last piece running on under the lower floor; the mix of pieces is the one whose total rise is nearest the slope's (every mix tried for runs of up to six pieces), and what it is still out by, a quarter unit at most, is shared between its ends;
+  - a slope whose foot is a unit or more under the floor over it is not given ramps (two were roots or braces).
+- **Guardian:** every ramp top within 0.11 of the floor block it meets, most within 0.05, feet at or under the lower floor; floor blocks at 18 heights instead of one per block; 190 floor blocks (70%), 36 ramps, 37 walls, 263 pieces, budget 2,630.
+- **Made for the owner:** `FP_Guardian_4.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 292 objects; `check` reads it back with no problems.
+- **Validation:** six new tests and five updated in `tools/test_forge_printer_fit.py`; full suite 1179 OK.
+- **Untested in game:** the fourth print.
+
 ### Reach Forge Printer: slot and budget limits when printing; the third print seen in game, 2026-11-21
 
 - **In game, the owner's four screenshots of `FP Guardian 3`:** the two ramps that stepped now join (a Ramp 1x2 Shallow running into a Ramp 2x2), a ramp's low tip meets the floor block below it, the long walkway ramp runs unbroken, and the HUD reads $27,020 as predicted.
