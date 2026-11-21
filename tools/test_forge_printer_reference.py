@@ -90,8 +90,25 @@ class ScaleObj(unittest.TestCase):
             with mock.patch.object(ref, "H3_TO_REACH_SCALE", 0.5):
                 tris, (lo, hi) = ref.scale_obj(src, dst)
             self.assertEqual(tris, 2)
-            self.assertEqual((lo, hi), ([0, 0, 0], [5.0, 10.0, 2.5]))
-            self.assertIn("v 5.0000 0.0000 0.0000\n", get(dst))
+            # bsp2obj's Y-up (x, y, z) is the game's (x, -z, y)
+            self.assertEqual((lo, hi), ([0, -2.5, 0], [5.0, 0, 10.0]))
+            text = get(dst)
+            self.assertIn("v 5.0000 0.0000 0.0000\n", text)
+            self.assertIn("v 0.0000 0.0000 10.0000\n", text)      # obj (0, 20, 0): 20 up
+            self.assertIn("v 0.0000 -2.5000 0.0000\n", text)      # obj (0, 0, 5)
+            self.assertNotIn("-0.0000", text)
+
+    def test_turning_z_up_keeps_the_winding(self):
+        # a floor triangle seen from above, counter-clockwise in the game's axes, written Y up by bsp2obj
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = os.path.join(tmp, "a.obj"), os.path.join(tmp, "b.obj")
+            put(src, "v 0 3 0\nv 1 3 0\nv 0 3 -1\nf 1 2 3\n")
+            with mock.patch.object(ref, "H3_TO_REACH_SCALE", 1.0):
+                ref.scale_obj(src, dst)
+            v = [[float(c) for c in line.split()[1:]] for line in get(dst).splitlines() if line.startswith("v ")]
+            self.assertEqual(v, [[0, 0, 3], [1, 0, 3], [0, 1, 3]])
+            (ax, ay, _), (bx, by, _), (cx, cy, _) = v
+            self.assertGreater((bx - ax) * (cy - ay) - (by - ay) * (cx - ax), 0)   # the normal points up
 
     def test_no_triangles_is_an_error(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -128,7 +145,7 @@ class Build(unittest.TestCase):
         self.assertEqual(rep["triangles"], 2)
         self.assertEqual(rep["bsp2obj_triangles"], 2)
         k = ref.H3_TO_REACH_SCALE
-        self.assertEqual(r1["bounds"], {"min": [0, 0, 0], "max": [round(10 * k, 4), round(20 * k, 4), round(5 * k, 4)]})
+        self.assertEqual(r1["bounds"], {"min": [0, round(-5 * k, 4), 0], "max": [round(10 * k, 4), 0, round(20 * k, 4)]})
         self.assertEqual(r1["spawns"][0]["pos"], [round(c * k, 4) for c in (1.0, 2.0, 3.0)])
         files = {n: get(os.path.join(self.out, n), "rb") for n in ("h3_yard.obj", "reference.json")}
         self.build()

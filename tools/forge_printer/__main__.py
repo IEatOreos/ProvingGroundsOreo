@@ -4,6 +4,7 @@
     python\\python.exe tools\\forge_printer check FILE_OR_FOLDER ...
     python\\python.exe tools\\forge_printer move  FILE OUT --slot N [--dx 0] [--dy 0] [--dz 0] [--title TEXT] [--keep-hash]
     python\\python.exe tools\\forge_printer reference MAP [--out FOLDER]
+    python\\python.exe tools\\forge_printer surfaces FOLDER [--side 4] [--below 3] [--above 8]
 
 `check` reads each file, writes it back in memory and compares the bytes.
 `move` never touches FILE: it writes a changed copy to OUT.
@@ -107,6 +108,14 @@ def cmd_reference(args):
     return h3_reference.main(args.map, args.out)
 
 
+def cmd_surfaces(args):
+    if __package__ in (None, ""):
+        from forge_printer import surfaces     # needs numpy: only loaded for this command
+    else:
+        from . import surfaces
+    return surfaces.main(args.folder, args.side, args.below, args.above)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="forge_printer", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -131,6 +140,12 @@ def main(argv=None):
     p.add_argument("map", help="a maps/ folder name, e.g. h3_guardian")
     p.add_argument("--out", help="output folder (default: re_tools\\forge_printer\\reference\\<map>)")
     p.set_defaults(run=cmd_reference)
+    p = sub.add_parser("surfaces", help="cut a reference to its play space and sort it into floors, slopes, walls, ceilings")
+    p.add_argument("folder", help="a folder `reference` wrote")
+    p.add_argument("--side", type=float, default=4.0, help="world units kept beyond the walked ground, sideways")
+    p.add_argument("--below", type=float, default=3.0, help="... below it")
+    p.add_argument("--above", type=float, default=8.0, help="... above it")
+    p.set_defaults(run=cmd_surfaces)
     args = parser.parse_args(argv)
     return args.run(args)
 

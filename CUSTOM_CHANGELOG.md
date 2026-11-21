@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 3 part 1: Guardian's play space cut out and sorted into surfaces; reference mesh turned Z up, 2026-11-21
+
+The owner started phase 3 of `docs/REACH_FORGE_PRINTER_PLAN.md` with what does not need his calibration map (not saved yet): "cropping Guardian's backdrop and surface classification". A separate tool: nothing in the bot imports it.
+
+- **Fixed: the reference mesh lay on its side.** `bsp2obj` writes its OBJ Y up; phase 2's `reference` kept that, while the spawns, weapons and objectives beside it are in the game's Z-up axes, so in Blender the level stood at right angles to its own placements (its "long y side" was the trees' height). `h3_reference.scale_obj` now writes the game's axes (`x, -z, y`, as `tools/heightmap.py` reads the same files). Proof: with that turn all 58 of Guardian's spawns have ground right under them; with the 47 other axis orders at most 11 do. Guardian's box is now x -18.95..20.08, y -35.27..6.07, z -38.23..91.45.
+- **New `tools/forge_printer/surfaces.py`, run as `python\python.exe tools\forge_printer surfaces <reference folder> [--side 4] [--below 3] [--above 8]`:**
+  - finds the play space by following the walkable ground under the spawns outward on foot (jump 1 u up, drop 4 u, gap 2 u; ground counts only where it covers 40% of a half-unit cell, which keeps leaves and branches out);
+  - cuts the mesh to a box around that ground (triangles crossing the box are cut at it);
+  - sorts every triangle by how far it leans: floor (to 10°), slope (to 55°), wall, ceiling (from 125°);
+  - groups touching triangles that lie in one plane into patches, and marks the floors and slopes players actually walk on.
+  It writes `<map>_play.obj` (one group per kind) and `surfaces.json` (the box, each kind's area, every patch of 0.25 u² or more with its plane, tilt, uphill direction and box) beside the reference; both are made from the game and stay local. It refuses a mesh whose spawns do not stand on ground, the check that would have caught the axis mistake.
+- **`blender_import_reference.py`** also loads the play-space mesh when it is there (collection `play`: floor, slope, wall and ceiling as coloured objects) and hides the whole level behind it.
+- **Guardian:** 58 of 58 spawns on ground; play box 39.5 x 36.0 x 23.3 u (z 8.4..31.7 of the mesh's -38..91); 99,022 of 115,250 triangles and 8,326 of 20,187 u² kept; floor 566 u² (509 walked), slope 377 (224 walked), wall 6,532, ceiling 852. A second run writes the same bytes. Blender 5.1 headless loads it (floor 7,696, slope 8,802, wall 64,892, ceiling 17,334 triangles); a top-down render shows the map's layout.
+- **Validation:** `tools/test_forge_printer_surfaces.py` (new, 23 tests on a hand-built yard in a "forest") and two changed or new tests in `tools/test_forge_printer_reference.py`; full suite 1108 OK.
+- **Not done / known limits:** the big tree trunks inside the box are still there, as walls (the mesh names no materials to tell them from the structure); a patch's area can exceed its outline where the render mesh stacks layers; no piece fitting yet. Only Guardian was run.
+
 ### Reach Forge Printer, phase 2: a Halo 3 map as a Blender tracing reference, 2026-11-21
 
 Phase 2 of `docs/REACH_FORGE_PRINTER_PLAN.md` (brief: `docs/REACH_FORGE_PRINTER_PHASE2_BRIEF.md`). A separate tool: nothing in the bot imports it, and nothing under `brain/`, `native/` or `maps/` changed.

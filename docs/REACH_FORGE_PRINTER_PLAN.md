@@ -1,9 +1,10 @@
 # Reach Forge Printer — Project Plan
 
 Status: Phase 1 done (2026-11-21): built, committed locally, and the edited
-variant loaded in Reach Forge with its wall moved. Phase 2 not started; its
-brief is `docs/REACH_FORGE_PRINTER_PHASE2_BRIEF.md`. Separate tool from the
-Project Reach bot code.
+variant loaded in Reach Forge with its wall moved. Phase 2 done (Halo 3
+reference, scale 0.975). Phase 3 started: the play space is cut out and sorted
+into surfaces; the calibration map is built but not saved yet; no piece
+fitting yet. Separate tool from the Project Reach bot code.
 
 ## Goal
 
@@ -102,6 +103,12 @@ Do not start Phase 2 on Fable.
 - [x] Phase 1 committed locally
 - [x] Phase 2 — H3 reference import (scale 0.975, the owner's choice)
 - [ ] Phase 3 — auto-builder core (Guardian test)
+  - [x] reference mesh turned Z up (a phase 2 mistake), play space cut out,
+        surfaces sorted (`forge_printer surfaces`)
+  - [ ] calibration map read: palette row/item → piece, rotation axes
+  - [ ] piece sizes and prices
+  - [ ] piece fitting
+  - [ ] budget and limit solver
 - [ ] Phase 4 — Blender addon
 
 ## Handoff notes
@@ -229,3 +236,77 @@ check that the scale doesn't break a known jump on Guardian.
   row/item → Forge piece, prices, up-vector axes and turn direction.
 - Not tested: any map but Guardian; a Blender run with the UI open (only
   headless was run).
+
+### Phase 3, part 1 (2026-11-21, written by Fable 5.2)
+
+**Correction to the Phase 2 note above.** The reference OBJ was Y up (that is
+how `bsp2obj` writes it) while the placements are Z up, so the mesh stood at
+right angles to its own spawns; the "long y side … far-off backdrop" was the
+trees' height. Fixed in `h3_reference.scale_obj` (`x, -z, y`). Guardian's box
+is x -18.95..20.08, y -35.27..6.07, z -38.23..91.45; the play space is
+z 11..24 of that. Re-run `reference` on any folder made before this fix.
+
+**Done**
+
+- `tools/forge_printer/surfaces.py`, run as
+  `python\python.exe tools\forge_printer surfaces <reference folder>`: finds
+  the play space by walking the ground from the spawns, cuts the mesh to a box
+  around it, sorts triangles into floor / slope / wall / ceiling, groups them
+  into flat patches, marks walked ground. Writes `<map>_play.obj` and
+  `surfaces.json` beside the reference (local only). The rules and their
+  numbers are the constants at the top of the file.
+- `blender_import_reference.py` loads the play mesh too (collection `play`).
+- Guardian: play box 39.5 × 36.0 × 23.3 u; floor 566 u² (509 walked), slope
+  377 (224 walked), wall 6,532, ceiling 852; 208 floor patches of 0.25 u² or
+  more hold 518 of the 566. Pictures:
+  `re_tools\forge_printer\reference\h3_guardian\views\`.
+- Tests: `tools/test_forge_printer_surfaces.py` (23). Full suite 1108 OK.
+
+**Known limits**
+
+- The big tree trunks inside the box remain, as walls: 6,532 u² of wall is
+  mostly trunk. The mesh names no materials. The fitter should take walls from
+  beside walked ground, not from the whole list.
+- A patch's `area` can exceed its outline (the render mesh stacks layers in
+  places); fit to the outline, not the area.
+- Patches split at T-junctions, so one real floor can be several patches.
+
+**The calibration map (the owner, 2026-11-21): built, not saved yet** ("MCC
+says private storage is full"). It will be in the MCC Reach `Map` folder; the
+owner gives its name. Forge World, 97 pieces in 7 rows in placement order,
+nothing deleted; the piece names row by row are the owner's notes,
+`C:\Users\marsh\Downloads\Forge Items.txt` (typos his: Blcok = Block, Medieum =
+Medium). Categories in order: Building Blocks (25), Bridges and Platforms (21),
+Buildings (11), Decorative (6), Doors Windows and Walls (11), Inclines (15),
+Nature (8).
+
+Rotation test, not in that file: at the end of row seven, after Rock Arch,
+five Ramp 1x2 copies placed right to left, copy 1 nearest the arch:
+1 not turned · 2 turned 90 left · 3 turned 45 left · 4 tipped forward 90 ·
+5 rolled 90 onto its right side. Rotation snap was on.
+
+What the map can and cannot settle:
+
+- **Row/item → piece: yes.** One earlier data point already fits: the owner's
+  own variant holds type 74 item 8, and "Wall Coliseum" is the ninth name
+  (index 8) in the Doors, Windows and Walls list, so an item number is the
+  piece's place in its Forge menu.
+- **Rotation axes and turn direction: yes**, from the five ramps.
+- **Prices: only the total.** The file holds the budget spent, not a price per
+  piece. If every piece costs the same the total shows it (the owner's own
+  variant: 13 Coliseum walls, budget 130); otherwise the prices have to come
+  from the Forge menu or the map's tags.
+- **Piece sizes: no.** The file has positions only. Sizes need the pieces'
+  models (`model2obj` on `forge_halo.map`, kept local) or measuring in game.
+
+**Next**
+
+1. When the map is saved: `forge_printer info --objects` on it, then a
+   `calibrate` step that pairs slots with the notes and writes the palette
+   table (names, row, item) into the repository and the rotation result into
+   `docs/reach_mvar_format.md` (sections 4.2 and 4.3).
+2. Piece sizes for the 97 pieces.
+3. Fitting, floors first: cover each walked floor patch's outline with the
+   largest blocks that fit, then ramps on walked slopes, then walls beside
+   walked ground.
+4. Check one known Guardian jump against the 0.975 scale.

@@ -5,7 +5,7 @@
 Writes, in FOLDER (default E:\\Proving Grounds\\re_tools\\forge_printer\\reference\\<map>):
 
   <map>.obj        the map's level geometry (bsp2obj, run as its own program),
-                   every vertex in Reach units
+                   every vertex in Reach units and the game's Z-up axes
   reference.json   its spawns, weapons, objectives and other placements from
                    maps/<map>/objects.json and features.json, in Reach units,
                    facings in radians
@@ -98,14 +98,22 @@ def placements(objects, features):
     return {"spawns": spawns, "weapons": weapons, "objectives": objectives, "other": other}
 
 
+def world(x, y, z):
+    """bsp2obj writes its OBJ Y up (X, Z, -Y of the game's world); this is the game's own Z-up
+    position back, the frame objects.json's placements are in (tools/heightmap.py reads it the same way).
+    A rotation, not a mirror, so the triangles keep their winding."""
+    return x, -z, y
+
+
 def scale_obj(src, dst):
-    """Copies an OBJ with every vertex scaled into Reach units. (triangles, (min, max) bounds)."""
+    """Copies bsp2obj's OBJ with every vertex turned Z up and scaled into Reach units.
+    (triangles, (min, max) bounds)."""
     lo, hi = [math.inf] * 3, [-math.inf] * 3
     tris = 0
     with open(src, encoding="ascii", errors="replace") as fin, open(dst, "w", encoding="ascii", newline="\n") as fout:
         for line in fin:
             if line.startswith("v "):
-                xyz = [r(float(c)) for c in line.split()[1:4]]
+                xyz = [r(c) + 0.0 for c in world(*(float(c) for c in line.split()[1:4]))]   # + 0.0: no "-0.0000"
                 for i, c in enumerate(xyz):
                     lo[i], hi[i] = min(lo[i], c), max(hi[i], c)
                 fout.write("v %.4f %.4f %.4f\n" % tuple(xyz))
