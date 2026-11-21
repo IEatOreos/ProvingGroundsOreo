@@ -114,8 +114,9 @@ Do not start Phase 2 on Fable.
         what a turn means under a tilted up: a second test, when tilted
         pieces are needed
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
-  - [ ] piece prices — the HUD after two prints fits: Flat blocks, Ramp 1x2,
-        Block 1x1 Tall, Wall Coliseum 10 each, small antenna 50; the rest unknown
+  - [ ] piece prices — sixteen known from four HUD totals (`pieces.PRICES`:
+        the Flat blocks used, Block 1x1 Tall, four ramps, Wall, Wall Double,
+        Wall Coliseum at 10, small antenna 50); the other 93 unknown
   - [x] piece fitting, floors, first version (`forge_printer fit`, `print`):
         Guardian 71% of walked floor with 185 flat blocks — printed, waiting
         for the owner to load it
@@ -692,3 +693,11 @@ first print. **Not loaded in the game yet.** Expected HUD budget if every
 piece is 10 and the small antenna 50: 130 + 2,590 + 260 = 2,980 spent,
 $27,020 left; a different figure gives the price of Wall, Wall Double or the
 ramps.
+
+**The owner, 2026-11-21, after loading it: "$27,020".** Exactly as expected,
+so the game counted all 259 pieces, and Wall, Wall Double, Ramp 1x2 Shallow,
+Ramp 2x2 and Ramp 2x2 Steep fit 10 each. `pieces.PRICES` now holds the sixteen
+prices the four HUD totals agree on (fifteen pieces at 10, the small antenna
+at 50), `pieces.cost()` adds a list of pieces up, and `fit` reports the
+budget of what it placed (Guardian: 2,590). Not reported yet: whether the
+ramps meet the floors, and the tilt test.

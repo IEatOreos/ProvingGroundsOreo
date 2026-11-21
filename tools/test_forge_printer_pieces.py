@@ -212,6 +212,22 @@ class KeptTable(unittest.TestCase):
         v.quotas.pop()
         self.assertFalse(pieces.is_forge_world(v))                                  # an older palette: rows differ
 
+    def test_prices_add_up_to_what_the_hud_showed(self):
+        # the four totals the game showed after loading files this tool wrote
+        self.assertEqual(pieces.cost(["Wall Coliseum"] * 13), (130, []))
+        turn_test = ["Ramp 1x2"] * 3 + ["ff_antenna"] * 5 + ["Block 1x1 Tall"] * 3
+        self.assertEqual(pieces.cost(turn_test), (310, []))
+        tilt_test = ["Ramp 1x2"] * 3 + ["ff_antenna"] * 4 + ["Block 1x1 Tall"] * 3
+        floors = (["Block 5x5 Flat"] * 2 + ["Block 3x3 Flat"] * 2 + ["Block 5x1 Flat"] * 15 + ["Block 2x2 Flat"] * 10
+                  + ["Block 3x1 Flat"] * 21 + ["Block 2x1 Flat"] * 44 + ["Block 1x1 Flat"] * 91)
+        self.assertEqual(pieces.cost(floors + tilt_test), (30000 - 27760 - 130, []))
+        rest = ["Ramp 1x2 Shallow"] * 24 + ["Ramp 2x2"] * 5 + ["Ramp 2x2 Steep"] * 8 + ["Wall"] * 25 + ["Wall Double"] * 12
+        self.assertEqual(pieces.cost(floors + rest + tilt_test), (30000 - 27020 - 130, []))
+        self.assertEqual(pieces.cost(["Block 4x4", "Wall", "Dish", "Dish"]), (10, ["Block 4x4", "Dish"]))
+        self.assertIsNone(pieces.price("Tower Tall"))
+        for name in pieces.PRICES:
+            self.assertIn(name, {p["name"] for p in self.table["pieces"]})
+
     def test_pieces_known_only_by_model_are_not_offered_by_name(self):
         self.assertEqual(len(self.named), 99)
         self.assertNotIn("ff_antenna", self.named)

@@ -117,6 +117,38 @@ CATEGORIES = [
 ]
 
 
+# What a piece costs, where the game has shown it. The file holds no prices and the game works the
+# budget out itself, so these come from the HUD after loading files this tool wrote (2026-11-21):
+#   the owner's own variant, 13 Wall Coliseum: 130
+#   + 3 Ramp 1x2, 5 small antennas, 3 Block 1x1 Tall: 310 more
+#   + 185 Flat blocks of seven kinds, and 3 Ramp 1x2, 4 antennas, 3 Block 1x1 Tall: 2,110 more
+#   + the same and 37 ramps of three kinds and 37 Wall / Wall Double: 2,850 more
+# Every total is exact with 10 for each of these and 50 for the antenna. A total cannot prove each
+# price apart (two that are wrong by opposite amounts would hide), but four totals agree.
+PRICES = {name: 10 for name in (
+    "Block 5x5 Flat", "Block 3x3 Flat", "Block 5x1 Flat", "Block 2x2 Flat", "Block 3x1 Flat", "Block 2x1 Flat",
+    "Block 1x1 Flat", "Block 1x1 Tall", "Ramp 1x2", "Ramp 1x2 Shallow", "Ramp 2x2", "Ramp 2x2 Steep",
+    "Wall", "Wall Double", "Wall Coliseum")}
+PRICES["ff_antenna"] = 50
+
+
+def price(name):
+    """What the piece costs, or None where the game has not shown it yet."""
+    return PRICES.get(name)
+
+
+def cost(names):
+    """(total of the known prices, [names with no known price]) for a list of piece names."""
+    total, unknown = 0, []
+    for name in names:
+        value = PRICES.get(name)
+        if value is None:
+            unknown.append(name)
+        else:
+            total += value
+    return total, sorted(set(unknown))
+
+
 class PieceError(Exception):
     """A clear one-line reason the pieces could not be measured or read."""
 

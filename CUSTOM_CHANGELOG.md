@@ -14,7 +14,7 @@ The owner, asked whether to fit Guardian's ramps and walls next: "Yes, ramps and
 - **Guardian:** 37 ramps on 60 of its 224 u² of walked slope (27%: the straight walkway ramps; curved ramps and in-between leans are left) and 37 wall pieces along 64 units of wall, on top of the 185 floor blocks: 259 pieces.
 - **Made for the owner:** `FP_Guardian_2.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository), 288 objects; `check` reads it back with no problems.
 - **Validation:** 9 new tests in `tools/test_forge_printer_fit.py` (ramps chosen by lean and width and turned to the slope, walls by length and height, walls nobody walks beside left alone); full suite 1162 OK. `pieces --measure` re-ran: 109 of 109.
-- **Untested in game:** this print. **Known limits:** a ramp piece is a solid wedge, so it fills the space under a thin sloping bridge; some ramps land on tree roots; railings, kerbs and ceilings get nothing.
+- **In game, the owner, 2026-11-21:** the print loads and the HUD shows $27,020 left, exactly what 259 pieces at 10 each give, so every piece was counted. `pieces.PRICES` now holds the sixteen prices four such HUD totals agree on (fifteen pieces at 10, the small antenna at 50), with `pieces.cost()`; `fit` reports the budget of what it placed. Whether the ramps meet the floors has not been reported. **Known limits:** a ramp piece is a solid wedge, so it fills the space under a thin sloping bridge; some ramps land on tree roots; railings, kerbs and ceilings get nothing.
 
 ### Reach Forge Printer, phase 3 part 5: Guardian's floors fitted with Forge blocks and printed, 2026-11-21
 

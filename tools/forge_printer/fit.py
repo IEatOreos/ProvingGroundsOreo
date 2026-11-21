@@ -395,8 +395,10 @@ def build(folder):
     counts = {}
     for p in placements:
         counts[p["piece"]] = counts.get(p["piece"], 0) + 1
+    total, unpriced = pieces.cost([p["piece"] for p in placements])
     report = {"floors": floor_report, "slopes": slope_report, "walls": wall_report,
-              "pieces": len(placements), "by_piece": {name: counts[name] for name in sorted(counts)}}
+              "pieces": len(placements), "by_piece": {name: counts[name] for name in sorted(counts)},
+              "budget": total, "unpriced": unpriced}
     ref = analysis["ref"]
     name = ref["source"]["map"]
     out = {"source": ref["source"], "mesh": name + "_fit.obj",
@@ -452,7 +454,8 @@ def main(folder):
         r["slope_area"], r["fitted_area"], 100 * r["coverage"], r["pieces"]))
     r = report["walls"]
     print("walls    %d pieces along %.1f units of wall" % (r["pieces"], r["length"]))
-    print("pieces   %d" % report["pieces"])
+    print("pieces   %d, budget %d%s" % (report["pieces"], report["budget"],
+                                        " plus the unpriced: " + ", ".join(report["unpriced"]) if report["unpriced"] else ""))
     for name, count in report["by_piece"].items():
         print("  %-18s %d" % (name, count))
     return 0
