@@ -221,18 +221,22 @@ world units.
 ### 4.2 Turn
 
 14 bits over a full turn: `raw = floor((angle + pi) / (2 pi) * 16384)`, so 8192
-is 0°, 4096 is -90°, 12288 is +90°. Which way positive turns, and what 0°
-faces when the up vector is tilted, is not confirmed.
+is 0°, 4096 is -90°, 12288 is +90°. With the world's up, the angle is where
+the piece's own +x points, counter-clockwise from world +x seen from above:
+seen in the game (2026-11-21) on three ramps written at 0°, +90° and +45°.
+What 0° faces when the up vector is tilted is not confirmed.
 
 ### 4.3 Up vector
 
 20 bits: `face * 174762 + u * 417 + v`. `face` (0-5) picks a side of a cube,
 `u` and `v` (0-416) a point on it, 208 being the middle. Axis-aligned up
-vectors sit at the face centres. Face 2 is the world's up (objects that are
-upright but not flagged as such use it); a variant with walls stood on edge
-puts faces 1 and 4 on one horizontal axis and face 3 on the other, which fits
-the order +X, +Y, +Z, -X, -Y, -Z. Which of u and v is which axis on each face
-is not worked out.
+vectors sit at the face centres. The up vector is where the piece's own +z
+points. The faces are +X, +Y, +Z, -X, -Y, -Z in that order: faces 0, 1, 2
+and 5 were seen in the game (2026-11-21, antennas written with each), 3 and 4
+follow the pattern and fit a variant whose flat-lying walls use them. On face
+2, more u leans the vector towards +x and more v leans it along y (which way
+is not yet seen); how far a step leans it, and u and v on the other faces,
+are not worked out.
 
 ### 4.4 Boundary sizes
 
@@ -271,7 +275,10 @@ not known: a file with a deliberately wrong hash has not been tried.
   the field at all.
 - The 128-bit block version 32 adds; the 32-bit field that is always
   0xFFFFFFFF; the two flags; the 10-bit field in each object; the 2-bit flags.
-- The exact up-vector axes and the direction of the turn (4.2, 4.3).
+- On the up vector: the sign of v, the size of a step, u and v off face 2, and
+  what the turn means once up is tilted (4.2, 4.3).
+- Budget: the game shows its own total, not the stored one (a file saying 240
+  spent showed 440). Whether the stored figure matters anywhere is not known.
 - Names of the multiplayer object kinds other than weapon and teleporter, and
   the meaning of the placement flag bits.
 - Which palette row and item is which Forge piece, and each piece's price

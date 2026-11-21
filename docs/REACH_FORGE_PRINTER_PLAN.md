@@ -108,8 +108,9 @@ Do not start Phase 2 on Fable.
   - [x] palette row/item → piece (from ten variants already on the PC; the
         calibration map was not needed for it)
   - [x] a file with objects added loads in the game ("It loaded fine")
-  - [ ] rotation axes and turn direction — `FP_Turn_Test.mvar` loaded; waiting
-        for what the owner saw (which way each ramp and antenna points)
+  - [x] turn direction and the up vector's faces (the owner's screenshot)
+  - [ ] the rest of the up vector: sign of v, size of a step, the turn under a
+        tilted up (a screenshot from above, then a second test if needed)
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices
   - [ ] piece fitting
@@ -474,6 +475,36 @@ the map: the spawn points are on the +x side, the pillars on the +y side):
 **The owner, 2026-11-21: "It loaded fine."** So a file with objects added
 (new rows used, quotas recounted, a guessed budget) loads in Reach Forge.
 Which way each ramp and antenna points has not been reported yet.
+
+**The owner's screenshot (2026-11-21), Forge monitor view from the south,
+compass reading N straight ahead, spawn markers at the right edge.** So the
+pillars (+y) are to the north and the spawn (+x) to the east. Read off it:
+
+| Piece | Seen | Settles |
+|---|---|---|
+| A1, turn 0 | wedge, high end to the right (east) | a turn of 0 points the model's +x along world +x |
+| A2, turn +90° | seen from its low end, treads rising away from the camera | +90° is towards +y: turns run counter-clockwise seen from above |
+| A3, turn +45° | sloped face towards the camera's left, high edge back right | between the two, as it should be |
+| B1, face 0 | lying flat, tip to the right, towards the spawn markers | face 0 is +X |
+| B2, face 1 | lying flat, mast running up-left towards the vanishing point | face 1 is +Y (less plain than the others in this view) |
+| B3, face 5 | base on top, mast straight down | face 5 is -Z |
+| B4, face 2 + u | upright, leaning to the right (east) | face 2 is +Z; u leans it towards +x |
+| B5, face 2 + v | upright, no lean left or right | v leans it along y; towards or away not visible from here |
+
+So the guesses held: turn = angle counter-clockwise from world +x, faces in
+the order +X, +Y, +Z, -X, -Y, -Z (3 and 4 by the pattern, not seen). Open
+after this one view: the sign of v on face 2, how far 90 steps really lean
+(B4 looks nearer 10° than the 23° a plain cube-face reading gives, but a view
+from the side cannot measure it), and A2/A3/B2 would be plainer from above.
+A screenshot from straight above settles all of these.
+
+**The game works out the budget itself.** The file said 240 spent; the HUD
+shows $29,560 left of 30,000, so 440 spent. The stored figure is therefore
+not what the game shows, and prices can be read off the HUD by loading files:
+the original thirteen walls were 130, so the eleven added pieces cost 310:
+3 × Ramp 1x2 + 5 × small antenna + 3 × Block 1x1 Tall = 310. If prices are
+multiples of 5 that leaves (ramp + block, antenna) = (20, 50), (45, 35),
+(70, 20) or (95, 5); 10, 10 and 50 is the plain reading, not yet proven.
 
 A ramp climbs towards its model's +x; an antenna's thin tip is its model's +z,
 which is what the file calls "up". Reading the answers: A1 and A2 give where a
