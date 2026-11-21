@@ -67,6 +67,13 @@ The owner, on the third Guardian print's screenshots: "Two of those screenshots 
 - **Validation:** seven new tests in `tools/test_forge_printer_fit.py` (limits by slots and by budget, the order pieces are dropped in, an unpriced piece named, print's stored budget and its left-out line); full suite 1174 OK.
 - **Not applied:** per-piece or per-category limits, because none has been seen (185 Building Blocks loaded). **Still unread:** the tilt test.
 
+### Reach: a bot no longer takes the player's reticle target as its own (missed rounds), 2026-11-21
+The owner's reports "Sword shoots the ground twice" (with theater screenshots: Sword117's view on him, its rounds into the grass at its feet), "Sword missed 2 shots on me" and the 1v4 he could not be killed in.
+- Cause: `native/reach.cpp` builds each bot's action from the player's own action of the tick and overwrites it field by field; of the aim-assist block it zeroed only the weights (+0x8C / +0x90) and left his +0x78 (target set), +0x80 (the unit under his red reticle) and +0x88 (weight 1.0). A bot he aimed at had itself as its target.
+- Evidence (logs/trace_reach_forge_halo_20261121-135535 and -150927; the owner's own trace row carries the player under his reticle): Noble DMR rounds at him within 15 u, counted a hit when his shield or health fell within 0.25 s: with his reticle on the shooter 11 of 41 and 24 of 66 (27%, 36%), with it elsewhere or on nobody 36 of 66 and 28 of 59 (55%, 47%). Every difficulty used the same action path: not Noble's alone.
+- Fix: every bot's action gets the block as the player's carries it with nobody under the reticle (5659 of 5659 ticks of logs/reload_capture_20261120-234526): +0x78 0, +0x7C / +0x80 / +0x84 0xFFFFFFFF, +0x88..+0x9F 0. A bot's own red-reticle target (hb_target: sword, hammer and melee lunges) is still written after it, unchanged.
+- Validation: `build.bat pg41` builds `botcore_pg41.dll` (the native files also hold the collaborator's uncommitted lobby edits, the same ones already in pg40). Full Python suite unchanged. **Untested in game:** from MCC's next start; the check is Noble's hit rate on the owner with his reticle on the shooter, up to the rate without.
+
 ### Noble: taps a running sprint off to shoot; the close lock checked live, 2026-11-21
 From the owner's next Asylum match (logs/bug_reports/reach_forge_halo_20261121-150927, owner + 3 Demon vs 4 Noble):
 - The close-range lock above, live: ticks of a DMR fight with a clear line where Noble's trigger was free, under 3 u 30% -> 91%, 3-6 u 70% -> 90% (Demon 100%). Reloads again 68 of 75 Noble, 61 of 65 Demon, median 1.2 s.

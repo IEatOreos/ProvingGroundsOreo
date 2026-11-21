@@ -1081,7 +1081,16 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                     }
                     // +0x7C: the aim assist block (weights +0x8C / +0x90; FUN_18010e8f8). the player's passed the
                     // action check whole, but pulled the bot's shots toward his target: no weights, no assist
-                    memset(act + 0x8C, 0, 8);
+                    // (custom, Nov 21) and no target: the player's own +0x78 / +0x80 / +0x88 (the man under his red
+                    // reticle) were still copied in, so a bot he aimed at had itself as its target. Its rounds went
+                    // into the ground at its feet (the owner's theater screenshots, Sword117 at 71.6 / 72.1 s on
+                    // Asylum) and Noble rounds at him hit 27-36% with his reticle on the shooter, 47-55% without
+                    // (logs/trace_reach_forge_halo_20261121-135535 / -150927). The block as his action carries it
+                    // with nobody under the reticle (5659 of 5659 ticks, logs/reload_capture_20261120-234526):
+                    // +0x78 0, +0x7C / +0x80 / +0x84 0xFFFFFFFF, +0x88..+0x9F 0. A bot's own target is set below
+                    *(uint32_t*)(act + 0x78) = 0;
+                    memset(act + 0x7C, 0xFF, 12);
+                    memset(act + 0x88, 0, 0x18);
                     // the red reticle's target (shared.h hb_target), as the player's own action carries it (live,
                     // Boardwalk Infection, logs/tmp/aa_watch.py, his reticle red on a zombie): +0x78 1, +0x7C node,
                     // +0x80 the man's unit, +0x88 weight 1.0, +0x8C 0, +0x9C flags 4; within melee reach his input
