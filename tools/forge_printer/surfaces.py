@@ -325,8 +325,11 @@ def patches(verts, tris, normals, areas, centres, kinds):
 
 # ---- the command ------------------------------------------------------------
 
-def build(folder, side=SIDE, below=BELOW, above=ABOVE):
-    """Writes <map>_play.obj and surfaces.json into the reference folder. Returns the surfaces dict."""
+def analyse(folder, side=SIDE, below=BELOW, above=ABOVE):
+    """The play space of a reference folder, worked out but not written anywhere: a dict with the
+    cut mesh ("verts", "tris"), each triangle's "normals", "areas", "centres", "kinds" and whether
+    it is "walked" ground, the flat "patches" and each triangle's patch ("owner"), and the rest
+    build() reports."""
     try:
         with open(os.path.join(folder, "reference.json"), encoding="utf-8") as f:
             ref = json.load(f)
@@ -367,6 +370,17 @@ def build(folder, side=SIDE, below=BELOW, above=ABOVE):
     for number, patch in enumerate(found):
         if patch["kind"] in ("floor", "slope"):
             patch["walked"] = bool(share[number] * 2 >= patch["area"] and share[number] > 0)
+    return {"ref": ref, "whole_triangles": int(len(tris)), "whole_area": float(areas.sum()),
+            "verts": cut_v, "tris": cut_t, "normals": normals, "areas": areas2, "centres": centres,
+            "kinds": kinds, "walked": walked, "patches": found, "owner": owner,
+            "box": (lo, hi), "on_ground": on_ground, "spawns": len(spawns), "reached": reached}
+
+
+def build(folder, side=SIDE, below=BELOW, above=ABOVE):
+    """Writes <map>_play.obj and surfaces.json into the reference folder. Returns the surfaces dict."""
+    a = analyse(folder, side, below, above)
+    ref, cut_v, cut_t, kinds, walked, found = a["ref"], a["verts"], a["tris"], a["kinds"], a["walked"], a["patches"]
+    areas2, reached, (lo, hi), on_ground = a["areas"], a["reached"], a["box"], a["on_ground"]
 
     name = ref["source"]["map"]
     play = name + "_play.obj"
@@ -391,9 +405,9 @@ def build(folder, side=SIDE, below=BELOW, above=ABOVE):
            "cut": {"side": side, "below": below, "above": above},
            "rules": {"floor_max_deg": FLOOR_MAX_DEG, "slope_max_deg": SLOPE_MAX_DEG,
                      "ceiling_min_deg": CEILING_MIN_DEG, "patch_listed_area": PATCH_LISTED},
-           "whole_mesh": {"triangles": int(len(tris)), "area": round(float(areas.sum()), 2)},
+           "whole_mesh": {"triangles": a["whole_triangles"], "area": round(a["whole_area"], 2)},
            "play_mesh": {"triangles": written, "area": round(float(areas2.sum()), 2)},
-           "spawns_on_ground": [on_ground, len(spawns)],
+           "spawns_on_ground": [on_ground, a["spawns"]],
            "walked_ground_cells": len({c for c, _ in reached}),
            "kinds": totals,
            "patches": listed}

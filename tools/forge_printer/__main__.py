@@ -7,6 +7,8 @@
     python\\python.exe tools\\forge_printer surfaces FOLDER [--side 4] [--below 3] [--above 8]
     python\\python.exe tools\\forge_printer pieces [--measure] [--keep FOLDER]
     python\\python.exe tools\\forge_printer turntest FILE OUT --origin X Y Z [--title TEXT]
+    python\\python.exe tools\\forge_printer fit FOLDER
+    python\\python.exe tools\\forge_printer print FOLDER TEMPLATE OUT --offset DX DY DZ [--title TEXT]
 
 `check` reads each file, writes it back in memory and compares the bytes.
 `move` never touches FILE: it writes a changed copy to OUT.
@@ -134,7 +136,23 @@ def cmd_turntest(args):
         from forge_printer import turn_test
     else:
         from . import turn_test
-    return turn_test.main(args.file, args.out, tuple(args.origin), args.title)
+    return turn_test.main(args.file, args.out, tuple(args.origin), args.title, args.test)
+
+
+def cmd_fit(args):
+    if __package__ in (None, ""):
+        from forge_printer import fit
+    else:
+        from . import fit
+    return fit.main(args.folder)
+
+
+def cmd_print(args):
+    if __package__ in (None, ""):
+        from forge_printer import fit
+    else:
+        from . import fit
+    return fit.print_main(args.folder, args.template, args.out, tuple(args.offset), args.title)
 
 
 def cmd_pieces(args):
@@ -179,12 +197,25 @@ def main(argv=None):
     p.add_argument("--measure", action="store_true", help="export each piece's model from MCC and rewrite the table")
     p.add_argument("--keep", help="where the exported models go (default: re_tools\\forge_printer\\pieces)")
     p.set_defaults(run=cmd_pieces)
+    p = sub.add_parser("fit", help="cover a reference's walked floors with flat Forge blocks")
+    p.add_argument("folder", help="a folder `reference` wrote")
+    p.set_defaults(run=cmd_fit)
+    p = sub.add_parser("print", help="write a fit into a copy of a Forge World variant")
+    p.add_argument("folder", help="a folder `fit` has run on")
+    p.add_argument("template", help="a Forge World variant MCC saved (not changed)")
+    p.add_argument("out")
+    p.add_argument("--offset", type=float, nargs=3, required=True, metavar=("DX", "DY", "DZ"),
+                   help="where the reference's own coordinates go in Forge World")
+    p.add_argument("--title")
+    p.set_defaults(run=cmd_print)
     p = sub.add_parser("turntest", help="write a copy of a Forge World variant with pieces that show how turns are stored")
     p.add_argument("file")
     p.add_argument("out")
     p.add_argument("--origin", type=float, nargs=3, required=True, metavar=("X", "Y", "Z"),
                    help="a point on a flat floor with room towards -x and -y")
-    p.add_argument("--title", default="FP Turn Test")
+    p.add_argument("--title")
+    p.add_argument("--test", choices=("turn", "tilt"), default="turn",
+                   help="turn: turns and the up vector's faces; tilt: leaning up vectors and turns under a tilt")
     p.set_defaults(run=cmd_turntest)
     args = parser.parse_args(argv)
     return args.run(args)

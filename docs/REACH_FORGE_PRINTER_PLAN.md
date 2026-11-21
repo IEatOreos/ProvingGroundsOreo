@@ -115,8 +115,12 @@ Do not start Phase 2 on Fable.
         pieces are needed
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices
-  - [ ] piece fitting
-  - [ ] budget and limit solver
+  - [x] piece fitting, floors, first version (`forge_printer fit`, `print`):
+        Guardian 71% of walked floor with 185 flat blocks — printed, waiting
+        for the owner to load it
+  - [ ] piece fitting: slopes, walls, pieces not square to the axes
+  - [ ] budget and limit solver (the first print already uses more Building
+        Blocks than any variant on disk)
 - [ ] Phase 4 — Blender addon
 
 ## Handoff notes
@@ -533,3 +537,73 @@ each face's axis; B4 and B5 give which of u and v is which world axis on face
 2 (and so, by the pattern, the others). The antenna is row 73 item 0 by the
 map file's order; if something else shows there, that is an answer too.
 Still open after this test: what the turn means once "up" is tilted.
+
+### Phase 3, part 5: the first floor fit and the first print (2026-11-21, written by Fable 5.2)
+
+The owner, 2026-11-21: "Yes, start fitting", and of the tests, "you pick which
+test to do". He also said the floor grid of his own variant "was place by
+hand" and its pieces "set as the spawned": its tile spacing is approximate and
+is not evidence for any exact size.
+
+**Done**
+
+- `tools/forge_printer/fit.py`: `python\python.exe tools\forge_printer fit
+  <reference folder>` covers the walked floors with flat blocks and writes
+  `fit.json` (each piece's name, middle, top height, turn) and
+  `<map>_fit.obj` (the pieces as boxes) beside the reference, local only.
+  `forge_printer print <folder> <template> <out> --offset DX DY DZ` writes the
+  pieces into a copy of a Forge World variant.
+- How it fits: the walked floor on a quarter-unit grid, each cell keeping its
+  floor heights; heights busiest first, floor within 0.2 of a height being one
+  level; on a level, largest block first, each at the first place (row by
+  row) wholly on uncovered floor; then a pass allowing a tenth of a block past
+  an edge; then a pass that fills strips between blocks with a block tucked
+  0.01 under its neighbours when at least 35% of it is new floor.
+- `surfaces.analyse()` is the surface work without the files, for the fitter.
+  `blender_import_reference.py` also loads the fitted boxes (collection `fit`).
+- Tests: `tools/test_forge_printer_fit.py` (17) and one more in the turn-test
+  file. Full suite 1153 OK.
+
+**Guardian**
+
+- 484 u² of walked floor on 71 height steps; 341 u² covered, **71%**, with 185
+  blocks (2 × 5x5, 2 × 3x3, 15 × 5x1, 10 × 2x2, 21 × 3x1, 44 × 2x1, 91 × 1x1,
+  all Flat), 92 of them tucked. A 1x1 lying wholly on floor can reach 76% at
+  best, so what is left is mostly rims and curves narrower than a block.
+  Picture: `re_tools\forge_printer\reference\h3_guardian\views\guardian_fit_top.png`.
+- Loosening the tuck rule to 25% new floor gives 75% with about 270 blocks.
+
+**Known limits of this first version**
+
+- Blocks are square to the map's axes only; round rooms and anything diagonal
+  are part covered. Slopes, walls and ceilings are not fitted at all.
+- Only the eight Flat blocks are used. No piece limits are applied: the fit
+  uses 185 Building Blocks, and no variant on this PC holds more than 92 in
+  that row (50 walls, 47 bridges and platforms, 89 decorative), which smells
+  like a limit of about 100. Whether the game keeps the extra ones is one of
+  the things the first print shows.
+- A gently sloping floor is fitted flat at its middle height.
+
+**The first print: `E:\Proving Grounds\re_tools\forge_printer\FP_Guardian_Floors.mvar`**
+(local only), title "FP Guardian Floors", 214 objects: the owner's variant
+(19), Guardian's 185 floor blocks moved by (-39, -135, +8) so they hang about
+18 above his floor, and the second rotation test (10 pieces) on the floor
+below, where the first test stood. **Not loaded in the game yet.**
+
+What to look for in the floors: are they all there (count the gaps against
+the picture), are the heights right relative to each other, do tucked blocks
+flicker.
+
+The tilt test (`turntest --test tilt`), nearest the spawn first:
+
+| Piece | Stored | Shows |
+|---|---|---|
+| C1 antenna, floating row | face 2, u at its edge | 45° towards +x if a face spans 45°; less says the grid is not what was assumed |
+| C2 antenna | face 2, u half way | 26.6° if the grid is x/z evenly; the first test measured about half the expected lean |
+| C3 antenna | face 0, u half way | which world axis u is on a side face, and its sign |
+| C4 antenna | face 0, v half way | the same for v |
+| D1 ramp, floating over the old ramp spots | up = face 0, turn 0 | what a turn of 0 means when up is +X |
+| D2 ramp | up = face 0, turn +90° | which way a turn goes about a tilted up |
+| D3 ramp | up = face 1, turn 0 | the same reference for up = +Y |
+
+A level, side-on screenshot from the south and one from above read all seven.

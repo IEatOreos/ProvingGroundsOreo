@@ -121,6 +121,25 @@ class TurnTest(unittest.TestCase):
         self.assertIn("refusing to overwrite", buf.getvalue())
         self.assertAlmostEqual(math.degrees(mvar.decode_angle(back.variant.objects[3].angle)), 90.0, delta=0.05)
 
+    def test_the_tilt_test_pieces(self):
+        v = forge_world()
+        placed = turn_test.add_to(v, ORIGIN, "tilt")
+        self.assertEqual([p[0] for p in placed], ["C1", "C2", "C3", "C4", "D1", "D2", "D3", "pillar", "pillar", "pillar"])
+        by = {label: v.objects[slot] for label, slot, _, _ in placed if label != "pillar"}
+        self.assertEqual(mvar.split_up(by["C1"].up), (2, 1.0, 0.0))             # the face's +u edge
+        self.assertEqual(mvar.split_up(by["C2"].up), (2, 0.5, 0.0))
+        self.assertEqual(mvar.split_up(by["C3"].up), (0, 0.5, 0.0))
+        self.assertEqual(mvar.split_up(by["C4"].up), (0, 0.0, 0.5))
+        self.assertEqual([(mvar.split_up(by[l].up)[0], by[l].angle) for l in ("D1", "D2", "D3")],
+                         [(0, 8192), (0, 12288), (1, 8192)])
+        self.assertEqual(v.problems(), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            source, out = os.path.join(tmp, "yard.mvar"), os.path.join(tmp, "tilt.mvar")
+            mvar.MvarFile(variant=forge_world(), chdr=mvar.build_chdr(v.header)).write(source)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(turn_test.main(source, out, ORIGIN, test="tilt"), 0)
+            self.assertEqual(mvar.MvarFile.read(out).variant.header.title, "FP Tilt Test")
+
     def test_only_todays_forge_world_palette(self):
         v = forge_world()
         v.quotas.pop()

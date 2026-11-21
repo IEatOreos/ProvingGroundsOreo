@@ -42,9 +42,31 @@ STATIONS = [
     ("pillar", "Block 1x1 Tall", (-10.0, 3.5, 1.0), 0.0, None),
 ]
 
+# The second test (--test tilt), for what the first left open: how far a step off a face's middle
+# leans the up vector, which way u and v run on a side face, and what a turn means once up is tilted.
+#   row C, antennas floating on the -y side: C1 face 2 pushed to its +u edge (every reading says 45 degrees),
+#     C2 face 2 half way there, C3 face 0 half way along u, C4 face 0 half way along v
+#   row D, Ramp 1x2 floating over the first test's ramp spots: D1 up = face 0 turn 0, D2 up = face 0
+#     turn +90, D3 up = face 1 turn 0
+HALF = 104
+EDGE = 208
+TILT_STATIONS = [
+    ("C1", "ff_antenna", (0.0, -5.5, 2.5), 0.0, (2, EDGE, 0)),
+    ("C2", "ff_antenna", (-5.0, -5.5, 2.5), 0.0, (2, HALF, 0)),
+    ("C3", "ff_antenna", (-10.0, -5.5, 2.5), 0.0, (0, HALF, 0)),
+    ("C4", "ff_antenna", (-15.0, -5.5, 2.5), 0.0, (0, 0, HALF)),
+    ("D1", "Ramp 1x2", (0.0, 0.0, 2.5), 0.0, (0, 0, 0)),
+    ("D2", "Ramp 1x2", (-5.0, 0.0, 2.5), 90.0, (0, 0, 0)),
+    ("D3", "Ramp 1x2", (-10.0, 0.0, 2.5), 0.0, (1, 0, 0)),
+    ("pillar", "Block 1x1 Tall", (0.0, 3.5, 1.0), 0.0, None),
+    ("pillar", "Block 1x1 Tall", (-5.0, 3.5, 1.0), 0.0, None),
+    ("pillar", "Block 1x1 Tall", (-10.0, 3.5, 1.0), 0.0, None),
+]
+TESTS = {"turn": STATIONS, "tilt": TILT_STATIONS}
 
-def add_to(variant, origin):
-    """Adds the test pieces to a Forge World variant. Returns [(label, slot, piece name, position)]."""
+
+def add_to(variant, origin, test="turn"):
+    """Adds a test's pieces to a Forge World variant. Returns [(label, slot, piece name, position)]."""
     if not pieces.is_forge_world(variant):
         raise ValueError("the test needs a variant on today's Forge World palette (map %d, %d quota rows)" % (
             pieces.FORGE_WORLD_MAP_ID, pieces.FORGE_WORLD_QUOTA_ROWS))
@@ -52,7 +74,7 @@ def add_to(variant, origin):
     known = {p["name"]: p for p in table["pieces"]}
     middle = (mvar.UP_GRID - 1) // 2
     placed = []
-    for label, name, offset, turn, up in STATIONS:
+    for label, name, offset, turn, up in TESTS[test]:
         piece = known[name]
         obj = mvar.ForgeObject(type_index=piece["row"], variant_index=piece["item"],
                                placement_flags=PLACEMENT_FLAGS)
@@ -67,13 +89,14 @@ def add_to(variant, origin):
     return placed
 
 
-def main(source, out, origin, title="FP Turn Test"):
+def main(source, out, origin, title=None, test="turn"):
+    title = title or {"turn": "FP Turn Test", "tilt": "FP Tilt Test"}[test]
     if os.path.exists(out):
         print("turntest: refusing to overwrite %s" % out)
         return 1
     try:
         f = mvar.MvarFile.read(source)
-        placed = add_to(f.variant, origin)
+        placed = add_to(f.variant, origin, test)
     except (OSError, ValueError, pieces.PieceError) as error:
         print("turntest: %s" % error)
         return 1

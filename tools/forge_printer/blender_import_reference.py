@@ -22,6 +22,7 @@ GROUPS = ("spawns", "weapons", "objectives", "other")
 EMPTY = {"spawns": "SINGLE_ARROW", "weapons": "CUBE", "objectives": "CONE", "other": "SPHERE"}
 PLAY_COLOURS = {"floor": (0.25, 0.65, 0.3, 1.0), "slope": (0.9, 0.7, 0.2, 1.0),
                 "wall": (0.55, 0.6, 0.7, 1.0), "ceiling": (0.7, 0.3, 0.3, 1.0)}
+FIT_COLOUR = (0.2, 0.45, 0.95, 1.0)
 
 
 def folder_arg():
@@ -86,6 +87,26 @@ def load(folder):
             play_tris[kind or o.name] = len(o.data.loop_triangles)
         level.hide_viewport = True          # the whole level stays loaded, hidden behind the play space
 
+    # the Forge pieces `forge_printer fit` chose, as boxes
+    fit_boxes = 0
+    fit_path = os.path.join(folder, "fit.json")
+    if os.path.isfile(fit_path):
+        with open(fit_path, encoding="utf-8") as f:
+            boxes_path = os.path.join(folder, json.load(f)["mesh"])
+        before = set(bpy.data.objects)
+        bpy.ops.wm.obj_import(filepath=boxes_path, forward_axis="Y", up_axis="Z", global_scale=1.0)
+        fit = collection("fit", root)
+        mat = bpy.data.materials.get("fit") or bpy.data.materials.new("fit")
+        mat.diffuse_color = FIT_COLOUR
+        for o in [o for o in bpy.data.objects if o not in before and o.type == "MESH"]:
+            for c in list(o.users_collection):
+                c.objects.unlink(o)
+            fit.objects.link(o)
+            o.name = "fit_pieces"
+            o.data.materials.clear()
+            o.data.materials.append(mat)
+            fit_boxes += len(o.data.polygons) // 6
+
     counts = {}
     for group in GROUPS:
         coll = collection(group, root)
@@ -120,6 +141,8 @@ def load(folder):
     print("reference: mesh triangles %d" % tris)
     if play_tris:
         print("reference: play space " + ", ".join("%s %d" % (k, n) for k, n in sorted(play_tris.items())))
+    if fit_boxes:
+        print("reference: fitted pieces %d" % fit_boxes)
     print("reference: mesh box x %.3f..%.3f  y %.3f..%.3f  z %.3f..%.3f" % (lo[0], hi[0], lo[1], hi[1], lo[2], hi[2]))
     print("reference: box vs reference.json bounds: max difference %.4f (%s)" % (worst, "ok" if worst <= 0.01 else "MISMATCH"))
     return 0 if worst <= 0.01 else 1

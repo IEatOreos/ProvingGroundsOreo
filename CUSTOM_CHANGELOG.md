@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 3 part 5: Guardian's floors fitted with Forge blocks and printed, 2026-11-21
+
+The owner, asked whether to start fitting pieces to Guardian's floors: "Yes, start fitting"; and of which test to run, "you pick".
+
+- **New `tools/forge_printer/fit.py`:**
+  - `python\python.exe tools\forge_printer fit <reference folder>` covers a reference's walked floors with flat Forge blocks, largest first, and writes `fit.json` and `<map>_fit.obj` (the pieces as boxes) beside the reference; both are made from the game and stay local.
+  - `python\python.exe tools\forge_printer print <folder> <template> <out> --offset DX DY DZ [--title TEXT]` writes the pieces into a copy of a Forge World variant (the template is never changed, the output never overwritten).
+  - The floor is sampled on a quarter-unit grid with every floor height kept; floor within 0.2 of a height is one level; each block goes to the first place wholly on uncovered floor, then a pass lets a tenth of a block hang past an edge, then strips between blocks are filled by a block tucked 0.01 under its neighbours.
+- **`surfaces.analyse()`** is the surface work without writing files (the fitter uses it; `surfaces` writes the same bytes as before). **`blender_import_reference.py`** also loads the fitted boxes. **`turntest --test tilt`** is a second rotation test: antennas at a face's edge and half way, and ramps turned under a tilted up.
+- **Guardian:** 71% of its 484 u² of walked floor covered by 185 flat blocks (a 1x1 lying wholly on floor can reach 76%); a second run writes the same bytes; a top-down render shows the blocks on the platforms.
+- **Made for the owner:** `FP_Guardian_Floors.mvar` in `E:\Proving Grounds\re_tools\forge_printer` (not in the repository): his own variant with Guardian's floor blocks hanging about 18 units above its floor, and the tilt test below. `check` reads it back (214 objects, no problems).
+- **Validation:** `tools/test_forge_printer_fit.py` (new, 17 tests on hand-built floors) and one more turn-test test; full suite 1153 OK.
+- **Untested in game:** the print. **Known limits:** blocks square to the map's axes only, flat blocks only, no slopes, walls or ceilings, and no piece limits (185 Building Blocks where no variant on this PC holds more than 92).
+
 ### Reach Forge Printer, phase 3 part 4: a test map for turns and tilts, 2026-11-21
 
 MCC would not save the owner's calibration map, so the rotation test runs the other way round: the tool writes the pieces and the owner looks. Asked whether to, the owner: "Write it."
