@@ -124,6 +124,15 @@ def save_humans(players):
         pass
 
 
+_T0 = time.time()      # (custom, Nov 21) this process's start, for stamp()
+
+
+def stamp():
+    """(custom, Nov 21: the owner, the bots "stand still" at the start) The clock and the seconds since play.py began,
+    on its start-up lines: with tools/live_bots.py's startup marks, where a match's first seconds go."""
+    return f"[{time.strftime('%H:%M:%S')}.{int(time.time() * 10) % 10} +{time.time() - _T0:.1f}s]"
+
+
 def add_bot(m, machine, team, name, game):
     """botctl.add_bot with this install's look, clan and emblem for the name, waited through a paused game (botcore
     takes commands on the game's thread: none in the pause menu). Prints the outcome; True when the game made it. A
@@ -137,7 +146,7 @@ def add_bot(m, machine, team, name, game):
             r = botctl.status(m)
     res = r.get("result", -1)
     ok = not r.get("timeout") and not r.get("fault") and (res & 0xFFFFFFFF != 0xFFFFFFFF and res > -100 or res < -100)
-    print(f"bot {name} on team {team}:", "ok" if ok else r, flush=True)
+    print(f"bot {name} on team {team}:", "ok" if ok else r, stamp(), flush=True)
     return ok
 
 
@@ -190,7 +199,7 @@ def main():
                 break
             time.sleep(1)
         o.game = GAME_ID.get(g) or next((k for dll, k in GAME_DLL if module_loaded(dll)), "ce")
-    print("game", o.game)
+    print("game", o.game, stamp())
     h2 = o.game in ("h2", "h3", "reach", "odst", "h2a", "h4")   # the Halo 2 code path (H3, Reach are its successors; differences via the Live class)
     h3 = o.game == "h3"
     LiveCls = (lambda: LiveH4F(H4F_DLL[o.game])) if o.game in H4F_DLL else LiveODST if o.game == "odst" else LiveReach if o.game == "reach" else LiveH3 if h3 else LiveH2 if h2 else Live
@@ -221,7 +230,7 @@ def main():
     if not escort and not have_map and not o.lidar:     # LiDAR maps blind too
         sys.exit(f"bots do not know the map '{map_name}' yet (supported: "
                  f"{', '.join(d for d in os.listdir(os.path.join(ROOT, 'maps')) if os.path.isdir(os.path.join(ROOT, 'maps', d)))})")
-    print("map", map_name)
+    print("map", map_name, stamp())
     m = botctl.shm()
     if botctl.status(m)["magic"] != hex(HB_MAGIC):
         dll = max(glob.glob(os.path.join(ROOT, "native", "bin", "botcore*.dll")), key=os.path.getmtime)
@@ -250,7 +259,7 @@ def main():
                 break
             time.sleep(0.5)
             v = live.variant()
-        print("variant", v)
+        print("variant", v, stamp())
         teams = o.teams or (v["teams"] if v["teams"] is not None else not o.ffa)
     else:
         teams = struct.unpack("<I", live.g.read(live.g.base + VARIANT + 0x34, 4))[0] != 0
@@ -327,6 +336,7 @@ def main():
                         "--game", o.game, "--tier", tier])
         return
     # (Scaling difficulty reads each match's trace back with its post-game report, brain/scaling.py: always kept then)
+    print("bots added, starting the brain", stamp(), flush=True)
     scaled = "scaling" in o.tier.split(",") + [b["tier"] for b in roster or []]   # (a bot on Scaling: either team)
     trace = match_trace(map_name, after=recording.since()) if (os.path.exists(os.path.join(ROOT, "logs", "trace_on")) or scaled) else None
     subprocess.run([sys.executable, "-u", "-I", os.path.join(HERE, "live_bots.py"), str(o.minutes * 60),

@@ -611,13 +611,204 @@ def terrain(m, live_blocks=None):
     reviewed and approved. live_blocks: solid objects read from the running game (brain/forge.py: a map variant's
     Forge pieces); given, the terrain is built again with them (kept in m, for growing). A map variant's terrain
     covers its window only (brain/variants.py), grown by grow and swap; m["shields"] (brain/forge.py shields) go
-    onto every build."""
+    onto every build. (custom, Nov 21) The first build of a map comes from the terrain cache when its exact inputs were
+    built before (cache_key, prebuild_after_match), else it is built and filed there."""
     if live_blocks is not None:
         _TERRAIN.pop(m["name"], None)
         m["live_blocks"] = live_blocks
     if m["name"] not in _TERRAIN:
-        _TERRAIN[m["name"]] = _build(m, m.get("window"))
+        T = None
+        if live_blocks is None:
+            try:
+                _PRE[m["name"]] = _pickle_m(m)     # (this match's inputs, for the build after it: prebuild_after_match)
+                T = _cache_load(m, cache_key(m))
+                print(f"terrain: {'from the cache' if T is not None else 'building (not cached)'}", flush=True)
+            except Exception as e:                   # (no cache: built as ever)
+                print(f"terrain cache not read: {type(e).__name__}: {e}", flush=True)
+                T = None
+        if T is None:
+            # (not filed here: the match changes its data, the people's walk, so the next match's terrain is built after
+            # it, prebuild_after_match; filing it now pickled 640 MB in the match for a key the next match never asks)
+            T = _build(m, m.get("window"))
+        _TERRAIN[m["name"]] = T
     return _TERRAIN[m["name"]]
+
+
+# (custom, Nov 21, the owner: the bots "stand still" at the start of a match) Building a map's terrain took 7.3 s on
+# Asylum (reach_forge_halo/variants/v8e4a8930), every match, while the bots stood at their spawns: the brain's first tick
+# came 10-17 s into each match. The terrain cache keeps the built terrain (and what _build sets on the map) in
+# logs/terrain_cache, filed under a hash of everything it is built from: the map code (CACHE_CODE), every file in the
+# map's data folders but those it never reads (CACHE_SKIP: written each match, read by others), the piece shapes, and
+# the loaded map itself (its variant's first / last seen left out). The same inputs load it back in under a second; any
+# change builds it again. Each match's data changes as it is played (the people's LiDAR walk, what bots learned), so
+# after a match the next match's terrain is built from the saved data in the background (prebuild_after_match,
+# tools/terrain_prebuild.py) while the person is in the post-game. CACHE_KEEP files are kept, the newest
+CACHE_DIR = os.path.join(os.path.dirname(ROOT), "logs", "terrain_cache")
+CACHE_KEEP = 6
+CACHE_VERSION = b"terrain-cache 1"
+CACHE_SKIP = frozenset(("stations.json", "lore.json", "oob.json", "owner_profile.json", "topdown.png", "lidar_sim.json",
+                        "variant.json"))     # (variant.json: in the loaded map, m["variant"], its times left out)
+CACHE_CODE = ("brain/terrain.py", "brain/maps.py", "brain/forge.py", "brain/placed.py", "brain/variants.py",
+              "brain/callouts.py", "brain/core.py", "tools/lidar_rides.py", "tools/jumpphys.py")
+CACHE_M_STATE = ("live_blocks", "shields", "points", "lanes", "holds")   # what _build sets on the map
+_PRE = {}                                    # map name -> its pickled inputs at its first build (prebuild_after_match)
+
+
+def _canon(x):
+    """x as plain JSON data, the same in every process (sets sorted, objects by their fields, arrays by a hash)."""
+    import hashlib
+    if isinstance(x, dict):
+        return {str(k): _canon(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_canon(v) for v in x]
+    if isinstance(x, (set, frozenset)):
+        import json
+        return sorted((_canon(v) for v in x), key=lambda v: json.dumps(v, sort_keys=True))
+    if isinstance(x, (str, int, float, bool)) or x is None:
+        return x
+    if hasattr(x, "tobytes") and hasattr(x, "shape"):              # a numpy array
+        return ["array", list(x.shape), str(x.dtype), hashlib.blake2b(x.tobytes(), digest_size=16).hexdigest()]
+    if hasattr(x, "__dict__"):
+        return [type(x).__name__, _canon(vars(x))]
+    if hasattr(x, "__slots__"):
+        return [type(x).__name__, [_canon(getattr(x, k, None)) for k in x.__slots__]]
+    return repr(x)
+
+
+def _map_inputs(m):
+    """The loaded map as the cache key sees it: every field, its variant's first / last seen left out."""
+    out = {k: v for k, v in m.items() if k not in ("grow",)}
+    if isinstance(out.get("variant"), dict):
+        out["variant"] = {k: v for k, v in out["variant"].items() if k not in ("first_seen", "last_seen")}
+    return out
+
+
+def cache_key(m):
+    """(custom, Nov 21) The hash of everything m's terrain is built from (see CACHE_DIR), before its build."""
+    import hashlib
+    import json
+    h = hashlib.blake2b(CACHE_VERSION, digest_size=20)
+    top = os.path.dirname(ROOT)
+    for rel in CACHE_CODE:
+        p = os.path.join(top, *rel.split("/"))
+        h.update(rel.encode())
+        h.update(_read(p) if os.path.exists(p) else b"-")
+    shapes = os.path.join(ROOT, "_shapes")
+    if os.path.isdir(shapes):
+        for fn in sorted(os.listdir(shapes)):
+            st = os.stat(os.path.join(shapes, fn))
+            h.update(f"{fn}:{st.st_size}:{st.st_mtime_ns}".encode())
+    seen = set()
+    for nm in data_names(m):
+        d = os.path.join(ROOT, nm)
+        for fn in sorted(os.listdir(d)) if os.path.isdir(d) else ():
+            p = os.path.join(d, fn)
+            if fn in CACHE_SKIP or fn.endswith(".tmp") or not os.path.isfile(p):
+                continue
+            seen.add(os.path.normcase(os.path.abspath(p)))
+            h.update(f"{nm}/{fn}".encode())
+            h.update(_read(p))
+    hm = m.get("heightmap")
+    if hm and os.path.normcase(os.path.abspath(hm)) not in seen and os.path.exists(hm):
+        h.update(_read(hm))
+    h.update(json.dumps(_canon(_map_inputs(m)), sort_keys=True).encode())
+    return h.hexdigest()
+
+
+def _read(p):
+    with open(p, "rb") as f:
+        return f.read()
+
+
+def _cache_file(name, key):
+    return os.path.join(CACHE_DIR, name.replace("/", "~").replace("\\", "~") + "." + key + ".pkl.z")
+
+
+def _pickle_m(m):
+    import pickle
+    return pickle.dumps(_map_inputs(m), protocol=5)
+
+
+def _m_state(m):
+    """What _build sets on the map (CACHE_M_STATE, items' reachable, zone centres), to put back on a cache load."""
+    return dict({k: m.get(k) for k in CACHE_M_STATE}, reachable=[it.get("reachable") for it in m["items"]],
+                zones=[z.center for z in m["zones"].zones])
+
+
+def _cache_load(m, key):
+    """The cached terrain for key, its build's settings put on m; None when there is none (or it does not fit m)."""
+    import pickle
+    import zlib
+    p = _cache_file(m["name"], key)
+    if not os.path.exists(p):
+        return None
+    T, state = pickle.loads(zlib.decompress(_read(p)))
+    if len(state["reachable"]) != len(m["items"]) or len(state["zones"]) != len(m["zones"].zones):
+        return None
+    for k in CACHE_M_STATE:
+        if state.get(k) is not None or k in m:
+            m[k] = state[k]
+    for it, r in zip(m["items"], state["reachable"]):
+        if r is not None:
+            it["reachable"] = r
+    for z, c in zip(m["zones"].zones, state["zones"]):
+        z.center = c
+    os.utime(p)                              # (recently used: kept, CACHE_KEEP)
+    return T
+
+
+def _cache_save(m, key, T, wait=True):
+    """File T (built from m's inputs, key) and m's build settings: pickled now, compressed and written in the background
+    unless wait. The map's older files and all but the newest CACHE_KEEP go."""
+    import pickle
+    import zlib
+    blob = pickle.dumps((T, _m_state(m)), protocol=5)
+
+    def write():
+        try:
+            os.makedirs(CACHE_DIR, exist_ok=True)
+            p = _cache_file(m["name"], key)
+            tmp = p + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(zlib.compress(blob, 3))
+            os.replace(tmp, p)
+            prefix = os.path.basename(_cache_file(m["name"], "")).rsplit(".pkl.z", 1)[0]
+            files = [os.path.join(CACHE_DIR, f) for f in os.listdir(CACHE_DIR) if f.endswith(".pkl.z")]
+            for f in files:
+                if os.path.basename(f).startswith(prefix) and os.path.abspath(f) != os.path.abspath(p):
+                    os.remove(f)
+            files = sorted((f for f in files if os.path.exists(f)), key=os.path.getmtime, reverse=True)
+            for f in files[CACHE_KEEP:]:
+                os.remove(f)
+        except Exception as e:
+            print(f"terrain cache not written: {type(e).__name__}: {e}", flush=True)
+    if wait:
+        write()
+    else:
+        import threading
+        threading.Thread(target=write, daemon=True).start()
+
+
+def prebuild_after_match(m):
+    """(custom, Nov 21) After a match, its data saved: build the next match's terrain for this map from it in the
+    background (tools/terrain_prebuild.py), from the inputs it was built from at this match's start (_PRE: its game
+    mode's teleporters, its items) with its window as it is now. Returns the process, or None (no first build here)."""
+    import pickle
+    import subprocess
+    import sys
+    pre = _PRE.get(m["name"])
+    if pre is None:
+        return None
+    m0 = pickle.loads(pre)
+    m0["window"] = m.get("window")
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    p = os.path.join(CACHE_DIR, "next_" + m["name"].replace("/", "~") + ".pkl")
+    with open(p + ".tmp", "wb") as f:
+        pickle.dump(m0, f, protocol=5)
+    os.replace(p + ".tmp", p)
+    tool = os.path.join(os.path.dirname(ROOT), "tools", "terrain_prebuild.py")
+    return subprocess.Popen([sys.executable, "-I", tool, p], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
 def data_names(m):

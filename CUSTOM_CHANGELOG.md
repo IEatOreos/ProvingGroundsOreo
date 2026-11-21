@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### The bots' terrain from a cache at match start; start-up times in the brain's log, 2026-11-21
+
+The owner: "We have to figure out why the bots dont play the game right from the start. It happened on my last asylum game. It happens quite a bit still", then "They stand still"; then "Yes, add both".
+
+- **Found:**
+  - The brain gave its first command 10-17 s into every match: the first recorded row showed 703-710 s of a 720 s match left in all nine recent recordings. Today's Asylum match (`reach_forge_halo/variants/v8e4a8930`, 13:55) lost 14.6 s; until then the bots stood at their spawns.
+  - `botcore` starts `tools/play.py` once the match ticks. It polls for the game, map and variant, adds the bots one by one, then starts `tools/live_bots.py`. That process identifies the layout and builds its terrain, **7.3 s on Asylum, every match**, before its first tick. The rest of the time is not measured yet.
+  - The build is `Terrain.__init__` (nav graph 4.9 s, the layout's 223 pieces 3.1 s).
+- `brain/maps.py`: the terrain cache (`CACHE_DIR` logs/terrain_cache, `cache_key`, `_cache_load`, `_cache_save`, `prebuild_after_match`).
+  - **Key:** a hash of the map code (`CACHE_CODE`), every file in the map's data folders except those the build never reads that change each match (`CACHE_SKIP`), the piece shapes, and the loaded map, with its variant's first and last seen left out.
+  - **Hit:** loads the terrain and what `_build` sets on the map (blocks, shields, snapped points, lanes, holds, zone centres, items' reachability). On Asylum that is 0.77 s instead of 7.5 s, with the same nav answers.
+  - **Building it:** a match changes its own data (the people's LiDAR walk, what bots learned), so after a match, its data saved, `live_bots` starts `tools/terrain_prebuild.py`. It builds the next match's terrain from this match's starting inputs and current window, in the background (about 9 s, during the post-game).
+  - The next match on the same layout and game type starts from it; anything else changed builds as before. `CACHE_KEEP` 6 files are kept (about 72 MB each on Asylum), newest first. Nothing is filed at a match's start: that pickled 640 MB mid-match for a key the next match never asks for.
+- Start-up times:
+  - `tools/play.py` stamps its lines (game, map, variant, each bot added, "starting the brain") with the clock and seconds since it began.
+  - `tools/live_bots.py` adds `startup` marks: brain started, game attached, variant identified, terrain ready (with "from the cache" or "building"), first tick.
+  - The next match's `logs/brain.txt` shows where the rest of the start goes.
+- Validation:
+  - `tools/test_terrain_cache.py` (new, 4): the key follows the build's inputs, not each match's other files; the round trip puts the map settings back, and another key or a map that does not fit loads nothing; one file per map and the newest kept; after a match, the next build gets this match's inputs with the grown window.
+  - Live data: the key is the same in two processes (0.05 s); the match-start copy keys the same; the background build found it cached.
+  - `live_bots`, `play` and `terrain_prebuild` import. The full suite runs 1184 tests: 1183 pass, and `test_forge_printer_fit` fails on another session's uncommitted Forge Printer work.
+  - **Untested in a match.** The first Asylum match after this still builds (this change is in the key); the one after should start from the cache.
+
 ### Reach Forge Printer: ramps tied to the floors they join, floor blocks flush, 2026-11-21
 
 The owner, on the third Guardian print's screenshots: "Two of those screenshots showed the floor not sitting flush on another object? and one of the ra[m]ps didnt connect to the the other floor?" He was right; the entry below, which reads those pictures as fine apart from the fixed step, was wrong about that.

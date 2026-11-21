@@ -808,6 +808,18 @@ def decoded_buttons(game):
     return out
 
 
+_STARTUP = [time.time(), True]   # (custom, Nov 21) the process start; still starting up (startup_mark)
+
+
+def startup_mark(what):
+    """(custom, Nov 21: the owner, the bots "stand still" at the start) A start-up step into the brain's log with the
+    clock time and the seconds since this process began: with tools/play.py's own marks, where a match's first seconds
+    go before the first tick."""
+    if _STARTUP[1]:
+        print(f"startup {time.strftime('%H:%M:%S')}.{int(time.time() * 10) % 10} +{time.time() - _STARTUP[0]:.1f}s: "
+              f"{what}", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("seconds", type=float, nargs="?", default=60)
@@ -830,6 +842,7 @@ def main():
     ap.add_argument("--aim-loose", choices=("on", "off"), help="test: the looser trigger below Legendary on or off "
                     "for this match (brain/profiles.py LOOSE_AIM, the default)")
     o = ap.parse_args()
+    startup_mark("brain started")
     # Scaling difficulty (brain/scaling.py): one skill rating with no limit, set from the person's last Scaling games'
     # K/D; every bot on Scaling (its row on the BOTS list, else --tier) is made from it, both teams
     SCALE, SCALE_CFG = None, scaling.settings()
@@ -855,6 +868,7 @@ def main():
     live, m = ({"h2": LiveH2, "h3": LiveH3, "reach": LiveReach, "odst": LiveODST, "h2a": lambda: LiveH4F("groundhog.dll"),
       "h4": LiveH4F}.get(o.game, Live))(), botctl.shm()
     FIREFIGHT = hasattr(live, "firefight") and live.firefight()
+    startup_mark("game attached")
     T = None
     # Halo 4 / H2A: on their Forge canvases only (exported bare: tools/reach_export.py --h4 / --h2a); a built-in map's
     # game-type crates are its own placements there (tools/placed_refresh.py), not a layout
@@ -888,7 +902,9 @@ def main():
                     print(f"  done in {variant_strategy.build(name):.0f} s", flush=True)
                 MAP = get_map(name)
                 mode_teleporters(MAP, o.game, live)
+                startup_mark(f"map variant {name} identified")
                 T = map_terrain(MAP)
+                startup_mark("terrain ready")
                 from brain import variants as _variants
                 if o.game == "reach" and not os.path.exists(os.path.join(_variants.ROOT, name, "mvar_objects.json")):
                     # no .mvar file: its items are the canvas's placements, not what it has (#11): what lies in it
@@ -905,6 +921,7 @@ def main():
     if T is None:
         mode_teleporters(MAP, o.game, live)
         T = map_terrain(MAP)
+        startup_mark("terrain ready")
     palette = Palette() if getattr(live, "LOADOUT", 0) else None   # Reach, Halo 4, H2A
     loadout_state = {}
     pressable = decoded_buttons(o.game)          # melee, grenades, equipment ... where decoded
@@ -1042,6 +1059,8 @@ def main():
     mode_watch, mode_check = [None], [-9.0]      # Territories, Assault, Stockpile, Headhunter, Infection (brain/modes.py)
     bug_check, grow_check = [-9.0, None], [-9.0]     # bug_check[1]: the last tick's mode once read (see below)
     import bug_reports
+    startup_mark("first tick")
+    _STARTUP[1] = False
     try:
         while time.time() - t0 < o.seconds:
             try:
@@ -1492,6 +1511,12 @@ def main():
                 print("out of bounds:", oob.save(), flush=True)
         except Exception as e:
             print("out of bounds not saved:", e, flush=True)
+        try:                                     # (custom, Nov 21) the next match's terrain, from what was just saved,
+            from brain.maps import prebuild_after_match   # built in the background (brain/maps.py terrain cache)
+            if prebuild_after_match(MAP) is not None:
+                print("terrain for the next match: building in the background", flush=True)
+        except Exception as e:
+            print("terrain prebuild not started:", e, flush=True)
         if trace is not None:
             try:                                         # the whole match into its bug reports
                 trace.close()                            # (a trim under way finished first)
