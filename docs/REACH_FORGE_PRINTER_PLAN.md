@@ -1023,3 +1023,49 @@ still 1.0), a run starting at a hanging block's edge, `_onto_slope` itself.
 of 130 and the tilt test's 260). Floors the owner saw as good in the fifth
 print have moved: any floor that was levelled with a neighbour more than 0.1
 away now sits at its own height.
+
+### Phase 3, part 11: the tilt test read (2026-11-21, written by Fable 5.2)
+
+The owner loaded the sixth print and sent one screenshot: the tilt test from
+straight above, HUD **$26,650 as predicted**. No picture of Guardian itself
+from this print yet, and no side-on picture of the test.
+
+**How it was read.** Not by eye this time. The three upright pillars (known
+size and place) give 17 points; a pinhole camera fitted to them lands within
+1 pixel rms (camera 16.3 above the pillars' feet, 6 degrees off straight
+down, turned 1.7 degrees). With that camera:
+
+- each antenna's direction is solved from where its tip is seen (its foot is
+  where it was written, its length 3.5 from the model);
+- each ramp's six corners were projected for every way its own x could point
+  and compared with the picture; one way fits each, to a few pixels.
+
+**Settled (details and the table of measurements in `reach_mvar_format.md`
+4.2 and 4.3):**
+
+- A point on a cube face is the direction (1, u, v): a step leans the up
+  vector by atan(steps / 208). Half way across reads 25, 29 and 28 degrees on
+  three antennas (26.6 expected), the edge 47 (45 expected). The earlier
+  "9 and 14 degrees for 90 steps", read by eye, is withdrawn.
+- On face +X, u runs along +y and v along +z (on +Z: +x and +y, as before).
+- What a turn means when up is tilted: counter-clockwise about up from a
+  reference direction, `Y x up` when up leans no more along y than along x,
+  else `up x X`. All three ramps fit it, and so do the turn test's two
+  leaning antennas, re-read from its old top-down picture (the one leaning
+  north has its box to the south: its +x points north, not east).
+
+**In code:** `mvar.up_vector`, `mvar.up_raw` (any direction within 45 degrees
+of +X or +Z, which covers every slope a ramp can have), `mvar.reference_axes`,
+`mvar.axes(up, turn)`, `mvar.turn_for(up, forward)`. Tests hold each thing
+seen in the game, and that `turn_for` lays a piece's +x straight up a slope of
+any heading with its +y level.
+
+**Not settled:** the step size to better than about 2 degrees (2 degrees over
+a 4-unit ramp is 0.14 of height); u and v on the other four faces; the turn's
+reference for an up vector leaning in x and y at once, which is every ramp
+that is not square to the map. A tilted piece laid between two known heights
+would settle the first and third in one picture.
+
+**What this opens:** a slope can be one flat piece (or a ramp piece) tilted
+to the slope's own angle, instead of a mix of 14, 27 and 45 degree pieces
+that is a little long or a little steep. Not built yet.

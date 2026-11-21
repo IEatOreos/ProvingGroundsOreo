@@ -114,6 +114,85 @@ def split_up(raw):
     return face, u / half - 1.0, v / half - 1.0
 
 
+# Which world axis (0 x, 1 y, 2 z) a cube face's own direction, its u and its v run along. Measured in the
+# game (2026-11-21, antennas written half way and all the way across a face) for +X and +Z only.
+UP_FACE_AXES = {0: (0, 1, 2), 2: (2, 0, 1)}
+
+
+def _unit(v):
+    size = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+    return (v[0] / size, v[1] / size, v[2] / size)
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def up_vector(raw):
+    """The unit vector a raw up value stands for: where the piece's own +z points.
+
+    A point (u, v) on a cube face, each -1..1, is the direction (1, u, v) with the 1 on the face's
+    own axis. Faces +X and +Z are measured; on the other four only the middle is known."""
+    face, u, v = split_up(raw)
+    vector = [0.0, 0.0, 0.0]
+    if face in UP_FACE_AXES:
+        own, along_u, along_v = UP_FACE_AXES[face]
+        vector[own], vector[along_u], vector[along_v] = 1.0, u, v
+    elif u == 0.0 and v == 0.0:
+        vector[face % 3] = 1.0 if face < 3 else -1.0
+    else:
+        raise ValueError("which way u and v run on cube face %d is not worked out" % face)
+    return _unit(vector)
+
+
+def up_raw(vector):
+    """The raw up value nearest a direction. Any direction that leans at most 45 degrees from +X or
+    +Z (so every slope a ramp could have), and the six axes themselves."""
+    vector = _unit(vector)
+    middle = (UP_GRID - 1) // 2
+    for axis in range(3):
+        if abs(abs(vector[axis]) - 1.0) < 1e-9:
+            return join_up(axis if vector[axis] > 0 else axis + 3)
+    for face, (own, along_u, along_v) in UP_FACE_AXES.items():
+        if vector[own] > 0 and abs(vector[along_u]) <= vector[own] + 1e-9 and abs(vector[along_v]) <= vector[own] + 1e-9:
+            u = int(round(middle + middle * vector[along_u] / vector[own]))
+            v = int(round(middle + middle * vector[along_v] / vector[own]))
+            return join_up(face, max(0, min(UP_GRID - 1, u)), max(0, min(UP_GRID - 1, v)))
+    raise ValueError("an up vector leaning from %s is not worked out" % (
+        "+Y" if vector[1] > 0 and abs(vector[1]) >= max(abs(vector[0]), abs(vector[2])) else "a downward or -X/-Y direction"))
+
+
+def reference_axes(up):
+    """Where a piece's own +x and +y point at turn 0 for a given up vector: (forward, left).
+
+    Seen in the game: up +Z gives +x east and +y north; up +X gives +x down and +y north; up +Y
+    gives +x down and +y west; and an antenna leaning north from +Z has its +x to the north, one
+    leaning east has it to the east. All five fit: forward is Y cross up when up leans no more
+    along y than along x, else up cross X; left is up cross forward."""
+    up = _unit(up)
+    if abs(up[0]) >= abs(up[1]):
+        forward = _unit(_cross((0.0, 1.0, 0.0), up))
+    else:
+        forward = _unit(_cross(up, (1.0, 0.0, 0.0)))
+    return forward, _cross(up, forward)
+
+
+def axes(up, turn):
+    """A piece's own x, y and z axes in the world for an up vector and a turn in radians. The turn
+    is counter-clockwise about up, starting from reference_axes(up)."""
+    up = _unit(up)
+    forward, left = reference_axes(up)
+    c, s = math.cos(turn), math.sin(turn)
+    x_axis = tuple(forward[i] * c + left[i] * s for i in range(3))
+    return x_axis, _cross(up, x_axis), up
+
+
+def turn_for(up, forward):
+    """The turn in radians that points a piece's own +x along `forward` (taken square to up)."""
+    reference, left = reference_axes(up)
+    return math.atan2(sum(forward[i] * left[i] for i in range(3)), sum(forward[i] * reference[i] for i in range(3)))
+
+
 # ---- the pieces of a variant ------------------------------------------------
 
 @dataclass

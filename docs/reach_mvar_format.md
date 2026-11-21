@@ -224,7 +224,25 @@ world units.
 is 0°, 4096 is -90°, 12288 is +90°. With the world's up, the angle is where
 the piece's own +x points, counter-clockwise from world +x seen from above:
 seen in the game (2026-11-21) on three ramps written at 0°, +90° and +45°.
-What 0° faces when the up vector is tilted is not confirmed.
+
+With any other up vector the turn is still counter-clockwise about up, and it
+starts from a reference direction that depends on up (`mvar.reference_axes`,
+`mvar.axes`, `mvar.turn_for`):
+
+```
+forward0 = Y x up   if |up.x| >= |up.y|,   else   up x X       (normalised)
+left0    = up x forward0
+piece +x = forward0 * cos(turn) + left0 * sin(turn)
+piece +y = up x (piece +x)
+```
+
+Seen in the game (2026-11-21): up +X turn 0 has the piece's +x pointing down
+and +y north; up +X turn +90 has +x north and +y up; up +Y turn 0 has +x down
+and +y west (three ramps, each matched corner for corner against a fitted
+camera); an antenna leaning east from +Z keeps its +x east, one leaning north
+has it north (read from where the antenna's box sits, once, less sure). The
+rule fits all of these and upright. It has not been seen for an up vector
+leaning in both x and y at once.
 
 ### 4.3 Up vector
 
@@ -233,12 +251,36 @@ What 0° faces when the up vector is tilted is not confirmed.
 vectors sit at the face centres. The up vector is where the piece's own +z
 points. The faces are +X, +Y, +Z, -X, -Y, -Z in that order: faces 0, 1, 2
 and 5 were seen in the game (2026-11-21, antennas written with each), 3 and 4
-follow the pattern and fit a variant whose flat-lying walls use them. On face
-2, more u leans the vector towards +x and more v towards +y (seen in the
-game). How far a step leans it is not settled: 90 steps off the middle were
-measured at about 9° and 14° on two screenshots, where reading the grid as
-x/z from -1 to 1 across the face gives 23°. Only the face middles are safe to
-write for now. u and v on the other faces are not worked out.
+follow the pattern and fit a variant whose flat-lying walls use them.
+
+A point on a face is the direction `(1, u', v')`, the 1 along the face's own
+axis and `u' = u / 208 - 1`, `v' = v / 208 - 1` along two others, then
+normalised (`mvar.up_vector`, `mvar.up_raw`). So a step leans the vector by
+`atan(steps / 208)`: about a quarter of a degree near the middle, 45° at the
+edge.
+
+| face | own axis | u runs along | v runs along |
+|------|----------|--------------|--------------|
+| 0    | +X       | +y           | +z           |
+| 2    | +Z       | +x           | +y           |
+| 1, 3, 4, 5 | +Y, -X, -Y, -Z | not worked out | not worked out |
+
+Measured in the game (2026-11-21) from one top-down screenshot of four
+antennas, the camera fitted to three upright pillars (17 points, 1 pixel
+rms), each antenna's direction solved from where its tip is seen:
+
+| written | reading above gives | measured |
+|---------|---------------------|----------|
+| face 2, u +208 (the edge) | 45.0° from +Z towards +x | 47° (43 to 56) |
+| face 2, u +104 | 26.6° from +Z towards +x | 25° |
+| face 0, u +104 | 26.6° from +X towards +y | 29° |
+| face 0, v +104 | 26.6° from +X towards +z | 28° |
+
+The three half-way readings are good to a degree or two each and straddle
+26.6°; an even 45°/208 per step would give 22.5° and does not fit. An earlier
+reading by eye of 9° and 14° for 90 steps, from screenshots with no camera
+fit, is withdrawn. Not yet tested to better than about 2°: a tilted piece
+laid against known heights would show it.
 
 ### 4.4 Boundary sizes
 
@@ -277,8 +319,9 @@ not known: a file with a deliberately wrong hash has not been tried.
   the field at all.
 - The 128-bit block version 32 adds; the 32-bit field that is always
   0xFFFFFFFF; the two flags; the 10-bit field in each object; the 2-bit flags.
-- On the up vector: the size of a step, u and v off face 2, and what the turn
-  means once up is tilted (4.2, 4.3).
+- On the up vector: u and v on faces 1, 3, 4 and 5; the size of a step to
+  better than about 2°; the turn's starting direction for an up vector that
+  leans in x and y at once (4.2, 4.3).
 - Budget: the game shows its own total, not the stored one (a file saying 240
   spent showed 440). Whether the stored figure matters anywhere is not known.
 - Names of the multiplayer object kinds other than weapon and teleporter, and

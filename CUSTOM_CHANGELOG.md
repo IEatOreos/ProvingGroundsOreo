@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Reach Forge Printer: the tilt test read; up vectors and turns for tilted pieces, 2026-11-21
+
+The owner loaded the sixth Guardian print (HUD $26,650, as predicted) and sent the tilt test from straight above.
+
+- **Read with a fitted camera, not by eye:** the three upright pillars give 17 known points; a pinhole camera fits them to 1 pixel rms. Each antenna's direction was solved from where its tip is seen, and each ramp's corners were projected for every way it could lie and compared with the picture.
+- **Settled:**
+  - a point on a cube face is the direction (1, u, v), so a step leans the up vector by atan(steps / 208): half way across a face measured 25, 29 and 28 degrees (26.6 expected), the edge 47 (45 expected). The earlier "9 and 14 degrees for 90 steps", read by eye, is withdrawn;
+  - on face +X, u runs along +y and v along +z;
+  - a turn with a tilted up is counter-clockwise about up from `Y x up` (when up leans no more along y than x) or `up x X`. Three ramps and two leaning antennas fit.
+- `tools/forge_printer/mvar.py`: `up_vector`, `up_raw`, `reference_axes`, `axes`, `turn_for`. `docs/reach_mvar_format.md` 4.2 and 4.3 rewritten with the measurements; the plan has phase 3 part 11.
+- **Not settled:** the step size to better than about 2 degrees; u and v on faces +Y, -X, -Y, -Z; the turn's reference for an up vector leaning in x and y at once. Nothing is printed with a tilted piece yet.
+- **Validation:** four new tests in `tools/test_forge_printer.py` (32 in all) hold each thing seen in the game; full suite 1193 OK.
+- **Not seen:** Guardian itself in the sixth print (no picture yet), and the tilt test from the side.
+
 ### Reach Forge Printer: ramp tops clear of overhanging floor blocks; floor levels by real height, 2026-11-21
 
 The owner, asked whether to read the tilt test or fix the angled ramp tops next: "You pick". The tilt test needs two screenshots from him, so the ramp tops were done meanwhile.

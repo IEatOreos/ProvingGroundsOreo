@@ -16,6 +16,11 @@ from forge_printer import mvar
 from forge_printer.bitstream import BitReader, BitWriter
 
 
+def _unit(v):
+    size = math.sqrt(sum(c * c for c in v))
+    return tuple(c / size for c in v)
+
+
 def sample_variant(version=32, label_names=("ctf", "slayer", "ffa_only")):
     v = mvar.MapVariant()
     v.version = version
@@ -152,6 +157,64 @@ class ConversionTest(unittest.TestCase):
             self.assertEqual(got_face, face)
             self.assertAlmostEqual(u, 0.0)
             self.assertAlmostEqual(v, 0.0)
+
+    def near(self, got, want, places=3):
+        for g, w in zip(got, want):
+            self.assertAlmostEqual(g, w, places=places)
+
+    def test_up_vectors_as_seen_in_the_game(self):
+        # the six face middles
+        for face, want in enumerate(((1, 0, 0), (0, 1, 0), (0, 0, 1), (-1, 0, 0), (0, -1, 0), (0, 0, -1))):
+            self.near(mvar.up_vector(mvar.join_up(face)), want)
+            self.assertEqual(mvar.up_raw(want), mvar.join_up(face))
+        # the tilt test's four antennas (2026-11-21): half way across a face is a lean of atan(1/2), the edge 45
+        half = 1 / math.sqrt(5)
+        self.near(mvar.up_vector(mvar.join_up(2, 208 + 208, 208)), (math.sqrt(0.5), 0, math.sqrt(0.5)))   # measured 47
+        self.near(mvar.up_vector(mvar.join_up(2, 208 + 104, 208)), (half, 0, 2 * half))                 # measured 25
+        self.near(mvar.up_vector(mvar.join_up(0, 208 + 104, 208)), (2 * half, half, 0))                 # 29, to +y
+        self.near(mvar.up_vector(mvar.join_up(0, 208, 208 + 104)), (2 * half, 0, half))                 # 28, to +z
+        self.near(mvar.up_vector(mvar.join_up(2, 208, 208 + 90)), _unit((0, 90 / 208.0, 1)))             # +v leans to +y
+        with self.assertRaises(ValueError):
+            mvar.up_vector(mvar.join_up(1, 300, 208))            # u and v on +Y are not worked out
+        with self.assertRaises(ValueError):
+            mvar.up_raw((0.1, 0.9, 0.2))
+
+    def test_up_raw_is_the_nearest_grid_point(self):
+        for degrees, heading in ((5, 0), (13.9, 90), (26.6, 200), (44, 315), (30, 37)):
+            lean, around = math.radians(degrees), math.radians(heading)
+            want = (math.sin(lean) * math.cos(around), math.sin(lean) * math.sin(around), math.cos(lean))
+            got = mvar.up_vector(mvar.up_raw(want))
+            off = math.degrees(math.acos(min(1.0, sum(g * w for g, w in zip(got, want)))))
+            self.assertLess(off, 0.25, (degrees, heading))       # a grid step is about a quarter of a degree
+            self.assertEqual(mvar.split_up(mvar.up_raw(want))[0], 2)
+
+    def test_a_pieces_axes_as_seen_in_the_game(self):
+        quarter = math.pi / 2
+        # upright: turn 0 has the piece's +x to the east, turn +90 to the north
+        self.near(mvar.axes((0, 0, 1), 0.0)[0], (1, 0, 0))
+        self.near(mvar.axes((0, 0, 1), quarter)[0], (0, 1, 0))
+        self.near(mvar.axes((0, 0, 1), 0.0)[1], (0, 1, 0))
+        # the tilt test's three ramps: up +X turn 0, up +X turn +90, up +Y turn 0
+        x, y, z = mvar.axes((1, 0, 0), 0.0)
+        self.near(x, (0, 0, -1)); self.near(y, (0, 1, 0)); self.near(z, (1, 0, 0))
+        x, y, z = mvar.axes((1, 0, 0), quarter)
+        self.near(x, (0, 1, 0)); self.near(y, (0, 0, 1))
+        x, y, z = mvar.axes((0, 1, 0), 0.0)
+        self.near(x, (0, 0, -1)); self.near(y, (-1, 0, 0)); self.near(z, (0, 1, 0))
+        # the turn test's leaning antennas: leaning east the +x stays east, leaning north it is to the north
+        self.assertGreater(mvar.axes(mvar.up_vector(mvar.join_up(2, 208 + 90, 208)), 0.0)[0][0], 0.9)
+        self.assertGreater(mvar.axes(mvar.up_vector(mvar.join_up(2, 208, 208 + 90)), 0.0)[0][1], 0.9)
+
+    def test_turn_for_points_a_piece_up_a_slope(self):
+        for degrees, heading in ((13.9, 0), (13.9, 90), (20, 113), (26.6, 225), (35, 300), (10, 44)):
+            lean, around = math.radians(degrees), math.radians(heading)
+            uphill = (math.cos(around), math.sin(around))
+            up = (-math.sin(lean) * uphill[0], -math.sin(lean) * uphill[1], math.cos(lean))      # the slope's normal
+            along = (math.cos(lean) * uphill[0], math.cos(lean) * uphill[1], math.sin(lean))     # up the slope
+            x, y, z = mvar.axes(up, mvar.turn_for(up, along))
+            self.near(x, along)
+            self.near(z, up)
+            self.near(y, (-uphill[1], uphill[0], 0.0))           # across the slope, level
 
 
 class VariantStreamTest(unittest.TestCase):
