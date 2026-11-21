@@ -107,7 +107,8 @@ Do not start Phase 2 on Fable.
         surfaces sorted (`forge_printer surfaces`)
   - [x] palette row/item → piece (from ten variants already on the PC; the
         calibration map was not needed for it)
-  - [ ] rotation axes and turn direction (calibration map, or a printed test)
+  - [ ] rotation axes and turn direction — test file written
+        (`FP_Turn_Test.mvar`), waiting for the owner to load it
   - [x] piece sizes (`forge_printer pieces`, 108 pieces, table in the repository)
   - [ ] piece prices
   - [ ] piece fitting
@@ -442,3 +443,37 @@ loads it and says which way each ramp points. The second needs no saving but
 is the first time objects are added to a file, which is itself untested.
 
 **Prices** still have no source.
+
+### Phase 3, part 4: the turn test (2026-11-21, written by Fable 5.2)
+
+The owner chose the reverse test ("Write it."). `tools/forge_printer/turn_test.py`,
+run as `python\python.exe tools\forge_printer turntest FILE OUT --origin X Y Z`,
+adds eleven pieces to a copy of a Forge World variant. Built from the owner's
+own variant with origin (-31, -131.5, 5.21), on its Coliseum floor in front of
+its spawn points: `E:\Proving Grounds\re_tools\forge_printer\FP_Turn_Test.mvar`
+(local only), title "FP Turn Test", 30 objects, budget 240 (10 a piece, a
+guess). **Not loaded in the game yet; it is also the first file with objects
+added, which is itself untested.**
+
+What is in it (positions are certain, so directions are given by things in
+the map: the spawn points are on the +x side, the pillars on the +y side):
+
+| Piece | Where | Stored | If the guesses hold, the owner sees |
+|---|---|---|---|
+| A1 Ramp 1x2 | nearest the spawn, beside the pillars | turn 0, world up | it climbs towards the spawn (+x) |
+| A2 Ramp 1x2 | 5 further from the spawn | turn +90° | it climbs towards the pillars (+y) |
+| A3 Ramp 1x2 | 5 further again | turn +45° | halfway between those two |
+| B1 antenna | other row, floating, nearest the spawn | up = face 0 | its tip points at the spawn (+x) |
+| B2 antenna | next | up = face 1 | its tip points towards the pillars (+y) |
+| B3 antenna | next, higher | up = face 5 | its tip points straight down |
+| B4 antenna | next | face 2, 90 steps along u | upright, leaning about 23° one way |
+| B5 antenna | last | face 2, 90 steps along v | upright, leaning about 23° another way |
+| 3 pillars (Block 1x1 Tall) | 3.5 to the +y side of the ramps | | markers only |
+
+A ramp climbs towards its model's +x; an antenna's thin tip is its model's +z,
+which is what the file calls "up". Reading the answers: A1 and A2 give where a
+turn of 0 points and which way a positive turn goes; B1 to B3 give the sign of
+each face's axis; B4 and B5 give which of u and v is which world axis on face
+2 (and so, by the pattern, the others). The antenna is row 73 item 0 by the
+map file's order; if something else shows there, that is an answer too.
+Still open after this test: what the turn means once "up" is tilted.

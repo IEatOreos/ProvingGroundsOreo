@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reach Forge Printer, phase 3 part 4: a test map for turns and tilts, 2026-11-21
+
+MCC would not save the owner's calibration map, so the rotation test runs the other way round: the tool writes the pieces and the owner looks. Asked whether to, the owner: "Write it."
+
+- **New `tools/forge_printer/turn_test.py`, run as `python\python.exe tools\forge_printer turntest FILE OUT --origin X Y Z [--title TEXT]`:** adds eleven pieces to a copy of a Forge World variant (FILE is never changed, OUT never overwritten): three Ramp 1x2 turned 0, +90 and +45 degrees; five small antennas whose "up" is set to cube faces 0, 1 and 5 and to face 2 pushed along u and along v; three tall pillars as a marker for +y. Quotas are recounted and the budget raised by a guessed 10 a piece.
+- **`tools/forge_printer/mvar.py`:** `MapVariant.add_object` (first free slot) and `join_up` (a raw up vector from face, u, v).
+- **Made for the owner:** `FP_Turn_Test.mvar` from his own variant, on its floor in front of its spawn points; kept in `E:\Proving Grounds\re_tools\forge_printer`, not in the repository. `check` reads it back (30 objects, no problems).
+- **Validation:** `tools/test_forge_printer_turn_test.py` (new, 8 tests on a hand-built Forge World variant); full suite 1135 OK.
+- **Untested in game:** everything about this file. It is the first one with objects added (new quota counts, a guessed budget), so it may not load; if it loads, what the owner sees settles the turn direction and the up-vector axes. The plan lists what each piece should look like if the current guesses hold.
+
 ### Reach Forge Printer, phase 3 part 3: which palette row and item each piece is, 2026-11-21
 
 The owner on his calibration map, which MCC refused to save ("private storage is full"): "It probably wont let me save it." So what the map was for was looked for in files already on the PC.

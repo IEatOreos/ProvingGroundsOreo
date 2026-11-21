@@ -6,6 +6,7 @@
     python\\python.exe tools\\forge_printer reference MAP [--out FOLDER]
     python\\python.exe tools\\forge_printer surfaces FOLDER [--side 4] [--below 3] [--above 8]
     python\\python.exe tools\\forge_printer pieces [--measure] [--keep FOLDER]
+    python\\python.exe tools\\forge_printer turntest FILE OUT --origin X Y Z [--title TEXT]
 
 `check` reads each file, writes it back in memory and compares the bytes.
 `move` never touches FILE: it writes a changed copy to OUT.
@@ -128,6 +129,14 @@ def cmd_surfaces(args):
     return surfaces.main(args.folder, args.side, args.below, args.above)
 
 
+def cmd_turntest(args):
+    if __package__ in (None, ""):
+        from forge_printer import turn_test
+    else:
+        from . import turn_test
+    return turn_test.main(args.file, args.out, tuple(args.origin), args.title)
+
+
 def cmd_pieces(args):
     if __package__ in (None, ""):
         from forge_printer import pieces
@@ -170,6 +179,13 @@ def main(argv=None):
     p.add_argument("--measure", action="store_true", help="export each piece's model from MCC and rewrite the table")
     p.add_argument("--keep", help="where the exported models go (default: re_tools\\forge_printer\\pieces)")
     p.set_defaults(run=cmd_pieces)
+    p = sub.add_parser("turntest", help="write a copy of a Forge World variant with pieces that show how turns are stored")
+    p.add_argument("file")
+    p.add_argument("out")
+    p.add_argument("--origin", type=float, nargs=3, required=True, metavar=("X", "Y", "Z"),
+                   help="a point on a flat floor with room towards -x and -y")
+    p.add_argument("--title", default="FP Turn Test")
+    p.set_defaults(run=cmd_turntest)
     args = parser.parse_args(argv)
     return args.run(args)
 

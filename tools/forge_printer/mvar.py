@@ -99,6 +99,13 @@ def encode_dimension(value):
     return min(1 + int(math.floor(value * (top - 1) / DIMENSION_MAX)), top - 1)
 
 
+def join_up(face, u=(UP_GRID - 1) // 2, v=(UP_GRID - 1) // 2):
+    """A raw up vector from a cube face (0..5) and grid steps u, v (0..416; 208, 208 is the face's middle)."""
+    if not (0 <= face < 6 and 0 <= u < UP_GRID and 0 <= v < UP_GRID):
+        raise ValueError("no such up vector: face %r, u %r, v %r" % (face, u, v))
+    return face * UP_FACE_SPAN + u * UP_GRID + v
+
+
 def split_up(raw):
     """A raw up vector as (cube face 0..5, u, v), u and v running -1..1 across the face."""
     face, rest = divmod(raw, UP_FACE_SPAN)
@@ -237,6 +244,15 @@ class MapVariant:
     def placed_objects(self):
         """(slot, object) for each used slot."""
         return [(slot, obj) for slot, obj in enumerate(self.objects) if obj is not None]
+
+    def add_object(self, obj):
+        """Puts the object in the first free slot and returns the slot. Quotas are not touched:
+        call recount_quotas() when done adding."""
+        for slot, existing in enumerate(self.objects):
+            if existing is None:
+                self.objects[slot] = obj
+                return slot
+        raise ValueError("all %d object slots are used" % OBJECT_SLOTS)
 
     def recount_quotas(self):
         """Set each quota row's placed count from the objects (and lift its maximum to match)."""
