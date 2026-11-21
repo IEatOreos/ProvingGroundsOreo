@@ -312,6 +312,33 @@ class PushTests(unittest.TestCase):
         self.assertTrue(b.chase_ok(0.0, shooter(), None, 1))
 
 
+class LeadTests(unittest.TestCase):
+    """(Nov 21, the owner: "noble only misses when Im strafing at full speed") Noble leads a man by the snapshot's real
+    age when its action goes out (Bot.noble_lead_s), not the fixed DEMON_LEAD_S."""
+
+    def test_lead_is_the_reads_age_plus_a_game_tick(self):
+        import time as _t
+        from brain.core import Snapshot
+        snap = Snapshot(1.0, [])
+        self.assertIsNone(bot.Bot.noble_lead_s(snap))                 # (no read time: the simulator, tests)
+        snap.read_wall = _t.time() - 0.06
+        got = bot.Bot.noble_lead_s(snap)
+        self.assertGreaterEqual(got, 0.06 + bot.NOBLE_APPLY_S)
+        self.assertLess(got, 0.06 + bot.NOBLE_APPLY_S + 0.05)
+        snap.read_wall = _t.time() - 5.0                              # (a stall: capped)
+        self.assertEqual(bot.Bot.noble_lead_s(snap), bot.NOBLE_LEAD_MAX)
+
+    def test_a_full_strafe_led_onto_his_head(self):
+        # a man strafing 2.5 u/s across, 8 u off: with a 0.08 s old read the shot meets his head where he is when it
+        # goes out; the fixed lead is 0.115 u short, past a head's half-width (NOBLE_PART_HALF)
+        me, him = shooter(), shooter(Vec(8, 0, 0), vel=Vec(0, 2.5, 0))
+        ray = (eye(me), him.pos + Vec(0, 0, aim_height(True, False)))
+        there = ray[1] + him.vel * 0.08
+        self.assertLess((bot.lead_ray(me, him, ray, 0.08)[1] - there).length(), 1e-9)
+        self.assertGreater((bot.lead_ray(me, him, ray)[1] - there).length(), bot.NOBLE_PART_HALF)
+        self.assertEqual(bot.lead_ray(me, him, ray, None), bot.lead_ray(me, him, ray))   # (Demon: unchanged)
+
+
 class SprintOffTests(unittest.TestCase):
     """(Nov 21, the owner's report "queen just refuses to shoot me": Reach's sprint ran on after the press, no shot
     fires while it is on) Bot.noble_sprint_off."""

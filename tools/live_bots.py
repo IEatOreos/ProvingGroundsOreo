@@ -1068,8 +1068,12 @@ def main():
                 now = (still[2] if still[2] is not None else tick) - t0 - paused[0]
                 st = botctl.status(m)
                 oc = botctl.owner_crouch(m)             # H2A / Halo 4: his own action's crouch bit; elsewhere his key
+                read_t0 = time.time()
                 snap = snapshot(live, now, prev, set(st["bots"].values()), {i for i, c in crouch_cmd.items() if c},
                                 oc if oc is not None else crouch_now(), person_horn=botctl.owner_horn(m))
+                # (custom, Nov 21) when the game was read (the read's middle): Noble leads a man by the snapshot's real
+                # age when its action goes out (Bot.noble_lead_s)
+                snap.read_wall = (read_t0 + time.time()) / 2
                 # the game paused (the pause menu: the player's bug notes held matches still 15-35 s): botcore's tick
                 # count (its per-tick game hook) stands still. The brain's clock stops with it, so nothing reads as
                 # stuck or waited out (the critic flagged bots "pushed into something" all through his pauses)
@@ -1409,6 +1413,8 @@ def main():
                                 line["turret"] = me.turret
                         if b.fx:
                             line["fx"] = b.fx
+                        if getattr(b.aim, "noble_lead", None) is not None:
+                            line["lead"] = round(b.aim.noble_lead, 3)   # (Nov 21: Noble's lead this tick, s)
                         if b.att:
                             line["att"] = b.att               # what it looks at and why
                         if b.notes:

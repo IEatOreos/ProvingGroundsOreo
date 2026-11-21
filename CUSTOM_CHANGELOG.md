@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Noble: leads a strafing man by the read's real age; the reticle fix seen live, 2026-11-21
+- The reticle-target fix (botcore_pg41) in the owner's next Asylum match (logs/trace_reach_forge_halo_20261121-153537; "it was the better match"): Noble rounds at him landed 55% (32 of 58; before 45% in both matches), 50% with his reticle on the shooter and 62% without (before 27-36% vs 47-55%).
+- The owner: "It seems like noble only misses when Im strafing at full speed, doesnt have to be back and fourth just max speed to one side". With him moving sideways over 1.5 u/s Noble hit 0 of 3 that match and 3 of 16 the one before (about 35-40% slower). Noble's precision shot (the final snap and the fight aim, `lead_ray`) led him by the fixed DEMON_LEAD_S, 0.034 s; the snapshot is older than that by the time a bot's action goes out (`tools/live_bots.py` reads the game, does the tick's other work, then thinks and sends bot by bot; the loop 34 ms median, 77 ms p90), and a full strafe moves about 0.1 u, a head's half-width, in 0.04 s. Its own view follows a sent aim within one row (measured: median error 0 at 0.01-0.03 s), so the gap is the read's age, not the turn.
+- Now `live_bots` stamps each snapshot with when it was read (`snap.read_wall`), and Noble leads by that age when it thinks plus NOBLE_APPLY_S (one 60 Hz game tick, botcore's write), capped at NOBLE_LEAD_MAX 0.15 s (`Bot.noble_lead_s`, `lead_ray(..., lead_s)`). Noble only; Demon keeps DEMON_LEAD_S; without a read time (simulator, tests) as before. The trace's bot rows carry `lead` (s) for Noble to check it.
+- Validation: `test_noble_difficulty.py` `LeadTests` (2 new); full suite 1195 OK; `live_bots` imports. **Untested in game.** The check: Noble's hit rate on the owner while he strafes over 1.5 u/s, up toward the slow rate.
+
 ### Reach Forge Printer: the tilt test read; up vectors and turns for tilted pieces, 2026-11-21
 
 The owner loaded the sixth Guardian print (HUD $26,650, as predicted) and sent the tilt test from straight above.

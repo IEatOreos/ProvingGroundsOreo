@@ -2,6 +2,7 @@
 import dataclasses
 import math
 import random
+import time
 from dataclasses import dataclass
 
 from .core import Vec, Action, dist, angles_to, wrap, eye, CROUCH_HEAD, CROUCH_CHEST
@@ -1123,6 +1124,8 @@ NOBLE_HOLD_R = math.radians(20.0)   # rad: locked, a tick's move of his this big
 NOBLE_PART_HALF = 0.1    # u: (Nov 21) the aimed part's half-width; up close its angle widens the lock (Aim.noble_lock)
 NOBLE_LOCK_TICKS = 2     # (Nov 21) the man's own move over this many ticks also counts as on him (the read-back lag)
 NOBLE_SPRINT_RETAP = 0.4 # s: (Nov 21) a sprint still on this long after Noble's tap to end it is tapped again
+NOBLE_APPLY_S = 1 / 60   # s: (Nov 21) botcore writes the action on the game's next tick (60 per s): Bot.noble_lead_s
+NOBLE_LEAD_MAX = 0.15    # s: (Nov 21) a read older than this (a stall) is not led further: the lead would only guess
 NOBLE_PUSH = 0.25        # Noble's fight with a man in view over its best other choice (Bot.noble_push)
 NOBLE_LONG_PACE = 1.2    # Noble's precision cadence past 10 u: x the paced gap (FIRE_GAP), the bloom fully settled
 # Halo 4 Demon at a rider (custom, Nov 7): his seated head (brain/live.py h4_seated_head, the owner's seat capture) from
@@ -1137,11 +1140,14 @@ H4_RIDER_CHEST = 0.12    # u: a rider's upper chest under his head (over the War
 H4_VIEW_OVER_PLACE = 0.22   # u: on foot, the live view point over the place (its base + 0.60, the place base + 0.38)
 
 
-def lead_ray(me, target, ray):
-    """A (origin, point) shot ray with both ends moved on by DEMON_LEAD_S of our and his read velocity."""
+def lead_ray(me, target, ray, lead_s=None):
+    """A (origin, point) shot ray with both ends moved on by DEMON_LEAD_S of our and his read velocity (lead_s: Noble's
+    measured read-to-shot time instead, Bot.noble_lead_s)."""
+    k = DEMON_LEAD_S if lead_s is None else lead_s
+
     def step(v, vmax):
         n = math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-        return v * DEMON_LEAD_S if n <= vmax else Vec()
+        return v * k if n <= vmax else Vec()
     riding = getattr(target, "vehicle", -1) not in (None, -1)
     return ray[0] + step(me.vel, LEAD_VEL_MAX), ray[1] + step(target.vel, RIDER_VEL_MAX if riding else LEAD_VEL_MAX)
 
@@ -2627,6 +2633,19 @@ class Bot:
         s.noble_watch.pressed(now, snap, me, part_[0], dist(me.pos, target.pos), me.weapon, part_[1],
                               FIRE_GAP.get(me.weapon, 0.2))
 
+    @staticmethod
+    def noble_lead_s(snap):
+        """(custom, Nov 21, the owner: "noble only misses when Im strafing at full speed ... just max speed to one side")
+        How far on to lead a man: the snapshot's real age when this bot's action goes out (live: read at snap.read_wall,
+        tools/live_bots.py; the bots think and send one after another, after the tick's other work, so the age varies
+        by bot and tick, the brain's loop 34 ms median, 77 ms p90) and NOBLE_APPLY_S for botcore's next game tick. A
+        fixed DEMON_LEAD_S (0.034 s) fell short on the older reads: a man at full strafe (about 2.5 u/s) moves 0.1 u,
+        a head's half-width, in 0.04 s. None without a read time (the simulator, tests): DEMON_LEAD_S."""
+        rw = getattr(snap, "read_wall", None)
+        if rw is None:
+            return None
+        return min(NOBLE_LEAD_MAX, max(0.0, time.time() - rw) + NOBLE_APPLY_S)
+
     def noble_sprint_off(s, now, me, act, kind):
         """(custom, Nov 21, the owner's report "queen just refuses to shoot me") Reach's sprint, once on, runs on after
         the button is let go, and no shot fires while it is on: Queen of Dark pressed the trigger 7 times in 2.5 s at
@@ -2781,6 +2800,7 @@ class Bot:
         noble_on = profiles.fixed_noble(s.p)
         if noble_on:
             s.noble_learn(now, snap)          # (custom, Nov 20: Noble's shots resolved, brain/noble.py)
+            s.aim.noble_lead = s.noble_lead_s(snap)   # (custom, Nov 21: led by the snapshot's real age)
         me = snap.player(s.id)
         if me and me.alive:
             # Observe full magazines during fights too, before reload_check needs the
@@ -2819,7 +2839,7 @@ class Bot:
                         and (shot_part[1] or reach_demon_direct_fire(s.p, s.game, me, target))):
                     locked = head_solution(me, target) if shot_part[1] else chest_solution(me, target)
                     if reach_demon_direct_fire(s.p, s.game, me, target):
-                        locked = lead_ray(me, target, locked)      # Reach Demon: one tick of lead (lead_ray)
+                        locked = lead_ray(me, target, locked, getattr(s.aim, "noble_lead", None))   # Reach Demon: one tick of lead (lead_ray); Noble: its measured one
             if locked is not None:
                 yaw, pitch = angles_to(*locked)
                 # Keep the intended movement direction while snapping the shot.
@@ -7327,7 +7347,8 @@ class Bot:
             ray = h4_ray(me, target, head, lead=True)
         elif direct_fire:
             # (Reach Demon: led one tick, lead_ray; Legendary's protected head point stays as it was)
-            ray = lead_ray(me, target, head_solution(me, target) if head else chest_solution(me, target))
+            ray = lead_ray(me, target, head_solution(me, target) if head else chest_solution(me, target),
+                           getattr(s.aim, "noble_lead", None))
         if (ray is None and s.game == "h4" and target is not None and target.vehicle not in (None, -1)
                 and me.vehicle in (None, -1)):
             # (custom: Halo 4, every tier on foot at a rider: from our real view to his real head or chest, or to his
