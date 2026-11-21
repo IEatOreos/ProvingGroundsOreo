@@ -127,7 +127,9 @@ class Build(unittest.TestCase):
         r1, rep = self.build()
         self.assertEqual(rep["triangles"], 2)
         self.assertEqual(rep["bsp2obj_triangles"], 2)
-        self.assertEqual(r1["bounds"], {"min": [0, 0, 0], "max": [10.0, 20.0, 5.0]})
+        k = ref.H3_TO_REACH_SCALE
+        self.assertEqual(r1["bounds"], {"min": [0, 0, 0], "max": [round(10 * k, 4), round(20 * k, 4), round(5 * k, 4)]})
+        self.assertEqual(r1["spawns"][0]["pos"], [round(c * k, 4) for c in (1.0, 2.0, 3.0)])
         files = {n: get(os.path.join(self.out, n), "rb") for n in ("h3_yard.obj", "reference.json")}
         self.build()
         for n, data in files.items():

@@ -100,8 +100,7 @@ Do not start Phase 2 on Fable.
       loaded, and did move"
 - [x] Format doc written (`docs/reach_mvar_format.md`)
 - [x] Phase 1 committed locally
-- [x] Phase 2 — H3 reference import (scale 1.0 pending the owner's call; see
-      the Phase 2 → Phase 3 note)
+- [x] Phase 2 — H3 reference import (scale 0.975, the owner's choice)
 - [ ] Phase 3 — auto-builder core (Guardian test)
 - [ ] Phase 4 — Blender addon
 
@@ -191,8 +190,8 @@ Reach unit scale by measuring a known feature in both rather than assuming it.
   powerups, 2 launchers, 1 lift); none outside the mesh box + 2 u. A second
   run gives byte-identical files. (The OBJ differs from bsp2obj's raw file
   only in formatting: CRLF → LF and every coordinate written with 4 decimals.)
-- Bounds (Reach units, scale 1.0): x -19.44..20.60, y -39.21..93.79,
-  z -6.23..36.18, size 40.0 × 133.0 × 42.4. Forge World's box is
+- Bounds (Reach units, scale 0.975): x -18.95..20.08, y -38.23..91.45,
+  z -6.07..35.27, size 39.0 × 129.7 × 41.3 (at 1.0 it was 40.0 × 133.0 × 42.4). Forge World's box is
   x -203.60..277.66, y -360.83..324.92, z -25.01..117.79, so Guardian fits
   easily. The long y side is far-off backdrop geometry; the play space is
   much smaller. Phase 3 should crop it.
@@ -203,9 +202,11 @@ Reach unit scale by measuring a known feature in both rather than assuming it.
   `h3_s3d_avalanche`: the DLC map isn't installed here), MCC not found,
   `bsp2obj.exe` not found, non-Halo 3 map.
 
-**The scale: OWNER'S DECISION PENDING**
+**The scale: 0.975, the owner's choice (2026-11-21)**
 
-`H3_TO_REACH_SCALE = 1.0` for now. One measurement: the player models,
+`H3_TO_REACH_SCALE = 0.975`, the percentile ratio below. Shipped at 1.0 first
+and changed the same day. Guardian re-exported at 0.975: same counts, none
+outside the box, repeat run identical, Blender box matches. One measurement: the player models,
 exported with `model2obj` into `E:\Proving Grounds\re_tools\forge_printer\scale\`:
 
 | Model | Max vertex height | 99.9th percentile |
@@ -217,8 +218,9 @@ That's a ratio of 0.975 by the percentile and 0.952 by the max: 2.5–5% apart,
 not a clean number. The models are different armour designs, so this alone
 can't separate "same unit, different suits" from a real unit change. No
 second per-game measurement was found on this PC (the bot records Reach's
-gravity, 4.1 u/s², but no Halo 3 figure). Per the brief, I didn't pick one.
-Changing it is one constant; re-run `reference` afterwards.
+gravity, 4.1 u/s², but no Halo 3 figure), so the owner made the call.
+Changing it is one constant; re-run `reference` afterwards. Phase 3 should
+check that the scale doesn't break a known jump on Guardian.
 
 **For Phase 3 (Fable 5.2)**
 

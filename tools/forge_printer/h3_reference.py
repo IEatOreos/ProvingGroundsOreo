@@ -31,8 +31,8 @@ DEFAULT_OUT = r"E:\Proving Grounds\re_tools\forge_printer\reference"
 # model2obj, stand 0.761 u (Halo 3 mp_masterchief) and 0.742 u (Reach spartans)
 # tall at the 99.9th percentile of vertex height, 2.5% apart. That gap is the
 # two armour designs or a unit change; this one measurement cannot tell which.
-# 1.0 (no change) until the owner decides.
-H3_TO_REACH_SCALE = 1.0
+# The owner chose 0.975 (the percentile ratio, 0.742 / 0.761), 2026-11-21.
+H3_TO_REACH_SCALE = 0.975
 
 SOURCE_GAME = "halo3"
 PREFIX = "h3_"
