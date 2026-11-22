@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Reach Forge Printer add-on: floors, slopes, walls and ceilings of the backdrop switch on and off, 2026-11-21
+
+- The owner found Guardian's wire backdrop (its trees, roots and cliffs) covering the pieces. Under Wire / Solid floors / Hidden the Forge panel now has four switches, **Floors / Slopes / Walls / Ceilings**, each showing or hiding that kind of reference surface; ceilings start hidden as before, the rest shown. Only `tools/forge_printer/blender_addon/ui.py` changes what the add-on does; nothing about export.
+- **Validation:** `headless_check.py` gained a check (walls hide and come back, floors stay, ceilings start hidden); its full Guardian round trip in Blender 5.1.1 headless: 0 failed, still 292 of 292 equal to `print`. Forge Printer tests 173 OK. Not yet looked at in the owner's Blender window.
+
 ### Reach Forge Printer: a Blender add-on that opens, edits, counts and exports (Phase 4, milestone 1), 2026-11-21
 
 Milestone 1 of `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`: edit an auto-built map in Blender and export it as a `.mvar`.

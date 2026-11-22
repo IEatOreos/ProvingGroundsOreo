@@ -28,6 +28,9 @@ runs the repository's version) and enables the add-on. In Blender it is in the
    reference level comes in behind them as the `Reference backdrop`, which
    cannot be clicked on. Wire / Solid floors / Hidden switches how it is drawn:
    the pieces' tops lie in the reference's floors, so solid floors hide them.
+   Under it, **Floors / Slopes / Walls / Ceilings** show or hide each kind of
+   surface on its own (walls are Guardian's trees, roots and cliffs; ceilings
+   start hidden).
 2. **Template**: a Forge World variant your MCC saved (the one the prints use is
    "Bot Testing Grounds", in MCC's `LocalLow\MCC\LocalFiles\<id>\HaloReach\Map`
    folder). It is copied, never changed. The counts use it.

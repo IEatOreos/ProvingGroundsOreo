@@ -31,6 +31,9 @@ CATEGORY_COLOURS = {"Building Blocks": (0.55, 0.58, 0.63, 1.0), "Bridges and Pla
                     "Nature": (0.42, 0.58, 0.36, 1.0)}
 PLAY_COLOURS = {"floor": (0.25, 0.65, 0.3, 1.0), "slope": (0.9, 0.7, 0.2, 1.0),
                 "wall": (0.55, 0.6, 0.7, 1.0), "ceiling": (0.7, 0.3, 0.3, 1.0)}
+# one show/hide switch per kind of reference surface: (kind, scene property, label, shown at first)
+BACKDROP_KINDS = (("floor", "fp_show_floor", "Floors", True), ("slope", "fp_show_slope", "Slopes", True),
+                  ("wall", "fp_show_wall", "Walls", True), ("ceiling", "fp_show_ceiling", "Ceilings", False))
 
 _TABLE = pieces.load()
 KNOWN = pieces.by_name(_TABLE)
@@ -218,16 +221,18 @@ def load_backdrop(scene, folder):
 
 def show_backdrop(scene, context=None):
     """Draws the backdrop as the scene's "fp_backdrop" says. The pieces' tops lie in the reference's
-    floors, so solid floors hide them: wire is the default, solid floors show where floor is bare."""
+    floors, so solid floors hide them: wire is the default, solid floors show where floor is bare.
+    Each kind of surface (floors, slopes, walls, ceilings) also has its own show/hide switch."""
     coll = bpy.data.collections.get(BACKDROP)
     if coll is None:
         return
     mode = scene.fp_backdrop
+    shown = {kind: getattr(scene, prop) for kind, prop, _, _ in BACKDROP_KINDS}
     for o in coll.objects:
         kind = o.get("fp_backdrop", "level")
         o.display_type = "SOLID" if mode == "SOLID" and kind in ("floor", "slope") else "WIRE"
         try:
-            o.hide_set(mode == "HIDDEN" or kind == "ceiling")
+            o.hide_set(mode == "HIDDEN" or not shown.get(kind, True))
         except RuntimeError:
             pass                                        # not in this view layer
 
@@ -447,8 +452,15 @@ class FORGE_PRINTER_PT_main(Panel):
         layout.operator("forge_printer.open_fit", icon="FILE_FOLDER")
         layout.prop(scene, "fp_template")
         layout.prop(scene, "fp_offset")
-        if bpy.data.collections.get(BACKDROP):
+        backdrop = bpy.data.collections.get(BACKDROP)
+        if backdrop:
             layout.row().prop(scene, "fp_backdrop", expand=True)
+            kinds = {o.get("fp_backdrop") for o in backdrop.objects}
+            row = layout.row(align=True)
+            row.active = scene.fp_backdrop != "HIDDEN"
+            for kind, prop, _, _ in BACKDROP_KINDS:
+                if kind in kinds:
+                    row.prop(scene, prop, toggle=True)
         try:
             pairs, good, counts, template_error = _summary(scene)
         except Exception as error:                     # a panel must never stop drawing
@@ -545,6 +557,9 @@ SCENE_PROPS = {
                                        ("SOLID", "Solid floors", "The reference's floors and slopes solid: bare floor "
                                                                  "shows, but they hide the pieces level with them"),
                                        ("HIDDEN", "Hidden", "No reference level")]),
+    **{prop: BoolProperty(name=label, default=default, update=lambda self, context: show_backdrop(self),
+                          description="Show the reference level's %s" % label.lower())
+       for _, prop, label, default in BACKDROP_KINDS},
     "fp_fit_path": StringProperty(name="Opened from", subtype="FILE_PATH"),
     "fp_next_index": IntProperty(name="Next piece index", default=0, min=0),
 }

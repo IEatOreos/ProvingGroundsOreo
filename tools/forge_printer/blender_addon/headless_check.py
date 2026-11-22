@@ -139,6 +139,16 @@ def guardian(ui, folder, template, offset, out_dir):
     backdrop = bpy.data.collections.get(ui.BACKDROP)
     check(backdrop is not None and len(backdrop.objects) > 0 and all(o.hide_select for o in backdrop.objects),
           "the reference backdrop is loaded and cannot be selected (%d objects)" % (len(backdrop.objects) if backdrop else 0))
+    if backdrop is not None:
+        def hidden(kind):
+            return {o.hide_get() for o in backdrop.objects if o.get("fp_backdrop") == kind}
+        start = (hidden("floor"), hidden("wall"), hidden("ceiling"))
+        scene.fp_show_wall = False
+        walls_off = (hidden("floor"), hidden("wall"))
+        scene.fp_show_wall = True
+        check(start == ({False}, {False}, {True}) and walls_off == ({False}, {True}) and hidden("wall") == {False},
+              "backdrop switches: walls hide and come back, floors stay, ceilings start hidden %s %s"
+              % (start, walls_off))
     models = sorted(set(o.data.name for o in objs))
     print("meshes: " + ", ".join(models))
 
