@@ -154,7 +154,8 @@ Do not start Phase 2 on Fable.
       as close to the original guardian as possible"), Guardian first, in his order:
   - [ ] step 1a walls: every wall a player sees (`fit.fit_wall_faces`) — built, printed "FP Guardian Walls",
         not yet seen in the game
-  - [ ] step 1b ramps and slopes
+  - [x] step 1b ramps and slopes: measured, nothing to add (the bare "slope" is railing and kerb bevels and
+        root humps; see the step 1b note)
   - [ ] step 2 solid floors (the sides under raised floors)
   - [ ] step 3 floor gaps
 
@@ -1467,3 +1468,23 @@ the old count.
 ramps and the template, the walls row holds 255, and a Wall Double covers 8
 u2 at most, so roughly half of Guardian's seen wall is what fits. Solid floors
 and fewer floor pieces (steps 2 and 3) are where more room comes from.
+
+### Phase 5, step 1b: ramps and slopes measured (2026-11-21, written by Opus 5.5)
+
+`fit_slopes` reports 25% of Guardian's walked slope covered, but that figure
+misleads. Of the 142 u2 it leaves bare (walked ground leaning 6-58 degrees),
+grouped into connected regions facing alike: 105 u2 is strips under 0.4 wide
+(the bevelled tops of railings and kerbs, which count as walked because they
+are within half a unit of the floor and the walk reaches onto them), 22 u2
+strips 0.4-0.8 wide, and 15 u2 in seven regions wider than 0.8, the largest a
+44-degree patch among a tree's roots at height 13 (the walks are at 16-18).
+Inside any unit of the bare slope its faces lean on average 35 degrees from
+one another. The ramps players use are the ones `fit_slopes` already builds
+(the owner, Phase 3: "The Ramps were all good").
+
+A pass laying tilted Inclines on the bare slope (Ramp 2x2 Steep meets a
+55-degree slope with a 10-degree tilt; the Inclines row is empty) was written
+and tried: 9 pieces, 11 u2, all on those root and bevel patches. It was taken
+out again: Forge ramps on railing bevels and roots would look less like
+Guardian, not more. If the owner finds a ramp missing in the game, its place
+is where to look next.

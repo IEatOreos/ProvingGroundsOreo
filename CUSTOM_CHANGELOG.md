@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Reach Forge Printer: ramps and slopes measured, nothing added (Phase 5, step 1b), 2026-11-21
+
+- The 25% slope coverage `fit_slopes` reports misleads: of the 142 u2 it leaves bare on Guardian, 105 u2 is railing and kerb bevels under 0.4 wide, 22 u2 narrow strips, 15 u2 seven wider patches (the largest among a tree's roots below the walks). The ramps players use are already built. A pass of tilted Inclines on the bare slope was tried (9 pieces, all on bevels and roots) and taken out again; the plan's "Phase 5, step 1b" note has the numbers. No code changes.
+
 ### Reach Forge Printer: the walls a player sees (Phase 5, step 1a), 2026-11-21
 
 - The owner set the next phase: the automatic build as close to Guardian as it can be (he places spawns and items himself), in his order walls, ramps and slopes; solid floors; floor gaps.
