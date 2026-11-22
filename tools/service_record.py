@@ -787,6 +787,15 @@ def variant_title(map_id, variant, paths):
     Pinnacle), else its id."""
     v = load_json(os.path.join(paths.maps, map_id, "variants", variant, "variant.json"), {})
     name = v.get("name") or ""
+    try:                                    # (custom, Nov 22) as the game shows it, as LiDAR does (brain/variants.title:
+        if ROOT not in sys.path:            # "$HReach_MPMap_R-25_Title" and hr_forgeWorld_theCage are The Cage)
+            sys.path.insert(0, ROOT)
+        from brain.variants import title
+        shown = title(name, (v.get("mvar") or {}).get("file"))
+        if shown:
+            return shown
+    except ImportError:
+        pass
     if name and not name.startswith("$"):
         return name
     stem = os.path.splitext((v.get("mvar") or {}).get("file") or "")[0]

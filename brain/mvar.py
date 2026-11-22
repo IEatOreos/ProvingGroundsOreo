@@ -343,12 +343,24 @@ def find(base, pieces, files=None):
     live_pieces): of the files on its map, the one placing the largest share of the live pieces that its palette has
     (the base map's own scenery is not in a variant), at least SAME; ties to the newest. -> (variant, share) or
     (None, best share)."""
+    best, best_share = None, 0.0
+    for share, mtime, v in candidates(base, pieces, files):
+        key = (round(share, 3), mtime)
+        if share >= SAME and (best is None or key > best[0]):
+            best = (key, v)
+        best_share = max(best_share, share)
+    return (best[1], best[0][0]) if best else (None, best_share)
+
+
+def candidates(base, pieces, files=None):
+    """[(share, file time, variant)] of every readable map variant file on base (find): the share of the live pieces
+    its palette has that it places."""
     mid = map_id_of(base)
     names = {n for f in (palette(mid) or {}).get("folders", []) for n in f["objects"]}
     live = [(n, p) for n, p, _ in pieces if n in names]
-    best, best_share = None, 0.0
+    out = []
     if mid is None or not live:
-        return None, 0.0
+        return out
     for path in library() if files is None else files:
         try:
             if header_map_id(path) != mid:
@@ -362,11 +374,54 @@ def find(base, pieces, files=None):
         for o in v["objects"]:
             by.setdefault(o["name"], []).append(o["pos"])
         share = sum(1 for n, p in live if any(math.dist(p, q) <= NEAR for q in by.get(n, ()))) / len(live)
-        key = (round(share, 3), os.path.getmtime(path))
-        if share >= SAME and (best is None or key > best[0]):
-            best = (key, v)
-        best_share = max(best_share, share)
-    return (best[1], best[0][0]) if best else (None, best_share)
+        out.append((share, os.path.getmtime(path), v))
+    return out
+
+
+# (custom, Nov 22) Layouts filed before their .mvar file was on this PC (or read) have no name: LiDAR listed them as
+# "Forge layout F1ED". name_layouts names them from the files now here, when one name is clearly theirs: the best file
+# places NAME_SHARE of their pieces, NAME_MIN pieces at least, and no file with another name comes within NAME_TIE.
+NAME_SHARE = 0.9
+NAME_MIN = 30
+NAME_TIE = 0.05
+
+
+def layout_name(base, pieces, files=None):
+    """(name the game shows, its file's variant, share) for a filed layout (pieces: variant.json's, variants.pieces_of),
+    or (None, None, best share) when no file is clearly its own (NAME_SHARE, NAME_MIN, NAME_TIE)."""
+    from . import variants
+    found = sorted(candidates(base, pieces, files), key=lambda c: (c[0], c[1]), reverse=True)
+    if not found or len(pieces) < NAME_MIN or found[0][0] < NAME_SHARE:
+        return None, None, found[0][0] if found else 0.0
+    share, _, v = found[0]
+    name = variants.title(v["title"], v["path"])
+    if not name or any(s >= share - NAME_TIE and variants.title(o["title"], o["path"]) != name
+                       for s, _, o in found[1:]):
+        return None, None, share
+    return name, v, share
+
+
+def name_layouts(write=True, files=None):
+    """Name every filed Reach layout with no name yet (layout_name): variant.json "name" (the file's title, as
+    mvar.write files it: brain/variants.title shows it) and "named_from" (the file). -> [(layout, name shown or None,
+    file, share)]."""
+    import glob as _glob
+    from . import variants
+    out = []
+    for p in sorted(_glob.glob(os.path.join(variants.ROOT, "reach_*", variants.SUB, "*", "variant.json"))):
+        layout = os.path.relpath(os.path.dirname(p), variants.ROOT).replace("\\", "/")
+        info = variants.info(layout)
+        if not info or info.get("name"):
+            continue
+        name, v, share = layout_name(variants.base_of(layout), variants.pieces_of(info), files)
+        fn = os.path.basename(v["path"]) if v else None
+        out.append((layout, name, fn, share))
+        if name and write:
+            info = variants.info(layout)            # (read again: a match may have written it meanwhile)
+            if info is not None and not info.get("name"):
+                info.update(name=v["title"], named_from=fn)
+                variants.save(layout, info)
+    return out
 
 
 # --- the variant's objects in the scenario schema (tools/reach_export.py writes the same from a map's own scenario),

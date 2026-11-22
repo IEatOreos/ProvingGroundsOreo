@@ -224,6 +224,20 @@ def main():
             break
         time.sleep(1)
     have_map = os.path.exists(os.path.join(ROOT, "maps", map_name, "heightmap.npz"))
+    # (custom, Nov 22) a modded map with no level data, or rebuilt by its maker since: its level data built from its .map
+    # in the background (tools/mod_maps.py; its files swapped in whole), for the next match on it. LiDAR maps this one
+    # blind meanwhile, or on the level data it had. (MCC's own maps have no mod.json: no mod folders are looked in.)
+    if h2 and (not have_map or os.path.exists(os.path.join(ROOT, "maps", map_name, "mod.json"))):
+        try:
+            import mod_maps
+            row = next((r for r in mod_maps.mod_maps() if r["folder"] == map_name and r["map"] and not r["stock"]), None)
+            if row and (not have_map or row["stale"]):
+                subprocess.Popen([sys.executable, "-I", os.path.join(ROOT, "tools", "mod_maps.py"), map_name],
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                print(f"modded map {map_name}: building its level data for the next match (tools/mod_maps.py)")
+        except Exception as e:
+            print(f"modded map {map_name}: level data not built: {type(e).__name__}: {e}")
     # Firefight without map data (ODST's kit exports none; Reach's DLC Firefight maps, Unearthed and Installation 04,
     # are not exported: bots never joined there, GitHub #12): the map-free escort brain
     escort = not have_map and (o.game == "odst" or (o.game == "reach" and getattr(live, "firefight", lambda: False)()))

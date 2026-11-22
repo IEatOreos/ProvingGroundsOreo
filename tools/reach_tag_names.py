@@ -54,11 +54,25 @@ def names_of(path):
 def cached(map_name, game="reach"):
     """The map's tag names by index, from maps/_shapes/<game>_tags_<map>.json, made from the .map file the first time."""
     dst = os.path.join(OUT, f"{game}_tags_{map_name}.json")
-    if not os.path.exists(dst):
-        names = names_of(os.path.join(MCC, GAME_DIR[game], "maps", map_name + ".map"))
+    src, mod = source(map_name, game)
+    # (a modded map is rebuilt by its maker, its tag order with it: read again when its .map is newer than the list)
+    if not os.path.exists(dst) or (mod and os.path.getmtime(src) > os.path.getmtime(dst)):
+        names = names_of(src)
         os.makedirs(OUT, exist_ok=True)
         json.dump(names, open(dst, "w"))
     return json.load(open(dst))
+
+
+def source(map_name, game="reach"):
+    """(the map's .map file, is it a mod's): MCC's own, else (custom, Nov 22) a modded map's (tools/mod_maps.py)."""
+    src = os.path.join(MCC, GAME_DIR[game], "maps", map_name + ".map")
+    if os.path.exists(src):
+        return src, False
+    if HERE not in sys.path:                          # (python -I leaves this folder off sys.path)
+        sys.path.insert(0, HERE)
+    import mod_maps
+    mod = mod_maps.map_file(map_name, game)
+    return (mod, True) if mod else (src, False)
 
 
 def check():
@@ -69,7 +83,7 @@ def check():
         if not rest.endswith(".json") or game not in GAME_DIR:
             continue
         saved = json.load(open(os.path.join(OUT, fn)))
-        fresh = names_of(os.path.join(MCC, GAME_DIR[game], "maps", rest[:-5] + ".map"))
+        fresh = names_of(source(rest[:-5], game)[0])
         diff = next((i for i in range(max(len(saved), len(fresh)))
                      if (saved[i] if i < len(saved) else "") != (fresh[i] if i < len(fresh) else "")), None)
         if diff is None:

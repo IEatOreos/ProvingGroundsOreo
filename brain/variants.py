@@ -29,6 +29,41 @@ TILE = 16.0          # windows snap out to this grid
 EDGE = 8.0           # a player this close to an edge the level goes on past grows the window
 
 
+# (custom, Nov 22, the owner: "make it to where lidar reads all forge maps by their ingame names") MCC's own map variants
+# carry a string key as their title, not a name: "$HReach_MPMap_R-21_Title" is Asylum. MCC_TITLES by R number, as the
+# menus' native/proving_grounds.cpp R_MAPS (R-21 to R-25: haloreach\map_variants hr_forgeWorld_* in the folder's order).
+MCC_TITLES = (None, "Boardwalk", "Boneyard", "Countdown", "Powerhouse", "Reflection", "Spire", "Sword Base", "Zealot",
+              "Anchor 9", "Breakpoint", "Tempest", "Condemned", "Highlands", "Battle Canyon", "Penance", "Ridgeline",
+              "Solitary", "High Noon", "Breakneck", "Forge World", "Asylum", "Hemorrhage", "Paradiso", "Pinnacle",
+              "The Cage")
+KEY_WORDS = ("HReach_MPMap_", "hr_mvar_", "_Title")     # a string key's parts that are no words of its name
+
+
+def title(raw, file=None):
+    """A map variant's name as the game shows it, from its title (raw: variant.json "name" or the .mvar's title) and its
+    .mvar file's name: its own name; an MCC string key turned into its map ("$HReach_MPMap_R-21_Title" -> "Asylum"; a
+    key not in MCC_TITLES: its own words, "$hr_mvar_Hardcore_Countdown" -> "Hardcore Countdown"); without a title, its
+    file's ("hr_forgeWorld_theCage.mvar" -> "The Cage"). None without either."""
+    import re
+    raw = (raw or "").strip()
+    if raw and not raw.startswith("$"):
+        return raw
+    if raw:
+        m = re.fullmatch(r"\$HReach_MPMap_R-(\d+)_Title", raw)
+        if m and 0 < int(m.group(1)) < len(MCC_TITLES):
+            return MCC_TITLES[int(m.group(1))]
+        words = raw[1:]
+        for k in KEY_WORDS:
+            words = words.replace(k, " ")
+        words = " ".join(words.replace("_", " ").split())
+        if words:
+            return words
+    stem = os.path.splitext(os.path.basename(file or ""))[0]
+    stem = re.sub(r"^(hr_)?(forge_?world_?|forgeworld_?)", "", stem, flags=re.I)
+    stem = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", stem).replace("_", " ").strip()
+    return " ".join(w[:1].upper() + w[1:] for w in stem.split()) or None
+
+
 def base_of(name):
     """The base map of a map name ("reach_forge_halo/variants/v1a2b3c4d" -> "reach_forge_halo")."""
     return name.split("/" + SUB + "/")[0]

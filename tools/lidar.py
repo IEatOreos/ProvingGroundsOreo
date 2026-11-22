@@ -692,11 +692,13 @@ def map_titles():
 
 def map_title(name):
     """A map's real name (Battle Creek for beavercreek); a level MCC does not have keeps its folder name. A map variant
-    (brain/variants.py): its base map's, then its own name once known, else its id."""
+    (brain/variants.py): its base map's, then its own name once known (as the game shows it: brain/variants.title, MCC's
+    "$HReach_MPMap_R-21_Title" is Asylum), else its id."""
     base, _, vid = name.partition("/variants/")
-    title = map_titles().get(base) or re.sub(r"^(h2a|h2|h3|h4|odst|reach)_", "", base).replace("_", " ").title()
+    title = (map_titles().get(base) or _mod_title(base)          # (custom, Nov 22: a modded map's, tools/mod_maps.py)
+             or re.sub(r"^(h2a|h2|h3|h4|odst|reach)_", "", base).replace("_", " ").title())
     if vid:
-        from brain.variants import info
+        from brain.variants import info, title as variant_title
         v = info(name) or {}
         seen = (v.get("first_seen") or "")[:10]
         when = ""
@@ -705,8 +707,18 @@ def map_title(name):
                 when = ", first played " + time.strftime("%b %d", time.strptime(seen, "%Y-%m-%d")).replace(" 0", " ")
             except ValueError:
                 pass
-        title += ": " + (v.get("name") or f"Forge layout {vid[1:5].upper()}{when}")
+        title += ": " + (variant_title(v.get("name"), (v.get("mvar") or {}).get("file"))
+                         or f"Forge layout {vid[1:5].upper()}{when}")
     return title
+
+
+def _mod_title(base):
+    """A modded map's in-game title (maps/<map>/mod.json, tools/mod_maps.py), or None."""
+    try:
+        with open(os.path.join(ROOT, "maps", base, "mod.json"), encoding="utf-8") as f:
+            return json.load(f).get("title")
+    except (OSError, ValueError, AttributeError):
+        return None
 
 
 MAP_NAME = re.compile(r"[a-z0-9_]+(/variants/v[0-9a-f]{8})?")    # a map, or a map variant filed under it
