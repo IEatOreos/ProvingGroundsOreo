@@ -1,4 +1,4 @@
-"""Project Reach's launcher: the window the Start Menu shortcut opens. It shows what is ready (the game, the
+"""Project Noble's launcher: the window the Start Menu shortcut opens. It shows what is ready (the game, the
 first-time setup, the map tools, mapped maps, mods that can clash), lets the player choose which MCC folder the mod uses
 (Windows' folder picker or a pasted path, saved in user/mcc_folder.txt; or automatic), starts MCC with the bots, runs the first-time setup
 (Repair: all of it again), opens the tools (Observer, LiDAR Simulator, LiDAR Viewer, nav painter), each in its own app
@@ -273,7 +273,7 @@ class Handler(BaseHTTPRequestHandler):
             url = f"http://127.0.0.1:{self.server.server_address[1]}/guide"
             if paths.wine():                         # (no app window under Wine: the page opens it in the browser)
                 return self.send({"ok": True, "url": "/guide", "opened": False})
-            appwindow.open_window(url, (1180, 820), "Guide - Project Reach")
+            appwindow.open_window(url, (1180, 820), "Guide - Project Noble")
             self.send({"ok": True, "opened": True})
         elif self.path == "/update/check":
             self.send(dict(updater.check(force=True), wine=paths.wine()))

@@ -10,7 +10,7 @@ Phase 4 milestone 1 built (2026-11-21): the Blender add-on opens, edits,
 counts and exports, checked headless against `print`; waiting for the owner to
 load an edited export in the game (the "Phase 4, milestone 1" note at the
 end). Its brief is `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
-Separate tool from the Project Reach bot code.
+Separate tool from the Project Noble bot code.
 
 ## Goal
 

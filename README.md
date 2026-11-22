@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/banner.jpg" alt="Halo MCC: Project Reach" width="100%"></p>
+<p align="center"><img src="docs/banner.jpg" alt="Project Noble: bots for Halo: The Master Chief Collection" width="100%"></p>
 
-# Project Reach
+# Project Noble
 
 > **This is a customized build** of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds)
 > (upstream 0.2.2), with its own bot changes: the Demon, Mythic, Blind and Tactician difficulties, Halo 4 aim and vehicle
@@ -58,7 +58,7 @@ and bots for anyone who wants to study how they play (the zip has its own README
 
 ## Play
 
-1. Open **Project Reach** from the Start Menu and press **Play**. Steam asks how to start MCC: choose the
+1. Open **Project Noble** from the Start Menu and press **Play**. Steam asks how to start MCC: choose the
    option with **anti-cheat off**.
 2. In MCC: **Multiplayer > Custom Multiplayer >** Halo: CE, Halo 2: Classic, Halo 2: Anniversary, Halo 3, Halo:
    Reach or Halo 4. For bot teammates against the Covenant: **Firefight > Halo: Reach Custom Firefight** or **Halo 3:
@@ -331,8 +331,8 @@ running a copy? The bots load into the one that runs.
 
 ## Uninstall
 
-In the launcher: **Uninstall** (bottom row), or Windows **Settings > Apps > Installed apps > Project Proving
-Grounds > Uninstall**. It removes the Windows Security
+In the launcher: **Uninstall** (bottom row), or Windows **Settings > Apps > Installed apps > Project
+Noble > Uninstall**. It removes the Windows Security
 exclusion if you added one and asks whether to keep your LiDAR scans, learned map data and recorded matches.
 
 ## Linux and Steam Deck
@@ -348,7 +348,7 @@ the game. Linux support is new: if something does not work, please [report it](#
    Extract, or `tar -xzf ProjectProvingGrounds-Linux-<version>.tar.gz`).
 3. In a terminal (Konsole on the Deck), in the unpacked folder: `./install.sh`. It finds Steam (also the Flatpak
    Steam) and MCC in any of your libraries (an SD card too), copies the mod to `~/.local/share/project-proving-grounds`,
-   runs the first-time setup (a few minutes) and adds **Project Reach** to the application menu. It does not
+   runs the first-time setup (a few minutes) and adds **Project Noble** to the application menu. It does not
    change MCC or MCC's Proton prefix, and needs no root rights.
 4. It prints one line for Steam. In Steam: **Halo: The Master Chief Collection > Properties > General > Launch
    Options**, paste it. It looks like `"/home/deck/.local/share/project-proving-grounds/app/installer/linux/ppg-run.sh" %command%`.
@@ -357,7 +357,7 @@ the game. Linux support is new: if something does not work, please [report it](#
 starts; the rest is the same as on Windows ([Play](#play)). With anti-cheat on, the game starts as normal, without
 the bots. The log of each start is `logs/linux_play.txt` in the mod's folder.
 
-**The launcher** (setup, Repair, the Observer and the LiDAR tools): **Project Reach** in the application
+**The launcher** (setup, Repair, the Observer and the LiDAR tools): **Project Noble** in the application
 menu. It opens in your web browser.
 
 **Update**: run the new version's `./install.sh` (your LiDAR scans, learned map data and recordings are kept).
@@ -392,6 +392,6 @@ Free to use, share and change for any noncommercial purpose under the
 [PolyForm Noncommercial License 1.0.0](LICENSE.md); selling it or earning money from it is not permitted. Notices and
 third-party licenses: [NOTICE.md](NOTICE.md).
 
-Halo: The Master Chief Collection © Microsoft Corporation. Project Reach was created under Microsoft's
+Halo: The Master Chief Collection © Microsoft Corporation. Project Noble was created under Microsoft's
 "[Game Content Usage Rules](https://www.xbox.com/en-US/developers/rules)" using assets from Halo: The Master Chief
 Collection, and it is not endorsed by or affiliated with Microsoft.

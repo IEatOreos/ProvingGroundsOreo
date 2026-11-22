@@ -1,11 +1,11 @@
-# Project Reach: code guide
+# Project Noble: code guide
 
 This guide explains what every part of the code does and how the parts work together, for anyone who wants to read,
 change or build the mod. It follows the code as it is in this version.
 
 ## The big picture
 
-Project Reach puts bots into Halo: The Master Chief Collection's offline custom games as real players. It
+Project Noble puts bots into Halo: The Master Chief Collection's offline custom games as real players. It
 has three layers:
 
 1. **The mod inside the game (`native/`).** A small injector loads `botcore.dll` into MCC (only with Easy Anti-Cheat
@@ -47,7 +47,7 @@ has three layers:
 
 ## The mod inside the game (native/)
 
-The native side of Project Reach is a 64-bit DLL, `botcore.dll`, that runs inside `MCC-Win64-Shipping.exe`, plus two small stand-alone programs: `inject.exe`, which loads the DLL into a running MCC, and `ppg_window.exe`, the app window that shows the project's local web pages. The bots' decision making does not live here. It lives in the Python "brain" (`tools/play.py` and the `brain/` package), which runs as a separate process. The DLL's job is mechanical: find each Halo engine as MCC loads it, hook the engine's per-tick player update, create bot players with the engine's own player creation function, and every tick copy the brain's chosen input (move, look, buttons) into each bot's slot of the engine's action array, so the game simulates a bot exactly as it would simulate a person. It also draws the in-lobby BOTS panel, fixes up what MCC's own screens show for bots (names, clan tags, emblems, post-game rows), records bot input for Theater films, and starts and stops the brain.
+The native side of Project Noble is a 64-bit DLL, `botcore.dll`, that runs inside `MCC-Win64-Shipping.exe`, plus two small stand-alone programs: `inject.exe`, which loads the DLL into a running MCC, and `ppg_window.exe`, the app window that shows the project's local web pages. The bots' decision making does not live here. It lives in the Python "brain" (`tools/play.py` and the `brain/` package), which runs as a separate process. The DLL's job is mechanical: find each Halo engine as MCC loads it, hook the engine's per-tick player update, create bot players with the engine's own player creation function, and every tick copy the brain's chosen input (move, look, buttons) into each bot's slot of the engine's action array, so the game simulates a bot exactly as it would simulate a person. It also draws the in-lobby BOTS panel, fixes up what MCC's own screens show for bots (names, clan tags, emblems, post-game rows), records bot input for Theater films, and starts and stops the brain.
 
 The DLL starts a background thread from `DllMain` (`botcore.cpp main_thread`). That thread creates the named shared memory block defined in `shared.h`, loads the settings from `botcore.ini`, installs the overlay hooks (`overlay.cpp`) and MCC's report hooks (`report.cpp`), then loops forever: every 33 ms (100 ms when Halo: CE is not loaded) it checks whether each title's engine DLL (`halo1.dll`, `halo2.dll`, `halo3.dll`, `haloreach.dll`, `halo3odst.dll`, `groundhog.dll` for Halo 2 Anniversary, `halo4.dll`) is loaded and hooked, rehooks any that MCC has unloaded and reloaded, and watches MCC's menu state to start the brain when a match begins and stop it in the menus. MCC reloads a title's DLL between matches, so every per-game file has a `*_watch()` function that compares the first five bytes of its hooked function with the jump it wrote and installs the hook again when they differ. All hooks are MinHook detours. The engine hooks run on the game thread; everything they do (running a brain command, writing actions) happens inside the game's own tick, guarded by structured exception handling so a bad pointer sets a fault flag instead of crashing MCC.
 
@@ -345,7 +345,7 @@ A self-contained Direct3D 11 renderer that draws character models packed from MC
 
 ### `native/ppg_window.cpp`
 
-`ppg_window.exe` is Project Reach's app window, a separate program unrelated to MCC. It hosts one of the project's local web pages (the launcher, the Observer, the LiDAR view, the nav painter) in a native window through the Microsoft Edge WebView2 control, so the tools look like a desktop app rather than a browser tab. Usage: `ppg_window.exe --url http://127.0.0.1:8793/ [--title ...] [--icon file.ico] [--width 1040] [--height 700]`; `tools/appwindow.py` starts it.
+`ppg_window.exe` is Project Noble's app window, a separate program unrelated to MCC. It hosts one of the project's local web pages (the launcher, the Observer, the LiDAR view, the nav painter) in a native window through the Microsoft Edge WebView2 control, so the tools look like a desktop app rather than a browser tab. Usage: `ppg_window.exe --url http://127.0.0.1:8793/ [--title ...] [--icon file.ico] [--width 1040] [--height 700]`; `tools/appwindow.py` starts it.
 
 The program parses its arguments, accepts only `http://127.0.0.1:`, `http://localhost:` and `about:` URLs (anything else becomes `about:blank`), becomes per-monitor DPI aware, creates a dark-titled window sized in 96-DPI units, and creates a WebView2 environment whose user data lives in `%LOCALAPPDATA%\ProjectProvingGrounds\webview`. Once the controller exists it sets a dark default background, disables developer tools, the status bar, default context menus and web messaging, cancels any navigation to a non-local URL (opening `https://` links in the default browser instead), routes new-window requests the same way, fits the view to the client area on resize and navigates to the page. If the WebView2 Runtime is missing it offers to open Microsoft's download page and exits.
 
@@ -1325,7 +1325,7 @@ The launcher's single page, plain HTML, CSS and JavaScript with no external reso
 
 Opens a project page in its own window. `WINDOW` is `native/bin/ppg_window.exe`, a small Windows program built from `native/ppg_window.cpp` that hosts the WebView2 control of Windows 10 and 11: no browser profile, no sign-in, no extensions, no address bar; links to other sites open in the default browser.
 
-- `command(url, size, title)` builds `[ppg_window.exe, --url, url, --title, title, --width, w, --height, h, (--icon installer/icon.ico)]`. The title comes from `TITLES` by port: 8793 "Project Reach", 8799 "Observer - ...", 8797 "LiDAR Viewer - ...", 8798 "LiDAR Simulator - ...", 8796 "Paint the nav - ...". Returns None when the executable is missing.
+- `command(url, size, title)` builds `[ppg_window.exe, --url, url, --title, title, --width, w, --height, h, (--icon installer/icon.ico)]`. The title comes from `TITLES` by port: 8793 "Project Noble", 8799 "Observer - ...", 8797 "LiDAR Viewer - ...", 8798 "LiDAR Simulator - ...", 8796 "Paint the nav - ...". Returns None when the executable is missing.
 - `open_window(url, size, title)` starts that command and returns at once, or falls back to `webbrowser.open(url)` in a developer copy without the built window. Under Wine (`brain.paths.wine()`, Linux and Steam Deck) there is no WebView2: it only prints the address, and the Linux launcher script and the launcher's page open the pages in the system's browser.
 - `remove_old_edge_profile()` deletes `%LOCALAPPDATA%\ProjectProvingGrounds\window` (best effort).
 - CLI: `python -I appwindow.py <url> [width height]`.
@@ -1950,7 +1950,7 @@ The canvas shows the roofless picture for the chosen cut height. A map without a
 
 ## Art and models made on each PC (setup builders)
 
-Project Reach ships no art, models or textures taken from Halo: The Master Chief Collection. Everything the
+Project Noble ships no art, models or textures taken from Halo: The Master Chief Collection. Everything the
 launcher, the LiDAR tools and the BOTS panel show that comes from the games is built on each PC from that PC's own copy
 of MCC. Most of it is built by the first-time setup (`tools/setup.py`, which the launcher runs and the installer offers
 to run when it finishes). A few builders are also run by `native/build.bat`, and a few are map data builders whose
@@ -2219,7 +2219,7 @@ reports the first differing index; exit 1 on any difference).
 
 Two command-line exporters that read MCC's `.map` files. They are a separate project, Proving Grounds Map Tools,
 because they are built on Reclaimer, a Halo map library under the GNU General Public License v3.0, so they are GPL-3.0
-too. Project Reach contains none of their code and only runs them as separate processes.
+too. Project Noble contains none of their code and only runs them as separate processes.
 
 | Program | Writes | Used for |
 |---|---|---|
@@ -2503,7 +2503,7 @@ mod's folder as drive Z:.
   MCC is running. Copies the payload to `<data>/app`; an update first deletes the previous version's code and documents
   (`docs`, `ghidra`, `native/tests`, `tools/menu_titles`, the code files in `tools`, `brain` and `native`) and keeps the player's logs, maps, LiDAR scans,
   `user/` settings and the art the setup built. Runs the first-time setup in the mod's prefix (output also in
-  `logs/linux_setup.txt`), writes the "Project Reach" menu entry (and a desktop copy when there is a Desktop
+  `logs/linux_setup.txt`), writes the "Project Noble" menu entry (and a desktop copy when there is a Desktop
   folder) that runs `ppg-launcher.sh`, and prints the Steam launch option to paste (copied to the clipboard with
   `wl-copy` or `xclip` when present).
 - `ppg-run.sh`, the Steam launch option (`"<app>/installer/linux/ppg-run.sh" %command%`). When Steam's command runs

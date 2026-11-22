@@ -1,7 +1,7 @@
-"""(custom, Nov 19) Project Reach's Reach Armory price list: maps/_looks/reach_prices.json.
+"""(custom, Nov 19) Project Noble's Reach Armory price list: maps/_looks/reach_prices.json.
 
 The owner: every Reach item purchasable with credits, as in the 2010 Armory; MCC keeps everything unlocked and
-untouched, and Project Reach's own Armory decides what the player may wear. The prices and rank gates are Halo: Reach's
+untouched, and Project Noble's own Armory decides what the player may wear. The prices and rank gates are Halo: Reach's
 own, read from the Halo: Reach Editing Kit's ui/supply_depot.cookie_purchase_globals (each item's credit cost, its
 minimum rank as a grade and sub grade, the items it needs bought first, its default / auto-buy flags). Each priced
 family lines up one to one with the Armory's catalog botcore logged (maps/_looks/reach_armory.json "writes": per slot,

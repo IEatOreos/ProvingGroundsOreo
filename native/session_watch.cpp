@@ -209,14 +209,14 @@ static void add_lobby_bots(uint8_t* msg) {
     }
 }
 
-// (custom, Nov 16) the person's own name, from MCC's list (their node: +0x10 set), for Project Reach's lobby rows
+// (custom, Nov 16) the person's own name, from MCC's list (their node: +0x10 set), for Project Noble's lobby rows
 static char g_me_name[64];
 static volatile uint64_t g_me_id;                // (Nov 17) their id (+0x18): report.cpp keeps their emblem and nameplate
 const char* mcc_player_name() { return g_me_name; }
 uint64_t mcc_player_id() { return g_me_id; }
 
 // (custom, Nov 17, the owner: a friend in the lobby, "balance him to a team like normal matchmaking would") the other
-// people in the session, for Project Reach. From the logs of real lobbies (two friends who joined, two only on
+// people in the session, for Project Noble. From the logs of real lobbies (two friends who joined, two only on
 // the friends list): a person in the session has +0x12 and +0x13 set (the player 01 01 01 01 00 01, a joined
 // friend 00 00 01 01 01, a friends-list entry only +0x14); +0x6C is the team (the player 0, a friend MCC put on Blue 1,
 // and in a match's list each bot its own team: 0, 1, 1 as dealt; -1 not yet set); +0x64 the machine (the host 0, a
@@ -395,7 +395,7 @@ static DWORD WINAPI refresh_thread(void*) {
 
 void career_hooks();                             // career.cpp (Nov 13: the bots' numbers on MCC's Career page)
 
-void lobby_test_hooks();                         // lobby_test.cpp (Nov 16: Project Reach, the lobby's own picks)
+void lobby_test_hooks();                         // lobby_test.cpp (Nov 16: Project Noble, the lobby's own picks)
 
 void session_watch_hooks() {
     career_hooks();

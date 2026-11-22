@@ -33,6 +33,6 @@ The live loop remains 30 Hz; a 10 ms decision deadline is processed on available
 
 All 40 offline regression tests passed, including seven new integration checks. All 84 current Python sources compiled in memory. The live runner loads and displays --help, and the new updater's offline selftest passes. The prior placed.py unclosed-file ResourceWarning remains. No native rebuild is required: native source and binaries are the new installer versions.
 
-After restarting Project Reach, check normal match startup and shutdown, Legendary DMR/sniper aim, lower-tier sniper shots, empty-sniper switching/reloading, power fetching, weapon replacements and the Breakpoint ledge. Firefight and newly changed vehicle behavior also need gameplay confirmation. No live game result is claimed from offline tests.
+After restarting Project Noble, check normal match startup and shutdown, Legendary DMR/sniper aim, lower-tier sniper shots, empty-sniper switching/reloading, power fetching, weapon replacements and the Breakpoint ledge. Firefight and newly changed vehicle behavior also need gameplay confirmation. No live game result is claimed from offline tests.
 
 The author's updater remains unmodified. Running another upstream installer, including an enabled automatic update, can replace customized source again; preserve the custom Git history and repeat a source merge after future updates. Machine settings, recordings, bundled runtimes, binaries and derived map exports are not included in source commits.

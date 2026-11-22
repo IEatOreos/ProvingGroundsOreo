@@ -1,5 +1,5 @@
 #!/bin/bash
-# Project Reach on Linux and Steam Deck: what the other scripts share (sourced, not run).
+# Project Noble on Linux and Steam Deck: what the other scripts share (sourced, not run).
 #
 # MCC runs through Proton (Wine). The mod's Windows parts (its bundled Windows Python, inject.exe, botcore.dll) run
 # through the same Proton:
@@ -15,7 +15,7 @@
 PPG_APPID=976730
 
 ppg_say() { printf '%s\n' "$*"; }
-ppg_die() { printf 'Project Reach: %s\n' "$*" >&2; exit 1; }
+ppg_die() { printf 'Project Noble: %s\n' "$*" >&2; exit 1; }
 
 # Steam's folders: native (~/.steam/steam, ~/.local/share/Steam) and Flatpak; one line each, no repeats
 ppg_steam_roots() {

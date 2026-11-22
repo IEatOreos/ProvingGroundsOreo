@@ -1,5 +1,5 @@
 #!/bin/bash
-# Removes Project Reach from Linux / Steam Deck: the mod's folder (asks whether to keep your LiDAR scans,
+# Removes Project Noble from Linux / Steam Deck: the mod's folder (asks whether to keep your LiDAR scans,
 # learned map data and recorded matches), its Wine prefix and its menu entries. MCC itself is not changed.
 #   ./uninstall.sh [--yes]      (--yes: no questions, keeps your data)
 set -euo pipefail
@@ -12,7 +12,7 @@ done
 declare -F ppg_data_dir >/dev/null || { echo "common.sh was not found beside this script" >&2; exit 1; }
 DATA="$(ppg_data_dir)"
 APP="$DATA/app"
-[ -d "$DATA" ] || { echo "Project Reach is not installed ($DATA)"; exit 0; }
+[ -d "$DATA" ] || { echo "Project Noble is not installed ($DATA)"; exit 0; }
 ppg_mcc_running && ppg_die "Close Halo: The Master Chief Collection first (the bots are loaded into it)."
 
 keep=y
@@ -34,7 +34,7 @@ rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/project-proving-grounds
 desktop="$(xdg-user-dir DESKTOP 2>/dev/null || printf '%s' "$HOME/Desktop")"
 rm -f "$desktop/project-proving-grounds.desktop"
 cat <<EOF
-Project Reach is removed.
+Project Noble is removed.
 Last step in Steam: Halo: The Master Chief Collection > Properties > General > Launch Options: clear the line.
 (Until then MCC still starts normally, through a small stand-in left at $APP/installer/linux/ppg-run.sh.)
 EOF

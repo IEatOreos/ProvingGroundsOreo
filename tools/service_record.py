@@ -1,4 +1,4 @@
-"""The Project Reach Service Record (custom, Nov 15): a stats site for the bots, laid out like a 2010 service record
+"""The Project Noble Service Record (custom, Nov 15): a stats site for the bots, laid out like a 2010 service record
 (the owner's brief: docs/SERVICE_RECORD_SITE_BRIEF.md). One build reads what the mod already records and writes a
 folder of static pages, logs/service_record/index.html, that opens straight from the folder (no server).
 
@@ -17,9 +17,9 @@ Who is listed (the owner, Nov 15): the bots only. Every bot of bot_profiles.ini 
 (bot_pool.txt, Nov 17), at 0 from the start, and any other bot once it has a match that counts. People are listed only when named in native/bin/service_record/people.json (Nov 17,
 the owner: "Yes just me for now"; this PC only, never in git); anyone else is not, though a match's scoreboard still
 shows every gamertag.
-Which matches (Nov 17, the owner: "Matchmaking only"): the ones Project Reach started, named by MCC's GameUniqueId
+Which matches (Nov 17, the owner: "Matchmaking only"): the ones Project Noble started, named by MCC's GameUniqueId
 in native/bin/service_record/matchmaking.txt (native/proving_grounds.cpp writes a line once each match's report is
-written). A custom game played without Project Reach is not on the site; bot_career still counts it in totals.txt
+written). A custom game played without Project Noble is not on the site; bot_career still counts it in totals.txt
 (the bots' MCC Career pages).
 Of those, a match counts by bot_career's rules (its person played 60 s or more; a bot's row of a match from before the
 bots' restart does not), so over the same matches the leaderboard equals native/bin/career/totals.txt.
@@ -54,7 +54,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 SITE = os.path.join(HERE, "service_record_site")
 BIN = os.path.join(ROOT, "native", "bin")
-NAME = "Project Reach Service Record"
+NAME = "Project Noble Service Record"
 DEFAULT_GAME = "reach"
 
 
@@ -82,7 +82,7 @@ class Paths:
         s.pool = os.path.join(BIN, "bot_pool_saved.ini")
         s.bot_pool = os.path.join(BIN, "bot_pool.txt")           # Bot Matchmaking's pool: every bot listed (Nov 17)
         s.botcore = os.path.join(BIN, "botcore.ini")             # the BOTS panel's lobby list (bot= lines, Nov 18)
-        # Project Reach's matches, the only ones on the site (Nov 17); None: every match (the tests of what counts)
+        # Project Noble's matches, the only ones on the site (Nov 17); None: every match (the tests of what counts)
         s.matchmaking = os.path.join(BIN, "service_record", "matchmaking.txt")
         s.emblems = os.path.join(BIN, "emblems")
         s.look_names = os.path.join(ROOT, "native", "look_names.h")
@@ -445,7 +445,7 @@ def kill_feed(detail, rows, game):
 def feed_feats(feed, winners):
     """{name: {"first": 1, "closer": 1, "grudge": n}} from one match's kill feed (kill_feed, oldest first): who got its
     first kill, who got its last kill when that player's side won the match (winners: the names that won), and for
-    each player how many enemies they killed 5 times or more (the Project Reach commendations). Kills only: a
+    each player how many enemies they killed 5 times or more (the Project Noble commendations). Kills only: a
     betrayal or a death with no killer is not one."""
     kills = [r for r in feed if r[4] == "kill" and r[1] and r[1] != UNNAMED]
     out = {}
@@ -1251,7 +1251,7 @@ def load_people(paths):
 
 
 def load_matchmaking(path):
-    """(Nov 17, the owner: "Matchmaking only") {GameUniqueId} of the matches Project Reach started: its list
+    """(Nov 17, the owner: "Matchmaking only") {GameUniqueId} of the matches Project Noble started: its list
     (native/bin/service_record/matchmaking.txt, native/proving_grounds.cpp), one a line, the id first, # lines notes.
     No file yet: none. path None: None, every match counts."""
     if path is None:
@@ -1330,7 +1330,7 @@ def collect(ledger, store_matches, roster, kills=None, paths=None, people=(), bo
     `people` (load_people) that the ledger has as people. kills: the store's kill rows
     by recording ({"<map>_<start>": [rows]}); a match with none adds nothing to weapons, versus and heat, and
     kill_games says how many of a player's matches had them. matchmaking: the ids of the only matches shown
-    (load_matchmaking: Project Reach's own), None every match."""
+    (load_matchmaking: Project Noble's own), None every match."""
     every = ledger
     if matchmaking is not None:                             # (Nov 17, "Matchmaking only": a custom game adds nobody)
         ledger = {gid: m for gid, m in ledger.items() if gid in matchmaking}
@@ -2440,7 +2440,7 @@ def write_game_ranks(data, paths):
 def write_game_challenges(data, paths):
     """(Nov 17, docs: the challenges in game, and the owner's Bungie.net Reach Challenges picture) <out>/challenges.txt,
     the live challenges as this build drew them (challenge_table) and each listed person's progress on them
-    (challenge_progress), for Project Reach's Challenges page (native/proving_grounds.cpp). The game reads this and
+    (challenge_progress), for Project Noble's Challenges page (native/proving_grounds.cpp). The game reads this and
     works nothing out: the site and the game show the same numbers."""
     C = data.get("challenges") or {}
     by = {c["key"]: c for c in C.get("list", [])}
@@ -2474,7 +2474,7 @@ def write_game_challenges(data, paths):
 
 def write_game_commendations(data, paths):
     """(Nov 19, the owner's picture of Halo: Reach's Service Record: Commendations, "add it to ours with its own menu
-    option, and keep it connected to the service record site") <out>/commendations.txt for Project Reach's Commendations
+    option, and keep it connected to the service record site") <out>/commendations.txt for Project Noble's Commendations
     page (native/proving_grounds.cpp): the site's table and banners (each tier's own where the site has it), and each
     listed person's counts with the tier reached as the site's Commendations page counts it (app.js commState: the tiers
     whose need the count reaches), their Overall Commendation Progress, credits, rank and the next rank. The game works
@@ -2516,7 +2516,7 @@ def write_game_commendations(data, paths):
 
 
 def write_game_locations(data, paths):
-    """(Nov 19, the owner: Project Reach's Psych Profile page, "a static heat map of the service websites player
+    """(Nov 19, the owner: Project Noble's Psych Profile page, "a static heat map of the service websites player
     locations") <out>/locations.txt: how many of the site's listed players (bots and people) have each home state, as
     the site shows them (states.json's pick from the name, or the one set in edit mode), and each person's own state.
     The game draws the heat over its world map (native/proving_grounds_reach.inc, native/world_map.h)."""
@@ -2543,7 +2543,7 @@ def write_game_locations(data, paths):
 def write_game_career(data, paths):
     """(Nov 19, the owner's frames of Halo: Reach's Service Record and Career pages) <out>/career.txt: each listed
     person's matches as Reach's Career split them, from the site's own match list. The Service Record counts only
-    Project Reach's matches (matchmaking.txt), so every one is Matchmaking; Arena is the ones of its ARENA playlist
+    Project Noble's matches (matchmaking.txt), so every one is Matchmaking; Arena is the ones of its ARENA playlist
     (The Arena); Big Team Battle its BIG TEAM BATTLE. Campaign, Firefight and custom games are not recorded."""
     playlists = load_matchmaking_playlists(getattr(paths, "matchmaking", None))
     people = {p["name"] for p in data["players"] if p.get("person")}
@@ -2564,7 +2564,7 @@ def write_game_career(data, paths):
                 t["deaths"] += int(r.get("d") or 0)
                 t["assists"] += int(r.get("a") or 0)
                 t["seconds"] += int(r.get("sec") or 0)
-    lines = ["# made by tools/service_record.py from the site's matches (Project Reach's only); do not edit",
+    lines = ["# made by tools/service_record.py from the site's matches (Project Noble's only); do not edit",
              "# career<TAB>name<TAB>matchmaking | arena | btb<TAB>games<TAB>wins<TAB>kills<TAB>deaths<TAB>assists<TAB>seconds"]
     for (name, b), t in sorted(tally.items()):
         clean = name.replace("\t", " ").replace("\n", " ")
@@ -2593,7 +2593,7 @@ def armory_gate_step(ranks, grade, sub):
 
 def write_game_armory(data, paths, prices_path=ARMORY_PRICES, table_path=ARMORY_TABLE):
     """(Nov 19, the owner: "all the items in the game to be purchasable and unlockable ... you can't equip it until you
-    purchase it through our menu") <out>/armory.txt for Project Reach's Armory (native/armory.cpp): each listed
+    purchase it through our menu") <out>/armory.txt for Project Noble's Armory (native/armory.cpp): each listed
     person's rank step and credits earned (the rank stays the credits earned; what the Armory spends is taken from them
     by its own ledger, <store>/armory_ledger.txt, which botcore writes), every item of maps/_looks/reach_prices.json
     with its rank gate as a step of this site's one rank table (ranks.json), and the customization table's pieces
@@ -2642,8 +2642,8 @@ def write_game_armory(data, paths, prices_path=ARMORY_PRICES, table_path=ARMORY_
 
 def write_last_match(data, paths):
     """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
-    report) <out>/last_match.txt: what the newest match on the site (a Project Reach match) earned each listed person
-    in it, for Project Reach's credits screen when its lobby comes back (native/proving_grounds.cpp). Their credits
+    report) <out>/last_match.txt: what the newest match on the site (a Project Noble match) earned each listed person
+    in it, for Project Noble's credits screen when its lobby comes back (native/proving_grounds.cpp). Their credits
     before and after; a line for each kind of credit by ranks.json's worth (the game played, the win, kills, assists,
     medals), then the rest of the difference: Challenges (as their credits grew since the last build) and Commendations
     (tiers reached); the rank steps the bar runs through.
@@ -2704,7 +2704,7 @@ def write_last_match(data, paths):
         had = None
     if lines or (m and had != m["id"]):                    # (a match nobody listed played: its line alone, so the
                                                             # game knows there is nothing to show)
-        text = ["# made by tools/service_record.py with the site: what the newest Project Reach match earned; do not edit",
+        text = ["# made by tools/service_record.py with the site: what the newest Project Noble match earned; do not edit",
                 "# match<TAB>id; person<TAB>name<TAB>credits before<TAB>after; line<TAB>name<TAB>what<TAB>count<TAB>credits;",
                 "# step<TAB>name<TAB>rank step<TAB>rank<TAB>its credits (the steps the bar runs through, and the next)",
                 f"match\t{m['id']}"] + lines

@@ -1504,7 +1504,7 @@ def main():
                     tb = traceback.format_exc(limit=6)
                     print(f"{now:6.1f}s tick failed ({err}):", tb, flush=True)
                     # (custom, Nov 18) into the match's recording too: logs/brain.txt is the last match's only, and two
-                    # matches whose bots all froze 10 s in (17:47, 17:50, Project Reach with a friend) left no error
+                    # matches whose bots all froze 10 s in (17:47, 17:50, Project Noble with a friend) left no error
                     # once the next match had written over it
                     if trace is not None:
                         try:

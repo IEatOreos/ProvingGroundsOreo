@@ -1,4 +1,4 @@
-// proving_grounds.h: Project Reach (custom, Nov 16). The owner: an offline copy of Halo: Reach's Social Games over
+// proving_grounds.h: Project Noble (custom, Nov 16). The owner: an offline copy of Halo: Reach's Social Games over
 // MCC's own Halo: Reach custom game lobby: pick 4v4 (Arena) or 8v8 (Big Team Battle), a short search that fills the
 // lobby with Bot Matchmaking's bots (clans together), teams dealt fair every match, then Reach's vote (three games and
 // None of the Above) where every bot votes by its own taste, and the winner launched by MCC's own lobby. Invited bots
@@ -53,10 +53,10 @@ struct pg_env {
     // person Reach's default Spartan (person_figure); null or 0: none
     unsigned long long (*figure)(const char* name, bool bot, float yaw, int w, int h);
 };
-bool pg_running();              // a Project Reach session: between matches the lobby comes back to it
+bool pg_running();              // a Project Noble session: between matches the lobby comes back to it
 bool pg_visible();              // its screens are up (they take the mouse, keys and pad)
 bool pg_launching();            // (Nov 18) the vote's winner sent to MCC's lobby, its game not started yet
-void pg_open();                 // the lobby's PROJECT REACH tile
+void pg_open();                 // the lobby's PROJECT NOBLE tile
 void pg_back();                 // Esc / the pad's B
 // each frame over the lobby (between ImGui::NewFrame and Render); true when the roster changed (save it)
 bool pg_frame(pg_env& e);
@@ -68,7 +68,7 @@ const char* pg_map_name(const char* mcc_name, const char* key, char* out, int ca
 bool pg_following();
 void pg_follow_poll();          // the overlay's every frame: a host's state starts (or ends) the following
 
-// ---- pg_link.cpp (Nov 18): the host's Project Reach to a joined PC friend's, over MCC's Party text chat
+// ---- pg_link.cpp (Nov 18): the host's Project Noble to a joined PC friend's, over MCC's Party text chat
 #define PGS_MAX 4096             // a state's bytes at most (60000 went through live)
 #define PGS_MAGIC "PGS2"
 void pg_link_watch();                                    // botcore.cpp's loop: hooks MCC's Party once it is loaded

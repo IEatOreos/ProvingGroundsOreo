@@ -16,9 +16,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 WINDOW = os.path.join(ROOT, "native", "bin", "ppg_window.exe")
 ICON = os.path.join(ROOT, "installer", "icon.ico")
-TITLES = {"8793": "Project Reach", "8799": "Observer - Project Reach",
-          "8797": "LiDAR Viewer - Project Reach", "8798": "LiDAR Simulator - Project Reach",
-          "8796": "Paint the nav - Project Reach"}
+TITLES = {"8793": "Project Noble", "8799": "Observer - Project Noble",
+          "8797": "LiDAR Viewer - Project Noble", "8798": "LiDAR Simulator - Project Noble",
+          "8796": "Paint the nav - Project Noble"}
 
 
 def command(url, size=(1400, 900), title=None):
@@ -26,7 +26,7 @@ def command(url, size=(1400, 900), title=None):
     if not os.path.exists(WINDOW):
         return None
     port = url.split(":")[2].split("/")[0] if url.count(":") >= 2 else ""
-    cmd = [WINDOW, "--url", url, "--title", title or TITLES.get(port, "Project Reach"),
+    cmd = [WINDOW, "--url", url, "--title", title or TITLES.get(port, "Project Noble"),
            "--width", str(size[0]), "--height", str(size[1])]
     return cmd + (["--icon", ICON] if os.path.exists(ICON) else [])
 

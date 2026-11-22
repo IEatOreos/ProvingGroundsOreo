@@ -1,4 +1,4 @@
-# Project Reach — custom bot developer handoff
+# Project Noble — custom bot developer handoff
 
 Prepared November 5, 2026, America/New_York. This is a standalone handoff for the next developer or coding agent. It describes the installed code and work completed in this session; observations, verified behavior, and proposals are distinguished below.
 
@@ -17,7 +17,7 @@ Current state:
 - GitHub has **no release entries** as of this check. No custom installer or release package has been published.
 - Eight focused ammo/rearm regression tests pass. All 78 `brain/*.py` and `tools/*.py` sources compile with the installed Python runtime.
 - Battery/energy depletion detection is **not implemented**. It must not be described as working.
-- Restart the Project Reach bot process/launcher after Python changes. Coordinate around the owner's active match.
+- Restart the Project Noble bot process/launcher after Python changes. Coordinate around the owner's active match.
 - **The owner must approve each future push, published tag, release, or artifact upload.** Today's completed pushes do not authorize later uploads.
 
 This handoff is a new local document created after the code commits above. Unless separately approved and pushed later, obtain it directly from the owner rather than assuming it is already on GitHub.

@@ -1,5 +1,5 @@
 @echo off
-rem Builds native\bin\ppg_window.exe, Project Reach's app window (WebView2), with Visual Studio's C++ tools.
+rem Builds native\bin\ppg_window.exe, Project Noble's app window (WebView2), with Visual Studio's C++ tools.
 setlocal
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 set "VSDIR="

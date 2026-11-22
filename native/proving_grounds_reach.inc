@@ -1,22 +1,22 @@
-// proving_grounds_reach.inc (custom, Nov 19): Halo: Reach's own menus around Project Reach, phase 1. Included once by
+// proving_grounds_reach.inc (custom, Nov 19): Halo: Reach's own menus around Project Noble, phase 1. Included once by
 // proving_grounds.cpp, after menu_screen: it draws with that file's helpers (P, text, item, prompt, painted_background,
 // the roster) and keeps its own settings in native\bin\reach_menus.ini.
 //
 // The owner sent seven frames of Reach's menus: "Starting here. This is the main menu. And the matchmaking menus all
-// phase 1". Project Reach's S_MENU now shows Reach's pages (g_rpage):
+// phase 1". Project Noble's S_MENU now shows Reach's pages (g_rpage):
 //  - RP_TITLE: the title screen, on the first open of a session (the launcher's route lands here): the title spaced
-//    wide over the painting, START SOLO CAMPAIGN (not in Project Reach yet) and MAIN MENU;
+//    wide over the painting, START SOLO CAMPAIGN (not in Project Noble yet) and MAIN MENU;
 //  - RP_MAIN: MAIN MENU: CAMPAIGN, MATCHMAKING, FIREFIGHT, CUSTOM GAME, FORGE, THEATER, a line on each, MY PARTY at
 //    the right. MATCHMAKING opens RP_MM; CUSTOM GAME leaves for MCC's own Halo: Reach custom game lobby (it is under
-//    these screens); the rest are not in Project Reach yet (they say so);
+//    these screens); the rest are not in Project Noble yet (they say so);
 //  - RP_MM: MATCHMAKING: the playlist's banner, PLAYLIST, SEARCH RESTRICTIONS, PSYCH PROFILE, START MATCHMAKING (the
-//    search, the vote, the game: Project Reach as before), MY PARTY;
+//    search, the vote, the game: Project Noble as before), MY PARTY;
 //  - RP_PLAYLIST: Reach's categories and playlists in two columns, the picked one's picture, words and numbers, the
-//    player's band. Project Reach plays THE ARENA (4v4) and BIG TEAM BATTLE (8v8); the rest of Reach's list is shown,
+//    player's band. Project Noble plays THE ARENA (4v4) and BIG TEAM BATTLE (8v8); the rest of Reach's list is shown,
 //    marked as not here yet;
 //  - RP_RESTRICT / RP_PSYCH: SEARCH RESTRICTIONS (three ticks) and PSYCH PROFILE (four choices), saved; the search does
 //    not use them yet (each page says so);
-//  - RP_OPTIONS: Project Reach's own menu as before (invite, challenges, commendations, simulate matches, game size),
+//  - RP_OPTIONS: Project Noble's own menu as before (invite, challenges, commendations, simulate matches, game size),
 //    opened with the Menu prompt (the pad's Start, M on the keys) from the title, the main menu or matchmaking.
 // Our own drawing and words throughout: no Bungie or 343 art, logos or icons. The paintings behind the title, the main
 // menu and matchmaking are this PC's own (native\bin\pg_backgrounds: title, main_menu, matchmaking_lobby, else the
@@ -50,7 +50,7 @@ static void rm_save() {
 }
 
 // ------------------------------------------------------------------ the playlists, as Reach lists them
-// pl: Project Reach's playlist (g_pl index) when it plays it, -1 when not yet. Our own words for each.
+// pl: Project Noble's playlist (g_pl index) when it plays it, -1 when not yet. Our own words for each.
 struct rm_pl { int cat; const char* name; int pl; const char* blurb; };
 static const char* RM_CAT[5] = { "STANDARD", "EVOLVED", "ANNIVERSARY", "COMMUNITY", "COOPERATIVE" };
 static const char* RM_CAT_BLURB[5] = {
@@ -79,7 +79,7 @@ static int rm_lists(int cat, int* out) {         // the playlists of a category,
     for (int i = 0; i < RM_NPL; i++) if (RM_PL[i].cat == cat) out[n++] = i;
     return n;
 }
-static int rm_current() {                        // the RM_PL entry Project Reach is set to
+static int rm_current() {                        // the RM_PL entry Project Noble is set to
     for (int i = 0; i < RM_NPL; i++) if (RM_PL[i].pl == (g_size >= 8 ? 1 : 0)) return i;
     return 0;
 }
@@ -174,7 +174,7 @@ static const pic* rm_picture(const wchar_t* name) {
 }
 
 static const pic* rm_lobby_art();               // (phase 5, below)
-// the frame's ground for Reach's pages (false: not one of them, Project Reach's own ground then)
+// the frame's ground for Reach's pages (false: not one of them, Project Noble's own ground then)
 static bool rmenu_background(float t) {
     if (g_rpage == RP_OPTIONS) return false;
     const pic* art = nullptr;
@@ -193,8 +193,8 @@ static bool rmenu_party() {
     return g_rpage == RP_MAIN || g_rpage == RP_MM || g_rpage == RP_OPTIONS || g_rpage == RP_CUSTOM || g_rpage == RP_LOBBY;
 }
 
-// a list row as Reach's: the label (and a value at its right), Reach's band on the focused one; a row not in Proving
-// Grounds yet stays dim
+// a list row as Reach's: the label (and a value at its right), Reach's band on the focused one; a row not in Project
+// Noble yet stays dim
 static void rm_row(float x0, float y0, float x1, float y1, bool focus, const char* label, bool on = true,
                    const char* value = nullptr) {
     if (focus) focus_band(x0, y0, x1, y1);
@@ -262,7 +262,7 @@ static void rm_party(pg_env& e, const char* where_caps, const char* where) {
     sprintf_s(now, "%d", g_nparty + 1 + np);
     sprintf_s(max, "%d", 16);
     ros_head h = { where_caps, cnt, where, cnt, "MY PARTY", "MY PARTY DETAILS",
-                   { me_name(), cur_pl().title, now, max, "Project Reach" } };
+                   { me_name(), cur_pl().title, now, max, "Project Noble" } };
     roster(e, rows, h, 1830, 34, 82, 0, nullptr);
 }
 
@@ -317,14 +317,14 @@ static void rm_title(pg_env& e, float t) {
     g_dl->AddRectFilledMultiColor(P(960, 572), P(1920, 600), A(IM_COL32(230, 236, 240, 60)), A(IM_COL32(230, 236, 240, 0)),
                                   A(IM_COL32(230, 236, 240, 0)), A(IM_COL32(230, 236, 240, 0)));
     rm_spaced(30, 960, 446, IM_COL32(214, 220, 226, 200), "PROJECT", 22, 1);
-    rm_spaced(104, 960, 476, IM_COL32(236, 240, 244, 235), "REACH", 30, 1);   // (Nov 20: "PROJECT" above, "REACH")
+    rm_spaced(104, 960, 476, IM_COL32(236, 240, 244, 235), "NOBLE", 30, 1);   // (Nov 21: "PROJECT" above, "NOBLE")
     g_alpha = keep;
     int base = (int)g_items.size();
     bool f0 = item(160, 800, 640, 838), f1 = item(160, 842, 640, 880);
     rm_row(160, 800, 640, 838, f0, "START SOLO CAMPAIGN", false);
     rm_row(160, 842, 640, 880, f1, "MAIN MENU");
-    if (f0) text(g_fs, 22, 170, 890, IM_COL32(200, 206, 212, 220), "The campaign is not in Project Reach yet.");
-    text(g_fl, 22, 1760, 900, IM_COL32(214, 220, 226, 150), "PROJECT REACH", 2);
+    if (f0) text(g_fs, 22, 170, 890, IM_COL32(200, 206, 212, 220), "The campaign is not in Project Noble yet.");
+    text(g_fl, 22, 1760, 900, IM_COL32(214, 220, 226, 150), "PROJECT NOBLE", 2);
     text(g_fs, 18, 1760, 928, IM_COL32(214, 220, 226, 110), g_rm_version_text(), 2);
     if (rm_prompts(176, 966, false, false, true)) rm_open_options();
     if (pressed(base + 0)) sound(PS_ERROR);
@@ -334,7 +334,7 @@ static void rm_title(pg_env& e, float t) {
 static const char* RM_MAIN_ITEMS[6] = { "CAMPAIGN", "MATCHMAKING", "FIREFIGHT", "CUSTOM GAME", "FORGE", "THEATER" };
 static const char* RM_MAIN_DESC[6] = {
     "The campaign's lobby. The campaign itself is played from MCC's own menus.",
-    "Take your party into matchmaking: Project Reach's playlists, a lobby of bots and the vote.",
+    "Take your party into matchmaking: Project Noble's playlists, a lobby of bots and the vote.",
     "Firefight's lobby. Firefight itself is played from MCC's own menus.",
     "Your own game: pick the game type and the map, then start it with your bots.",
     "Forge's lobby. Forge itself is played from MCC's own menus.",
@@ -491,7 +491,7 @@ static void rm_playlist(pg_env& e, float t) {
         const rm_pl& p = RM_PL[focus_pl];
         if (p.pl < 0) {
             rm_wrap(g_fl, 25, 1170, y, 345, IM_COL32(222, 226, 230, 255), p.blurb);
-            text(g_fl, 24, 1170, y + 110, C_GOLD, "Not in Project Reach yet.");
+            text(g_fl, 24, 1170, y + 110, C_GOLD, "Not in Project Noble yet.");
         } else {
             const playlist& pl = g_pl[p.pl];
             rm_wrap(g_fl, 25, 1170, y, 345, IM_COL32(222, 226, 230, 255), pl.blurb);
@@ -781,7 +781,7 @@ static void rm_psych(pg_env& e, float t) {
     rm_small_header("PSYCH PROFILE", "MATCHMAKING");
     int base = (int)g_items.size(), focus = -1;
     // (Nov 19, the owner: "the proving grounds options (Simulate Matches 1 round, 2 round, etc) to be on the pysch
-    // screen") the four preferences, then Project Reach's own two: the bot simulation's rounds, the invited party
+    // screen") the four preferences, then Project Noble's own two: the bot simulation's rounds, the invited party
     double now = ImGui::GetTime();
     sim_poll(now);
     char sims[48], inv[32];
@@ -825,7 +825,7 @@ static void rm_psych(pg_env& e, float t) {
             sound(PS_MOVE);
         }
     }
-    if (focus == 4 && g_left_right && !g_sim_proc) {     // (the rounds, 1 to 20, as Project Reach's menu had them)
+    if (focus == 4 && g_left_right && !g_sim_proc) {     // (the rounds, 1 to 20, as Project Noble's menu had them)
         g_lr_taken = true;
         int r = g_sim_rounds + g_left_right;
         g_sim_rounds = r < 1 ? 1 : r > 20 ? 20 : r;
@@ -842,7 +842,7 @@ static void rm_psych(pg_env& e, float t) {
 // ------------------------------------------------------------------ phase 2: the Start menu, the Service Record
 // (Nov 19, the owner's ten frames: MY PARTY DETAILS, MENU, SERVICE RECORD, CAREER, CAMPAIGN, ARENA, MATCHMAKING,
 // FIREFIGHT twice, COMMENDATIONS) Reach's player pages. The numbers are the Service Record's (career.txt, written with
-// the site by tools/service_record.py write_game_career): it counts only Project Reach's matches, so Matchmaking is
+// the site by tools/service_record.py write_game_career): it counts only Project Noble's matches, so Matchmaking is
 // all of them and Arena those of The Arena; the campaign, Firefight and custom games are not recorded, and their pages
 // say so rather than show made-up numbers. Top Commendations are the three furthest along (commendations.txt).
 static int g_car[3][6];                          // matchmaking, arena, btb: games, wins, kills, deaths, assists, seconds
@@ -948,23 +948,23 @@ static void rm_star(float cx, float cy, float r, ImU32 c) {   // (Reach's challe
     g_dl->AddConcavePolyFilled(v, 10, A(c));
 }
 
-// (Nov 19, later) PROJECT REACH'S own options left the menu: Simulate Matches and Invite Player are on the Psych
+// (Nov 19, later) PROJECT NOBLE'S own options left the menu: Simulate Matches and Invite Player are on the Psych
 // Profile, Commendations on Matchmaking, the challenges here (rm_challenges), the game size the playlist
 static const int RM_NMENU = 8;
 static const char* RM_MENU_ITEMS[9] = { "THE ARMORY", "PLAYER", "FILE BROWSER", "CONTROLLER", "AUDIO VIDEO", "CHALLENGES",
-                                        "NETWORK STATUS", "SERVICE RECORD SITE", "PROJECT REACH" };
+                                        "NETWORK STATUS", "SERVICE RECORD SITE", "PROJECT NOBLE" };
 static const bool RM_MENU_ON[9] = { true, true, true, true, false, true, true, true, true };
 static const char* RM_MENU_DESC[9] = {
     "Buy armor with the credits your Service Record has earned, as in Reach. What you equip here is what you wear in "
-    "Project Reach's matches.",
+    "Project Noble's matches.",
     "Your Service Record: your career, your commendations.",
     "Look through the game types, maps and films of your recent games and the ones you saved.",
     "See Halo: Reach's controls as MCC has them set.",
     "Set sound and picture in MCC's own Settings.",
     "Today's and this week's challenges, as your Service Record has them.",
-    "Project Reach plays on this PC: there is no network to check.",
+    "Project Noble plays on this PC: there is no network to check.",
     "Open your Service Record site in the browser: every match, medal and commendation.",
-    "Project Reach's own options: invite players, challenges, commendations, simulate matches, game size." };
+    "Project Noble's own options: invite players, challenges, commendations, simulate matches, game size." };
 
 // the challenges in the Start menu, as Reach's DAILY CHALLENGES: each its icon in a ring, its name, what to do, its
 // credits, a thin bar and [n/need]; the dailies, then the weeklies
@@ -1126,7 +1126,7 @@ static void rm_sr(pg_env& e, float t) {
     rm_stat(382, "Highest Campaign Difficulty", "Not recorded", true);
     rm_stat(423, "Connected Campaign Kills", "Not recorded", true);
     rm_top_comms(470);
-    if (focus == 2) text(g_fs, 21, 400, 280, IM_COL32(200, 206, 212, 200), "Legacy is not in Project Reach yet.");
+    if (focus == 2) text(g_fs, 21, 400, 280, IM_COL32(200, 206, 212, 200), "Legacy is not in Project Noble yet.");
     rm_band();
     float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
     prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
@@ -1154,8 +1154,8 @@ static void rm_career(pg_env& e, float t) {
         int n = f == 0 ? 5 : 7;
         for (int k = 0; k < n; k++) rm_stat(160 + 41.0f * k, R[k], "Not recorded", true);
         rm_wrap(g_fl, 24, 808, 175 + 41.0f * n, 700, IM_COL32(200, 206, 212, 220), f == 0
-                ? "Project Reach does not record the campaign: the Service Record counts only its own matches."
-                : "Project Reach does not record Firefight: the Service Record counts only its own matches.");
+                ? "Project Noble does not record the campaign: the Service Record counts only its own matches."
+                : "Project Noble does not record Firefight: the Service Record counts only its own matches.");
     } else if (f == 1 || f == 2) {
         const int* c = g_car[f == 1 ? 1 : 0];
         rm_stat(160, "Games Won", num(0, c[1]));
@@ -1173,7 +1173,7 @@ static void rm_career(pg_env& e, float t) {
         }
     } else {
         rm_wrap(g_fl, 25, 808, 175, 700, IM_COL32(222, 226, 230, 255),
-                "Custom games are not on the Service Record: it counts only Project Reach's matches, the games its "
+                "Custom games are not on the Service Record: it counts only Project Noble's matches, the games its "
                 "matchmaking started.");
     }
     rm_band();
@@ -1199,7 +1199,7 @@ static void rm_diff(pg_env& e, float t) {
     int n = g_diff_mode ? 7 : 5;
     for (int k = 0; k < n; k++) rm_stat(160 + 41.0f * k, R[k], "Not recorded", true);
     rm_wrap(g_fl, 24, 808, 175 + 41.0f * n, 700, IM_COL32(200, 206, 212, 220),
-            g_diff_mode ? "Project Reach does not record Firefight yet." : "Project Reach does not record the campaign yet.");
+            g_diff_mode ? "Project Noble does not record Firefight yet." : "Project Noble does not record the campaign yet.");
     rm_band();
     prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
     if (rm_exit_prompt()) rm_exit();
@@ -1213,7 +1213,7 @@ static void rm_diff(pg_env& e, float t) {
 // page lists its items (the helmet its helmets, each opening its variants), each EQUIPPED, PURCHASED or its price,
 // locked by rank or by the item it needs first; the focused item tried on the Spartan; a purchase asked about first.
 // Reach's own prices and rank gates (the Editing Kit's supply depot tag, tools/reach_prices.py), the credits the
-// Service Record's (native/armory.cpp, its ledger); what is equipped is worn in Project Reach's Halo: Reach matches
+// Service Record's (native/armory.cpp, its ledger); what is equipped is worn in Project Noble's Halo: Reach matches
 // (reach.cpp). Emblem and colours stay MCC's own, as Reach never sold them.
 static const char* ARM_TITLE[ARM_NSLOTS] = { "HELMET", "LEFT SHOULDER", "RIGHT SHOULDER", "CHEST", "WRIST", "UTILITY",
                                              "VISOR COLOR", "KNEE GUARDS", "ARMOR EFFECT", "ELITE ARMOR" };
@@ -1271,7 +1271,7 @@ static void arm_figure(pg_env& e, float x0, float y0, float x1, float y1) {
 static bool arm_ready() {                        // the data is there; else the page says why
     if (armory_load()) return true;
     rm_wrap(g_fl, 25, 808, 175, 700, IM_COL32(222, 226, 230, 255),
-            "The Armory opens once the Service Record site has been built: it is built after every Project Reach "
+            "The Armory opens once the Service Record site has been built: it is built after every Project Noble "
             "match (or run tools\\service_record.py).");
     return false;
 }
@@ -1342,8 +1342,8 @@ static void arm_describe(int i, float y) {
         text(g_fs, 19, 1500, y + 48, IM_COL32(176, 182, 188, 220), c, 2);
     }
     bool mcc = it.id.rfind("mcc_", 0) == 0 || it.id == "chest_01" || it.id == "chest_02";   // (never in the 2010 Armory)
-    const char* src = mcc ? "Added by MCC: Project Reach's own price"
-                    : it.ours ? "Not sold for credits in 2010: Project Reach's own price"
+    const char* src = mcc ? "Added by MCC: Project Noble's own price"
+                    : it.ours ? "Not sold for credits in 2010: Project Noble's own price"
                     : it.def ? "Every Spartan's from the start" : "Halo: Reach's own price and rank";
     text(g_fs, 19, 830, y + 48, IM_COL32(176, 182, 188, 220), src);
     text(g_fl, 20, 830, y + 80, IM_COL32(176, 182, 188, 220), "PREREQUISITES");
@@ -1515,7 +1515,7 @@ static void rm_arm_items(pg_env& e, float t) {
 // Blam file's chdr: the name at 0xC0, the description at 0x1C0, UTF-16 either way round; the creator at 0x88, the editor
 // at 0xAC). File Share and the searches were Bungie.net's: dim. CONTROLLER shows Reach's controller settings as MCC
 // keeps them (its GameUserSettings.ini, the seventh of each list: Halo: Reach); they are changed in MCC's own Settings,
-// which writes that file. NETWORK STATUS, on the menu as Reach's: Project Reach plays on this PC.
+// which writes that file. NETWORK STATUS, on the menu as Reach's: Project Noble plays on this PC.
 struct fb_file { std::wstring path; std::string name, desc, by, edited; ULONGLONG when = 0; uint64_t size = 0; };
 static const char* FB_KIND[4] = { "GAME TYPES", "MAP VARIANTS", "FILMS", "SCREENSHOTS" };
 static const wchar_t* FB_DIR[4] = { L"GameType", L"Map", L"Movie", L"Screenshot" };
@@ -1633,9 +1633,9 @@ static const char* FB_ROWS[11] = { "TEMPORARY HISTORY", "LOCAL FILES", "FILE SHA
 static const char* FB_DESC[9] = {
     "The game types, maps and films of your recent Halo: Reach games, as MCC keeps them on this PC.",
     "The game types, maps, films and screenshots you saved in Halo: Reach.",
-    "Your File Share was online, on Bungie.net. Project Reach plays on this PC.",
+    "Your File Share was online, on Bungie.net. Project Noble plays on this PC.",
     "Uploads and downloads were Bungie.net's. Nothing is sent or fetched here.",
-    "Recommended files came from Bungie.net, which Project Reach does not reach.",
+    "Recommended files came from Bungie.net, which Project Noble does not reach.",
     "Searching other players' files was Bungie.net's.",
     "Searching other players' files was Bungie.net's.",
     "Searching other players' files was Bungie.net's.",
@@ -1855,13 +1855,13 @@ static void rm_controller(pg_env& e, float t) {
     ctl_show(940, 690, 330);
     rm_wrap(g_fl, 23, 400, 500, 1050, IM_COL32(200, 206, 212, 220),
             "Halo: Reach's controls as MCC keeps them on this PC. Change them in MCC's own Settings, under Controls: "
-            "Project Reach shows them and does not change them.");
+            "Project Noble shows them and does not change them.");
     rm_band();
     prompt(318, 966, "B", "Esc", "Done", &g_footer_back);
     if (rm_exit_prompt()) rm_exit();
 }
 
-// NETWORK STATUS, drawn on the Start menu as Reach's (its three boxes), saying what holds for Project Reach
+// NETWORK STATUS, drawn on the Start menu as Reach's (its three boxes), saying what holds for Project Noble
 static void rm_network() {
     uint64_t ids[PG_PEOPLE];
     char names[PG_PEOPLE][32];
@@ -1870,7 +1870,7 @@ static void rm_network() {
     sprintf_s(party, np ? "%d IN YOUR PARTY" : "JUST YOU", np + 1);
     const char* L[3] = { "Matches:", "Connection Needed:", "Your Party:" };
     const char* V[3] = { "THIS PC", "NONE", party };
-    const char* D[3] = { "Project Reach hosts every match on this PC: the bots play here.",
+    const char* D[3] = { "Project Noble hosts every match on this PC: the bots play here.",
                          "No upload, NAT or packet loss to measure: nothing goes over a network for a match with bots.",
                          "The players in your MCC party, as MCC lists them." };
     for (int k = 0; k < 3; k++) {
@@ -1889,7 +1889,7 @@ static void rm_network() {
 // lobbies, "Next phase", and four paintings: "Four original screens for the game menus as well") CUSTOM GAME is real:
 // its game type and map are MCC's own lists (pg_lobby.cpp copies MCC's variant library), the maps a game type does not
 // go on dimmed by MCC's own check, and START GAME starts it through MCC's own lobby (pg_lobby_launch, the way
-// matchmaking's winner starts), then Project Reach steps aside as for any custom game (not a matchmaking match: not on
+// matchmaking's winner starts), then Project Noble steps aside as for any custom game (not a matchmaking match: not on
 // the Service Record). Its game options are shown, not changed: MCC keeps them in the game type's file. CAMPAIGN,
 // FIREFIGHT, FORGE and THEATER are their lobbies' looks only, saying they are played from MCC's own menus. Their
 // paintings are this PC's own (native\bin\pg_backgrounds: custom_game, campaign, firefight, forge, theater).
@@ -2011,13 +2011,13 @@ static void rm_custom(pg_env& e, float t) {
         if (s == 2) {
             g_cg_state = 0;
             g_stage = S_OFF;
-            logf("proving grounds: closed: a custom game started from Project Reach's Custom Game lobby");
+            logf("proving grounds: closed: a custom game started from Project Noble's Custom Game lobby");
             return;
         }
         if (s == -1) { g_cg_state = 0; g_cg_msg = why; }
         else if (ImGui::GetTime() - g_cg_t0 > 8) {
             g_cg_state = 0;
-            g_cg_msg = "MCC's Halo: Reach custom game lobby did not take the game. Leave Project Reach to check it is open.";
+            g_cg_msg = "MCC's Halo: Reach custom game lobby did not take the game. Leave Project Noble to check it is open.";
         }
     }
     const char* L[4] = { "GAME TYPE", "MAP", "GAME OPTIONS", "START GAME" };
@@ -2218,7 +2218,7 @@ static void rm_cg_options(pg_env& e, float t) {
     g_dl->AddLine(P(400, 322), P(1500, 322), A(IM_COL32(150, 158, 166, 70)), U(1));
     rm_wrap(g_fl, 24, 400, 338, 1100, IM_COL32(222, 226, 230, 255),
             "The game type's rules (score to win, weapons and vehicles, traits) are kept in its own file. Change them in "
-            "MCC's own custom game lobby, under Game Options, and save the game type: Project Reach starts it as saved.");
+            "MCC's own custom game lobby, under Game Options, and save the game type: Project Noble starts it as saved.");
     rm_band();
     prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
     if (rm_exit_prompt()) rm_exit();
@@ -2256,12 +2256,12 @@ static void rm_lobby(pg_env& e, float t) {
     bool ON[5] = { false, false, false, false, false };
     char d[220];
     static const char* WORD[4] = { "The campaign", "Firefight", "Forge", "Theater" };
-    sprintf_s(d, "%s is played from MCC's own menus: leave Project Reach and pick Halo: Reach's %s there. Proving "
-                 "Grounds' bots do not play it yet.", WORD[md], md == 0 ? "campaign" : WORD[md]);
+    sprintf_s(d, "%s is played from MCC's own menus: leave Project Noble and pick Halo: Reach's %s there. Project "
+                 "Noble's bots do not play it yet.", WORD[md], md == 0 ? "campaign" : WORD[md]);
     const char* D[5] = { d, d, d, d, d };
     std::string title = LB_TITLE[md];
     int base = (int)g_items.size();
-    cg_lobby(e, title.c_str(), "Not in Project Reach yet", R, V, ON, n, D, caps[md], where[md]);
+    cg_lobby(e, title.c_str(), "Not in Project Noble yet", R, V, ON, n, D, caps[md], where[md]);
     if (rm_prompts(256, 966, false, true, true)) rm_open_options();
     for (int k = 0; k < n; k++) if (pressed(base + k)) sound(PS_ERROR);
 }
@@ -2296,7 +2296,7 @@ static void reach_menu_screen(pg_env& e, float t) {
     if (g_invite) invite_list(e);
 }
 
-// B / Esc on Reach's pages: one page back (false: the title, Project Reach closes)
+// B / Esc on Reach's pages: one page back (false: the title, Project Noble closes)
 static bool rmenu_back() {
     switch (g_rpage) {
     case RP_TITLE: return false;

@@ -342,7 +342,7 @@ uint32_t g_netbots = 0;
 // (custom, Nov 13) test: the lobby's first bot in MCC's own session list, the menus only (session_watch.cpp). 0 off (the
 // default), 1 as a plain entry, 2 with the player's session flags. botcore.ini sessionbots=
 uint32_t g_sessionbots = 0;
-// (custom, Nov 18) the link that shows a joined PC friend the host's Project Reach (pg_link.cpp): 0 off, 1 answers a
+// (custom, Nov 18) the link that shows a joined PC friend the host's Project Noble (pg_link.cpp): 0 off, 1 answers a
 // friend's link and never speaks first (the default), 2 also speaks first when this PC joins a host's lobby alone (the
 // friend's copy: only with a host who runs the mod). botcore.ini pglink=
 uint32_t g_pglink = 1;
@@ -381,7 +381,7 @@ void save_settings() {
     fprintf(f, "pool_format=%u\n", hb_pool_format);                     // (custom, Nov 16: its 4v4 / 8v8 file)
     fprintf(f, "netbots=%u\n", g_netbots);                              // (custom, Nov 12: Reach network test)
     fprintf(f, "sessionbots=%u\n", g_sessionbots);                      // (custom, Nov 13: MCC's session list test)
-    fprintf(f, "pglink=%u\n", g_pglink);                                // (custom, Nov 18: Project Reach for a friend)
+    fprintf(f, "pglink=%u\n", g_pglink);                                // (custom, Nov 18: Project Noble for a friend)
     roster_write(f, g_roster);
     roster_write(f, g_ff_roster, "ff");
     fclose(f);
@@ -556,7 +556,7 @@ static DWORD WINAPI main_thread(LPVOID self) {
         odst_watch();                         // Halo 3: ODST (native/odst.cpp)
         h4f_watch();                          // Halo 2 Anniversary, Halo 4 (native/h4f.cpp)
         spawnhook_watch();                    // Reach: bots respawn in Invasion (native/spawnhook.cpp)
-        pg_link_watch();                      // (custom, Nov 18) Project Reach for a joined PC friend (native/pg_link.cpp)
+        pg_link_watch();                      // (custom, Nov 18) Project Noble for a joined PC friend (native/pg_link.cpp)
         // the brain runs while a match is on: start it when the menus give way to a game (MCC
         // does not always reload halo1.dll for a new match), stop it back in the menus
         int menu = mcc_menu_state();

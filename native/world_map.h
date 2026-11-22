@@ -1,6 +1,6 @@
 // world_map.h: made by tools/world_map.py, do not edit. The world's land and the US states' outlines and label
 // points, from Natural Earth's 1:110m vector data (public domain, naturalearthdata.com): each polygon's outer ring at a
-// tenth of a degree (lon * 10, lat * 10). Drawn on Project Reach's Psych Profile page (proving_grounds_reach.inc).
+// tenth of a degree (lon * 10, lat * 10). Drawn on Project Noble's Psych Profile page (proving_grounds_reach.inc).
 #pragma once
 #include <stdint.h>
 

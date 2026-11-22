@@ -579,7 +579,7 @@ def test_everyone_restarts_at_zero():
 
 
 def test_matchmaking_only():
-    """(Nov 17, the owner: "Matchmaking only") the site shows only the matches Project Reach named in its list: a
+    """(Nov 17, the owner: "Matchmaking only") the site shows only the matches Project Noble named in its list: a
     custom game counts in totals.txt but adds no match, no stats and no bot to the site; no list yet, no matches. The
     game writes the list where the site reads it, by MCC's GameUniqueId."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -596,7 +596,7 @@ def test_matchmaking_only():
         assert data["matches"] == [] and data["players"] == [], data["players"]
         os.makedirs(w.paths.store, exist_ok=True)
         with open(w.paths.matchmaking, "w", encoding="utf-8") as f:
-            f.write("# The matches Project Reach started\npg-1\t2026-11-17 18:00\tARENA\n\n")
+            f.write("# The matches Project Noble started\npg-1\t2026-11-17 18:00\tARENA\n\n")
         assert sr.load_matchmaking(w.paths.matchmaking) == {"pg-1"} and sr.load_matchmaking(None) is None
         data = w.build()
         assert [m["id"] for m in data["matches"]] == ["pg-1"] and [p["name"] for p in data["players"]] == ["Wheezy"]
@@ -641,7 +641,7 @@ def test_game_reads_the_sites_challenges():
 
 
 def test_credits_of_the_last_match():
-    """(Nov 17, the owner's level up bar after each game) last_match.txt: what the newest Project Reach match earned the
+    """(Nov 17, the owner's level up bar after each game) last_match.txt: what the newest Project Noble match earned the
     listed person, from where the last build stood, each kind of credit by ranks.json's worth and the rest as
     Commendations; reported once; the next match starts from there."""
     def report_lines(w):
@@ -697,7 +697,7 @@ def test_rank_table_and_credits():
 
 
 def test_game_reads_the_sites_ranks():
-    """(Nov 17) <site>/ranks.txt, the ranks Project Reach's rows show beside the names: each listed player's rank
+    """(Nov 17) <site>/ranks.txt, the ranks Project Noble's rows show beside the names: each listed player's rank
     step and rank as the site has them (one table, one credits sum), people left off as on the site."""
     import types
     with tempfile.TemporaryDirectory() as tmp:
@@ -728,7 +728,7 @@ def test_game_reads_the_sites_ranks():
 
 
 def test_game_reads_the_sites_commendations():
-    """(Nov 19) <site>/commendations.txt, Project Reach's Commendations page: the site's table, and each listed
+    """(Nov 19) <site>/commendations.txt, Project Noble's Commendations page: the site's table, and each listed
     person's counts with the tier reached as the site counts it, their progress, credits, rank and the next rank."""
     import types
     with tempfile.TemporaryDirectory() as tmp:
@@ -793,7 +793,7 @@ def test_game_reads_the_sites_career():
 
 
 def test_game_reads_the_sites_armory():
-    """(Nov 19) <site>/armory.txt, Project Reach's Armory: the person's rank step and credits earned, every item of
+    """(Nov 19) <site>/armory.txt, Project Noble's Armory: the person's rank step and credits earned, every item of
     maps/_looks/reach_prices.json with its rank gate as a step of the one rank table (Reach's grade 7 is Major), and
     the customization table's pieces; the game reads it (native/armory.cpp) and works out no rank of its own."""
     import types
@@ -899,7 +899,7 @@ def test_the_persons_own_reach_look():
 
 
 def test_game_reads_the_sites_home_states():
-    """(Nov 19) <site>/locations.txt, the heat on Project Reach's Psych Profile map: every state of states.json with
+    """(Nov 19) <site>/locations.txt, the heat on Project Noble's Psych Profile map: every state of states.json with
     how many listed players have it as their home state (the site's own pick or the one set by hand), and each person's
     state; every code also on the game's built-in map (native/world_map.h)."""
     import types

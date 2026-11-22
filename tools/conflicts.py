@@ -1,4 +1,4 @@
-"""Other mods that can clash with Project Reach, found in the MCC folder, and a clean launch without them.
+"""Other mods that can clash with Project Noble, found in the MCC folder, and a clean launch without them.
 
 What can clash: a DLL another mod drops beside MCC's program so Windows loads it into the game (a "proxy" DLL named
 like a system one: dxgi.dll, d3d11.dll, dinput8.dll, version.dll ... ReShade, Special K, ASI loaders, other injectors

@@ -1,4 +1,4 @@
-// proving_grounds.cpp (custom, Nov 16): Project Reach, an offline copy of Halo: Reach's Social Games (proving_grounds.h).
+// proving_grounds.cpp (custom, Nov 16): Project Noble, an offline copy of Halo: Reach's Social Games (proving_grounds.h).
 // The owner: "recreate the Social games menu for my own offline experience. We will name the new selection Proving
 // Grounds", "the ability to select either 4v4 or 8v8", "when I click play ... a random 4-10 seconds of fake searching
 // and then we connect to our lobby", "the voting ... where I can openly vote and the bots in my lobby will (vote)", "an
@@ -268,7 +268,7 @@ static void save_settings() {
     }
     if (_wfopen_s(&f, p, L"w") || !f) return;
     if (!had) {
-        fprintf(f, "# Project Reach (native/proving_grounds.cpp): your playlist, vote time and invited party.\n"
+        fprintf(f, "# Project Noble (native/proving_grounds.cpp): your playlist, vote time and invited party.\n"
                    "# The playlists (arena = 4v4, btb = 8v8) can be changed here, names as in lobby_library.txt:\n"
                    "#   arena.addmap=HEMORRHAGE btb           (adds a map; your own Forge maps too)\n"
                    "#   arena.addgametype=MLG Team Slayer v7*2 (adds a gametype; *2 = twice as likely; team games only)\n"
@@ -546,7 +546,7 @@ static uint32_t g_vote_key;                      // (Nov 18) a new number each v
 
 // (Nov 17, the owner: a friend in the lobby, "Just balance him to a team like normal matchmaking would") the other
 // people in MCC's lobby as the last deal counted them: each takes a bot's seat on the team MCC has them on (one not
-// yet on a team: the team with fewer people), and the bots are dealt by points around everyone. Project Reach cannot
+// yet on a team: the team with fewer people), and the bots are dealt by points around everyone. Project Noble cannot
 // move a real player between MCC's teams; it builds the teams around where MCC put them. Dealt again (the bots kept)
 // when someone joins, leaves or changes team before the game starts
 static const int PG_PEOPLE = 8;
@@ -584,7 +584,7 @@ static char g_pool_names[4096][16];
 static int g_npool_names;
 
 // (Nov 19, the owner's frames of Halo: Reach's menus, phase 1) the page S_MENU shows: Reach's title, main menu,
-// matchmaking and its three sub-pages, or Project Reach's own menu (RP_OPTIONS). proving_grounds_reach.inc
+// matchmaking and its three sub-pages, or Project Noble's own menu (RP_OPTIONS). proving_grounds_reach.inc
 // (Nov 19, phase 2) Reach's Start menu and the player's Service Record, Career and its difficulty pages
 enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF,
        RP_ARMORY, RP_ARM_ITEMS, RP_ARM_FAMILY,     // (Nov 19, phase 3: the Armory, proving_grounds_reach.inc)
@@ -815,7 +815,7 @@ static bool start_search(pg_env& e) {
     playlist_pool(cur_pl(), gts, maps);
     g_retry = RETRY_SEARCH;
     if (!pg_lobby_live() || !g_nlmaps) {
-        strcpy_s(g_error, "Project Reach needs MCC's Halo: Reach custom game lobby open behind it (Custom Multiplayer, Halo: Reach).");
+        strcpy_s(g_error, "Project Noble needs MCC's Halo: Reach custom game lobby open behind it (Custom Multiplayer, Halo: Reach).");
         g_stage = S_ERROR; return false;
     }
     if (gts.empty() || maps.empty()) {
@@ -859,9 +859,9 @@ bool pg_after_match(hb_roster& r, uint32_t difficulty) {
 }
 
 // ------------------------------------------------------------------ the Service Record's matches
-// (Nov 17, the owner: the site's stats from "Matchmaking only") each match Project Reach started, named by MCC's own
+// (Nov 17, the owner: the site's stats from "Matchmaking only") each match Project Noble started, named by MCC's own
 // GameUniqueId in native\bin\service_record\matchmaking.txt once MCC's post-game report has it. tools/service_record.py
-// counts only the matches that file names: a custom game played without Project Reach is not on the site.
+// counts only the matches that file names: a custom game played without Project Noble is not on the site.
 static bool g_mark_due;                          // a match started here, its report not read yet
 static uint64_t g_mark_from;                     // when it started (FILETIME, 10 s early)
 static double g_mark_back, g_mark_check;         // the lobby back (ImGui time, 0: not yet); the last look at the report
@@ -991,7 +991,7 @@ static void mark_check(double now) {
     bool fresh = GetFileAttributesW(mp) == INVALID_FILE_ATTRIBUTES;
     if (_wfopen_s(&f, mp, L"a") || !f) return;
     if (fresh)
-        fprintf(f, "# The matches Project Reach started (native/proving_grounds.cpp), by MCC's GameUniqueId: the Service\n"
+        fprintf(f, "# The matches Project Noble started (native/proving_grounds.cpp), by MCC's GameUniqueId: the Service\n"
                    "# Record (tools/service_record.py) counts only these. id<TAB>when<TAB>playlist\n");
     SYSTEMTIME st;
     GetLocalTime(&st);
@@ -1390,7 +1390,7 @@ static void footer(const char* hint = nullptr, const char* select = nullptr, boo
 // (Nov 19, the owner's pictures of Halo: Reach's own menus: "The background is more seemless and fluid ... I want the
 // background to be like that") Reach's backgrounds, the owner's upscales of its menu art: one painting across the whole
 // screen, bright, the menus over it. This PC's only, in native\bin\pg_backgrounds (git-ignored: Reach's art is never
-// committed): menu.png Project Reach's own screens (the Halo over Reach), matchmaking.png Find Game, the vote and the
+// committed): menu.png Project Noble's own screens (the Halo over Reach), matchmaking.png Find Game, the vote and the
 // next game (Reach's main menu, the Covenant over the glassing), postgame.png the credits after a game (an Elite and a
 // Spartan); .jpg too. Without one: the playlist's maps, faint, as before (background below).
 enum { BG_MENU, BG_MATCH, BG_POST, BG_N };
@@ -1726,8 +1726,8 @@ static void session_panel(pg_env& e) {
     sprintf_s(now, "%d", g_nparty + 1 + np);
     sprintf_s(max, "%d", cur_pl().size * 2);
     // (Nov 19) one name for the list wherever it stands: Reach's own ("MY GAME SESSION" before)
-    ros_head h = { "IN PROJECT REACH LOBBY", cnt, "In Project Reach Lobby", cnt, "MY PARTY", "MY PARTY DETAILS",
-                   { me_name(), cur_pl().title, now, max, "Project Reach" } };
+    ros_head h = { "IN PROJECT NOBLE LOBBY", cnt, "In Project Noble Lobby", cnt, "MY PARTY", "MY PARTY DETAILS",
+                   { me_name(), cur_pl().title, now, max, "Project Noble" } };
     roster(e, rows, h, 1830, 34, 82, 0, nullptr);
 }
 
@@ -1938,7 +1938,7 @@ static void open_site_challenges() { open_site_page(g_chal_who, "challenges"); }
 static void challenges_screen(pg_env& e, float t) {
     (void)e; (void)t;
     chal_load();
-    header("PROJECT REACH", "CHALLENGES", 0);
+    header("PROJECT NOBLE", "CHALLENGES", 0);
     float x0 = 410, x1 = 1510;
     long long now = (long long)time(nullptr);
     if (!g_chal_have || g_chal_items.empty()) {
@@ -2013,7 +2013,7 @@ static void challenges_screen(pg_env& e, float t) {
 // ------------------------------------------------------------------ the commendations, as Reach's Service Record
 // (Nov 19, the owner's picture of Halo: Reach's Service Record: Commendations, "add it to ours with its own menu option,
 // and keep it connected to the service record site") The menu's COMMENDATIONS: Reach's page. Its lists at the left
-// (Top Commendations, then the site's two sets: Multiplayer, Project Reach's own), the list at the right (each its
+// (Top Commendations, then the site's two sets: Multiplayer, Project Noble's own), the list at the right (each its
 // banner, the tier reached, the bar toward the next tier with n/need, sorted as the site's Commendations page sorts
 // them: tier, then progress), the player's band along the bottom (emblem, rank insignia, name, rank, credits, the next
 // rank). Everything from <repo>\logs\service_record\commendations.txt, which the Service Record's build writes with the
@@ -2106,9 +2106,9 @@ static const pic* site_picture(const std::string& rel) {   // a picture of the s
 static void comm_screen(pg_env& e, float t) {
     (void)e; (void)t;
     comm_load();
-    header("PROJECT REACH", "SERVICE RECORD", 0);
-    static const char* TAB[3] = { "TOP COMMENDATIONS", "MULTIPLAYER", "PROJECT REACH" };
-    static const char* TITLE[3] = { "Top Commendations", "Multiplayer Commendations", "Project Reach Commendations" };
+    header("PROJECT NOBLE", "SERVICE RECORD", 0);
+    static const char* TAB[3] = { "TOP COMMENDATIONS", "MULTIPLAYER", "PROJECT NOBLE" };
+    static const char* TITLE[3] = { "Top Commendations", "Multiplayer Commendations", "Project Noble Commendations" };
     // the lists, at the left: Left / Right, LB / RB or a click change them
     int tab_was = g_comm_tab;
     for (int k = 0; k < 3; k++) {
@@ -2264,7 +2264,7 @@ static void comm_screen(pg_env& e, float t) {
 
 static void menu_screen(pg_env& e, float t) {
     if (ros_up()) { session_panel(e); return; }          // (the roster has the focus: Reach's list and its panel)
-    header("MULTIPLAYER", "PROJECT REACH", 0);
+    header("MULTIPLAYER", "PROJECT NOBLE", 0);
     text(g_fl, 24, 96, 188, C_TEXT, "COMPOSE YOUR MATCH");
     // the card: a map of the playlist behind our crest
     panel(96, 215, 880, 340, IM_COL32(18, 20, 23, 190));
@@ -2279,7 +2279,7 @@ static void menu_screen(pg_env& e, float t) {
                                       A(IM_COL32(18, 20, 23, 20)), A(IM_COL32(18, 20, 23, 235)));
     }
     crest(170, 278, 44, IM_COL32(232, 236, 240, 255));
-    text(g_fl, 40, 238, 236, C_TEXT, "PROJECT REACH");
+    text(g_fl, 40, 238, 236, C_TEXT, "PROJECT NOBLE");
     text(g_fl, 24, 240, 286, C_BLUE, cur_pl().title);
     const char* desc[7] = { "Find a game: a lobby of bots from your pool, then the vote.",
                             "Arena is 4v4, Big Team Battle 8v8.",
@@ -2287,7 +2287,7 @@ static void menu_screen(pg_env& e, float t) {
                             "Today's and this week's challenges, as your Service Record has them.",
                             "Your commendations, tiers and progress, as your Service Record has them.",
                             "Bots play matches of their own for the Service Record. Left / Right: how many rounds (a round is about 25 lobbies).",
-                            "Leave Project Reach for MCC's own lobby." };
+                            "Leave Project Noble for MCC's own lobby." };
     int base = (int)g_items.size();
     // (Nov 18: the rows 48 tall, 8 apart, so SIMULATE MATCHES fits above the games and categories; Nov 19: 44 tall, 6
     // apart, for COMMENDATIONS too)
@@ -2622,7 +2622,7 @@ static void result_screen(pg_env& e, float t) {
 }
 
 static void error_screen(pg_env& e, float t) {
-    header("MULTIPLAYER", "PROJECT REACH", 0);
+    header("MULTIPLAYER", "PROJECT NOBLE", 0);
     panel(460, 360, 1460, 640, IM_COL32(20, 22, 25, 245));
     text(g_fl, 34, 490, 384, C_GOLD, "GAME DIDN'T START");   // (Nov 19: what happened, the reason under it)
     // the reason, wrapped
@@ -2632,7 +2632,7 @@ static void error_screen(pg_env& e, float t) {
     bool f0 = item(490, 560, 850, 615);
     row(490, 560, 850, 615, f0, "TRY AGAIN");
     bool f1 = item(870, 560, 1430, 615);
-    row(870, 560, 1430, 615, f1, "BACK TO PROJECT REACH");
+    row(870, 560, 1430, 615, f1, "BACK TO PROJECT NOBLE");
     if (g_left_right && (f0 || f1)) {                    // (Nov 19: side by side, so Left / Right move between them too)
         g_lr_taken = true;
         g_focus = base + (g_left_right > 0 ? 1 : 0);
@@ -2659,7 +2659,7 @@ static void error_screen(pg_env& e, float t) {
 
 // ------------------------------------------------------------------ the credits a match earned
 // (Nov 17, the owner: "add this level up bar after each game showing what earned you your xp. Before the carnage
-// report? Or after whichever is cleaner") After: the carnage report is MCC's own screen, so when Project Reach's lobby
+// report? Or after whichever is cleaner") After: the carnage report is MCC's own screen, so when Project Noble's lobby
 // comes back from a match it marked, this comes first. The match is counted as it is marked (stats_build), and
 // tools/service_record.py writes logs\service_record\last_match.txt: the player's credits before and after, what
 // earned them, the rank steps between. The lines come in one by one, then the total, then the bar fills from where the
@@ -2904,14 +2904,14 @@ static void credits_screen(pg_env& e, float t, double now) {
 }
 
 // ------------------------------------------------------------------ the link to a joined PC friend (Nov 18)
-// (the owner: PC friends who run the mod see Project Reach's search, vote and loading, following the host) The host's
+// (the owner: PC friends who run the mod see Project Noble's search, vote and loading, following the host) The host's
 // copy puts its screens' state into a pgs_state each frame and pg_link.cpp sends it over MCC's Party text chat to a
 // friend whose copy linked (on a change, and every second). A friend's copy that gets one follows: the same screens drawn
 // from the host's state, nothing of its own run (no search, no deal, no MCC launch: the host's MCC starts the game), its
 // vote sent back and counted in the host's tally. Its own credits screen comes after a match it followed from the
 // launch (this PC's own MCC report, its own Service Record). Esc / B put the host's screens away till its next stage; the
-// PROJECT REACH tile brings them back. No word from the host in 4 s, or the host out of a match's stages: this PC's
-// own Project Reach again.
+// PROJECT NOBLE tile brings them back. No word from the host in 4 s, or the host out of a match's stages: this PC's
+// own Project Noble again.
 #pragma pack(push, 1)
 struct pgs_seat { char name[16]; char clan[8]; uint8_t team, tier, party, pad; float arrive, vote_at; int32_t vote; };
 struct pgs_person { char name[32]; int8_t team, vote; uint8_t pad[2]; };
@@ -3054,7 +3054,7 @@ static void follow_update(double now) {
         g_f_key = 0;
         g_vote_me = -1;
         g_stage = S_OFF;
-        logf("proving grounds: following %s's Project Reach", s.host);
+        logf("proving grounds: following %s's Project Noble", s.host);
     }
     if (g_f_have && !memcmp(&s, &g_f_last, sizeof s) && (g_stage == hs || g_stage == S_CREDITS)) return;
     g_f_have = true;
@@ -3145,7 +3145,7 @@ static void follow_update(double now) {
     }
 }
 
-// (the overlay's every frame, Project Reach on or not: a host's state may start the following)
+// (the overlay's every frame, Project Noble on or not: a host's state may start the following)
 void pg_follow_poll() {
     if (!g_loaded) load_settings();
     follow_update(ImGui::GetTime());
@@ -3163,7 +3163,7 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 2: pg_open(); start_search(e); break;
     case 3: pg_open(); start_search(e); take_options(); start_vote(*e.roster, false); g_vote_me = 0; break;
     case 4: pg_open(); start_search(e); take_options(); g_winner = 0; g_stage = S_RESULT; break;
-    case 5: pg_open(); strcpy_s(g_error, "MCC did not start the game. Leave Project Reach to see any message its lobby shows."); g_stage = S_ERROR; break;
+    case 5: pg_open(); strcpy_s(g_error, "MCC did not start the game. Leave Project Noble to see any message its lobby shows."); g_stage = S_ERROR; break;
     // (Nov 17) the roster at Reach's place: the menu's party with its header picked; the vote's lobby with a bot picked,
     // then the player (PG_FOCUS: another entry)
     case 6: case 7: case 8: {
@@ -3252,7 +3252,7 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 41: pg_open(); cg_resolve(); g_rpage = RP_CG_OPTIONS; g_focus = 0; break;
     case 42: pg_open(); g_rpage = RP_LOBBY; g_lobby_mode = 1; g_focus = 0; break;
     }
-    if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Project Reach's own menu)
+    if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Project Noble's own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
     g_t0 = now - t;
 }
@@ -3316,7 +3316,7 @@ static bool pg_frame_body(pg_env& e) {
             g_stage = S_PLAYING; g_after_due = false; g_lobby_seen_at = 0; mark_start();
         }
         else if (s == 1 && t > 6) {
-            strcpy_s(g_error, "MCC's Halo: Reach custom game lobby did not take the game. Leave Project Reach to check it is still open.");
+            strcpy_s(g_error, "MCC's Halo: Reach custom game lobby did not take the game. Leave Project Noble to check it is still open.");
             g_retry = RETRY_LAUNCH;
             g_stage = S_ERROR;
         }
@@ -3360,7 +3360,7 @@ static bool pg_frame_body(pg_env& e) {
     int pressed_before = g_pressed;
     (void)pressed_before;
     g_pad_in = e.pad;
-    // (Nov 19) Reach's own painting for the screen when this PC has it (bg_picture): Project Reach's menu, matchmaking
+    // (Nov 19) Reach's own painting for the screen when this PC has it (bg_picture): Project Noble's menu, matchmaking
     // (Find Game, the vote, the next game), the credits after a game
     int bgk = g_stage == S_CREDITS ? BG_POST
             : (g_stage == S_SEARCH || g_stage == S_VOTE || g_stage == S_RESULT || g_stage == S_LAUNCH) ? BG_MATCH : BG_MENU;

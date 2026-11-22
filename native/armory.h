@@ -1,4 +1,4 @@
-// armory.h (custom, Nov 19): Project Reach's Halo: Reach Armory (native/armory.cpp). The owner: every item bought
+// armory.h (custom, Nov 19): Project Noble's Halo: Reach Armory (native/armory.cpp). The owner: every item bought
 // with credits, as in the 2010 Armory; MCC keeps everything unlocked and untouched, and only what was bought here can
 // be worn. Read by the Reach menus (proving_grounds_reach.inc), the 3D figure (bots_panel.cpp person_figure) and the
 // match (reach.cpp, which lays the equipped pieces over the player's configuration).

@@ -27,4 +27,4 @@ Unit +0xD50 provides a cached view point that follows the model base at +0x64. I
 
 All 50 regression tests pass; all 85 current Python source files compile in memory. New tests cover standing/crouched decoding, wrong DLL/rig/offsets, malformed reads, NaN and invalid transforms, paired final aim, movement direction, precise and ordinary tracking, sniper hit outcomes, Reach/partial-pair fallback, head visibility and obstruction, perception and the actual Halo 4 players() wiring. The prior placed.py unclosed-file warning remains.
 
-MCC was closed before implementation, so no post-fix live kill-rate improvement is claimed. Restart the Project Reach launcher/bot process and test standing, strafing and crouching in a fresh Halo 4 match. In particular, verify both accuracy and cover handling before treating the change as gameplay-confirmed.
+MCC was closed before implementation, so no post-fix live kill-rate improvement is claimed. Restart the Project Noble launcher/bot process and test standing, strafing and crouching in a fresh Halo 4 match. In particular, verify both accuracy and cover handling before treating the change as gameplay-confirmed.

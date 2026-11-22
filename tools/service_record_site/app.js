@@ -1,4 +1,4 @@
-/* Project Reach Service Record: the pages (tools/service_record.py copies this into the built site).
+/* Project Noble Service Record: the pages (tools/service_record.py copies this into the built site).
    Everything shown comes from window.SR_DATA (data.js); every number in it was summed by the build, this file only
    lays it out. Text always goes in as text, never as HTML. */
 (function () {
@@ -479,7 +479,7 @@
       })));
   }
   // (Nov 17, the owner: "Daily Top 5, Playlist activity") today's five best games by the credits each earned, and how
-  // busy the playlists were (tools/service_record.py today_block; Reach, Project Reach's matches and the simulated ones)
+  // busy the playlists were (tools/service_record.py today_block; Reach, Project Noble's matches and the simulated ones)
   function todayPanels() {
     const t = D.today;
     if (!t) return null;
@@ -1285,7 +1285,7 @@
       panel("Multiplayer Commendations", el("div", { class: "body" }, part("mp"),
         el("p", { class: "note" }, "Reach's " + count("mp") + " multiplayer commendations. Campaign and Firefight ones are left out: the bots play multiplayer only.")),
         el("span", { class: "note" }, count("mp") + " in all")),
-      count("pg") ? panel("Project Reach Commendations", el("div", { class: "body" }, part("pg"),
+      count("pg") ? panel("Project Noble Commendations", el("div", { class: "body" }, part("pg"),
         el("p", { class: "note" }, "Our own, counted the same way: first kills, game-winning kills and grudges come from the kill record (games since 15 Nov 2026).")),
         el("span", { class: "note" }, count("pg") + " in all")) : null,
       badges.length ? panel("Badges", el("div", { class: "body" }, el("ul", { class: "comms" }, badges.map((bd) => badgeCard(p, bd))),

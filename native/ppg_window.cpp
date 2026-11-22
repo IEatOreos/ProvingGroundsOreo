@@ -1,9 +1,9 @@
-// ppg_window.exe: Project Reach's app window. Shows one of its local pages (the launcher, the Observer, the
+// ppg_window.exe: Project Noble's app window. Shows one of its local pages (the launcher, the Observer, the
 // LiDAR view, the nav painter: 127.0.0.1 only) in a window of its own through Microsoft Edge WebView2, the web view
 // built into Windows 10 and 11. It is not the Edge browser: no browser profile, no account sign-in, no sync, no
 // extensions, no address bar. Its data (cache, settings) lives in %LOCALAPPDATA%\ProjectProvingGrounds\webview.
 //
-// usage: ppg_window.exe --url http://127.0.0.1:8793/ [--title "Project Reach"] [--icon <file.ico>]
+// usage: ppg_window.exe --url http://127.0.0.1:8793/ [--title "Project Noble"] [--icon <file.ico>]
 //                       [--width 1040] [--height 700]
 // Links to other sites open in the default browser. Without the WebView2 Runtime it says so and offers Microsoft's
 // download page.
@@ -20,7 +20,7 @@ using Microsoft::WRL::ComPtr;
 
 static ComPtr<ICoreWebView2Controller> g_controller;
 static ComPtr<ICoreWebView2> g_view;
-static std::wstring g_url = L"http://127.0.0.1:8793/", g_title = L"Project Reach", g_icon;
+static std::wstring g_url = L"http://127.0.0.1:8793/", g_title = L"Project Noble", g_icon;
 static int g_w = 1040, g_h = 700;
 
 static bool local_url(const wchar_t* u) {
@@ -43,9 +43,9 @@ static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 static void no_runtime(HWND hwnd) {
-    if (MessageBoxW(hwnd, L"Project Reach needs the Microsoft Edge WebView2 Runtime, which comes with Windows 11 "
+    if (MessageBoxW(hwnd, L"Project Noble needs the Microsoft Edge WebView2 Runtime, which comes with Windows 11 "
                           L"and current Windows 10. It was not found on this PC.\n\nOpen Microsoft's download page now?",
-                    L"Project Reach", MB_YESNO | MB_ICONINFORMATION) == IDYES)
+                    L"Project Noble", MB_YESNO | MB_ICONINFORMATION) == IDYES)
         ShellExecuteW(nullptr, L"open", L"https://developer.microsoft.com/microsoft-edge/webview2/", nullptr, nullptr,
                       SW_SHOWNORMAL);
 }

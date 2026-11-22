@@ -2,7 +2,7 @@
 
 ## Where it stands (Nov 18: built; waiting for the owner's test run)
 
-**Built and checked.** `botcore_pg14.dll` runs a round when each Project Reach match ends; the menu row and the
+**Built and checked.** `botcore_pg14.dll` runs a round when each Project Noble match ends; the menu row and the
 site's edit-mode button play rounds on demand. It goes live at MCC's next start. Until then no simulated match has
 been written to the real Service Record (there is no `native/bin/service_record/sim.db`). All of it is in
 CUSTOM_CHANGELOG.md; the notes below are the build's history.
@@ -36,7 +36,7 @@ Done in the second sitting:
 Left, in order:
 1. Run the whole suite: `python\python.exe -I -m unittest discover -s tools -p "test_*.py"`.
 2. (was 1-2, done above)
-3. Project Reach (`native/proving_grounds.cpp`):
+3. Project Noble (`native/proving_grounds.cpp`):
    - `stats_build` runs `bot_sim.py --after <id>` after the first build, then bot_career and service_record again,
      at BELOW_NORMAL priority;
    - a SIMULATE MATCHES menu row (Left/Right rounds, Enter runs; shows sim_status.txt).
@@ -65,7 +65,7 @@ was agreed in five rounds of questions.
 
 | Question | Answer |
 |---|---|
-| When matches are simulated | **Alongside each of your Project Reach matches**, plus a **manual button** |
+| When matches are simulated | **Alongside each of your Project Noble matches**, plus a **manual button** |
 | How many bots play | **Each bot at its own rate**, averaging **a third of your games** |
 | Grinders | Any tier can grind, but **Legendary, Blind, Mythic and Demon bots are about 3x as likely** |
 | How they show on the site | **Exactly like real matches**: no badge, no separate list |
@@ -80,7 +80,7 @@ was agreed in five rounds of questions.
 | Bot life (form, fatigue, tilt, hours) | **None for now** |
 | In game after your match | **Nothing** |
 | Site extras | **Daily Top 5** and **Playlist activity** |
-| Button | **Both**: a Project Reach menu row and a Service Record site button. **Asks how many rounds** each time |
+| Button | **Both**: a Project Noble menu row and a Service Record site button. **Asks how many rounds** each time |
 | Start | **From now on**; current records stay as they are |
 
 ## Defaults chosen in the write-up (not asked; change any)
@@ -222,6 +222,6 @@ Rotation maps with no kill record (no weapons or heatmap spots to copy):
    teams balanced, the bot vote for map and gametype.
 4. **Writing results.** Save each match in the form the Service Record reads from a real report:
    scoreboard, medals, map, gametype. Add it to the ledger and `matchmaking.txt` with the hidden mark.
-5. **Triggers.** Project Reach's end-of-match build runs `tools/bot_sim.py` before `bot_career.py`
+5. **Triggers.** Project Noble's end-of-match build runs `tools/bot_sim.py` before `bot_career.py`
    and `service_record.py`. Add the menu row and the site button, which ask how many rounds.
 6. **Site extras.** Daily Top 5 and Playlist activity.

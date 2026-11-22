@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>Project Reach</title>
+<title>Project Noble</title>
 <style>
-  /* tokens: spacing 4/8/12/16/24/32/48, type 12/14/16/20/24, colours by role, taken from the Project Reach art (the
+  /* tokens: spacing 4/8/12/16/24/32/48, type 12/14/16/20/24, colours by role, taken from the Project Noble art (the
      dusk sky, the sand, the sign, the embers, the Spartan's blue and gold). Contrast measured (WCAG): every text colour
      4.5:1 or more on every surface it is used on, control borders and the focus ring 3:1 or more */
   :root {
@@ -306,7 +306,7 @@
 </svg>
 
 <header class="hero">
-  <h1 class="sr-only">Project Reach</h1>   <!-- (the sign in the art shows the name) -->
+  <h1 class="sr-only">Project Noble</h1>   <!-- (the sign in the art shows the name) -->
   <p class="tagline">PvP bots for Halo: The Master Chief Collection</p>
 </header>
 <div class="banner"><svg class="i" aria-hidden="true"><use href="#i-bad"/></svg><span id="banner" role="alert"></span></div>
@@ -431,11 +431,11 @@
   </nav>
   <span class="upd"><span id="updstate"></span><button class="quiet" id="updcheck" title="Check GitHub for a new version now">Check</button>
     <label class="updauto" title="Download and install new versions when the launcher opens (never while MCC runs)"><input type="checkbox" id="updauto"> Auto-update</label></span>
-  <span class="legal" title="Project Reach is not affiliated with or endorsed by Microsoft."><span class="version" id="version"></span>Not endorsed by Microsoft.</span>
+  <span class="legal" title="Project Noble is not affiliated with or endorsed by Microsoft."><span class="version" id="version"></span>Not endorsed by Microsoft.</span>
 </footer>
 
 <dialog id="uninstall-ask" aria-labelledby="uninstall-t" aria-describedby="uninstall-q">
-  <h2 id="uninstall-t">Uninstall Project Reach?</h2>
+  <h2 id="uninstall-t">Uninstall Project Noble?</h2>
   <p id="uninstall-q">MCC itself is not changed. Every window of the mod closes, then the uninstaller asks whether to keep
     your LiDAR scans and recorded matches.</p>
   <p id="uninstall-state" class="msg" aria-live="polite"></p>
@@ -546,7 +546,7 @@ function render(s) {
 
 async function refresh() {
   try { render(await (await fetch("/status")).json()); $("banner").textContent = ""; }
-  catch (e) { $("banner").textContent = "The launcher stopped. Close this window and open Project Reach again."; }
+  catch (e) { $("banner").textContent = "The launcher stopped. Close this window and open Project Noble again."; }
 }
 
 const following = {};

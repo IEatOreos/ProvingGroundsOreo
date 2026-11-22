@@ -1,6 +1,6 @@
 # ProvingGroundsOreo — code review and integration handoff
 
-Prepared November 6, 2026 for the main AI/developer reviewing the owner's custom Project Reach code. This document describes the combined work of the owner, this coding assistant, and the owner's coding collaborator. It covers the published customization history, final behavior, integration points, validation, and open proposals.
+Prepared November 6, 2026 for the main AI/developer reviewing the owner's custom Project Noble code. This document describes the combined work of the owner, this coding assistant, and the owner's coding collaborator. It covers the published customization history, final behavior, integration points, validation, and open proposals.
 
 ## Post-baseline follow-up — 0.2.2-custom.5
 

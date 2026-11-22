@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installs Project Reach on Linux and Steam Deck (SteamOS), for MCC on Steam through Proton.
+# Installs Project Noble on Linux and Steam Deck (SteamOS), for MCC on Steam through Proton.
 #
 #   ./install.sh                 from the unpacked ProjectProvingGrounds-Linux-<version>.tar.gz (its payload folder)
 #   ./install.sh --download      downloads the newest Linux release from GitHub first
@@ -8,7 +8,7 @@
 #
 # What it does: copies the mod to ~/.local/share/project-proving-grounds/app (an update keeps your LiDAR scans,
 # learned map data, recordings and settings), runs the first-time setup in the mod's own Wine prefix with MCC's Proton,
-# adds "Project Reach" to the application menu, and prints the Steam launch option that loads the bots.
+# adds "Project Noble" to the application menu, and prints the Steam launch option that loads the bots.
 # MCC's own files and its Proton prefix are not changed. No root rights needed.
 set -euo pipefail
 
@@ -44,7 +44,7 @@ if [ "$DOWNLOAD" = 1 ]; then
     PAYLOAD="$(find "$tmp" -mindepth 2 -maxdepth 2 -type d -name payload | head -n 1)"
 fi
 PAYLOAD="$(cd "$PAYLOAD" && pwd)"
-[ -f "$PAYLOAD/installer/linux/common.sh" ] || { echo "$PAYLOAD is not a Project Reach payload" >&2; exit 1; }
+[ -f "$PAYLOAD/installer/linux/common.sh" ] || { echo "$PAYLOAD is not a Project Noble payload" >&2; exit 1; }
 # shellcheck source=common.sh
 . "$PAYLOAD/installer/linux/common.sh"
 
@@ -83,7 +83,7 @@ entry="$icons/project-proving-grounds.desktop"
 cat >"$entry" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Project Reach
+Name=Project Noble
 Comment=PvP bots for Halo: The Master Chief Collection
 Exec="$APP/installer/linux/ppg-launcher.sh"
 Icon=$APP/installer/linux/icon.png
@@ -104,7 +104,7 @@ elif command -v xclip >/dev/null && printf '%s' "$option" | xclip -selection cli
 fi
 cat <<EOF
 
-Project Reach is installed.
+Project Noble is installed.
 
 One step in Steam (once): Halo: The Master Chief Collection > Properties > General > Launch Options, paste$copied:
 
@@ -113,6 +113,6 @@ One step in Steam (once): Halo: The Master Chief Collection > Properties > Gener
 Then press Play in Steam and choose the anti-cheat off option. The bots load as MCC starts; in MCC open
 Multiplayer > Custom Multiplayer, the BOTS tile is next to START (or press B).
 
-The launcher (setup, Repair, Observer, LiDAR tools): "Project Reach" in the application menu.
+The launcher (setup, Repair, Observer, LiDAR tools): "Project Noble" in the application menu.
 To uninstall: $APP/installer/linux/uninstall.sh
 EOF

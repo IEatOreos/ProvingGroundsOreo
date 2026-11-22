@@ -18,7 +18,7 @@ import sys
 
 bl_info = {
     "name": "Reach Forge Printer",
-    "author": "Project Reach",
+    "author": "Project Noble",
     "version": (0, 1, 0),
     "blender": (4, 2, 0),
     "location": "3D View > Sidebar (N) > Forge",

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Project Noble: the new name, banner and icon, 2026-11-21
+
+The owner sent his new banner, PROJECT NOBLE over Noble Team: "Here is the new Banner for our github banner. And also use the project noble logo as our launchers emblem on the desktop or file". Asked whether the project is now called Project Noble (yesterday it became Project Reach): "Yes, Project Noble".
+
+- **The name:** every visible "Project Reach" now reads "Project Noble" (254 places in 60 files), the same way as yesterday: text only, the same protected credits. Halo: Reach and every other Reach are untouched. The title screen reads PROJECT above NOBLE.
+- **Missed yesterday, now right:**
+  - The installer's Start-menu and desktop shortcut names and its default folder still said Project Proving Grounds: yesterday's rename took `{autoprograms}\…` for a folder path. They now say Project Noble. An existing install keeps its folder on an update.
+  - Five places where the name broke across two lines (README, two comments, a lobby message, the launcher's README) now read Project Noble. The owner's own words from when he named the mode ("We will name the new selection Proving Grounds") stay as said.
+- **The banner:** `docs/banner.jpg`, at the top of README on GitHub, is his new 2000 x 500 banner; its alt text is "Project Noble: bots for Halo: The Master Chief Collection".
+- **The icon:** his PROJECT NOBLE logo, cut from the banner, on a dark tile with a gold rim, its own sky blurred behind it. It replaces `installer/icon.ico` (the Start-menu and desktop shortcuts, the app windows, the setup program, the uninstall entry; 16 to 256 px) and `installer/linux/icon.png`. The standalone launcher's `ppg_launch.exe` now carries it as its file icon. The wordmark reads at 48 px and up; at 16 px it is only the tile.
+- **The standalone launcher** (its own repository): boot screen and splash read PROJECT above NOBLE, and its text says Project Noble.
+- **Validation:** the full suite (1237 tests) passes. `tools/test_service_record.py` stops at `test_game_reads_the_sites_challenges`, as yesterday: its one test match makes no progress on today's drawn daily challenges. `build.bat pg38` builds `botcore_pg38.dll`. The title screen and a lobby's message were checked in the preview. The launcher builds, its boot tests pass, and the icon was read back out of the built exe. The site was rebuilt as "Project Noble Service Record". Not pushed: GitHub shows the banner once this is uploaded.
+
 ### Reach Forge Printer add-on: floors, slopes, walls and ceilings of the backdrop switch on and off, 2026-11-21
 
 - The owner found Guardian's wire backdrop (its trees, roots and cliffs) covering the pieces. Under Wire / Solid floors / Hidden the Forge panel now has four switches, **Floors / Slopes / Walls / Ceilings**, each showing or hiding that kind of reference surface; ceilings start hidden as before, the rest shown. Only `tools/forge_printer/blender_addon/ui.py` changes what the add-on does; nothing about export.
