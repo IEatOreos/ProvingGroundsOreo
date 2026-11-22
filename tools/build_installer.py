@@ -121,7 +121,13 @@ def stage_project():
                 g.write(f.read())
             n += 1
     pack = 0
-    for dp, _, fs in os.walk(os.path.join(ROOT, "maps")):
+    for dp, ds, fs in os.walk(os.path.join(ROOT, "maps")):
+        if "mod.json" in fs:
+            # (custom, Nov 22) a folder tools/mod_maps.py built from a mod's .map on this PC (its own .gitignore "*": a
+            # Workshop mod's level, the owner's own ports): not ours to ship, and nothing to anyone without that mod.
+            # 0.2.2-custom.14's first build took two 47 MB heightmaps of one (482 MB -> 540 MB)
+            ds[:] = []
+            continue
         for f in fs:
             rel = os.path.relpath(os.path.join(dp, f), ROOT).replace("\\", "/")
             if match(rel, MAP_PACK):

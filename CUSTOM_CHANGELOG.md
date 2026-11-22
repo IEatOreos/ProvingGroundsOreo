@@ -4,6 +4,10 @@
 
 ## 0.2.2-custom.14 — Noble learns from every match, Take Space, bots that never stand still, LiDAR's map names and the Forge Printer's Blender add-on, 2026-11-22
 
+### Installer: no map folders built from mods in the map pack, 2026-11-22
+- The first 0.2.2-custom.14 build came to 540 MB (custom.13: 482). The map pack (`tools/build_installer.py stage_project`) took every `maps/*/heightmap.npz` and `topdown.png` on this PC, and those included five folders `tools/mod_maps.py` built from mods' .map files here: the Steam Workshop mod "Forge World AI Battleground" (`reach_forge_halo_normal`, `reach_forge_halo_legendary`, 47 MB heightmaps each) and the owner's own Reach ports (`reach_fp_avalanche`, `reach_fp_construct`, `reach_fp_guardian`). Each says in its own `.gitignore` that it is this PC's.
+- Fix: a map folder holding a `mod.json` (what `mod_maps.py` writes) is skipped, with everything under it. Validation: the map pack's selection run without building: 400 files (410 before), the 5 mod folders skipped; the rebuilt installer below.
+
 ### Take Space: Demon and Noble move up to the next hot spot after a kill, 2026-11-22
 The owner's mechanic, named after Rainbow Six Siege: "when you clear and area, or kill an enemy you try to take space meaning you are taking control of the map ... take the closest hot spot (From lidar) to an objective that is active. Or if its slayer, try to control a hot spot near a power weapon or push to the next hot spot after x amount of kills". On the team split: "is another anchor here? move to next, or do a call where they can move together". "Do it for demon and Noble first." The Slayer anchor stays one per team.
 - **When:** the man it fought goes down (`kill_check`), or a fight ends with no enemy known within 20 u for 2 s. Not while hurt (the window waits for a recharge), carrying, in a vehicle, as a runner, escort, defender or crew, as the team's Slayer anchor on its post, in Race, Infection or Firefight, or on a map with no hot spots.
