@@ -227,6 +227,37 @@ def guardian(ui, folder, template, offset, out_dir):
         check(ok, "each moved 1 along +x and turned 90 degrees in the file")
 
 
+def library_check(ui):
+    """A two-piece asset library: assets with thumbnails and catalogs, and a piece taken from it is
+    exported like one from the palette. Runs last: building starts an empty file. Nothing is saved to
+    the preferences (factory settings)."""
+    import tempfile
+    from forge_printer.blender_addon import library
+    with tempfile.TemporaryDirectory() as folder:
+        path, made, _ = library.build(folder, only={"Wall Double", "Block 2x2 Flat"})
+        check(made == 2 and os.path.isfile(path), "the library builds (%d assets)" % made)
+        with open(os.path.join(folder, library.CATALOG_FILE), encoding="utf-8") as f:
+            check(library.catalog_id("Building Blocks") in f.read(), "its catalogs are written")
+        bpy.ops.wm.read_homefile(use_empty=True)
+        with bpy.data.libraries.load(path, link=False, assets_only=True) as (src, dst):
+            dst.objects = list(src.objects)
+        objs = [o for o in dst.objects if o is not None]
+        check(len(objs) == 2 and all(o.asset_data and o.preview and any(o.preview.image_pixels_float[:4000])
+                                     for o in objs), "both are assets with a thumbnail")
+        scene = bpy.context.scene
+        for i, o in enumerate(objs):
+            scene.collection.objects.link(o)
+            o.location = (3.0 * i, 1.0, 2.0)
+        bpy.context.view_layer.update()
+        entries = ui.scene_entries(scene)
+        check(len(entries) == 2 and all(e["placement"] is not None for _, e in entries),
+              "pieces taken from the library are Forge pieces that export: %s" % [
+                  (e["placement"] or {}).get("piece") for _, e in entries])
+        entry = library.register_library(folder)
+        check(entry.name == library.LIBRARY_NAME and os.path.normcase(entry.path) == os.path.normcase(folder),
+              "it can be added to the Asset Browser's libraries")
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser(prog="headless_check")
@@ -241,6 +272,7 @@ def main():
     refusals(ui)
     if args.guardian:
         guardian(ui, args.guardian, args.template, tuple(args.offset), args.out)
+    library_check(ui)
     print("checks: %d failed" % len(FAILED))
     if FAILED:
         sys.exit(1)

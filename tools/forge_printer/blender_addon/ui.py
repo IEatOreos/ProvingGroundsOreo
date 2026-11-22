@@ -345,6 +345,32 @@ class FORGE_PRINTER_OT_add_piece(Operator):
         return {"FINISHED"}
 
 
+class FORGE_PRINTER_OT_add_library(Operator):
+    """Add the Reach Forge pieces asset library (built by build_library.py) to Blender's Asset Browser and
+    save that in the preferences"""
+    bl_idname = "forge_printer.add_library"
+    bl_label = "Add piece library to the Asset Browser"
+
+    def execute(self, context):
+        from . import library
+        if not os.path.isfile(os.path.join(library.DEFAULT_DIR, library.BLEND_NAME)):
+            self.report({"ERROR"}, "the library is not built yet: run build_library.py first")
+            return {"CANCELLED"}
+        entry = library.register_library()
+        bpy.ops.wm.save_userpref()
+        self.report({"INFO"}, "Asset Browser library \"%s\" added: open an Asset Browser and drag pieces in" % entry.name)
+        return {"FINISHED"}
+
+
+def _library_state():
+    """("missing" | "unregistered" | "ready", library name)."""
+    from . import library
+    if not os.path.isfile(os.path.join(library.DEFAULT_DIR, library.BLEND_NAME)):
+        return "missing", library.LIBRARY_NAME
+    names = {lib.name for lib in bpy.context.preferences.filepaths.asset_libraries}
+    return ("ready" if library.LIBRARY_NAME in names else "unregistered"), library.LIBRARY_NAME
+
+
 class FORGE_PRINTER_OT_select_problems(Operator):
     """Select the pieces that cannot be written (scaled, leaning too far, reshaped)"""
     bl_idname = "forge_printer.select_problems"
@@ -510,6 +536,13 @@ class FORGE_PRINTER_PT_palette(Panel):
 
     def draw(self, context):
         layout, scene = self.layout, context.scene
+        state, name = _library_state()
+        if state == "unregistered":
+            layout.operator("forge_printer.add_library", icon="ASSET_MANAGER")
+        elif state == "ready":
+            box = layout.box()
+            box.label(text="Drag pieces in from an Asset Browser:", icon="ASSET_MANAGER")
+            box.label(text="library \"%s\"" % name)
         layout.prop(scene, "fp_category", text="")
         layout.prop(scene, "fp_real_models")
         col = layout.column(align=True)
@@ -521,8 +554,8 @@ class FORGE_PRINTER_PT_palette(Panel):
             layout.label(text="%d pieces with no known menu name are not offered yet" % UNNAMED)
 
 
-CLASSES = (FORGE_PRINTER_OT_open_fit, FORGE_PRINTER_OT_add_piece, FORGE_PRINTER_OT_select_problems,
-           FORGE_PRINTER_OT_export, FORGE_PRINTER_PT_main, FORGE_PRINTER_PT_palette)
+CLASSES = (FORGE_PRINTER_OT_open_fit, FORGE_PRINTER_OT_add_piece, FORGE_PRINTER_OT_add_library,
+           FORGE_PRINTER_OT_select_problems, FORGE_PRINTER_OT_export, FORGE_PRINTER_PT_main, FORGE_PRINTER_PT_palette)
 
 
 @bpy.app.handlers.persistent

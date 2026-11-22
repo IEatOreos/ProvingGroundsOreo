@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Reach Forge Printer add-on: the pieces as a Blender asset library, 2026-11-21
+
+- The owner chose to make the Blender side a good Blender-to-Forge tool first (after comparing with the Halo Infinite Blender-2-Forge printer, whose core is an asset library of real models). **`blender_addon/library.py` and `build_library.py` (new):** every named piece (99) as an asset with its real model, origin at Forge's placing point, the add-on's custom properties, a rendered thumbnail, one catalog a Forge category. Built into `re_tools\forge_printer\asset_library` (the game's models, never committed) in a factory-settings Blender, so the build never touches the owner's preferences; added to the Asset Browser as "Reach Forge Pieces" by the same command with Blender closed, or by the new Forge palette button **Add piece library to the Asset Browser**. A piece dragged in from it is counted and exported like one from the palette.
+- **Validation:** built for real (99 assets, all with the real model and a thumbnail, 7 catalogs); a separate Blender loaded them, placed three and they exported with the turns given; `headless_check.py` gained a library check (a two-piece library builds, its assets carry thumbnails and catalogs, pieces taken from it export, it can be added to the libraries); add-on tests 23 OK. Not yet used in the owner's Blender window (it needs a restart to load the new button).
+
 ### Reach Forge Printer: wall pieces no longer close doorways, 2026-11-21
 
 - The owner found doorways in the walls fit "blocked by entire walls". A piece's face counted as on wall when wall lay within a box or two in any direction, so a doorway was "backed" by its own frame. Now the wall is looked for only straight behind and in front of each face point, and a piece is refused when any part of it that is on no wall has nothing at all behind it for 1.5 units (a doorway, a window, air past a wall's end). 166 of the 255 previously printed wall pieces fail that. Rebuilt Guardian: 255 pieces, 36% of the seen wall (48% beside the walks). Printed "FP Guardian Walls 2" and copied into MCC's Map folder (MCC was running; it may need a restart to list it).

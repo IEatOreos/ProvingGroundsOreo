@@ -18,6 +18,27 @@ runs the repository's version) and enables the add-on. In Blender it is in the
 3D view's sidebar: press **N**, tab **Forge**. To take it out again:
 `install.py --remove` (removes the link only).
 
+## Piece library (Asset Browser)
+
+Every piece with a known menu name (99), with its real model and a thumbnail,
+sorted into one catalog a Forge category, for dragging into a scene from
+Blender's Asset Browser. Build it once (a minute or two, Blender may stay open):
+
+```
+python\python.exe tools\forge_printer\blender_addon\build_library.py
+```
+
+It writes `E:\Proving Grounds\re_tools\forge_printer\asset_library\Reach Forge Pieces.blend`
+(the game's models, so never in the repository). With Blender closed it also
+adds that folder to the Asset Browser as **Reach Forge Pieces**; with Blender
+open, click **Add piece library to the Asset Browser** at the top of the Forge
+palette instead. Then split off an area, make it an **Asset Browser**, pick
+**Reach Forge Pieces** and drag pieces into the 3D view. A dragged piece is a
+Forge piece like one from the palette: it is counted and exported. Its origin
+is Forge's placing point, so Blender's snapping lines pieces up the way Forge
+would. If a piece dropped on a slope comes in leaning, the drop's own options
+(bottom left) can turn surface alignment off.
+
 ## Use
 
 1. **Open fit.json** (Forge tab). For Guardian it is
@@ -91,3 +112,5 @@ palette yet.
   with the reasons a piece cannot be written. No Blender.
 - `export.py` — the counter, what an export would write, writing it. No Blender.
 - `install.py`, `headless_check.py` — the install step and the Blender-side checks.
+- `library.py`, `build_library.py` — the piece library (needs Blender) and the
+  command that builds it and adds it to the Asset Browser.
