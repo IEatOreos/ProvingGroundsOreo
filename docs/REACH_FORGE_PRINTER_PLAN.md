@@ -6,10 +6,10 @@ reference, scale 0.975). Phase 3 done as far as the plan asks (2026-11-21):
 Guardian's floors, ramps (as tilted faces) and walls are fitted with Forge
 pieces and seven prints have loaded in the game; the "Phase 3 → Phase 4" note
 at the end says what is proven, what is left and what Phase 4 starts from.
-Phase 4 milestone 1 built (2026-11-21): the Blender add-on opens, edits,
-counts and exports, checked headless against `print`; waiting for the owner to
-load an edited export in the game (the "Phase 4, milestone 1" note at the
-end). Its brief is `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
+Phase 4 milestone 1 done (2026-11-21): the Blender add-on opens, edits,
+counts and exports, checked headless against `print`, and an export the owner
+edited by hand loaded in the game with his changes (the "Phase 4, milestone 1"
+note at the end). Its brief is `docs/REACH_FORGE_PRINTER_PHASE4_BRIEF.md`.
 Separate tool from the Project Noble bot code.
 
 ## Goal
@@ -143,8 +143,10 @@ Do not start Phase 2 on Fable.
         export through `fit.within_limits` / `fit.add_to`
         (`tools/forge_printer/blender_addon/`); Guardian opened and exported
         unedited equals `print` (292 of 292 objects, the same 44 left out)
-  - [ ] milestone 1 in the game: an export edited by hand loaded and compared
-        with Blender (the owner)
+  - [x] milestone 1 in the game: an export edited by hand loaded and compared
+        with Blender (the owner, 2026-11-21: "FP Guardian test", a 5x5 turned
+        and tilted, a 3x1 moved: "The changes and export all showed inside
+        the game")
   - [ ] milestone 2 — gameplay objects (not started: waits for the owner)
   - [ ] milestone 3 — gap, overlap and lip finders (not started)
 
@@ -1382,9 +1384,16 @@ Blender: sidebar (N), tab Forge.
    `tools/test_forge_printer_addon_blender.py` (runs `headless_check.py`, about
    a second; skips without Blender).
 7. This note and the checklist.
-8. **Not done: the owner has not loaded an export from the add-on.** The
-   check: open Guardian, move and turn a few pieces by hand (one tilted),
-   export, load it in Forge and compare with Blender.
+8. **Done (the owner, 2026-11-21).** First an unedited export ("FP Guardian
+   edit", equal to `print`) loaded and played. Then "FP Guardian test" from the
+   owner's own saved scene: Block 5x5 Flat (#0) turned -33 degrees and tilted
+   27.5, in place; Block 3x1 Flat (#295) moved 4.47; plus three Block 1x1s
+   added at the 3D cursor (scene zero, under the floor), which took three fill
+   blocks' places in the full Building Blocks row. Comparing the two files:
+   only those slots differ. The owner: "The changes and export all showed
+   inside the game". The scene was saved by the owner and exported by Claude
+   with the same operator in headless Blender (template and offset filled in
+   for that export, the .blend not changed).
 
 Also checked by running Blender's window once with a script (screenshots,
 local): the panel's counts react to adding, scaling and moving, and the export

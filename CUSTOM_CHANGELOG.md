@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Reach Forge Printer: Phase 4 milestone 1 passes in the game, 2026-11-21
+
+- The owner edited Guardian in the Blender add-on (a Block 5x5 Flat turned -33 and tilted 27.5 degrees, a Block 3x1 Flat moved 4.47), the export ("FP Guardian test") loaded in Reach Forge and his changes showed as in Blender. An unedited export loaded and played before it. The plan's checklist and its "Phase 4, milestone 1" note mark item 8 done; no code changes. Milestones 2 and 3 wait for the owner.
+
 ### Project Noble: the new name, banner and icon, 2026-11-21
 
 The owner sent his new banner, PROJECT NOBLE over Noble Team: "Here is the new Banner for our github banner. And also use the project noble logo as our launchers emblem on the desktop or file". Asked whether the project is now called Project Noble (yesterday it became Project Reach): "Yes, Project Noble".
