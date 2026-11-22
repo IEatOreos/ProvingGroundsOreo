@@ -441,6 +441,74 @@ class Walls(unittest.TestCase):
         self.assertEqual(fit.fit_walls(analysed(m))[0], [])
 
 
+class WallFaces(unittest.TestCase):
+    """fit_wall_faces: wall pieces laid on the wall a player sees, upright or leaning."""
+
+    def floor_and_wall(self, lean=0.0, length=8.0, height=3.0):
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        top = height * math.tan(math.radians(lean))                                  # leaning away from the floor
+        m.quad((0, 0, 0), (0, length, 0), (-top, length, height), (-top, 0, height))   # at x = 0, facing +x
+        return m
+
+    def frames(self, placements):
+        known = pieces.by_name()
+        out = []
+        for p in placements:
+            x, y, z = mvar.axes(p.get("up", (0.0, 0.0, 1.0)), math.radians(p["turn"]))
+            piece = known[p["piece"]]
+            mid = [(piece["min"][k] + piece["max"][k]) / 2.0 for k in range(3)]
+            centre = [p["origin"][i] + mid[0] * x[i] + mid[1] * y[i] + mid[2] * z[i] for i in range(3)]
+            out.append((piece, centre, x, y, z))
+        return out
+
+    def test_an_upright_wall_beside_the_floor_takes_upright_wall_pieces_on_its_face(self):
+        placements, report = fit.fit_wall_faces(analysed(self.floor_and_wall()))
+        self.assertGreater(len(placements), 0)
+        self.assertGreater(report["coverage"], 0.8)
+        for piece, centre, x, y, z in self.frames(placements):
+            self.assertEqual(piece["category"], "Doors, Windows and Walls")
+            self.assertNotIn("up", placements[0])                                     # upright: the world's up
+            self.assertAlmostEqual(abs(y[0]), 1.0, places=3)                           # its thin side across the wall
+            self.assertAlmostEqual(centre[0], -piece["size"][1] / 2.0, delta=0.06)    # its face on the wall's face
+            self.assertGreaterEqual(centre[1] - piece["size"][0] / 2.0, -0.6)        # not past the wall's ends by much
+            self.assertLessEqual(centre[1] + piece["size"][0] / 2.0, 8.6)
+
+    def test_a_leaning_wall_takes_pieces_leaning_with_it(self):
+        placements, report = fit.fit_wall_faces(analysed(self.floor_and_wall(lean=20.0)))
+        self.assertGreater(report["coverage"], 0.6)
+        self.assertGreater(report["leaning"], 0)
+        for piece, centre, x, y, z in self.frames(placements):
+            lean = math.degrees(math.acos(z[2]))
+            self.assertAlmostEqual(lean, 20.0, delta=1.5)
+            self.assertLess(z[0], 0.0)                                                  # leaning back, away from the floor
+
+    def test_no_piece_stands_where_a_player_walks(self):
+        # a step: the floor at x 0..8 is 0.5 lower than the floor at x 8..16; the riser faces -x
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad(*slab(8, 0, 16, 8, z=0.5))
+        m.quad((8, 8, 0), (8, 0, 0), (8, 0, 0.5), (8, 8, 0.5))
+        placements, _ = fit.fit_wall_faces(analysed(m, spawns=((2.0, 2.0, 0.05), (12.0, 2.0, 0.55))))
+        for piece, centre, x, y, z in self.frames(placements):
+            top = centre[2] + piece["size"][2] / 2.0
+            self.assertLessEqual(top, 0.5 + 0.001, "a piece stands up out of the upper floor")
+
+    def test_a_wall_nobody_walks_beside_is_left(self):
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad((4, 0, 9), (4, 8, 9), (4, 8, 12), (4, 0, 12))                        # hanging 9 above the floor
+        self.assertEqual(fit.fit_wall_faces(analysed(m))[0], [])
+
+    def test_the_file_holds_what_was_laid(self):
+        placements, _ = fit.fit_wall_faces(analysed(self.floor_and_wall(lean=15.0)))
+        for p in placements:
+            raw = mvar.up_raw(p["up"])
+            self.assertEqual(mvar.up_raw(mvar.up_vector(raw)), raw)                  # the up is one the file holds
+            turn = math.radians(p["turn"])
+            self.assertAlmostEqual(mvar.decode_angle(mvar.encode_angle(turn)), turn, places=6)
+
+
 class Placing(unittest.TestCase):
     def test_the_placing_point_allows_for_a_piece_that_is_not_centred(self):
         table = pieces.load()
@@ -655,17 +723,21 @@ class Commands(unittest.TestCase):
             self.assertEqual(floors["coverage"], 1.0)
             self.assertEqual(sorted({p["top"] for p in out["placements"] if p["part"] == "floor"}), [0.0, 2.0])
             # the yard's ramp (4 long, 8 wide, 26.6 degrees) takes eight tilted 5x1 blocks, one a lane (its face
-            # is 4.47 long), its wall two Wall Double
+            # is 4.47 long); its wall and the trunk beside it take wall pieces (fit_wall_faces)
             self.assertEqual(out["report"]["slopes"]["pieces"], 8)
-            self.assertEqual(out["report"]["walls"]["pieces"], 2)
-            self.assertEqual(out["report"]["pieces"], floors["pieces"] + 10)
-            self.assertEqual({(p["part"], p["piece"]) for p in out["placements"] if p["part"] != "floor"},
-                             {("slope", "Block 5x1 Flat"), ("wall", "Wall Double")})
+            walls = out["report"]["walls"]
+            self.assertGreater(walls["near_coverage"], 0.9)
+            self.assertEqual(out["report"]["pieces"], floors["pieces"] + 8 + walls["pieces"])
+            self.assertEqual({(p["part"], p["piece"]) for p in out["placements"] if p["part"] == "slope"},
+                             {("slope", "Block 5x1 Flat")})
+            self.assertLessEqual({p["piece"] for p in out["placements"] if p["part"] == "wall"},
+                                 {"Wall Double", "Wall", "Wall Coliseum"})
             self.assertEqual({"up" in p for p in out["placements"] if p["part"] == "slope"}, {True})
             v, t = surfaces.load_obj(os.path.join(folder, out["mesh"]))
             self.assertEqual(len(v), 8 * out["report"]["pieces"])
             self.assertEqual(len(t), 12 * out["report"]["pieces"])       # six faces a box, two triangles each
-            self.assertAlmostEqual(float(v[:, 2].max()), 2.0, delta=0.01)  # box tops are the floors, the ramps' too
+            ground = 8 * (out["report"]["pieces"] - walls["pieces"])    # floors and ramps come first, walls last
+            self.assertAlmostEqual(float(v[:ground, 2].max()), 2.0, delta=0.01)  # box tops are the floors, the ramps' too
             first = {n: open(os.path.join(folder, n), "rb").read() for n in ("fit.json", out["mesh"])}
             fit.build(folder)
             for name, data in first.items():
@@ -698,7 +770,7 @@ class Commands(unittest.TestCase):
         for o in tilted:                                                                      # 26.6 degrees, leaning to -x
             self.near(mvar.up_vector(o.up), (-math.sin(math.atan(0.5)), 0.0, math.cos(math.atan(0.5))))
         self.assertEqual(back.variant.quotas[75].placed, 0)                                   # Inclines: none now
-        self.assertEqual(back.variant.quotas[74].placed, 1 + 2)                               # the template's wall and two
+        self.assertEqual(back.variant.quotas[74].placed, 1 + out["report"]["walls"]["pieces"])  # the template's wall and ours
         cost, unpriced = pieces.cost([p["piece"] for p in out["placements"]])
         self.assertEqual(back.variant.budget_spent, 130 + cost)                               # the stored figure follows
         self.assertEqual(unpriced, ["Block 4x4 Flat"])                                        # not yet seen on the HUD

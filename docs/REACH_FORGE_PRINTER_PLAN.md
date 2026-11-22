@@ -147,8 +147,16 @@ Do not start Phase 2 on Fable.
         with Blender (the owner, 2026-11-21: "FP Guardian test", a 5x5 turned
         and tilted, a 3x1 moved: "The changes and export all showed inside
         the game")
-  - [ ] milestone 2 — gameplay objects (not started: waits for the owner)
+  - [-] milestone 2 — gameplay objects: dropped by the owner (2026-11-21: "Spawns and in game items can be
+        placed by me")
   - [ ] milestone 3 — gap, overlap and lip finders (not started)
+- [ ] Phase 5 — the automatic build as close to the original as it can be (the owner, 2026-11-21: "I want it
+      as close to the original guardian as possible"), Guardian first, in his order:
+  - [ ] step 1a walls: every wall a player sees (`fit.fit_wall_faces`) — built, printed "FP Guardian Walls",
+        not yet seen in the game
+  - [ ] step 1b ramps and slopes
+  - [ ] step 2 solid floors (the sides under raised floors)
+  - [ ] step 3 floor gaps
 
 ## Handoff notes
 
@@ -1402,3 +1410,60 @@ dialog lists and selects the pieces before anything is written.
 **Not done / for later:** gameplay objects (milestone 2) and the cleanup
 helpers (milestone 3) wait for the owner. The 10 model-named Decorative
 pieces have no palette button. A hidden piece is still exported.
+
+### Phase 5, step 1a: every wall a player sees (2026-11-21, written by Opus 5.5)
+
+**The owner's direction:** spawns and items he places by hand (milestone 2
+dropped); the automatic build is to come as close to Guardian as it can, in
+his order: walls, ramps and slopes; then solid floors; then floor gaps. He
+named the missing walls first ("we're missing tons of walls"): the trunks,
+roots, cliffs and building sides drawn as black lines in the add-on.
+
+**Measured before (the Phase 3 fit):** wall within 2 units of walked ground
+(across) and under 8 above it: 3574 u2; 1941 upright, 1524 leaning 60-88
+degrees from up; the 37 walls of `fit_walls` (upright within 2 degrees,
+rectangular, at most two pieces high) covered 345 u2 of it (9.7%).
+
+**Built:** `fit.fit_wall_faces`, used by `build` in place of `fit_walls`
+(kept, with its tests). The wall a player sees (`visible_wall`: within 2 of
+walked ground across, from half a unit under it to 8 over it) is sampled as
+points facing the player. For each seed a plane is fitted to the samples
+around it facing within 35 degrees; Wall Coliseum, Wall Double and Wall are
+laid flat on it (tilted with a leaning wall through `up_raw` / `turn_for` /
+`axes`, rounded to the file's steps before the position is worked out; under
+1 degree they stand upright), centred, topped at the wall's top or standing at
+its foot, and centred or flush with either end. A candidate is kept when:
+
+- at least 3/4 of its face is on wall facing within about 45 degrees of it
+  (any height, all of the cut) or hidden under walked ground;
+- no part of it that is on no wall stands up out of walked ground just behind
+  it (a fence along a floor's edge);
+- it fills no point where a player stands (0.1, 0.35, 0.65 over walked ground)
+  more than 0.15 behind its face.
+
+The pieces are then taken greedily by what they cover that nothing covers yet,
+each sample worth 1 / (1 + its distance from the walk), halved above 2.5 high
+and halved again above 5 (`_seen`): the wall beside the walkways at eye height
+comes first. 255 at most (one palette row). A piece overlapping one already
+laid in the same plane goes 0.012 further back.
+
+**Guardian:** 255 pieces (165 Wall Double, 90 Wall, 228 leaning), 1640 of
+4066 u2 of seen wall covered (40%); beside the walks (within 1, under 2.5)
+54% of 1852 u2. Wall Coliseum is never kept: a 10 x 12 face always sticks out
+somewhere on Guardian. `print` with Bot Testing Grounds (-39 -135 8): "FP
+Guardian Walls", 497 pieces added, 516 of 651 objects, budget 5100; left out
+44 fill blocks (row 70, as before) and 13 walls (the template's own 13 Wall
+Coliseum share row 74). Every new tilted piece leans on the +Z face. The
+Phase 3 fit is kept beside the new one as `fit_phase3.json`.
+
+**Checked here, not in the game:** renders at player height from six spawns
+(headless Blender, local): the flat walls beside walkways and the corridor
+sides are mostly covered; the rock cliffs take panels at jagged angles; one
+doorway has a panel across its top under the lintel. Tests: 5 new
+(`WallFaces`), two command tests now check the walls' coverage instead of
+the old count.
+
+**The ceiling the game sets:** about 340 objects are left after floors,
+ramps and the template, the walls row holds 255, and a Wall Double covers 8
+u2 at most, so roughly half of Guardian's seen wall is what fits. Solid floors
+and fewer floor pieces (steps 2 and 3) are where more room comes from.

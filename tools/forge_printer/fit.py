@@ -25,6 +25,8 @@ Both files are made from the game: they stay local and are never committed.
 Phase 3 of docs/REACH_FORGE_PRINTER_PLAN.md. Nothing in the bot imports this.
 """
 
+import heapq
+import itertools
 import json
 import math
 import os
@@ -803,6 +805,365 @@ def fit_walls(analysis, table=None):
     return placements, {"pieces": len(placements), "length": round(length_fitted, 1)}
 
 
+# ---- walls as faces: every wall a player sees, followed with flat wall pieces ---------------------
+#
+# fit_walls above takes only upright, rectangular walls; Guardian's walls are mostly trunks, roots and
+# cliffs that lean and curve, and it covered under a tenth of them. Here the visible wall is sampled
+# as points, each candidate piece is laid flat on the plane of the wall around a seed (tilted with it,
+# within the up vector's 45 degrees), and the pieces that cover the most wall nothing covers yet are
+# taken first, while none may stand where a player walks.
+
+FACE_PIECES = {"Wall Coliseum": 2.0, "Wall Double": 1.0, "Wall": 0.5}   # piece: how far apart its candidates are
+FACE_SAMPLE = 0.0625    # one sample point per this much wall, u2
+FACE_NEAR = 2.0         # wall a player sees: within this of walked ground, across,
+FACE_HIGH = 8.0         # ... no higher than this above it, and no lower than half a unit under it
+FACE_PLANE = 0.5        # a sample is on a piece's face if it is within this of the face's plane
+FACE_AGREE = 55.0       # ... and faces within this many degrees of the same way (a trunk's flutes vary that much)
+FACE_GATHER = 35.0      # a candidate's plane is fitted to the samples facing within this of its seed's
+FACE_BACKED = 0.75      # at least this share of a piece's face is on wall (any height) or hidden under the ground
+FACE_GRID = 0.5         # the face is checked at points this far apart
+FACE_VOXEL = 0.25       # wall anywhere is kept as boxes this size: a face point within a box or two of one is on wall
+FACE_UPRIGHT = 1.0      # a wall leaning less than this many degrees takes an upright piece
+FACE_HEADINGS = 12      # wall is told apart by which way it faces, in bins of 15 degrees: a face is on wall only
+FACE_HEADING_REACH = 2  # where that wall faces within this many bins of it (about 45 degrees: a fluted trunk
+                        # still counts, a piece standing square across a wall does not)
+FACE_MIN_GAIN = 1.0     # a piece must cover at least this much wall nothing covers yet, u2
+FACE_MAX_PIECES = 255   # wall pieces at most: every one is in one palette row (Doors, Windows and Walls), which
+                        # holds 255; floors and ramps are kept before walls when slots run out (within_limits)
+FACE_TOP_DROP = 0.02    # a piece topped at a wall's top sits this far under it: never level with a floor
+FACE_TUCK = 0.012       # a piece overlapping one already laid in the same plane goes this much further back
+BODY = (0.1, 0.35, 0.65)  # heights above walked ground a player stands in: no piece may fill them
+BODY_SLACK = 0.15       # ... by more than this (the ground is known in half-unit cells; a leaning wall's own
+                        # surface passes through the nearest cell's points)
+
+
+class _Near:
+    """Points in grid buckets, for "which of them lie within r of here" with numpy alone."""
+
+    def __init__(self, points, size):
+        self.points = np.asarray(points, dtype=float)
+        self.size = float(size)
+        buckets = {}
+        for i, key in enumerate(map(tuple, np.floor(self.points / self.size).astype(np.int64).tolist())):
+            buckets.setdefault(key, []).append(i)
+        self.buckets = {k: np.array(v, dtype=np.int64) for k, v in buckets.items()}
+
+    def within(self, centre, r):
+        centre = np.asarray(centre, dtype=float)
+        lo = np.floor((centre - r) / self.size).astype(np.int64)
+        hi = np.floor((centre + r) / self.size).astype(np.int64)
+        found = []
+        for key in itertools.product(*(range(int(a), int(b) + 1) for a, b in zip(lo, hi))):
+            got = self.buckets.get(key)
+            if got is not None:
+                found.append(got)
+        if not found:
+            return np.zeros(0, dtype=np.int64)
+        idx = np.concatenate(found)
+        d = self.points[idx] - centre
+        return idx[np.einsum("ij,ij->i", d, d) <= r * r]
+
+
+def _seen(distance, height):
+    """How much a bit of wall counts towards choosing pieces: wall right beside the walkway at eye
+    height counts fully, wall further back or higher up less (it is still covered if room is left)."""
+    return (1.0 / (1.0 + distance)) * np.where(height <= 2.5, 1.0, np.where(height <= 5.0, 0.5, 0.25))
+
+
+def visible_wall(analysis, seed=0):
+    """Sample points over the wall a player sees: (points, normals turned towards the player, weights u2,
+    walked ground as (x, y, z) rows, and each point's worth in choosing pieces, from _seen). Wall within
+    FACE_NEAR of walked ground across, from half a unit under it to FACE_HIGH over it."""
+    a = analysis
+    ground = np.array([[(c[0] + 0.5) * surfaces.CELL, (c[1] + 0.5) * surfaces.CELL, z] for c, z in a["reached"]],
+                      dtype=float).reshape(-1, 3)
+    empty = (np.zeros((0, 3)), np.zeros((0, 3)), np.zeros(0), ground, np.zeros(0))
+    if not len(ground):
+        return empty
+    near = _Near(ground[:, :2], 1.0)
+    walls = np.nonzero(a["kinds"] == surfaces.WALL)[0]
+    keep, toward, worth = [], [], []
+    for t in walls:
+        c = a["centres"][t]
+        idx = near.within(c[:2], FACE_NEAR)
+        idx = idx[(ground[idx, 2] <= c[2] + 0.5) & (ground[idx, 2] >= c[2] - FACE_HIGH)]
+        if not len(idx):
+            continue
+        d = ground[idx, :2] - c[:2]
+        d2 = np.einsum("ij,ij->i", d, d)
+        best = idx[int(np.argmin(d2))]
+        keep.append(t)
+        toward.append(ground[best, :2] - c[:2])
+        worth.append(float(_seen(math.sqrt(float(d2.min())), c[2] - ground[best, 2])))
+    if not keep:
+        return empty
+    keep, toward, worth = np.array(keep), np.array(toward), np.array(worth)
+    areas = a["areas"][keep]
+    count = np.maximum(1, np.round(areas / FACE_SAMPLE).astype(np.int64))
+    owner = np.repeat(np.arange(len(keep)), count)
+    rng = np.random.default_rng(seed)
+    r1, r2 = np.sqrt(rng.random(len(owner))), rng.random(len(owner))
+    tri = a["verts"][a["tris"][keep[owner]]]
+    points = tri[:, 0] * (1 - r1)[:, None] + tri[:, 1] * (r1 * (1 - r2))[:, None] + tri[:, 2] * (r1 * r2)[:, None]
+    normals = a["normals"][keep].copy()
+    flip = np.einsum("ij,ij->i", normals[:, :2], toward) < 0       # the side the player is on
+    normals[flip] *= -1.0
+    return points, normals[owner], (areas / count)[owner], ground, worth[owner]
+
+
+class _Solid:
+    """Where any wall is (all of it in the cut, not only what a player sees) and where the walked ground
+    is, to tell whether each point of a piece's face is on wall or hidden under the ground."""
+
+    def __init__(self, analysis, ground):
+        a = analysis
+        walls = np.nonzero(a["kinds"] == surfaces.WALL)[0]
+        areas = a["areas"][walls]
+        count = np.maximum(1, np.round(areas / (FACE_VOXEL * FACE_VOXEL)).astype(np.int64))
+        owner = np.repeat(np.arange(len(walls)), count)
+        rng = np.random.default_rng(1)
+        r1, r2 = np.sqrt(rng.random(len(owner))), rng.random(len(owner))
+        tri = a["verts"][a["tris"][walls[owner]]]
+        pts = tri[:, 0] * (1 - r1)[:, None] + tri[:, 1] * (r1 * (1 - r2))[:, None] + tri[:, 2] * (r1 * r2)[:, None]
+        self.low = (pts.min(axis=0) if len(pts) else np.zeros(3)) - 4.0
+        heading = self._heading(a["normals"][walls[owner]])
+        self.keys = np.unique(self._key(np.floor((pts - self.low) / FACE_VOXEL).astype(np.int64)) * FACE_HEADINGS + heading)
+        self.ground = {}
+        for row in ground:
+            cell = (int(math.floor(row[0] / surfaces.CELL)), int(math.floor(row[1] / surfaces.CELL)))
+            self.ground[cell] = max(self.ground.get(cell, -1e9), float(row[2]))
+
+    @staticmethod
+    def _key(k):
+        k = np.clip(k, 0, (1 << 18) - 1)
+        return (k[..., 0] << 36) | (k[..., 1] << 18) | k[..., 2]
+
+    @staticmethod
+    def _heading(normals):
+        """Which way a wall faces on the ground, either side alike: a bin of 180 / FACE_HEADINGS degrees."""
+        angle = np.degrees(np.arctan2(normals[..., 1], normals[..., 0])) % 180.0
+        return (angle // (180.0 / FACE_HEADINGS)).astype(np.int64) % FACE_HEADINGS
+
+    def on_wall(self, pts, normal):
+        """Whether each point is within a box or two of wall facing within about 30 degrees of `normal`."""
+        base = self._key(np.floor((pts - self.low) / FACE_VOXEL).astype(np.int64)[:, None, :] +
+                         np.array(list(itertools.product((-1, 0, 1), repeat=3)))[None, :, :]) * FACE_HEADINGS
+        heading = int(self._heading(np.asarray(normal, dtype=float)))
+        hit = np.zeros(len(pts), dtype=bool)
+        if not len(self.keys):
+            return hit
+        for h in range(heading - FACE_HEADING_REACH, heading + FACE_HEADING_REACH + 1):
+            keys = base + h % FACE_HEADINGS
+            at = np.minimum(np.searchsorted(self.keys, keys), len(self.keys) - 1)
+            hit |= (self.keys[at] == keys).any(axis=1)
+        return hit
+
+    def fence(self, pts, normal):
+        """Whether any of these face points (ones on no wall) stands up out of walked ground just behind
+        the face: a piece's edge sticking up along a floor's edge, where the real level is open."""
+        for p in pts:
+            for back in (0.25, 0.5, 0.75):
+                q = p - normal * back
+                z = self.ground.get((int(math.floor(q[0] / surfaces.CELL)), int(math.floor(q[1] / surfaces.CELL))))
+                if z is not None and p[2] - 1.0 <= z <= p[2] - 0.05:
+                    return True
+        return False
+
+    def under_ground(self, pts):
+        out = np.zeros(len(pts), dtype=bool)
+        for i, p in enumerate(pts):
+            z = self.ground.get((int(math.floor(p[0] / surfaces.CELL)), int(math.floor(p[1] / surfaces.CELL))))
+            out[i] = z is not None and z >= p[2] + 0.05
+        return out
+
+
+def _face_frame(normal, along):
+    """The up and turn a wall piece takes to lie flat on a plane facing `normal` with its length `along`
+    it, as the file holds them, and its own axes then: (up, turn, x, y, z) or None past 45 degrees.
+    A wall within FACE_UPRIGHT of upright takes an upright piece."""
+    up_dir = np.cross(normal, along)
+    up_dir /= np.linalg.norm(up_dir)
+    lean = math.degrees(math.acos(max(-1.0, min(1.0, float(up_dir[2])))))
+    if lean > TILT_MAX:
+        return None
+    if lean < FACE_UPRIGHT:
+        up_dir = np.array((0.0, 0.0, 1.0))
+        along = np.array((float(along[0]), float(along[1]), 0.0))
+        along /= np.linalg.norm(along)
+    up = mvar.up_vector(mvar.up_raw(tuple(float(c) for c in up_dir)))
+    turn = mvar.decode_angle(mvar.encode_angle(mvar.turn_for(up, tuple(float(c) for c in along))))
+    x_axis, y_axis, z_axis = (np.array(v, dtype=float) for v in mvar.axes(up, turn))
+    return up, turn, x_axis, y_axis, z_axis
+
+
+def _face_candidates(seed, piece, points, normals, weights, near):
+    """Pieces laid on the plane of the wall around one sample: centred on it, topped at the wall's top,
+    and standing at its foot. [{"piece", "up", "turn", "axes", "face", "normal"}]"""
+    length, thick, height = piece["size"]
+    idx = near.within(points[seed], 0.5 * max(length, height))
+    idx = idx[normals[idx] @ normals[seed] >= math.cos(math.radians(FACE_GATHER))]
+    w = weights[idx]
+    if w.sum() < FACE_MIN_GAIN or len(idx) < 6:
+        return []
+    centre = (points[idx] * w[:, None]).sum(axis=0) / w.sum()
+    rel = points[idx] - centre
+    _, vectors = np.linalg.eigh((rel * w[:, None]).T @ rel)
+    normal = vectors[:, 0] if vectors[:, 0] @ normals[seed] >= 0 else -vectors[:, 0]
+    along = np.cross((0.0, 0.0, 1.0), normal)
+    if np.linalg.norm(along) < 1e-6:
+        return []
+    frame = _face_frame(normal, along / np.linalg.norm(along))
+    if frame is None:
+        return []
+    up, turn, x_axis, y_axis, z_axis = frame
+    face_normal = -y_axis                                      # the piece's own +y points into the wall
+    rise, run = rel @ z_axis, rel @ x_axis
+    lifts = (0.0, float(rise.max()) - height / 2.0 - FACE_TOP_DROP, float(rise.min()) + height / 2.0)
+    slides = (0.0, float(run.max()) - length / 2.0, float(run.min()) + length / 2.0)   # centred, or flush with an end
+    out = []
+    for lift in lifts:
+        for slide in slides:
+            if any(abs(lift - c["lift"]) < 0.05 and abs(slide - c["slide"]) < 0.05 for c in out):
+                continue
+            out.append({"piece": piece, "up": up, "turn": turn, "axes": (x_axis, y_axis, z_axis),
+                        "face": centre + z_axis * lift + x_axis * slide, "normal": face_normal,
+                        "lift": lift, "slide": slide})
+    return out
+
+
+def _face_cover(c, points, normals, near):
+    """The visible-wall samples a candidate's face lies on."""
+    length, _, height = c["piece"]["size"]
+    x_axis, _, z_axis = c["axes"]
+    idx = near.within(c["face"], 0.5 * math.hypot(length, height) + FACE_PLANE)
+    rel = points[idx] - c["face"]
+    on = (np.abs(rel @ x_axis) <= length / 2.0) & (np.abs(rel @ z_axis) <= height / 2.0) & \
+         (np.abs(rel @ c["normal"]) <= FACE_PLANE) & \
+         (normals[idx] @ c["normal"] >= math.cos(math.radians(FACE_AGREE)))
+    return idx[on]
+
+
+def _face_backed(c, solid):
+    """The share of a candidate's face that is on wall (at any height) or hidden under walked ground."""
+    length, _, height = c["piece"]["size"]
+    x_axis, _, z_axis = c["axes"]
+    xs = np.linspace(-length / 2.0, length / 2.0, max(2, int(round(length / FACE_GRID)) + 1))
+    zs = np.linspace(-height / 2.0, height / 2.0, max(2, int(round(height / FACE_GRID)) + 1))
+    gx, gz = np.meshgrid(xs, zs)
+    pts = c["face"] + gx.reshape(-1, 1) * x_axis + gz.reshape(-1, 1) * z_axis
+    ok = solid.on_wall(pts, c["normal"])
+    if not ok.all():
+        ok[~ok] = solid.under_ground(pts[~ok])
+    if not ok.all() and solid.fence(pts[~ok], c["normal"]):
+        return 0.0
+    return float(ok.mean())
+
+
+def _face_box(c):
+    """A candidate's middle (its slab behind the face) and half sizes along its own axes."""
+    length, thick, height = c["piece"]["size"]
+    return c["face"] + c["axes"][1] * (thick / 2.0), np.array([length, thick, height]) / 2.0
+
+
+def _face_blocks(c, body, body_near):
+    """Whether the piece fills where a player stands: a body point across its face and more than
+    BODY_SLACK behind it, but not past its back (behind that is the other side of the wall)."""
+    middle, half = _face_box(c)
+    idx = body_near.within(middle, float(np.linalg.norm(half)) + 0.2)
+    if not len(idx):
+        return False
+    rel = body[idx] - c["face"]
+    x_axis, _, z_axis = c["axes"]
+    depth = -(rel @ c["normal"])
+    inside = (np.abs(rel @ x_axis) < half[0] - 0.05) & (np.abs(rel @ z_axis) < half[2] - 0.05) & \
+             (depth > BODY_SLACK) & (depth < 2.0 * half[1] + 0.1)
+    return bool(inside.any())
+
+
+def fit_wall_faces(analysis, table=None, max_pieces=FACE_MAX_PIECES):
+    """Wall pieces laid flat on the wall a player sees, upright or leaning, the biggest that pay first.
+    Returns (placements, report)."""
+    table = table or pieces.load()
+    known = pieces.by_name(table)
+    points, normals, weights, ground, worth = visible_wall(analysis)
+    report = {"visible_area": round(float(weights.sum()), 1), "covered_area": 0.0, "coverage": 0.0,
+              "near_area": round(float(weights[worth >= 0.5].sum()), 1), "near_covered": 0.0, "near_coverage": 0.0,
+              "pieces": 0, "leaning": 0, "by_piece": {}}
+    if not len(points):
+        return [], report
+    value = weights * worth                                    # what covering each sample is worth
+    near = _Near(points, 1.0)
+    body = np.concatenate([ground + (0.0, 0.0, h) for h in BODY])
+    body_near = _Near(body, 1.0)
+    solid = _Solid(analysis, ground)
+
+    candidates, heap = [], []
+    for name, spacing in FACE_PIECES.items():
+        piece = known[name]
+        _, seeds = np.unique(np.floor(points / spacing).astype(np.int64), axis=0, return_index=True)
+        for seed in np.sort(seeds):
+            for c in _face_candidates(int(seed), piece, points, normals, weights, near):
+                idx = _face_cover(c, points, normals, near)
+                if float(weights[idx].sum()) < FACE_MIN_GAIN or _face_backed(c, solid) < FACE_BACKED or \
+                        _face_blocks(c, body, body_near):
+                    continue
+                heapq.heappush(heap, (-float(value[idx].sum()), len(candidates)))
+                candidates.append(c)
+
+    covered = np.zeros(len(points), dtype=bool)
+    laid, placements = [], []
+    while heap and len(placements) < max_pieces:
+        _, i = heapq.heappop(heap)
+        c = candidates[i]
+        idx = _face_cover(c, points, normals, near)
+        new = idx[~covered[idx]]
+        if float(weights[new].sum()) < FACE_MIN_GAIN:
+            continue
+        gain = float(value[new].sum())
+        if heap and gain < -heap[0][0] - 1e-9:
+            heapq.heappush(heap, (-gain, i))                   # someone else covers more now
+            continue
+        face = c["face"].copy()
+        length, _, height = c["piece"]["size"]
+        reach = 0.5 * math.hypot(length, height)
+        for _ in range(3):                                     # never level with a piece already in that plane
+            clash = False
+            for other in laid:
+                if abs(float(other["normal"] @ c["normal"])) < 0.995 or abs(float(c["normal"] @ (other["face"] - face))) > 0.03:
+                    continue
+                o_len, _, o_h = other["piece"]["size"]
+                if np.linalg.norm(other["face"] - face) > reach + 0.5 * math.hypot(o_len, o_h):
+                    continue
+                rel = other["face"] - face
+                if abs(float(rel @ c["axes"][0])) < (length + o_len) / 2.0 and abs(float(rel @ c["axes"][2])) < (height + o_h) / 2.0:
+                    clash = True
+                    break
+            if not clash:
+                break
+            face = face - c["normal"] * FACE_TUCK
+        c = dict(c, face=face)
+        covered[idx] = True
+        laid.append(c)
+        piece = c["piece"]
+        middle, _ = _face_box(c)
+        mid = [(piece["min"][k] + piece["max"][k]) / 2.0 for k in range(3)]
+        origin = middle - sum(mid[k] * c["axes"][k] for k in range(3))
+        placement = {"part": "wall", "piece": piece["name"], "turn": round(math.degrees(c["turn"]), 3),
+                     "origin": [round(float(v), 3) for v in origin]}
+        if mvar.up_raw(c["up"]) != mvar.join_up(2):
+            placement["up"] = [round(v, 6) for v in c["up"]]
+            report["leaning"] += 1
+        placements.append(placement)
+        report["by_piece"][piece["name"]] = report["by_piece"].get(piece["name"], 0) + 1
+    report["pieces"] = len(placements)
+    report["covered_area"] = round(float(weights[covered].sum()), 1)
+    report["coverage"] = round(report["covered_area"] / report["visible_area"], 3) if report["visible_area"] else 0.0
+    report["near_covered"] = round(float(weights[covered & (worth >= 0.5)].sum()), 1)
+    report["near_coverage"] = round(report["near_covered"] / report["near_area"], 3) if report["near_area"] else 0.0
+    report["candidates"] = len(candidates)
+    return placements, report
+
+
 def origin_of(placement, piece):
     """Where Forge's placing point goes so the piece's box sits on the placement: (x, y, z)."""
     turn = math.radians(placement["turn"])
@@ -847,7 +1208,7 @@ def build(folder):
         raise FitError(str(error))
     floors, floor_report = fit_floors(analysis, table)
     slopes, slope_report = fit_slopes(analysis, table, floors, tilted=True)
-    walls, wall_report = fit_walls(analysis, table)
+    walls, wall_report = fit_wall_faces(analysis, table)
     placements = floors + slopes + walls
     counts = {}
     for p in placements:
@@ -957,7 +1318,9 @@ def main(folder):
     print("slopes   %.1f u2 walked; %.1f u2 fitted (%.0f%%) by %d ramps" % (
         r["slope_area"], r["fitted_area"], 100 * r["coverage"], r["pieces"]))
     r = report["walls"]
-    print("walls    %d pieces along %.1f units of wall" % (r["pieces"], r["length"]))
+    print("walls    %.1f u2 a player sees; %.1f u2 covered (%.0f%%) by %d pieces, %d leaning; beside the walks "
+          "%.0f%% of %.1f u2" % (r["visible_area"], r["covered_area"], 100 * r["coverage"], r["pieces"], r["leaning"],
+                                 100 * r["near_coverage"], r["near_area"]))
     print("pieces   %d, budget %d%s" % (report["pieces"], report["budget"],
                                         " plus the unpriced: " + ", ".join(report["unpriced"]) if report["unpriced"] else ""))
     for name, count in report["by_piece"].items():

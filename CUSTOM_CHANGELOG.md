@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Reach Forge Printer: the walls a player sees (Phase 5, step 1a), 2026-11-21
+
+- The owner set the next phase: the automatic build as close to Guardian as it can be (he places spawns and items himself), in his order walls, ramps and slopes; solid floors; floor gaps.
+- **`fit.fit_wall_faces` (new), used by `fit`:** wall pieces laid flat on every wall within 2 units of walked ground and under 8 above it, upright or leaning with the wall (through the proven `up_raw` / `turn_for` / `axes`), chosen greedily by the wall they cover nearest the walkways first. A piece must lie on wall facing its way (or be hidden under the ground) over 3/4 of its face, never stand up as a fence along a floor's edge, and never fill where a player stands. 255 at most (one palette row). The old `fit_walls` is kept with its tests.
+- **Guardian:** wall coverage of what a player sees from 9.7% (37 pieces) to 40% (255 pieces), 54% beside the walkways. Printed as "FP Guardian Walls" (497 pieces, 516 of 651 objects, budget 5100; 44 fill blocks and 13 walls left out for full palette rows) and copied into MCC's Map folder.
+- **Validation:** 5 new tests (`WallFaces`: upright and leaning walls, no piece standing out of an upper floor, a hanging wall left, values the file holds), two command tests updated; Forge Printer tests 178 OK. Renders at player height from six spawns in headless Blender. **Not yet seen in the game.**
+
 ### GitHub page: the banner only, 2026-11-21
 
 The owner: "Remove everything on the github below the banner. All of the entire description".
