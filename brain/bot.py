@@ -414,6 +414,11 @@ TEAM_FACING = {}
 # man (odds.DANGER_ACC) is not waited for
 PEEK_WATCH_HALF = math.radians(35.0)
 PEEK_FRESH, PEEK_WAIT_S, PEEK_R, PEEK_WAIT_SCORE = 0.5, 2.0, 25.0, 3.45
+# (custom, Nov 22, the owner: "Anything other than standing completely still in the open") Bot.hold_shuffle: a hold on
+# the spot (a pre-nade's doorway, a peek waited out) as side steps of SHUFFLE_STEP s at SHUFFLE_MAG of the stick, a
+# crouch walk SHUFFLE_CROUCH of them, within SHUFFLE_LEASH u of the spot; a step shows us to the man waited on when
+# SHUFFLE_PROBE u to that side has a line from him
+SHUFFLE_STEP, SHUFFLE_MAG, SHUFFLE_CROUCH, SHUFFLE_LEASH, SHUFFLE_PROBE = (0.35, 0.8), (0.45, 0.75), 0.25, 0.8, 0.6
 # (custom, Nov 8) the team's eyes for the fight odds (Bot.share_sightings, mate_kill_times): every bot posts the enemies
 # in its view each tick {(map, team): {bot id: (t, enemy ids, accuracy)}}; a Halo 4 Demon's odds count a teammate on
 # foot whose post is under TEAM_FRESH s old and has that enemy in it, at his gun's pace over his accuracy (a Demon
@@ -2877,7 +2882,62 @@ class Bot:
                     and dist(x[1], e.pos) <= THIRD_ANGLE_R + 2.0]:
             del scores[key]
         scores[("retreat", me.pos)] = max(scores.get(("retreat", me.pos), 0.0), PEEK_WAIT_SCORE)
+        spots = [(t, p) for t, p in getattr(s, "peek_spots", ()) if now - t < 3.0]
+        s.peek_spots = spots[-8:] + [(now, me.pos)]       # (peek_shuffle: a retreat goal that is this wait's own spot)
         s.note(f"peek: #{k} is looking this way, wait for him to look away")
+
+    def hold_shuffle(s, now, me, act, hidden_from=None):
+        """(custom, Nov 22, the owner on his friend's "bots stop moving and players never stop moving": "holding a door
+        wait they can strafe a little, and same as 3. Just make them strafe or move, or crouch walk. Anything other than
+        standing completely still in the open") A hold on the spot (a pre-nade's doorway, a peek waited out) as a person
+        holds one: side steps of SHUFFLE_STEP s across the view, now and then crouched (a crouch walk), kept within
+        SHUFFLE_LEASH u of where the hold began (back toward it past that). hidden_from (a point: the man waited on): a
+        step that would show us to him is not taken; with no hidden step either way, a crouch on the spot. Live, before:
+        Demon and Noble stood still 10-13% of their time alive, these two holds a third of it (recharging in cover,
+        the rest, is left as it is)."""
+        sh = getattr(s, "_shuffle", None)
+        if sh is None or now - sh["t"] > 0.5 or (me.pos - sh["anchor"]).flat() > SHUFFLE_LEASH + 1.0:
+            sh = s._shuffle = dict(anchor=me.pos, dir=s.rng.choice((-1, 1)), until=0.0, crouch=False, t=now)
+        sh["t"] = now
+        if now >= sh["until"]:
+            sh["dir"] = -sh["dir"] if s.rng.random() < 0.8 else sh["dir"]
+            sh["until"] = now + s.rng.uniform(*SHUFFLE_STEP)
+            sh["crouch"] = s.rng.random() < SHUFFLE_CROUCH
+            sh["mag"] = s.rng.uniform(*SHUFFLE_MAG)
+        side_yaw = act.yaw + math.pi / 2                  # (a positive strafe: this way)
+        right = Vec(math.cos(side_yaw), math.sin(side_yaw), 0.0)
+        fwd = Vec(math.cos(act.yaw), math.sin(act.yaw), 0.0)
+        off = me.pos - sh["anchor"]
+        side = off.x * right.x + off.y * right.y
+        ahead = off.x * fwd.x + off.y * fwd.y
+        if abs(side) > SHUFFLE_LEASH:
+            sh["dir"] = -1 if side > 0 else 1             # (back toward the spot)
+        d = sh["dir"]
+        if hidden_from is not None:
+            T = s.T()
+            seen_at = lambda dd: T.los(hidden_from, eye(me) + right * (dd * SHUFFLE_PROBE))
+            try:
+                if seen_at(d):
+                    d = -d if not seen_at(-d) else 0
+            except Exception:
+                d = 0
+            sh["dir"] = d or sh["dir"]
+        act.strafe = d * sh["mag"]
+        act.forward = -0.4 if ahead > SHUFFLE_LEASH else (0.4 if ahead < -SHUFFLE_LEASH else 0.0)
+        act.sprint = False
+        if sh["crouch"] or d == 0:
+            act.crouch = True
+
+    def peek_shuffle(s, now, me, act, kind, arg):
+        """(custom, Nov 22) Waiting for a man to look away (peek_timing's hold on its own spot): hold_shuffle, kept out
+        of his sight. Only on a retreat goal that is one of the wait's own spots (peek_spots), not a recharge's cover."""
+        w = getattr(s, "peek_wait", None)
+        if (w is None or kind != "retreat" or not isinstance(arg, Vec) or (me.pos - arg).flat() > 1.5
+                or me.vehicle not in (None, -1) or now - w[1] >= PEEK_WAIT_S
+                or not any(dist(p, arg) < 0.05 for _, p in getattr(s, "peek_spots", ()))):
+            return
+        b = s.per.beliefs.get(w[0])
+        s.hold_shuffle(now, me, act, hidden_from=(b.pos + Vec(0.0, 0.0, EYE)) if b is not None else None)
 
     def break_point(s, me, others, cur_pos):
         """The nearest walkable spot within DEMON_BREAK_RINGS, a short walk off, none of `others` has a line to: in each
@@ -3740,6 +3800,7 @@ class Bot:
         if used:
             s.notes.append(used)
         s.noble_sprint_off(now, me, act, kind)            # (custom, Nov 21: a sprint left on blocks every shot)
+        s.peek_shuffle(now, me, act, kind, arg)           # (custom, Nov 22: no standing still waiting out a peek)
         s.give_way(me, snap, act)
         s.crouch_spots(me, act)
         s.own_grenade(now, me, act)
@@ -10076,6 +10137,9 @@ class Bot:
             else:
                 act.forward = act.strafe = 0.0
                 act.sprint = False
+                # (custom, Nov 22, the owner: "holding a door wait they can strafe a little ... Anything other than
+                # standing completely still in the open") a small side to side on the spot, the doorway in view
+                s.hold_shuffle(now, me, act)
                 s.note("pre-nade: holding the doorway")
             s.att = ["prenade", k, round(peek.x, 1), round(peek.y, 1)]
             return True
