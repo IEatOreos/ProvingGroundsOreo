@@ -37,7 +37,8 @@ SHOTS_FILE = "noble_shots.json"
 # part (2.)
 DEFAULTS = dict(recharge=1, no_new_fight=1, break_second=1, odds=1, peek=1, objective=1, chase=1,
                 push=0.0, push_shield=0.95, long_pace=1.2, spots=1, spot_hold_s=3.0, shot_learn=1, explore=0.12,
-                preaim=1, habits=1, dodge_learn=1, focus_learn=1)   # (Nov 22: brain/noble_habits.py's four)
+                preaim=1, habits=1, dodge_learn=1, focus_learn=1,   # (Nov 22: brain/noble_habits.py's four)
+                take_space=1)                                       # (Nov 22: Bot.take_space)
 RULES = ("recharge", "no_new_fight", "break_second", "odds", "peek", "objective", "chase")
 OVERRIDE = None                             # a dict: these settings over the file's (tools/noble_tune.py, tests)
 _TUNE = {}

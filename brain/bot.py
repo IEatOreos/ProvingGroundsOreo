@@ -419,6 +419,23 @@ PEEK_FRESH, PEEK_WAIT_S, PEEK_R, PEEK_WAIT_SCORE = 0.5, 2.0, 25.0, 3.45
 # crouch walk SHUFFLE_CROUCH of them, within SHUFFLE_LEASH u of the spot; a step shows us to the man waited on when
 # SHUFFLE_PROBE u to that side has a line from him
 SHUFFLE_STEP, SHUFFLE_MAG, SHUFFLE_CROUCH, SHUFFLE_LEASH, SHUFFLE_PROBE = (0.35, 0.8), (0.45, 0.75), 0.25, 0.8, 0.6
+# (custom, Nov 22, the owner's "Take Space", from Rainbow Six Siege: "when you clear and area, or kill an enemy you try to
+# take space meaning you are taking control of the map") Bot.take_space, Demon and Noble (TAKE_SPACE_TIERS): after the
+# man it fought goes down, or a fight ends with nobody known near, the map's next hot spot (power positions, LiDAR's
+# Edit spots and the computed ones) toward the objective (Slayer: a power weapon lying out, else where the enemy was
+# last known), within SPACE_REACH u and SPACE_FORWARD u nearer it than we are. Held SPACE_QUIET s with nobody seen, or
+# until SPACE_KILLS more go down, then the next one; SPACE_STEPS at most, SPACE_ACTIVE s after the last kill. A spot a
+# teammate holds (within SPACE_TAKEN_R) or has claimed (TEAM_SPACE) is passed for the next; with none free, it calls in
+# and joins him (the owner: "is another anchor here? move to next, or do a call where they can move together"),
+# SPACE_PAIR_R u beside him. Scored SPACE_SCORE: over the team's slot, items and patrols, under every fight and hunt.
+TEAM_SPACE = {}             # {(map, team): {bot id: (t, spot)}}
+TAKE_SPACE_TIERS = ("demon", "noble")       # (profiles.fixed_demon, its Noble label: the owner, "Demon and Noble first")
+SPACE_REACH, SPACE_FORWARD, SPACE_QUIET, SPACE_KILLS, SPACE_STEPS, SPACE_ACTIVE = 25.0, 2.0, 6.0, 2, 3, 25.0
+# (SPACE_SCORE 1.45 first: in the sim the director's Slayer slot, scored "objective" up to 2.0, took 25-40% of its
+# ticks and the spot was reached 0-3% of them; 2.2 is over that and under committed fights 2.6+, hunts and cover 3.0+,
+# a power weapon grab 3.15+. The window waits while a recharge goes on: cover took 35-45% of them)
+SPACE_TAKEN_R, SPACE_PAIR_R, SPACE_SCORE, SPACE_CLEAR_S, SPACE_CLEAR_R = 3.0, 2.5, 2.2, 2.0, 20.0
+SPACE_AT_R = 4.5            # u: on its spot (a hold goal loiters 4 u about it in Slayer, 2.5 elsewhere: plan)
 # (custom, Nov 8) the team's eyes for the fight odds (Bot.share_sightings, mate_kill_times): every bot posts the enemies
 # in its view each tick {(map, team): {bot id: (t, enemy ids, accuracy)}}; a Halo 4 Demon's odds count a teammate on
 # foot whose post is under TEAM_FRESH s old and has that enemy in it, at his gun's pace over his accuracy (a Demon
@@ -2939,6 +2956,181 @@ class Bot:
         b = s.per.beliefs.get(w[0])
         s.hold_shuffle(now, me, act, hidden_from=(b.pos + Vec(0.0, 0.0, EYE)) if b is not None else None)
 
+    # --- (custom, Nov 22) Take Space: see TEAM_SPACE above ---
+    def take_space_on(s):
+        """Take Space for this bot: Demon or Noble as TAKE_SPACE_TIERS names them (Noble: its tune's take_space too)."""
+        if not profiles.fixed_demon(s.p):
+            return False
+        if profiles.fixed_noble(s.p):
+            return "noble" in TAKE_SPACE_TIERS and bool(noble.tune(getattr(s, "game", None))["take_space"])
+        return "demon" in TAKE_SPACE_TIERS
+
+    def space_anchor(s, snap):
+        """The team's Slayer anchor on its post (director.slayer_slots): it keeps its post, it takes no space."""
+        p = s.order.point
+        return (snap.mode == "slayer" and s.order.role == "mid" and p is not None
+                and any(dist(p, q) < 1.0 for q in (s.map or {}).get("positions") or ()))
+
+    def space_target(s, me, snap):
+        """(where it takes space toward, the words for it): the objective (the hill, the ball, their flag, Invasion's
+        zone or core, else its order's point); Slayer: a power weapon lying within 40 u, else where an enemy was last
+        known, else the team's hot zone. (None, None): nowhere."""
+        mode = getattr(snap, "mode", "slayer")
+        if mode == "king" and getattr(snap, "hill", None) is not None:
+            return snap.hill, "the hill"
+        if mode == "oddball" and getattr(snap, "ball", None) is not None:
+            return snap.ball, "the ball"
+        if mode == "ctf":
+            f = next((f for t, f in (snap.flags or {}).items() if t != me.team), None)
+            if f is not None:
+                return f.pos, "their flag"
+        inv = list(getattr(snap, "inv_zones", None) or []) + ([snap.inv_core] if getattr(snap, "inv_core", None) else [])
+        if inv:
+            return min(inv, key=lambda q: dist(q, me.pos)), "the objective"
+        if mode != "slayer":
+            return (s.order.point, "the objective") if s.order.point is not None else (None, None)
+        guns = [(dist(me.pos, q), q, n) for n, q in (getattr(snap, "ground_weapons", None) or ())
+                if s.rank(n) >= POWER_GRAB_RANK and dist(me.pos, q) < 40.0]
+        if guns:
+            _, q, n = min(guns, key=lambda g: g[0])
+            return q, f"the {n}"
+        known = [b for k, b in s.per.beliefs.items() if isinstance(k, int)]
+        if known:
+            return max(known, key=lambda b: b.t).pos, "where they were"
+        hs = getattr(s, "hot_spot", None)
+        return (hs, "the hot zone") if hs is not None else (None, None)
+
+    def space_pair(s, q, frm):
+        """A spot SPACE_PAIR_R u from hot spot q on its floor, on frm's side: beside the teammate holding it."""
+        try:
+            T = s.T()
+        except Exception:
+            return q
+        base = math.atan2(frm.y - q.y, frm.x - q.x)
+        for da in (0.6, -0.6, 1.2, -1.2, 0.0):
+            a = base + da
+            p = Vec(q.x + math.cos(a) * SPACE_PAIR_R, q.y + math.sin(a) * SPACE_PAIR_R, q.z)
+            try:
+                z = T.nav_z(p.x, p.y, p.z)
+                if z is not None and abs(z - q.z) < 0.6 and T.ground_ok(p.x, p.y, z, drop=0.6):
+                    return Vec(p.x, p.y, z)
+            except Exception:
+                return q
+        return q
+
+    def space_pick(s, now, me, snap, claims, held):
+        """(spot, words) the next hot spot: within SPACE_REACH, SPACE_FORWARD nearer the target than we are, not one
+        held already this time, nearest us (and a little the target). One a teammate claimed or stands on is passed;
+        with no free one, beside the teammate on the best one (two at most a spot). None: no spot forward."""
+        target, why = s.space_target(me, snap)
+        if target is None:
+            return None
+        live = {j: q for j, (t, q) in claims.items() if j != me.id and now - t < 3.0}
+        mates = [p for p in snap.players if p.team == me.team and p.id != me.id and p.alive]
+        d_me = dist(me.pos, target)
+        bans = getattr(s, "goal_ban", {})
+        free, taken = [], []
+        for q in (s.map or {}).get("positions") or ():
+            if dist(q, me.pos) > SPACE_REACH or dist(q, target) > d_me - SPACE_FORWARD:
+                continue
+            if any(dist(q, h) < 1.0 for h in held) or bans.get(s._goal_key(("hold", q)), 0.0) > now:
+                continue
+            who = {j for j, c in live.items() if dist(c, q) < SPACE_TAKEN_R + SPACE_PAIR_R}
+            who |= {p.id for p in mates if dist(p.pos, q) < SPACE_TAKEN_R}
+            v = dist(me.pos, q) + 0.3 * dist(q, target)    # (the next one forward: a step, not a run to the far end)
+            if not who:
+                free.append((v, q))
+            elif len(who) < 2:
+                taken.append((v, q, min(who)))
+        if free:
+            return min(free, key=lambda x: x[0])[1], f"the next hot spot toward {why}"
+        if taken:
+            _, q, j = min(taken, key=lambda x: x[0])
+            return s.space_pair(q, me.pos), f"#{j} has the spot toward {why}: moving up with him"
+        return None
+
+    def space_end(s, claims, me):
+        s.space = None
+        claims.pop(me.id, None)
+
+    def take_space(s, now, me, snap, scores, seen):
+        """(custom, Nov 22, the owner's "Take Space") Demon and Noble: after a kill (kill_check: the man it fought went
+        down) or a fight ended with nobody known within SPACE_CLEAR_R for SPACE_CLEAR_S s, the next hot spot forward
+        (space_pick) as a hold goal (SPACE_SCORE), then the next after SPACE_KILLS more kills or SPACE_QUIET s quiet there.
+        Not hurt (a recharge first), carrying, in a vehicle, as the objective's runner, an escort, a defender or crew, as the
+        team's Slayer anchor, in Race, Infection or Firefight, or on a map with no hot spots. Fights and hunts win."""
+        key = ((s.map or {}).get("name"), me.team)
+        claims = TEAM_SPACE.setdefault(key, {})
+        if (not s.take_space_on() or me.has_flag or me.vehicle not in (None, -1) or not me.alive
+                or getattr(snap, "mode", "slayer") in ("race", "infection", "firefight")
+                or s.order.role in ("runner", "escort", "defender", "drive", "ride", "board") or s.space_anchor(snap)
+                or not (s.map or {}).get("positions")):
+            s.space_end(claims, me)
+            return
+        ks = getattr(s, "kill_seen", None)
+        new_kill = ks is not None and ks[0] > getattr(s, "space_kill_t", -9.0)
+        if new_kill:
+            s.space_kill_t = ks[0]
+        if s.goal[0] == "fight":
+            s.space_fight_t = now
+        fought = now - getattr(s, "space_fight_t", -99.0)
+        near = any(isinstance(k, int) and now - b.t < SPACE_CLEAR_S and dist(b.pos, me.pos) < SPACE_CLEAR_R
+                   for k, b in s.per.beliefs.items())
+        cleared = SPACE_CLEAR_S <= fought < 6.0 and not near and not seen
+        hurt = now < getattr(s, "recharge_until", 0.0) or (not snap.shieldless and me.shield < 0.9)
+        sp = getattr(s, "space", None)
+        if sp is None:
+            if not (new_kill or cleared) or hurt:
+                claims.pop(me.id, None)
+                return
+            sp = s.space = dict(steps=0, until=now + SPACE_ACTIVE, spot=None, at=None, kills=0, held=[], why="")
+            s.space_fight_t = -99.0                       # (one start a fight)
+        elif new_kill:
+            sp["until"] = now + SPACE_ACTIVE
+            if sp["at"] is not None:
+                sp["kills"] += 1
+        if hurt:
+            sp["until"] = max(sp["until"], now + 8.0)     # (a recharge first: the space is taken after it)
+            if sp["at"] is not None:
+                sp["at"] = now                            # (its quiet time there starts again)
+        if now > sp["until"]:
+            s.space_end(claims, me)
+            return
+        if sp["spot"] is not None:
+            if sp["at"] is None and (me.pos - sp["spot"]).flat() < SPACE_AT_R and abs(me.pos.z - sp["spot"].z) < 1.5:
+                sp["at"] = now
+            done = sp["at"] is not None and (sp["kills"] >= SPACE_KILLS or (now - sp["at"] > SPACE_QUIET and not seen))
+            banned = getattr(s, "goal_ban", {}).get(s._goal_key(("hold", sp["spot"])), 0.0) > now
+            if done or banned:
+                sp["held"].append(sp["spot"])
+                sp["spot"] = None
+                sp["steps"] += 1
+                if sp["steps"] >= SPACE_STEPS:
+                    s.space_end(claims, me)
+                    return
+        if sp["spot"] is None:
+            got = s.space_pick(now, me, snap, claims, sp["held"])
+            if got is None:
+                s.space_end(claims, me)
+                return
+            sp["spot"], sp["at"], sp["kills"], sp["why"] = got[0], None, 0, got[1]
+            s.note(f"take space: {got[1]}")
+        claims[me.id] = (now, sp["spot"])
+        if seen or hurt:
+            return                                        # (a man in view, or its shield first: their goals win)
+        k = ("hold", sp["spot"])
+        scores[k] = max(scores.get(k, 0.0), SPACE_SCORE)
+
+    def space_shuffle(s, now, me, act, kind, arg):
+        """(custom, Nov 22) On its Take Space spot (the hold's loiter about it), standing between its loiter's steps:
+        hold_shuffle, never standing still there."""
+        sp = getattr(s, "space", None)
+        if (sp is None or sp["spot"] is None or kind != "hold" or not isinstance(arg, Vec) or dist(arg, sp["spot"]) > 0.05
+                or (me.pos - arg).flat() > SPACE_AT_R or me.vehicle not in (None, -1)
+                or abs(act.forward) + abs(act.strafe) >= 0.2):
+            return
+        s.hold_shuffle(now, me, act)
+
     def break_point(s, me, others, cur_pos):
         """The nearest walkable spot within DEMON_BREAK_RINGS, a short walk off, none of `others` has a line to: in each
         ring one the man it fights (cur_pos) still sees first, else one nobody sees. None: no such spot."""
@@ -3801,6 +3993,7 @@ class Bot:
             s.notes.append(used)
         s.noble_sprint_off(now, me, act, kind)            # (custom, Nov 21: a sprint left on blocks every shot)
         s.peek_shuffle(now, me, act, kind, arg)           # (custom, Nov 22: no standing still waiting out a peek)
+        s.space_shuffle(now, me, act, kind, arg)          # (custom, Nov 22: nor on a Take Space spot)
         s.give_way(me, snap, act)
         s.crouch_spots(me, act)
         s.own_grenade(now, me, act)
@@ -4955,6 +5148,7 @@ class Bot:
         s.peek_timing(now, me, snap, scores, seen)          # (custom, Nov 18: Reach Demon / Mythic: go as he looks away)
         s.noble_push(me, snap, scores, seen)                # (custom, Nov 20: Noble: the man in view first)
         s.noble_spot(now, me, snap, scores, seen)           # (custom, Nov 20: Noble: a winning spot, not a walk at him)
+        s.take_space(now, me, snap, scores, seen)           # (custom, Nov 22: Demon / Noble: Take Space after a kill)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         s.power_commit(now, me, snap, scores, hit_recent)   # (custom, Nov 18: a power weapon run is finished)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them
