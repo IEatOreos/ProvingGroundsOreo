@@ -36,7 +36,8 @@ SHOTS_FILE = "noble_shots.json"
 # cells (3.); spot_hold_s: how long it holds one before walking on; explore: a share of shots tried at another pace or
 # part (2.)
 DEFAULTS = dict(recharge=1, no_new_fight=1, break_second=1, odds=1, peek=1, objective=1, chase=1,
-                push=0.0, push_shield=0.95, long_pace=1.2, spots=1, spot_hold_s=3.0, shot_learn=1, explore=0.12)
+                push=0.0, push_shield=0.95, long_pace=1.2, spots=1, spot_hold_s=3.0, shot_learn=1, explore=0.12,
+                preaim=1, habits=1, dodge_learn=1, focus_learn=1)   # (Nov 22: brain/noble_habits.py's four)
 RULES = ("recharge", "no_new_fight", "break_second", "odds", "peek", "objective", "chase")
 OVERRIDE = None                             # a dict: these settings over the file's (tools/noble_tune.py, tests)
 _TUNE = {}
@@ -83,6 +84,8 @@ def reload():
     """Forget what was read (a new tune written, a test's own folder)."""
     _TUNE.clear()
     _BOOK.clear()
+    from . import noble_habits      # (Nov 22: its four stores too)
+    noble_habits.reload()
 
 
 def skips(prof, rule, game=None):

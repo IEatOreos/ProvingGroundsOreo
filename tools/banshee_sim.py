@@ -36,6 +36,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import brain.maps  # noqa: E402
 brain.maps.PVP = True
+from brain import noble as _noble  # noqa: E402
+_noble.SAVE = False     # (custom, Nov 22) a simulated match writes nothing to user/noble_*.json: those are live play's
 from brain import oob as O  # noqa: E402
 from brain import vehicles as V  # noqa: E402
 from brain.bot import REACH_BOMB_SPEED, REACH_FUELROD, Bot  # noqa: E402

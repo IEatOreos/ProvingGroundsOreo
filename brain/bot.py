@@ -15,6 +15,7 @@ from . import anticipate
 from . import odds as odds_model
 from . import nade
 from . import noble          # (custom, Nov 20) Noble, the testing bot: its tune, shot learning, winning spots
+from . import noble_habits   # (custom, Nov 22) Noble: pre-aim, each person's habits, dodges, team focus
 
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
@@ -2205,6 +2206,10 @@ class Bot:
         per trace. Every other tier: where it last knew him (b.pos), as before."""
         if not profiles.demon_rules(s.p) or b is None or s.map is None or not s.map.get("name"):
             return b.pos if b is not None else None
+        if profiles.fixed_noble(s.p):
+            got = s.noble_escape_guess(now, k, b)     # (custom, Nov 22: where this person goes hurt, noble_habits)
+            if got is not None:
+                return got
         cache = s.__dict__.setdefault("_guess", {})
         c = cache.get(k)
         if c is not None and c[0] == b.t and c[1] == b.pos and now < c[2]:
@@ -2624,6 +2629,147 @@ class Bot:
         if w is not None and me is not None:
             w.resolve(now, snap, me)
 
+    def noble_layout(s):
+        return (s.map or {}).get("name")
+
+    def noble_sighted(s, now, me, e):
+        """(custom, Nov 22, the owner: "Do pre aim first") A Noble's new sighting of a man none of whom was in its own
+        eyes for SIGHT_GAP s: where it stood and where he came into view (brain/noble_habits.py), a person's by name.
+        On foot both, an enemy."""
+        if not profiles.fixed_noble(s.p) or not noble.tune(getattr(s, "game", None))["preaim"]:
+            return
+        was = s.__dict__.get("noble_eyes_at", {}).get(e.id, -99.0)
+        if (now - was < noble_habits.SIGHT_GAP or not e.alive or e.team == me.team or me.vehicle not in (None, -1)
+                or e.vehicle not in (None, -1)):
+            return
+        noble_habits.add_sight(s.noble_layout(), me.pos, e.pos, None if e.is_bot else e.name)
+
+    def noble_people(s, snap, me):
+        """The persons (not bots) on the other team now, by name (noble_habits: their own habits weigh more)."""
+        return tuple(p.name for p in snap.players if not p.is_bot and p.team != me.team and p.name)
+
+    def noble_mate_on(s, now, me, k):
+        """A teammate fights k now (TEAM_TARGETS, TEAM_FRESH s)."""
+        if k is None:
+            return False
+        team = ((s.map or {}).get("name"), me.team)
+        return any(j != me.id and kk == k and 0.0 <= now - t <= TEAM_FRESH
+                   for j, (t, kk) in TEAM_TARGETS.get(team, {}).items())
+
+    def noble_habits_tick(s, now, snap):
+        """(custom, Nov 22) A Noble's learning each tick after its plan (brain/noble_habits.py): who is in its own eyes,
+        hurt persons leaving them (where they go), its jukes' damage, its fights (focus or solo)."""
+        me = snap.player(s.id)
+        if me is None:
+            return
+        st = noble.tune(getattr(s, "game", None))
+        s.noble_people_now = s.noble_people(snap, me)
+        s.noble_names = {p.id: p.name for p in snap.players if not p.is_bot and p.name and p.team != me.team}
+        seen_now = [k for k, t in s.per.last_seen.items() if t == now] if me.alive else []
+        eyes = s.__dict__.setdefault("noble_eyes_at", {})
+        for k in seen_now:
+            eyes[k] = now
+        lay = s.noble_layout()
+        if st["habits"] and lay:
+            w = getattr(s, "noble_escapes", None)
+            if w is None or w.layout != lay:
+                w = s.noble_escapes = noble_habits.EscapeWatch(lay)
+            w.tick(now, snap, me, seen_now)
+        dw = getattr(s, "noble_dodges", None)
+        if dw is not None:
+            dw.tick(now, me, snap)
+        if st["focus_learn"]:
+            fw = getattr(s, "noble_focus", None)
+            if fw is None:
+                fw = s.noble_focus = noble_habits.FocusWatch(getattr(s, "game", None))
+            g = s.goal
+            k = g[1] if g[0] == "fight" and isinstance(g[1], int) else None
+            fw.tick(now, snap, me, k, k in seen_now, s.noble_mate_on(now, me, k) if me.alive else False)
+
+    def noble_escape_guess(s, now, k, b):
+        """(custom, Nov 22, the owner's #4: each person's habits) A person (not a bot) out of sight ESCAPE_GUESS_AFTER s
+        or more, hurt by its reckoning (est_shield ESCAPE_SHIELD or less): where he went most, hurt, from where it last
+        knew him (noble_habits.escape_to). None: a bot, healthy, not long gone, or not learned there."""
+        name = getattr(s, "noble_names", {}).get(k) if isinstance(k, int) else None
+        if (name is None or b.seen or now - b.t < noble_habits.ESCAPE_GUESS_AFTER
+                or not noble.tune(getattr(s, "game", None))["habits"]):
+            return None
+        est = s.per.est_shield(k, now, False)
+        if est is None or est > noble_habits.ESCAPE_SHIELD:
+            return None
+        got = noble_habits.escape_to(s.noble_layout(), name, b.pos)
+        if got is None:
+            return None
+        noted = s.__dict__.setdefault("_noble_esc_noted", {})
+        if noted.get(k) != b.t:
+            noted[k] = b.t
+            s.note(f"habit: #{k} hurt went here {got[2]:.0%} of {got[1]} times")
+        return got[0]
+
+    def noble_dodge(s, now, me, act, target):
+        """(custom, Nov 22, the owner's #5: what made the shooter miss) A Noble's juke under fire, or in his sights: the
+        one of noble_habits.DODGES that has cost it least (the damage taken in DODGE_WINDOW s less the damage dealt to
+        the man it fights; against a person his own count weighs more), now and then another. flip: the other way, a short step; keep: on the same way, a longer run;
+        crouch / jump / stop: the other way and a crouch, a jump, a short stop. Watched (noble_habits_tick). False: not
+        a Noble on foot with dodge_learn on (the upstream juke)."""
+        if (not profiles.fixed_noble(s.p) or me.vehicle not in (None, -1)
+                or not noble.tune(getattr(s, "game", None))["dodge_learn"]):
+            return False
+        att = getattr(s.per, "attacker_id", None)
+        k = att if att is not None and now - getattr(s.per, "attacker_t", -9.0) < 1.0 else getattr(target, "id", None)
+        name = getattr(s, "noble_names", {}).get(k)
+        style = noble_habits.dodge_pick(getattr(s, "game", None), s.rng, name)
+        if style != "keep":
+            s.strafe_dir = -s.strafe_dir
+        s.next_strafe_flip = now + (s.rng.uniform(0.55, 0.9) if style == "keep" else s.rng.uniform(0.3, 0.55))
+        if style == "crouch":
+            s.crouch_until = now + s.rng.uniform(0.2, 0.45)
+        elif style == "jump":
+            act.jump = True
+        elif style == "stop":
+            s.strafe_pause_until = now + s.rng.uniform(0.2, 0.4)
+        w = getattr(s, "noble_dodges", None)
+        if w is None:
+            w = s.noble_dodges = noble_habits.DodgeWatch(getattr(s, "game", None))
+        w.juked(now, me, style, name, target)
+        return True
+
+    def noble_focus_lean(s, me, e):
+        """(custom, Nov 22, the owner's #6) +1: a Noble's fights joined to a teammate's man have gone better at e's range,
+        -1: its own fights have, 0: not known yet, or not a Noble (noble_habits.focus_lean)."""
+        if (e is None or not profiles.fixed_noble(s.p)
+                or not noble.tune(getattr(s, "game", None))["focus_learn"]):
+            return 0
+        return noble_habits.focus_lean(getattr(s, "game", None), noble_habits.focus_band(dist(me.pos, e.pos)))
+
+    def noble_focus_scores(s, now, me, snap, scored):
+        """A man a teammate fights now: his threat x FOCUS_BONUS where joining has gone better, / it where a man of its
+        own has (noble_focus_lean)."""
+        for k in scored:
+            if not s.noble_mate_on(now, me, k):
+                continue
+            lean = s.noble_focus_lean(me, snap.player(k))
+            if lean > 0:
+                scored[k] *= noble_habits.FOCUS_BONUS
+            elif lean < 0:
+                scored[k] /= noble_habits.FOCUS_BONUS
+
+    def noble_preaim(s, now, me, toward=None):
+        """(custom, Nov 22) Noble, nobody known: where men came into view most from where it stands (noble_habits.preaim,
+        each person on the other team's own angles weighted up), a line to it, walking within LOOK_CONE of its way.
+        Kept PREAIM_KEEP s while it moves under 1 u. None: none learned here."""
+        if not noble.tune(getattr(s, "game", None))["preaim"] or me.vehicle not in (None, -1):
+            return None
+        c = getattr(s, "_noble_preaim", None)
+        if c is not None and now < c[0] and (me.pos - c[1]).flat() < 1.0 and (c[2] is None or s._in_cone(me, c[2], toward)):
+            return c[2]
+        T, e = s.T(), eye(me)
+        got = noble_habits.preaim(s.noble_layout(), me.pos, e, T.los, getattr(s, "noble_people_now", ()),
+                                  ok=lambda q: s._in_cone(me, q, toward))
+        q = got[0] if got is not None else None
+        s._noble_preaim = (now + noble_habits.PREAIM_KEEP, me.pos, q)
+        return q
+
     def noble_fired(s, now, snap, act, was_firing):
         """(custom, Nov 20) A Noble press of a precision gun at the man it fights: watched (noble_learn)."""
         me = snap.player(s.id)
@@ -2829,6 +2975,7 @@ class Bot:
         if noble_on:
             s.noble_fired(now, snap, act, getattr(s, "noble_fire_was", False))   # (custom, Nov 20: a press watched)
             s.noble_fire_was = bool(act.fire)
+            s.noble_habits_tick(now, snap)    # (custom, Nov 22: escapes, dodges, fights, brain/noble_habits.py)
         s.sniper_missed_last = False
         me = snap.player(s.id)
         if not s.grenades_allowed():
@@ -3160,6 +3307,7 @@ class Bot:
         s.per.marker_far = s.order.role in ("hunter", "cutoff")     # (custom: the carrier's emblem, MARKER_R)
         for e in s.per.update(now, me, snap, los, callouts, game=s.game):
             s.reports.append(("seen", e.id, e.pos, now, busy))
+            s.noble_sighted(now, me, e)          # (custom, Nov 22: Noble's pre-aim learning, brain/noble_habits.py)
             if e.has_flag:
                 s.reports.append(("flag_carrier", e.id, e.pos, now, busy))
         s.share_sightings(now, me, snap)
@@ -4106,6 +4254,8 @@ class Bot:
         swung past 25% every second in a 13-player lobby; Legendary bots switched twice as often as
         Easy ones, won 11% of their fights to Easy's 26% and their team finished last."""
         scored = {k: s.threat(now, me, snap, k) for k in seen}
+        if profiles.fixed_noble(s.p):
+            s.noble_focus_scores(now, me, snap, scored)   # (custom, Nov 22: joining or spreading, as it has learned)
         best = max(scored, key=scored.get)
         cur = s.goal[1] if s.goal[0] == "fight" else None
         if cur is None and profiles.demon_rules(s.p):
@@ -4174,7 +4324,8 @@ class Bot:
                 and not (cur in seen and aims_at(tgt, me, 0.2))):
             return best                      # a man close in with us in his sights, the one we fight looking away
         if (cur in seen and best in seen and not s.finishing(snap, seen) and s.mate_has_him(now, me, snap, tgt)
-                and not s.mate_has_him(now, me, snap, e)):
+                and not s.mate_has_him(now, me, snap, e) and s.noble_focus_lean(me, tgt) <= 0):
+            # (custom, Nov 22: not a Noble that has learned joining wins more at this range)
             s.note(f"spread: #{cur} is a teammate's kill, on #{best}")
             s.spread_from = (cur, now + SPREAD_HOLD)
             return best                      # (custom, Nov 8: Halo 4, TEAM_TARGETS)
@@ -7454,16 +7605,20 @@ class Bot:
         dodging = under_fire or (s.p.juke >= 0.5 and target is not None and aims_at(target, me, 0.15))
         if now >= s.next_strafe_flip:
             if dodging and s.rng.random() < s.p.juke:
-                # juke: irregular side steps to throw the shooter's aim off, mostly short, now and then a longer run
-                # (0.15-0.35 s steps before: the stop-start read as speed varying 0.31-0.41 to the player's 0.23)
-                s.strafe_dir = -s.strafe_dir if s.rng.random() < 0.85 else s.strafe_dir
-                # (0.22-0.45 / 0.45-0.8 s steps to: turned before they were up to speed, strafe 0.55 u/s)
-                s.next_strafe_flip = now + (s.rng.uniform(0.3, 0.55) if s.rng.random() < 0.75 else s.rng.uniform(0.55, 0.9))
-                if s.rng.random() < 0.15 * s.p.juke:
-                    # crouch-juke: drops the head out of the crosshair (held: a one-tick crouch never showed)
-                    s.crouch_until = now + s.rng.uniform(0.2, 0.45)
-                if s.rng.random() < STRAFE_PAUSE:
-                    s.strafe_pause_until = now + s.rng.uniform(0.2, 0.4)    # a person's side to side has short stops
+                if s.noble_dodge(now, me, act, target):
+                    pass        # (custom, Nov 22) Noble: the juke that has cost it least (noble_habits dodges)
+                else:
+                    # juke: irregular side steps to throw the shooter's aim off, mostly short, now and then a longer
+                    # run (0.15-0.35 s steps before: the stop-start read as speed varying 0.31-0.41 to the player's
+                    # 0.23)
+                    s.strafe_dir = -s.strafe_dir if s.rng.random() < 0.85 else s.strafe_dir
+                    # (0.22-0.45 / 0.45-0.8 s steps to: turned before they were up to speed, strafe 0.55 u/s)
+                    s.next_strafe_flip = now + (s.rng.uniform(0.3, 0.55) if s.rng.random() < 0.75 else s.rng.uniform(0.55, 0.9))
+                    if s.rng.random() < 0.15 * s.p.juke:
+                        # crouch-juke: drops the head out of the crosshair (held: a one-tick crouch never showed)
+                        s.crouch_until = now + s.rng.uniform(0.2, 0.45)
+                    if s.rng.random() < STRAFE_PAUSE:
+                        s.strafe_pause_until = now + s.rng.uniform(0.2, 0.4)    # a person's side to side has short stops
             else:
                 s.strafe_dir = -s.strafe_dir if s.rng.random() < 0.8 else s.strafe_dir
                 s.next_strafe_flip = now + s.rng.uniform(0.45, 1.0)
@@ -11592,7 +11747,11 @@ class Bot:
             # (custom, Nov 19) Legendary and up, nobody known: after a kill the spawns he comes back at, else the spots
             # men shot from when people died here (brain/lore.py)
             toward = s.ahead(me, w) if walking else None
-            for how, q in (("spawn", s.spawn_look(now, me, toward)), ("danger", s.danger_look(now, me, toward))):
+            sp, dg = s.spawn_look(now, me, toward), s.danger_look(now, me, toward)
+            # (custom, Nov 22) Noble: where men came into view from here, as it has seen (noble_preaim), over the spots
+            # men shot from
+            learned = s.noble_preaim(now, me, toward) if sp is None and profiles.fixed_noble(s.p) else None
+            for how, q in (("spawn", sp), ("learned", learned), ("danger", dg)):
                 if q is not None:
                     s.att = ["watch", how, round(q.x, 1), round(q.y, 1)]
                     return q
