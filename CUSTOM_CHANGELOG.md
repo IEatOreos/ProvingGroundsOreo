@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Reach Forge Printer add-on: a starter scene on Forge World, 2026-11-21
+
+- **`build_library.py --starter <template>` and `library.build_starter` (new):** Forge World's own level, exported from `forge_halo.map` with `bsp2obj`, turned Z up, cut to the area a variant can place in (plus 30) and written to `re_tools\forge_printer\starter\forge_world.obj`; then a .blend with that level as locked solid ground, the template's own objects shown where they stand (locked, never exported or counted), the template chosen, the offset 0 0 0 and the view on the template's objects: `Reach Forge Starter.blend`. Game-derived, so never committed.
+- **Validation:** the exported level lines up with Forge World's coordinates (the 122 of Hemorrhage's 230 spawn points standing on bare ground are within 0.1 of it); built for real on Bot Testing Grounds (1,060,620 triangles, 19 template objects; the template's Coliseum-wall floor sits in its hollow in a render); opened again with the add-on, it carries the template, offset 0 0 0, nothing counted as a piece. `headless_check.py` gained a starter check on a made-up ground and the suite's Forge World variant; add-on tests OK. Not yet opened in the owner's Blender.
+
 ### Reach Forge Printer add-on: the pieces as a Blender asset library, 2026-11-21
 
 - The owner chose to make the Blender side a good Blender-to-Forge tool first (after comparing with the Halo Infinite Blender-2-Forge printer, whose core is an asset library of real models). **`blender_addon/library.py` and `build_library.py` (new):** every named piece (99) as an asset with its real model, origin at Forge's placing point, the add-on's custom properties, a rendered thumbnail, one catalog a Forge category. Built into `re_tools\forge_printer\asset_library` (the game's models, never committed) in a factory-settings Blender, so the build never touches the owner's preferences; added to the Asset Browser as "Reach Forge Pieces" by the same command with Blender closed, or by the new Forge palette button **Add piece library to the Asset Browser**. A piece dragged in from it is counted and exported like one from the palette.

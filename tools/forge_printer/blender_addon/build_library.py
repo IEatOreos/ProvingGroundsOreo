@@ -69,16 +69,82 @@ def register(blender, out):
     return code
 
 
+TERRAIN_MARGIN = 30.0     # world units of Forge World's level kept beyond the area Forge can place in
+
+
+def terrain(folder, bounds, mcc=None, bsp2obj=None):
+    """Forge World's own level (bsp2obj on haloreach\\maps\\forge_halo.map), turned Z up, cut to the area a
+    variant can place objects in plus TERRAIN_MARGIN: <folder>\\forge_world.obj. Returns (path, triangles)."""
+    import tempfile
+
+    import numpy as np
+
+    from forge_printer import h3_reference, pieces, surfaces
+    sys.path.insert(0, os.path.join(os.path.dirname(TOOLS), "brain"))
+    import paths
+    mcc = mcc or paths.mcc()
+    bsp2obj = bsp2obj or paths.map_tool("bsp2obj")
+    if not mcc or not bsp2obj:
+        raise SystemExit("library: MCC or bsp2obj.exe was not found (see brain/paths.py)")
+    source = os.path.join(mcc, *pieces.MAP)
+    os.makedirs(folder, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=folder) as tmp:
+        raw = os.path.join(tmp, "raw.obj")
+        done = subprocess.run([bsp2obj, source, raw], capture_output=True, text=True, timeout=1200)
+        if done.returncode or not os.path.isfile(raw):
+            raise SystemExit("library: bsp2obj failed: %s" % (done.stderr or done.stdout).strip()[-300:])
+        verts, tris = surfaces.load_obj(raw)
+    verts = np.array([h3_reference.world(*v) for v in verts.tolist()], dtype=float)   # its Y up to the game's Z up
+    lo = np.array(bounds[0::2]) - TERRAIN_MARGIN
+    hi = np.array(bounds[1::2]) + TERRAIN_MARGIN
+    centres = verts[tris].mean(axis=1)
+    keep = tris[np.all((centres >= lo) & (centres <= hi), axis=1)]
+    used, index = np.unique(keep, return_inverse=True)
+    path = os.path.join(folder, "forge_world.obj")
+    with open(path, "w", encoding="ascii", newline="\n") as f:
+        f.write("# Forge World's level (forge_halo.map), Z up, Reach units, cut to the Forge area\n")
+        f.writelines("v %.4f %.4f %.4f\n" % tuple(v) for v in verts[used])
+        f.writelines("f %d %d %d\n" % tuple(t + 1) for t in index.reshape(-1, 3))
+    return path, len(keep)
+
+
+def starter(blender, folder, template):
+    from forge_printer import mvar
+    bounds = mvar.MvarFile.read(template).variant.bounds
+    path, count = terrain(folder, bounds)
+    print("library: wrote %s: %d triangles of Forge World's level" % (path, count))
+    code, lines = run(blender, (
+        "import sys\n"
+        "sys.path.insert(0, %r)\n"
+        "from forge_printer.blender_addon import library\n"
+        "path, made = library.build_starter(%r, %r, %r)\n"
+        "print(%r + 'wrote %%s: Forge World and %%d template objects, template set, offset 0 0 0' %% (path, made))\n"
+    ) % (TOOLS, folder, path, template, MARK), factory=True)
+    for line in lines:
+        print("library: " + line)
+    return code
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Build the Reach Forge pieces asset library for Blender")
     parser.add_argument("--out", help="folder for the library (default: re_tools\\forge_printer\\asset_library)")
     parser.add_argument("--blender", help="blender.exe to use (default: the newest under Program Files)")
     parser.add_argument("--no-register", action="store_true", help="build only; do not add it to Blender")
+    parser.add_argument("--starter", metavar="TEMPLATE",
+                        help="build the starter scene on this Forge World variant (one your MCC saved) instead")
     args = parser.parse_args(argv)
     blender = install.find_blender(args.blender)
     if not blender:
         print("library: Blender was not found; give it with --blender PATH")
         return 1
+    if args.starter:
+        folder = os.path.abspath(args.out or os.path.join(os.path.dirname(default_out()), "starter"))
+        print("library: building the starter scene in %s (a few minutes: Forge World's level is large)" % folder)
+        if starter(blender, folder, os.path.abspath(args.starter)):
+            print("library: the starter scene failed (see above)")
+            return 1
+        print("library: done. Open \"Reach Forge Starter.blend\" there and save it under a new name to start a map")
+        return 0
     out = os.path.abspath(args.out or default_out())
     print("library: using %s, building in %s (a minute or two)" % (blender, out))
     if build(blender, out):

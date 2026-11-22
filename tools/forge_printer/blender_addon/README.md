@@ -39,6 +39,28 @@ is Forge's placing point, so Blender's snapping lines pieces up the way Forge
 would. If a piece dropped on a slope comes in leaning, the drop's own options
 (bottom left) can turn surface alignment off.
 
+## Starter scene (build on Forge World)
+
+A .blend to start a map from: Forge World's own level as solid ground
+(exported from `forge_halo.map` with `bsp2obj`, lined up with Forge's own
+coordinates: Bungie's Hemorrhage spawn points stand on it within 0.1), your
+template's objects shown where they stand, the template already chosen and the
+offset 0 0 0, so a piece put in Blender lands on the same spot in Forge. The
+ground and the template's objects cannot be clicked and are never exported
+(the template's objects are in the template already). Build it once, naming the
+Forge World variant to build on (Blender may stay open; a few minutes):
+
+```
+python\python.exe tools\forge_printer\blender_addon\build_library.py --starter <a Forge World .mvar your MCC saved>
+```
+
+It writes `E:\Proving Grounds\re_tools\forge_printer\starter\Reach Forge Starter.blend`
+(and `forge_world.obj`; the game's level, so never in the repository). Open it,
+**File > Save As** a name of your own (so the starter stays clean), drag pieces
+in from the piece library and press **Export .mvar**. Forge World's level is
+about a million triangles: hide the `Forge World` collection (the eye in the
+Outliner) when the view gets slow.
+
 ## Use
 
 1. **Open fit.json** (Forge tab). For Guardian it is

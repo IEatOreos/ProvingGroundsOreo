@@ -127,6 +127,105 @@ def build(directory=DEFAULT_DIR, only=None, thumbnails=True):
     return path, made, boxes
 
 
+STARTER_DIR = os.path.join(os.path.dirname(pieces.DEFAULT_KEEP), "starter")
+STARTER_NAME = "Reach Forge Starter.blend"
+TERRAIN_NAME = "forge_world.obj"
+TERRAIN = "Forge World"                     # the collection of Forge World's own level, not exported
+TEMPLATE_OBJECTS = "Template objects"       # the template's objects, shown where they are, not exported
+GROUND_COLOUR = (0.42, 0.43, 0.40, 1.0)
+
+
+def _shown_up(raw):
+    """The up vector to draw a template object with: the file's own when it is worked out, else the cube
+    face's axis (a hair off at most on the faces whose u and v are not worked out)."""
+    from forge_printer import mvar
+    if raw is None:
+        return (0.0, 0.0, 1.0)
+    try:
+        return mvar.up_vector(raw)
+    except ValueError:
+        face = mvar.split_up(raw)[0]
+        axis = [0.0, 0.0, 0.0]
+        axis[face % 3] = 1.0 if face < 3 else -1.0
+        return tuple(axis)
+
+
+def add_template_objects(scene, template_path):
+    """The template's own objects as locked, unexported objects where they stand (pieces with their model,
+    others as a marker). Returns how many."""
+    from forge_printer import mvar
+
+    from . import convert, export
+    f = export.load_template(template_path)
+    v = f.variant
+    by_slot = {(p["row"], p["item"]): p for p in ui._TABLE["pieces"]}
+    coll = ui.collection(TEMPLATE_OBJECTS, scene.collection)
+    count = 0
+    for slot, o in v.placed_objects():
+        placement = {"origin": v.world_position(o), "turn": math.degrees(mvar.decode_angle(o.angle)),
+                     "up": _shown_up(o.up)}
+        piece = by_slot.get((o.type_index, o.variant_index))
+        if piece is not None:
+            obj = bpy.data.objects.new("template %d %s" % (slot, piece["name"]), ui.piece_mesh(piece, True))
+        else:
+            obj = bpy.data.objects.new("template %d (row %d item %d)" % (slot, o.type_index, o.variant_index), None)
+            obj.empty_display_type = "SINGLE_ARROW"
+            obj.empty_display_size = 0.8
+        from mathutils import Matrix
+        obj.matrix_world = Matrix(convert.matrix_for(placement))
+        obj["fp_template_object"] = slot
+        obj.hide_select = True
+        coll.objects.link(obj)
+        count += 1
+    return count
+
+
+def build_starter(directory, terrain_obj, template_path, title="FP New Map"):
+    """A .blend to start a Forge World map from: Forge World's level as solid ground (locked), the
+    template's objects where they stand (locked), the template chosen and the offset 0 0 0 (the scene is
+    Forge World itself), the view on the template's objects. Returns (path, template objects)."""
+    os.makedirs(directory, exist_ok=True)
+    bpy.ops.wm.read_homefile(use_empty=True)
+    ours = not hasattr(bpy.types.Scene, "fp_template")
+    if ours:
+        ui.register()                                          # the scene settings the add-on reads
+    scene = bpy.context.scene
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=terrain_obj, forward_axis="Y", up_axis="Z", global_scale=1.0,
+                          use_split_objects=False, use_split_groups=False)
+    ground = bpy.data.materials.new("FP Forge World")
+    ground.diffuse_color = GROUND_COLOUR
+    coll = ui.collection(TERRAIN, scene.collection)
+    for o in set(bpy.data.objects) - before:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+        coll.objects.link(o)
+        o.name = "Forge World level"
+        o.data.materials.clear()
+        o.data.materials.append(ground)
+        o.hide_select = True
+    made = add_template_objects(scene, template_path)
+    scene.fp_template = template_path
+    scene.fp_offset = (0.0, 0.0, 0.0)
+    scene.fp_title = title
+    scene.fp_out_dir = ui.export.DEFAULT_OUT
+    marks = [o for o in bpy.data.objects if o.get("fp_template_object") is not None]
+    focus = sum((o.matrix_world.translation for o in marks), Vector()) / len(marks) if marks else Vector()
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type == "VIEW_3D":
+                space = area.spaces.active
+                space.clip_start, space.clip_end = 0.05, 2000.0
+                region = space.region_3d
+                region.view_location = focus
+                region.view_distance = 40.0
+    path = os.path.join(directory, STARTER_NAME)
+    bpy.ops.wm.save_as_mainfile(filepath=path, check_existing=False, compress=True)
+    if ours:
+        ui.unregister()
+    return path, made
+
+
 def register_library(directory=DEFAULT_DIR, name=LIBRARY_NAME):
     """Adds (or points again) the library in Blender's preferences, appending pieces so they can be moved,
     sharing one mesh a piece. The caller saves the preferences. Returns the library entry."""

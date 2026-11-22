@@ -258,6 +258,31 @@ def library_check(ui):
               "it can be added to the Asset Browser's libraries")
 
 
+def starter_check(ui):
+    """The starter scene on a made-up terrain (one 400 x 400 square) and the test suite's Forge World
+    variant: the ground and the template's objects come in locked and unexported, the template is chosen
+    and the offset is 0 0 0. Runs last (it starts an empty file)."""
+    import tempfile
+    from forge_printer import mvar
+    from forge_printer.blender_addon import library
+    from test_forge_printer_turn_test import forge_world
+    with tempfile.TemporaryDirectory() as folder:
+        ground = os.path.join(folder, "ground.obj")
+        with open(ground, "w") as f:
+            f.write("v -200 -200 0\nv 200 -200 0\nv 200 200 0\nv -200 200 0\nf 1 2 3\nf 1 3 4\n")
+        v = forge_world()
+        template = os.path.join(folder, "template.mvar")
+        mvar.MvarFile(variant=v, chdr=mvar.build_chdr(v.header)).write(template)
+        path, made = library.build_starter(folder, ground, template)
+        check(made == len(v.placed_objects()), "the template's %d objects are shown" % made)
+        bpy.ops.wm.open_mainfile(filepath=path)
+        scene = bpy.context.scene
+        check(os.path.normcase(bpy.path.abspath(scene.fp_template)) == os.path.normcase(template) and
+              tuple(scene.fp_offset) == (0.0, 0.0, 0.0), "the starter chooses the template, offset 0 0 0")
+        check(ui.forge_objects(scene) == [] and all(o.hide_select for o in bpy.data.objects),
+              "the ground and the template's objects are locked and not counted as pieces")
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser(prog="headless_check")
@@ -273,6 +298,7 @@ def main():
     if args.guardian:
         guardian(ui, args.guardian, args.template, tuple(args.offset), args.out)
     library_check(ui)
+    starter_check(ui)
     print("checks: %d failed" % len(FAILED))
     if FAILED:
         sys.exit(1)
