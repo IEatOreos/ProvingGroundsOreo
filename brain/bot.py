@@ -756,6 +756,7 @@ PL_LOCK_S, PL_LOCK_R, PL_SLIP = 2.2, 1.5, 0.3   # s, u (the reticle on a vehicle
 # export-tag-to-xml): Reach, Halo 4, H2A swords (and Halo 4's Flood prongs, H2A's infected sword) autoaim range 2.25 u,
 # angle 6 deg; the gravity hammer (Reach, Halo 4) 1.35 u, 10 deg
 LUNGE = {"sword": 2.25, "gravity_hammer": 1.35}
+LUNGE_AWAY = 5.0     # (custom, Nov 22) off a sword or hammer's score with nobody near and a loaded gun beside it (choose_weapon)
 # u: a sword or hammer this near is met with the shotgun. The Flood close 3 u/s, 6 with a thruster: a swap begun here has
 # it out before they are in its reach (2.5 u). Past it the guns go by range (the magnum hits him on his way in): at 10 u
 # survivors held the shotgun from 10 u in, walked at the Flood and fired nothing (Wraparound playtest, Nov 6 16:01)
@@ -4415,6 +4416,12 @@ class Bot:
                 # in hand 18% of the time, logs/tmp/heldgun.py: by rank alone the needle rifle was 0.7 better, under the
                 # 1.0 a switch needs)
                 v += 3.0 * sum(BAND_WEIGHT[k] * proficiency(w, game=s.game)[k] for k in range(4)) - 1.0
+            if d is None and w in LUNGE and any(inv[j] not in LUNGE and ammo[j] != 0 for j in range(n)):
+                # (custom, Nov 22, the owner: "Change holding sword out when enemy isnt close") nobody near: the gun, not
+                # the blade (live Ivory Tower 20261122-163607: bots with a sword beside their DMR held the sword out 90%
+                # of their time outside close fights, by its rank; a man at range then waited on the switch). It comes
+                # out by range as before (the fight's draw within 6 u, a man within SHORT_BAND, one rushing us)
+                v -= LUNGE_AWAY
             return v
 
         best = max(range(n), key=score)

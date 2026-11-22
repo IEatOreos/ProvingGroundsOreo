@@ -49,6 +49,7 @@ LUNGERS = {"sword", "gravity_hammer"}
 # a Flood survivor's hardlight shield (Nov 5): short blocks, the gun between them
 SURV_BLOCK_S = 0.6       # one block
 SURV_SHOOT_S = 1.2       # the gun before the next block
+LOCK_ENDED_S = 0.2       # (custom, Nov 22) s an armor lock that came on reads off before the hold lets go (Kit.act)
 SURV_MELEE_R = 1.8       # the melee on the let-go reaches him
 CORNER_R, CORNER_SIDES = 1.3, 5   # walls within this on at least this many of 8 sides: backed into a corner
 CQB = {"shotgun", "sword", "gravity_hammer", "scattershot", "excavator"}
@@ -1151,11 +1152,23 @@ class Kit:
             if k == "armor_lock" and me.ability_on:
                 s.press_on = s.press_t0                        # it locked (this press)
                 s.seen_on = True                               # the reader shows ours: a lock that never comes on is refused
+                s.lock_on_at = now
             hp0 = getattr(s, "press_hp", None)
             locked = getattr(s, "press_on", None) == s.press_t0
             hurt = hp0 is not None and (me.shield < hp0[0] - 0.02 or me.health < hp0[1] - 0.02)
             read = getattr(s, "seen_on", False) and k not in s.unread
-            if k == "armor_lock" and not locked and (hurt and now - s.press_t0 > 0.15 or read and now - s.press_t0 > 0.55):
+            if (k == "armor_lock" and locked and not me.ability_on
+                    and now - getattr(s, "lock_on_at", now) > LOCK_ENDED_S):
+                # (custom, Nov 22, the owner's "c2ir let me shoot him twice before returning fire": live Ivory Tower
+                # 20261122-163607 at 350.9-352.3 s, a Demon's third lock in 3 s, each on a grenade at its feet, came on
+                # and the game ended it, its meter emptier than ours; the hold went on, no shot and no step at 2.3 u for
+                # 1.4 s while the owner emptied its shield) the game ended the lock: let go and fight, the meter empty
+                s.hold_until, s.cool[k] = now, now + 3.0
+                if s.energy is not None:
+                    s.energy.level, s.energy.off_at = 0.0, now
+                act.equipment = act.ability = False
+                note = f"{k}: the lock ended, fighting on"
+            elif k == "armor_lock" and not locked and (hurt and now - s.press_t0 > 0.15 or read and now - s.press_t0 > 0.55):
                 # it never locked: hurt in it, or not on past its warmup and the reader's lag (0.15 + 0.4 s; one came on
                 # 0.30 s in, stepping down a ledge, live Boardwalk at 241.1 s). The game refused it: its meter is
                 # emptier than our model's (the same match at 244.7 s, the fourth lock in 28 s, 0.5 s pressed, health

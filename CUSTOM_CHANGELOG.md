@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Armor lock let go once the game ends it; the sword away between fights, 2026-11-22
+From the owner's Ivory Tower match (logs/bug_reports/reach_52_ivory_tower_20261122-163607).
+- **"c2ir let me shoot him twice before returning fire":** at 346.7, 347.9 and 349.2 s C2IR (Demon) locked against a grenade at its feet. The third lock came on and the game ended it at about 350.9 s (its meter emptier than the kit's model). The hold went on: from 350.9 to 352.3 s it sent the ability bit with no shot and no step at 2.3 u while the owner emptied its shield. The kit's let-go covered only a lock that never came on. Fix (`brain/equipment.py Kit.act`): a lock that came on this press and reads off for `LOCK_ENDED_S` (0.2 s) is let go ("the lock ended, fighting on"), the model's meter emptied, no press for 3 s. Every tier (the kit is shared).
+- **"Change holding sword out when enemy isnt close":** bots with a sword beside their DMR held the sword 90% of their time outside close fights: between fights `choose_weapon` scores by rank, and the sword ranks 4.5. Fix: with nobody near and a loaded gun beside it, a sword or hammer scores `LUNGE_AWAY` (5) less. It still comes out by range (the fight's draw, a man within the short band, one rushing us), and alone it stays. Every tier.
+- **Validation:** new `tools/test_armor_lock_ended.py` (3) and `tools/test_sword_away.py` (3); the earlier `test_armor_lock.py` unchanged and passing; full suite 1307 OK. **Untested in game.**
+
 ### Bots no longer run to weapon spawns the game type never fills, 2026-11-22
 The owner's report "Why arent they killing me" (Asylum, TU TEAM SLAYER DMR, logs/bug_reports/reach_forge_halo_20261122-155713: at 269.8 s all four enemy Demons had one goal, an "item" at (52.4, 223.2)) and his question "how did they have two empty weapon spots, They have ars and dmrs?".
 - **Cause:** the layout's .mvar places two snipers (52.4, 223.2 and 73.3, 203.4; 90 s) and two shotguns, which the DMR game type never spawns. `tools/live_bots.py item_check` starts a spawn's timer when a bot comes within 25 u of it and nothing lies there ("taken, or not in this game type"). When the timer ran out the spawn was still empty, so the timer started again. Each time it came due, `director.power_runs` sent a Demon onto the empty sniper spot ("power weapon run: committed", 2,419 notes), and each bot's own `best_item` read the same timers. The four enemies spent 2,273 trace rows, about 9% of their time, on those two spots.
