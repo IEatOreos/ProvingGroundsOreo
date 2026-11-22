@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Releases named Project Noble, 2026-11-21
+
+The owner: "Can you change the names of our releases also to project noble and all further releases".
+
+- **On GitHub:** the three releases are retitled "Project Noble 0.2.2-custom.11", ".12" and ".13" (with his approval of the request; .13 is still Latest). Their tags, downloads and notes are unchanged: the notes describe each build as it was released.
+- **Further releases:** `docs/CUSTOM_RELEASE_WORKFLOW.md` has a new section, Release names. Every release is titled `Project Noble <CUSTOM_VERSION>` with the tag `v<CUSTOM_VERSION>`. The notes call the build Project Noble and keep the upstream credit. The download keeps its `ProjectProvingGrounds-Setup-<CUSTOM_VERSION>.exe` name, which the launcher's updater does not depend on.
+- **Validation:** `gh release list` shows the three new titles.
+
 ### Reach Forge Printer: Phase 4 milestone 1 passes in the game, 2026-11-21
 
 - The owner edited Guardian in the Blender add-on (a Block 5x5 Flat turned -33 and tilted 27.5 degrees, a Block 3x1 Flat moved 4.47), the export ("FP Guardian test") loaded in Reach Forge and his changes showed as in Blender. An unedited export loaded and played before it. The plan's checklist and its "Phase 4, milestone 1" note mark item 8 done; no code changes. Milestones 2 and 3 wait for the owner.

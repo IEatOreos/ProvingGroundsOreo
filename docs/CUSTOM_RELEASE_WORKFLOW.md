@@ -24,6 +24,14 @@ After approximately three meaningful updates, or when the user asks, prepare a c
 
 Initial publication follows the same approval gate. No automation should push on a timer or after a commit count.
 
+## Release names
+
+The owner, 2026-11-21: "change the names of our releases also to project noble and all further releases".
+
+- Title every GitHub release `Project Noble <CUSTOM_VERSION>` (for example `Project Noble 0.2.2-custom.14`); the tag stays `v<CUSTOM_VERSION>`. The three earlier releases (0.2.2-custom.11 to .13) were retitled the same way on 2026-11-21; their notes still describe each build as it was released.
+- In the notes, call the build Project Noble and keep the upstream credit: a customized build of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds).
+- The download keeps its file name, `ProjectProvingGrounds-Setup-<CUSTOM_VERSION>.exe` (the owner kept file names on the rename; the launcher's updater takes any `.exe` of the latest release, so a later rename would not break updates).
+
 ## Preserve collaborator work
 
 The owner reiterated on 2026-11-06 that this is a team workflow: check the collaborator's local work as well as GitHub before publishing. Inspect local HEAD and all outgoing commits, staged/unstaged changes and new files, then fetch and review remote changes. A pending teammate commit is not automatically approved for upload just because it is an ancestor of our change. Explain the combined candidate and confirm any additional feature outside the requested upload before pushing. Preserve in-progress files and commit identities. Immediately before publication, recheck local/remote state; publish only the reviewed commit so a concurrently advanced local branch cannot silently add unreviewed changes.
