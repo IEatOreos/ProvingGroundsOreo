@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.2-custom.14 — Noble learns from every match, Take Space, bots that never stand still, LiDAR's map names and the Forge Printer's Blender add-on, 2026-11-22
+
 ### Take Space: Demon and Noble move up to the next hot spot after a kill, 2026-11-22
 The owner's mechanic, named after Rainbow Six Siege: "when you clear and area, or kill an enemy you try to take space meaning you are taking control of the map ... take the closest hot spot (From lidar) to an objective that is active. Or if its slayer, try to control a hot spot near a power weapon or push to the next hot spot after x amount of kills". On the team split: "is another anchor here? move to next, or do a call where they can move together". "Do it for demon and Noble first." The Slayer anchor stays one per team.
 - **When:** the man it fought goes down (`kill_check`), or a fight ends with no enemy known within 20 u for 2 s. Not while hurt (the window waits for a recharge), carrying, in a vehicle, as a runner, escort, defender or crew, as the team's Slayer anchor on its post, in Race, Infection or Firefight, or on a map with no hot spots.
