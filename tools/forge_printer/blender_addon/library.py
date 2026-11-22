@@ -180,6 +180,31 @@ def add_template_objects(scene, template_path):
     return count
 
 
+def add_ground(scene, terrain_obj):
+    """Forge World's own level (the starter's forge_world.obj) as locked solid ground in the collection
+    TERRAIN. Returns how many objects came in (0 when it is there already)."""
+    coll = ui.collection(TERRAIN, scene.collection)
+    if coll.objects:
+        return 0
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=terrain_obj, forward_axis="Y", up_axis="Z", global_scale=1.0,
+                          use_split_objects=False, use_split_groups=False)
+    ground = bpy.data.materials.get("FP Forge World") or bpy.data.materials.new("FP Forge World")
+    ground.diffuse_color = GROUND_COLOUR
+    new = [o for o in bpy.data.objects if o not in before]
+    for o in new:
+        for c in list(o.users_collection):
+            c.objects.unlink(o)
+        coll.objects.link(o)
+        o.name = "Forge World level"
+        if o.type == "MESH":
+            o.data.materials.clear()
+            o.data.materials.append(ground)
+        o.hide_select = True
+        o.select_set(False)
+    return len(new)
+
+
 def build_starter(directory, terrain_obj, template_path, title="FP New Map"):
     """A .blend to start a Forge World map from: Forge World's level as solid ground (locked), the
     template's objects where they stand (locked), the template chosen and the offset 0 0 0 (the scene is
@@ -190,20 +215,7 @@ def build_starter(directory, terrain_obj, template_path, title="FP New Map"):
     if ours:
         ui.register()                                          # the scene settings the add-on reads
     scene = bpy.context.scene
-    before = set(bpy.data.objects)
-    bpy.ops.wm.obj_import(filepath=terrain_obj, forward_axis="Y", up_axis="Z", global_scale=1.0,
-                          use_split_objects=False, use_split_groups=False)
-    ground = bpy.data.materials.new("FP Forge World")
-    ground.diffuse_color = GROUND_COLOUR
-    coll = ui.collection(TERRAIN, scene.collection)
-    for o in set(bpy.data.objects) - before:
-        for c in list(o.users_collection):
-            c.objects.unlink(o)
-        coll.objects.link(o)
-        o.name = "Forge World level"
-        o.data.materials.clear()
-        o.data.materials.append(ground)
-        o.hide_select = True
+    add_ground(scene, terrain_obj)
     made = add_template_objects(scene, template_path)
     scene.fp_template = template_path
     scene.fp_offset = (0.0, 0.0, 0.0)

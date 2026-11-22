@@ -332,5 +332,75 @@ class Export(unittest.TestCase):
                 export.load_template("")
 
 
+class OpenedMap(unittest.TestCase):
+    """A map opened in Blender and exported again: pieces left alone stay byte for byte, a moved piece
+    keeps everything else about it, a deleted piece's slot comes free, new pieces are added."""
+
+    def made_map(self, folder):
+        v = forge_world()
+        placed = [{"piece": "Block 2x2 Flat", "turn": 0.0, "origin": [-30.0, -130.0, 5.0]},
+                  {"piece": "Wall Double", "turn": 90.0, "origin": [-25.0, -130.0, 6.0]},
+                  {"piece": "Block 5x1 Flat", "turn": 45.0, "origin": [-20.0, -130.0, 5.0]}]
+        slots = fit.add_to(v, placed, (0.0, 0.0, 0.0))
+        moved = v.objects[slots[1]]
+        moved.team, moved.spawn_sequence, moved.color = 3, 7, 2           # set in Forge; must survive a move
+        v.budget_spent += 30
+        return template_file(folder, v), slots
+
+    def test_open_move_delete_add(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, (keep, move, gone) = self.made_map(folder)
+            v = export.load_template(path).variant
+            shown = {slot: (piece, p) for slot, piece, p in export.opened(v)}
+            self.assertEqual(shown[move][0]["name"], "Wall Double")
+            self.assertEqual(len(shown), len(v.placed_objects()))            # every object of the map is shown
+            moved = dict(shown[move][1], origin=[shown[move][1]["origin"][0] + 1.0] + shown[move][1]["origin"][1:])
+            entries = [{"label": "kept", "placement": None, "slot": keep, "unchanged": True},
+                       dict(flat("Wall Double", *moved["origin"], turn=moved["turn"]), slot=move),
+                       flat("Block 1x1 Flat", -28.0, -128.0, 5.0)]
+            result = export.plan(entries, v, (0.0, 0.0, 0.0), source_slots=[keep, move, gone])
+            self.assertEqual(export.lines(result), [])
+            self.assertEqual((result["removed"], [s for s, _ in result["edits"]], len(result["kept"])), ([gone], [move], 1))
+            counts = result["counts"]
+            self.assertEqual(counts["slots_used"], len(v.placed_objects()) - 1 + 1)
+            out = os.path.join(folder, "out.mvar")
+            info = export.write(path, result, (0.0, 0.0, 0.0), out, "FP opened")
+            self.assertEqual(info["problems"], [])
+            a, b = mvar.MvarFile.read(path).variant, mvar.MvarFile.read(out).variant
+            self.assertEqual(a.objects[keep], b.objects[keep])               # untouched, every field
+            new = KNOWN["Block 1x1 Flat"]                                    # deleted: the new piece takes its slot
+            self.assertEqual((b.objects[gone].type_index, b.objects[gone].variant_index), (new["row"], new["item"]))
+            self.assertNotIn((KNOWN["Block 5x1 Flat"]["row"], KNOWN["Block 5x1 Flat"]["item"]),
+                             [(o.type_index, o.variant_index) for _, o in b.placed_objects()])
+            self.assertEqual((b.objects[move].team, b.objects[move].spawn_sequence, b.objects[move].color), (3, 7, 2))
+            ax, bx = a.world_position(a.objects[move]), b.world_position(b.objects[move])
+            self.assertAlmostEqual(bx[0] - ax[0], 1.0, delta=0.002)
+            self.assertAlmostEqual(bx[1], ax[1], delta=0.002)
+            self.assertLessEqual(turn_steps(a.objects[move].angle, b.objects[move].angle), 1)
+            self.assertEqual(len(b.placed_objects()), len(a.placed_objects()))     # one gone, one new
+            self.assertEqual(b.budget_spent, a.budget_spent - 10 + 10)
+            self.assertEqual(info["edited"], [move])
+
+    def test_a_map_left_alone_is_written_unchanged(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, slots = self.made_map(folder)
+            v = export.load_template(path).variant
+            entries = [{"label": str(s), "placement": None, "slot": s, "unchanged": True} for s in slots]
+            result = export.plan(entries, v, (0.0, 0.0, 0.0), source_slots=slots)
+            self.assertEqual((result["removed"], result["edits"], result["kept"]), ([], [], []))
+            with self.assertRaises(export.ExportError):                      # nothing changed, nothing to write
+                export.write(path, result, (0.0, 0.0, 0.0), os.path.join(folder, "out.mvar"), "same")
+
+    def test_the_counter_frees_what_was_deleted(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path, slots = self.made_map(folder)
+            v = export.load_template(path).variant
+            before = export.count([], v)
+            after = export.count([], v, removed=[slots[2]])
+            self.assertEqual(after["slots_used"], before["slots_used"] - 1)
+            self.assertEqual(after["rows"][70], before["rows"][70] - 1)
+            self.assertEqual(after["budget_spent"], before["budget_spent"] - 10)
+
+
 if __name__ == "__main__":
     unittest.main()

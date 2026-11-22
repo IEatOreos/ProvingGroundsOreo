@@ -11,6 +11,7 @@ budget, 255 pieces a palette row), `fit.add_to` adds it to a copy of the templat
 Phase 4 of docs/REACH_FORGE_PRINTER_PLAN.md. Nothing in the bot imports this.
 """
 
+import math
 import os
 import re
 
@@ -55,8 +56,18 @@ def room(variant):
         row: mvar.ROW_MAX - quota.placed for row, quota in enumerate(variant.quotas)}
 
 
-def count(placements, variant=None, table=None):
-    """The live counter's figures for these placements on top of the template (None: an empty one).
+def _piece_at(variant, slot, table=None):
+    """The table's piece for the template object in a slot, or None (a spawn point, a weapon, ...)."""
+    obj = variant.objects[slot]
+    for p in (table or pieces.load())["pieces"]:
+        if (p["row"], p["item"]) == (obj.type_index, obj.variant_index):
+            return p
+    return None
+
+
+def count(placements, variant=None, table=None, removed=()):
+    """The live counter's figures for these placements on top of the template (None: an empty one),
+    less the template's objects in the `removed` slots (pieces of an opened map that were deleted).
 
     {"slots_used", "slots_max", "slots_over", "rows": {row: pieces}, "rows_over": {row: pieces too
     many}, "budget_added", "budget_spent", "budget_max" (None without a template), "budget_over",
@@ -67,14 +78,23 @@ def count(placements, variant=None, table=None):
         for row, quota in enumerate(variant.quotas):
             if quota.placed:
                 rows[row] = quota.placed
+    freed = 0
+    for slot in removed:
+        obj = variant.objects[slot] if variant is not None else None
+        if obj is None:
+            continue
+        rows[obj.type_index] = rows.get(obj.type_index, 0) - 1
+        piece = _piece_at(variant, slot, table)
+        freed += (pieces.price(piece["name"]) or 0) if piece and piece["name"] in known else 0
+    rows = {row: n for row, n in rows.items() if n}
     names = []
     for p in placements:
         row = known[p["piece"]]["row"]
         rows[row] = rows.get(row, 0) + 1
         names.append(p["piece"])
     added, unpriced_names = pieces.cost(names)
-    used = len(placements) + (len(variant.placed_objects()) if variant is not None else 0)
-    spent = added + (variant.budget_spent if variant is not None else 0)
+    used = len(placements) + (len(variant.placed_objects()) - len(removed) if variant is not None else 0)
+    spent = added - freed + (variant.budget_spent if variant is not None else 0)
     budget_max = variant.budget_max if variant is not None else None
     return {"slots_used": used, "slots_max": mvar.OBJECT_SLOTS, "slots_over": max(0, used - mvar.OBJECT_SLOTS),
             "rows": rows, "rows_over": {row: n - mvar.ROW_MAX for row, n in rows.items() if n > mvar.ROW_MAX},
@@ -88,16 +108,30 @@ def _outside(variant, position):
     return any(not b[i * 2] <= position[i] <= b[i * 2 + 1] for i in range(3))
 
 
-def plan(entries, variant, offset, table=None):
+def removed_slots(entries, variant, source_slots=()):
+    """The opened map's piece slots no entry stands for any more: the pieces deleted in Blender."""
+    present = {e["slot"] for e in entries if e.get("slot") is not None}
+    return sorted(s for s in source_slots if s not in present and 0 <= s < len(variant.objects)
+                  and variant.objects[s] is not None)
+
+
+def plan(entries, variant, offset, table=None, source_slots=()):
     """What an export would write. Nothing is written here.
 
-    Returns {"kept": placements to write, in order; "kept_labels"; "refused": [(label, reason)],
-    pieces that cannot be written at all; "left_out": [(label, why)], pieces that can be written
-    but do not fit; "warnings": [(label, text)]; "report": within_limits' report; "counts": the
-    counter's figures for every writable piece}."""
-    refused, warnings, candidates = [], [], []
+    An entry with a "slot" stands for that slot's object of an opened map (the template): it is
+    left as it is when "unchanged", else moved where it is now, keeping everything else about it.
+    The `source_slots` (the opened map's pieces) no entry stands for any more are removed. Every
+    other entry is a new piece and goes through within_limits.
+
+    Returns {"kept": new placements to write, in order; "kept_labels"; "edits": [(slot, placement)];
+    "removed": slots; "refused": [(label, reason)], pieces that cannot be written at all (an opened
+    map's piece then stays where the file has it); "left_out": [(label, why)], new pieces that do not
+    fit; "warnings": [(label, text)]; "report": within_limits' report; "counts": the counter's figures}."""
+    refused, warnings, candidates, edits = [], [], [], []
     for entry in entries:
-        label, p = entry["label"], entry.get("placement")
+        label, p, slot = entry["label"], entry.get("placement"), entry.get("slot")
+        if slot is not None and entry.get("unchanged"):
+            continue                                            # left exactly as the file has it
         if p is None:
             refused.append((label, entry.get("reason") or "it cannot be written"))
             continue
@@ -108,14 +142,22 @@ def plan(entries, variant, offset, table=None):
             refused.append((label, "it is outside Forge World's bounds, at (%.1f, %.1f, %.1f) in Forge World: "
                                    "move it, or change the offset" % at))
             continue
-        candidates.append((label, p))
+        if slot is not None:
+            edits.append((slot, p))
+        else:
+            candidates.append((label, p))
+    removed = removed_slots(entries, variant, source_slots)
     free, budget_left, row_room = room(variant)
+    free += len(removed)
+    for slot in removed:
+        row_room[variant.objects[slot].type_index] = row_room.get(variant.objects[slot].type_index, mvar.ROW_MAX) + 1
     kept, report = fit.within_limits([p for _, p in candidates], free, budget_left, row_room, table)
     kept_ids = set(id(p) for p in kept)
     left_out = [(label, "out of %s" % report["ran_out_of"]) for label, p in candidates if id(p) not in kept_ids]
     return {"kept": kept, "kept_labels": [label for label, p in candidates if id(p) in kept_ids],
+            "edits": edits, "removed": removed,
             "refused": refused, "left_out": left_out, "warnings": warnings, "report": report,
-            "counts": count([p for _, p in candidates], variant, table)}
+            "counts": count([p for _, p in candidates], variant, table, removed)}
 
 
 def lines(result, limit=None):
@@ -198,14 +240,33 @@ def free_path(folder, stem):
 def write(template_path, result, offset, out_path, title, table=None):
     """Writes the plan's kept pieces into a copy of the template at out_path (never over a file).
     Returns {"path", "slots", "objects", "budget_spent", "budget_max", "title"}. Raises ExportError."""
-    if not result["kept"]:
-        raise ExportError("nothing to write: no piece can be written")
+    edits, removed = result.get("edits", []), result.get("removed", [])
+    if not result["kept"] and not edits and not removed:
+        raise ExportError("nothing to write: no piece was added, moved or deleted")
     f = load_template(template_path)          # a fresh copy: planning never changes the template
     v = f.variant
-    try:
-        slots = fit.add_to(v, result["kept"], offset, table)
-    except fit.FitError as error:
-        raise ExportError(str(error))
+    known = pieces.by_name(table)
+    for slot in removed:                      # deleted in Blender: their slots and their price come free
+        piece = _piece_at(v, slot, table)
+        if piece is not None and piece["name"] in known:
+            v.budget_spent = max(0, v.budget_spent - (pieces.price(piece["name"]) or 0))
+        v.objects[slot] = None
+    for slot, p in edits:                     # moved: the same object, so team, colour, labels and the rest stay
+        obj = v.objects[slot]
+        x, y, z = p["origin"]
+        try:
+            v.set_world_position(obj, x + offset[0], y + offset[1], z + offset[2])
+        except ValueError:
+            raise ExportError("a piece at (%.1f, %.1f, %.1f) is outside Forge World" % (x + offset[0], y + offset[1], z + offset[2]))
+        obj.angle = mvar.encode_angle(math.radians(p["turn"]))
+        obj.up = mvar.up_raw(p["up"]) if "up" in p else None
+    v.recount_quotas()
+    slots = []
+    if result["kept"]:
+        try:
+            slots = fit.add_to(v, result["kept"], offset, table)
+        except fit.FitError as error:
+            raise ExportError(str(error))
     v.budget_spent += result["report"]["cost"]
     problems = v.problems()
     if problems:
@@ -220,5 +281,26 @@ def write(template_path, result, offset, out_path, title, table=None):
     except FileExistsError:
         raise ExportError("%s already exists; nothing was written" % out_path)
     back = mvar.MvarFile.read(out_path).variant
-    return {"path": out_path, "slots": slots, "objects": len(back.placed_objects()), "budget_spent": back.budget_spent,
+    return {"path": out_path, "slots": slots, "edited": [s for s, _ in edits], "removed": list(removed),
+            "objects": len(back.placed_objects()), "budget_spent": back.budget_spent,
             "budget_max": back.budget_max, "title": f.variant.header.title, "problems": back.problems()}
+
+
+def opened(variant, table=None):
+    """An opened map's objects for Blender: [(slot, piece or None, placement)], the placement in Forge
+    World's own coordinates with the up the file holds (a cube face whose u and v are not worked out
+    is drawn on its axis; such a piece is exported untouched unless it is moved)."""
+    out = []
+    for slot, obj in variant.placed_objects():
+        raw = obj.up
+        try:
+            up = (0.0, 0.0, 1.0) if raw is None else mvar.up_vector(raw)
+        except ValueError:
+            face = mvar.split_up(raw)[0]
+            up = [0.0, 0.0, 0.0]
+            up[face % 3] = 1.0 if face < 3 else -1.0
+            up = tuple(up)
+        placement = {"origin": list(variant.world_position(obj)), "turn": math.degrees(mvar.decode_angle(obj.angle)),
+                     "up": up}
+        out.append((slot, _piece_at(variant, slot, table), placement))
+    return out

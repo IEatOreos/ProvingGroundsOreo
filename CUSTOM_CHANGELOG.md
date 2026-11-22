@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Reach Forge Printer add-on: open a Forge map (.mvar) in Blender and export it again, 2026-11-21
+
+- **Open .mvar (new):** a Forge World map MCC saved comes into Blender: its pieces to edit (each remembers its slot and where it stood), other objects (spawns, weapons) as locked markers, Forge World's ground when the starter is built. The map becomes the template, offset 0 0 0.
+- **Export of an opened map (`export.plan` / `write`):** pieces left alone are not converted and stay byte for byte; a moved piece is edited in its own slot, so team, colour, spawn settings and label stay; pieces deleted in Blender are removed and their slots and price come free; copies (Shift+D, which copies the slot) and new pieces are added through `within_limits` as before. The live counter counts new pieces on top of the map, less the deleted ones.
+- **Validation:** 3 new plain tests (open, move, delete, add; a map left alone writes nothing; the counter frees deleted pieces); `headless_check.py` gained an Open .mvar check (move, delete, copy, add, export, read back); Forge Printer tests 182 OK. On two real saved maps in headless Blender (Bot Testing Grounds: 13 pieces, 6 markers; FP Guardian test: 305 pieces, 6 markers): the counter equals the file, one piece moved 0.5 exports moved, every other object byte-identical, the files sound. Bungie's shipped Forge World maps (older palette) are refused. Not yet used in the owner's Blender.
+
 ### Reach Forge Printer add-on: a starter scene on Forge World, 2026-11-21
 
 - **`build_library.py --starter <template>` and `library.build_starter` (new):** Forge World's own level, exported from `forge_halo.map` with `bsp2obj`, turned Z up, cut to the area a variant can place in (plus 30) and written to `re_tools\forge_printer\starter\forge_world.obj`; then a .blend with that level as locked solid ground, the template's own objects shown where they stand (locked, never exported or counted), the template chosen, the offset 0 0 0 and the view on the template's objects: `Reach Forge Starter.blend`. Game-derived, so never committed.

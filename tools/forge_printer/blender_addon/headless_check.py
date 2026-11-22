@@ -227,6 +227,58 @@ def guardian(ui, folder, template, offset, out_dir):
         check(ok, "each moved 1 along +x and turned 90 degrees in the file")
 
 
+def mvar_check(ui):
+    """Open .mvar on a made map: move one piece, delete one, copy one (Shift+D keeps its slot), add one;
+    export. The untouched piece is byte for byte the same, the moved one keeps its team, the deleted
+    one is gone, the copy and the new one are added."""
+    import tempfile
+    from forge_printer import fit, mvar
+    from test_forge_printer_turn_test import forge_world
+    from mathutils import Matrix
+    with tempfile.TemporaryDirectory() as folder:
+        v = forge_world()
+        placed = [{"piece": "Block 2x2 Flat", "turn": 0.0, "origin": [-30.0, -130.0, 5.0]},
+                  {"piece": "Wall Double", "turn": 90.0, "origin": [-25.0, -130.0, 6.0]},
+                  {"piece": "Block 5x1 Flat", "turn": 45.0, "origin": [-20.0, -130.0, 5.0]},
+                  {"piece": "Ramp 2x2", "turn": 30.0, "origin": [-15.0, -130.0, 5.0]}]
+        keep, move, gone, copied = fit.add_to(v, placed, (0.0, 0.0, 0.0))
+        v.objects[move].team = 3
+        path = os.path.join(folder, "made.mvar")
+        mvar.MvarFile(variant=v, chdr=mvar.build_chdr(v.header)).write(path)
+        bpy.ops.wm.read_homefile(use_empty=True)
+        scene = bpy.context.scene
+        bpy.ops.forge_printer.open_mvar(filepath=path, ground=False, replace=True)
+        by_slot = {int(o["fp_slot"]): o for o in ui.forge_objects(scene)}
+        check({keep, move, gone, copied} <= set(by_slot) and sorted(ui.source_slots(scene)) == sorted(by_slot),
+              "Open .mvar brings the map's pieces in to edit (%d, the test map's own Wall Coliseum too) with their "
+              "slots" % len(by_slot))
+        check(all(e.get("unchanged") for _, e in ui.scene_entries(scene)), "nothing counts as moved before an edit")
+        by_slot[move].matrix_world = Matrix.Translation((1.0, 0.0, 0.0)) @ by_slot[move].matrix_world
+        bpy.data.objects.remove(by_slot[gone])
+        copy = by_slot[copied].copy()                                   # what Shift+D does: same custom properties
+        by_slot[copied].users_collection[0].objects.link(copy)
+        copy.matrix_world = Matrix.Translation((0.0, 3.0, 0.0)) @ copy.matrix_world
+        scene.cursor.location = (-28.0, -126.0, 5.0)
+        bpy.ops.forge_printer.add_piece(piece="Block 1x1 Flat")
+        bpy.context.view_layer.update()
+        scene.fp_out_dir = folder
+        scene.fp_title = "FP opened"
+        bpy.ops.forge_printer.export("EXEC_DEFAULT", accept=True)
+        out = os.path.join(folder, "FP_opened.mvar")
+        check(os.path.isfile(out), "the edited map exports")
+        if not os.path.isfile(out):
+            return
+        a, b = mvar.MvarFile.read(path).variant, mvar.MvarFile.read(out).variant
+        check(a.objects[keep] == b.objects[keep], "the untouched piece is written byte for byte the same")
+        ax, bx = a.world_position(a.objects[move]), b.world_position(b.objects[move])
+        check(abs(bx[0] - ax[0] - 1.0) < 0.002 and b.objects[move].team == 3, "the moved piece moved and kept its team")
+        names = sorted((o.type_index, o.variant_index) for _, o in b.placed_objects())
+        five, ramp, one = (ui.KNOWN[n] for n in ("Block 5x1 Flat", "Ramp 2x2", "Block 1x1 Flat"))
+        check((five["row"], five["item"]) not in names and names.count((ramp["row"], ramp["item"])) == 2 and
+              (one["row"], one["item"]) in names and b.problems() == [],
+              "the deleted piece is gone, the copy and the new piece are added, the file is sound")
+
+
 def library_check(ui):
     """A two-piece asset library: assets with thumbnails and catalogs, and a piece taken from it is
     exported like one from the palette. Runs last: building starts an empty file. Nothing is saved to
@@ -297,6 +349,7 @@ def main():
     refusals(ui)
     if args.guardian:
         guardian(ui, args.guardian, args.template, tuple(args.offset), args.out)
+    mvar_check(ui)
     library_check(ui)
     starter_check(ui)
     print("checks: %d failed" % len(FAILED))

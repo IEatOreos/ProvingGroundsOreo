@@ -61,6 +61,25 @@ in from the piece library and press **Export .mvar**. Forge World's level is
 about a million triangles: hide the `Forge World` collection (the eye in the
 Outliner) when the view gets slow.
 
+## Open a Forge map (.mvar)
+
+**Open .mvar** (Forge tab, beside Open fit.json) reads a Forge World map your
+MCC saved: every Forge piece comes in to edit (with its real model), spawn
+points, weapons and the other objects are shown where they stand as small
+arrows you cannot click, and Forge World's ground comes in too when the
+starter scene has been built. The opened map becomes the template and the
+offset 0 0 0. Move, turn, delete, copy (Shift+D) and add pieces, then **Export
+.mvar**: it writes a new file in which
+
+- pieces you left alone are exactly as the map had them, byte for byte;
+- a moved piece is the same object moved: its team, colour, spawn settings and
+  label stay;
+- a deleted piece is gone and its slot is free again;
+- copies and new pieces are added like any new piece.
+
+Maps on the older palette (Bungie's own Forge World maps as shipped) are not
+read: open one in Forge and save it once, then open that.
+
 ## Use
 
 1. **Open fit.json** (Forge tab). For Guardian it is

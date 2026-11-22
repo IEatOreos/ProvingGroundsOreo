@@ -59,8 +59,22 @@ def _plain(value):
     return value.to_list() if hasattr(value, "to_list") else value
 
 
-def entry_for(obj):
-    """convert.placement_from for one object, as an export entry."""
+def _matrix_values(obj):
+    return [float(v) for row in obj.matrix_world for v in row]
+
+
+def _unchanged(obj):
+    """Whether a piece of an opened map still stands exactly where the map had it."""
+    stored = obj.get("fp_import")
+    return stored is not None and len(stored) == 16 and all(
+        abs(a - b) < 1e-5 for a, b in zip(_matrix_values(obj), stored))
+
+
+def entry_for(obj, slot=None):
+    """convert.placement_from for one object, as an export entry. A piece of an opened map carries its
+    slot; if it has not moved it is not converted at all (the file keeps it exactly)."""
+    if slot is not None and _unchanged(obj):
+        return {"label": obj.name, "placement": None, "reason": None, "warning": None, "slot": slot, "unchanged": True}
     matrix = [list(row) for row in obj.matrix_world]
     local_box = None
     if obj.type == "MESH":
@@ -69,11 +83,32 @@ def entry_for(obj):
                      tuple(max(c[i] for c in corners) for i in range(3)))
     props = {key: _plain(obj.get("fp_" + key)) for key in convert.CARRIED}
     placement, reason, warning = convert.placement_from(matrix, obj["fp_piece"], KNOWN, props, local_box)
-    return {"label": obj.name, "placement": placement, "reason": reason, "warning": warning}
+    out = {"label": obj.name, "placement": placement, "reason": reason, "warning": warning}
+    if slot is not None:
+        out["slot"] = slot
+    return out
 
 
 def scene_entries(scene):
-    return [(o, entry_for(o)) for o in forge_objects(scene)]
+    """(object, entry) for every Forge piece. A copy of an opened map's piece (Shift+D copies its slot)
+    is a new piece: only the first object with a slot stands for it."""
+    out, taken = [], set()
+    for o in forge_objects(scene):
+        slot = o.get("fp_slot")
+        slot = int(slot) if slot is not None and int(slot) not in taken else None
+        if slot is not None:
+            taken.add(slot)
+        out.append((o, entry_for(o, slot)))
+    return out
+
+
+def source_slots(scene):
+    """The opened map's piece slots (empty for a scene not opened from a map)."""
+    return [int(s) for s in scene.fp_source_slots.split(",") if s.strip()] if scene.fp_source_slots else []
+
+
+def _writable(entry):
+    return entry["placement"] is not None or entry.get("unchanged")
 
 
 def template_of(scene):
@@ -313,6 +348,73 @@ class FORGE_PRINTER_OT_open_fit(Operator, ImportHelper):
         return {"FINISHED"}
 
 
+class FORGE_PRINTER_OT_open_mvar(Operator, ImportHelper):
+    """Open a Forge World map (.mvar) your MCC saved: its Forge pieces to edit; spawns, weapons and other
+    objects shown where they stand. Exporting writes a new file: pieces left alone stay exactly as they
+    are, moved ones keep their team, colour and other settings, deleted ones are removed"""
+    bl_idname = "forge_printer.open_mvar"
+    bl_label = "Open .mvar"
+    bl_options = {"REGISTER", "UNDO"}
+
+    filename_ext = ".mvar"
+    filter_glob: StringProperty(default="*.mvar", options={"HIDDEN"})
+    ground: BoolProperty(name="Forge World's ground", default=True,
+                         description="Bring in Forge World's own level if the starter scene's copy of it is built "
+                                     "(build_library.py --starter); about a million triangles")
+    real_models: BoolProperty(name="Real piece models where found", default=True)
+    replace: BoolProperty(name="Replace the pieces already here", default=False)
+
+    def execute(self, context):
+        scene = context.scene
+        existing = forge_objects(scene)
+        if existing and not self.replace:
+            self.report({"ERROR"}, "This scene already holds %d Forge pieces: tick Replace, or start a new file"
+                        % len(existing))
+            return {"CANCELLED"}
+        try:
+            f = export.load_template(self.filepath)
+        except export.ExportError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        for o in existing + [o for o in scene.objects if o.get("fp_template_object") is not None]:
+            bpy.data.objects.remove(o)
+        v = f.variant
+        others = collection("Map objects", scene.collection)
+        slots, markers = [], 0
+        for slot, piece, placement in export.opened(v, _TABLE):
+            matrix = convert.matrix_for(placement)
+            if piece is not None and piece["name"] in KNOWN:
+                obj = make_piece(scene, piece, matrix, "opened", slot, {"slot": slot}, self.real_models)
+                obj["fp_import"] = _matrix_values(obj)
+                slots.append(slot)
+                continue
+            name = piece["name"] if piece else "row %d item %d" % (v.objects[slot].type_index, v.objects[slot].variant_index)
+            obj = bpy.data.objects.new("map %d %s" % (slot, name), None)
+            obj.empty_display_type = "SINGLE_ARROW"
+            obj.empty_display_size = 0.8
+            obj.matrix_world = Matrix(matrix)
+            obj["fp_template_object"] = slot
+            obj.hide_select = True
+            others.objects.link(obj)
+            markers += 1
+        scene.fp_template = self.filepath
+        scene.fp_offset = (0.0, 0.0, 0.0)
+        scene.fp_source_slots = ",".join(str(s) for s in slots)
+        scene.fp_next_index = mvar.OBJECT_SLOTS
+        scene.fp_fit_path = ""
+        scene.fp_title = ("%s edit" % (v.header.title or "FP Map"))[:export.TITLE_MAX]
+        ground = 0
+        if self.ground:
+            from . import library
+            terrain = os.path.join(library.STARTER_DIR, library.TERRAIN_NAME)
+            if os.path.isfile(terrain):
+                ground = library.add_ground(scene, terrain)
+        self.report({"INFO"}, "Opened %d Forge pieces to edit and %d other objects%s" % (
+            len(slots), markers, ", with Forge World's ground" if ground else ""))
+        print("forge printer: opened %s: %d pieces, %d other objects" % (self.filepath, len(slots), markers))
+        return {"FINISHED"}
+
+
 class FORGE_PRINTER_OT_add_piece(Operator):
     """Add this Forge piece at the 3D cursor"""
     bl_idname = "forge_printer.add_piece"
@@ -378,7 +480,7 @@ class FORGE_PRINTER_OT_select_problems(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        bad = [o for o, e in scene_entries(context.scene) if e["placement"] is None]
+        bad = [o for o, e in scene_entries(context.scene) if not _writable(e)]
         select_only(context, bad)
         self.report({"INFO"}, "%d piece(s) cannot be written" % len(bad))
         return {"FINISHED"}
@@ -398,9 +500,10 @@ class FORGE_PRINTER_OT_export(Operator):
         template = bpy.path.abspath(scene.fp_template) if scene.fp_template else ""
         f = export.load_template(template)
         pairs = scene_entries(scene)
-        if not pairs:
+        if not pairs and not source_slots(scene):
             raise export.ExportError("there are no Forge pieces in this scene")
-        result = export.plan([e for _, e in pairs], f.variant, tuple(scene.fp_offset), _TABLE)
+        result = export.plan([e for _, e in pairs], f.variant, tuple(scene.fp_offset), _TABLE,
+                             source_slots(scene))
         return template, pairs, result
 
     def invoke(self, context, event):
@@ -444,8 +547,10 @@ class FORGE_PRINTER_OT_export(Operator):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         report = result["report"]
-        summary = "Wrote %s: %d pieces added, %d of %d objects, budget %d of %d%s" % (
-            info["path"], len(info["slots"]), info["objects"], mvar.OBJECT_SLOTS, info["budget_spent"],
+        summary = "Wrote %s: %d pieces added%s, %d of %d objects, budget %d of %d%s" % (
+            info["path"], len(info["slots"]),
+            ", %d moved, %d deleted" % (len(info["edited"]), len(info["removed"])) if source_slots(scene) else "",
+            info["objects"], mvar.OBJECT_SLOTS, info["budget_spent"],
             info["budget_max"], ", no price known for " + ", ".join(report["unpriced"]) if report["unpriced"] else "")
         _report_text([summary, 'Title "%s"' % info["title"]] + problems)
         print("forge printer: " + summary)
@@ -462,8 +567,10 @@ class FORGE_PRINTER_OT_export(Operator):
 def _summary(scene):
     pairs = scene_entries(scene)
     f, template_error = template_of(scene)
-    good = [e["placement"] for _, e in pairs if e["placement"] is not None]
-    counts = export.count(good, f.variant if f else None, _TABLE)
+    good = [e for _, e in pairs if _writable(e)]
+    new = [e["placement"] for e in good if e.get("slot") is None]          # an opened map's pieces are in the template
+    removed = export.removed_slots([e for _, e in pairs], f.variant, source_slots(scene)) if f else []
+    counts = export.count(new, f.variant if f else None, _TABLE, removed)
     return pairs, good, counts, template_error
 
 
@@ -475,7 +582,11 @@ class FORGE_PRINTER_PT_main(Panel):
 
     def draw(self, context):
         layout, scene = self.layout, context.scene
-        layout.operator("forge_printer.open_fit", icon="FILE_FOLDER")
+        row = layout.row(align=True)
+        row.operator("forge_printer.open_fit", icon="FILE_FOLDER")
+        row.operator("forge_printer.open_mvar", icon="FILE_FOLDER")
+        if scene.fp_source_slots:
+            layout.label(text="Opened map: the template is that map", icon="INFO")
         layout.prop(scene, "fp_template")
         layout.prop(scene, "fp_offset")
         backdrop = bpy.data.collections.get(BACKDROP)
@@ -554,7 +665,7 @@ class FORGE_PRINTER_PT_palette(Panel):
             layout.label(text="%d pieces with no known menu name are not offered yet" % UNNAMED)
 
 
-CLASSES = (FORGE_PRINTER_OT_open_fit, FORGE_PRINTER_OT_add_piece, FORGE_PRINTER_OT_add_library,
+CLASSES = (FORGE_PRINTER_OT_open_fit, FORGE_PRINTER_OT_open_mvar, FORGE_PRINTER_OT_add_piece, FORGE_PRINTER_OT_add_library,
            FORGE_PRINTER_OT_select_problems, FORGE_PRINTER_OT_export, FORGE_PRINTER_PT_main, FORGE_PRINTER_PT_palette)
 
 
@@ -594,6 +705,9 @@ SCENE_PROPS = {
                           description="Show the reference level's %s" % label.lower())
        for _, prop, label, default in BACKDROP_KINDS},
     "fp_fit_path": StringProperty(name="Opened from", subtype="FILE_PATH"),
+    "fp_source_slots": StringProperty(name="Opened map's piece slots", options={"HIDDEN"},
+                                      description="The slots of the opened .mvar's pieces, so deleted ones are "
+                                                  "removed on export"),
     "fp_next_index": IntProperty(name="Next piece index", default=0, min=0),
 }
 
