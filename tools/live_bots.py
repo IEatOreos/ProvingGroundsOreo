@@ -554,6 +554,10 @@ def item_name(path):
     return EQUIPMENT_ALIAS.get(n, WEAPON_ALIAS.get(n, n))
 
 
+ITEM_NOT_HERE = float("inf")   # (custom, Nov 22) a director's item_up for a spawn this game type does not fill (item_check)
+ITEM_EMPTY_AFTER = 5.0         # s past its respawn time with nothing there: not in this game type
+
+
 def item_check(live, directors, bots, snap, now):
     """Power items: a team learns one is gone (taken, or not in this game type) when one of its
     bots is near the spawn and nothing of that kind lies there; its timer starts then, as for a
@@ -571,10 +575,26 @@ def item_check(live, directors, bots, snap, now):
                 for d in directors.values():
                     if d.item_up.get(i, 0.0) > now:
                         d.item_up[i] = 0.0
+            for d in directors.values():
+                up = d.item_up.get(i, 0.0)
+                if up == ITEM_NOT_HERE or 0.0 < up <= now:
+                    d.item_up[i] = 0.0                    # (here after all, or back on time: up, its next take timed anew)
             continue
         for d in directors.values():
-            if d.item_up.get(i, 0.0) > now:
-                continue                                  # already counting down
+            up = d.item_up.get(i, 0.0)
+            if up > now:
+                continue                                  # already counting down (or not in this game type)
+            if up > 0.0:
+                # (custom, Nov 22, the owner's "how did they have two empty weapon spots, They have ars and dmrs?") its
+                # timer ran out and nothing lies there: a spawn this game type never fills (Asylum's .mvar places two
+                # snipers and two shotguns; TU TEAM SLAYER DMR spawns none). Restarted, its timer sent a Demon onto the
+                # empty sniper spot every 90 s all match (live 20261122-155713: 4 enemies 9% of their time on "item").
+                # ITEM_EMPTY_AFTER s past its time it is not in this game type: no timer, no run, until a gun lies there
+                if now >= up + ITEM_EMPTY_AFTER:
+                    d.item_up[i] = ITEM_NOT_HERE
+                    print(f"{now:6.1f}s {it['name']} at ({p.x:.1f}, {p.y:.1f}) still empty after its respawn time: "
+                          f"not in this game type", flush=True)
+                continue
             if any(snap.player(b.id) and snap.player(b.id).alive and      # (d.bots: its team)
                    (snap.player(b.id).pos - p).flat() < 25 for b in d.bots.values()):
                 d.item_taken(i, now, it["respawn"])

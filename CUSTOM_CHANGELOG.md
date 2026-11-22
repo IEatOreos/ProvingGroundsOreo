@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Bots no longer run to weapon spawns the game type never fills, 2026-11-22
+The owner's report "Why arent they killing me" (Asylum, TU TEAM SLAYER DMR, logs/bug_reports/reach_forge_halo_20261122-155713: at 269.8 s all four enemy Demons had one goal, an "item" at (52.4, 223.2)) and his question "how did they have two empty weapon spots, They have ars and dmrs?".
+- **Cause:** the layout's .mvar places two snipers (52.4, 223.2 and 73.3, 203.4; 90 s) and two shotguns, which the DMR game type never spawns. `tools/live_bots.py item_check` starts a spawn's timer when a bot comes within 25 u of it and nothing lies there ("taken, or not in this game type"). When the timer ran out the spawn was still empty, so the timer started again. Each time it came due, `director.power_runs` sent a Demon onto the empty sniper spot ("power weapon run: committed", 2,419 notes), and each bot's own `best_item` read the same timers. The four enemies spent 2,273 trace rows, about 9% of their time, on those two spots.
+- **Fix:** a spawn still empty `ITEM_EMPTY_AFTER` (5 s) after its respawn time is `ITEM_NOT_HERE` (no timer) for that team: no power run, no item trip, for the rest of the match. A gun lying there again sets it back to up, as does a gun back on time, so its next take is timed anew. A real power weapon taken by an enemy is timed as before.
+- **Validation:** new `tools/test_empty_spawns.py` (3). Full suite 1301 OK. **Untested in game.**
+
 ## 0.2.2-custom.14 — Noble learns from every match, Take Space, bots that never stand still, LiDAR's map names and the Forge Printer's Blender add-on, 2026-11-22
 
 ### Installer: no map folders built from mods in the map pack, 2026-11-22
