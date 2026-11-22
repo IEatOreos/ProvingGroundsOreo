@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### GitHub page: the banner only, 2026-11-21
+
+The owner: "Remove everything on the github below the banner. All of the entire description".
+
+- `README.md` (what GitHub shows on the repository's page) is now only the Project Noble banner. Gone from it: the title, status, install, play, difficulty, tools, player's guide, system requirements, troubleshooting, Linux, developers, credits and license sections.
+- **Still in the repository:** the license and its Required Notice, the upstream credit and Microsoft's Game Content Usage Rules notice (`LICENSE.md`, `NOTICE.md`; GitHub links the license in the sidebar), and the players' guide in the launcher (`tools/guide.html`).
+- Two docs still point at sections that are gone: `docs/KNOWN_BUGS.md` (the README's troubleshooting) and `tools/launch.py`'s Linux message ("see the README").
+
 ### Releases named Project Noble, 2026-11-21
 
 The owner: "Can you change the names of our releases also to project noble and all further releases".
