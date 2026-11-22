@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Reach Forge Printer: wall pieces no longer close doorways, 2026-11-21
+
+- The owner found doorways in the walls fit "blocked by entire walls". A piece's face counted as on wall when wall lay within a box or two in any direction, so a doorway was "backed" by its own frame. Now the wall is looked for only straight behind and in front of each face point, and a piece is refused when any part of it that is on no wall has nothing at all behind it for 1.5 units (a doorway, a window, air past a wall's end). 166 of the 255 previously printed wall pieces fail that. Rebuilt Guardian: 255 pieces, 36% of the seen wall (48% beside the walks). Printed "FP Guardian Walls 2" and copied into MCC's Map folder (MCC was running; it may need a restart to list it).
+- **Validation:** new test `test_no_piece_closes_a_doorway`; Forge Printer tests 179 OK; renders from the spawns. Not yet seen in the game.
+
 ### Reach Forge Printer: ramps and slopes measured, nothing added (Phase 5, step 1b), 2026-11-21
 
 - The 25% slope coverage `fit_slopes` reports misleads: of the 142 u2 it leaves bare on Guardian, 105 u2 is railing and kerb bevels under 0.4 wide, 22 u2 narrow strips, 15 u2 seven wider patches (the largest among a tree's roots below the walks). The ramps players use are already built. A pass of tilted Inclines on the bare slope was tried (9 pieces, all on bevels and roots) and taken out again; the plan's "Phase 5, step 1b" note has the numbers. No code changes.

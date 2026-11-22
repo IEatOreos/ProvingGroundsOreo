@@ -500,6 +500,30 @@ class WallFaces(unittest.TestCase):
         m.quad((4, 0, 9), (4, 8, 9), (4, 8, 12), (4, 0, 12))                        # hanging 9 above the floor
         self.assertEqual(fit.fit_wall_faces(analysed(m))[0], [])
 
+    def test_no_piece_closes_a_doorway(self):
+        # a wall 0.3 thick at x -0.3..0 with a doorway 1.2 wide and 2.2 high through it, floor on both sides
+        m = Mesh()
+        m.quad(*slab(0, 0, 8, 8))
+        m.quad(*slab(-4, 0, -0.3, 8))
+        m.quad(*slab(-0.3, 3.4, 0, 4.6))                                             # the doorway's own floor
+        for x, way in ((0.0, 1), (-0.3, -1)):                                        # both faces of the wall
+            for y0, y1, z0, z1 in ((0, 3.4, 0, 3), (4.6, 8, 0, 3), (3.4, 4.6, 2.2, 3)):
+                if way > 0:
+                    m.quad((x, y1, z0), (x, y0, z0), (x, y0, z1), (x, y1, z1))
+                else:
+                    m.quad((x, y0, z0), (x, y1, z0), (x, y1, z1), (x, y0, z1))
+        m.quad((0, 3.4, 0), (-0.3, 3.4, 0), (-0.3, 3.4, 2.2), (0, 3.4, 2.2))         # the doorway's sides
+        m.quad((-0.3, 4.6, 0), (0, 4.6, 0), (0, 4.6, 2.2), (-0.3, 4.6, 2.2))
+        placements, report = fit.fit_wall_faces(analysed(m, spawns=((2.0, 2.0, 0.05), (-2.0, 2.0, 0.05))))
+        self.assertGreater(report["pieces"], 0)
+        for piece, centre, x, y, z in self.frames(placements):
+            if abs(y[0]) < 0.9:
+                continue                                                             # not on the doorway's wall
+            half_y, half_z = piece["size"][0] / 2.0, piece["size"][2] / 2.0
+            overlaps_y = centre[1] - half_y < 4.5 and centre[1] + half_y > 3.5
+            overlaps_z = centre[2] - half_z < 2.1 and centre[2] + half_z > 0.1
+            self.assertFalse(overlaps_y and overlaps_z, "a %s stands across the doorway at %s" % (piece["name"], centre))
+
     def test_the_file_holds_what_was_laid(self):
         placements, _ = fit.fit_wall_faces(analysed(self.floor_and_wall(lean=15.0)))
         for p in placements:

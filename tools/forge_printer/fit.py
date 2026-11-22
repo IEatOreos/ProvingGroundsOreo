@@ -824,6 +824,8 @@ FACE_BACKED = 0.75      # at least this share of a piece's face is on wall (any 
 FACE_GRID = 0.5         # the face is checked at points this far apart
 FACE_VOXEL = 0.25       # wall anywhere is kept as boxes this size: a face point within a box or two of one is on wall
 FACE_UPRIGHT = 1.0      # a wall leaning less than this many degrees takes an upright piece
+FACE_OPEN = 1.5         # a point of a face with no surface at all this far behind it is over an opening: no
+                        # piece may cover a doorway, a window or open air past a wall's end
 FACE_HEADINGS = 12      # wall is told apart by which way it faces, in bins of 15 degrees: a face is on wall only
 FACE_HEADING_REACH = 2  # where that wall faces within this many bins of it (about 45 degrees: a fluted trunk
                         # still counts, a piece standing square across a wall does not)
@@ -917,17 +919,20 @@ class _Solid:
 
     def __init__(self, analysis, ground):
         a = analysis
-        walls = np.nonzero(a["kinds"] == surfaces.WALL)[0]
-        areas = a["areas"][walls]
-        count = np.maximum(1, np.round(areas / (FACE_VOXEL * FACE_VOXEL)).astype(np.int64))
-        owner = np.repeat(np.arange(len(walls)), count)
+        every = np.arange(len(a["tris"]))
+        areas = a["areas"]
+        count = np.maximum(1, np.round(areas / (FACE_VOXEL * FACE_VOXEL / 4.0)).astype(np.int64))   # 4 a box face
+        owner = np.repeat(every, count)
         rng = np.random.default_rng(1)
         r1, r2 = np.sqrt(rng.random(len(owner))), rng.random(len(owner))
-        tri = a["verts"][a["tris"][walls[owner]]]
+        tri = a["verts"][a["tris"][owner]]
         pts = tri[:, 0] * (1 - r1)[:, None] + tri[:, 1] * (r1 * (1 - r2))[:, None] + tri[:, 2] * (r1 * r2)[:, None]
         self.low = (pts.min(axis=0) if len(pts) else np.zeros(3)) - 4.0
-        heading = self._heading(a["normals"][walls[owner]])
-        self.keys = np.unique(self._key(np.floor((pts - self.low) / FACE_VOXEL).astype(np.int64)) * FACE_HEADINGS + heading)
+        boxes = self._key(np.floor((pts - self.low) / FACE_VOXEL).astype(np.int64))
+        self.solid = np.unique(boxes)                          # any surface at all: wall, floor, ceiling
+        wall = a["kinds"][owner] == surfaces.WALL
+        heading = self._heading(a["normals"][owner[wall]])
+        self.keys = np.unique(boxes[wall] * FACE_HEADINGS + heading)
         self.ground = {}
         for row in ground:
             cell = (int(math.floor(row[0] / surfaces.CELL)), int(math.floor(row[1] / surfaces.CELL)))
@@ -944,19 +949,35 @@ class _Solid:
         angle = np.degrees(np.arctan2(normals[..., 1], normals[..., 0])) % 180.0
         return (angle // (180.0 / FACE_HEADINGS)).astype(np.int64) % FACE_HEADINGS
 
+    def _line(self, pts, normal, depths):
+        """Box keys along the line through each point square to the face: (points, depths)."""
+        normal = np.asarray(normal, dtype=float)
+        along = pts[:, None, :] + np.asarray(depths, dtype=float)[None, :, None] * normal[None, None, :]
+        return self._key(np.floor((along - self.low) / FACE_VOXEL).astype(np.int64))
+
+    @staticmethod
+    def _found(keys, sorted_keys):
+        if not len(sorted_keys):
+            return np.zeros(keys.shape, dtype=bool)
+        at = np.minimum(np.searchsorted(sorted_keys, keys), len(sorted_keys) - 1)
+        return sorted_keys[at] == keys
+
     def on_wall(self, pts, normal):
-        """Whether each point is within a box or two of wall facing within about 30 degrees of `normal`."""
-        base = self._key(np.floor((pts - self.low) / FACE_VOXEL).astype(np.int64)[:, None, :] +
-                         np.array(list(itertools.product((-1, 0, 1), repeat=3)))[None, :, :]) * FACE_HEADINGS
+        """Whether each point has wall facing within about 45 degrees of `normal` straight in front of it or
+        behind it, within FACE_PLANE: looked for along the line square to the face, not beside it (beside a
+        doorway is its frame, and the doorway itself is open)."""
+        base = self._line(pts, normal, np.linspace(-FACE_PLANE, FACE_PLANE, 9)) * FACE_HEADINGS
         heading = int(self._heading(np.asarray(normal, dtype=float)))
         hit = np.zeros(len(pts), dtype=bool)
-        if not len(self.keys):
-            return hit
         for h in range(heading - FACE_HEADING_REACH, heading + FACE_HEADING_REACH + 1):
-            keys = base + h % FACE_HEADINGS
-            at = np.minimum(np.searchsorted(self.keys, keys), len(self.keys) - 1)
-            hit |= (self.keys[at] == keys).any(axis=1)
+            hit |= self._found(base + h % FACE_HEADINGS, self.keys).any(axis=1)
         return hit
+
+    def open_behind(self, pts, normal):
+        """Whether behind each point (into the wall, FACE_PLANE to FACE_OPEN) there is no surface at all: the
+        point is over a doorway, a window or the sky past a wall's end."""
+        keys = self._line(pts, -np.asarray(normal, dtype=float), np.arange(FACE_PLANE, FACE_OPEN + 1e-9, FACE_VOXEL / 2.0))
+        return ~self._found(keys, self.solid).any(axis=1)
 
     def fence(self, pts, normal):
         """Whether any of these face points (ones on no wall) stands up out of walked ground just behind
@@ -1054,8 +1075,8 @@ def _face_backed(c, solid):
     ok = solid.on_wall(pts, c["normal"])
     if not ok.all():
         ok[~ok] = solid.under_ground(pts[~ok])
-    if not ok.all() and solid.fence(pts[~ok], c["normal"]):
-        return 0.0
+    if not ok.all() and (solid.open_behind(pts[~ok], c["normal"]).any() or solid.fence(pts[~ok], c["normal"])):
+        return 0.0                                             # it would close a doorway or stand in the open
     return float(ok.mean())
 
 

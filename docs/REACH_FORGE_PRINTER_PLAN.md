@@ -1469,6 +1469,19 @@ ramps and the template, the walls row holds 255, and a Wall Double covers 8
 u2 at most, so roughly half of Guardian's seen wall is what fits. Solid floors
 and fewer floor pieces (steps 2 and 3) are where more room comes from.
 
+### Phase 5, step 1a fixed: no wall piece across a doorway (2026-11-21, written by Opus 5.5)
+
+The owner opened the walls fit in the add-on: "a lot of the door ways to other extensions are blocked by
+entire walls" (two screenshots). The cause: a face point counted as on wall when wall facing its way lay
+within a box or two in any direction, so a doorway a unit or so wide was "backed" by its own frame and the
+wall over it. Now (`_Solid.on_wall`) the wall is looked for only along the line square to the face (within
+FACE_PLANE in front and behind), and a piece is refused outright when any point of its face that is on no
+wall has no surface at all behind it for 1.5 (`_Solid.open_behind`): a doorway, a window, the air past a
+wall's end. Of the 255 wall pieces printed in "FP Guardian Walls", 166 fail that. Rebuilt: 255 pieces, 36%
+of the seen wall (was 40%), 48% beside the walks (was 54%); printed as "FP Guardian Walls 2". New test:
+a wall with a doorway through it gets pieces, none across the doorway. Renders from the spawns show the two
+corridor doorways that were covered now open.
+
 ### Phase 5, step 1b: ramps and slopes measured (2026-11-21, written by Opus 5.5)
 
 `fit_slopes` reports 25% of Guardian's walked slope covered, but that figure
