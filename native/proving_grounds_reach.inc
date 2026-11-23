@@ -423,6 +423,15 @@ static void rm_mm(pg_env& e, float t) {
     if (focus >= 0) rm_wrap(g_fl, 26, 256, 842, 600, IM_COL32(222, 226, 230, 255), D[focus]);
     rm_party(e, "IN MATCHMAKING LOBBY", "In Matchmaking Lobby");
     if (rm_prompts(256, 966, true, true, true)) rm_open_options();
+    // (Nov 23, the owner's picture of Reach's matchmaking page) Prior Game Stats: the last game's carnage report
+    if (carnage_on_disk()) {
+        bool prior = false;
+        prompt(684, 966, "View", "G", "Prior Game Stats", &prior);
+        if (!g_inert && (prior || ImGui::IsKeyPressed(ImGuiKey_GamepadBack, false) || ImGui::IsKeyPressed(ImGuiKey_G, false))) {
+            g_cg_menu_focus = g_focus;
+            if (carnage_enter(nullptr, true, ImGui::GetTime())) { sound(PS_SELECT); return; }
+        }
+    }
     if (pressed(base + 0)) {
         g_rpage = RP_PLAYLIST; g_rm_col = 0; g_rm_cat = RM_PL[rm_current()].cat; g_focus_after = g_rm_cat; sound(PS_SELECT);
     }

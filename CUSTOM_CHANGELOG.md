@@ -12,6 +12,66 @@ The owner: "On the site cloudybarracude going 91/4 in a 100 kill game isnt reali
 - Already played: the edit was saved before the owner's next matches. 648 simulated matches since carry the cap: their top player median 25 kills, 41 in one game in ten, 65 at most, and no game with a 90-kill player (15 among the 1,093 before).
 - Validation: full suite 1363 OK; `bot_sim` imports. `bot_sim --verify 40`: 17 of 40 the same with this engine (the committed one: none, as those 40 were played with the cap).
 
+### Project Noble: Halo: Reach's carnage report after the credits, in place of MCC's, 2026-11-23
+
+The owner sent four frames of Halo: Reach's carnage report (Overview, MCC-era matchmaking menu with Prior Game Stats, Stats, Player Carnage): "I want this to replace us going back to mccs carnage report after the matches. this would be right after our level up/credits, then to this." He allowed this chat to edit the Proving Grounds menu code for it.
+
+- **When it shows:** a Project Noble match ends and MCC puts up its own post-game report. The credits now start straight away, drawn over MCC's report (before, they came after MCC's report, once its lobby was back). The carnage report follows the credits. Leaving it sends MCC one Back (the pad's B for 0.15 s, else Esc), and the screen waits for MCC's lobby. After 3 Backs with no lobby, MCC's own report is left on screen for the player. Over MCC's lobby (MCC's report already left) both show as before, with no Back sent. A joined PC friend's copy is unchanged.
+- `native/proving_grounds.cpp`:
+  - New stage `S_CARNAGE`, after the credits (`credits_done`).
+  - **Overview:** the map's picture with the gametype's icon, "<gametype> on <map>" (the vote's winner, kept at launch in `g_played`), Top Medals with who earned each, and the teams' place and score (free for all: the top 10 players).
+  - **Stats:** everyone by team in team colours, with emblem and service tag; a speech bubble on people's rows; one number a page (Score, Credits Earned in place of Reach's Rating, Kills, Deaths, Assists, Medals; "Page n/6").
+  - **Player Carnage:** the band with emblem, name, rank, service tag and insignia; the player's Spartan; the medals grid; Kills, Deaths, K/D Spread, Headshots, Best Spree; Killed Most and Killed Most By; Tool of Destruction.
+  - **Controls:** LB/RB (Q/E or Tab) change tab, or the player on Player Carnage; Left/Right change a Stats page; A opens a player; B goes back; Start (X) or the Exit prompt leaves.
+  - The match's map is kept in `native\bin\service_record\last_played.txt` (not in git) for Prior Game Stats.
+- `native/proving_grounds_reach.inc`: **Prior Game Stats** on the Matchmaking page (View, or G) opens the last report; leaving returns to the page.
+- `native/overlay.cpp`: draws Project Noble over MCC's post-game report while `pg_postgame()` says so (`pg_env.postgame`), without the PROJECT NOBLE tile there. `mcc_send_back` sends the Back.
+- `native/proving_grounds.h`: `pg_env.postgame`, `pg_postgame()`, `pg_mcc_back_wanted()`.
+- `native/pg_preview.cpp`: screens 44-47 (Overview, Stats, Stats on Credits Earned, Player Carnage). `PG_CARNAGE=<file>` gives the preview a carnage file of its own.
+- `tools/service_record.py` `write_last_carnage`, run with every site build, writes `logs\service_record\last_carnage.txt` for the newest match a person played:
+  - the gametype, map and teams;
+  - each player's numbers, with headshots from the Headshot medal and credits earned by ranks.json's worth;
+  - service tag and emblem ids from MCC's own report;
+  - Killed Most and Killed Most By (from MCC's report rows);
+  - Tool of Destruction: the weapon with the most kills in the kill record (none without one);
+  - medals, rarest kinds first, and the three Top Medals.
+- **Validation:**
+  - `tools/test_service_record.py` `test_carnage_of_the_last_match`. The full suite passes (1,363 tests).
+  - The file's own runner stops at `test_forge_layouts_and_tier_banners` (`variant_title`), which was already failing: neither change touches it.
+  - The preview drew all four pages and the Matchmaking prompt from a carnage file made from the owner's last real MCC report (8 players, One Bomb Assault), checked by eye against his frames.
+  - `build.bat pg43c` builds `botcore_pg43c.dll` (with the live points work, uncommitted in the same files).
+- **Untested in game:**
+  - that the credits come up over MCC's report the moment the match ends;
+  - that one B (or Esc) takes MCC from its report to its lobby;
+  - the timing of the build that writes the file.
+- **Live, the same night (pg43c):**
+  - The owner played a match. `botcore_pg43c.log` shows the credits over MCC's report, then the carnage report, then one B sent to MCC and its lobby back.
+  - The owner: the credits screen "just loads for a few seconds and shows all the totals". The credits now come up as the match ends, while the build is still counting it, and Reach's sequence was timed from that wait, so it was already over when its numbers came.
+  - Fix (`credits_screen`): the sequence starts when `last_match.txt` has this match (`botcore_pg44c.dll`). Untested in game.
+- **Then (pg44c):**
+  - The owner: "it just says counting credits ... and then just kicks me to the lobby".
+  - **Found:** his two test games lasted 12 s and 27 s (the ledger's seconds). The site never counts a game under a minute (`bot_career.counts`), so `last_match.txt` never named them. The credits waited their 20 s, and there was no carnage report.
+  - **Also found:** his full 381 s game, the one that showed earlier, is marked `all_reset` (Reset all was used after it), so it left the site.
+  - **Fix:**
+    - `tools/service_record.py` `newest_short_match`: the newest game a person played, when it is too short to count.
+    - `write_last_match` then writes its id with `uncounted	short`.
+    - `write_last_carnage` writes its report from MCC's own file, with 0 credits.
+    - `credits_screen` shows GAME NOT COUNTED for 4 s ("Games shorter than a minute don't count toward your Service Record"), then the carnage report.
+  - **Validation:**
+    - `test_carnage_of_the_last_match` covers a 12 s game; the full suite passes (1,363).
+    - A real build wrote both files for his 12 s game.
+    - `build.bat pg45c`. Untested in game.
+
+### Your team-balance points move with your results, 2026-11-23
+
+The owner: "I want my count to actively go up live after each win and down 1 after a loss. So it makes my games harder but losing enough brings me back down", then "Win +2", a floor of 18, a ceiling of 35, one count for 4v4 and 8v8, and "a menu option for a reset".
+
+- **Rules:** the player starts at 20 points (`HB_HUMAN_POINTS`). A win adds `win_points` (proving_grounds.ini, 2; 0-17), a loss takes 1, and a draw or a match with no report changes nothing. The count is kept between 18 and 35 and shared by 4v4 and 8v8. Friends who join stay at 20, and lobbies outside Project Noble count everyone at 20.
+- **Live:** `tools/service_record.py` `write_last_match` adds a `result<TAB>name<TAB>win|loss|tie` line. `native/proving_grounds.cpp` `pts_poll` reads it once a second, counts each match once, and keeps the points and the last match counted in `native\bin\pg_points.txt`. On the first run it starts from the match the site last reported, so older games aren't counted. When the points change, the waiting lobby is dealt again with its bots kept (`redeal_if_people_changed`), so the next game uses them.
+- **Balance:** `native/bots_panel.cpp` `bot_pool_set_person_points`; `roster_point_balance` and `roster_team_points` count the player at their points on the team `bot_pool_matchmake` seats them on.
+- **Menu:** Psych Profile has a TEAM POINTS row showing the count; A resets it to 20. Its seven rows are now 36 apart (were six, 41 apart), so nothing below moved.
+- **Validation:** built as `botcore_pg42.dll`. `pool_test` passes with a new check 26b (the player counted at 18 and at 35), built from a scratch copy of `build_pool_test.bat` with `armory.cpp` added, since the checked-in script no longer links since the Armory code. `test_bot_sim` has a new test for the win, loss and tie result lines. The full `tools/test_*.py` suite (1362) passes. The Psych Profile page was checked in `pg_preview`. **In game from MCC's next start; not yet seen live.**
+
 ### Bot simulation: top bots farm like real top players (steeper gaps, hunting); Heroic and Tactician every other round, 2026-11-23
 
 The owner: "After 46 games not a single bot has a 2 or more kd. All the lobbies are being stacked against each other where the minority skill level of high end players are all always in the same lobbies?", with his own and a friend's last Infinite games (2 to 16 K/D, most 5-10); then "Make all Heroics and Tacticians play just as much as. and make them flip flop ... play 50% of all games?", and "Yes, flip flop + B".

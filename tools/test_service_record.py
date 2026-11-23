@@ -640,6 +640,56 @@ def test_game_reads_the_sites_challenges():
     assert "\\\\logs\\\\service_record\\\\challenges.txt" in cpp and "\\\\logs\\\\service_record\\\\icons\\\\%S.png" in cpp
 
 
+def test_carnage_of_the_last_match():
+    """(Nov 23, the owner's Reach carnage report after the credits) last_carnage.txt: the newest match a person played,
+    the teams by place with their scores, each player's numbers, service tag and emblem from MCC's own report, the
+    Headshot medals as headshots, the credits the match earned, who they killed most and were killed most by, their
+    medals, and the three Top Medals; nothing when no person played."""
+    def lines(w):
+        with open(os.path.join(w.paths.out, "last_carnage.txt"), encoding="utf-8") as f:
+            return [l.split("\t") for l in f.read().splitlines() if not l.startswith("#")]
+    with tempfile.TemporaryDirectory() as tmp:
+        w = World(tmp)
+        w.write("trace_reach_forge_halo_20261123-170000.carnage.xml", report("bots-only", [
+            row(bot(1), "Wheezy", 1, 0, 4, 1, 1, 600), row(bot(2), "Oreo", 0, 1, 1, 4, 0, 600)]))
+        w.career()
+        w.build()
+        assert not os.path.exists(os.path.join(w.paths.out, "last_carnage.txt"))   # (no person played it)
+        text = report("pg-9", [
+            row(ME, "Me", 0, 0, 10, 4, 2, 600, score=50, spree=6, most=(1, 4), by=(1, 2), medals={111: 2, 135: 1, 8: 3}),
+            row(bot(1), "Wheezy", 1, 1, 4, 10, 1, 600, score=20, most=(0, 2), by=(0, 4), medals={74: 1})])
+        text = text.replace('mGamertagText="Wheezy"', 'mGamertagText="Wheezy" ServiceId="WZ" EmblemTexture0="5" '
+                            'EmblemTexture1="505" EmblemColor0="2" EmblemColor1="31" EmblemColor2="9"')
+        w.write("trace_reach_forge_halo_20261123-180000.carnage.xml", text)
+        w.career()
+        data = w.build()
+        got = lines(w)
+        assert got[0] == ["match", "pg-9"] and got[1] == ["game", "TU TEAM SLAYER DMR", "1", "reach_forge_halo"], got[:2]
+        assert [l for l in got if l[0] == "team"] == [["team", "0", "1", "50"], ["team", "1", "2", "20"]], got
+        players = [l for l in got if l[0] == "player"]
+        assert [p[2] for p in players] == ["Me", "Wheezy"], players
+        me, wz = players
+        worth = data["credits"]
+        assert me[5:15] == ["1", "50", "10", "4", "2", "6", "6", "2",
+                            str(worth["game"] + worth["win"] + 10 * worth["kill"] + 2 * worth["assist"] + 6 * worth["medal"]), "0"], me
+        assert me[20:24] == ["Wheezy", "4", "Wheezy", "2"] and wz[20:24] == ["Me", "2", "Me", "4"], (me, wz)
+        assert wz[3] == "WZ" and wz[15:20] == ["5", "505", "2", "31", "9"] and wz[14] == "1", wz
+        assert me[24:27] == ["", "0", ""], me                  # (no kill record: no Tool of Destruction)
+        assert [l[2] for l in got if l[0] == "medal" and l[1] == "0"] == ["135", "111", "8"], got
+        assert [(l[1], l[3]) for l in got if l[0] == "top"] == [("74", "1"), ("135", "0"), ("111", "0")], got
+        # (the owner's 12 s test game) a game too short to count: the credits told at once, its carnage report shown
+        w.write("trace_reach_forge_halo_20261123-190000.carnage.xml", report("quick", [
+            row(ME, "Me", 0, 0, 1, 0, 0, 12, medals={74: 1}), row(bot(1), "Wheezy", 1, 1, 0, 1, 0, 12)]))
+        w.career()
+        data = w.build()
+        assert not any(m["id"] == "quick" for m in data["matches"])
+        with open(os.path.join(w.paths.out, "last_match.txt"), encoding="utf-8") as f:
+            assert [l for l in f.read().splitlines() if not l.startswith("#")] == ["match\tquick", "uncounted\tshort"]
+        got = lines(w)
+        assert got[0] == ["match", "quick"] and [p[2] for p in got if p[0] == "player"] == ["Me", "Wheezy"], got
+        assert all(p[13] == "0" for p in got if p[0] == "player"), got   # (no credits: it does not count)
+
+
 def test_credits_of_the_last_match():
     """(Nov 17, the owner's level up bar after each game) last_match.txt: what the newest Project Noble match earned the
     listed person, from where the last build stood, each kind of credit by ranks.json's worth and the rest as

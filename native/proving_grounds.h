@@ -52,10 +52,19 @@ struct pg_env {
     // (Nov 17) a player's Reach figure in 3D for the player card: a bot's own look (bots_panel.cpp bot_figure), a
     // person Reach's default Spartan (person_figure); null or 0: none
     unsigned long long (*figure)(const char* name, bool bot, float yaw, int w, int h);
+    // (Nov 23) drawn over MCC's own post-game carnage report (a match just ended, MCC's lobby not back): the credits and
+    // Project Noble's carnage report stand in for MCC's; lobby_visible is false then
+    bool postgame;
 };
 bool pg_running();              // a Project Noble session: between matches the lobby comes back to it
 bool pg_visible();              // its screens are up (they take the mouse, keys and pad)
 bool pg_launching();            // (Nov 18) the vote's winner sent to MCC's lobby, its game not started yet
+// (Nov 23, the owner: Reach's carnage report "to replace us going back to mcc's carnage report") a match of Project
+// Noble's just ended: its screens go over MCC's post-game report (overlay.cpp draws them there, pg_env.postgame)
+bool pg_postgame();
+// (Nov 23) once a request: the carnage report was left over MCC's own post-game report, so MCC is to be sent one Back
+// (the pad's B, else Esc) to take it to its lobby
+bool pg_mcc_back_wanted();
 void pg_open();                 // the lobby's PROJECT NOBLE tile
 void pg_back();                 // Esc / the pad's B
 // each frame over the lobby (between ImGui::NewFrame and Render); true when the roster changed (save it)

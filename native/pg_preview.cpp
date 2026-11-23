@@ -323,16 +323,20 @@ int main(int argc, char** argv) {
                             "reach_controller",
                             // (Nov 19, phase 5) the lobbies
                             "reach_custom_game", "reach_select_game_type", "reach_select_map", "reach_game_options",
-                            "reach_firefight_lobby" };
+                            "reach_firefight_lobby",
+                            // (Nov 23) the carnage report after a game
+                            "carnage_overview", "carnage_stats", "carnage_stats_credits", "carnage_player",
+                            "credits_not_counted", "credits_after_match" };
     // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
     // band (8.9 s), the promotion (11.5 s; six lines)
     const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f,
                          3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
-                         2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
+                         2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
+                         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 2.0f };
     // (PG_ONLY=<n>: that screen alone, 1-based as its file's number)
     char only_s[8];
     int only = GetEnvironmentVariableA("PG_ONLY", only_s, sizeof only_s) ? atoi(only_s) : 0;
-    for (int s = 0; s < 43; s++) {
+    for (int s = 0; s < 49; s++) {
         if (only && s + 1 != only) continue;
         g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};
@@ -346,7 +350,11 @@ int main(int argc, char** argv) {
             io.DeltaTime = 1.0f / 60;
             ImGui_ImplDX11_NewFrame();
             ImGui::NewFrame();
-            if (!staged) { pg_preview_stage(s, at[s], e); staged = true; if (s == 3) pg_preview_odds(roster); }
+            if (!staged) {                                     // (PG_AT=<seconds>: that moment of the screen instead)
+                char at_s[16];
+                float when = GetEnvironmentVariableA("PG_AT", at_s, sizeof at_s) ? (float)atof(at_s) : at[s];
+                pg_preview_stage(s, when, e); staged = true; if (s == 3) pg_preview_odds(roster);
+            }
             if (backdrop) ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)backdrop, ImVec2(0, 0), ImVec2((float)W, (float)H));
             pg_frame(e);
             ImGui::Render();

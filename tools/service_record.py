@@ -2650,7 +2650,7 @@ def write_game_armory(data, paths, prices_path=ARMORY_PRICES, table_path=ARMORY_
     os.replace(tmp, os.path.join(paths.out, "armory.txt"))
 
 
-def write_last_match(data, paths):
+def write_last_match(data, paths, short=None):
     """(Nov 17, the owner: "add this level up bar after each game showing what earned you your xp", after the carnage
     report) <out>/last_match.txt: what the newest match on the site (a Project Noble match) earned each listed person
     in it, for Project Noble's credits screen when its lobby comes back (native/proving_grounds.cpp). Their credits
@@ -2659,7 +2659,18 @@ def write_last_match(data, paths):
     (tiers reached); the rank steps the bar runs through.
     "Before" is what the last build had (<store>/credits_seen.json), so the bar starts where the site stood; a match
     already reported is not reported again (the file keeps its last report). A newest match no listed person played
-    gets its match line alone, so the game does not wait for a report that will not come."""
+    gets its match line alone, so the game does not wait for a report that will not come.
+    (Nov 23) short: the newest match a person played when it was too short to count (newest_short_match): its match
+    line and "uncounted<TAB>short", so the credits screen says so at once instead of waiting."""
+    path = os.path.join(paths.out, "last_match.txt")
+    if short:
+        text = ["# made by tools/service_record.py with the site: the newest Project Noble match was too short to count",
+                f"match\t{short}", "uncounted\tshort"]
+        os.makedirs(paths.out, exist_ok=True)
+        with open(path + ".tmp", "w", encoding="utf-8") as f:
+            f.write("\n".join(text) + "\n")
+        os.replace(path + ".tmp", path)
+        return
     matches = data.get("matches") or []
     seen_path = os.path.join(paths.store, "credits_seen.json")
     seen = load_json(seen_path, {})
@@ -2724,6 +2735,143 @@ def write_last_match(data, paths):
         os.replace(tmp, path)
 
 
+# (Nov 23) a medal's weight among a match's Top Medals and in a player's grid: its kind (medals.json), the rarer kinds
+# first; then the fewest of it earned in the match
+MEDAL_KIND_RANK = {"Legendary": 0, "KillStreak": 1, "Spree": 2, "RoleKillSpree": 2, "Style": 3, "ModeSpecific": 4,
+                   "AssistSupport": 5, "Kill": 6}
+HEADSHOT_MEDAL = "111"                                      # (medals.json: medal_headshot)
+
+
+def report_of(gid, paths):
+    """(path, text) of the carnage report with this GameUniqueId: MCC's own last one, else a recent trace's; None."""
+    files = [paths.mcc_report] + sorted(glob.glob(os.path.join(paths.logs, "trace_*.carnage.xml")),
+                                        key=lambda p: -os.path.getmtime(p))[:12]
+    for path in files:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                x = f.read()
+        except OSError:
+            continue
+        if f'GameUniqueId="{gid}"' in x:
+            return path, x
+    return None
+
+
+def newest_short_match(paths, data):
+    """(Nov 23, the owner: the credits "just says counting credits ... and then just kicks me to the lobby" after a
+    12 s test game) the newest match a person played, when the site leaves it out for being too short (bot_career
+    counts: under MIN_SECONDS): its id, else None. Its credits screen then says so at once, and its carnage report still
+    shows it (Project Noble's report stands in for MCC's, which shows every game)."""
+    ledger = load_json(paths.ledger, {})
+    on_site = {m["id"] for m in data.get("matches") or []}
+    for gid, m in reversed(list(ledger.items()) if isinstance(ledger, dict) else []):
+        rows = m.get("players", [])
+        if m.get("sim") or not any(not p.get("bot") for p in rows):
+            continue
+        short = gid not in on_site and not m.get("all_reset") and not career.counts(rows)
+        return gid if short else None
+    return None
+
+
+def write_last_carnage(data, paths, short=None):
+    """(Nov 23, the owner's four frames of Halo: Reach's carnage report: "I want this to replace us going back to mcc's
+    carnage report after the matches ... right after our level up/credits") <out>/last_carnage.txt: the match
+    last_match.txt names, for Project Noble's carnage report (native/proving_grounds.cpp): its gametype and map, the
+    teams' places and scores, each player's numbers (score, kills, deaths, assists, medals, best spree, headshots: the
+    Headshot medals, the credits the match earned them by ranks.json's worth), service tag and emblem ids from MCC's own
+    report, who they killed most and were killed by most, their Tool of Destruction (the weapon with the most kills in
+    the kill record, when the match has one), their medals rarest first, and the match's three Top Medals. Names, medal
+    and weapon pictures as the site has them. Rewritten with each build; nothing when no person played a match."""
+    matches = data.get("matches") or []
+    m = next((x for x in matches if any(not r["bot"] for r in x["rows"])), None)
+    if short:                                               # (a game too short to count: from MCC's report, no credits)
+        found = report_of(short, paths)
+        gid, detail = read_report(found[0]) if found else (None, None)
+        if not detail:
+            return
+        draw = all(p["standing"] == 0 for p in detail["players"])
+        m = {"id": gid, "type": detail["type"], "teams": detail["teams"], "map": detail["map"], "feed": [],
+             "rows": [{"n": html.unescape(p["name"]), "bot": p["bot"], "team": p["team"], "st": p["standing"],
+                       "k": p["kills"], "d": p["deaths"], "a": p["assists"], "score": p["score"], "md": p["medal_total"],
+                       "spree": p["spree"], "medals": {str(i): n for i, n in p["medals"].items()},
+                       "won": p["standing"] == 0 and not draw} for p in detail["players"]]}
+    if not m:
+        return
+    found = report_of(m["id"], paths)
+    raw = found[1] if found else None
+    order = [dict(ATTR.findall(pm.group(1))) for pm in PLAYER.finditer(raw)] if raw else []   # (MCC's rows, its order)
+    extra = {html.unescape(a.get("mGamertagText", "")): a for a in order}
+    rivals = {}                                             # (name -> (killed most, killed most by): [name, n] or None)
+    for a in order:
+        pair = []
+        for i_key, n_key in (("mKilledMostPlayerIndex", "mKilledMostPlayerCount"),
+                             ("mMostKilledByPlayerIndex", "mMostKilledByPlayerCount")):
+            i, n = _int(a, i_key, -1), _int(a, n_key)
+            pair.append([html.unescape(order[i].get("mGamertagText", "")), n] if n > 0 and 0 <= i < len(order) else None)
+        rivals[html.unescape(a.get("mGamertagText", ""))] = tuple(pair)
+    worth, medals, weapons, art = data["credits"], data.get("medals", {}), data.get("weapons", {}), data.get("weapon_art", {})
+    info = load_json(os.path.join(paths.store, "art", "medals.json"), {})
+
+    def medal_key(mid, total):
+        return (MEDAL_KIND_RANK.get((info.get(mid) or {}).get("kind"), 7), total.get(mid, 0), int(mid) if mid.isdigit() else 999)
+
+    def clean(s):                                           # (0 stays "0": a row, team or count)
+        return ("" if s is None else str(s)).replace("\t", " ").replace("\n", " ")
+
+    def medal_text(mid):                                    # (its name, and its picture in the site when it has one)
+        shown = medals.get(mid) or {}
+        return f"{clean(shown.get('name') or (info.get(mid) or {}).get('name') or 'Medal ' + mid)}\t{clean(shown.get('icon'))}"
+
+    rows = sorted(m["rows"], key=lambda r: (r["st"], -r.get("score", 0), -r["k"], r["d"]))
+    total = {}
+    for r in rows:
+        for mid, n in (r.get("medals") or {}).items():
+            total[mid] = total.get(mid, 0) + int(n)
+    tools = {}                                              # (name -> {damage type: kills}, the kill record's)
+    for f in m.get("feed", []):
+        if f[4] == "kill" and f[1]:
+            tools.setdefault(f[1], {}).setdefault(f[3], 0)
+            tools[f[1]][f[3]] += 1
+    lines = [f"match\t{m['id']}", f"game\t{clean(m.get('type'))}\t{int(bool(m.get('teams')))}\t{clean(m.get('map'))}"]
+    if m.get("teams"):
+        teams = {}
+        for r in rows:
+            t = teams.setdefault(r["team"], [r["st"], 0])
+            t[0], t[1] = min(t[0], r["st"]), t[1] + int(r.get("score", 0))
+        for team, (st, score) in sorted(teams.items(), key=lambda kv: (kv[1][0], -kv[1][1], kv[0])):
+            lines.append(f"team\t{team}\t{st + 1}\t{score}")
+    index = {r["n"]: i for i, r in enumerate(rows)}
+    for i, r in enumerate(rows):
+        a = extra.get(r["n"], {})
+        md = int(r.get("md", 0))
+        cr = 0 if short else worth["game"] + worth["win"] * int(r["won"]) + worth["kill"] * r["k"] \
+            + worth["assist"] * r["a"] + worth["medal"] * md       # (a game too short to count earned nothing)
+        most, by = rivals.get(r["n"], (None, None))
+        tool = ("", 0, "")
+        if tools.get(r["n"]):
+            key, n = max(tools[r["n"]].items(), key=lambda kv: (kv[1], kv[0]))
+            tool = ((weapons.get(key) or ["", 0])[0], n, art.get(key, ""))
+        emblem = [a.get(k, "") for k in ("EmblemTexture0", "EmblemTexture1", "EmblemColor0", "EmblemColor1", "EmblemColor2")]
+        lines.append("\t".join(clean(v) for v in (
+            "player", i, r["n"], a.get("ServiceId", ""), r["team"], r["st"] + 1, r.get("score", 0), r["k"], r["d"],
+            r["a"], md, r.get("spree", 0), (r.get("medals") or {}).get(HEADSHOT_MEDAL, 0), cr, int(r["bot"]),
+            *emblem, most[0] if most else "", most[1] if most else 0, by[0] if by else "", by[1] if by else 0,
+            tool[0], tool[1], tool[2])))
+        for mid in sorted((r.get("medals") or {}), key=lambda k: medal_key(k, total)):
+            lines.append(f"medal\t{i}\t{mid}\t{r['medals'][mid]}\t{medal_text(mid)}")
+    for mid in sorted(total, key=lambda k: medal_key(k, total))[:3]:
+        best = max(rows, key=lambda r: (int((r.get("medals") or {}).get(mid, 0)), -index[r["n"]]))
+        lines.append(f"top\t{mid}\t{best['medals'][mid]}\t{index[best['n']]}\t{medal_text(mid)}")
+    head = ["# made by tools/service_record.py with the site: Project Noble's carnage report of the newest match; do not edit",
+            "# match id; game type teams map; team id place score; player row name tag team place score kills deaths",
+            "# assists medals spree headshots cR bot fg bg primary secondary background most n by n tool kills picture;",
+            "# medal row id count name picture; top id count row name picture"]
+    path = os.path.join(paths.out, "last_carnage.txt")
+    with open(path + ".tmp", "w", encoding="utf-8") as f:
+        f.write("\n".join(head + lines) + "\n")
+    os.replace(path + ".tmp", path)
+
+
 def write_site(data, paths):
     """The pages (copied as they are) and data.js; stamp.js last, the sign an open page watches for a new build."""
     os.makedirs(paths.out, exist_ok=True)
@@ -2739,7 +2887,9 @@ def write_site(data, paths):
                 have.append(int(f[:-4]))
         data["rank_art"] = sorted(have)
     write_game_ranks(data, paths)
-    write_last_match(data, paths)
+    short = newest_short_match(paths, data)                  # (Nov 23: a game too short to count, newest)
+    write_last_match(data, paths, short)
+    write_last_carnage(data, paths, short)                   # (Nov 23: the game's own carnage report after the credits)
     write_game_challenges(data, paths)
     write_game_commendations(data, paths)                    # (Nov 19: the game's Commendations page)
     write_game_locations(data, paths)                        # (Nov 19: the heat on the game's Psych Profile map)

@@ -824,10 +824,29 @@ static BOOL WINAPI h_getphyscursorpos(LPPOINT p) {
 // real pad
 typedef DWORD(WINAPI* xinput_get_fn)(DWORD, XINPUT_STATE*);
 static xinput_get_fn o_xinput_get;
+// (custom, Nov 23) Project Noble's carnage report left over MCC's own post-game report (pg_mcc_back_wanted): MCC's reads
+// see B held for 0.15 s, as if pressed, so MCC goes back to its lobby; with no pad answering, Esc goes to MCC instead
+static volatile ULONGLONG g_back_until, g_pad_ok_at;
+static volatile LONG g_esc_pass;                 // Esc messages let through to MCC (the down and the up)
 static DWORD WINAPI h_xinput_get(DWORD user, XINPUT_STATE* st) {
     DWORD r = o_xinput_get(user, st);
-    if (r == ERROR_SUCCESS && st && g_pad_held && !t_ours) memset(&st->Gamepad, 0, sizeof st->Gamepad);
+    if (r == ERROR_SUCCESS && st && !t_ours) {
+        g_pad_ok_at = GetTickCount64();
+        if (g_pad_held) memset(&st->Gamepad, 0, sizeof st->Gamepad);
+        if (GetTickCount64() < g_back_until) {
+            memset(&st->Gamepad, 0, sizeof st->Gamepad);
+            st->Gamepad.wButtons = XINPUT_GAMEPAD_B;
+            st->dwPacketNumber += 0x40000;              // (a state of its own while held)
+        }
+    }
     return r;
+}
+static void mcc_send_back() {
+    if (GetTickCount64() - g_pad_ok_at < 2000) { g_back_until = GetTickCount64() + 150; logf("proving grounds: B sent to MCC"); return; }
+    InterlockedExchange(&g_esc_pass, 2);
+    PostMessageW(g_hwnd, WM_KEYDOWN, VK_ESCAPE, 0x00010001);
+    PostMessageW(g_hwnd, WM_KEYUP, VK_ESCAPE, 0xC0010001);
+    logf("proving grounds: Esc sent to MCC");
 }
 // each frame over the lobby: both sticks pressed together open or close the panel (MCC's lobby has no use for that);
 // B at its top level backs out of it (in a list or a dialog, B is theirs: ImGui and the panel close those); which
@@ -862,6 +881,12 @@ static DWORD g_esc_eat;              // Esc closed the panel at this tick: its r
 // default (raw input kept from MCC)
 enum { WP_MCC, WP_OURS, WP_DEFAULT };
 static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+    // (custom, Nov 23) the Esc sent to MCC for Project Noble's carnage report (mcc_send_back): straight to MCC
+    if ((msg == WM_KEYDOWN || msg == WM_KEYUP) && wp == VK_ESCAPE && g_esc_pass > 0 && (lp & 0x00FF0000) == 0x00010000 &&
+        (lp & 0xFFFF) == 1) {
+        InterlockedDecrement(&g_esc_pass);
+        return WP_MCC;
+    }
     if (msg == WM_KEYDOWN || msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MOUSEWHEEL) g_pad_last = false;
     // MCC backs out of the lobby on Esc's release: closing the panel with Esc left the lobby too (live Nov 6), as the
     // pad's B would without g_pad_held
@@ -1066,7 +1091,12 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
             pg_follow_poll();
             held = false; LeaveCriticalSection(&g_imgui_lock);
             bool pg_follow = pg_following() && mcc_menu_state() == 0 && !g_playback;
-            bool pg_lobby = (g_show_tile && reach_lobby()) || pg_hold || pg_follow;
+            // (custom, Nov 23) a Project Noble match just ended: its credits and carnage report over MCC's own post-game
+            // report (MCC's lobby not seen), till they are left and MCC is sent its Back (pg_mcc_back_wanted)
+            bool pg_post = pg_postgame() && reach_lobby() && bots_title(g_session) && mcc_menu_state() == 0 && !g_playback &&
+                           !g_lobby_visible;
+            if (pg_mcc_back_wanted()) mcc_send_back();
+            bool pg_lobby = (g_show_tile && reach_lobby()) || pg_hold || pg_follow || pg_post;
             if (pg_running() && !pg_lobby) {
                 EnterCriticalSection(&g_imgui_lock); held = true;
                 pg_env pe{};
@@ -1091,7 +1121,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                         !g_shm->lidar_mode && !g_sessionbots;
             g_sess_drawn = sess;
             if (!sess) g_sess_hover = -1;
-            if (g_show_tile || notice || bug || sess || bot_ui() || pg_hold || pg_follow) {
+            if (g_show_tile || notice || bug || sess || bot_ui() || pg_hold || pg_follow || pg_post) {
                 EnterCriticalSection(&g_imgui_lock); held = true;  // (custom, Nov 12: MCC's window thread feeds ImGui too)
                 ImGuiIO& gio = ImGui::GetIO();
                 if (bug && g_bug_open && !g_bug_was_open) {          // F9 opened the window: nothing typed before is its text
@@ -1137,18 +1167,19 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 // left out (it drew over the panel's header), and takes no clicks
                 if (g_show_tile && !g_panel && !bot_ui() && !pg_up) draw_tile((float)ImGui::GetTime());   // (a bot's menu: over it)
                 else g_hover_tile = false;
-                if (pg_lobby && !g_panel && !bot_ui() && !pg_up) draw_pg_tile((float)ImGui::GetTime());
+                if (pg_lobby && !pg_post && !g_panel && !bot_ui() && !pg_up) draw_pg_tile((float)ImGui::GetTime());
                 else g_hover_pg = false;
                 if (sess) draw_session((float)ImGui::GetTime());     // (the bots in MY GAME SESSION, where it stands)
                 if (g_bot_card) draw_card();                         // (a picked bot: its card, else its menu)
                 else if (g_bot_menu >= 0) draw_bot_menu();
                 bot_emblems_frame();
                 if (g_show_tile && g_panel) draw_panel();
-                if (pg_lobby && g_pg_open_req && !g_panel && !bot_ui()) { pg_open(); play_sound(PS_OPEN, g_sounds); }
+                if (pg_lobby && !pg_post && g_pg_open_req && !g_panel && !bot_ui()) { pg_open(); play_sound(PS_OPEN, g_sounds); }
                 g_pg_open_req = false;
                 if (pg_lobby && pg_running()) {                      // (Project Noble over everything of ours)
                     pg_env pe{};
-                    pg_env_fill(pe, true);
+                    pg_env_fill(pe, !pg_post);                       // (Nov 23: over MCC's post-game report, no lobby)
+                    pe.postgame = pg_post;
                     if (pg_frame(pe)) { g_shm->settings_seq++; save_settings(); }
                 }
                 g_popup_before = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
