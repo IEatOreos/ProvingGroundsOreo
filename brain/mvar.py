@@ -447,7 +447,7 @@ def scenario_objects(v):
     a game type's own label (inf_spawn, inv_slayer, race_spawn ...) list that label as their game, so load_map's slayer
     and CTF lists leave them out."""
     from .live import brain_name
-    out = dict(netgame_flags=[], spawns=[], equipment=[], vehicles=[])
+    out = dict(netgame_flags=[], spawns=[], equipment=[], vehicles=[], powerups=[])
     r = lambda xs: [round(x, 3) for x in xs]
     for o in v["objects"]:
         name, label, t = o["name"] or "", o["label"] if o["label"] not in (None, "none") else None, o["team"]
@@ -473,6 +473,12 @@ def scenario_objects(v):
                                          games=["all games"], spawn_time=o["respawn_time"], label=label))
         elif mp in VEHICLE_TYPES:
             out["vehicles"].append(dict(item=name, tag=name, path=name, yaw=yaw, team=t, pos=pos,
+                                        spawn_time=o["respawn_time"], label=label))
+        elif mp == "powerup":
+            # (custom, Nov 23, the owner's Beaver Creek report "These are overshields": its powerup_red was left out with
+            # the other non-weapons, so no bot went for it; kept apart from the weapons' placements, brain/maps.py
+            # power_items reads them)
+            out["powerups"].append(dict(item=name, tag=name, path=name, yaw=yaw, team=t, pos=pos,
                                         spawn_time=o["respawn_time"], label=label))
         if mp in ("teleporter_2way", "teleporter_sender", "teleporter_receiver"):
             kinds = {"teleporter_2way": ["teleport from", "teleport to"], "teleporter_sender": ["teleport from"],

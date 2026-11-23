@@ -557,7 +557,8 @@ def events(bots, directors, before, snap, now):
                 d.report(now, index, "one_shot" if e.health < 0.5 else "cracked", e.pos, enemy=e.id, busy=True)
 
 
-EQUIPMENT_ALIAS = {"over_shield": "overshield", "active_camouflage": "camo"}
+EQUIPMENT_ALIAS = {"over_shield": "overshield", "active_camouflage": "camo",
+                   "powerup_red": "overshield"}       # (custom, Nov 23: Reach's, brain/maps.py POWER)
 
 
 def item_name(path):

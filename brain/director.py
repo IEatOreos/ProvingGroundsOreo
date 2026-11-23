@@ -1871,6 +1871,31 @@ class Director:
                 s.roles[b.id] = "drive"
                 filled.add(role)
                 s.event(now, "vehicle", f"{players[b.id].name}: driving the {v['kind']} ({role.replace('_', '-')})")
+        # (custom, Nov 23, the owner's Forge World report "Bots dont get called to the wraith?", "They get called to the
+        # wraith just not at the beginning of the match") a tank of ours left empty once its role is filled: one bot
+        # each, as the role's (CREW_REACH, rank first). Match 20261123-155411: our Revenant (anti-vehicle too) taken at
+        # 9 s filled the Wraith's only role, and in Slayer no bot is on an objective job for the power vehicles' pass
+        # below: both Wraiths stood empty until 65 and 91 s, every other vehicle driven within 12 s
+        for h, v in list(empty.items()):
+            if vehicles.kind_of(v["kind"]) not in vehicles.TANKS:
+                continue
+            vp = Vec(*v["pos"])
+            pairs = [(dist(players[bid].pos, vp), b) for bid, b in pool_for(v).items()
+                     if skip.get((bid, h), 0.0) <= now and may_drive(b, v)
+                     and dist(players[bid].pos, vp) <= reach_of(bid, v)]
+            if not pairs:
+                continue
+            d, b = min(pairs, key=lambda x: (profiles.resource_priority(x[1].p), x[0]))
+            leave(b)
+            b.set_order(Order("drive", vp, target=h))
+            if b.order.role != "drive":          # a rogue moment: it plays on its own this round
+                skip[(b.id, h)] = now + 10.0
+                continue
+            drop_run(b, v)
+            del empty[h]
+            crews[h] = (b.id, now)
+            s.roles[b.id] = "drive"
+            s.event(now, "vehicle", f"{players[b.id].name}: driving the {v['kind']} (a tank, its role filled)")
         # a power vehicle (vehicles.taxi_ok: a Banshee, a tank ...) nobody of ours took, by a bot on an objective job
         # (busy: Invasion has no other kind): the nearest one within POWER_R takes it to work it (Bot.drive: its role's
         # patrol, never left at a trip's end), whatever role we fill. Live Spire 20261105-201917: three Banshees stood

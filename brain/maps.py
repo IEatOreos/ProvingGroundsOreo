@@ -93,7 +93,7 @@ def load_map(name):
         ctf = [f for f in objs["netgame_flags"] if f["type"] in ("ctf - flag", "CTF flag return")]   # file has none
         has = {f["id"] for f in mo["netgame_flags"] if f["type"] == "ctf - flag"} >= {0, 1}
         objs = dict(objs, netgame_flags=mo["netgame_flags"] + ([] if has else ctf), mvar=mo.get("source"),
-                    **{k: mo[k] for k in ("spawns", "equipment", "vehicles") if mo.get(k)})
+                    **{k: mo[k] for k in ("spawns", "equipment", "vehicles", "powerups") if mo.get(k)})
     for f in objs["netgame_flags"]:     # Halo 3's names for Reach's (Construct Team Oddball: no ball spots,
         f["type"] = H3_TYPES.get(f["type"], f["type"])    # so the ball was never found and the match ran as Slayer)
     flags = {f["id"]: _v(f["pos"]) for f in objs["netgame_flags"] if f["type"] == "ctf - flag"}
@@ -211,7 +211,10 @@ POWER = {"rocket launcher": ("rockets", "weapon", 1.0), "sniper rifle": ("sniper
          # H2A and Halo 4 powerups
          "h2a_overshield": ("overshield", "powerup", 0.9), "h2a_activecamo": ("camo", "powerup", 0.7),
          "h2a_speedboost": ("speed_boost", "powerup", 0.6), "ord_equip_overshield": ("overshield", "powerup", 0.9),
-         "speedboost": ("speed_boost", "powerup", 0.6)}
+         "speedboost": ("speed_boost", "powerup", 0.6),
+         # (custom, Nov 23) Halo: Reach's Forge powerups by their tag names (a .mvar's, the live reader's): the owner,
+         # Beaver Creek Anniversary's powerup_red, "These are overshields"
+         "powerup_red": ("overshield", "powerup", 0.9)}
 
 
 # Halo 4's ordnance guns (custom, Nov 8), beside POWER's, by the exports' item names (the brain's): power 0.8 and up
@@ -234,7 +237,7 @@ def power_items(objs, h3=False, h4=False):
     the initial ones are items (ORDNANCE_GONE once seen taken), the random ones none (ordnance_power)."""
     table = {**POWER, **H4_ORDNANCE} if h4 else POWER
     out = []
-    for e in objs["equipment"]:
+    for e in list(objs["equipment"]) + list(objs.get("powerups") or ()):   # (custom, Nov 23: a .mvar's powerups)
         key = e["item"].split("\\")[-1]
         if key in table:
             name, kind, value = table[key]
@@ -701,7 +704,8 @@ CACHE_SKIP = frozenset(("stations.json", "lore.json", "oob.json", "owner_profile
                         "variant.json"))     # (variant.json: in the loaded map, m["variant"], its times left out)
 CACHE_CODE = ("brain/terrain.py", "brain/maps.py", "brain/forge.py", "brain/placed.py", "brain/variants.py",
               "brain/callouts.py", "brain/core.py", "tools/lidar_rides.py", "tools/jumpphys.py")
-CACHE_M_STATE = ("live_blocks", "shields", "points", "lanes", "holds")   # what _build sets on the map
+CACHE_M_STATE = ("live_blocks", "shields", "points", "lanes", "holds",   # what _build sets on the map
+                 "positions", "position_info")
 _PRE = {}                                    # map name -> its pickled inputs at its first build (prebuild_after_match)
 
 
@@ -975,6 +979,7 @@ def _build(m, window):
     T.set_spawns(spawn_points(m))
     for it in m["items"]:                # an item on a rock top nobody can reach is not worth a trip
         it["reachable"] = T.inside(it["pos"].x, it["pos"].y) and bool(T.reach[T._node(it["pos"])])
+    keep_reachable_positions(m, T)       # (custom, Nov 23) power positions nobody can stand on: left out
 
     def snap(p):                         # a point no player can stand on (Halo 2 Lockout's mid at
         if not T.inside(p.x, p.y):       # (outside a variant's window: left as it is)
@@ -1028,6 +1033,24 @@ def _build(m, window):
         from .forge import apply_shields
         apply_shields(T, m["shields"])
     return T
+
+
+def keep_reachable_positions(m, T):
+    """(custom, Nov 23, the owner on Sword Base: "Make bots use this lift ... it leads to floor 3. So make routes worth
+    it", "Swordbase is usually height is most important") The power positions (positions.json) no player can stand on
+    are left out, with their position_info: Sword Base's four on its roof (z 38) got 40% of the bots' orders in match
+    20261123-132333 while nobody stood over z 33, and the bots held the floor under them (z 24.5-29.6) instead of floor
+    3's four posts. Outside a variant's window they are kept as they are."""
+    pts, info = m.get("positions") or [], m.get("position_info") or []
+    ok = [not T.inside(p.x, p.y) or bool(T.reach[T._node(p)]) for p in pts]
+    if all(ok):
+        return
+    gone = [p for p, k in zip(pts, ok) if not k]
+    print(f"positions: {len(gone)} of {len(pts)} out of reach, left out: "
+          + ", ".join(f"({p.x:.0f}, {p.y:.0f}, {p.z:.0f})" for p in gone), flush=True)
+    m["positions"] = [p for p, k in zip(pts, ok) if k]
+    if len(info) == len(pts):
+        m["position_info"] = [i for i, k in zip(info, ok) if k]
 
 
 def spawn_points(m):

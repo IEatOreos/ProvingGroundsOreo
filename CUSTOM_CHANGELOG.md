@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Bug reports: Sword Base's floor 3, Beaver Creek's overshield, the Wraith at the start, 2026-11-23
+
+The owner: "Do them all and the wraith last. They get called to the wraith just not at the beginning of the match for some reason."
+
+- **Sword Base, floor 3:** "Make bots use this lift on swordbase, it leads to floor 3. So make routes worth it". Then: "Make bots use this lift on the opposite side of the map to get to floor 3. Swordbase is usually height is most important". Match `20261123-132333`, variant `v04abd98b`.
+  - **The lifts were already routes:** the variant's nav has both of his rides as people's ride links (lift C at (-120, 30.5), 1.6 s; lift A at (-137, 47.6), 1.4 s), and bots rode the lifts 16 times in the match.
+  - **The cause:**
+    - Four of the map's eight power positions sit on the roof (z 38), where the nav can't reach. They took 40% of the bots' orders (16,058 of 39,794 order rows), while nobody stood over z 33.
+    - The anchors held the floor under them instead (z 24.5–29.6).
+    - Bots spent 15% of their time on floor 3 against the owner's 36%.
+  - **Fix (`brain/maps.py` `keep_reachable_positions`, called by `_build`; the terrain cache keeps the result):** power positions no player can stand on are left out, with their `position_info`. Sword Base keeps its four floor-3 posts (z 28–28.5), so its post-holders go up the lifts and stairs to floor 3.
+  - **Across the Reach maps (base layouts):** unreachable posts are left out on 8 of 27. Sword Base 8 → 4, Spire 13 → 9, Airview 8 → 4, Corvette 5 → 3, Invasion DLC 18 → 16, Panopticon 14 → 13, Headlong 16 → 15. The build logs each one ("positions: ... out of reach, left out").
+- **Beaver Creek Anniversary:** "These are overshields", by its `powerup_red`.
+  - **The cause:** `brain/mvar.py` `scenario_objects` kept only a variant's weapons, so its powerups never became power items. No bot went for the overshield.
+  - **Fix:**
+    - A variant's powerups are filed apart from its weapons (`powerups`, so the live reader's naming by the weapons' placements is unchanged).
+    - `brain/maps.py` `power_items` reads them, and `POWER` knows `powerup_red` as the overshield (0.9).
+    - `tools/live_bots.py` `item_name` reads the live object as "overshield", so `item_check` sees it on its spot.
+  - Beaver Creek's: one, respawn 90 s. The variant's file is filed again at each match's start, so it takes effect next match.
+  - The blue and yellow powerups are not mapped (not confirmed).
+- **Powerhouse's roof bomb** ("Bots cant get on roof to get bomb on powerhouse", `20261123-021733`): already fixed from this recording in `7913213` (the hops split, planting on the goal's floor).
+- **Forge World, the Wraith** ("Bots dont get called to the wraith?", `20261123-155411`):
+  - **The cause:** `crew_orders` fills one vehicle per role. Our Revenant, which is anti-vehicle too, was taken at 9 s and filled the Wraith's only role. In Slayer no bot is on an objective job for the power vehicles' pass, so both Wraiths stood empty until 65 and 91 s, while every other vehicle had a driver within 12 s.
+  - **Fix (`brain/director.py` `crew_orders`):** a tank of ours (Wraith, Scorpion, Mantis) left empty once its role is filled gets one bot, as the role's would: within `CREW_REACH`, by rank, then nearest. A second Revenant or Banshee stays as before.
+- **Checks:**
+  - New `tools/test_posts_and_powerups.py` (6 tests): the roof posts, the cache, a variant's overshield, the live name.
+  - New `tools/test_tank_crew.py` (5 tests); 3 of them fail without the new pass.
+  - `unittest discover` over `tools` is OK (1406 tests), and so is the `live_bots` import.
+  - **Untested in a match.**
+
 ### Reach One Bomb / Neutral Bomb: the carrier drops the bomb to fight when shot, 2026-11-23
 
 The owner: "Make it to where they drop it when theyre shot to fight back? And keep the within 4u rule".
