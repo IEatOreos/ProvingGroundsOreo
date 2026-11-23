@@ -819,7 +819,6 @@ static int person_team() {
 static int g_pts = SR_PERSON_START;              // the player's rating (team games)
 static bool g_pts_redeal;                        // a rating changed since the lobby was dealt
 static void pts_load();
-static void pts_reset();
 static bool rating_count(const std::string& id);
 
 // (Nov 17) the lobby dealt: the player, the friends who joined (each a bot's seat), the party, the bots by points
@@ -2759,15 +2758,6 @@ static void pts_poll(double now, bool force = false) {
     char res;
     if (!pts_last_match(id, &res) || res == 'u' || id == sr_counted()) return;
     rating_count(id);
-}
-
-static void pts_reset() {
-    pts_load();
-    int was = g_pts;
-    sr_reset_person(me_name());
-    g_pts = sr_person(me_name());
-    if (g_pts != was) g_pts_redeal = true;
-    logf("proving grounds: your skill rating reset (%d -> %d)", was, g_pts);
 }
 
 // ------------------------------------------------------------------ the credits a match earned

@@ -32,6 +32,16 @@ int  sr_person(const char* name, bool ffa = false);          // saved, else 1600
 void sr_note_tier(const char* name, int tier);               // a bot seated at this difficulty (for rating it later)
 int  sr_tier_of(const char* name);                           // the difficulty it was last seated or rated at, else -1
 void sr_reset_person(const char* name);                      // back to 1600, teams and free for all
+// (Nov 23, the owner: "the option to custom set my rating. Or change my plus/minus gains", both, on the Psych Profile)
+#define SR_SET_MAX 2500             // a rating set by hand: 1500 to 2500
+void sr_set_person(const char* name, int rating, bool ffa);  // set by hand (kept 1500 to 2500)
+// a person's own gains (the player's; friends keep the defaults): a close win win_top-5 to win_top (40: +35 to +40),
+// over a much weaker team 5 less (+30 to +35); a loss -loss (15), to a much stronger team 5 less (-10). Kept win_top 15
+// to 100, loss 5 to 50
+#define SR_WIN_TOP 40
+#define SR_LOSS 15
+void sr_set_gains(const char* name, int win_top, int loss);
+void sr_gains_of(const char* name, int* win_top, int* loss);
 
 // a match: each player as the carnage report has them. sr_rate fills before and after, saves, and keeps after for the
 // RATING page (sr_shown). False when the match was counted already or is not rated (Firefight, no players)

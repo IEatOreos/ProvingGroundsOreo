@@ -755,6 +755,56 @@ int main(int argc, char** argv) {
         sr_reset_person("Me");
         CHECK(sr_person("Me") == 1600 && sr_person("Me", true) == 1600, "reset");
 
+        // (Nov 23) set by hand on the Psych Profile: 1500 to 2500, team and free for all apart
+        sr_set_person("Me", 2140, false);
+        sr_set_person("Me", 9000, true);
+        CHECK(sr_person("Me") == 2140 && sr_person("Me", true) == SR_SET_MAX, "set by hand: %d %d", sr_person("Me"), sr_person("Me", true));
+        sr_set_person("Me", 100, false);
+        CHECK(sr_person("Me") == SR_PERSON_FLOOR, "set by hand, floor: %d", sr_person("Me"));
+        sr_set_person("Me", 1600, false);
+        // (Nov 23) the player's own gains: a close win 55-60, much weaker 50-55; a loss -22, to much stronger -17; a
+        // friend keeps 35-40 / -15; the gains read back from the file
+        sr_set_gains("Me", 60, 22);
+        int wt, ls;
+        sr_gains_of("Me", &wt, &ls);
+        CHECK(wt == 60 && ls == 22, "gains %d %d", wt, ls);
+        sr_gains_of("Pal", &wt, &ls);
+        CHECK(wt == SR_WIN_TOP && ls == SR_LOSS, "a friend's gains %d %d", wt, ls);
+        sr_set_gains("Pal", 5, 500);
+        sr_gains_of("Pal", &wt, &ls);
+        CHECK(wt == 15 && ls == 50, "gains kept 15-100 / 5-50: %d %d", wt, ls);
+        auto duel = [](const char* id, bool me_wins) {
+            std::vector<sr_player> pl;
+            for (int i = 0; i < 2; i++) {
+                sr_player p; p.name = i ? "Friend" : "Me"; p.team = i; p.place = (i == 0) == me_wins ? 1 : 2; pl.push_back(p);
+            }
+            sr_rate(id, true, "Slayer", pl);
+            return pl;
+        };
+        std::vector<sr_player> d = duel("g1", true);
+        CHECK(d[0].after - d[0].before >= 55 && d[0].after - d[0].before <= 60, "your close win with 60: %+d", d[0].after - d[0].before);
+        CHECK(d[1].after - d[1].before == -15, "the friend's loss: %+d", d[1].after - d[1].before);
+        d = duel("g2", false);
+        CHECK(d[0].after - d[0].before == -22 && d[1].after - d[1].before >= 35 && d[1].after - d[1].before <= 40,
+              "your loss with 22: %+d, the friend's win %+d", d[0].after - d[0].before, d[1].after - d[1].before);
+        sr_set_person("Me", 1800, false);                  // (Me 1800, Friend about 1620: much stronger, 150+ apart)
+        sr_set_person("Friend", 1600, false);
+        d = duel("g3", true);
+        CHECK(d[0].after - d[0].before >= 50 && d[0].after - d[0].before <= 55, "your win over a much weaker one: %+d", d[0].after - d[0].before);
+        d = duel("g4", false);
+        CHECK(d[0].after - d[0].before == -22, "your loss to a much weaker one: %+d", d[0].after - d[0].before);
+        sr_set_person("Me", 1500, false);
+        sr_set_person("Friend", 1900, false);
+        d = duel("g5", false);
+        CHECK(d[0].after - d[0].before == 0 && d[0].before == 1500, "-17 at the floor stays 1500: %d", d[0].after);
+        sr_set_person("Me", 1600, false);
+        d = duel("g6", false);
+        CHECK(d[0].after - d[0].before == -17, "your loss to a much stronger one with 22: %+d", d[0].after - d[0].before);
+        sr_open(L"C:\\");
+        sr_open(dir);
+        sr_gains_of("Me", &wt, &ls);
+        CHECK(wt == 60 && ls == 22, "gains read back: %d %d", wt, ls);
+
         // the balancer counts ratings: a 4v4 with you (1600) dealt within SR_TIE of the most even split
         bot_pool_set_people_ratings(1600, nullptr, 0);
         int humans[HB_TEAMS_MAX] = { 1 };

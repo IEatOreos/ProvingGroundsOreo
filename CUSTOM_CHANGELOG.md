@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Psych Profile: set your ratings by hand, and your own win and loss gains, 2026-11-23
+
+The owner: "Also add to the pysch screen the option to custom set my rating. Or change my plus/minus gains". His answers: both; Left/Right 10 and LB/RB 100; kept 1500 to 2500; a separate row for free for all; only the win range and the loss, the wide-gap versions 5 less; friends keep the default gains.
+
+- **New rows (`native/proving_grounds_reach.inc` `rm_psych`):** the Psych Profile now has eleven rows (28 apart, were 32). The world map starts at 548 instead of 495 and is drawn a little flatter (1.85 a degree, was 2.1), so all of it still shows under the notes.
+  - **SKILL RATING** and the new **FFA RATING:** Left / Right change them by 10, LB / RB (Page Up / Down) by 100, and they stay between 1500 and 2500. A puts that one back to 1600. A change to the team rating deals the waiting lobby again.
+  - **WIN GAIN:** a close win's range, +35 to +40 by default. Left / Right move it 5 at a time, from +10 to +15 up to +95 to +100. Beating a much weaker team gives 5 less. A puts it back.
+  - **LOSS:** −15 by default. Left / Right move it 1 at a time, from −5 to −50. Losing to a much stronger team costs 5 less (never below 0). A puts it back.
+  - **VOTING TIME** is now the eleventh row and works as before.
+- **`native/skill_rating.cpp`:**
+  - `sr_set_person` sets a rating by hand, kept between 1500 and 2500.
+  - `sr_set_gains` / `sr_gains_of` keep a person's own gains in `pg_ratings.txt` as `gains` lines. Only the player sets them, so friends keep +35 to +40 / −15.
+  - `pts_reset` is gone: A on each row does that row's reset.
+- **Checks:**
+  - `native\build_pool_test.bat`: all pool checks pass. New cases cover a rating set by hand (the 1500–2500 limits, team and free for all apart), gains limits, a friend keeping the defaults, your close and wide-gap wins and losses with your own gains, the floor, and gains read back from the file.
+  - Preview renders of the Psych Profile on SKILL RATING, WIN GAIN and LOSS look right.
+  - `botcore_pg54.dll` built. MCC was running on the earlier build, so this appears after its next start. **Untested in game.**
+
 ### Skill ratings in place of the team points, and Reach's RATING page, 2026-11-23
 
 The owner, with a screenshot of Reach's carnage report RATING page: "do calculations similar to my already standing balance system I have in place, but use the rating system reach did". Then: "the teams would balance by total skill rating per team", and his numbers, agreed one question at a time. His +2/−1 team points are gone.

@@ -30,6 +30,8 @@ struct sr_entry { bool bot = false; int tier = -1, team = -1, ffa = -1; std::str
 static std::map<std::string, sr_entry> g_tab;           // by name, lower case
 static std::map<std::string, int> g_seen;               // the difficulty each bot was last seated at
 static std::map<std::string, int> g_shown;              // the newest match: ratings after it
+struct sr_gains { int win_top = SR_WIN_TOP, loss = SR_LOSS; std::string name; };
+static std::map<std::string, sr_gains> g_gains;         // (Nov 23) a person's own gains, set on the Psych Profile
 static std::string g_counted, g_shown_match;
 static wchar_t g_path[MAX_PATH];
 static FILETIME g_stamp;
@@ -67,7 +69,7 @@ static bool stamp_of(FILETIME* ft) {
 }
 
 static void load() {
-    g_tab.clear(); g_shown.clear(); g_counted.clear(); g_shown_match.clear();
+    g_tab.clear(); g_shown.clear(); g_gains.clear(); g_counted.clear(); g_shown_match.clear();
     FILE* f = nullptr;
     if (_wfopen_s(&f, g_path, L"rb") || !f) return;
     char line[512];
@@ -83,6 +85,9 @@ static void load() {
         } else if (c[0] == "person" && c.size() >= 4) {
             sr_entry& e = g_tab[key(c[1].c_str())];
             e.bot = false; e.name = c[1]; e.team = atoi(c[2].c_str()); e.ffa = atoi(c[3].c_str());
+        } else if (c[0] == "gains" && c.size() >= 4) {
+            sr_gains& g = g_gains[key(c[1].c_str())];
+            g.name = c[1]; g.win_top = atoi(c[2].c_str()); g.loss = atoi(c[3].c_str());
         } else if (c[0] == "shown" && c.size() >= 3) {
             if (c[1].empty()) g_shown_match = c[2];
             else g_shown[key(c[1].c_str())] = atoi(c[2].c_str());
@@ -116,13 +121,15 @@ static void save() {
     if (_wfopen_s(&f, tmp, L"w") || !f) return;
     fprintf(f, "# Project Noble: skill ratings (native/skill_rating.cpp); the game keeps this file, do not edit while it runs.\n"
                "# match id (the last counted); bot name difficulty team-rating ffa-rating; person name team-rating\n"
-               "# ffa-rating (-1: not rated yet); shown name rating (the newest match's, for its RATING page)\n");
+               "# ffa-rating (-1: not rated yet); gains name win-top loss (a person's own, the Psych Profile's); shown\n"
+               "# name rating (the newest match's, for its RATING page)\n");
     fprintf(f, "match\t%s\n", g_counted.c_str());
     for (auto& kv : g_tab) {
         const sr_entry& e = kv.second;
         if (e.bot) fprintf(f, "bot\t%s\t%d\t%d\t%d\n", e.name.c_str(), e.tier, e.team, e.ffa);
         else fprintf(f, "person\t%s\t%d\t%d\n", e.name.c_str(), e.team, e.ffa);
     }
+    for (auto& kv : g_gains) fprintf(f, "gains\t%s\t%d\t%d\n", kv.second.name.c_str(), kv.second.win_top, kv.second.loss);
     fprintf(f, "shown\t\t%s\n", g_shown_match.c_str());
     for (auto& kv : g_shown) fprintf(f, "shown\t%s\t%d\n", kv.first.c_str(), kv.second);
     fclose(f);
@@ -170,6 +177,29 @@ void sr_reset_person(const char* name) {
     save();
 }
 
+void sr_set_person(const char* name, int rating, bool ffa) {
+    sr_entry& e = g_tab[key(name)];
+    if (e.bot) { e.team = -1; e.ffa = -1; }
+    e.bot = false; e.name = name;
+    rating = rating < SR_PERSON_FLOOR ? SR_PERSON_FLOOR : rating > SR_SET_MAX ? SR_SET_MAX : rating;
+    (ffa ? e.ffa : e.team) = rating;
+    save();
+}
+
+void sr_set_gains(const char* name, int win_top, int loss) {
+    sr_gains& g = g_gains[key(name)];
+    g.name = name;
+    g.win_top = win_top < 15 ? 15 : win_top > 100 ? 100 : win_top;
+    g.loss = loss < 5 ? 5 : loss > 50 ? 50 : loss;
+    save();
+}
+
+void sr_gains_of(const char* name, int* win_top, int* loss) {
+    auto it = g_gains.find(key(name));
+    *win_top = it != g_gains.end() ? it->second.win_top : SR_WIN_TOP;
+    *loss = it != g_gains.end() ? it->second.loss : SR_LOSS;
+}
+
 const char* sr_counted() { return g_counted.c_str(); }
 void sr_set_counted(const char* id) { g_counted = id ? id : ""; save(); }
 int sr_shown(const char* name) { auto it = g_shown.find(key(name)); return it == g_shown.end() ? -1 : it->second; }
@@ -209,10 +239,14 @@ bool sr_rate(const char* id, bool teams, const char* gametype, std::vector<sr_pl
             if (p.bot) {
                 if (won && p.completed) p.after += own - opp > SR_GAP ? 9 : 19;
                 else p.after -= opp - own > SR_GAP ? 9 : 19;
-            } else if (won) {
-                p.after += own - opp > SR_GAP ? draw(id, p.name, 30, 35) : draw(id, p.name, 35, 40);
-                if (p.kills > kills) { int b = (int)((p.kills - kills) / 3); p.after += b > 3 ? 3 : b; }
-            } else p.after -= opp - own > SR_GAP ? 10 : 15;
+            } else {
+                int top, loss;                               // (Nov 23: the person's own gains, else 40 and 15)
+                sr_gains_of(p.name.c_str(), &top, &loss);
+                if (won) {
+                    p.after += own - opp > SR_GAP ? draw(id, p.name, top - 10, top - 5) : draw(id, p.name, top - 5, top);
+                    if (p.kills > kills) { int b = (int)((p.kills - kills) / 3); p.after += b > 3 ? 3 : b; }
+                } else p.after -= opp - own > SR_GAP ? (loss > 5 ? loss - 5 : 0) : loss;
+            }
         }
     } else {
         for (sr_player& p : pl) {

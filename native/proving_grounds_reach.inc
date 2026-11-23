@@ -715,9 +715,10 @@ static void loc_load() {
 }
 
 static void rm_world_heat() {
-    const float X0 = 393, Y0 = 495, X1 = 1480, Y1 = 800;
-    auto at = [](int lon10, int lat10) {             // (latitude 80 at y 508, -40 at 760, as Reach's lines)
-        return P(400 + (lon10 / 10.0f + 180) / 360 * 1060, 508 + (80 - lat10 / 10.0f) * 2.1f);
+    // (Nov 23: from 548, a little flatter, under the Psych Profile's eleven rows; it was 495, 2.1 a degree)
+    const float X0 = 393, Y0 = 548, X1 = 1480, Y1 = 800;
+    auto at = [](int lon10, int lat10) {             // (latitude 80 at y 560, -40 at 782, as Reach's lines)
+        return P(400 + (lon10 / 10.0f + 180) / 360 * 1060, 560 + (80 - lat10 / 10.0f) * 1.85f);
     };
     g_dl->AddRectFilled(P(X0, Y0), P(X1, Y1), A(IM_COL32(7, 10, 13, 200)));
     g_dl->PushClipRect(P(X0, Y0), P(X1, Y1), true);
@@ -747,7 +748,7 @@ static void rm_world_heat() {
     }
     static const char* lat[7] = { "80", "60", "40", "20", "0", "20", "40" };
     for (int i = 0; i < 7; i++) {
-        float y = 508 + i * 42.0f;
+        float y = 560 + i * 37.0f;
         g_dl->AddLine(P(400, y), P(1460, y), A(IM_COL32(150, 170, 190, 34)), U(1));
         text(g_fs, 13, 1474, y - 8, IM_COL32(176, 182, 188, 140), lat[i], 2);
     }
@@ -810,44 +811,68 @@ static void rm_psych(pg_env& e, float t) {
     sprintf_s(inv, "%d / %d", g_nparty, cur_pl().size - 1);
     // (Nov 23, the owner's live points: "add a menu option for a reset") TEAM POINTS: where the player's points stand,
     // A puts them back to 20. (Nov 23: SKILL RATING, the rating in their place; A back to 1600) (Nov 23, the owner: the vote "30 seconds by default but allow it to be picked in the
-    // options from 15-30-45") VOTING TIME the eighth row: eight rows 32 apart, the notes a little lower
+    // options from 15-30-45") VOTING TIME the eighth row: eight rows 32 apart, the notes a little lower (the eleventh
+    // since the rating rows below)
+    // (Nov 23, the owner: "the option to custom set my rating. Or change my plus/minus gains", both) SKILL RATING and
+    // FFA RATING set by hand (Left / Right 10, LB / RB 100, 1500 to 2500; A back to 1600), WIN GAIN (a close win's
+    // range, by 5) and LOSS (by 1), the player's own (friends keep +35 to +40 / -15); eleven rows 28 apart
     pts_load();
-    char pts[24], vt[24];
+    const char* me = me_name();
+    int ffa_r = sr_person(me, true), win_top, loss;
+    sr_gains_of(me, &win_top, &loss);
+    char pts[24], ffa[24], wg[24], ls[24], vt[24];
     sprintf_s(pts, "%d", g_pts);
+    sprintf_s(ffa, "%d", ffa_r);
+    sprintf_s(wg, "+%d TO +%d", win_top - 5, win_top);
+    sprintf_s(ls, "-%d", loss);
     sprintf_s(vt, "%d SECONDS", g_vote_s);
-    for (int k = 0; k < 8; k++) {
-        float y = 160 + 32.0f * k;
-        bool f = item(393, y, 1505, y + 30);
+    static const char* LABEL[11] = { nullptr, nullptr, nullptr, nullptr, "SIMULATE MATCHES", "INVITE PLAYER",
+                                     "SKILL RATING", "FFA RATING", "WIN GAIN", "LOSS", "VOTING TIME" };
+    for (int k = 0; k < 11; k++) {
+        float y = 160 + 28.0f * k;
+        bool f = item(393, y, 1505, y + 26);
         if (f) focus = k;
-        rm_row(393, y, 1505, y + 30, f, k < 4 ? RM_PSY[k] : k == 4 ? "SIMULATE MATCHES" : k == 5 ? "INVITE PLAYER"
-                                         : k == 6 ? "SKILL RATING" : "VOTING TIME");
-        const char* v = k < 4 ? RM_PSY_V[k][g_rm_psych[k]] : k == 4 ? sims : k == 5 ? inv : k == 6 ? pts : vt;
-        text(g_fl, 25, 1238, y + 2, f ? C_TEXT : C_DIM, v, 1);
-        if (f && (k < 4 || (k == 4 && sim_arrows) || k == 7)) { text(g_fl, 28, 960, y - 1, C_DIM, "<"); text(g_fl, 28, 1494, y - 1, C_DIM, ">", 2); }
+        rm_row(393, y, 1505, y + 26, f, k < 4 ? RM_PSY[k] : LABEL[k]);
+        const char* v = k < 4 ? RM_PSY_V[k][g_rm_psych[k]] : k == 4 ? sims : k == 5 ? inv : k == 6 ? pts : k == 7 ? ffa
+                      : k == 8 ? wg : k == 9 ? ls : vt;
+        text(g_fl, 24, 1238, y + 1, f ? C_TEXT : C_DIM, v, 1);
+        if (f && (k < 4 || (k == 4 && sim_arrows) || k >= 6)) { text(g_fl, 26, 960, y - 1, C_DIM, "<"); text(g_fl, 26, 1494, y - 1, C_DIM, ">", 2); }
     }
-    g_dl->AddLine(P(400, 420), P(1500, 420), A(IM_COL32(206, 212, 218, 70)), U(1));
+    g_dl->AddLine(P(400, 472), P(1500, 472), A(IM_COL32(206, 212, 218, 70)), U(1));
+    const float n1 = 478, n2 = 510;                  // (the notes' two lines)
     if (focus >= 0 && focus < 4) {
         char l1[96];
         sprintf_s(l1, "Saved for your lobbies. The search does not use your %s yet.", focus == 0 ? "chattiness" :
                   focus == 1 ? "motivation" : focus == 2 ? "teamwork" : "tone");
-        text(g_fl, 27, 402, 428, C_TEXT, l1);
-        text(g_fl, 25, 402, 462, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
+        text(g_fl, 27, 402, n1, C_TEXT, l1);
+        text(g_fl, 25, 402, n2, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
     } else if (focus == 4) {
-        text(g_fl, 27, 402, 428, C_TEXT, "Bots play matches of their own for the Service Record.");
-        text(g_fl, 25, 402, 462, C_DIM, "Left / Right: how many rounds (a round is about 25 lobbies). A: play them.");
+        text(g_fl, 27, 402, n1, C_TEXT, "Bots play matches of their own for the Service Record.");
+        text(g_fl, 25, 402, n2, C_DIM, "Left / Right: how many rounds (a round is about 25 lobbies). A: play them.");
     } else if (focus == 5) {
-        text(g_fl, 27, 402, 428, C_TEXT, "Bots who play on your team every game, whatever the lobby.");
-        text(g_fl, 25, 402, 462, C_DIM, "A: pick them from your pool.");
-    } else if (focus == 6) {
+        text(g_fl, 27, 402, n1, C_TEXT, "Bots who play on your team every game, whatever the lobby.");
+        text(g_fl, 25, 402, n2, C_DIM, "A: pick them from your pool.");
+    } else if (focus == 6 || focus == 7) {
         char l1[128];
-        sprintf_s(l1, "You count as %d when the teams are balanced; friends count their own ratings.", g_pts);
-        text(g_fl, 27, 402, 428, C_TEXT, l1);
-        sprintf_s(l1, "Free for all: %d. A win +35 to +40, a loss -15, never under 1500. A: both back to 1600.",
-                  sr_person(me_name(), true));
-        text(g_fl, 25, 402, 462, C_DIM, l1);
-    } else if (focus == 7) {
-        text(g_fl, 27, 402, 428, C_TEXT, "How long the lobby votes on the next map and game type.");
-        text(g_fl, 25, 402, 462, C_DIM, "Left / Right or A: 15, 30 or 45 seconds. The bots' votes spread over it.");
+        if (focus == 6) sprintf_s(l1, "You count as %d when the teams are balanced; friends count their own.", g_pts);
+        else sprintf_s(l1, "Your free-for-all rating: %d. It moves only in free for all.", ffa_r);
+        text(g_fl, 27, 402, n1, C_TEXT, l1);
+        text(g_fl, 25, 402, n2, C_DIM, g_pad_in ? "Left / Right: 10.  LB / RB: 100.  1500 to 2500.  A: back to 1600."
+                                                 : "Left / Right: 10.  Page Up / Down: 100.  1500 to 2500.  Enter: back to 1600.");
+    } else if (focus == 8) {
+        char l1[128];
+        sprintf_s(l1, "A close win gives you +%d to +%d; beating a much weaker team, +%d to +%d.", win_top - 5, win_top,
+                  win_top - 10, win_top - 5);
+        text(g_fl, 27, 402, n1, C_TEXT, l1);
+        text(g_fl, 25, 402, n2, C_DIM, "Left / Right: 5 at a time, +10 to +15 up to +95 to +100. A: back to +35 to +40.");
+    } else if (focus == 9) {
+        char l1[128];
+        sprintf_s(l1, "A loss costs you %d; losing to a much stronger team, %d.", loss, loss > 5 ? loss - 5 : 0);
+        text(g_fl, 27, 402, n1, C_TEXT, l1);
+        text(g_fl, 25, 402, n2, C_DIM, "Left / Right: 1 at a time, -5 to -50. A: back to -15. Friends keep the usual gains.");
+    } else if (focus == 10) {
+        text(g_fl, 27, 402, n1, C_TEXT, "How long the lobby votes on the next map and game type.");
+        text(g_fl, 25, 402, n2, C_DIM, "Left / Right or A: 15, 30 or 45 seconds. The bots' votes spread over it.");
     }
     rm_world_heat();                                 // (Nov 19: the world as Reach's, the Service Record's home states)
     rm_band();
@@ -873,15 +898,43 @@ static void rm_psych(pg_env& e, float t) {
         else { sim_start(); sound(PS_SELECT); }
     }
     if (pressed(base + 5)) { g_invite = true; g_npool_names = 0; g_invite_scroll = 0; g_focus = 0; sound(PS_SELECT); }
-    if (pressed(base + 6)) { pts_reset(); sound(PS_SELECT); }
-    if (focus == 7) {                                    // (15 / 30 / 45: Left / Right step, A goes round; a time saved
-        int step = g_left_right ? g_left_right : pressed(base + 7) ? 1 : 0;   // off the three moves to the nearest)
+    // (Nov 23) the ratings set by hand: Left / Right 10, LB / RB (Page Up / Down) 100; A back to 1600
+    if (focus == 6 || focus == 7) {
+        bool ffa_row = focus == 7;
+        int step = g_left_right * 10;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1) || ImGui::IsKeyPressed(ImGuiKey_PageDown)) step = 100;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadL1) || ImGui::IsKeyPressed(ImGuiKey_PageUp)) step = -100;
+        int cur = ffa_row ? ffa_r : g_pts, want = cur + step;
+        if (pressed(base + focus)) want = SR_PERSON_START;
+        if (g_left_right) g_lr_taken = true;
+        want = want < SR_PERSON_FLOOR ? SR_PERSON_FLOOR : want > SR_SET_MAX ? SR_SET_MAX : want;
+        if ((step || pressed(base + focus)) && want != cur) {
+            sr_set_person(me, want, ffa_row);
+            if (!ffa_row) { g_pts = want; g_pts_redeal = true; }   // (the waiting lobby dealt again by it)
+            logf("proving grounds: your %s rating set to %d (was %d)", ffa_row ? "free-for-all" : "team", want, cur);
+            sound(pressed(base + focus) ? PS_SELECT : PS_MOVE);
+        } else if (step || pressed(base + focus)) sound(PS_ERROR);
+    }
+    if (focus == 8 || focus == 9) {                      // (the gains: Left / Right; A back to 35-40 / 15)
+        int wt = win_top, l = loss;
+        if (focus == 8) wt = pressed(base + 8) ? SR_WIN_TOP : wt + 5 * g_left_right;
+        else l = pressed(base + 9) ? SR_LOSS : l + g_left_right;
+        if (g_left_right) g_lr_taken = true;
+        wt = wt < 15 ? 15 : wt > 100 ? 100 : wt;
+        l = l < 5 ? 5 : l > 50 ? 50 : l;
+        if (wt != win_top || l != loss) {
+            sr_set_gains(me, wt, l);
+            sound(pressed(base + focus) ? PS_SELECT : PS_MOVE);
+        } else if (g_left_right || pressed(base + focus)) sound(PS_ERROR);
+    }
+    if (focus == 10) {                                   // (15 / 30 / 45: Left / Right step, A goes round; a time saved
+        int step = g_left_right ? g_left_right : pressed(base + 10) ? 1 : 0;   // off the three moves to the nearest)
         if (step) {
             if (g_left_right) g_lr_taken = true;
             static const int T[3] = { 15, 30, 45 };
             int at = g_vote_s <= 22 ? 0 : g_vote_s <= 37 ? 1 : 2;
             bool exact = g_vote_s == T[at];
-            if (pressed(base + 7)) at = (at + 1) % 3;
+            if (pressed(base + 10)) at = (at + 1) % 3;
             else if (exact) at = at + step < 0 ? 0 : at + step > 2 ? 2 : at + step;
             g_vote_s = T[at];
             save_settings();
