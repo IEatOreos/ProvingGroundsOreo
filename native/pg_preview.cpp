@@ -98,6 +98,8 @@ static int g_ticket;
 int pg_lobby_check(const int*, const int*, int) { return ++g_ticket; }
 bool pg_lobby_checked(int ticket, uint8_t* ok, int n) { for (int i = 0; i < n; i++) ok[i] = 1; return ticket == g_ticket; }
 void pg_lobby_launch(int, int) {}
+int menu_route_state() { return 0; }                    // (Nov 23: the menu route, menu_route.cpp: never in the preview)
+const char* menu_route_why() { return ""; }
 int pg_lobby_launch_state(char* why, int cap) { if (why) why[0] = 0; return 1; }
 // (Nov 18) the link to a joined friend's copy (pg_link.cpp): a loopback here, so pg_11 draws the host's state as a
 // friend's copy follows it

@@ -2133,7 +2133,21 @@ static void rm_custom(pg_env& e, float t) {
                          "Choose the map: the maps the game type does not go on are dimmed.",
                          "See the game type's rules.",
                          "Start the selected game in MCC's own lobby, with the bots set in BOTS." };
-    std::string status = g_cg_state == 1 ? "Starting..." : !g_nlgts ? "Open MCC's Halo: Reach custom game lobby first."
+    // (Nov 23) START GAME pressed away from the lobby: the game starts once MCC has been walked there (menu_route.cpp)
+    if (g_cg_wait && g && m && pg_lobby_live() && g_cg_state == 0) {
+        g_cg_wait = 0;
+        pg_lobby_launch(m->id, g->id);
+        g_cg_state = 1;
+        g_cg_t0 = ImGui::GetTime();
+        logf("proving grounds: custom game asked of MCC once its lobby opened: %s on %s", g->name, m->name);
+    }
+    if (g_cg_wait && menu_route_state() == -1) {
+        g_cg_wait = 0;
+        g_cg_msg = std::string("Could not open Halo: Reach's custom game lobby (") + menu_route_why() + "). Open it in MCC, then start.";
+    }
+    bool walking = menu_route_state() == 1;
+    std::string status = g_cg_state == 1 ? "Starting..." : walking || g_cg_wait ? "Opening Halo: Reach's custom game lobby..."
+                       : !g_nlgts ? "Open MCC's Halo: Reach custom game lobby first."
                        : !fits ? "That game type does not go on that map." : "Ready";
     int base = (int)g_items.size();
     cg_lobby(e, "CUSTOM GAME", status.c_str(), L, V, ON, 4, D, "IN CUSTOM GAME LOBBY", "In Custom Game Lobby");
@@ -2158,8 +2172,11 @@ static void rm_custom(pg_env& e, float t) {
     if (pressed(base + 2)) { if (g) { sound(PS_SELECT); g_rpage = RP_CG_OPTIONS; g_focus_after = 0; } else sound(PS_ERROR); }
     if (pressed(base + 3)) {
         if (!ON[3]) sound(PS_ERROR);
-        else if (!pg_lobby_live()) { sound(PS_ERROR); g_cg_msg = "Open MCC's Halo: Reach custom game lobby first: the game starts there."; }
-        else {
+        else if (!pg_lobby_live()) {                     // (Nov 23: started away from the lobby: MCC is walked there,
+            sound(PS_SELECT);                            // menu_route.cpp, and the game starts when it is open)
+            g_cg_wait = 1;
+            g_cg_msg.clear();
+        } else {
             sound(PS_SELECT);
             g_cg_msg.clear();
             pg_lobby_launch(m->id, g->id);

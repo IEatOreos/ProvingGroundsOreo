@@ -41,6 +41,17 @@ The owner: "I want the bots on attack to notice when there is 15 seconds or less
 - **The replay of that match (the drop rule, Nov 18):** it was active, with 3 drops ("flag: dropping it to fight") and the carriers going back for the bomb. Most carrier deaths were too quick for it: from 1.25-2.0 health to dead within one quarter-second read. About 4 of the 11 were round resets, with the enemy 140 u away. The rule drops only when the damage would empty him within 1.5 s, so it rarely had the chance. Left as it was.
 - **Checks:** new `tools/test_bomb_push.py` (15 tests: each push, its limits, defending, armed, non-Reach maps, two-bomb Assault, One Bomb, sudden death as overtime, the immediate go, no cool-down). `tools/test_land_grab.py` has the 65536 read and keeps the clock with garbage scores. `unittest discover` over `tools` is OK (1392 tests), and so is the `live_bots` import. **Untested in a match.**
 
+### Fix: a LB + RB pressed in a match no longer opens Project Noble over the match's end, 2026-11-23
+
+The owner: "that last match kicked me out of the last match with no carnage report or level up credit screen". `botcore_pg55.log` (Team Slayer on The Cage, match 67653972…) shows it. Right after "the match is over", the log has "overlay: LB + RB in MCC's pad reads (menus 1, Project Noble up 0)", then "project noble: opened from MCC's menus (LB + RB or the badge)".
+
+- **Cause:** the shortcut (`native/overlay.cpp` `h_xinput_get`) took a LB + RB from MCC's own pad reads during play too. A press in the match (an armor ability and a reload together) stayed taken until the overlay's next frame, which was the post-game screen's. There MCC counts as its menus, so Project Noble opened at its menu before `pg_after_match` ran. That skipped the credits and the carnage report, and dealt a new lobby (7 new bots). The match before it showed the same press, but its after-match step ran first, so nothing happened.
+- **Fix (`native/overlay.cpp`):**
+  - While MCC's menu byte says a match is on, LB + RB is never taken, and any earlier one is dropped.
+  - For 5 s after a match is last seen, the shortcut isn't taken from either source (MCC's reads or ImGui's), so the credits take over. The log says "LB + RB not taken: a match ended under 5 s ago".
+  - In MCC's menus otherwise, it works as before.
+- **Checks:** `build.bat pg56` builds `botcore_pg56.dll`, and `unittest discover` over `tools` is OK. **Untested in game.**
+
 ### Psych Profile: set your ratings by hand, and your own win and loss gains, 2026-11-23
 
 The owner: "Also add to the pysch screen the option to custom set my rating. Or change my plus/minus gains". His answers: both; Left/Right 10 and LB/RB 100; kept 1500 to 2500; a separate row for free for all; only the win range and the loss, the wide-gap versions 5 less; friends keep the default gains.
@@ -99,6 +110,49 @@ The owner, with a screenshot of Reach's carnage report RATING page: "do calculat
   - The commit was built and tested from its own exported snapshot: pool checks, the preview and the DLL.
   - `botcore_pg53.dll` built. Preview renders of the RATING page and the Psych Profile row look right.
 - **Not yet seen in a real match.** Simulated bot matches (`tools/bot_sim.py`) don't move ratings.
+
+### Project Noble from any of MCC's menus: LT + RT, a badge, and MCC walked to Reach's lobby behind it, 2026-11-23
+
+The owner, with his friend's mod (an OFFLINE MATCHMAKING badge at the top left, both triggers opening it from any menu): "Itll make our launcher much faster and alot more accessible". Then: "Badge and buttons and number 3 it right we can test it". His answers about MCC's main menu: B does nothing on it, and Up stops at its top item.
+
+- **LT + RT anywhere** (`native/overlay.cpp`): in any of MCC's menus (not a match, not a film), both triggers open Project Noble at once, drawn over whatever MCC shows. It was only Reach's custom game lobby before. While opened away from that lobby it stays drawn there (`g_pg_anywhere`); once the lobby opens, the lobby's own drawing takes over as before.
+- **The badge:** "PROJECT NOBLE" with LT and RT drawn, small, at the top left of MCC's menus whenever none of ours is up. A click on it opens Project Noble; the click is kept from MCC.
+- **MCC walked to the lobby** (`native/menu_route.cpp`, new):
+  - When Project Noble was opened away from the lobby and its screens need it (the search, the vote, Custom Game's pages and START GAME), MCC is taken there behind them. The steps:
+    - B eight times, out to the main menu;
+    - Up ten times, to its top item;
+    - the launcher's recorded route from there: Down, A, Down, Down, A until a `game_variants` folder opens, A, A until `MultiplayerCustomGame.gfx` opens; the lobby must be Halo: Reach's.
+  - The launcher's timings are kept (a 120 ms press, 1.5 s between presses, 6 s for each checkpoint, 0.7 s after one).
+  - The presses go into MCC's own pad reads (`h_xinput_get`), the player's held back meanwhile; the checkpoints are the files MCC opens (`h_createfile`).
+  - The search goes on ("Opening Halo: Reach's custom game lobby...") until the lobby is open and MCC's lists are read; the result waits for the lobby (a minute at most) before the game goes to MCC.
+  - Custom Game's START GAME, pressed away from the lobby, starts the game once the lobby opens; a route that stops says why there.
+  - The route runs once each time Project Noble is opened away from the lobby.
+- **Validation:** `build.bat pg49` builds `botcore_pg49.dll`; the preview builds, and its search (3) and Custom Game (39) screens render. **Untested in game:** the badge's place and look over MCC's menus, the triggers outside the lobby, and the whole route. It was written from the launcher's route and the owner's two answers, not seen working.
+- **First test (pg49), the owner: "The trigger presses dont do anything".** botcore_pg49 loaded, but nothing opened. The menu byte (`mcc_menu_state`) had only ever been read in custom game lobbies (0).
+  - pg50: any value but 1 (a match) and -1 (not read) counts as MCC's menus.
+  - Each value it takes is logged ("MCC's menu byte"), and so is every LT + RT held together, with what could have stopped it.
+- **The launcher at MCC's main menu** (the owner: Project Noble opened at the main menu "so it makes loading faster"; botcore_pg51):
+  - The launcher's presses go into MCC's pad reads only, never botcore's pad reader. So it asks botcore with a window message of its own, `ProjectNoble.Open`, which botcore takes as LT + RT.
+  - The launcher's repo (`E:\Proving Grounds\Project Noble`, `src/route.cpp` `open_noble_at_main_menu`, `ppg_launch.ini` `[route] noble_at_main_menu=1`):
+    - right after the title's press brings up the main menu (the waits before it unchanged), it asks up to 3 times until botcore reads `proving_grounds.ini`, and the route ends there;
+    - if Project Noble never opens, the route goes on to Reach's lobby as before.
+  - Both build. Untested.
+- **LB + RB, not the triggers** (the owner: "Use my left and right bumpers instead of triggers. the triggers interact with the main menu"; botcore_pg52):
+  - The shortcut is LB + RB everywhere, Reach's lobby included; the badge and the Project Noble tile's hint say LB RB, and the log line says "LB + RB seen".
+  - The launcher's message is unchanged; its texts say LB+RB.
+- **The launcher presses LB + RB** (the owner: "make a script to press that with recorded controller presses instead of going through the entire custom game screen and I want it to land here", with Project Noble's title screen; botcore_pg54, the build list now including `skill_rating.cpp`, another session's new file that the code already called, on the owner's "BUild it"):
+  - **Tests the same day.** botcore_pg52's log: the launcher's message opened Project Noble at MCC's main menu, and the owner's LB + RB opened it five more times. pg53's log: LB + RB was seen in MCC's own pad reads too.
+  - Start Matchmaking over the main menu showed "GAME DIDN'T START": `start_search` refused at once without the lobby, before the walk to it could run.
+    - botcore_pg55: away from the lobby the search starts anyway and holds while MCC is walked there; the vote's candidates are drawn once MCC's lists are read.
+    - A route that already stopped says why in the error.
+  - The pg54 run stopped earlier: the launcher's A on MCC's "Press Start" screen took neither of its two tries (`boot.log`), so no LB + RB was ever pressed. That step now has 3 tries (`ppg_launch.ini` `steps=A*3>\localfiles\`). Then the owner: clicking through MCC's main screen by hand, "it does go straight to project noble and everything works". So only the launcher's first press failed: MCC's title screen asked for Enter ("PRESS [Enter] TO START"), the keyboard, and took no pad A. That step is now Enter sent to MCC's window (`steps=key:enter*3>\localfiles\`), 3 tries, the same checkpoint. The owner: "Seemed to work".
+  - Then: "make it to where the console screen minimizes and auto focuses the game". The launcher (`src/ppg_launch.cpp` `hand_over_focus`, `ppg_launch.ini` `[launcher] focus_game=1`), once the bots are loaded:
+    - brings MCC's window to the front while its console still has the focus (Windows lets the focused window hand it over);
+    - then minimizes the console (under Windows Terminal, the terminal's own window, the console's owner).
+    - Builds; untested. The owner says the launcher's console is always in front of MCC, and that his controller does not work in MCC when MCC has the focus (mouse only); not yet looked into.
+  - At MCC's main menu the launcher's route presses LB + RB on the pad (into MCC's pad reads, as its recorded presses go), with botcore's message after it as a backup, up to 3 times until Project Noble opens on its title screen.
+  - botcore now also takes LB + RB from MCC's own reads of the pad (`h_xinput_get`: the launcher's presses and the player's), logged as "LB + RB in MCC's pad reads".
+  - Both build. Untested.
 
 ### Carnage report: a medal hovered or focused says what it is for, 2026-11-23
 
@@ -762,6 +816,18 @@ The owner's plan (`docs/REACH_FORGE_PRINTER_PLAN.md`): build Halo: Reach Forge m
 - **Validation:** `tools/test_forge_printer.py` (new, 28 tests, variants built by hand in the test); full suite 1071 OK. `check` on the 34 Reach map variants in this PC's MCC folder (Xbox 360 era and MCC-saved, seven maps): each parses to its last bit, its object counts match its own quota table, and each written back is byte for byte the same.
 - **Tested in game by the owner, 2026-11-21:** a copy of an MCC-saved Forge World variant with a new title and one wall lifted 6 units ("FP Move Test A", made by `move`, kept in `E:\Proving Grounds\re_tools\forge_printer`, not in the repository) listed in Reach Forge, loaded, and showed the wall moved. **Still untested in game:** adding or removing objects, rotations, labels and budget changes.
 - **New `docs/REACH_FORGE_PRINTER_PHASE2_BRIEF.md`:** the brief for phase 2 (a Halo 3 map as a tracing reference).
+
+### Lobby tiles: BOTS and Project Reach stay up while MCC greys its top row, 2026-11-21
+
+The owner, with two screenshots of Halo: Reach's custom game lobby: "When I move my mouse to low or over my game session the bots menu and reach menu can just dissappear. Fix that".
+
+- **Found:** the tiles show only while the lobby probe (`native/overlay.cpp` `probe_lobby`) sees OPTIONS' and START's blue frame lines. MCC greys that whole row while its focus is on CHOOSE MAP or MY GAME SESSION, so the probe read "not seen" and both tiles went.
+- **Fixed:** once the frames have been seen, the tiles stay while two things hold:
+  - MCC's own custom game lobby screen still runs its Update (`pg_lobby.cpp`'s hook now notes it, for any title: `pg_lobby_screen_live`);
+  - the lobby's title ("HALO: REACH CUSTOM GAME", `ui_layout.h` `mcc_lobby_title_probe`) reads within a quarter of its letter pixels when the frames were last seen.
+  
+  A screen over the lobby with another title (the carnage report, Options & Career), the match, or the lobby closing still takes the tiles away. botcore's log notes each hold ("top row greyed, the lobby kept").
+- **Validation:** `build.bat pg40` builds `botcore_pg40.dll`. **Untested in game:** whether MCC's countdown, which also greys the row, now keeps the tiles up as well (the title stays the same then).
 
 ## 0.2.2-custom.12 — Project Reach: Reach's own menus, Noble, the Banshee pilot, bot simulation and Service Record, 2026-11-21
 

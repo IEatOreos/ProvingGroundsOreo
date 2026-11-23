@@ -42,6 +42,9 @@ inline ui_rect mcc_probe_rows(float W, float H) { return ui_at(mcc_content(W, H)
 // the Firefight lobby's title past where the post-game report's ends: "...CUSTOM FIREFIGHT" reaches it, "POSTGAME
 // CARNAGE" (to ~686) does not (live Nov 6, 1920x1080 window: 482 of 5040 pixels letter-white in the lobby, 0 after)
 inline ui_rect mcc_ff_title_probe(float W, float H) { return ui_at(mcc_content(W, H), 720, 72, 900, 100); }
+// (Nov 21) the custom game lobby's own title ("HALO: REACH CUSTOM GAME", the owner's screenshots: x 88-780, y 65-108),
+// read while MCC greys the top row (the focus on the maps or the session list): the same letters, the same lobby
+inline ui_rect mcc_lobby_title_probe(float W, float H) { return ui_at(mcc_content(W, H), 88, 66, 780, 106); }
 // the BOTS tile: the next slot right of START, MCC's own gap (5) and START's size
 inline ui_rect bots_tile_rect(float W, float H, bool ff = false) {
     return ff ? ui_at(mcc_content(W, H), 1376, 158, 1611, 316) : ui_at(mcc_content(W, H), 1216, 158, 1451, 316);

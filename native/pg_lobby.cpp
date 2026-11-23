@@ -249,8 +249,15 @@ static void tick(uint8_t* screen) {
     }
 }
 
+// (Nov 21) MCC's custom game lobby screen ran its Update (any title): the overlay keeps the BOTS and Project Noble tiles
+// up while it runs, even when MCC greys its top row (the focus on the maps or the session list)
+static volatile ULONGLONG g_screen_at;
+bool pg_lobby_screen_live() { return g_ok && g_screen_at && GetTickCount64() - g_screen_at < 500; }
+
 static void __fastcall h_update(uint8_t* screen, float dt) {
     o_update(screen, dt);
+    __try { if (*(uint8_t**)screen == g_mcc + LT_SCREEN_VT) g_screen_at = GetTickCount64(); }
+    __except (EXCEPTION_EXECUTE_HANDLER) {}
     __try { tick(screen); } __except (EXCEPTION_EXECUTE_HANDLER) {
         static int told;
         if (told++ < 3) logf("proving grounds: lobby unreadable this frame");

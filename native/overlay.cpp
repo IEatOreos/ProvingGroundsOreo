@@ -101,6 +101,7 @@ static LONG title_of(LPCWSTR name) {
 
 static HANDLE WINAPI h_createfile(LPCWSTR name, DWORD a, DWORD s, LPSECURITY_ATTRIBUTES sa, DWORD c, DWORD f, HANDLE t) {
     if (name) {
+        menu_route_file(name);                   // (Nov 23: the menu route's checkpoints, menu_route.cpp)
         static int logged;                       // the files a lobby opens (evidence for new titles)
         if (g_lobby_gfx_at && GetTickCount() - g_lobby_gfx_at < 3000 && logged < 60 && !wcsstr(name, L"\\Screens\\")) {
             logged++;
@@ -157,6 +158,34 @@ static bool white_pixel(const uint8_t* p, DXGI_FORMAT f) {   // (MCC's title let
         uint32_t v = *(const uint32_t*)p; r = (v & 1023) >> 2; g = ((v >> 10) & 1023) >> 2; b = ((v >> 20) & 1023) >> 2;
     } else { r = p[0]; g = p[1]; b = p[2]; }
     return r > 200 && g > 200 && b > 200;
+}
+
+// (Nov 21) the letter-white pixels of a box of the back buffer (the custom game lobby's title), 0 when not read
+static ID3D11Texture2D* g_white_tex;
+static UINT g_white_w, g_white_h;
+static DXGI_FORMAT g_white_fmt;
+static UINT white_count(ID3D11Texture2D* back, const D3D11_TEXTURE2D_DESC& bd, ui_rect r) {
+    UINT l = (UINT)r.x0, t = (UINT)r.y0, w = (UINT)(r.x1 - r.x0), h = (UINT)(r.y1 - r.y0);
+    if (!w || !h || l + w > bd.Width || t + h > bd.Height || bd.SampleDesc.Count != 1) return 0;
+    if (!g_white_tex || g_white_w != w || g_white_h != h || g_white_fmt != bd.Format) {
+        if (g_white_tex) g_white_tex->Release();
+        D3D11_TEXTURE2D_DESC sd{};
+        sd.Width = w; sd.Height = h; sd.MipLevels = 1; sd.ArraySize = 1; sd.Format = bd.Format;
+        sd.SampleDesc.Count = 1; sd.Usage = D3D11_USAGE_STAGING; sd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        g_white_tex = nullptr;
+        g_dev->CreateTexture2D(&sd, nullptr, &g_white_tex);
+        g_white_w = w; g_white_h = h; g_white_fmt = bd.Format;
+    }
+    if (!g_white_tex) return 0;
+    D3D11_BOX box{ l, t, 0, l + w, t + h, 1 };
+    g_ctx->CopySubresourceRegion(g_white_tex, 0, 0, 0, 0, back, 0, &box);
+    D3D11_MAPPED_SUBRESOURCE m;
+    if (FAILED(g_ctx->Map(g_white_tex, 0, D3D11_MAP_READ, 0, &m))) return 0;
+    UINT n = 0;
+    for (UINT y = 0; y < h; y++)
+        for (UINT x = 0; x < w; x++) n += white_pixel((const uint8_t*)m.pData + y * m.RowPitch + x * 4, bd.Format);
+    g_ctx->Unmap(g_white_tex, 0);
+    return n;
 }
 
 static UINT g_probe_rows0, g_probe_rows1, g_probe_solid0, g_probe_solid1;
@@ -234,6 +263,30 @@ static void probe_lobby(IDXGISwapChain* sc) {
             }
         }
         ok = title * 100 > tw * th * 3;                   // (letters: 9.6% of the box in the lobby, 0 after a match)
+    }
+    // (Nov 21, the owner: "When I move my mouse to low or over my game session the bots menu and reach menu can just
+    // dissappear") MCC greys the top row's frames while its focus is on the maps or the session list, and the frames
+    // read "not seen". The tiles stay while MCC's own lobby screen still runs (pg_lobby.cpp's hook of its Update) and its
+    // title reads as it did when the frames were last seen (within a quarter): another screen over it (the carnage
+    // report, Options & Career) or the match ends that
+    static UINT title_sig;
+    static bool held_logged;
+    bool held = false;
+    if (!g_ff_lobby) {
+        ui_rect tb = mcc_lobby_title_probe(W, H);
+        UINT letters = white_count(back, bd, tb);
+        UINT area = (UINT)((tb.x1 - tb.x0) * (tb.y1 - tb.y0));
+        if (ok) title_sig = letters;
+        else if (g_lobby_visible && title_sig > area / 50 && pg_lobby_screen_live() &&
+                 letters * 4 >= title_sig * 3 && letters * 4 <= title_sig * 5) {
+            ok = true;
+            held = true;
+        }
+        if (held != held_logged) {
+            logf("lobby probe: %s (title %u letter pixels, %u when the frames were seen)",
+                 held ? "top row greyed, the lobby kept" : "frames seen again or the lobby left", letters, title_sig);
+            held_logged = held;
+        }
     }
     back->Release();
     if (ok != g_lobby_visible || g_ff_lobby != g_probe_ff_logged) {      // (evidence: which row was read, what it found)
@@ -423,6 +476,38 @@ static void draw_tile(float t) {
 static void play_sound(int kind, uint32_t volume);
 static bool g_hover_pg;                  // the mouse is on the PROJECT NOBLE tile (its clicks are ours)
 static volatile bool g_pg_open_req;      // P pressed (wndproc): opened on the next frame
+// (Nov 23, the owner, after his friend's mod: "access his mod from any menu at anytime with a controller keybind ... Badge
+// and buttons") LB + RB in any of MCC's menus (not a match) opens Project Noble at once, over whatever MCC shows; a
+// small badge at the top left of MCC's menus names the buttons and opens it too when clicked. (Nov 23, the owner: "Use
+// my left and right bumpers instead of triggers. the triggers interact with the main menu": LT + RT before)
+static bool g_menus_now;                  // MCC's menus are up (no match, no film): the badge and the buttons count
+static bool g_pg_anywhere;                // Project Noble opened away from Halo: Reach's lobby, drawn where it was opened
+static volatile LONG g_badge_x0, g_badge_y0, g_badge_x1, g_badge_y1;   // the badge, window px (0 wide: not drawn)
+static void draw_pg_badge() {
+    ImDrawList* dl = ImGui::GetForegroundDrawList();
+    float s = ImGui::GetIO().DisplaySize.y / 1080.0f;
+    if (s <= 0) return;
+    ImFont* f = g_font_small;
+    float fs = 16 * s;
+    const char* name = "PROJECT NOBLE";
+    ImVec2 ts = f->CalcTextSizeA(fs, 1e9f, 0, name);
+    float x0 = 4 * s, y0 = 4 * s, pad = 9 * s, g = 20 * s;          // (two glyphs, LT RT, after the name)
+    float x1 = x0 + pad + ts.x + 10 * s + 2 * g + 6 * s + pad, y1 = y0 + 30 * s;
+    ImVec2 m = ImGui::GetIO().MousePos;
+    bool hov = m.x >= x0 && m.x <= x1 && m.y >= y0 && m.y <= y1;
+    dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), hov ? IM_COL32(40, 60, 80, 230) : IM_COL32(12, 18, 26, 200), 3 * s);
+    dl->AddRect(ImVec2(x0, y0), ImVec2(x1, y1), IM_COL32(170, 190, 210, hov ? 220 : 140), 3 * s, 0, 1.2f * s);
+    dl->AddText(f, fs, ImVec2(x0 + pad, y0 + (y1 - y0 - ts.y) * 0.5f), IM_COL32(222, 228, 234, 255), name);
+    float gx = x0 + pad + ts.x + 10 * s;
+    for (int k = 0; k < 2; k++) {                                       // (the triggers, drawn: a rounded tab, LT / RT)
+        float a = gx + k * (g + 6 * s);
+        dl->AddRect(ImVec2(a, y0 + 6 * s), ImVec2(a + g, y1 - 6 * s), IM_COL32(200, 210, 220, 220), 4 * s, 0, 1.2f * s);
+        const char* l = k ? "RB" : "LB";
+        ImVec2 ls = f->CalcTextSizeA(11 * s, 1e9f, 0, l);
+        dl->AddText(f, 11 * s, ImVec2(a + (g - ls.x) * 0.5f, y0 + (y1 - y0 - ls.y) * 0.5f), IM_COL32(222, 228, 234, 255), l);
+    }
+    g_badge_x0 = (LONG)x0; g_badge_y0 = (LONG)y0; g_badge_x1 = (LONG)x1; g_badge_y1 = (LONG)y1;
+}
 static bool reach_lobby() { return g_session == 5 && !g_ff_lobby; }
 static void draw_pg_tile(float t) {
     ImGuiIO& io = ImGui::GetIO();
@@ -451,7 +536,7 @@ static void draw_pg_tile(float t) {
     dl->AddText(g_font_label, fs, ImVec2(a.x + fs * 0.35f, b.y - fs * 1.35f), IM_COL32(112, 178, 222, 255), "PROJECT NOBLE");
     float ks = h * 0.115f * 0.85f, ky = b.y + h * 0.10f;
     {                                                        // (Nov 19: the pad's too, both triggers: pad_frame)
-        const char* key = g_pad_last ? "LT+RT" : "P";
+        const char* key = g_pad_last ? "LB+RB" : "P";
         float kw = g_font_label->CalcTextSizeA(ks, 1e9f, 0, key).x + ks * 0.66f;
         dl->AddRect(ImVec2(a.x, ky), ImVec2(a.x + kw, ky + ks * 1.2f), IM_COL32(170, 200, 215, 220), 2.0f, 0, 1.2f);
         dl->AddText(g_font_label, ks, ImVec2(a.x + ks * 0.33f, ky + ks * 0.1f), IM_COL32(200, 220, 230, 240), key);
@@ -828,9 +913,24 @@ static xinput_get_fn o_xinput_get;
 // see B held for 0.15 s, as if pressed, so MCC goes back to its lobby; with no pad answering, Esc goes to MCC instead
 static volatile ULONGLONG g_back_until, g_pad_ok_at;
 static volatile LONG g_esc_pass;                 // Esc messages let through to MCC (the down and the up)
+// (Nov 23, the owner: the launcher to press his LB + RB shortcut as recorded controller presses) LB + RB as MCC's own
+// reads of the pad see it (the launcher's presses go in there, the player's too), taken as the shortcut on the next frame
+static volatile bool g_mcc_chord;
+// (Nov 23, the owner: a match ended with no carnage report or credits) LB + RB pressed in the match (an armor ability and
+// a reload together) stayed taken until the overlay's next frame, the post-game screen's, and opened Project Noble at its
+// menu before the match's end was seen: so in a match it is never taken, and for 5 s after one none is (g_match_at)
+static volatile ULONGLONG g_match_at;            // MCC last seen in a match (its menu byte 1)
 static DWORD WINAPI h_xinput_get(DWORD user, XINPUT_STATE* st) {
     DWORD r = o_xinput_get(user, st);
     if (r == ERROR_SUCCESS && st && !t_ours) {
+        static WORD was[4];
+        const WORD both = XINPUT_GAMEPAD_LEFT_SHOULDER | XINPUT_GAMEPAD_RIGHT_SHOULDER;
+        bool in_match = mcc_menu_state() == 1;
+        if (in_match) { g_match_at = GetTickCount64(); g_mcc_chord = false; }
+        if (user < 4) {
+            if (!in_match && (st->Gamepad.wButtons & both) == both && (was[user] & both) != both) g_mcc_chord = true;
+            was[user] = st->Gamepad.wButtons;
+        }
         g_pad_ok_at = GetTickCount64();
         if (g_pad_held) memset(&st->Gamepad, 0, sizeof st->Gamepad);
         if (GetTickCount64() < g_back_until) {
@@ -838,6 +938,7 @@ static DWORD WINAPI h_xinput_get(DWORD user, XINPUT_STATE* st) {
             st->Gamepad.wButtons = XINPUT_GAMEPAD_B;
             st->dwPacketNumber += 0x40000;              // (a state of its own while held)
         }
+        menu_route_pad(st);                             // (Nov 23: the menu route's presses, menu_route.cpp)
     }
     return r;
 }
@@ -864,11 +965,28 @@ static void pad_frame() {
             g_panel = false;
             play_sound(PS_BACK, g_sounds);
         }
-        // (Nov 19, the owner: "we mostly use controllers") both triggers together open Project Noble in Halo: Reach's
-        // custom game lobby, as both sticks open BOTS (P on the keys); taken on this frame (g_pg_open_req)
-        bool lt = ImGui::IsKeyDown(ImGuiKey_GamepadL2), rt = ImGui::IsKeyDown(ImGuiKey_GamepadR2);
-        if (reach_lobby() && !g_panel && !bot_ui() &&
-            ((lt && ImGui::IsKeyPressed(ImGuiKey_GamepadR2, false)) || (rt && ImGui::IsKeyPressed(ImGuiKey_GamepadL2, false))))
+    }
+    // (Nov 19, the owner: "we mostly use controllers") both triggers together open Project Noble, as both sticks open
+    // BOTS (P on the keys in Reach's lobby); (Nov 23) in any of MCC's menus now, not only Reach's lobby; taken on this
+    // frame (g_pg_open_req)
+    {                                                    // (evidence: both triggers seen, and whether they could open it)
+        bool lt = ImGui::IsKeyDown(ImGuiKey_GamepadL1), rt = ImGui::IsKeyDown(ImGuiKey_GamepadR1);   // (LB, RB)
+        static bool both_was;
+        if (lt && rt && !both_was)
+            logf("overlay: LB + RB seen (menus %d, Project Noble up %d, panel %d, a bot's menu %d)", (int)g_menus_now,
+                 (int)pg_visible(), (int)g_panel, (int)bot_ui());
+        both_was = lt && rt;
+    }
+    bool mcc_chord = g_mcc_chord;                        // (LB + RB in MCC's own pad reads: the launcher's, the player's)
+    g_mcc_chord = false;
+    if (mcc_chord) logf("overlay: LB + RB in MCC's pad reads (menus %d, Project Noble up %d)", (int)g_menus_now, (int)pg_visible());
+    if (mcc_menu_state() == 1) g_match_at = GetTickCount64();   // (Nov 23: a match, as MCC's reads see it)
+    bool after_match = g_match_at && GetTickCount64() - g_match_at < 5000;   // (its end: the credits' to take over)
+    if (after_match && mcc_chord) logf("overlay: LB + RB not taken: a match ended under 5 s ago");
+    if (g_menus_now && !after_match && !pg_visible() && !g_panel && !bot_ui()) {
+        bool lt = ImGui::IsKeyDown(ImGuiKey_GamepadL1), rt = ImGui::IsKeyDown(ImGuiKey_GamepadR1);   // (LB, RB)
+        if (mcc_chord ||
+            (lt && ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) || (rt && ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false)))
             g_pg_open_req = true;
     }
     // (a bot's menu, card, PG; the button that closed one stays held from MCC till let go, in the menus only, Nov 18: in a
@@ -910,6 +1028,24 @@ static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         bool mouse = msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST;
         bool keys = msg >= WM_KEYFIRST && msg <= WM_KEYLAST;
         return mouse || keys ? WP_OURS : WP_MCC;
+    }
+    // (Nov 23, the owner: the launcher to open Project Noble at MCC's main menu, as LB + RB does) the launcher's route
+    // posts this message once MCC's main menu is up (its own pad presses never reach the pad reader LB + RB is read
+    // with): Project Noble opens as from the triggers, on the next frame
+    static UINT open_msg = RegisterWindowMessageW(L"ProjectNoble.Open");
+    if (g_ready && open_msg && msg == open_msg) {
+        logf("overlay: the launcher asked Project Noble to open (menus %d)", (int)g_menus_now);
+        g_pg_open_req = true;
+        return WP_OURS;
+    }
+    // (Nov 23) the badge clicked, in any of MCC's menus: Project Noble opens (the click and its release kept from MCC)
+    if (g_ready && g_menus_now && g_badge_x1 > g_badge_x0 && !bots_ui && !g_panel &&
+        (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONUP)) {
+        int mx = (short)LOWORD(lp), my = (short)HIWORD(lp);
+        if (mx >= g_badge_x0 && mx <= g_badge_x1 && my >= g_badge_y0 && my <= g_badge_y1) {
+            if (msg == WM_LBUTTONDOWN) g_pg_open_req = true;
+            return WP_OURS;
+        }
     }
     if (g_ready && g_show_tile && reach_lobby() && !bots_ui && !g_panel && msg == WM_KEYDOWN && wp == 'P' && !(lp & (1 << 30))) {
         g_pg_open_req = true;                                  // (opened on the next frame, ImGui's own thread)
@@ -1097,6 +1233,24 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                            !g_lobby_visible;
             if (pg_mcc_back_wanted()) mcc_send_back();
             bool pg_lobby = (g_show_tile && reach_lobby()) || pg_hold || pg_follow || pg_post;
+            // (Nov 23) MCC's menus anywhere: the badge and LB + RB; Project Noble opened away from Reach's lobby stays drawn
+            // there while it is up and MCC stays in its menus (its own lobby, when it comes, takes over as before)
+            // (Nov 23, the owner's test: the triggers did nothing outside the lobby) MCC's menu byte was only ever read in
+            // its custom game lobbies (0); any value but 1 (a match) and -1 (not read) counts as its menus now, and each
+            // value it takes is logged, for the evidence
+            {
+                static int seen_state = -99;
+                int ms = mcc_menu_state();
+                if (ms != seen_state) { logf("overlay: MCC's menu byte %d (session title %ld)", ms, (long)g_session); seen_state = ms; }
+                g_menus_now = ms != 1 && ms != -1 && !g_playback;
+            }
+            if (!g_menus_now || !pg_running() || pg_lobby) g_pg_anywhere = false;
+            pg_lobby = pg_lobby || g_pg_anywhere;
+            // (Nov 23, the owner: "number 3 it right") opened away from Reach's lobby and its screens need it now (the
+            // search, Custom Game): MCC is walked there behind them (menu_route.cpp), once each time it is opened away
+            static bool route_asked;
+            if (!g_pg_anywhere) route_asked = false;
+            else if (!route_asked && pg_wants_lobby() && !pg_lobby_screen_live()) { route_asked = true; menu_route_start(); }
             if (pg_running() && !pg_lobby) {
                 EnterCriticalSection(&g_imgui_lock); held = true;
                 pg_env pe{};
@@ -1121,7 +1275,7 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                         !g_shm->lidar_mode && !g_sessionbots;
             g_sess_drawn = sess;
             if (!sess) g_sess_hover = -1;
-            if (g_show_tile || notice || bug || sess || bot_ui() || pg_hold || pg_follow || pg_post) {
+            if (g_show_tile || notice || bug || sess || bot_ui() || pg_hold || pg_follow || pg_post || g_menus_now) {
                 EnterCriticalSection(&g_imgui_lock); held = true;  // (custom, Nov 12: MCC's window thread feeds ImGui too)
                 ImGuiIO& gio = ImGui::GetIO();
                 if (bug && g_bug_open && !g_bug_was_open) {          // F9 opened the window: nothing typed before is its text
@@ -1174,7 +1328,15 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 else if (g_bot_menu >= 0) draw_bot_menu();
                 bot_emblems_frame();
                 if (g_show_tile && g_panel) draw_panel();
-                if (pg_lobby && !pg_post && g_pg_open_req && !g_panel && !bot_ui()) { pg_open(); play_sound(PS_OPEN, g_sounds); }
+                // (Nov 23) the badge in MCC's menus while none of ours is up over them (in Reach's lobby too)
+                if (g_menus_now && !pg_up && !g_panel && !bot_ui() && !pg_post) draw_pg_badge();
+                else { g_badge_x0 = g_badge_x1 = 0; }
+                if ((pg_lobby || g_menus_now) && !pg_post && g_pg_open_req && !g_panel && !bot_ui() && !pg_visible()) {
+                    bool away = !pg_lobby;                           // (opened away from Reach's lobby: drawn where it is)
+                    pg_open();
+                    play_sound(PS_OPEN, g_sounds);
+                    if (away) { g_pg_anywhere = true; pg_lobby = true; logf("project noble: opened from MCC's menus (LB + RB or the badge)"); }
+                }
                 g_pg_open_req = false;
                 if (pg_lobby && pg_running()) {                      // (Project Noble over everything of ours)
                     pg_env pe{};

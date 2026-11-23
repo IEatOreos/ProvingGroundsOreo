@@ -588,6 +588,10 @@ bool pg_visible() {
     return (g_lobby_vis || over_post) && g_stage != S_OFF && g_stage != S_PLAYING && !(g_follow && g_f_hide);
 }
 bool pg_launching() { return g_stage == S_LAUNCH; }
+// (Nov 23) its screens need Halo: Reach's custom game lobby now: the search, the vote and the result (the game starts
+// there, and the vote's choices are MCC's lists, read in that lobby), Custom Game's pages (their lists) and its start.
+// Opened from another of MCC's menus, the overlay then walks MCC there behind them (menu_route.cpp)
+static int g_cg_wait;                            // (Custom Game's START pressed away from the lobby: started when it opens)
 bool pg_postgame() {
     return !g_follow && ((g_stage == S_PLAYING && g_after_due) || g_stage == S_CREDITS || g_stage == S_CARNAGE);
 }
@@ -605,6 +609,10 @@ enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS,
        RP_FILES, RP_FILE_LIST, RP_CONTROLLER,      // (phase 4: the File Browser, the controller)
        RP_CUSTOM, RP_CG_TYPE, RP_CG_MAP, RP_CG_OPTIONS, RP_LOBBY };   // (phase 5: Custom Game, the other lobbies)
 static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
+bool pg_wants_lobby() {                          // (Nov 23: above, by pg_launching)
+    if (g_stage == S_SEARCH || g_stage == S_VOTE || g_stage == S_RESULT) return true;
+    return g_stage == S_MENU && (g_cg_wait || g_rpage == RP_CUSTOM || g_rpage == RP_CG_TYPE || g_rpage == RP_CG_MAP);
+}
 static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
 static bool rmenu_back();
 // (Nov 23) the carnage report after the credits (its section, after the credits')
@@ -849,11 +857,18 @@ static bool start_search(pg_env& e) {
     std::vector<const pg_entry*> maps;
     playlist_pool(cur_pl(), gts, maps);
     g_retry = RETRY_SEARCH;
-    if (!pg_lobby_live() || !g_nlmaps) {
+    // (Nov 23, the owner's "GAME DIDN'T START" over MCC's main menu) started away from Reach's lobby: the search starts
+    // anyway and holds while the overlay walks MCC there (menu_route.cpp); the vote is drawn once MCC's lists are read
+    // in that lobby (search_screen). Only a route that already stopped still says to open the lobby by hand
+    bool away = !pg_lobby_live() && menu_route_state() != -1;
+    if (!away && (!pg_lobby_live() || !g_nlmaps)) {
         strcpy_s(g_error, "Project Noble needs MCC's Halo: Reach custom game lobby open behind it (Custom Multiplayer, Halo: Reach).");
+        if (menu_route_state() == -1 && menu_route_why()[0])
+            sprintf_s(g_error, "Project Noble could not open MCC's Halo: Reach custom game lobby (%s). Open it in MCC (Custom "
+                               "Multiplayer, Halo: Reach), then try again.", menu_route_why());
         g_stage = S_ERROR; return false;
     }
-    if (gts.empty() || maps.empty()) {
+    if (!away && (gts.empty() || maps.empty())) {
         sprintf_s(g_error, "None of the %s playlist's gametypes or maps were found in MCC's lists (see native\\bin\\lobby_library.txt).",
                   cur_pl().title);
         g_stage = S_ERROR; return false;
@@ -869,7 +884,8 @@ static bool start_search(pg_env& e) {
     draw_candidates();
     g_stage = S_SEARCH;
     g_t0 = ImGui::GetTime();
-    logf("proving grounds: search (%s, %d bots, %d new, %.1f s)", cur_pl().title, e.roster->n, fresh, g_search_s);
+    logf("proving grounds: search (%s, %d bots, %d new, %.1f s)%s", cur_pl().title, e.roster->n, fresh, g_search_s,
+         away ? ": away from Reach's lobby, MCC walked there first" : "");
     return true;
 }
 
@@ -2462,6 +2478,13 @@ static void search_screen(pg_env& e, float t) {
     const hb_roster& r = *e.roster;
     int n = r.n + 1 + g_npeople, filled = 1 + g_npeople;
     for (int i = 0; i < r.n; i++) filled += t >= g_arrive[i];
+    // (Nov 23) MCC being walked to Reach's lobby behind this screen (menu_route.cpp): the search goes on till it is there
+    // and its lists are read, so the vote is drawn from them
+    library();                                           // (MCC's lists, once its Reach lobby has been read)
+    bool walking = menu_route_state() == 1 || (menu_route_state() == 2 && (!g_nlgts || !g_nlmaps));
+    if (walking && !g_follow && t > g_search_s - 0.5f) g_search_s = t + 0.5f;
+    // started away from the lobby, no lists then: the vote's candidates drawn once MCC's lists are in
+    if (!walking && !g_follow && !g_check_ticket && !g_nopt && g_nlgts && g_nlmaps) draw_candidates();
     bool done = t >= g_search_s;
     {   // (Nov 19) a tick as each player is found (a clan arriving together: one)
         static int was = 0;
@@ -2518,7 +2541,8 @@ static void search_screen(pg_env& e, float t) {
     text(g_fl, 19, mx + 14, 390, C_TEXT, nums);
     stats_panel(mx, 432, mw);
     lobby_rows(e, t, false, 1830, 34, "SEARCHING FOR PLAYERS");
-    footer(done ? "Players found. Setting up the vote." : "Finding players for your match.", nullptr, true);
+    footer(done ? "Players found. Setting up the vote." : walking ? "Opening Halo: Reach's custom game lobby..."
+                                                                 : "Finding players for your match.", nullptr, true);
     }
     if (g_follow) return;                                // (Nov 18: following: the host moves the stages)
     if (done && t >= g_search_s + 1.4f && take_options()) start_vote(r, false);
@@ -3984,7 +4008,12 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 39: pg_open(); cg_resolve(); g_rpage = RP_CG_TYPE; g_cg_col = 1; g_cg_fam = F_CTF; g_focus = 1; break;
     case 40: pg_open(); cg_resolve(); g_rpage = RP_CG_MAP; g_cg_scroll = 0; g_focus = 6; break;
     case 41: pg_open(); cg_resolve(); g_rpage = RP_CG_OPTIONS; g_focus = 0; break;
-    case 42: pg_open(); g_rpage = RP_LOBBY; g_lobby_mode = 1; g_focus = 0; break;
+    case 42: {                                           // (PG_LOBBY=0..3: Campaign, Firefight (the default), Forge, Theater)
+        char lm[4];
+        pg_open(); g_rpage = RP_LOBBY; g_lobby_mode = GetEnvironmentVariableA("PG_LOBBY", lm, sizeof lm) ? atoi(lm) & 3 : 1;
+        g_focus = 0;
+        break;
+    }
     // (Nov 23) the carnage report from last_carnage.txt (PG_CARNAGE: a file of its own): Overview, Stats on Score,
     // Stats on Credits Earned with a bot picked, the player's Player Carnage
     case 43: case 44: case 45: case 46:
@@ -4188,7 +4217,9 @@ static bool pg_frame_body(pg_env& e) {
     case S_VOTE: vote_screen(e, t); break;
     case S_RESULT:
         result_screen(e, t);
-        if (t > 3.0f && !g_follow) {
+        // (Nov 23) started away from Reach's lobby: the game goes to MCC once that lobby is open (a minute at most;
+        // MCC's own refusal after that is the error screen's, as before)
+        if (t > 3.0f && !g_follow && (pg_lobby_live() || menu_route_state() != 1 || t > 60.0f)) {
             const option& o = g_opt[g_winner];
             g_last_map = o.map; g_last_gt = o.gametype;
             // (Nov 23) the game kept for its carnage report: its map's picture and name, its gametype

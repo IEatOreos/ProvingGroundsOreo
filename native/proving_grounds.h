@@ -22,6 +22,16 @@ struct pg_entry {
     char key[40];               // its picture's name ("HReachMP_SwordBase", "CG_Slayer")
 };
 bool pg_lobby_live();                                    // MCC's Halo: Reach custom game lobby ran in the last 0.5 s
+bool pg_lobby_screen_live();                             // (Nov 21) MCC's custom game lobby screen (any title) ran its
+                                                         // Update in the last 0.5 s
+// ---- menu_route.cpp (Nov 23): MCC walked to Halo: Reach's custom game lobby from any menu, behind Project Noble
+void menu_route_start();
+int menu_route_state();                                  // 0 idle, 1 running, 2 the lobby open, -1 stopped
+const char* menu_route_why();                            // why it stopped ("" otherwise)
+void menu_route_file(const wchar_t* path);               // (overlay.cpp's file hook)
+struct _XINPUT_STATE;
+bool menu_route_pad(_XINPUT_STATE* st);                  // (overlay.cpp's pad hook)
+bool pg_wants_lobby();                                   // (proving_grounds.cpp) its screens need Reach's lobby now
 int  pg_lobby_maps(pg_entry* out, int cap);             // the library's maps (a copy made on MCC's thread)
 int  pg_lobby_gametypes(pg_entry* out, int cap);        // its gametypes
 uint32_t pg_lobby_seq();                                 // changes when a new copy is made (0: none yet)
