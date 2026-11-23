@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Bot simulation: no more one-bot 100-kill games (hunting capped, gaps 3x), 2026-11-23
+
+The owner: "On the site cloudybarracude going 91/4 in a 100 kill game isnt realistic. 4 of the top 5 games all have over 100 kills. The sim went a little to crazy on obj modes." Asked to choose between three settings, he chose "Balanced".
+
+- **Found:** the uncapped hunting (`HUNT` 1.5 on the doubled gaps) made a Demon's fights with a Heroic about 27 times as likely as an even pair's, so one Demon in a lobby of weaker bots was in nearly every fight: DR26 121/19 of 169 kills (Multi Flag), OutlawMarine 116/2, Null3x 112/8. In the 1,093 matches stored with it, the top player took 37% of a 4v4's kills (57% in one game in ten, up to 80%); in the owner's real matches, 23% (29% at most), 35 kills (46 at most).
+- `tools/sim_engine.py` `HUNT_MAX` 3.0: a pair's hunting factor is at most 3 (`hunt_of`; also in the lobby's normalisation), stored in each match's slice (`hunt_max`; an older one: no cap). `SKILL_SCALE` 3.0 (was 2.0), so the top bots keep a K/D well over 2.
+- Measured before it went in (`hunt_tune`, 10 rounds of the owner's pool, nothing stored): 4v4 top player about 40 kills (57 in one game in ten, 67 at most), 27% of the kills; 8v8 27 (40 at most). K/D: Demon 3.03, Noble 3.45, Mythic 1.60, Legendary 0.93, Tactician 0.47, Heroic 0.24; best bots 5-5.7. Multi Flag unchanged: even 4v4 about 0.9 captures, 12 min, 162 kills; Demon against Heroic 3-0 in 6.4 min; 8v8 12 min, 202 kills.
+- Already played: the edit was saved before the owner's next matches. 648 simulated matches since carry the cap: their top player median 25 kills, 41 in one game in ten, 65 at most, and no game with a 90-kill player (15 among the 1,093 before).
+- Validation: full suite 1363 OK; `bot_sim` imports. `bot_sim --verify 40`: 17 of 40 the same with this engine (the committed one: none, as those 40 were played with the cap).
+
 ### Bot simulation: top bots farm like real top players (steeper gaps, hunting); Heroic and Tactician every other round, 2026-11-23
 
 The owner: "After 46 games not a single bot has a 2 or more kd. All the lobbies are being stacked against each other where the minority skill level of high end players are all always in the same lobbies?", with his own and a friend's last Infinite games (2 to 16 K/D, most 5-10); then "Make all Heroics and Tacticians play just as much as. and make them flip flop ... play 50% of all games?", and "Yes, flip flop + B".

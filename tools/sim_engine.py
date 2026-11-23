@@ -139,8 +139,14 @@ NOBLE_EDGE = (0.55, 0.60)
 # Legendary 73% of fights, not 62%), and fights found HUNT times more often between mismatched players
 # (exp(HUNT * gap): the strong hunt the weak, as in a real Big Team Battle). Measured on his pool before it went in:
 # Demons 1.40 -> about 3.5, Nobles 1.77 -> about 5.5. Fitted models carry them; each match stores its own (slice).
-SKILL_SCALE = 2.0
+# Then (the owner: "cloudybarracude going 91/4 in a 100 kill game isnt realistic. 4 of the top 5 games all have over
+# 100 kills"): one Demon in a lobby of weaker bots was in nearly every fight (hunting up to 27 times), 90-121 kills.
+# HUNT_MAX caps a pair's hunting at 3 times, and the gaps went to 3 times TIER_SKILL's (he chose "Balanced"): measured
+# on his pool (hunt_tune, 10 rounds): the top player of a 4v4 about 40 kills (57 in a big game, 67 at most; his real
+# 4v4 matches: 35, 46), 27% of the match's kills (real 23%); Demons 3.0 K/D, Nobles 3.5, best bots 5-5.7.
+SKILL_SCALE = 3.0
 HUNT = 1.5
+HUNT_MAX = 3.0
 
 
 def skill_of(name, tier, scale=1.0):
@@ -406,6 +412,7 @@ class Model:
         self.score_rules = {}    # (family, team size) -> score limit (fit: SCORE_RULES)
         self.skill_scale = 1.0   # the tiers' strength gaps in fights (fit: SKILL_SCALE)
         self.hunt = 0.0          # mismatched fights' extra rate, exp(hunt * gap) (fit: HUNT)
+        self.hunt_max = None     # and at most this many times (fit: HUNT_MAX; None: no cap)
         self.style_rate = {}     # medal -> per kill
         self.weapon_medal = {}   # medal -> per kill with its weapon
         self.mode_rate = {}      # (family, medal) -> per kill in that family
@@ -600,7 +607,7 @@ def fit(real, tiers):
     m.assist_medal = min(1.0, medal_tot.get(M_ASSIST, 0) / assists_tot) if assists_tot else 1.0
     m.limits = {key: limits_from(key[0], seen) for key, seen in gt_seen.items()}
     m.kpm_game, m.obj_rules, m.score_rules = dict(KPM_RULES), dict(OBJ_RULES), dict(SCORE_RULES)
-    m.skill_scale, m.hunt = SKILL_SCALE, HUNT
+    m.skill_scale, m.hunt, m.hunt_max = SKILL_SCALE, HUNT, HUNT_MAX
     return m
 
 
@@ -698,6 +705,7 @@ def model_slice(model, gametype, size):
             **({"obj": list(rule)} if rule else {}),           # (Nov 23: a gametype's own capture rule)
             **({"scale": model.skill_scale, "hunt": model.hunt}   # (Nov 23: steeper gaps, hunting)
                if getattr(model, "skill_scale", 1.0) != 1.0 or getattr(model, "hunt", 0.0) else {}),
+            **({"hunt_max": model.hunt_max} if getattr(model, "hunt_max", None) else {}),
             "style_rate": {str(k): round(v, 6) for k, v in model.style_rate.items()},
             "weapon_medal": {str(k): round(v, 6) for k, v in model.weapon_medal.items()},
             "mode_rate": [[f, mid, round(v, 6)] for (f, mid), v in model.mode_rate.items() if f == fam],
@@ -711,6 +719,7 @@ def model_from_slice(sl, gametype):
     m.limits = {(gametype, sl.get("size", 0)): tuple(sl["limits"])}
     m.obj_rules = {gametype.lower(): tuple(sl["obj"])} if sl.get("obj") else {}
     m.skill_scale, m.hunt = float(sl.get("scale", 1.0)), float(sl.get("hunt", 0.0))   # (older matches: 1 and 0)
+    m.hunt_max = float(sl["hunt_max"]) if sl.get("hunt_max") else None              # (older: no cap)
     m.style_rate = {int(k): v for k, v in sl["style_rate"].items()}
     m.weapon_medal = {int(k): v for k, v in sl["weapon_medal"].items()}
     m.mode_rate = {(f, int(mid)): v for f, mid, v in sl["mode_rate"]}
@@ -1083,9 +1092,14 @@ def play(spec, model, info, seed, inputs=None):
     roster = {tm: sum(p.s for p in by_team[tm]) / max(1, len(by_team[tm])) / scale for tm in teams}
 
     # (hunting moves fights toward mismatched pairs without adding any: the lobby's kills a minute stay kpm's)
+    hunt_max = getattr(model, "hunt_max", None)
+
+    def hunt_of(x, y):                                   # (a pair's hunting factor, at most hunt_max)
+        f = math.exp(hunt * abs(x.s - y.s))
+        return min(f, hunt_max) if hunt_max else f
     hunt_norm = 1.0
     if hunt:
-        cross = [math.exp(hunt * abs(x.s - y.s)) for x in ps for y in ps if x.team != y.team]
+        cross = [hunt_of(x, y) for x in ps for y in ps if x.team != y.team]
         hunt_norm = sum(cross) / len(cross) if cross else 1.0
 
     def objective_rates():
@@ -1118,7 +1132,7 @@ def play(spec, model, info, seed, inputs=None):
                     for y in alive_by[tb]:
                         pairs.append((x, y))
                         w = mx * y.a * rate_mult(y)
-                        weights.append(w * math.exp(hunt * abs(x.s - y.s)) if hunt else w)   # (the strong hunt)
+                        weights.append(w * hunt_of(x, y) if hunt else w)   # (the strong hunt)
         fight_rate = lam0 * sum(weights) / hunt_norm
         su_rate = sum(p.su + p.bt for p in ps if p.back <= t)
         obj = objective_rates()
