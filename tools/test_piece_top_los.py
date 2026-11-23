@@ -61,5 +61,28 @@ class PieceTopTests(unittest.TestCase):
         self.assertFalse(ray(T, 0.70))
 
 
+class OwnLipTests(unittest.TestCase):
+    """(Nov 22) The level's own wall near the eye: the upper half of its top step is rounding (Terrain._ray, LIP_R)."""
+
+    def lip(self, top_bit_z, near=True):
+        T = flat()
+        b = int(np.floor((top_bit_z - T.wall_z0) / T.wall_bin))
+        x = 5.0 if near else 12.0
+        ci = int(x / T.cell)
+        for k in range(int(np.floor((0.0 - T.wall_z0) / T.wall_bin)), b + 1):
+            T.walls[:, ci, 0] |= np.uint64(1) << np.uint64(k)     # (a low wall across y, from the floor up to that step)
+        return T
+
+    def test_upper_half_of_its_own_top_step_near_the_eye_passes(self):
+        T = self.lip(0.6)                                          # (its top step 0.5-0.75)
+        self.assertTrue(T._ray(Vec(4.0, 4.1, 0.0), Vec(16.0, 4.1, 0.0), 0.7, "shot", source_height=0.7))
+        self.assertFalse(T._ray(Vec(4.0, 4.1, 0.0), Vec(16.0, 4.1, 0.0), 0.55, "shot", source_height=0.55))   # (lower half)
+        self.assertFalse(T._ray(Vec(4.0, 4.1, 0.0), Vec(16.0, 4.1, 0.0), 0.3, "shot", source_height=0.3))
+
+    def test_far_from_the_eye_it_blocks(self):
+        T = self.lip(0.6, near=False)                              # (8 u off: his cover, not ours)
+        self.assertFalse(T._ray(Vec(4.0, 4.1, 0.0), Vec(16.0, 4.1, 0.0), 0.7, "shot", source_height=0.7))
+
+
 if __name__ == "__main__":
     unittest.main()

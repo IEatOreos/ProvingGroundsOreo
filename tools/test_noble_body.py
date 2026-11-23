@@ -36,11 +36,24 @@ class BodyPointTests(unittest.TestCase):
 
     def test_top_and_sides_of_the_head(self):
         me, e = PlayerState(0, 0, "b", Vec()), man(Vec(10, 0, 0))
-        name, h, lat, p = B.noble_body_point(me, e, lambda o, p: p.z > 0.66)        # (over a wall: his helmet's top)
+        name, h, lat, p = B.noble_body_point(me, e, lambda o, p: p.z > 0.65)        # (over a wall: his helmet's top)
         self.assertEqual(name, "top of the head")
         name, h, lat, p = B.noble_body_point(me, e, lambda o, p: p.y < -0.05 and p.z > 0.6)   # (round a corner)
         self.assertEqual(name, "side of the head")
         self.assertLess(p.y, -0.05)
+
+    def test_edges_pulled_in_to_the_body(self):
+        # (Nov 22, later: the edge points hit 21-40% live, past the body the game hits)
+        for name, h, lat in B.NOBLE_BODY:
+            if name in ("shoulder", "arm", "hand"):
+                self.assertLessEqual(abs(lat), 0.16, name)
+        self.assertLessEqual(dict((n, h) for n, h, _ in B.NOBLE_BODY)["top of the head"][1], 0.04)
+
+    def test_sighting_uses_a_spread_of_points(self):
+        self.assertLess(len(B.NOBLE_SIGHT), len(B.NOBLE_BODY))
+        me, e = PlayerState(0, 0, "b", Vec()), man(Vec(10, 0, 0))
+        name, h, lat, p = B.noble_body_point(me, e, lambda o, p: p.z < 0.05, B.NOBLE_SIGHT)
+        self.assertEqual(name, "foot")
 
     def test_the_whole_outline(self):
         names = {n for n, _, _ in B.NOBLE_BODY}

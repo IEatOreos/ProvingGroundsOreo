@@ -554,6 +554,23 @@ def item_name(path):
     return EQUIPMENT_ALIAS.get(n, WEAPON_ALIAS.get(n, n))
 
 
+# (custom, Nov 22, the owner on the brain's update rate: its passes 10-17% over 100 ms in his matches, shots fired after
+# one hitting about 20 points less) each pass's time and each bot's think, summed up in the next world row (perf_row):
+# [passes, median pass ms, slowest pass ms, passes over 100 ms, slowest pass's thinking ms, {bot: its slowest think ms}]
+PERF = {"pass": [], "think_sum": [], "think": {}, "think_pass": 0.0}
+
+
+def perf_row():
+    p, ts = PERF["pass"], PERF["think_sum"]
+    if not p:
+        return None
+    k = max(range(len(p)), key=p.__getitem__)
+    row = [len(p), round(sorted(p)[len(p) // 2], 1), round(p[k], 1), sum(x > 100.0 for x in p),
+           round(ts[k], 1) if k < len(ts) else None, {str(i): round(v, 1) for i, v in PERF["think"].items()}]
+    PERF["pass"], PERF["think_sum"], PERF["think"] = [], [], {}
+    return row
+
+
 ITEM_NOT_HERE = float("inf")   # (custom, Nov 22) a director's item_up for a spawn this game type does not fill (item_check)
 ITEM_EMPTY_AFTER = 5.0         # s past its respawn time with nothing there: not in this game type
 
@@ -1414,7 +1431,8 @@ def main():
                         vehicles=[[v["handle"], v["kind"], round(v["pos"][0], 2), round(v["pos"][1], 2),
                                    round(v["pos"][2], 2), v["riders"], v["team"],
                                    round(v["up"][2], 2) if v.get("up") else None, v.get("left"), int(bool(v.get("dead")))]
-                                  for v in snap.vehicles])) + chr(10))
+                                  for v in snap.vehicles],
+                        perf=perf_row())) + chr(10))
                 if now - getattr(main, "saved_at", 0.0) > 60:   # learned sight lines, once a minute
                     main.saved_at = now
                     save_learned(MAP)
@@ -1444,7 +1462,11 @@ def main():
                     d = directors[key(b)]
                     last_wp["w"] = None
                     decide_was = b.next_decide
+                    th0 = time.perf_counter()
                     a = b.think(now, dt, snap, T.sees, nav, d.callouts, d.item_up)   # (sight: windows and fences pass)
+                    th = (time.perf_counter() - th0) * 1000.0      # (custom, Nov 22: each bot's think, ms: PERF)
+                    PERF["think"][index] = max(PERF["think"].get(index, 0.0), th)
+                    PERF["think_pass"] += th
                     if trace:
                         g, w = b.goal, last_wp["w"]
                         line = dict(t=round(now, 3), id=index, pos=[round(v, 2) for v in (me.pos.x, me.pos.y, me.pos.z)],
@@ -1514,6 +1536,9 @@ def main():
                         print(f"{now:6.1f}s bot {index} {b.p.tier[:3]} t{b.team} {me.pos.x:6.1f},{me.pos.y:7.1f} goal {b.goal[0]:<8} "
                               f"sh {me.shield:.2f} hp {me.health:.2f}" if me and me.alive else f"{now:6.1f}s bot {index} dead",
                               flush=True)
+                PERF["pass"].append((time.time() - tick) * 1000.0)        # (custom, Nov 22: the whole pass, ms)
+                PERF["think_sum"].append(PERF["think_pass"])
+                PERF["think_pass"] = 0.0
                 time.sleep(max(0.0, 1 / HZ - (time.time() - tick)))
             except Exception as e:      # a read raced the game (object gone) or the match ended
                 fails += 1

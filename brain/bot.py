@@ -765,6 +765,7 @@ ON_SIGHT_R = 0.22    # (custom, Nov 22) u: the view this near a part of a man in
 # (custom, Nov 22) Noble's DMR within NOBLE_FAST_R u (Bot.fire_gap): the owner's measured fastest pace while his shield
 # holds, his paced last shot once it is down
 NOBLE_FAST_R, NOBLE_DMR_FAST, NOBLE_KILL_PACE = 7.0, 0.367, 0.55
+NOBLE_FLICKER_S = 1.0   # (custom, Nov 22) s: Noble's fight held on a man seen, or who hit it, this recently (noble_flicker)
 ON_SIGHT_HIT_S = 1.0  # (custom, Nov 22) s: a man who hit it this recently has a line to it, the map's checks or not
 # u: a sword or hammer this near is met with the shotgun. The Flood close 3 u/s, 6 with a thruster: a swap begun here has
 # it out before they are in its reach (2.5 u). Past it the guns go by range (the magnum hits him on his way in): at 10 u
@@ -1108,12 +1109,16 @@ def chest_solution(me, target):
 # shootable") the parts Noble may shoot, in its order, round his whole outline as it faces him: (name, height over his
 # feet standing, None: his head point and the offsets from it; to the side across the line to him, u). Crouched, the
 # heights shrink as his head does
-NOBLE_BODY = (("head", None, 0.0), ("top of the head", ("head", 0.07), 0.0), ("side of the head", ("head", 0.0), 0.08),
-              ("side of the head", ("head", 0.0), -0.08), ("chest", 0.35, 0.0), ("shoulder", 0.47, 0.21),
-              ("shoulder", 0.47, -0.21), ("arm", 0.36, 0.25), ("arm", 0.36, -0.25), ("hand", 0.24, 0.26),
-              ("hand", 0.24, -0.26), ("hips", 0.22, 0.0), ("hip", 0.22, 0.14), ("hip", 0.22, -0.14),
-              ("knee", 0.13, 0.1), ("knee", 0.13, -0.1), ("leg", 0.07, 0.1), ("leg", 0.07, -0.1),
-              ("foot", 0.02, 0.1), ("foot", 0.02, -0.1))
+# (Nov 22, later: live Asylum 20261122-195647, Noble's rounds by the point aimed at: head / chest 78%, side of the head
+# 68%, top of the head 40% (6 of 15), shoulder 24% (24 of 98), arm 29%, hand 21%: the edge points sat past the body the
+# game hits. Pulled in: shoulders 0.21 -> 0.14, arms 0.25 -> 0.16, hands 0.26 -> 0.15, hips 0.14 -> 0.1, legs and
+# feet 0.1 -> 0.07, the top of the head 0.07 -> 0.04 over the head point; the sides of the head as they were)
+NOBLE_BODY = (("head", None, 0.0), ("top of the head", ("head", 0.04), 0.0), ("side of the head", ("head", 0.0), 0.08),
+              ("side of the head", ("head", 0.0), -0.08), ("chest", 0.35, 0.0), ("shoulder", 0.47, 0.14),
+              ("shoulder", 0.47, -0.14), ("arm", 0.36, 0.16), ("arm", 0.36, -0.16), ("hand", 0.24, 0.15),
+              ("hand", 0.24, -0.15), ("hips", 0.22, 0.0), ("hip", 0.22, 0.1), ("hip", 0.22, -0.1),
+              ("knee", 0.13, 0.07), ("knee", 0.13, -0.07), ("leg", 0.07, 0.07), ("leg", 0.07, -0.07),
+              ("foot", 0.02, 0.07), ("foot", 0.02, -0.07))
 
 
 def body_point(me, target, h, lat):
@@ -1123,12 +1128,21 @@ def body_point(me, target, h, lat):
     return target.pos + Vec(-dy / n * lat, dx / n * lat, h)
 
 
-def noble_body_point(me, target, clear):
-    """(name, h, lat, point) of target's first part in NOBLE_BODY order that clear(eye, point) passes; None: none."""
+# (custom, Nov 22) the outline points Perception looks for a man by (the whole outline is for the man a Noble fights:
+# fight's noble_point). Every point every tick for every man in view behind cover took 38% of the brain's time in the
+# simulator (4 Noble vs 4 Demon, Asylum): a spread of eight, each man's answer kept NOBLE_SIGHT_KEEP s
+NOBLE_SIGHT = tuple(p for p in NOBLE_BODY if p[0] in ("side of the head", "shoulder", "hip", "knee", "foot")
+                    and p[2] != 0.0)[0::1]
+NOBLE_SIGHT_KEEP = 0.1
+
+
+def noble_body_point(me, target, clear, points=None):
+    """(name, h, lat, point) of target's first part in NOBLE_BODY order (or points) that clear(eye, point) passes;
+    None: none."""
     k = CROUCH_HEAD / 0.62 if crouched(target) else 1.0
     o = eye(me)
     head = (target.head_pos.z - target.pos.z) if target.head_pos is not None else aim_height(True, crouched(target))
-    for name, h, lat in NOBLE_BODY:
+    for name, h, lat in (points or NOBLE_BODY):
         if h is None:
             h = head
         elif isinstance(h, tuple):
@@ -1533,9 +1547,16 @@ class Perception:
                     parts = (chest, terrain.point_los(*ray, mode=vision_mode))
                 s.target_parts[e.id] = parts
                 line = any(parts)
-                if (not line and profiles.fixed_noble(s.p) and getattr(terrain, "point_los", None) is not None
-                        and noble_body_point(me, e, lambda a_, p_: terrain.point_los(a_, p_, mode=vision_mode))):
-                    line = True       # (custom, Nov 22) Noble sees a man by any part of him that shows (NOBLE_BODY)
+                if not line and profiles.fixed_noble(s.p) and getattr(terrain, "point_los", None) is not None:
+                    # (custom, Nov 22) Noble sees a man by any part of him that shows (NOBLE_SIGHT), kept a moment
+                    seen_by = s.__dict__.setdefault("noble_sight", {})
+                    c = seen_by.get(e.id)
+                    if c is None or now - c[0] > NOBLE_SIGHT_KEEP or (c[1] - e.pos).flat() > 0.3 \
+                            or (c[2] - me.pos).flat() > 0.3:
+                        got = noble_body_point(me, e, lambda a_, p_: terrain.point_los(a_, p_, mode=vision_mode),
+                                               NOBLE_SIGHT) is not None
+                        c = seen_by[e.id] = (now, e.pos, me.pos, got)
+                    line = c[3]
             elif (in_view and getattr(terrain, "point_los", None) is not None
                   and h4_demon_fire(s.p, game, me, e) and h4_rider(me, e)):
                 # (custom: Halo 4 Demon at a rider: what it can shoot is his seated head from our view, past the level
@@ -4947,7 +4968,7 @@ class Bot:
             gone = now - s.per.last_seen.get(s.goal[1], -9.0)
             weak = tgt is not None and tgt.shield <= 0.05 and (not snap.shieldless or tgt.health <= 0.5)
             # (custom, Nov 8: Halo 4 Demon, a man out of sight only by chase_ok: healthy, winning, no friends of his by)
-            chase = s.goal[1] in seen or s.chase_ok(now, me, snap, s.goal[1])
+            chase = s.goal[1] in seen or s.chase_ok(now, me, snap, s.goal[1]) or s.noble_flicker(now, s.goal[1])
             if tgt and tgt.alive and gone < (COMMIT_WEAK_S if weak else COMMIT_S) and chase:
                 # the commitment is to fighting, not to one man: when the threat ranking (pick_target,
                 # 25% stickiness built in) picked someone else in view, the commitment goes with it
@@ -10359,6 +10380,18 @@ class Bot:
                     return False
         return True
 
+    def noble_flicker(s, now, k):
+        """(custom, Nov 22, the owner: "I was never out of its sight line once") Noble keeps its fight on a man it saw
+        within NOBLE_FLICKER_S, or who hit it within it: a line that flickers off a moment (a lip, a pillar's edge, the
+        map's model of them) is no reason to walk off. Live Asylum 20261122-195647 at 14.16 and 15.24 s: CactusMailbox's
+        sight of the owner dropped a tick and its fight went with it, to a patrol and its objective, while he shot it."""
+        if not profiles.fixed_noble(s.p) or not isinstance(k, int):
+            return False
+        if now - s.per.last_seen.get(k, -99.0) <= NOBLE_FLICKER_S:
+            return True
+        return (getattr(s.per, "attacker_id", None) == k
+                and now - getattr(s.per, "attacker_t", -99.0) <= NOBLE_FLICKER_S)
+
     def on_sight_fire(s, now, me, act, snap):
         """(custom, Nov 22, the owner: "when an enemy peaks I want the bot to instantly shoot them at whatever body part
         they see no matter what. The bots are supposed to be good yet they dont shoot on site") Legendary, Blind,
@@ -10418,6 +10451,10 @@ class Bot:
         if best is None:
             return
         _, k, d, trust = best
+        if profiles.fixed_noble(s.p) and getattr(s.aim, "noble_on", None) != k:
+            # (custom, Nov 22, later) Noble: only with its own lock on him (Aim.noble_lock). Its off-lock presses here hit
+            # 3 of 26, live Asylum 20261122-195647; its own trigger already fires the tick the lock takes him
+            return
         chest, head = (getattr(s.per, "target_parts", {}).get(k) or (False, False))[:2]
         if chest or head:
             s.shot_part = (k, bool(head))          # (the snap, Demon's and Noble's, onto what it sees of him)

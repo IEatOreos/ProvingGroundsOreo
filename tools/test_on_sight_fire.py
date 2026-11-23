@@ -40,6 +40,8 @@ class OnSightTests(unittest.TestCase):
     def test_fires_at_a_man_in_the_crosshair(self):
         for tier in ("top", "mythic", "demon", "noble"):
             b, me, foe, sn = scene(tier)
+            if tier == "noble":
+                b.aim.noble_on = 1                     # (Noble: with its own lock on him, test_noble_only_with_its_lock_on)
             a = Action()
             b.on_sight_fire(10.0, me, a, sn)
             self.assertTrue(a.fire, tier)
@@ -88,6 +90,26 @@ class OnSightTests(unittest.TestCase):
         a = Action()
         b.on_sight_fire(10.0, me, a, sn)
         self.assertTrue(a.fire)
+
+    def test_noble_only_with_its_lock_on(self):
+        b, me, foe, sn = scene("noble")
+        b.aim.noble_on = None
+        a = Action()
+        b.on_sight_fire(10.0, me, a, sn)
+        self.assertFalse(a.fire)
+        b.aim.noble_on = 1
+        a = Action()
+        b.on_sight_fire(10.0, me, a, sn)
+        self.assertTrue(a.fire)
+
+    def test_noble_holds_its_fight_through_a_flicker(self):
+        b = mk("noble")
+        b.per.last_seen[1] = 9.4
+        self.assertTrue(b.noble_flicker(10.0, 1))                  # (seen 0.6 s ago)
+        self.assertFalse(b.noble_flicker(10.6, 1))
+        b.per.attacker_id, b.per.attacker_t = 1, 10.2                # (he hit it 0.4 s ago)
+        self.assertTrue(b.noble_flicker(10.6, 1))
+        self.assertFalse(mk("demon").noble_flicker(10.0, 1))
 
     def test_paced_and_released(self):
         b, me, foe, sn = scene()

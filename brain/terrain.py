@@ -16,6 +16,7 @@ EYE = 0.62       # standing eye height above the feet (world units, CE)
 CHEST = 0.40
 FEET_SLAB = 0.6  # a ray crossing the plane of a man's feet this close to him goes through the floor he stands on (_ray)
 RAY_MAX = 1000.0  # u: no line of sight longer than this (_ray: its samples grow with its length)
+LIP_R = 3.0           # u: from the eye, a wall's top step's upper half is rounding, not its cover's lip (_ray)
 PIECE_TOP_EPS = 0.03  # u: a line this far over a placed piece's real wall top passes it (_ray; its faces' samples stop
                       # just short of their edges)
 WAIST = 0.30     # a handrail's height over the feet (the waist ray of clearance; drops through a rail: _build_nav)
@@ -1207,6 +1208,21 @@ class Terrain:
                 if lv is not None:
                     level[over] = s._wall_bit(lv[j[over], i[over]], zs[over])
                 hit &= ~(over & ~level)
+        if hit.any():
+            # (custom, Nov 22) the top of its own cover: within LIP_R of the eye, a hit in the upper half of a wall's
+            # top step (no wall in the step over it) and no placed piece there (those have their real top, above) is the
+            # 0.25 u rounding, not the lip. Live Asylum 20261122-195647 at 13.4-14.1 s: a Noble's line to the owner over
+            # the rock in front of it, 1.8 u off, read blocked at 60.17 in the 60.0-60.25 step
+            near = hit & (t * math.hypot(L, zb - za) <= LIP_R)
+            if near.any():
+                idx = np.flatnonzero(near)
+                lv = getattr(s, "level_walls", None)
+                own = s._wall_bit(lv[j[idx], i[idx]], zs[idx]) if lv is not None else np.ones(len(idx), bool)
+                cap = top[j[idx], i[idx]] if top is not None else np.full(len(idx), -np.inf)
+                piece_here = zs[idx] <= cap + PIECE_TOP_EPS                  # (a piece's own face: its real top rules)
+                frac = ((zs[idx] - s.wall_z0) / s.wall_bin) % 1.0
+                above = s._wall_bit(W[idx], zs[idx] + s.wall_bin)
+                hit[idx[own & ~piece_here & (frac >= 0.5) & ~above]] = False
         if hit.any():
             return False                             # a wall at the ray's height (windows and fences: set_wall_kinds)
         fl = s.floors[:, j, i]                       # (L, n) floor levels under the samples
