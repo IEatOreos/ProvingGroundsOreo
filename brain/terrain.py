@@ -16,6 +16,8 @@ EYE = 0.62       # standing eye height above the feet (world units, CE)
 CHEST = 0.40
 FEET_SLAB = 0.6  # a ray crossing the plane of a man's feet this close to him goes through the floor he stands on (_ray)
 RAY_MAX = 1000.0  # u: no line of sight longer than this (_ray: its samples grow with its length)
+PIECE_TOP_EPS = 0.03  # u: a line this far over a placed piece's real wall top passes it (_ray; its faces' samples stop
+                      # just short of their edges)
 WAIST = 0.30     # a handrail's height over the feet (the waist ray of clearance; drops through a rail: _build_nav)
 RAIL_COST = 25.0  # a drop over a handrail: taken only when nothing else gets there (forbidding it cut off floors)
 LID_COST = 400.0  # a drop into a column whose floor goes on at the ledge's height (_build_nav): beyond any detour
@@ -580,8 +582,16 @@ class Terrain:
         i = np.floor((pts[:, 0] - s.x0) / s.cell).astype(int)
         bit = np.floor((pts[:, 2] - s.wall_z0) / s.wall_bin).astype(int)
         ok = (j >= 0) & (j < s.h) & (i >= 0) & (i < s.w) & (bit >= 0) & (bit < 64 * s.walls.shape[-1])
+        if getattr(s, "level_walls", None) is None:
+            s.level_walls = s.walls.copy()          # (custom, Nov 22) the level's own walls, before any piece (_ray)
         np.bitwise_or.at(s.walls, (j[ok], i[ok], bit[ok] >> 6), np.left_shift(np.uint64(1), (bit[ok] & 63).astype(np.uint64)))
         s._note_piece_walls(j[ok], i[ok], s.wall_z0 + bit[ok] * s.wall_bin)
+        # (custom, Nov 22) each cell's highest point of a piece's wall faces, exactly: a wall bin is a 0.25 u step, so a
+        # face topping out at 61.33 filled the bin to 61.5 and a line over the top of a Forge platform or lip read as
+        # blocked (_ray: PIECE_TOP_EPS)
+        if getattr(s, "piece_top", None) is None:
+            s.piece_top = np.full((s.h, s.w), -np.inf, np.float32)
+        np.fmax.at(s.piece_top, (j[ok], i[ok]), pts[ok, 2].astype(np.float32))
 
     def _note_piece_walls(s, j, i, z):
         """(custom, Nov 18) Keep, per cell, the height range of a placed piece's wall bins (s.piece_wz (h, w, 2), low and
@@ -1182,7 +1192,22 @@ class Terrain:
             W = W.copy()
             k = min(W.shape[-1], clear.shape[-1])    # (Forge pieces can add wall words after the kinds went in)
             W[:, :k] &= ~clear[j, i, :k]
-        if s._wall_bit(W, zs).any():
+        hit = s._wall_bit(W, zs)
+        top = getattr(s, "piece_top", None)
+        if top is not None and hit.any():
+            # (custom, Nov 22, the owner: "If I can see any part of a spartan as long as its not through a glass wall, I
+            # can shoot them") a piece's wall bin over the face's real top (0.25 u steps: up to a quarter unit too tall)
+            # is no wall to a line, unless the level's own walls are there too. Live Asylum 20261122-195647: a Noble
+            # under the owner's Forge platform (top 61.33) held fire, its lines blocked at 61.46, and two over a rock lip
+            cap = top[j, i]
+            over = hit & (zs > cap + PIECE_TOP_EPS)
+            if over.any():
+                lv = getattr(s, "level_walls", None)
+                level = np.zeros_like(over)
+                if lv is not None:
+                    level[over] = s._wall_bit(lv[j[over], i[over]], zs[over])
+                hit &= ~(over & ~level)
+        if hit.any():
             return False                             # a wall at the ray's height (windows and fences: set_wall_kinds)
         fl = s.floors[:, j, i]                       # (L, n) floor levels under the samples
         z0, z1 = np.r_[za, zs[:-1]], zs

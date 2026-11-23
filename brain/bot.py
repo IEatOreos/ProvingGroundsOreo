@@ -10389,10 +10389,10 @@ class Bot:
             e = snap.player(k)
             if e is None or not e.alive or e.team == me.team:
                 continue
-            # (the man hurting it now: his rounds reach it, so the line is there whatever its map's checks say. Live
-            # Asylum 20261122-190403 at 108.0-108.8 s: a Demon backed onto a ledge, its view on the owner's friend
-            # within 0.5 deg, every check of its map blocked at every height; his one shot from below killed it)
-            trust = k == shooter
+            # (the man hurting it now is looked at too, but his line is checked as any other's. Trusting his hits blind
+            # sent a Noble's two rounds into a platform's edge under the owner, live Asylum 20261122-195647 at 251.7 and
+            # 252.2 s; the false blocks it worked round were a piece's wall bins over its real top, Terrain._ray)
+            trust = False
             d = dist(me.pos, e.pos)
             if d > reach(me.weapon, s.game):
                 continue

@@ -75,14 +75,18 @@ class OnSightTests(unittest.TestCase):
             b.on_sight_fire(10.0, me, a, sn)
             self.assertFalse(a.fire, tier)
 
-    def test_the_man_hurting_it_is_shot_whatever_the_map_says(self):
+    def test_the_man_hurting_it_needs_a_line_too(self):
+        # (Nov 22: trusting his hits blind shot into a platform's edge; Terrain._ray's piece tops fixed the false blocks)
         b, me, foe, sn = scene(los=lambda a_, p: False)
         b.per.attacker_id, b.per.attacker_t = 1, 9.6
         a = Action()
         b.on_sight_fire(10.0, me, a, sn)
-        self.assertTrue(a.fire)
-        b.line_clear = lambda now, me_, k, snap: False
-        b.fire_gate(10.0, me, a, sn)
+        self.assertFalse(a.fire)
+        b, me, foe, sn = scene()
+        b.per.visible_enemies = lambda: []                       # (not in its eyes, but hitting it, with a line)
+        b.per.attacker_id, b.per.attacker_t = 1, 9.6
+        a = Action()
+        b.on_sight_fire(10.0, me, a, sn)
         self.assertTrue(a.fire)
 
     def test_paced_and_released(self):
