@@ -1236,7 +1236,7 @@ RIDER_VEL_MAX = 25.0     # u/s: ... for a man riding a vehicle (a Warthog runs a
 PART_DRY_S, PART_FLIP_S = 0.8, 1.5   # s: pressing at one part this long without a hit on him: the other part this long
 NOBLE_LEAD_ITERS = 3     # (custom, Nov 20) Noble's lead: the shot's flight to where he will be, solved this many times
 NOBLE_EASE_S = 0.06      # s: Noble's swing onto a new man closes the gap with this time constant (eased in, no flick)
-TURN_STEP_MAX_S = 0.05   # s: (custom, Nov 23) Noble's most turn in one update: this long at its turn speed (Bot.turn_cap)
+TURN_STEP_MAX_S = 0.05   # s: (custom, Nov 23) a bot's most turn in one update: this long at its turn speed (Bot.turn_cap)
 NOBLE_LOCK_R = math.radians(1.5)    # rad: this near the point the swing ends and the view locks on him
 NOBLE_HOLD_R = math.radians(20.0)   # rad: locked, a tick's move of his this big is followed exactly (more: swing again)
 NOBLE_PART_HALF = 0.1    # u: (Nov 21) the aimed part's half-width; up close its angle widens the lock (Aim.noble_lock)
@@ -3603,11 +3603,10 @@ class Bot:
         gets, so it still goes where it meant to."""
         dy, dp = wrap(act.yaw - me.yaw), act.pitch - me.pitch
         rate = vehicles.SCORPION_TURN if getattr(s, "scorpion_turn", False) else s.p.turn
-        if profiles.fixed_noble(s.p):
-            # (custom, Nov 23) Noble: a late update turns no more than TURN_STEP_MAX_S's worth. The game applies a step
-            # in one frame: live, SpaghettiBandit's update 0.123 s after its last sent 84 degrees at once (700 deg/s x
-            # 0.123 s), 852 deg/s seen by the Data collector (Asylum 20261123-000210, 172.81 s)
-            dt = min(dt, TURN_STEP_MAX_S)
+        # (custom, Nov 23) a late update turns no more than TURN_STEP_MAX_S's worth, every tier. The game applies a step in
+        # one frame: live, SpaghettiBandit's update 0.123 s after its last sent 84 degrees at once (700 deg/s x 0.123 s),
+        # 852 deg/s seen by the Data collector (Asylum 20261123-000210, 172.81 s); every tier went past its own speed so
+        dt = min(dt, TURN_STEP_MAX_S)
         most = min(s.p.turn, rate) * max(dt, 1e-3)
         turn = math.hypot(dy, dp)
         if turn <= most:

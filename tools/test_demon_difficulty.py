@@ -24,7 +24,7 @@ class DemonProfileTests(unittest.TestCase):
         for style in sorted(set(PERSONALITIES)-{'wheelman'}):   # (the golden 7 styles; Wheelman: Nov 13)
             for seed in range(5):
                 demon=make_profile('demon',style,random.Random(seed))
-                self.assertEqual(demon.turn, math.radians(700))   # (Nov 10, owner; was 480)
+                self.assertEqual(demon.turn, math.radians(450))   # (Nov 23, owner; 700 from Nov 10, was 480)
                 # Use the original turn cap when comparing the rest to the pre-split profile.
                 values = dict(vars(demon), turn=math.radians(1000))
                 numbers.append({k:v for k,v in values.items() if isinstance(v,(float,int))})

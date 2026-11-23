@@ -28,11 +28,12 @@ class HandsTests(unittest.TestCase):
         dem = dict(TIERS["demon"], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN["demon"])
         self.assertEqual(set(mid), set(profiles.MYTHIC_HANDS) | {"turn"})
         for k, v in mid.items():
-            self.assertAlmostEqual(v, (leg[k] + dem[k]) / 2, msg=k)
+            if k != "turn":                                             # (Nov 23: every bot's 400, below)
+                self.assertAlmostEqual(v, (leg[k] + dem[k]) / 2, msg=k)
         self.assertAlmostEqual(mid["reaction"], 0.077, places=6)        # Legendary 0.154 s, Demon 0
         self.assertAlmostEqual(mid["decide"], 0.055, places=6)          # 0.10 s, 0.01 s
         self.assertAlmostEqual(mid["aim_err"], 0.003, places=6)         # 0.006 rad, 0
-        self.assertAlmostEqual(math.degrees(mid["turn"]), 675.0)        # 650, 700 deg/s
+        self.assertAlmostEqual(math.degrees(mid["turn"]), 400.0)        # (Nov 23, owner: every bot 400 deg/s; was 675)
 
     def test_every_bot_is_legendary_with_jittered_middle_hands(self):
         mid = profiles.mythic_hands()

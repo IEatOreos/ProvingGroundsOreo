@@ -36,7 +36,7 @@ class DifficultySeparationTests(unittest.TestCase):
                 numeric['overshoot'] = original['overshoot']
                 self.assertAlmostEqual(numeric['reaction'], original['reaction'] * 0.100 / 0.154)
                 numeric['reaction'] = original['reaction']
-                self.assertAlmostEqual(math.degrees(numeric['turn']), 650)   # (Nov 10, owner)
+                self.assertAlmostEqual(math.degrees(numeric['turn']), 400)   # (Nov 23, owner; 650 from Nov 10)
                 numeric['turn'] = math.radians(1000)     # the stock turn speed, for the stock fingerprint
                 values.append(numeric)
                 self.assertGreater(p.reaction,.0899)     # (Nov 19: 0.100 s x 0.9-1.1)

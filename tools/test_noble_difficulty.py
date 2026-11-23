@@ -176,7 +176,7 @@ class AimbotTests(unittest.TestCase):
             me.yaw, me.pitch = y, p
             if locked_at is None and miss(eye(me), y, p, head) < 1e-9:
                 locked_at = k
-        self.assertEqual(profiles.NOBLE_TURN, math.radians(400))     # (Nov 23: the owner's own top speed; was Demon's)
+        self.assertEqual(profiles.NOBLE_TURN, math.radians(450))     # (Nov 23, owner: Demon's and Noble's 450)
         self.assertTrue(all(st <= profiles.NOBLE_TURN * dt + 1e-9 for st in steps))
         self.assertLess(steps[0], math.radians(120) / 2)                # (no snap)
         self.assertIsNotNone(locked_at)

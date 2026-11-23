@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Every bot turns at 400 deg/s, Demon and Noble 450; no stacked step after a late update for any tier, 2026-11-23
+The owner: "Change all the bots speeds to 400. Demon and Noble to 450" (after Noble's cap at 400, 25ebeed).
+- **Turn speeds (`brain/profiles.py` `TURN`, `BOT_TURN_DEG`, `DEMON_TURN_DEG`, `NOBLE_TURN`):** Easy 270 -> 400 deg/s, Normal 435 -> 400, Heroic and Legendary 650 -> 400, Blind (drawn 650-692) and Mythic (675) -> 400 (`blind_ranges`, `mythic_hands`: Blind still draws it, one value, so its other draws per seed are unchanged), Tactician 400 (Legendary's), Demon 700 -> 450, Noble 400 -> 450. The owner and his friend peak at 400-413 deg/s on controller (the Data collector, six Forge matches). The protected head/turret precision keeps every tier's own speed as before (LEGENDARY_AIM has no turn); its shot correction after the cap is unchanged.
+- **Late update (`Bot.turn_cap`, `TURN_STEP_MAX_S` 0.05 s):** every tier now, not Noble only: an update turns no more than 0.05 s at its speed (20 degrees at 400, 22.5 at 450), however late it comes. Every tier went past its own speed after slow updates (Legendary 699 deg/s at p99, up to 1854 in the Data collector).
+- **Scaling (`brain/scaling.py`):** its own turn scale kept as it was (435 deg/s at 100%, at most 1300), no longer read from the fixed tiers' `TURN`.
+- **Validation:** `tools/test_noble_turn.py` now covers every tier (3); `test_blind_difficulty`, `test_demon_difficulty`, `test_difficulty_separation`, `test_mythic_difficulty` and `test_noble_difficulty` expect the new speeds; full suite 1353 OK. **Untested in game.**
+
 ### Noble turns at 400 deg/s, the owner's own top speed; no stacked step after a late update, 2026-11-23
 The owner's friend: RiotRed "instant flicked him" at about the 3-minute mark (live Asylum 20261123-000210). The owner: "a 60 degree whip in a tenth of a second. is this too fast?", then "Yes, cap Noble".
 - **What happened:** at about 2:56 RiotRed's swing onto him covered 16 degrees in its first update (Noble's ease closes 43% of the gap at once); at about 2:59 it whipped 60 degrees in 0.1 s (700 deg/s, its turn speed) to watch the corner his radar dot was heading for; at about 3:02 it was already on that corner when he came round and fired on the first update it saw him.

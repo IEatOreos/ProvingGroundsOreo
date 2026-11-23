@@ -44,7 +44,12 @@ LOOSE = {"novice": dict(follow=0.35, early=0.4), "average": dict(follow=0.3, ear
 # onto a man (435 deg/s, p95 of his Cyberdyne acquisitions, Aim.step); (custom, Nov 10, owner) Heroic and Legendary
 # 650 deg/s (Legendary was 1000), Demon 700 (was 480).
 # Not jittered (make_profile): one more random draw would shift every seeded bot's other values
-TURN = {k: math.radians(v) for k, v in dict(novice=270, average=435, strong=650, top=650).items()}
+# (custom, Nov 23, owner: "Change all the bots speeds to 400. Demon and Noble to 450") every tier 400 deg/s (Easy
+# was 270, Normal 435, Heroic and Legendary 650), Demon and Noble 450 (TURN[DEMON], NOBLE_TURN). Blind, Tactician and
+# Mythic turn at Legendary's 400 (blind_ranges, mythic_hands). The owner and his friend peak at 400-413 deg/s on
+# controller (the Data collector, six Forge matches). Scaling keeps its own turn scale (brain/scaling.py)
+BOT_TURN_DEG, DEMON_TURN_DEG = 400, 450
+TURN = {k: math.radians(BOT_TURN_DEG) for k in ("novice", "average", "strong", "top")}
 # Intent to kill (bot.Bot.press_on): the share of fights a bot walks in on the man it fights inside its gun's band rather
 # than holding its ground to strafe. A skilled player's Halo 3 matches against Legendary (tools/intent.py, game memory
 # only): he walked toward the man in view 47% of the in-view time and held 39%, Legendary 33% and 63%; he came inside
@@ -95,7 +100,7 @@ CRAFT = {
 # Explicit Demon settings: later edits to Legendary's rows must not change Demon.
 REACTION[DEMON] = 0.70
 SHARP[DEMON] = dict(lag=0.045, flick=0.7, aim_err=0.006, track=0.08)
-TURN[DEMON] = math.radians(700)
+TURN[DEMON] = math.radians(DEMON_TURN_DEG)    # (Nov 23, owner: 450; was 700)
 PRESS[DEMON] = 1.0
 TIERS[DEMON] = dict(HANDS, lag=0.045, flick=0.7, aim_err=0.006, track=0.08,
                     reaction=0.154, memory=10, radar=1.0, teamwork=0.95)
@@ -153,8 +158,9 @@ NOBLE = "noble"
 # (Nov 23, owner: "Yes, cap Noble") 700 -> 400 deg/s, the owner's and his friend's own top speed on controller: over six
 # Forge matches the Data collector's view reads of both peaked at 400-413 deg/s, never more than 33-38 degrees in any
 # 0.1 s; RiotRed's 60 degrees in 0.1 s to a radar dot read on the far side as an instant flick (live Asylum
-# 20261123-000210, about 2:59). Its step per update is capped too (bot.TURN_STEP_MAX_S)
-NOBLE_TURN = math.radians(400)
+# 20261123-000210, about 2:59). Then (owner: "Demon and Noble to 450") Demon's 450. Each update's step is capped too
+# (bot.TURN_STEP_MAX_S)
+NOBLE_TURN = TURN[DEMON]
 
 
 def arc_spot(prof):
@@ -367,7 +373,9 @@ def blind_ranges():
     Legendary's reaction as it was (LEGENDARY_BASE_REACTION): Blind unchanged."""
     leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"], reaction=LEGENDARY_BASE_REACTION)
     dem = dict(TIERS[DEMON], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN[DEMON])
-    return {k: (leg[k], leg[k] + BLIND_TOWARD * (dem[k] - leg[k])) for k in BLIND_HANDS + ("turn",)}
+    out = {k: (leg[k], leg[k] + BLIND_TOWARD * (dem[k] - leg[k])) for k in BLIND_HANDS + ("turn",)}
+    out["turn"] = (TURN["top"], TURN["top"])      # (Nov 23, owner: every bot 400 deg/s but Demon and Noble)
+    return out
 
 
 def blind_profile(personality, rng=random):
@@ -401,7 +409,9 @@ def mythic_hands():
     reaction as it was (LEGENDARY_BASE_REACTION): Mythic unchanged."""
     leg = dict(TIERS["top"], overshoot=0.0, turn=TURN["top"], reaction=LEGENDARY_BASE_REACTION)
     dem = dict(TIERS[DEMON], **DEMON_AIM, reaction=0.0, decide=0.01, turn=TURN[DEMON])
-    return {k: leg[k] + MYTHIC_TOWARD * (dem[k] - leg[k]) for k in MYTHIC_HANDS + ("turn",)}
+    out = {k: leg[k] + MYTHIC_TOWARD * (dem[k] - leg[k]) for k in MYTHIC_HANDS + ("turn",)}
+    out["turn"] = TURN["top"]                     # (Nov 23, owner: every bot 400 deg/s but Demon and Noble)
+    return out
 
 
 def mythic_profile(personality, rng=random):

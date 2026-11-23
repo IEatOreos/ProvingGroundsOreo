@@ -34,7 +34,7 @@ import math
 import os
 import re
 
-from .profiles import CRAFT, HANDS, LOOSE, PERSONALITIES, TIERS, TURN as TURNS, Profile
+from .profiles import CRAFT, HANDS, LOOSE, PERSONALITIES, TIERS, Profile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGS = os.path.join(ROOT, "logs")
@@ -48,8 +48,9 @@ BOT_ID = "0xB07B07B0"   # botcore's own players' Xbox IDs start with this
 TINY = 1e-6          # (numbers only: no value may reach exactly zero)
 TICK = 1.0 / 30      # the live loop's tick (tools/live_bots.py HZ): reaction, tracking, decisions go no quicker
 FLOORS = dict(reaction=TICK, track=TICK, decide=TICK)
-TURN = TURNS["average"]            # turn speed at 100%
-TURN_MAX = 2 * TURNS["top"]        # the quickest Scaling turns (2000 deg/s): reached at 460%
+# (custom, Nov 23) Scaling's own turn scale, as it was: the fixed tiers' TURN all went to 400 deg/s that day (the owner)
+TURN = math.radians(435)           # turn speed at 100% (Normal's former 435 deg/s)
+TURN_MAX = 2 * math.radians(650)   # the quickest Scaling turns (Legendary's former 650 x 2)
 LEGEND = 1.5         # the rating where the hands are about Legendary's: game sense grows past Legendary's above it
 MAX = 18.0           # the bots' best (1800%): shots before moving on reach 1 there, the last setting to hit its floor
 

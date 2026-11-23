@@ -19,14 +19,14 @@ class BlindTests(unittest.TestCase):
     def test_turn_speeds(self):
         deg = {t: round(math.degrees(make_profile(t, "rusher", random.Random(0)).turn))
                for t in ("average", "strong", "top", "demon")}
-        self.assertEqual(deg, dict(average=435, strong=650, top=650, demon=700))
+        self.assertEqual(deg, dict(average=400, strong=400, top=400, demon=450))   # (Nov 23, owner; Nov 10's 435-700)
         self.assertNotIn("turn", profiles.LEGENDARY_AIM)   # protected aim keeps Legendary's own turn speed
 
     def test_blind_is_legendary_with_drawn_hands(self):
         ranges = profiles.blind_ranges()
         self.assertAlmostEqual(ranges["reaction"][0], 0.154)
         self.assertAlmostEqual(ranges["reaction"][1], 0.154 * 0.15)
-        self.assertAlmostEqual(math.degrees(ranges["turn"][1]), 650 + 0.85 * 50)
+        self.assertEqual([math.degrees(x) for x in ranges["turn"]], [400, 400])   # (Nov 23, owner: every bot 400)
         seen = {k: set() for k in ranges}
         for style in PERSONALITIES:
             for seed in range(20):
@@ -45,7 +45,7 @@ class BlindTests(unittest.TestCase):
                 for k in ("memory", "radar", "teamwork", "jump", "routes", "map_iq", "aggression", "lead"):
                     self.assertEqual(getattr(p, k), getattr(top, k), k)
         for k, vals in seen.items():
-            if k != "overshoot":                     # (Legendary and Demon both 0)
+            if k not in ("overshoot", "turn"):       # (Legendary and Demon both 0; Nov 23: every Blind turns at 400)
                 self.assertGreater(len(vals), 15, k)  # drawn per bot (20 seeds), not one fixed value
 
     def test_legendary_and_demon_unchanged_by_blind(self):
