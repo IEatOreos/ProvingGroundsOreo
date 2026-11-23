@@ -1135,12 +1135,25 @@ def main():
     bug_check, grow_check = [-9.0, None], [-9.0]     # bug_check[1]: the last tick's mode once read (see below)
     read_gt = [None]                                  # (custom, Nov 21) botcore's tick count at the last read
     import bug_reports
+    sampler = None                                    # (custom, Nov 23) where the brain's time goes (tools/brain_sampler.py)
+    try:
+        from brain_sampler import Sampler
+        same = re.search(r"_(\d{8}-\d{6})\.jsonl$", o.trace or "")
+        stamp = same.group(1) if same else time.strftime("%Y%m%d-%H%M%S")
+        sampler = Sampler(os.path.join(ROOT, "logs", f"brain_profile_{o.map.replace('/', '_')}_{stamp}.txt"))
+        sampler.start()
+        print("brain profile:", sampler.path, flush=True)
+    except Exception as e:                            # (never stops the bots)
+        print(f"brain profile not started: {type(e).__name__}: {e}", flush=True)
+        sampler = None
     startup_mark("first tick")
     _STARTUP[1] = False
     try:
         while time.time() - t0 < o.seconds:
             try:
                 tick = time.time()
+                if sampler is not None:
+                    sampler.tick = tick
                 now = (still[2] if still[2] is not None else tick) - t0 - paused[0]
                 st = botctl.status(m)
                 oc = botctl.owner_crouch(m)             # H2A / Halo 4: his own action's crouch bit; elsewhere his key
@@ -1588,6 +1601,8 @@ def main():
                 continue
             fails = 0
     finally:
+        if sampler is not None:
+            sampler.stop()                       # (its last report written)
         save_learned(MAP)
         save_lidar()
         lidar_saver.close()                      # (custom, Nov 22: its last save written, the helper exits)

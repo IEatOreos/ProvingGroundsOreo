@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### The brain's profile in every match, 2026-11-23
+
+The owner, after an 8v8 CTF on a new Forge World layout (`20261123-182210`) where the brain's passes took 194 ms (median; 15–35 ms in the day's other matches) and the bots played badly: "Yes, profile first" (before spreading the bots across cores).
+
+- **New `tools/brain_sampler.py` (`Sampler`):** a thread looks at the brain's main thread every 10 ms and counts the function it is in (self time) and every function on its stack (total time).
+  - The counts are kept for the whole match and, apart, for slow passes (a pass already 100 ms long when sampled).
+  - It uses `time.sleep`, not `Event.wait`: on Windows a wait wakes on the 15.6 ms system tick.
+- **`tools/live_bots.py`:**
+  - It starts the sampler before the first tick, and each pass sets its start.
+  - The report, `logs/brain_profile_<map>_<stamp>.txt` (the trace's stamp), is written every 60 s and when the brain stops. It lists the top 40 functions by total and by self time, and the 25 commonest stacks of brain and tools frames.
+- **Overhead:** 0.8% on route searches and sight checks on that layout's nav (none measurable in a second run). It never stops the bots: any error in it is caught.
+- **Checks:** new `tools/test_brain_sampler.py` (2 tests: a slow part found in the slow passes, the report written; no thread, no error). `unittest discover` over `tools` is OK (1408 tests), and so is the `live_bots` import. **Not yet run in a match**; its first report comes with the next one.
+
 ### Reach's blue and yellow powerups, 2026-11-23
 
 The owner: "Blue camo, yellow custom".
