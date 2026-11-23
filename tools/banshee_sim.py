@@ -21,10 +21,17 @@ the walk speed, no grenades, armour abilities, power weapons, other vehicles. Re
 against bots that shoot back with DMRs, not as a Reach match.
 
 usage: python -I banshee_sim.py [--seed 1] [--limit 100] [--minutes 20] [--map reach_70_boneyard] [--tiers demon,...]
-                                [--trace out.jsonl] [--quiet]
+                                [--trace out.jsonl] [--quiet] [--delay]
+
+(custom, Nov 21) --delay / Match(delay=True): the game's delays, measured live. Each bot thinks on its own read of the
+game, DELAY_Q old in whole 60 Hz ticks (live: the brain's loop, then the bots think and send one by one, botcore writes
+the action on the next game tick), with vel / vel_t / read_wall set the way tools/live_bots.py sets them so Noble's lead
+(Bot.noble_lead_s, lead_ray) runs as live; its action and shot land on this tick's world. Directors read the present.
+tools/sim_scorecard.py measures the sim against live traces.
 """
 import argparse
 import collections
+import dataclasses
 import json
 import math
 import os
@@ -40,7 +47,7 @@ from brain import noble as _noble  # noqa: E402
 _noble.SAVE = False     # (custom, Nov 22) a simulated match writes nothing to user/noble_*.json: those are live play's
 from brain import oob as O  # noqa: E402
 from brain import vehicles as V  # noqa: E402
-from brain.bot import REACH_BOMB_SPEED, REACH_FUELROD, Bot  # noqa: E402
+from brain.bot import NOBLE_APPLY_S, REACH_BOMB_SPEED, REACH_FUELROD, Bot  # noqa: E402
 from brain.core import PlayerState, Snapshot, Vec  # noqa: E402
 from brain.director import Director  # noqa: E402
 from brain.maps import get_map, set_mode, terrain  # noqa: E402
@@ -78,6 +85,27 @@ SPLAT_SPEED, SPLAT_R = 5.0, 1.1
 SOFT_KILL_S = 9.5             # s: live Spire, pilots over the soft roof died 9-10 s later (brain/terrain.py air_roof)
 BANSHEE_PAD = {"reach_70_boneyard": (Vec(295.7, 100.4, -5.0), 0.0)}
 DEFAULT_TIERS = "demon,top,top,strong,strong,average,average,blind"
+# (custom, Nov 21) the game's delays (Match(delay=True)): live a bot thinks on a read of the game that is this old when its
+# action lands (the read's middle to botcore's next 60 Hz tick: the brain's loop, then the bots think and send one by
+# one). Noble's measured lead (Bot.noble_lead_s, the trace's "lead"), 5% steps, every Asylum match of the owner's in
+# logs/ to Nov 23 (29 matches, 390248 Noble rows: tools/sim_scorecard.py --delays; 0.15 is NOBLE_LEAD_MAX, a stall's cap)
+DELAY_Q = (0.017, 0.018, 0.018, 0.019, 0.02, 0.02, 0.021, 0.022, 0.023, 0.025, 0.026, 0.028, 0.03, 0.033, 0.036, 0.04,
+           0.046, 0.054, 0.067, 0.088, 0.15)
+GAME_HZ = 60.0                 # the game's ticks a second (botcore writes an action on the next one)
+LIVE_HZ = 30                   # tools/live_bots.py HZ: its plain velocity takes every read gap for 1 / HZ s
+
+
+def sample_delay(rng, q=DELAY_Q):
+    """A read-to-action age, s, from the measured spread q (its quantiles, even steps), linear between them."""
+    u = rng.random() * (len(q) - 1)
+    i = min(int(u), len(q) - 2)
+    return q[i] + (q[i + 1] - q[i]) * (u - i)
+
+
+def delay_ticks(rng, age):
+    """The age in whole game ticks (at least one: the action lands on the next tick), rounded at random so the mean
+    stays the age."""
+    return max(1, int(age * GAME_HZ + rng.random()))
 STYLES = ("rusher", "flanker", "camper", "grudger", "spammer", "objector", "flanker", "rusher")
 
 
@@ -147,8 +175,13 @@ class Shot:
 
 class Match:
     def __init__(s, map_name="reach_70_boneyard", seed=1, tiers=DEFAULT_TIERS, limit=100, per_team=8, trace=None,
-                 quiet=False, pilot=None, red_tiers=None, seat_team=None):
+                 quiet=False, pilot=None, red_tiers=None, seat_team=None, delay=False):
         s.rng = random.Random(seed)
+        # (custom, Nov 21) delay: each bot thinks on a read of the game DELAY_Q old (whole 60 Hz ticks), its velocities
+        # and read time set the way tools/live_bots.py sets them (delayed_snapshot); its action lands this tick
+        s.delay, s.drng = delay, random.Random(seed * 7919 + 13)
+        s.ticks, s.hist, s.reads, s.vel_t = 0, collections.deque(maxlen=8), {}, {}
+        s.ages = []                  # (the delays used, s: tests and the scorecard)
         s.pilot = pilot              # drill: this player is seated in the Banshee whenever it stands free and he lives
         # (the owner, Nov 19: "make the bots on one team all demons. And they will gurantee to get one") seat_team: a
         # living man of that team is seated whenever the Banshee stands free, its last pilot first; red_tiers: team 0's
@@ -220,6 +253,64 @@ class Match:
         players = [m.state(v) for m in s.men.values()]
         return Snapshot(s.now, players, score=dict(s.score), mode="slayer", score_limit=s.limit, score_live=True,
                         vehicles=[v.row(s.men)] if v is not None else [])
+
+    def read_at(s, g60):
+        """Every player as the game had him at game tick g60 (60 Hz; the history holds the sim's 30 Hz ticks, the odd
+        ones are halfway between, places and views eased, the rest the nearer tick's; a respawn or a jump is not eased)."""
+        have = {g: ps for g, ps in s.hist}
+        oldest = s.hist[0][0]
+        g60 = max(oldest, g60)
+        if g60 in have:
+            return [dataclasses.replace(p) for p in have[g60]]
+        a, b = have.get(g60 - 1), have.get(g60 + 1)
+        if a is None or b is None:
+            return [dataclasses.replace(p) for p in (a or b or s.hist[-1][1])]
+        bb = {p.id: p for p in b}
+        out = []
+        for p in a:
+            q = bb.get(p.id)
+            if q is None or p.alive != q.alive or (q.pos - p.pos).length() > 2.0:
+                out.append(dataclasses.replace(p))
+                continue
+            out.append(dataclasses.replace(p, pos=(p.pos + q.pos) * 0.5, yaw=wrap(p.yaw + wrap(q.yaw - p.yaw) * 0.5),
+                                           pitch=(p.pitch + q.pitch) * 0.5))
+        return out
+
+    def delayed_snapshot(s, pid, base):
+        """(custom, Nov 21) The bot pid's read of the game: DELAY_Q old in whole game ticks (read_at), each man's vel
+        his move since this bot's last read x LIVE_HZ and vel_t that move over the game time between the reads (a read
+        of the same tick keeps the last; tools/live_bots.py snapshot), and the age for Bot.noble_lead_s (read_wall, set
+        just before its think: think_snapshot). Returns the snapshot and the age."""
+        age = sample_delay(s.drng)
+        n = delay_ticks(s.drng, age)
+        g60 = s.ticks * 2 - n
+        players = s.read_at(g60)
+        prev = s.reads.get(pid)
+        keep = s.vel_t.setdefault(pid, {})
+        for p in players:
+            p.vel, p.vel_t = Vec(), None
+            if p.alive and prev is not None and p.id in prev[1]:
+                q = prev[1][p.id]
+                p.vel = (p.pos - q) * LIVE_HZ
+                dt = (g60 - prev[0]) / GAME_HZ
+                if 0 < dt <= 0.5:
+                    p.vel_t = (p.pos - q) * (1.0 / dt)
+                elif dt == 0:
+                    p.vel_t = keep.get(p.id)
+            if p.vel_t is not None and p.vel_t.length() <= 30.0:
+                keep[p.id] = p.vel_t
+            else:
+                keep.pop(p.id, None)
+                p.vel_t = None
+        s.reads[pid] = (g60, {p.id: p.pos for p in players if p.alive})
+        s.ages.append(n / GAME_HZ)
+        return dataclasses.replace(base, players=players), age
+
+    @staticmethod
+    def think_snapshot(snap, age):
+        """Its read time set now, so Bot.noble_lead_s (time.time() - read_wall + NOBLE_APPLY_S) gives the age."""
+        snap.read_wall = time.time() - max(0.0, age - NOBLE_APPLY_S)
+        return snap
 
     # --- damage -----------------------------------------------------------------------------------------------------
     def hurt(s, m, dmg, by, head=False, veh_shot=False, how="gun"):
@@ -531,6 +622,9 @@ class Match:
                 if m.shield > 0:
                     m.body = min(BODY, m.body + BODY * DT / SHIELD_REFILL)
         snap = s.snapshot()
+        s.ticks += 1
+        if s.delay:
+            s.hist.append((s.ticks * 2, snap.players))
         for d in s.directors.values():
             d.update(s.now, snap)
         acts = {}
@@ -541,7 +635,14 @@ class Match:
             if not m.alive:
                 continue
             b, d = s.bots[pid], s.directors[m.team]
-            a = b.think(s.now, DT, snap, s.T.sees, s.T.nav, d.callouts, d.item_up)
+            seen = snap
+            if s.delay:
+                seen, age = s.delayed_snapshot(pid, snap)
+                me = seen.player(pid)
+                if me is None or not me.alive:      # (live: a bot its read has dead does not think)
+                    continue
+                s.think_snapshot(seen, age)
+            a = b.think(s.now, DT, seen, s.T.sees, s.T.nav, d.callouts, d.item_up)
             for kind, eid, pos, t, busy in b.reports:
                 d.report(t, pid, kind, pos, enemy=eid, busy=busy)
             b.reports.clear()
@@ -656,12 +757,13 @@ def main():
     ap.add_argument("--veh-respawn", type=float, help="the Banshee's respawn, s (drills: more rides a run)")
     ap.add_argument("--red-tiers", help="team 0's tiers (e.g. demon,demon,...), the rest --tiers")
     ap.add_argument("--seat-team", type=int, help="seat a man of this team whenever the Banshee stands free")
+    ap.add_argument("--delay", action="store_true", help="the game's delays: each bot thinks on a read DELAY_Q old")
     o = ap.parse_args()
     global VEH_RESPAWN
     if o.veh_respawn is not None:
         VEH_RESPAWN = o.veh_respawn
     m = Match(o.map, o.seed, o.tiers, o.limit, trace=o.trace, quiet=o.quiet, pilot=o.pilot, red_tiers=o.red_tiers,
-              seat_team=o.seat_team)
+              seat_team=o.seat_team, delay=o.delay)
     r = m.run(o.minutes)
     print(json.dumps(r, indent=1))
     if o.json:
