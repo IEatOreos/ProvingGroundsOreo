@@ -1,5 +1,6 @@
 """One bot: perception with reaction delay, human aim, decisions, Halo combat habits."""
 import dataclasses
+import functools
 import math
 import random
 import time
@@ -9,7 +10,7 @@ from .core import Vec, Action, dist, angles_to, wrap, eye, CROUCH_HEAD, CROUCH_C
 from .equipment import Kit, game_of, hold_bit
 from .profiles import HANDS
 from . import profiles
-from .terrain import MAX_DROP, MAX_RISE, ROUTE_JUMP, ROUTE_CROUCH, EYE, CHEST
+from .terrain import MAX_DROP, MAX_RISE, ROUTE_JUMP, ROUTE_CROUCH, EYE, CHEST, FieldBudget, OPT_FIELDS
 from . import vehicles
 from . import anticipate
 from . import odds as odds_model
@@ -86,6 +87,34 @@ BANDS = {
 # the same gun name, another game's gun: Reach's and Halo 4's magnum kills in 5-6 shots (guide 03), Halo 2 / 3's does not
 BANDS_GAME = {"reach": {"magnum": (0.8, 0.8, 0.4, 0.1), "assault_rifle": (0.8, 0.6, 0.1, 0.0)},
               "h4": {"magnum": (0.8, 0.8, 0.4, 0.1)}}
+
+
+def optional_search(default):
+    """(custom, Nov 22) A tactic whose route searches may wait: inside it Terrain._field builds at most OPT_FIELDS fresh
+    fields a think (Bot.think resets the count); past that the tactic stops (FieldBudget) and returns default (a value,
+    or a function of the same arguments), and the next think goes on with the fields already built (cached). The bot's
+    own walk (nav) is never capped. Live, single thinks of 400-800 ms built 15-28 fresh fields each in pre-nades,
+    break-offs, cover and guesses, and froze every bot for that long. Only the outermost capped tactic catches it."""
+    def wrap(fn):
+        @functools.wraps(fn)
+        def run(s, *a, **k):
+            try:
+                d = s.T().__dict__
+            except Exception:
+                return fn(s, *a, **k)
+            d["opt_depth"] = d.get("opt_depth", 0) + 1
+            try:
+                return fn(s, *a, **k)
+            except FieldBudget:
+                if d.get("opt_depth", 1) > 1:
+                    raise
+                s.capped = getattr(s, "capped", 0) + 1
+                s.note(f"{fn.__name__}: route searches for this update spent, again next update")
+                return default(s, *a, **k) if callable(default) else default
+            finally:
+                d["opt_depth"] = d.get("opt_depth", 1) - 1
+        return run
+    return wrap
 
 
 def band(d):
@@ -2298,6 +2327,7 @@ class Bot:
             if now - rec[0] > STALE_S and dist(me.pos, b.pos) > 6.0:
                 scores[key] *= 0.25
 
+    @optional_search(lambda s, now, me, k, b: b.pos if b is not None else None)
     def guess(s, now, me, k, b):
         """Demon: where enemy k most likely is now (anticipate.predict over what belief b says), kept GUESS_KEEP s
         per trace. Every other tier: where it last knew him (b.pos), as before."""
@@ -3206,6 +3236,7 @@ class Bot:
             return
         s.hold_shuffle(now, me, act)
 
+    @optional_search(None)
     def break_point(s, me, others, cur_pos):
         """The nearest walkable spot within DEMON_BREAK_RINGS, a short walk off, none of `others` has a line to: in each
         ring one the man it fights (cur_pos) still sees first, else one nobody sees. None: no such spot."""
@@ -3233,6 +3264,7 @@ class Bot:
                 return hidden
         return None
 
+    @optional_search(None)
     def hidden_spot(s, me, threats):
         """The nearest walkable place a short walk off that no threat has a line to (maps without LiDAR cover spots:
         cover_from finds none there). Rings out to 10 u."""
@@ -3277,6 +3309,9 @@ class Bot:
 
     # --- per tick
     def think(s, now, dt, snap, los, nav, callouts, items=None):
+        T0 = s.__dict__.get("_terrain")
+        if T0 is not None:
+            T0.opt_left = OPT_FIELDS          # (custom, Nov 22: this think's fresh route fields for tactics, optional_search)
         me0 = snap.player(s.id)
         haz = s.kit.hazards(me0, snap) if me0 is not None and getattr(snap, "deployed", None) else ()
         if haz:
@@ -10509,6 +10544,12 @@ class Bot:
         (Blind with it, tier top) and Demon; not Tactician, not Scaling, not the lower tiers."""
         return PRENADE and profiles.fixed_high(s.p) and not profiles.fixed_tactician(s.p) and s.grenades_allowed()
 
+    def prenade_later(s, now, *a):
+        """(custom, Nov 22) A pre-nade's doorway search cut off by the route cap (optional_search): again next think."""
+        s.prenade_next = now
+        return False
+
+    @optional_search(prenade_later)
     def prenade(s, now, dt, me, snap, act):
         """(custom, Nov 13) A pre-nade, the owner's own play in a 1v1: a grenade at the doorway a man is about to come
         through, thrown before either can see the other, then the angle held. The opener (a grenade once he is in view)
@@ -12374,6 +12415,7 @@ class Bot:
             spot = s.los_cover(me, threats)
         return spot
 
+    @optional_search(None)          # (custom, Nov 22: a capped search is not kept as "no cover")
     def los_cover(s, me, threats):
         """hidden_spot, kept LOS_COVER_KEEP s while we and the threats stay within a unit (cover_from runs in several
         of each decision's rules, and Demon decides every tick)."""

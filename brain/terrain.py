@@ -170,6 +170,15 @@ def total_ram():
 FIELD_BYTES = field_budget(total_ram())
 
 
+class FieldBudget(BaseException):
+    """(custom, Nov 22) An optional tactic asked for more fresh route fields this think than OPT_FIELDS (Terrain._field
+    with opt_depth set): it gives up this tick and tries again next (brain/bot.py optional_search). A BaseException so
+    the tactics' own `except Exception` around a route search let it through to optional_search, which catches it."""
+
+
+OPT_FIELDS = 3      # (custom, Nov 22) fresh route fields an optional tactic may build in one bot's think
+
+
 def keep_field(cache, key, cost):
     """Cache a route field, the least recently used out first past FIELD_BYTES."""
     while cache and (len(cache) + 1) * cost.nbytes > FIELD_BYTES:
@@ -2254,6 +2263,13 @@ class Terrain:
         f = cached_field(cache, ckey)
         if f is not None:
             return f
+        if s.__dict__.get("opt_depth", 0) > 0:
+            # (custom, Nov 22) inside an optional tactic (a pre-nade's doorways, a break-off's rings, cover, a guess where
+            # he went): OPT_FIELDS fresh fields a think. Live, single thinks of 400-800 ms froze every bot; profiled, the
+            # slow ones built 15-28 fresh fields at 4-7 ms each (brain/bot.py optional_search)
+            if s.__dict__.get("opt_left", OPT_FIELDS) <= 0:
+                raise FieldBudget()
+            s.opt_left = s.__dict__.get("opt_left", OPT_FIELDS) - 1
         from scipy.sparse.csgraph import dijkstra
         start = (key[0] * s.nh + key[1]) * s.nw + key[2]
         old = graph.data[risky].copy() if len(risky) else None
