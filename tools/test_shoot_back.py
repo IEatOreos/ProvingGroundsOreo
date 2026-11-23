@@ -149,7 +149,9 @@ class FightOnTheWayTests(unittest.TestCase):
     """(Custom) Bot.on_way_target through think: a Demon walking to a gun with a man in view shoots him while it walks
     on to the gun (the patrol's way: fight's aim and trigger, the walk turned toward the goal)."""
 
-    def scene(self, tier="demon", gun=Vec(0, -20, 0), foe=Vec(15, 0, 0), kind="item", mode="slayer"):
+    def scene(self, tier="demon", gun=Vec(0, -20, 0), foe=Vec(15, 0, 0), kind="item", mode="slayer", on_sight=False):
+        # (Nov 22: on_sight=False tests on_way_target's own choice; Bot.on_sight_fire, a man already in the crosshair
+        # shot whatever the plan, is tested in tools/test_on_sight_fire.py. The man here stands dead ahead of the view)
         import math as m
         from test_demon_fire import Cover
 
@@ -167,6 +169,8 @@ class FightOnTheWayTests(unittest.TestCase):
         bot.per.recognized.add(1)
         for name in ("no_wall_jump", "edge_guard", "obstacle_guard", "unstuck"):
             setattr(bot, name, lambda *args: None)
+        if not on_sight:
+            bot.on_sight_fire = lambda *args: None
         bot.detour = lambda now, me, kind, p: p          # (no map zones or floor grid in this lane)
         bot.no_floor_at = lambda *args, **kw: False
         me = PlayerState(0, 0, "bot", Vec(), weapon="dmr", weapons=["dmr"], mag=[15], ammo=[45])

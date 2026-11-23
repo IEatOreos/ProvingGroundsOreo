@@ -50,7 +50,13 @@ class ReloadTimingTests(unittest.TestCase):
         act = Action()
         b.reload_check(50.0, me, act)
         self.assertFalse(act.reload)
+        # (Nov 22, the owner: no reload "with ammo in the mag when people are shooting them") hit within RELOAD_HURT_S:
+        # a third of a magazine is kept; past it, the reload
+        from brain.bot import RELOAD_HURT_S
         b.per.hurt_at = 50.0 - RELOAD_QUIET - 0.1
+        b.reload_check(50.0, me, act)
+        self.assertFalse(act.reload)
+        b.per.hurt_at = 50.0 - RELOAD_HURT_S - 0.1
         b.reload_check(50.0, me, act)
         self.assertTrue(act.reload)
 

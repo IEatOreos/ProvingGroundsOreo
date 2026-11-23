@@ -50,6 +50,7 @@ LUNGERS = {"sword", "gravity_hammer"}
 SURV_BLOCK_S = 0.6       # one block
 SURV_SHOOT_S = 1.2       # the gun before the next block
 LOCK_ENDED_S = 0.2       # (custom, Nov 22) s an armor lock that came on reads off before the hold lets go (Kit.act)
+LOCK_RELOAD = 0.5        # (custom, Nov 22) his armor lock: reload only a magazine at this share of its most or less
 SURV_MELEE_R = 1.8       # the melee on the let-go reaches him
 CORNER_R, CORNER_SIDES = 1.3, 5   # walls within this on at least this many of 8 sides: backed into a corner
 CQB = {"shotgun", "sword", "gravity_hammer", "scattershot", "excavator"}
@@ -413,8 +414,15 @@ class Kit:
             if d < 5.0:
                 away = (me.pos - e.pos).norm()
                 bot.steer(me, me.pos + away * 6.0, act, True)
-            act.reload = True
-            return "armor lock: back off and reload"
+            # (custom, Nov 22, the owner: no reload "with ammo in the mag when people are shooting them") the lock is
+            # time to reload a magazine half spent or more, not one nearly full: he steps out of it to a gun up
+            i = me.weapons.index(me.weapon) if me.weapon in me.weapons else -1
+            mag = me.mag[i] if 0 <= i < len(me.mag) else -1
+            top = getattr(bot, "mag_max", {}).get(me.weapon, 0)
+            if mag < 0 or top <= 0 or mag <= LOCK_RELOAD * top:
+                act.reload = True
+                return "armor lock: back off and reload"
+            return "armor lock: back off"
         for dp in snap.deployed:
             r = ITEM.get(dp["kind"], ("", 0, 0))[2]
             if dp["kind"] == "power_drain" and dp["team"] != me.team and dist(me.pos, dp["pos"]) < r + 0.3:

@@ -519,6 +519,10 @@ RETREAT_JUKE = 0.4
 # (custom, Nov 8) Bot.reload_check, every tier: out of a fight a magazine at this share of the most it has held or less is
 # topped off (was 0.4), not within RELOAD_QUIET s of being hit (a man unseen shooting us)
 RELOAD_TOP_OFF, RELOAD_QUIET = 0.8, 1.5
+# (custom, Nov 22) reload_check: a man known within RELOAD_THREAT_R u in the last RELOAD_THREAT_S s, or a hit in the last
+# RELOAD_HURT_S s: only at RELOAD_LOW of the magazine or less; within RELOAD_KILL_S s of a kill, at RELOAD_AFTER_KILL
+RELOAD_THREAT_R, RELOAD_THREAT_S, RELOAD_HURT_S, RELOAD_LOW = 30.0, 3.0, 3.0, 0.25
+RELOAD_KILL_S, RELOAD_AFTER_KILL = 4.0, 0.5
 # (custom, Nov 8) Demon holding nothing but sidearms with a man in sight past DEMON_STAND_R: off to cover this near at
 # DEMON_SIDEARM_SCORE (over the committed fight; Havoc94 out of a dying Ghost with a Boltshot and a Magnum lost 3 on 1)
 DEMON_SIDEARMS = frozenset(("magnum", "boltshot", "plasma_pistol", "pistol"))
@@ -757,6 +761,8 @@ PL_LOCK_S, PL_LOCK_R, PL_SLIP = 2.2, 1.5, 0.3   # s, u (the reticle on a vehicle
 # angle 6 deg; the gravity hammer (Reach, Halo 4) 1.35 u, 10 deg
 LUNGE = {"sword": 2.25, "gravity_hammer": 1.35}
 LUNGE_AWAY = 5.0     # (custom, Nov 22) off a sword or hammer's score with nobody near and a loaded gun beside it (choose_weapon)
+ON_SIGHT_R = 0.22    # (custom, Nov 22) u: the view this near a part of a man in sight is on him (Bot.on_sight_fire)
+ON_SIGHT_HIT_S = 1.0  # (custom, Nov 22) s: a man who hit it this recently has a line to it, the map's checks or not
 # u: a sword or hammer this near is met with the shotgun. The Flood close 3 u/s, 6 with a thruster: a swap begun here has
 # it out before they are in its reach (2.5 u). Past it the guns go by range (the magnum hits him on his way in): at 10 u
 # survivors held the shotgun from 10 u in, walked at the Flood and fired nothing (Wraparound playtest, Nov 6 16:01)
@@ -4013,6 +4019,7 @@ class Bot:
         s.unstuck(now, me, act, snap)
         s.no_wall_jump(me, act)
         s.edge_guard(now, me, act)
+        s.on_sight_fire(now, me, act, snap)    # (custom, Nov 22: a man in the crosshair is shot, whatever the plan)
         s.fire_gate(now, me, act, snap)
         s.fired_last = s.shot_now
         if s.shot_now:
@@ -4026,7 +4033,7 @@ class Bot:
             # (custom, Nov 8: in a retreat too, nobody in view: the owner's "reload when they have the time, like
             # retreating, or patrolling, whenever they arent fighting"; reload_check holds it while a man is in view or
             # rounds are coming in)
-            s.reload_check(now, me, act)
+            s.reload_check(now, me, act, snap)
         s.flag_fight_press(now, me, act, flag_phase)   # (never within FLAG_FIGHT_HOME of home: the goal's drop is apart)
         s.stockpile_drop(now, me, snap, act)
         return act
@@ -4239,7 +4246,7 @@ class Bot:
             if m > 0:
                 top[w] = max(top.get(w, 0), m)
 
-    def reload_check(s, now, me, act):
+    def reload_check(s, now, me, act, snap=None):
         """Reload between fights, never with a man in view (guide 03: "the bot reloads after every kill, never
         with an enemy in view"), once the magazine is down to RELOAD_TOP_OFF of the most it has held and rounds are
         left in reserve. Halo reloads an empty magazine by itself on the next trigger pull. (Custom, Nov 8: topped off
@@ -4249,6 +4256,19 @@ class Bot:
             return
         if now - getattr(s.per, "hurt_at", -99.0) < RELOAD_QUIET:
             return
+        # (custom, Nov 22, the owner: "reloading as soon as they get a kill with over more than half a mag of dmr ammo";
+        # "theyre reloading with ammo in the mag when people are shooting them and are on radar". Live Asylum
+        # 20261122-190403: 110 of 122 DMR reloads had 8+ rounds of 15, an enemy within 25 u at all but one, half within
+        # 3 s of being hit; in 31 the man came into its sights before the magazine refilled) a man known near (any sense:
+        # eyes, radar, his shots heard, a callout) or a hit lately: only a nearly empty magazine (RELOAD_LOW); just after
+        # a kill, half or less (RELOAD_AFTER_KILL); the top-off (RELOAD_TOP_OFF) only when it is quiet
+        alive = {p.id for p in snap.players if p.alive} if snap is not None else None
+        threat = now - getattr(s.per, "hurt_at", -99.0) < RELOAD_HURT_S or any(
+            isinstance(k, int) and (alive is None or k in alive) and now - b.t < RELOAD_THREAT_S
+            and dist(b.pos, me.pos) < RELOAD_THREAT_R for k, b in s.per.beliefs.items())
+        ks = getattr(s, "kill_seen", None)
+        limit = (RELOAD_LOW if threat else RELOAD_AFTER_KILL if ks is not None and now - ks[0] < RELOAD_KILL_S
+                 else RELOAD_TOP_OFF)
         i = me.weapons.index(me.weapon)
         mag = me.mag[i] if i < len(me.mag) else -1
         total = me.ammo[i] if i < len(me.ammo) else -1
@@ -4256,7 +4276,7 @@ class Bot:
             return
         top = s.__dict__.setdefault("mag_max", {})   # (learned every tick: plan)
         top[me.weapon] = max(top.get(me.weapon, 0), mag)
-        if total > mag and mag <= RELOAD_TOP_OFF * top[me.weapon] and now >= getattr(s, "reload_at", 0.0):
+        if total > mag and mag <= limit * top[me.weapon] and now >= getattr(s, "reload_at", 0.0):
             act.reload, s.reload_at = True, now + 3.0
             s.notes.append("reload between fights")
 
@@ -10264,6 +10284,75 @@ class Bot:
                     return False
         return True
 
+    def on_sight_fire(s, now, me, act, snap):
+        """(custom, Nov 22, the owner: "when an enemy peaks I want the bot to instantly shoot them at whatever body part
+        they see no matter what. The bots are supposed to be good yet they dont shoot on site") Legendary, Blind,
+        Tactician, Mythic, Demon and Noble: no press this tick, and the view the game has now (me.yaw / me.pitch, where a
+        round goes) passes within ON_SIGHT_R of an enemy in its own eyes, in reach, a line from its eye to that part of
+        him: pressed, at its gun's pace, whatever it plans (a hunt, a walk, another man it means to finish). Live Asylum
+        20261122-190403 at 73.0-74.1 s: a Mythic held its aim on the owner's friend at 13.6 u for 1.1 s without a press,
+        its target a man one shot from dead it had no shot at, and lost the fight that followed. The shot's part is what
+        it sees of him (the head, else the chest, else where the view is); a charge, splash, blade or empty gun, a
+        sprint, a held armor lock, a throw or a melee: no."""
+        if (act.fire or not (profiles.fixed_high(s.p) or profiles.fixed_mythic(s.p)) or not me.alive
+                or me.vehicle not in (None, -1) or me.has_flag or act.grenade or act.melee or act.ability
+                or me.weapon in CHARGE or me.weapon in SPLASH or me.weapon in LUNGE or me.weapon in ("none", "unknown")
+                or getattr(s, "fired_last", False) or now < getattr(s, "next_fire", 0.0)
+                or (me.equipment == "sprint" and me.ability_on) or s.dry(me)):
+            return
+        i = me.weapons.index(me.weapon) if me.weapon in me.weapons else -1
+        if 0 <= i < len(me.mag) and me.mag[i] == 0:
+            return
+        o = eye(me)
+        cp = math.cos(me.pitch)
+        ray = Vec(math.cos(me.yaw) * cp, math.sin(me.yaw) * cp, math.sin(me.pitch))
+        T = s.T()
+        best = None
+        att = getattr(s.per, "attacker_id", None)
+        shooter = att if now - getattr(s.per, "attacker_t", -9.0) < ON_SIGHT_HIT_S else None
+        for k in set(s.per.visible_enemies()) | ({shooter} if shooter is not None else set()):
+            e = snap.player(k)
+            if e is None or not e.alive or e.team == me.team:
+                continue
+            # (the man hurting it now: his rounds reach it, so the line is there whatever its map's checks say. Live
+            # Asylum 20261122-190403 at 108.0-108.8 s: a Demon backed onto a ledge, its view on the owner's friend
+            # within 0.5 deg, every check of its map blocked at every height; his one shot from below killed it)
+            trust = k == shooter
+            d = dist(me.pos, e.pos)
+            if d > reach(me.weapon, s.game):
+                continue
+            top = e.head_pos if e.head_pos is not None else e.pos + Vec(0.0, 0.0, 0.45 if e.crouching else 0.62)
+            for f in (1.0, 0.85, 0.7, 0.55, 0.4, 0.25):              # head down to the legs
+                p = e.pos + (top - e.pos) * f
+                v = p - o
+                t = v.x * ray.x + v.y * ray.y + v.z * ray.z
+                if t <= 0.3:
+                    continue
+                off = (v - ray * t).length()
+                if off > ON_SIGHT_R:
+                    continue
+                if not trust:
+                    try:
+                        if not T.los(o, p):
+                            continue
+                    except Exception:
+                        continue
+                if best is None or off < best[0]:
+                    best = (off, k, d, trust)
+                break
+        if best is None:
+            return
+        _, k, d, trust = best
+        chest, head = (getattr(s.per, "target_parts", {}).get(k) or (False, False))[:2]
+        if chest or head:
+            s.shot_part = (k, bool(head))          # (the snap, Demon's and Noble's, onto what it sees of him)
+        elif getattr(s, "shot_part", None) is not None and s.shot_part[0] != k:
+            s.shot_part = None                     # (no part of him the checks see: the round goes where the view is)
+        s.on_sight = (now, k, trust)
+        act.fire = s.shot_now = True
+        s.next_fire = now + s.fire_gap(me.weapon, d)
+        s.note(f"on sight: #{k} in the crosshair, fire")
+
     def fire_gate(s, now, me, act, snap):
         """The last word on the trigger, whoever pressed it (a hand gun, a seat's gun, a vehicle's): an enemy in front of
         the aim with a clear line to him (line_clear), or no shot. A charge being held stays held (letting go fires it);
@@ -10271,6 +10360,15 @@ class Bot:
         if not act.fire:
             return
         if me.weapon in CHARGE and getattr(s, "charge_since", None) is not None and me.vehicle == -1:
+            return
+        sight = getattr(s, "on_sight", None)
+        if sight is not None and sight[0] == now:
+            # (custom, Nov 22) on_sight_fire's press: the man in the crosshair, his line checked as any other's (the man
+            # hurting it now: his rounds prove it, on_sight_fire)
+            if sight[2] or s.line_clear(now, me, sight[1], snap):
+                return
+            act.fire = s.shot_now = False
+            s.note("no clear line: hold fire")
             return
         selected = getattr(s, "shot_part", None)
         target = snap.player(selected[0]) if selected is not None else None
