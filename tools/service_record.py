@@ -2708,6 +2708,9 @@ def write_last_match(data, paths, short=None):
         lo, hi = rank_index(max(before, 0), [[0, 0, 0, x[1]] for x in ranks]), int(p.get("rank") or 0)
         name = str(r["n"]).replace("\t", " ")
         lines.append(f"person\t{name}\t{before}\t{after}")
+        # (Nov 23, the owner's live points: +2 a win, -1 a loss) how the match ended for them; a draw is everyone's 0
+        result = "win" if r.get("won") else "tie" if all(x.get("st") == 0 for x in m["rows"]) else "loss"
+        lines.append(f"result\t{name}\t{result}")
         lines += [f"line\t{name}\t{label}\t{n}\t{cr}" for label, n, cr in parts]
         lines += [f"step\t{name}\t{s}\t{ranks[s][0]}\t{ranks[s][1]}" for s in range(lo, min(hi + 2, len(ranks)))]
     for name, p in persons.items():                         # (where each person's credits stand now)
@@ -2727,7 +2730,8 @@ def write_last_match(data, paths, short=None):
                                                             # game knows there is nothing to show)
         text = ["# made by tools/service_record.py with the site: what the newest Project Noble match earned; do not edit",
                 "# match<TAB>id; person<TAB>name<TAB>credits before<TAB>after; line<TAB>name<TAB>what<TAB>count<TAB>credits;",
-                "# step<TAB>name<TAB>rank step<TAB>rank<TAB>its credits (the steps the bar runs through, and the next)",
+                "# step<TAB>name<TAB>rank step<TAB>rank<TAB>its credits (the steps the bar runs through, and the next);",
+                "# result<TAB>name<TAB>win, loss or tie",
                 f"match\t{m['id']}"] + lines
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
@@ -2780,8 +2784,9 @@ def write_last_carnage(data, paths, short=None):
     teams' places and scores, each player's numbers (score, kills, deaths, assists, medals, best spree, headshots: the
     Headshot medals, the credits the match earned them by ranks.json's worth), service tag and emblem ids from MCC's own
     report, who they killed most and were killed by most, their Tool of Destruction (the weapon with the most kills in
-    the kill record, when the match has one), their medals rarest first, and the match's three Top Medals. Names, medal
-    and weapon pictures as the site has them. Rewritten with each build; nothing when no person played a match."""
+    the kill record, when the match has one), (Nov 23, for the skill ratings) whether they finished it (MCC's
+    mCompletedGame: 0 quit), their medals rarest first, and the match's three Top Medals. Names, medal and weapon
+    pictures as the site has them. Rewritten with each build; nothing when no person played a match."""
     matches = data.get("matches") or []
     m = next((x for x in matches if any(not r["bot"] for r in x["rows"])), None)
     if short:                                               # (a game too short to count: from MCC's report, no credits)
@@ -2818,9 +2823,14 @@ def write_last_carnage(data, paths, short=None):
     def clean(s):                                           # (0 stays "0": a row, team or count)
         return ("" if s is None else str(s)).replace("\t", " ").replace("\n", " ")
 
-    def medal_text(mid):                                    # (its name, and its picture in the site when it has one)
+    # (Nov 23, the owner: "add the ability to hover over these medals to say what they do") what each is for, our own
+    # words by MCC's medal key (service_record_site/medal_info.json); "" for one not written
+    what = load_json(os.path.join(SITE, "medal_info.json"), {}).get("what", {})
+
+    def medal_text(mid):                                    # (its name, its picture in the site when it has one, what for)
         shown = medals.get(mid) or {}
-        return f"{clean(shown.get('name') or (info.get(mid) or {}).get('name') or 'Medal ' + mid)}\t{clean(shown.get('icon'))}"
+        return (f"{clean(shown.get('name') or (info.get(mid) or {}).get('name') or 'Medal ' + mid)}\t{clean(shown.get('icon'))}"
+                f"\t{clean(what.get((info.get(mid) or {}).get('key', ''), ''))}")
 
     rows = sorted(m["rows"], key=lambda r: (r["st"], -r.get("score", 0), -r["k"], r["d"]))
     total = {}
@@ -2856,7 +2866,7 @@ def write_last_carnage(data, paths, short=None):
             "player", i, r["n"], a.get("ServiceId", ""), r["team"], r["st"] + 1, r.get("score", 0), r["k"], r["d"],
             r["a"], md, r.get("spree", 0), (r.get("medals") or {}).get(HEADSHOT_MEDAL, 0), cr, int(r["bot"]),
             *emblem, most[0] if most else "", most[1] if most else 0, by[0] if by else "", by[1] if by else 0,
-            tool[0], tool[1], tool[2])))
+            tool[0], tool[1], tool[2], _int(a, "mCompletedGame", 1))))
         for mid in sorted((r.get("medals") or {}), key=lambda k: medal_key(k, total)):
             lines.append(f"medal\t{i}\t{mid}\t{r['medals'][mid]}\t{medal_text(mid)}")
     for mid in sorted(total, key=lambda k: medal_key(k, total))[:3]:
@@ -2864,8 +2874,9 @@ def write_last_carnage(data, paths, short=None):
         lines.append(f"top\t{mid}\t{best['medals'][mid]}\t{index[best['n']]}\t{medal_text(mid)}")
     head = ["# made by tools/service_record.py with the site: Project Noble's carnage report of the newest match; do not edit",
             "# match id; game type teams map; team id place score; player row name tag team place score kills deaths",
-            "# assists medals spree headshots cR bot fg bg primary secondary background most n by n tool kills picture;",
-            "# medal row id count name picture; top id count row name picture"]
+            "# assists medals spree headshots cR bot fg bg primary secondary background most n by n tool kills picture",
+            "# finished (1, 0 quit: the skill ratings, native/skill_rating.cpp);",
+            "# medal row id count name picture what-for; top id count row name picture what-for"]
     path = os.path.join(paths.out, "last_carnage.txt")
     with open(path + ".tmp", "w", encoding="utf-8") as f:
         f.write("\n".join(head + lines) + "\n")

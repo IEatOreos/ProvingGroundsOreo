@@ -18,6 +18,7 @@
 #undef small                                             // (rpcndr.h's: a ui::button parameter)
 #include "bots_panel.h"
 #include "armory.h"                                      // (custom, Nov 19: the player's own Spartan, Armory-dressed)
+#include "skill_rating.h"                                // (custom, Nov 23: the teams dealt by skill rating)
 #include "model_view.h"
 #include "ui_layout.h"
 #include <ctype.h>
@@ -685,6 +686,10 @@ static uint32_t g_pool_salt = 0;                         // (Nov 16) "Reshuffle 
 static int pool_fmt_ix() { return hb_pool_format >= 8 ? 1 : 0; }
 static wchar_t g_pool_dir[260];
 static int g_humans[HB_TEAMS_MAX];                       // (Nov 13) the people by team, for the team points
+// (Nov 23) the player's own rating and their team in the last lobby bot_pool_matchmake dealt (-1: none since the pool
+// was loaded: every person 1600); the friends who joined, each with their own rating, on the teams it gave them
+static int g_me_points = SR_PERSON_START, g_me_points_team = -1;
+static int g_friend_rating[HB_ROSTER_MAX], g_friend_team[HB_ROSTER_MAX], g_nfriends;
 
 static bool pool_clean(const char* in, char out[16]) {
     while (*in == ' ' || *in == '\t') in++;
@@ -985,6 +990,9 @@ void bot_pool_load(const wchar_t* dir) {
     // (custom, Nov 13) the people in the last match, by team (tools/play.py writes bot_pool_humans.txt at each team match's
     // start: a human=<team> line each); none known yet: you alone on Red
     memset(g_humans, 0, sizeof g_humans);
+    g_me_points_team = -1;                               // (Nov 23: the player's own points only where matchmake says;
+                                                         // the friends' ratings only with it)
+    sr_open(g_pool_dir);                                 // (Nov 23: the skill ratings, native\bin\pg_ratings.txt)
     int people = 0;
     swprintf_s(p, L"%sbot_pool_humans.txt", g_pool_dir);
     if (_wfopen_s(&f, p, L"r") == 0 && f) {
@@ -1565,15 +1573,30 @@ static uint32_t& pool_rng() {
     if (!g_pool_rng) g_pool_rng = (GetTickCount() * 2654435761u) | 1;
     return g_pool_rng;
 }
-// novice average strong top scaling demon blind tactician mythic noble ((custom, Nov 13, owner) Mythic 10; Nov 20: Noble
-// Demon's 12)
-static const int TIER_POINTS[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5, 10, 12 };
-int tier_points(int tier) { return tier >= 0 && tier < HB_TIERS ? TIER_POINTS[tier] : TIER_POINTS[3]; }
+// (Nov 23, the owner: "the teams would balance by total skill rating per team") a seat's worth is its bot's skill
+// rating (skill_rating.cpp: saved by name, within its difficulty's range), in place of the points (Nov 13: Easy 1 to
+// Demon 12, a human 20)
+static int seat_rating(const hb_bot& b) { return sr_bot(b.name, b.tier); }
 // a Demon for the balance's Demon stacking: Demon, and Noble (Nov 20: Demon's base)
 static int demon_base(int tier) { return tier == HB_TIER_DEMON || tier == HB_TIER_NOBLE; }
+// (Nov 23) the people: the player at their own rating on the team bot_pool_matchmake seats them on, each friend who
+// joined at theirs on the team it gave them; anyone else (another lobby's people) 1600
+void bot_pool_set_people_ratings(int me, const int* friends, int n) {
+    g_me_points = me > 0 ? me : SR_PERSON_START;
+    g_nfriends = friends && n > 0 ? (n > HB_ROSTER_MAX ? HB_ROSTER_MAX : n) : 0;
+    for (int i = 0; i < g_nfriends; i++) { g_friend_rating[i] = friends[i] > 0 ? friends[i] : SR_PERSON_START; g_friend_team[i] = -1; }
+}
+static int people_points(int team, int humans) {
+    int p = humans * SR_PERSON_START;
+    if (humans > 0 && g_me_points_team >= 0) {
+        if (team == g_me_points_team) p += g_me_points - SR_PERSON_START;
+        for (int i = 0; i < g_nfriends; i++) if (g_friend_team[i] == team) p += g_friend_rating[i] - SR_PERSON_START;
+    }
+    return p;
+}
 int roster_team_points(const hb_roster& r, int team) {
-    int p = bot_pool_humans(team) * HB_HUMAN_POINTS;
-    for (int i = 0; i < r.n; i++) if (r.bot[i].team == team) p += tier_points(r.bot[i].tier);
+    int p = people_points(team, bot_pool_humans(team));
+    for (int i = 0; i < r.n; i++) if (r.bot[i].team == team) p += seat_rating(r.bot[i]);
     return p;
 }
 
@@ -1605,7 +1628,7 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
     for (int i = 0; i < r.n; i++) if (r.bot[i].team < nt) cap[r.bot[i].team]++;   // (team sizes as seated: kept)
     std::vector<int> tl;
     for (int t = 0; t < nt; t++) {
-        total[t] = humans[t] * HB_HUMAN_POINTS;
+        total[t] = people_points(t, humans[t]);
         if (cap[t]) tl.push_back(t);
     }
     if (tl.size() < 2) return;
@@ -1627,7 +1650,7 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
         }
         pb_block& b = bl[k];
         b.seat[b.n++] = i;
-        b.pts += tier_points(r.bot[i].tier);
+        b.pts += seat_rating(r.bot[i]);
         b.demons += demon_base(r.bot[i].tier);
     }
     // (Nov 16) parties that cannot all go whole onto a team each (a lobby made by hand: Bot Matchmaking never deals one):
@@ -1649,12 +1672,12 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
             if (big < 0 || parties_fit(sizes, room)) break;
             pb_block& b = bl[big];
             int s = b.seat[--b.n];
-            b.pts -= tier_points(r.bot[s].tier);
+            b.pts -= seat_rating(r.bot[s]);
             b.demons -= demon_base(r.bot[s].tier);
             pb_block one{};
             one.pin = -1;
             one.seat[one.n++] = s;
-            one.pts = tier_points(r.bot[s].tier);
+            one.pts = seat_rating(r.bot[s]);
             one.demons = demon_base(r.bot[s].tier);
             bl.push_back(one); clans.push_back("");
             sprintf_s(g_balance_note, "[%s] had more bots than fit on one team: %s and any more were split off.",
@@ -1675,10 +1698,12 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
     if (tl.size() == 2 && nb <= 20) {
         // two teams: every split of the blocks that keeps the team sizes; the fewest party bots on a team with people
         // (Nov 16), then the smallest gap in points; of those, A style (the Demons 2+ apart) 60% of the time, B style
-        // (spread) 40%, one at random; one style missing: the other
+        // (spread) 40%, one at random; one style missing: the other. (Nov 23, skill ratings: a gap within SR_TIE, 50, of
+        // the smallest counts as even, or ratings that rarely tie would leave the 60/40 nothing to choose from)
         int a = tl[0], b2 = tl[1], best = 1 << 30, best_with = 1 << 30, all_d = 0;
         for (const pb_block& b : bl) all_d += b.demons;
-        std::vector<uint32_t> stacked, spread;
+        struct split { uint32_t m; int with, gap; bool stacked; };
+        std::vector<split> splits;
         for (uint32_t m = 0; m < (1u << nb); m++) {
             int n = 0, p = 0, d = 0, with = 0;
             bool pin_ok = true;                          // (the pinned party on its own team)
@@ -1690,10 +1715,14 @@ void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t
             int pa = total[a] + p, pb = total[b2];
             for (int j = 0; j < nb; j++) if (!(m >> j & 1)) pb += bl[j].pts;
             int gap = abs(pa - pb);
-            if (with > best_with || (with == best_with && gap > best)) continue;
-            if (with < best_with || gap < best) { best_with = with; best = gap; stacked.clear(); spread.clear(); }
-            (abs(d - (all_d - d)) >= 2 ? stacked : spread).push_back(m);
+            if (with > best_with || (with == best_with && gap > best + SR_TIE)) continue;
+            if (with < best_with) { best_with = with; best = gap; }
+            else if (gap < best) best = gap;
+            splits.push_back({ m, with, gap, abs(d - (all_d - d)) >= 2 });
         }
+        std::vector<uint32_t> stacked, spread;
+        for (const split& s : splits)
+            if (s.with == best_with && s.gap <= best + SR_TIE) (s.stacked ? stacked : spread).push_back(s.m);
         if (stacked.empty() && spread.empty()) return;
         bool use_a = stacked.size() && (spread.empty() || rint(rng, 100) < 60);
         const std::vector<uint32_t>& pick = use_a ? stacked : spread;
@@ -1828,6 +1857,7 @@ int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int npar
     int other = 1 - party_team, want[2], have[2] = {0, 0};
     memset(g_humans, 0, sizeof g_humans);
     g_humans[party_team] = 1;                            // (the person: the clans line up on the other team)
+    g_me_points_team = party_team;                       // (Nov 23: counted at their own points)
     // (Nov 17) the friends who joined: each on the team MCC has them on, a seat of bots fewer there; one whose team is
     // not known yet on the team with fewer people
     for (int p = 0; people && p < npeople; p++) {
@@ -1835,6 +1865,7 @@ int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int npar
         if (t != 0 && t != 1) t = g_humans[1] < g_humans[0] ? 1 : 0;
         people[p] = t;
         g_humans[t]++;
+        if (p < g_nfriends) g_friend_team[p] = t;        // (Nov 23: each friend's rating counted on their team)
     }
     for (int t = 0; t < 2; t++) want[t] = size - g_humans[t] > 0 ? size - g_humans[t] : 0;
     hb_roster old = r;
@@ -1908,6 +1939,7 @@ int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int npar
         } else roster_name_own(r, i, (uint32_t)GetTickCount() + 7919u * (uint32_t)i);
     }
     roster_point_balance(r, g_humans, rng, pinned);
+    for (int i = 0; i < r.n; i++) sr_note_tier(r.bot[i].name, r.bot[i].tier);   // (Nov 23: rated at it after the match)
     bot_pool_save();
     return filled;
 }
@@ -2389,13 +2421,14 @@ static void team_card(bots_panel_env& e, int t, ImVec2 size, bool& changed) {
     int n = roster_on_team(r, t);
     push(SMALL);
     char cnt[48]; sprintf_s(cnt, n == 1 ? "1 bot" : "%d bots", n);
-    // (custom, Nov 13) Bot Matchmaking deals the teams by points: each team's total, its people counted (20 each)
+    // (custom, Nov 13) Bot Matchmaking deals the teams by points: each team's total, its people counted (Nov 23: by
+    // skill rating, the team's total)
     if (hb_matchmaking && !hb_panel_firefight) {
         int h = bot_pool_humans(t);
-        char more[40];
-        if (h) sprintf_s(more, h == 1 ? " + you, %d pts" : " + %d people, %d pts", h == 1 ? roster_team_points(r, t) : h,
+        char more[48];
+        if (h) sprintf_s(more, h == 1 ? " + you, rating %d" : " + %d people, rating %d", h == 1 ? roster_team_points(r, t) : h,
                          roster_team_points(r, t));
-        else sprintf_s(more, ", %d pts", roster_team_points(r, t));
+        else sprintf_s(more, ", rating %d", roster_team_points(r, t));
         strcat_s(cnt, more);
     }
     float cw = ImGui::CalcTextSize(cnt).x;
@@ -4696,8 +4729,8 @@ static void mod_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w
               "A bot you change in the Bots tab keeps its difficulty and play style when it comes back.");
         muted("Name*5 on one line brings that bot 5 times, spread through the queue. Bots with the same clan tag are a "
               "party: they usually join together, up to 4 in 4v4 or 8 in 8v8, and always play on one team, the one "
-              "without you when they fit. Teams are even, then dealt by points: Easy 1, Normal 2, Heroic 3, Tactician 5, "
-              "Legendary, Blind and Scaling 8, Mythic 10, Demon 12, you 20.");
+              "without you when they fit. Teams are even, then dealt by skill rating: each bot its own (Easy about 400, "
+              "Normal 600, Heroic 800, Tactician 950, Legendary 1300, Mythic 1600, Demon 1650, Noble 1700), you 1600.");
         if (button("Reload pool", GHOST, ImVec2(0, 0), true) && g_pool_dir[0]) bot_pool_load(g_pool_dir);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Read bot_pool.txt again (it is also read after every match)");
         static char grouped_msg[120] = "";
@@ -4962,7 +4995,7 @@ bool bots_panel(bots_panel_env& e) {
             ImGui::BeginDisabled(r.n < 2);
             if (button("Balance teams", GHOST, ImVec2(0, 0), true)) { roster_balance(r); changed = true; }
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("Even teams counting you, each clan whole on one team (the one without you when it fits),\n"
-                                                                                                                "then the team points (like Bot Matchmaking)");
+                                                                                                                "then the teams' skill ratings (like Bot Matchmaking)");
             ImGui::SameLine(0, px(2));
             if (button("Shuffle teams", GHOST, ImVec2(0, 0), true)) { roster_shuffle(r, seed()); changed = true; }
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("New teams for everyone, same team sizes");

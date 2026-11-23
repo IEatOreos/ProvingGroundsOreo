@@ -158,11 +158,13 @@ void bot_pool_rename(const char* from, const char* to);   // its bot_pool.txt li
 // bots to teams by points (the team sizes kept, a party as one block, the people of the last match counted: tools/play.py
 // writes native\bin\bot_pool_humans.txt, human=<team> lines; none: one on Red). Two teams: the smallest gap, then the
 // Demons stacked (2+ apart) 60%, spread 40%; more teams: as close as a quick deal and swaps get
-#define HB_HUMAN_POINTS 20
-int  tier_points(int tier);                             // Easy 1, Normal 2, Heroic 3, Tactician 5, Legendary, Blind and
-                                                        // Scaling 8, Mythic 10, Demon 12
+// (Nov 23, the owner) the points are now skill ratings (skill_rating.h): a bot its own, saved by name within its
+// difficulty's range (Easy 400 to Noble 1700), a person 1600 unless they have one
 int  bot_pool_humans(int team);                         // the people on that team in the last match
-int  roster_team_points(const hb_roster& r, int team);  // its bots' points and its people's
+int  roster_team_points(const hb_roster& r, int team);  // its bots' ratings and its people's
+// (Nov 23) the player's rating and each friend's (in the order of bot_pool_matchmake's people) for the lobbies
+// bot_pool_matchmake deals; other lobbies count every person at 1600
+void bot_pool_set_people_ratings(int me, const int* friends, int n);
 // (Nov 16) pinned[i]: seat i keeps its team (Project Noble's invited party, all on the person's team); null: none
 void roster_point_balance(hb_roster& r, const int humans[HB_TEAMS_MAX], uint32_t& rng, const uint8_t* pinned = nullptr);
 void bot_pool_seed(uint32_t s);                         // (tests) the parties' and the deal's random draws

@@ -659,7 +659,15 @@ def test_carnage_of_the_last_match():
             row(ME, "Me", 0, 0, 10, 4, 2, 600, score=50, spree=6, most=(1, 4), by=(1, 2), medals={111: 2, 135: 1, 8: 3}),
             row(bot(1), "Wheezy", 1, 1, 4, 10, 1, 600, score=20, most=(0, 2), by=(0, 4), medals={74: 1})])
         text = text.replace('mGamertagText="Wheezy"', 'mGamertagText="Wheezy" ServiceId="WZ" EmblemTexture0="5" '
-                            'EmblemTexture1="505" EmblemColor0="2" EmblemColor1="31" EmblemColor2="9"')
+                            'EmblemTexture1="505" EmblemColor0="2" EmblemColor1="31" EmblemColor2="9" '
+                            'mCompletedGame="0"')     # (Nov 23: Wheezy quit, for the skill ratings)
+        # (Nov 23) each medal's what-for, by its MCC key (the art store's medals.json) from medal_info.json
+        os.makedirs(os.path.join(w.paths.store, "art"), exist_ok=True)
+        with open(os.path.join(w.paths.store, "art", "medals.json"), "w", encoding="utf-8") as f:
+            json.dump({"135": {"key": "medal_killing_frenzy", "name": "Killing Frenzy"},   # (no kinds: the order
+                       "111": {"key": "medal_headshot", "name": "Headshot"},              # checked below is by count)
+                       "8": {"key": "medal_assist", "name": "Assist"},
+                       "74": {"key": "medal_not_written", "name": "First Strike"}}, f)
         w.write("trace_reach_forge_halo_20261123-180000.carnage.xml", text)
         w.career()
         data = w.build()
@@ -675,8 +683,15 @@ def test_carnage_of_the_last_match():
         assert me[20:24] == ["Wheezy", "4", "Wheezy", "2"] and wz[20:24] == ["Me", "2", "Me", "4"], (me, wz)
         assert wz[3] == "WZ" and wz[15:20] == ["5", "505", "2", "31", "9"] and wz[14] == "1", wz
         assert me[24:27] == ["", "0", ""], me                  # (no kill record: no Tool of Destruction)
+        assert len(me) == 28 and me[27] == "1" and wz[27] == "0", (me, wz)   # (Nov 23: finished, quit)
         assert [l[2] for l in got if l[0] == "medal" and l[1] == "0"] == ["135", "111", "8"], got
         assert [(l[1], l[3]) for l in got if l[0] == "top"] == [("74", "1"), ("135", "0"), ("111", "0")], got
+        with open(os.path.join(HERE, "service_record_site", "medal_info.json"), encoding="utf-8") as f:
+            what = json.load(f)["what"]
+        frenzy = next(l for l in got if l[0] == "medal" and l[2] == "135")
+        assert len(frenzy) == 7 and frenzy[6] == what["medal_killing_frenzy"] == "Kill 10 enemies without dying.", frenzy
+        assert next(l for l in got if l[0] == "top" and l[1] == "74")[6] == "", got   # (a medal not written: no text)
+        assert all(v.strip() and v.endswith(".") and "\t" not in v for v in what.values()) and len(what) >= 56
         # (the owner's 12 s test game) a game too short to count: the credits told at once, its carnage report shown
         w.write("trace_reach_forge_halo_20261123-190000.carnage.xml", report("quick", [
             row(ME, "Me", 0, 0, 1, 0, 0, 12, medals={74: 1}), row(bot(1), "Wheezy", 1, 1, 0, 1, 0, 12)]))

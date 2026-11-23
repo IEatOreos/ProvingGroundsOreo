@@ -2,6 +2,79 @@
 
 ## Unreleased
 
+### Skill ratings in place of the team points, and Reach's RATING page, 2026-11-23
+
+The owner, with a screenshot of Reach's carnage report RATING page: "do calculations similar to my already standing balance system I have in place, but use the rating system reach did". Then: "the teams would balance by total skill rating per team", and his numbers, agreed one question at a time. His +2/−1 team points are gone.
+
+- **The rules (`native/skill_rating.cpp` / `.h`, new):**
+  - **Bots:** each bot has its own rating, saved by name. A new bot starts at a random spot in its difficulty's range: Easy 400 (300–500), Normal 600 (500–700), Heroic 800 (700–900), Tactician 950 (850–1100), Legendary and Blind 1300 (1150–1450), Mythic 1600 (1500–1700), Demon 1650 (1550–1800), Noble 1700 (1600–1800). Scaling isn't in his matchmaking and borrows Legendary's.
+    - A win is +19, or +9 for beating a team whose average is more than 150 lower.
+    - A loss is −19, or −9 for losing to a team averaging more than 150 higher.
+    - No kill bonus, and a bot never leaves its range.
+  - **People:** the player and each friend who joins have their own rating, starting at 1600, never under 1500.
+    - A win is a random +35 to +40, including when beating a stronger team. Beating a team more than 150 lower gives +30 to +35.
+    - A win adds up to +3 more for kills above the lobby's average (1 per 3 over), never minus.
+    - A loss is −15, or −10 for losing to a team more than 150 higher.
+    - Quitting gives +15, so the next teams are tougher, and nothing else.
+  - **Other matches:** a draw changes nothing, a bot that quits takes a loss, and Firefight isn't rated.
+  - **Free for all** has its own rating: 1st +40, 2nd +30, 3rd +20, the rest −15.
+  - **Storage:** everything is kept in `native\bin\pg_ratings.txt`, with the last match counted. The first time, the match already played is marked counted, so it isn't rated.
+- **The balancer (`native/bots_panel.cpp`):**
+  - A seat now counts its bot's rating instead of its difficulty's points. A person counts 1600, the player and each friend their own, on the teams they were given.
+  - Clans, pinned parties, every split tried, and the 60/40 Demons stacked or spread rule are unchanged.
+  - Splits within 50 (`SR_TIE`) of the most even one count as even. Ratings rarely tie, so without this the 60/40 rule would have nothing to choose from. The owner's 8v8 test lobby is within 50 every time, with Demons stacked in 1188 of 2000 deals, as before.
+  - The lobby shows each team's total rating. The pool help text and the Balance teams tooltip say ratings.
+  - `bot_pool_set_person_points` became `bot_pool_set_people_ratings`. `tier_points` and `HB_HUMAN_POINTS` are gone.
+- **Project Noble (`native/proving_grounds.cpp`, `proving_grounds_reach.inc`):**
+  - **When a match is rated:** each match `last_match.txt` reports is rated from `last_carnage.txt`, the same way as before (once a second, and at once when the carnage report opens). A game too short to count is never rated.
+  - **Bot difficulties:** each bot is rated at the difficulty it was seated at. Its saved one is used next, else Legendary.
+  - **Redealing:** the waiting lobby is dealt again after a match.
+  - **RATING page:** the carnage report's second Stats page (now Page x/7) shows each player's rating after the match, in score order, with no comma, like Reach's.
+  - **Psych Profile:** TEAM POINTS is now SKILL RATING. It shows the player's team and free-for-all ratings, and A resets both to 1600.
+  - **`win_points=`** is no longer read.
+  - **Preview hooks:** `PG_CG_PAGE` and `PG_FOCUS` pick one Stats page or Psych Profile row in the preview. The preview rates in memory only.
+- **`tools/service_record.py` `write_last_carnage`:** each player line ends with whether they finished (MCC's `mCompletedGame`, 0 if they quit). Older files without the column read as finished.
+- **Builds:** `skill_rating.cpp` is in `build.bat`, `build_pg_preview.bat` and `build_pool_test.bat`. The pool test build also lacked `armory.cpp`, which since Nov 19 left it unable to link; that's fixed too.
+- **Checks:**
+  - `native\build_pool_test.bat`: all pool checks pass. The new section 27 covers bases and ranges, starts, close wins and losses, the 150 gap both ways, the kill bonus, quitting, a draw, the floor and ranges, Firefight, free for all kept apart, reading back from the file, the reset, and the friends' ratings in a dealt lobby.
+  - `unittest discover` over `tools`: 1376 tests OK, and the Mythic test reads the rating bases.
+  - `tools/test_service_record.py` (a plain script): 40 of 41 pass, including the carnage test, which checks the new column. `test_forge_layouts_and_tier_banners` fails at "Pinnacle", as it did before this change.
+  - The commit was built and tested from its own exported snapshot: pool checks, the preview and the DLL.
+  - `botcore_pg53.dll` built. Preview renders of the RATING page and the Psych Profile row look right.
+- **Not yet seen in a real match.** Simulated bot matches (`tools/bot_sim.py`) don't move ratings.
+
+### Carnage report: a medal hovered or focused says what it is for, 2026-11-23
+
+The owner, with Reach's PLAYER CARNAGE: "Also add the ability to hover over these medals to say what they do?" His choices: the mouse and the pad, both carnage screens, short descriptions in our own words.
+
+- **`tools/service_record_site/medal_info.json`** (new): one line for each Halo: Reach medal, by MCC's medal key.
+  - It covers all 56 medals in the owner's 908 recorded matches, plus the rest of Reach's multi-kills, sprees, weapon sprees and mode medals: 85 in all.
+  - Unsure ones were checked against Halopedia's medal list (Headcase is a headshot on a sprinting enemy; Showstopper a kill on an enemy mid-assassination; Firebird a kill while flying with a jetpack).
+  - Second Wind is left out (not confirmed); a medal without a line shows its name only.
+- **`tools/service_record.py` `write_last_carnage`:** each `medal` and `top` line of `last_carnage.txt` ends with that text.
+- **`native/proving_grounds.cpp`:**
+  - On PLAYER CARNAGE each medal is a stop: the mouse over it, or Up / Down / Left / Right through the grid, frames it.
+  - On the Overview each TOP MEDALS row is a stop, its picture included.
+  - The one hovered or focused gets a box beside it with its name, the count and what it is for (`cg_medal_tip`), drawn over the rest of the page.
+- **Validation:**
+  - `tools/test_service_record.py` `test_carnage_of_the_last_match` checks the text on a medal line and none for a medal without a line.
+  - The real site's `last_carnage.txt` was rebuilt with the text; preview screens 44 and 47 were checked by eye; built as the next `botcore_pg` tag.
+  - Separately, `test_forge_layouts_and_tier_banners` fails at a map variant's title ("Pinnacle"); that is not this change's code.
+  - **Untested in game.**
+
+### Vote time 30 s by default, picked on the Psych Profile; the carnage report's KILLS page shows deaths, assists and medals, 2026-11-23
+
+The owner: "I would like our voting screen to be 30 seconds by default but allow it to be picked in the options from 15-30-45", on Matchmaking's Psych Profile. Then, with a marked screenshot of the carnage report's STATS page: "the other categories to be what I marked, Deaths next then assists, and medals".
+
+- **Vote time** (`native/proving_grounds.cpp`, `proving_grounds_reach.inc`):
+  - The default is 30 s (was 15).
+  - The Psych Profile has an eighth row, VOTING TIME: Left / Right step through 15, 30 and 45 seconds; A goes round. It is saved in `proving_grounds.ini` `vote_seconds` as before.
+  - A time saved as the old default, 15, becomes 30 once (`reach_menus.ini` `[matchmaking] vote_default_30` marks it done); a time picked after that stays.
+  - The rows are now 32 apart (were 36) so eight fit above the notes; the notes moved down 6.
+  - The bots' votes still spread over the whole time. A joined friend follows the host's time, as before.
+- **Carnage report:** the STATS tab's KILLS page (page 3) fills the row's empty columns: KILLS, DEATHS, ASSISTS, MEDALS, each player's own. The other five pages are as before. The preview's carnage_stats screen now shows that page.
+- **Validation:** preview screens 29 (Psych Profile) and 45 (stats) checked by eye; `build.bat pg46` builds `botcore_pg46.dll`. The preview wrote the one-time mark into the owner's real `reach_menus.ini` once; it was taken out by hand, and the switch to 30 now runs only in the game. **Untested in game.**
+
 ### Real-rules sim: frags clear cover lips as the bots' throws plan them; sprint as live; the sweep tool, 2026-11-23
 - **Frags (`tools/real_sim.py` `clear`, the wall bounce):** a frag's step is checked with `Terrain.point_los`, the line the bots plan their throws with (Forge pieces' real tops), not `aim_hit`, whose wall bins stood a lip's whole 0.25 u step over its top: frags thrown over cover bounced back off the phantom lip 0.7 u out and killed their throwers (3 to 16 suicides a match; live Asylum: 7 self-kills in 2,639 kills). Frags now fly 10-15 u, as a throw does. A floor is checked first; a wall reflects only the part of the frag's motion into it (the blocked axis), not all of it back.
 - **Sprint:** as live Reach, a press at full stick starts it and it runs on until a second press, the meter or the stick off forward (ASSUMED: under half).

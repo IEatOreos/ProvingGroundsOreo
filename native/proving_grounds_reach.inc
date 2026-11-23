@@ -36,6 +36,15 @@ static void rm_load() {
     g_rm_loaded = true;
     wchar_t p[MAX_PATH];
     rm_ini(p);
+    // (Nov 23, the owner: the vote "30 seconds by default") a vote time saved as the old default, 15, becomes 30 once;
+    // what is picked on the Psych Profile after that stays
+#ifndef PG_PREVIEW                                       // (the preview never writes the owner's own settings)
+    if (!g_loaded) load_settings();
+    if (!GetPrivateProfileIntW(L"matchmaking", L"vote_default_30", 0, p)) {
+        if (g_vote_s == 15) { g_vote_s = 30; save_settings(); }
+        WritePrivateProfileStringW(L"matchmaking", L"vote_default_30", L"1", p);
+    }
+#endif
     for (int i = 0; i < 3; i++) g_rm_restrict[i] = GetPrivateProfileIntW(L"search_restrictions", RM_RKEY[i], 0, p) ? 1 : 0;
     for (int i = 0; i < 4; i++) {
         int v = GetPrivateProfileIntW(L"psych_profile", RM_PKEY[i], 0, p);
@@ -799,28 +808,46 @@ static void rm_psych(pg_env& e, float t) {
     else if (g_sim_done_at >= 0 && now - g_sim_done_at < 10.0 && g_sim_made >= 0) sprintf_s(sims, "DONE: %d MATCHES", g_sim_made);
     else { sprintf_s(sims, "%d ROUND%s", g_sim_rounds, g_sim_rounds == 1 ? "" : "S"); sim_arrows = true; }
     sprintf_s(inv, "%d / %d", g_nparty, cur_pl().size - 1);
-    for (int k = 0; k < 6; k++) {
-        float y = 160 + 41.0f * k;
-        bool f = item(393, y, 1505, y + 38);
+    // (Nov 23, the owner's live points: "add a menu option for a reset") TEAM POINTS: where the player's points stand,
+    // A puts them back to 20. (Nov 23: SKILL RATING, the rating in their place; A back to 1600) (Nov 23, the owner: the vote "30 seconds by default but allow it to be picked in the
+    // options from 15-30-45") VOTING TIME the eighth row: eight rows 32 apart, the notes a little lower
+    pts_load();
+    char pts[24], vt[24];
+    sprintf_s(pts, "%d", g_pts);
+    sprintf_s(vt, "%d SECONDS", g_vote_s);
+    for (int k = 0; k < 8; k++) {
+        float y = 160 + 32.0f * k;
+        bool f = item(393, y, 1505, y + 30);
         if (f) focus = k;
-        rm_row(393, y, 1505, y + 38, f, k < 4 ? RM_PSY[k] : k == 4 ? "SIMULATE MATCHES" : "INVITE PLAYER");
-        const char* v = k < 4 ? RM_PSY_V[k][g_rm_psych[k]] : k == 4 ? sims : inv;
-        text(g_fl, 25, 1238, y + 7, f ? C_TEXT : C_DIM, v, 1);
-        if (f && (k < 4 || (k == 4 && sim_arrows))) { text(g_fl, 28, 960, y + 3, C_DIM, "<"); text(g_fl, 28, 1494, y + 3, C_DIM, ">", 2); }
+        rm_row(393, y, 1505, y + 30, f, k < 4 ? RM_PSY[k] : k == 4 ? "SIMULATE MATCHES" : k == 5 ? "INVITE PLAYER"
+                                         : k == 6 ? "SKILL RATING" : "VOTING TIME");
+        const char* v = k < 4 ? RM_PSY_V[k][g_rm_psych[k]] : k == 4 ? sims : k == 5 ? inv : k == 6 ? pts : vt;
+        text(g_fl, 25, 1238, y + 2, f ? C_TEXT : C_DIM, v, 1);
+        if (f && (k < 4 || (k == 4 && sim_arrows) || k == 7)) { text(g_fl, 28, 960, y - 1, C_DIM, "<"); text(g_fl, 28, 1494, y - 1, C_DIM, ">", 2); }
     }
-    g_dl->AddLine(P(400, 414), P(1500, 414), A(IM_COL32(206, 212, 218, 70)), U(1));
+    g_dl->AddLine(P(400, 420), P(1500, 420), A(IM_COL32(206, 212, 218, 70)), U(1));
     if (focus >= 0 && focus < 4) {
         char l1[96];
         sprintf_s(l1, "Saved for your lobbies. The search does not use your %s yet.", focus == 0 ? "chattiness" :
                   focus == 1 ? "motivation" : focus == 2 ? "teamwork" : "tone");
-        text(g_fl, 27, 402, 422, C_TEXT, l1);
-        text(g_fl, 25, 402, 456, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
+        text(g_fl, 27, 402, 428, C_TEXT, l1);
+        text(g_fl, 25, 402, 462, C_DIM, RM_PSY_D[focus][g_rm_psych[focus]]);
     } else if (focus == 4) {
-        text(g_fl, 27, 402, 422, C_TEXT, "Bots play matches of their own for the Service Record.");
-        text(g_fl, 25, 402, 456, C_DIM, "Left / Right: how many rounds (a round is about 25 lobbies). A: play them.");
+        text(g_fl, 27, 402, 428, C_TEXT, "Bots play matches of their own for the Service Record.");
+        text(g_fl, 25, 402, 462, C_DIM, "Left / Right: how many rounds (a round is about 25 lobbies). A: play them.");
     } else if (focus == 5) {
-        text(g_fl, 27, 402, 422, C_TEXT, "Bots who play on your team every game, whatever the lobby.");
-        text(g_fl, 25, 402, 456, C_DIM, "A: pick them from your pool.");
+        text(g_fl, 27, 402, 428, C_TEXT, "Bots who play on your team every game, whatever the lobby.");
+        text(g_fl, 25, 402, 462, C_DIM, "A: pick them from your pool.");
+    } else if (focus == 6) {
+        char l1[128];
+        sprintf_s(l1, "You count as %d when the teams are balanced; friends count their own ratings.", g_pts);
+        text(g_fl, 27, 402, 428, C_TEXT, l1);
+        sprintf_s(l1, "Free for all: %d. A win +35 to +40, a loss -15, never under 1500. A: both back to 1600.",
+                  sr_person(me_name(), true));
+        text(g_fl, 25, 402, 462, C_DIM, l1);
+    } else if (focus == 7) {
+        text(g_fl, 27, 402, 428, C_TEXT, "How long the lobby votes on the next map and game type.");
+        text(g_fl, 25, 402, 462, C_DIM, "Left / Right or A: 15, 30 or 45 seconds. The bots' votes spread over it.");
     }
     rm_world_heat();                                 // (Nov 19: the world as Reach's, the Service Record's home states)
     rm_band();
@@ -846,6 +873,21 @@ static void rm_psych(pg_env& e, float t) {
         else { sim_start(); sound(PS_SELECT); }
     }
     if (pressed(base + 5)) { g_invite = true; g_npool_names = 0; g_invite_scroll = 0; g_focus = 0; sound(PS_SELECT); }
+    if (pressed(base + 6)) { pts_reset(); sound(PS_SELECT); }
+    if (focus == 7) {                                    // (15 / 30 / 45: Left / Right step, A goes round; a time saved
+        int step = g_left_right ? g_left_right : pressed(base + 7) ? 1 : 0;   // off the three moves to the nearest)
+        if (step) {
+            if (g_left_right) g_lr_taken = true;
+            static const int T[3] = { 15, 30, 45 };
+            int at = g_vote_s <= 22 ? 0 : g_vote_s <= 37 ? 1 : 2;
+            bool exact = g_vote_s == T[at];
+            if (pressed(base + 7)) at = (at + 1) % 3;
+            else if (exact) at = at + step < 0 ? 0 : at + step > 2 ? 2 : at + step;
+            g_vote_s = T[at];
+            save_settings();
+            sound(PS_MOVE);
+        }
+    }
 }
 
 // ------------------------------------------------------------------ phase 2: the Start menu, the Service Record

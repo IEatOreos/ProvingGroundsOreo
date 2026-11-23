@@ -32,6 +32,7 @@
 #include "third_party/imgui/imgui.h"
 #include "bots_panel.h"
 #include "armory.h"                                     // (Nov 19, phase 3: the Armory)
+#include "skill_rating.h"                               // (Nov 23: the skill ratings, in place of the team points)
 #include "proving_grounds.h"
 #include "ui_layout.h"
 
@@ -134,7 +135,7 @@ static void default_playlists() {
 // ------------------------------------------------------------------ settings (native\bin\proving_grounds.ini)
 static wchar_t g_bin[MAX_PATH], g_root[MAX_PATH];
 static int g_size = 4;                           // 4 Arena, 8 Big Team Battle
-static int g_vote_s = 15;
+static int g_vote_s = 30;                        // (Nov 23, the owner: 30 by default; 15, 30 or 45 on the Psych Profile)
 static char g_party[8][16];
 static int g_nparty;
 static bool g_loaded;
@@ -810,10 +811,25 @@ static int person_team() {
     return bot_pool_humans(1) > bot_pool_humans(0) ? 1 : 0;
 }
 
+// (Nov 23, the owner: "the teams would balance by total skill rating per team", replacing his points: +2 a win, -1 a
+// loss, 18 to 35) the player's skill rating when the teams are dealt (skill_rating.h has his rules: 1600 to start,
+// never under 1500), each friend who joined at their own, each bot at its own. skill_rating.cpp keeps them all in
+// native\bin\pg_ratings.txt; every match last_match.txt reports is rated from last_carnage.txt (pts_poll), and the
+// lobby waiting for the next game is dealt again with its bots kept
+static int g_pts = SR_PERSON_START;              // the player's rating (team games)
+static bool g_pts_redeal;                        // a rating changed since the lobby was dealt
+static void pts_load();
+static void pts_reset();
+static bool rating_count(const std::string& id);
+
 // (Nov 17) the lobby dealt: the player, the friends who joined (each a bot's seat), the party, the bots by points
 static int deal(hb_roster& r, int keep_pct, uint32_t difficulty) {
-    int party_team = person_team(), teams[PG_PEOPLE];
+    int party_team = person_team(), teams[PG_PEOPLE], friends[PG_PEOPLE];
+    pts_load();
+    g_pts_redeal = false;
     g_people_sig = people_now(g_people_id, g_people_name, teams, &g_npeople);
+    for (int i = 0; i < g_npeople; i++) friends[i] = sr_person(g_people_name[i]);   // (Nov 23: each friend's own)
+    bot_pool_set_people_ratings(g_pts, friends, g_npeople);
     int fresh = bot_pool_matchmake(r, g_size, g_party, g_nparty, party_team, keep_pct, difficulty, g_pinned, teams, g_npeople);
     g_me_team = party_team;
     for (int i = 0; i < g_npeople; i++) g_people_team[i] = teams[i];
@@ -1033,7 +1049,8 @@ static void redeal_if_people_changed(hb_roster& r, uint32_t difficulty, float t)
     uint64_t ids[PG_PEOPLE];
     char names[PG_PEOPLE][32];
     int teams[PG_PEOPLE], n;
-    if (people_now(ids, names, teams, &n) == g_people_sig) return;
+    bool pts = g_pts_redeal;                         // (Nov 23: the ratings moved: dealt again the same way)
+    if (people_now(ids, names, teams, &n) == g_people_sig && !pts) return;
     hb_roster old = r;
     float arrive[HB_ROSTER_MAX], vote_at[HB_ROSTER_MAX];
     int vote[HB_ROSTER_MAX];
@@ -1059,7 +1076,8 @@ static void redeal_if_people_changed(hb_roster& r, uint32_t difficulty, float t)
             g_vote_bot[i] = -2 - (v >= g_nopt ? 3 : v);
         }
     }
-    logf("proving grounds: the lobby's people changed: dealt again (%d bots, %d new)", r.n, fresh);
+    logf("proving grounds: %s: dealt again (%d bots, %d new)", pts ? "the ratings changed" : "the lobby's people changed",
+         r.n, fresh);
 }
 
 // ------------------------------------------------------------------ drawing
@@ -2677,6 +2695,81 @@ static void error_screen(pg_env& e, float t) {
     (void)t;
 }
 
+// ------------------------------------------------------------------ the skill ratings (Nov 23; the live points before)
+static bool g_pts_loaded;
+
+// last_match.txt (tools/service_record.py write_last_match): its match id, and the result for the player (by MCC's
+// name, else the first person in it, as the credits screen picks): 'w' win, 'l' loss, 't' draw, 0 none in it; (Nov 23)
+// 'u' a game too short to count (never rated)
+static bool pts_last_match(std::string& id, char* result) {
+    wchar_t p[MAX_PATH];
+    swprintf_s(p, L"%s\\logs\\service_record\\last_match.txt", g_root);
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"rb") || !f) return false;
+    std::vector<std::vector<std::string>> rows;
+    char line[512];
+    std::vector<std::string> c;
+    bool uncounted = false;
+    id.clear();
+    while (fgets(line, sizeof line, f)) {
+        if (line[0] == '#') continue;
+        line[strcspn(line, "\r\n")] = 0;
+        split_tabs(line, c);
+        if (c[0] == "match" && c.size() > 1) id = c[1];
+        else if (c[0] == "uncounted") uncounted = true;
+        else if (c.size() >= 3) rows.push_back(c);
+    }
+    fclose(f);
+    std::string who;
+    for (auto& r : rows)
+        if (r[0] == "person" && (who.empty() || !_stricmp(r[1].c_str(), me_name()))) who = r[1];
+    *result = 0;
+    for (auto& r : rows)
+        if (r[0] == "result" && r[1] == who) *result = r[2] == "win" ? 'w' : r[2] == "loss" ? 'l' : 't';
+    if (uncounted) *result = 'u';
+    return !id.empty();
+}
+
+// the ratings read (again when the file changed); the player's own at hand. The first time (no file yet) the match the
+// site last reported is marked counted, so a game played before the ratings is not rated
+static void pts_load() {
+    find_dirs();
+#ifdef PG_PREVIEW
+    sr_readonly(true);                               // (the preview's screens never write the ratings)
+#endif
+    wchar_t dir[MAX_PATH];
+    swprintf_s(dir, L"%s\\", g_bin);
+    bool have = sr_open(dir);
+    if (!g_pts_loaded) {
+        g_pts_loaded = true;
+        std::string id;
+        char res;
+        if (!have && pts_last_match(id, &res)) sr_set_counted(id.c_str());
+    }
+    g_pts = sr_person(me_name());
+}
+
+// once a second (force: now): a match the site reported and not rated yet is rated from its carnage report
+static void pts_poll(double now, bool force = false) {
+    static double last;
+    if (!force && now - last < 1.0) return;
+    last = now;
+    pts_load();
+    std::string id;
+    char res;
+    if (!pts_last_match(id, &res) || res == 'u' || id == sr_counted()) return;
+    rating_count(id);
+}
+
+static void pts_reset() {
+    pts_load();
+    int was = g_pts;
+    sr_reset_person(me_name());
+    g_pts = sr_person(me_name());
+    if (g_pts != was) g_pts_redeal = true;
+    logf("proving grounds: your skill rating reset (%d -> %d)", was, g_pts);
+}
+
 // ------------------------------------------------------------------ the credits a match earned
 // (Nov 17, the owner: "add this level up bar after each game showing what earned you your xp. Before the carnage
 // report? Or after whichever is cleaner") After: the carnage report is MCC's own screen, so when Project Noble's lobby
@@ -2947,11 +3040,12 @@ static void credits_screen(pg_env& e, float t, double now) {
 // Carnage; Left and Right a Stats page; A a player; B back (out, from Overview or Stats); Start (X on the keys, or the
 // Exit prompt) out. Out over MCC's own post-game report: MCC is sent one Back (overlay.cpp) and this waits for its
 // lobby (three tries, then MCC's report is left to the player). From the matchmaking page's Prior Game Stats: back there.
-struct cg_medal { int id, n; std::string name, icon; };
+struct cg_medal { int id, n; std::string name, icon, what; };   // (what: what it is for, Nov 23; "" not written)
 struct cg_player {
     int row = 0, team = -1, place = 0, score = 0, k = 0, d = 0, a = 0, md = 0, spree = 0, hs = 0, cr = 0;
     int most_n = 0, by_n = 0, tool_n = 0;
-    bool bot = false, emb_ok = false;
+    int rating = -1;                             // (Nov 23) their skill rating after the match, -1 not rated
+    bool bot = false, emb_ok = false, done = true;   // (done: Nov 23, finished the game, not quit)
     int32_t emb[5] = {};
     std::string name, tag, most, by, tool, tool_pic;
     std::vector<cg_medal> medals;
@@ -2973,7 +3067,30 @@ static bool g_cg_menu;                           // opened from the matchmaking 
 static bool g_cg_leaving;                        // out asked over MCC's post-game report: waiting for MCC's lobby
 static double g_cg_press_t;
 static int g_cg_presses;
-static const char* CG_PAGE[6] = { "SCORE", "CREDITS EARNED", "KILLS", "DEATHS", "ASSISTS", "MEDALS" };
+// (Nov 23, the owner's screenshot of Reach's: RATING the second page, each player's skill rating after the match)
+static const int CG_NPAGES = 7, CG_KILLS = 3;
+static const char* CG_PAGE[CG_NPAGES] = { "SCORE", "RATING", "CREDITS EARNED", "KILLS", "DEATHS", "ASSISTS", "MEDALS" };
+
+// (Nov 23, the owner: "add the ability to hover over these medals to say what they do") a medal hovered or focused: a
+// box beside it with its name, how many, and what it is for (service_record_site/medal_info.json; the name alone for
+// one not written). Put right of x1 when it fits, else left of x0; kept on the page
+static void cg_medal_tip(const cg_medal& m, float x0, float x1, float y) {
+    const float w = 430, pad = 14;
+    float bx = x1 + 10 + w <= 1690 ? x1 + 10 : x0 - 10 - w;
+    float wrap_h = m.what.empty() ? 0 : g_fl->CalcTextSizeA(U(22), 1e9f, U(w - 2 * pad), m.what.c_str()).y / g_pg.s;
+    float h = pad + 34 + (m.what.empty() ? 0 : 8 + wrap_h) + pad;
+    float by = y + h > 1000 ? 1000 - h : y;
+    g_dl->AddRectFilled(P(bx, by), P(bx + w, by + h), A(IM_COL32(16, 22, 28, 245)), U(4));
+    g_dl->AddRect(P(bx, by), P(bx + w, by + h), A(IM_COL32(200, 210, 220, 150)), U(4), 0, U(1.2f));
+    g_dl->AddRectFilled(P(bx, by), P(bx + 3, by + h), A(C_LIT));
+    text(g_fl, 28, bx + pad, by + pad - 2, C_TEXT, m.name.c_str());
+    char xn[16];
+    sprintf_s(xn, "x%d", m.n);
+    text(g_fl, 24, bx + w - pad, by + pad, C_DIM, xn, 2);
+    if (!m.what.empty()) {
+        g_dl->AddText(g_fl, U(22), P(bx + pad, by + pad + 42), A(IM_COL32(214, 220, 226, 255)), m.what.c_str(), nullptr, U(w - 2 * pad));
+    }
+}
 
 static void played_file(wchar_t* p) { swprintf_s(p, MAX_PATH, L"%s\\service_record\\last_played.txt", g_bin); }
 static void played_save() {
@@ -3046,14 +3163,73 @@ static bool carnage_load(const char* want) {
             for (int j = 0; j < 5; j++) { q.emb[j] = num(15 + j); q.emb_ok &= !str(15 + j).empty(); }
             q.most = str(20); q.most_n = num(21); q.by = str(22); q.by_n = num(23);
             q.tool = str(24); q.tool_n = num(25); q.tool_pic = str(26);
+            q.done = c.size() < 28 || str(27) != "0";   // (Nov 23: older files have no column: finished)
             g_cg.pl.push_back(q);
         } else if (k == "medal" && c.size() >= 6) {
-            for (cg_player& q : g_cg.pl) if (q.row == num(1)) q.medals.push_back({ num(2), num(3), str(4), str(5) });
-        } else if (k == "top" && c.size() >= 6) g_cg.top.push_back({ { num(1), num(2), str(4), str(5) }, num(3) });
+            for (cg_player& q : g_cg.pl) if (q.row == num(1)) q.medals.push_back({ num(2), num(3), str(4), str(5), str(6) });
+        } else if (k == "top" && c.size() >= 6) g_cg.top.push_back({ { num(1), num(2), str(4), str(5), str(6) }, num(3) });
     }
     fclose(f);
     g_cg.have = !g_cg.pl.empty() && (!want || !want[0] || g_cg.id == want);
+    if (g_cg.have) {                                 // (Nov 23) each player's rating after it: rated now if it was due
+        pts_poll(0, true);
+#ifdef PG_PREVIEW
+        if (g_cg.id != sr_shown_match()) {           // (the preview's own file: rated in memory, even one counted)
+            sr_set_counted("");
+            std::vector<sr_player> pl;
+            for (const cg_player& q : g_cg.pl) {
+                sr_player s;
+                s.name = q.name; s.bot = q.bot; s.team = q.team; s.place = q.place; s.kills = q.k; s.completed = q.done;
+                pl.push_back(s);
+            }
+            sr_rate(g_cg.id.c_str(), g_cg.teams, g_cg.type.c_str(), pl);
+        }
+#endif
+        for (cg_player& q : g_cg.pl) q.rating = g_cg.id == sr_shown_match() ? sr_shown(q.name.c_str()) : -1;
+    }
     return g_cg.have;
+}
+
+// (Nov 23) the match last_carnage.txt has rated, when it is the one asked for: everyone in it as the report has them
+// (team, place, kills, a bot or a person, finished or quit), each bot at the difficulty it was seated at
+static bool rating_count(const std::string& id) {
+    wchar_t p[MAX_PATH];
+    carnage_path(p);
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"rb") || !f) return false;
+    static char line[4096];
+    std::vector<std::string> c;
+    std::vector<sr_player> pl;
+    std::string mid, type;
+    bool teams = true;
+    while (fgets(line, sizeof line, f)) {
+        if (line[0] == '#') continue;
+        line[strcspn(line, "\r\n")] = 0;
+        split_tabs(line, c);
+        if (c[0] == "match" && c.size() > 1) mid = c[1];
+        else if (c[0] == "game" && c.size() > 2) { type = c[1]; teams = c[2] == "1"; }
+        else if (c[0] == "player" && c.size() >= 27) {
+            sr_player s;
+            s.name = c[2]; s.team = atoi(c[4].c_str()); s.place = atoi(c[5].c_str()); s.kills = atoi(c[7].c_str());
+            s.bot = c[14] == "1";
+            s.completed = c.size() < 28 || c[27] != "0";
+            if (s.bot) {
+                s.tier = sr_tier_of(s.name.c_str());
+                int t, st;
+                if (s.tier < 0 && bot_pool_saved_of(s.name.c_str(), &t, &st)) s.tier = t;
+            }
+            pl.push_back(s);
+        }
+    }
+    fclose(f);
+    if (mid != id) return false;                     // (the report not written yet: the next look)
+    int was = g_pts;
+    if (!sr_rate(id.c_str(), teams, type.c_str(), pl)) return false;
+    g_pts = sr_person(me_name());
+    g_pts_redeal = true;
+    logf("proving grounds: match %s rated (%s, %d players): your rating %d -> %d", id.c_str(),
+         teams ? "teams" : "free for all", (int)pl.size(), was, g_pts);
+    return true;
 }
 
 // a picture the file names: a full path (the preview's), else one in the site's folder ("medals/74.png")
@@ -3235,7 +3411,7 @@ static void carnage_screen(pg_env& e, float t, double now) {
         text(g_fl, 36, 338, 404, C_TEXT, cg_caption().c_str());
         text(g_fl, 27, 338, 468, IM_COL32(190, 196, 202, 255), "TOP MEDALS");
         g_dl->AddLine(P(330, 506), P(965, 506), A(IM_COL32(206, 212, 218, 60)), U(1));
-        int base = (int)g_items.size();
+        int base = (int)g_items.size(), top_tip = -1;
         for (int i = 0; i < (int)g_cg.top.size() && i < 3; i++) {
             const cg_top& tp = g_cg.top[i];
             float y = 518 + i * 120.0f;
@@ -3245,7 +3421,9 @@ static void carnage_screen(pg_env& e, float t, double now) {
             text(g_fl, 46, 452, y + 26, C_TEXT, xn);
             text(g_fl, 30, 582, y + 6, C_TEXT, tp.m.name.c_str());
             const cg_player* q = tp.row >= 0 && tp.row < n ? &g_cg.pl[tp.row] : nullptr;
-            bool f = !idle && item(582, y + 48, 965, y + 94);
+            // (Nov 23) the whole row a stop, the medal's picture too: hovered or focused, its box (cg_medal_tip)
+            bool f = !idle && item(322, y, 965, y + 104);
+            if (f) top_tip = i;
             cg_name_bar(582, y + 48, 965, y + 94, q, q ? q->name : "", f);
         }
         if (g_cg.top.empty()) text(g_fl, 24, 338, 526, C_DIM, "No medals were earned in this game.");
@@ -3277,11 +3455,19 @@ static void carnage_screen(pg_env& e, float t, double now) {
             text(g_fl, 30, 1410, y + 5, C_TEXT, pl, 1);
             text(g_fl, 30, 1525, y + 5, C_TEXT, sc, 1);
         }
+        if (top_tip >= 0) cg_medal_tip(g_cg.top[top_tip].m, 322, 965, 518 + top_tip * 120.0f);   // (over the teams' table)
     }
     // ---- STATS: everyone by team, one number a page
     else if (g_cg_tab == 1) {
-        if (!idle && g_left_right) { g_cg_page = (g_cg_page + 6 + g_left_right) % 6; sound(PS_MOVE); g_left_right = 0; }
-        text(g_fl, 28, 922, 184, C_TEXT, CG_PAGE[g_cg_page], 1);
+        if (!idle && g_left_right) { g_cg_page = (g_cg_page + CG_NPAGES + g_left_right) % CG_NPAGES; sound(PS_MOVE); g_left_right = 0; }
+        // (Nov 23, the owner's marked screenshot) the KILLS page fills the row's other three columns: DEATHS, ASSISTS,
+        // MEDALS beside KILLS (each column's middle: 920, 1114, 1304, 1490)
+        const bool four = g_cg_page == CG_KILLS;
+        static const float COL[4] = { 922, 1114, 1304, 1490 };
+        if (four) {
+            static const char* HEAD[4] = { "KILLS", "DEATHS", "ASSISTS", "MEDALS" };
+            for (int c = 0; c < 4; c++) text(g_fl, 28, COL[c], 184, C_TEXT, HEAD[c], 1);
+        } else text(g_fl, 28, 922, 184, C_TEXT, CG_PAGE[g_cg_page], 1);
         float step = n > 16 ? 748.0f / n : 46.6f, h = step - 2.6f;
         int base = (int)g_items.size();
         for (int i = 0; i < n; i++) {
@@ -3296,8 +3482,15 @@ static void carnage_screen(pg_env& e, float t, double now) {
             text(g_fl, h * 0.54f, 808, y + h * 0.18f, IM_COL32(214, 220, 226, 200), q.tag.c_str(), 2);
             g_dl->AddRectFilled(P(822, y), P(1582, y + h), A(f ? IM_COL32(120, 128, 136, 120) : IM_COL32(24, 28, 32, 130)));
             for (float x : { 1018.0f, 1210.0f, 1398.0f }) g_dl->AddLine(P(x, y + 4), P(x, y + h - 4), A(IM_COL32(206, 212, 218, 26)), U(1));
-            const int vals[6] = { q.score, q.cr, q.k, q.d, q.a, q.md };
-            text(g_fl, h * 0.62f, 922, y + h * 0.14f, C_TEXT, cr_text(vals[g_cg_page]).c_str(), 1);
+            const int vals[CG_NPAGES] = { q.score, q.rating, q.cr, q.k, q.d, q.a, q.md };
+            if (four) {
+                const int kdam[4] = { q.k, q.d, q.a, q.md };
+                for (int c = 0; c < 4; c++) text(g_fl, h * 0.62f, COL[c], y + h * 0.14f, C_TEXT, cr_text(kdam[c]).c_str(), 1);
+            } else if (g_cg_page == 1) {                 // (Nov 23: the rating as Reach printed it, no comma; - not rated)
+                char rt[16];
+                if (q.rating >= 0) sprintf_s(rt, "%d", q.rating); else strcpy_s(rt, "-");
+                text(g_fl, h * 0.62f, 922, y + h * 0.14f, C_TEXT, rt, 1);
+            } else text(g_fl, h * 0.62f, 922, y + h * 0.14f, C_TEXT, cr_text(vals[g_cg_page]).c_str(), 1);
             if (!q.bot) {                                // (a person: Reach's speech bubble, as its party members had)
                 float bx = 306, by = y + h * 0.5f;
                 g_dl->AddEllipseFilled(P(bx + 16, by - 2), ImVec2(U(16), U(10)), A(IM_COL32(214, 220, 226, 200)));
@@ -3311,7 +3504,7 @@ static void carnage_screen(pg_env& e, float t, double now) {
         }
         for (int i = 0; i < n; i++) if (pressed(base + i)) { g_cg_player = i; g_cg_tab = 2; sound(PS_SELECT); }
         char pg[24];
-        sprintf_s(pg, "Page %d/6", g_cg_page + 1);
+        sprintf_s(pg, "Page %d/%d", g_cg_page + 1, CG_NPAGES);
         text(g_fl, 26, 985, 996, C_TEXT, pg, 1);
         // (the page's arrows, clickable)
         text(g_fl, 26, 900, 996, C_DIM, "<", 1);
@@ -3319,7 +3512,7 @@ static void carnage_screen(pg_env& e, float t, double now) {
         if (!idle && ImGui::IsMouseClicked(0)) {
             ImVec2 m = ImGui::GetIO().MousePos, a = P(880, 990), b = P(1090, 1030);
             if (m.x >= a.x && m.x <= b.x && m.y >= a.y && m.y <= b.y) {
-                g_cg_page = (g_cg_page + (m.x < P(985, 0).x ? 5 : 1)) % 6; sound(PS_MOVE);
+                g_cg_page = (g_cg_page + (m.x < P(985, 0).x ? CG_NPAGES - 1 : 1)) % CG_NPAGES; sound(PS_MOVE);
             }
         }
     }
@@ -3353,6 +3546,10 @@ static void carnage_screen(pg_env& e, float t, double now) {
         // the medals
         g_dl->AddRectFilled(P(740, 284), P(1228, 740), A(IM_COL32(10, 14, 18, 110)));
         int nm = (int)q.medals.size();
+        // (Nov 23) each medal a stop for the mouse and the pad (Up / Down, Left / Right through the grid): the one
+        // hovered or focused framed, its box (cg_medal_tip) drawn after the grid so it lies over the rest
+        int mbase = (int)g_items.size(), tip = -1;
+        float tip_x = 0, tip_y = 0;
         for (int i = 0; i < nm && i < 16; i++) {
             float x = 752 + (i % 4) * 120.0f, y = 292 + (i / 4) * 112.0f;
             if (i == 15 && nm > 16) {                    // (more than the grid holds: how many more)
@@ -3362,11 +3559,22 @@ static void carnage_screen(pg_env& e, float t, double now) {
                 break;
             }
             const cg_medal& md = q.medals[i];
+            bool mf = !idle && item(x, y, x + 112, y + 108);
+            if (mf) {
+                g_dl->AddRect(P(x + 2, y - 2), P(x + 110, y + 108), A(IM_COL32(236, 240, 244, 170)), U(4), 0, U(1.5f));
+                tip = i; tip_x = x; tip_y = y;
+            }
             if (const pic* mp = cg_picture(md.icon)) image_fit(mp, x + 6, y, x + 98, y + 86);
             else text(g_fs, 16, x + 52, y + 30, C_DIM, md.name.c_str(), 1);
             char xn[16];
             sprintf_s(xn, "x%d", md.n);
             text(g_fl, 24, x + 70, y + 84, C_TEXT, xn);
+        }
+        if (!idle && g_left_right && g_focus >= mbase && g_focus < (int)g_items.size()) {   // (Left / Right: the next)
+            int cnt = (int)g_items.size() - mbase;
+            g_focus = mbase + (g_focus - mbase + cnt + g_left_right) % cnt;
+            g_lr_taken = true;
+            sound(PS_MOVE);
         }
         if (!nm) text(g_fl, 24, 984, 490, C_DIM, "No medals this game", 1);
         // the numbers
@@ -3405,6 +3613,7 @@ static void carnage_screen(pg_env& e, float t, double now) {
             sprintf_s(nb, "%d", q.tool_n);
             text(g_fl, 30, 1584, 928, C_TEXT, nb, 2);
         }
+        if (tip >= 0) cg_medal_tip(q.medals[tip], tip_x, tip_x + 112, tip_y);   // (over everything else on the page)
         if (!idle && (lb || rb)) { g_cg_player = (g_cg_player + n + (rb ? 1 : -1)) % n; sound(PS_MOVE); }
         lb = rb = false;
         // LB Player n/N RB, along the bottom
@@ -3753,7 +3962,9 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 25: pg_open(); g_rpage = RP_DIFF; g_diff_mode = 0; g_focus = 0; break;
     case 26: pg_open(); g_rpage = RP_MENU; g_focus = 1; break;
     case 27: pg_open(); g_rpage = RP_MENU; g_focus = 5; break;       // (the challenges, as Reach's Start menu)
-    case 28: pg_open(); g_rpage = RP_PSYCH; g_focus = 4; break;      // (Simulate Matches on the Psych Profile)
+    case 28: pg_open(); g_rpage = RP_PSYCH; g_focus = 4;            // (Simulate Matches on the Psych Profile;
+        { char f[8]; if (GetEnvironmentVariableA("PG_FOCUS", f, sizeof f)) g_focus = atoi(f); }   // PG_FOCUS: a row)
+        break;
     // (Nov 19, phase 3) the Armory: its slots, the helmets, Mark V's variants, a chest asked about before it is bought
     case 29: pg_open(); g_rpage = RP_ARMORY; g_focus = 0; break;
     case 30: pg_open(); armory_load(); g_rpage = RP_ARM_ITEMS; g_arm_slot = 0; g_arm_family = -1; g_focus = 13; break;
@@ -3791,7 +4002,8 @@ void pg_preview_stage(int which, float t, pg_env& e) {
         g_played = { "", "HReachMP_Boneyard", "Boneyard", "One Bomb", F_ASSAULT };
         if (!carnage_enter(nullptr, false, now)) printf("carnage report: no last_carnage.txt\n");
         g_cg_tab = which == 43 ? 0 : which == 46 ? 2 : 1;
-        g_cg_page = which == 45 ? 1 : 0;
+        g_cg_page = which == 45 ? 2 : which == 44 ? CG_KILLS : 0;   // (Nov 23: the stats screen on KILLS, its four columns)
+        { char pg[8]; if (GetEnvironmentVariableA("PG_CG_PAGE", pg, sizeof pg)) g_cg_page = atoi(pg) % CG_NPAGES; }   // (one page)
         g_focus = which == 45 ? 4 : which == 43 ? 0 : g_cg_sel;
         break;
     // (Nov 23) after a match: the credits (made-up numbers, a promotion) going on to the carnage report of the
@@ -3969,6 +4181,7 @@ static bool pg_frame_body(pg_env& e) {
         }
         background((float)now, art, art_a);
     }
+    if (!g_follow) pts_poll(now);                        // (Nov 23: the player's points after each reported match)
     if (!g_follow && (g_stage == S_SEARCH || g_stage == S_VOTE || (g_stage == S_RESULT && t < 2.5f)))   // (Nov 17: before
         redeal_if_people_changed(*e.roster, e.difficulty, t);                                           // the launch)
     switch (g_stage) {

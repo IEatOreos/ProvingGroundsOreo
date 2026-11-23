@@ -109,8 +109,11 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(tuple(keys), botctl.TIER_KEYS)
         self.assertEqual(botctl.DIFFICULTY_TIERS[9], "mythic")
         self.assertIn("d == 9 ? HB_TIER_MYTHIC", panel)
-        pts = re.search(r"TIER_POINTS\[HB_TIERS\]\s*=\s*\{([^}]*)\}", panel).group(1)
-        self.assertEqual([int(x) for x in pts.split(",")], [1, 2, 3, 8, 8, 12, 8, 5, 10, 12])   # (Nov 20: Noble 12)
+        # (Nov 23: the points became skill ratings, native/skill_rating.cpp: each difficulty's base, Mythic 1600)
+        rating = (ROOT / "native" / "skill_rating.cpp").read_text(encoding="utf-8", errors="replace")
+        rows = re.search(r"RANGE\[HB_TIERS\]\s*=\s*\{(.*?)\n\};", rating, re.S).group(1)
+        bases = [int(b) for b in re.findall(r"\{\s*(\d+),", rows)]
+        self.assertEqual(bases, [400, 600, 800, 1300, 1300, 1650, 1300, 950, 1600, 1700])
         overlay = (ROOT / "native" / "overlay.cpp").read_text(encoding="utf-8", errors="replace")
         names = re.findall(r'"([^"]*)"', re.search(r"DIFF_NAME\[HB_TIERS \+ 1\]\s*=\s*\{([^}]*)\}", overlay).group(1))
         self.assertEqual(names[8:], ["Mythic", "Noble", "Mixed"])

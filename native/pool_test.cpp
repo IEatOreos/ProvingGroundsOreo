@@ -8,6 +8,7 @@
 #include <string.h>
 #include <string>
 #include "bots_panel.h"
+#include "skill_rating.h"
 
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { fails++; printf("FAIL %s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); } } while (0)
@@ -272,61 +273,62 @@ int main(int argc, char** argv) {
               "a long name's *2 kept, *abc a name: %d %s %s", bot_pool_size(), bot_pool_upcoming(0), bot_pool_upcoming(2));
     }
 
-    // 20. (Nov 13) the owner's points: Easy 1, Normal 2, Heroic 3, Legendary 8, Scaling 8, Demon 12, Blind 8, Tactician 5,
-    // Mythic 10; (Nov 20) Noble, Demon's base, 12; a human 20
-    {
-        const int want20[HB_TIERS] = { 1, 2, 3, 8, 8, 12, 8, 5, 10, 12 };
-        for (int t = 0; t < HB_TIERS; t++) CHECK(tier_points(t) == want20[t], "tier %d points %d", t, tier_points(t));
-        CHECK(HB_HUMAN_POINTS == 20, "human points");
-    }
+    // 20. (Nov 13) the owner's points; (Nov 23) now skill ratings (27 checks the bases and ranges): a person 1600
+    CHECK(SR_PERSON_START == 1600 && SR_PERSON_FLOOR == 1500, "a person 1600, never under 1500");
+    { wchar_t rf[MAX_PATH]; swprintf_s(rf, L"%spg_ratings.txt", dir); DeleteFileW(rf); sr_open(dir); }   // (every bot at its start)
 
-    // 21. two teams: the smallest gap with the team sizes kept; of the even splits, Demons stacked about 60% of the time.
-    // The owner's lobby: you, 2 Demon, Blind, Legendary, 3 Tactician, 3 Heroic, Normal, 4 Easy (45 vs 45)
+    // 21. two teams: the smallest gap with the team sizes kept; of the even splits (Nov 23: within SR_TIE of the
+    // smallest), Demons stacked about 60% of the time. The owner's lobby: you, 2 Demon, Blind, Legendary, 3 Tactician,
+    // 3 Heroic, Normal, 4 Easy
     bots_panel_profiles(prof);                        // (whatever profiles: none of these bots has a clan)
     {
         const int tiers[15] = { HB_TIER_DEMON, HB_TIER_DEMON, HB_TIER_BLIND, 3, HB_TIER_TACTICIAN, HB_TIER_TACTICIAN,
                                 HB_TIER_TACTICIAN, 2, 2, 2, 1, 0, 0, 0, 0 };
         int humans[HB_TEAMS_MAX] = { 1 };
-        int stacked = 0, runs = 2000;
+        int stacked = 0, runs = 2000, worst = 0;
         for (int k = 0; k < runs; k++) {
             hb_roster b{}; b.teams = 2; b.n = 15;
             for (int i = 0; i < 15; i++) { b.bot[i].tier = (uint8_t)tiers[i]; b.bot[i].team = (uint8_t)(i < 7 ? 0 : 1); sprintf_s(b.bot[i].name, "T%d", i); }
             uint32_t rng = 1000u + 7u * k;
             roster_point_balance(b, humans, rng);
-            int red = 20, blue = 0, dr = 0;
+            int red = SR_PERSON_START, blue = 0, dr = 0;
             for (int i = 0; i < 15; i++) {
-                (b.bot[i].team == 0 ? red : blue) += tier_points(b.bot[i].tier);
+                (b.bot[i].team == 0 ? red : blue) += sr_bot(b.bot[i].name, b.bot[i].tier);
                 if (b.bot[i].tier == HB_TIER_DEMON && b.bot[i].team == 0) dr++;
             }
-            if (k < 3 || red != blue) CHECK(red == 45 && blue == 45 && roster_on_team(b, 0) == 7, "run %d: %d vs %d, %d red", k, red, blue, roster_on_team(b, 0));
+            CHECK(roster_on_team(b, 0) == 7, "run %d: %d red", k, roster_on_team(b, 0));
+            worst = abs(red - blue) > worst ? abs(red - blue) : worst;
             stacked += dr != 1;
         }
-        CHECK(stacked > runs * 55 / 100 && stacked < runs * 65 / 100, "Demons stacked %d of %d (want about 60%%)", stacked, runs);
-        printf("points: the owner's 8v8 even every time, Demons stacked in %d of %d\n", stacked, runs);
+        CHECK(worst <= SR_TIE + 20, "the owner's 8v8: gaps up to %d", worst);
+        CHECK(stacked > runs * 45 / 100 && stacked < runs * 75 / 100, "Demons stacked %d of %d (want about 60%%)", stacked, runs);
+        printf("ratings: the owner's 8v8 within %d every time, Demons stacked in %d of %d\n", worst, stacked, runs);
         // the 4v4 from the queue sim: you, Demon, Legendary, Blind, Tactician, Heroic, Normal, Easy (59: a gap of 1)
         const int t4[7] = { HB_TIER_DEMON, 3, HB_TIER_BLIND, HB_TIER_TACTICIAN, 2, 1, 0 };
         hb_roster b{}; b.teams = 2; b.n = 7;
         for (int i = 0; i < 7; i++) { b.bot[i].tier = (uint8_t)t4[i]; b.bot[i].team = (uint8_t)(i < 3 ? 0 : 1); sprintf_s(b.bot[i].name, "F%d", i); }
         uint32_t rng = 5;
         roster_point_balance(b, humans, rng);
-        int red = 20, blue = 0;
-        for (int i = 0; i < 7; i++) (b.bot[i].team == 0 ? red : blue) += tier_points(b.bot[i].tier);
-        CHECK(abs(red - blue) == 1 && roster_on_team(b, 0) == 3, "4v4: %d vs %d", red, blue);
-        // three teams: sizes kept, totals close (12 8 8 8 5 3 3 2 1: 50, 16-17 each)
+        int red = SR_PERSON_START, blue = 0;
+        for (int i = 0; i < 7; i++) (b.bot[i].team == 0 ? red : blue) += sr_bot(b.bot[i].name, b.bot[i].tier);
+        CHECK(abs(red - blue) <= 300 && roster_on_team(b, 0) == 3, "4v4: %d vs %d", red, blue);
+        printf("ratings: the queue sim's 4v4 %d vs %d\n", red, blue);
+        // three teams: sizes kept, totals close
         const int t3[9] = { HB_TIER_DEMON, 3, 3, HB_TIER_BLIND, HB_TIER_TACTICIAN, 2, 2, 1, 0 };
         int none[HB_TEAMS_MAX] = {};
         hb_roster c{}; c.teams = 3; c.n = 9;
         for (int i = 0; i < 9; i++) { c.bot[i].tier = (uint8_t)t3[i]; c.bot[i].team = (uint8_t)(i % 3); sprintf_s(c.bot[i].name, "G%d", i); }
         rng = 9;
         roster_point_balance(c, none, rng);
-        int lo = 999, hi = 0;
+        int lo = 1 << 30, hi = 0;
         for (int t = 0; t < 3; t++) {
             int p = 0;
-            for (int i = 0; i < 9; i++) if (c.bot[i].team == t) p += tier_points(c.bot[i].tier);
+            for (int i = 0; i < 9; i++) if (c.bot[i].team == t) p += sr_bot(c.bot[i].name, c.bot[i].tier);
             lo = p < lo ? p : lo; hi = p > hi ? p : hi;
             CHECK(roster_on_team(c, t) == 3, "3 teams: team %d has %d", t, roster_on_team(c, t));
         }
-        CHECK(hi - lo <= 2, "3 teams: %d to %d", lo, hi);
+        CHECK(hi - lo <= 400, "3 teams: %d to %d", lo, hi);
+        printf("ratings: three teams %d to %d\n", lo, hi);
     }
 
     // 22. parties: one clan's bots always on one team, (Nov 16) the team without people when it fits
@@ -441,8 +443,9 @@ int main(int argc, char** argv) {
         write(hum, "human=1\nhuman=1\nhuman=0\n");
         bot_pool_load(dir);
         CHECK(bot_pool_humans(0) == 1 && bot_pool_humans(1) == 2, "read: %d %d", bot_pool_humans(0), bot_pool_humans(1));
-        hb_roster b = seats(2);                       // Old0 red, Old1 blue, Heroic
-        CHECK(roster_team_points(b, 1) == 43 && roster_team_points(b, 0) == 23, "team points %d %d", roster_team_points(b, 0), roster_team_points(b, 1));
+        hb_roster b = seats(2);                       // Old0 red, Old1 blue, Heroic (Nov 23: by rating, a person 1600)
+        CHECK(roster_team_points(b, 1) == 2 * SR_PERSON_START + sr_bot("Old1", 2) &&
+              roster_team_points(b, 0) == SR_PERSON_START + sr_bot("Old0", 2), "team ratings %d %d", roster_team_points(b, 0), roster_team_points(b, 1));
         DeleteFileW(hum);
     }
 
@@ -579,6 +582,20 @@ int main(int argc, char** argv) {
             CHECK(bot_pool_humans(0) + bot_pool_humans(1) == 2, "friend: %d + %d people counted", bot_pool_humans(0),
                   bot_pool_humans(1));
         }
+        // 26b. (Nov 23) a matchmade lobby counts the player at their own rating and a friend at theirs, on their teams
+        for (int me : { 1500, 2100 }) {
+            bot_pool_seed(7);
+            hb_roster f = seats(0);
+            uint8_t fp[HB_ROSTER_MAX];
+            int people[1] = { 0 }, friends[1] = { 1750 };
+            bot_pool_set_people_ratings(me, friends, 1);
+            bot_pool_matchmake(f, 4, party, 0, 0, 0, 2, fp, people, 1);
+            int bots0 = 0;
+            for (int i = 0; i < f.n; i++) if (f.bot[i].team == 0) bots0 += sr_bot(f.bot[i].name, f.bot[i].tier);
+            CHECK(roster_team_points(f, 0) == bots0 + me + 1750, "your rating %d: red %d, its bots %d",
+                  me, roster_team_points(f, 0), bots0);
+        }
+        bot_pool_set_people_ratings(SR_PERSON_START, nullptr, 0);
         bot_pool_set_format(8);
         {
             bot_pool_seed(8);
@@ -607,6 +624,151 @@ int main(int argc, char** argv) {
             CHECK(c2.n == 7 && same == 6, "friend out, keep 100: %d bots, %d stayed", c2.n, same);
         }
         printf("proving grounds: friends take bots' seats on their teams\n");
+    }
+
+    // 27. (Nov 23) the owner's skill ratings (skill_rating.h): bots start in their difficulty's range, a person at 1600;
+    // a 4v4's wins, losses, the 150 gap, the kill bonus, quitting, a draw, the ranges and the floor, free for all, and
+    // the file read back
+    {
+        wchar_t rf[MAX_PATH];
+        swprintf_s(rf, L"%spg_ratings.txt", dir);
+        DeleteFileW(rf);
+        CHECK(!sr_open(dir), "no ratings file yet");
+        for (int t = 0; t < HB_TIERS; t++) {
+            sr_range g = sr_tier_range(t);
+            CHECK(g.lo <= g.base && g.base <= g.hi, "tier %d: %d in %d-%d", t, g.base, g.lo, g.hi);
+            for (int k = 0; k < 40; k++) {
+                char nm[16];
+                sprintf_s(nm, "R%d", k);
+                int s = sr_bot(nm, t);
+                CHECK(s >= g.lo && s <= g.hi && s == sr_bot(nm, t), "tier %d start %d", t, s);
+            }
+        }
+        const int bases[HB_TIERS] = { 400, 600, 800, 1300, 1300, 1650, 1300, 950, 1600, 1700 };
+        for (int t = 0; t < HB_TIERS; t++) CHECK(sr_tier_range(t).base == bases[t], "tier %d base %d", t, sr_tier_range(t).base);
+        CHECK(sr_tier_range(HB_TIER_NOBLE).lo == 1600 && sr_tier_range(HB_TIER_NOBLE).hi == 1800 &&
+              sr_tier_range(HB_TIER_DEMON).lo == 1550 && sr_tier_range(HB_TIER_DEMON).hi == 1800, "Noble and Demon ranges");
+        CHECK(sr_person("Me") == 1600, "a person starts at 1600");
+
+        // a close 4v4 the player's team wins: you and 3 Legendary bots vs 4 Legendary bots
+        auto lobby = [](int you_kills) {
+            std::vector<sr_player> pl;
+            sr_player me; me.name = "Me"; me.team = 0; me.place = 1; me.kills = you_kills; pl.push_back(me);
+            for (int i = 0; i < 7; i++) {
+                sr_player b; b.name = "L" + std::to_string(i); b.bot = true; b.tier = 3; b.team = i < 3 ? 0 : 1;
+                b.place = i < 3 ? 1 : 2; b.kills = 10; pl.push_back(b);
+            }
+            return pl;
+        };
+        std::vector<sr_player> pl = lobby(10);
+        CHECK(sr_rate("m1", true, "Team Slayer", pl), "m1 rated");
+        CHECK(pl[0].after - pl[0].before >= 35 && pl[0].after - pl[0].before <= 40, "close win: %+d", pl[0].after - pl[0].before);
+        for (int i = 1; i < 8; i++) {
+            sr_range g = sr_tier_range(3);
+            int want = pl[i].team == 0 ? pl[i].before + 19 : pl[i].before - 19;
+            want = want < g.lo ? g.lo : want > g.hi ? g.hi : want;
+            CHECK(pl[i].after == want, "bot %d: %d -> %d", i, pl[i].before, pl[i].after);
+        }
+        CHECK(!sr_rate("m1", true, "Team Slayer", pl), "a match counts once");
+        CHECK(sr_person("Me") == pl[0].after && sr_shown("me") == pl[0].after && !strcmp(sr_shown_match(), "m1"), "saved");
+
+        // the kill bonus: in a win, up to +3 over the lobby's average (10 here)
+        pl = lobby(40);
+        int was = sr_person("Me");
+        sr_rate("m2", true, "Team Slayer", pl);
+        int got = pl[0].after - was;
+        CHECK(got >= 38 && got <= 43, "a win with 40 kills: %+d", got);
+
+        // the 150 gap: you (Me) and 3 Easy bots vs 4 Noble bots. The loss is -10 (they were 150+ higher); the bots on
+        // your team lose 9, the Nobles win 9
+        pl.clear();
+        { sr_player me; me.name = "Me"; me.team = 0; me.place = 2; pl.push_back(me); }
+        for (int i = 0; i < 7; i++) {
+            sr_player b; b.name = "G" + std::to_string(i); b.bot = true; b.tier = i < 3 ? 0 : HB_TIER_NOBLE;
+            b.team = i < 3 ? 0 : 1; b.place = i < 3 ? 2 : 1; pl.push_back(b);
+        }
+        sr_rate("m3", true, "Team Slayer", pl);
+        CHECK(pl[0].after - pl[0].before == -10, "a loss to a much stronger team: %+d", pl[0].after - pl[0].before);
+        for (int i = 1; i < 8; i++) {
+            sr_range g = sr_tier_range(pl[i].tier);
+            int want = pl[i].before + (i < 4 ? -9 : 9);
+            want = want < g.lo ? g.lo : want > g.hi ? g.hi : want;
+            CHECK(pl[i].after == want, "gap bot %d: %d -> %d (want %d)", i, pl[i].before, pl[i].after, want);
+        }
+        // the other way round: your team far stronger wins smaller (30-35), loses -15
+        for (auto& p : pl) { p.place = p.team == 0 ? 1 : 2; p.tier = p.bot ? (p.team == 0 ? HB_TIER_NOBLE : 0) : -1; }
+        sr_rate("m4", true, "Team Slayer", pl);
+        CHECK(pl[0].after - pl[0].before >= 30 && pl[0].after - pl[0].before <= 35, "a win over a much weaker team: %+d", pl[0].after - pl[0].before);
+        for (auto& p : pl) p.place = p.team == 0 ? 2 : 1;
+        sr_rate("m5", true, "Team Slayer", pl);
+        CHECK(pl[0].after - pl[0].before == -15 || pl[0].after == SR_PERSON_FLOOR, "a loss to a much weaker team: %+d", pl[0].after - pl[0].before);
+
+        // a draw: nothing, but a person who quit +15 and a bot that quit a loss
+        pl = lobby(10);
+        for (auto& p : pl) p.place = 1;
+        pl[0].completed = false;
+        pl[5].completed = false;
+        sr_rate("m6", true, "Team Slayer", pl);
+        CHECK(pl[0].after - pl[0].before == 15, "you quit a draw: %+d", pl[0].after - pl[0].before);
+        CHECK(pl[1].after == pl[1].before && pl[7].after == pl[7].before, "a draw changes nothing");
+        CHECK(pl[5].after <= pl[5].before, "a bot that quit lost: %d -> %d", pl[5].before, pl[5].after);
+
+        // the floor: 1500 (40 losses: the gap soon passes 150, so most moves are 9)
+        for (int k = 0; k < 40; k++) {
+            pl = lobby(0);
+            for (auto& p : pl) p.place = p.team == 0 ? 2 : 1;
+            char id[16]; sprintf_s(id, "f%d", k);
+            sr_rate(id, true, "Team Slayer", pl);
+        }
+        CHECK(sr_person("Me") == SR_PERSON_FLOOR, "never under 1500: %d", sr_person("Me"));
+        // the ranges: the losing Legendaries (your team) end at 1150, the winners at 1450, no further
+        CHECK(sr_bot("L0", 3) == 1150 && sr_bot("L3", 3) == 1450, "ranges: %d %d", sr_bot("L0", 3), sr_bot("L3", 3));
+
+        // Firefight: not rated
+        pl = lobby(10);
+        CHECK(!sr_rate("ff", true, "Firefight Arcade", pl), "Firefight not rated");
+
+        // free for all, its own rating: 1st +40, 2nd +30, 3rd +20, the rest -15; the team ratings untouched
+        int team_me = sr_person("Me");
+        pl.clear();
+        for (int i = 0; i < 6; i++) {
+            sr_player p; p.name = i ? "F" + std::to_string(i) : "Me"; p.bot = i > 0; p.tier = HB_TIER_NOBLE; p.team = i;
+            p.place = i + 1; pl.push_back(p);
+        }
+        sr_rate("ffa1", false, "Slayer", pl);
+        CHECK(pl[0].before == 1600 && pl[0].after == 1640, "FFA 1st: %d -> %d", pl[0].before, pl[0].after);
+        const int ffa_d[6] = { 40, 30, 20, -15, -15, -15 };
+        for (int i = 1; i < 6; i++) {
+            sr_range g = sr_tier_range(HB_TIER_NOBLE);
+            int want = pl[i].before + ffa_d[i];
+            want = want < g.lo ? g.lo : want > g.hi ? g.hi : want;
+            CHECK(pl[i].after == want, "FFA place %d: %d -> %d", i + 1, pl[i].before, pl[i].after);
+        }
+        CHECK(sr_person("Me") == team_me && sr_person("Me", true) == 1640, "FFA kept apart: %d %d", sr_person("Me"), sr_person("Me", true));
+
+        // read back from the file; a new difficulty starts in its new range
+        int l0 = sr_bot("L0", 3);
+        sr_open(L"C:\\");                                  // (another folder, then this one again: read from disk)
+        sr_open(dir);
+        CHECK(sr_bot("L0", 3) == l0 && sr_person("Me", true) == 1640 && !strcmp(sr_counted(), "ffa1"), "read back");
+        CHECK(sr_bot("L0", 0) >= 300 && sr_bot("L0", 0) <= 500, "L0 as Easy: %d", sr_bot("L0", 0));
+        sr_reset_person("Me");
+        CHECK(sr_person("Me") == 1600 && sr_person("Me", true) == 1600, "reset");
+
+        // the balancer counts ratings: a 4v4 with you (1600) dealt within SR_TIE of the most even split
+        bot_pool_set_people_ratings(1600, nullptr, 0);
+        int humans[HB_TEAMS_MAX] = { 1 };
+        hb_roster b{}; b.teams = 2; b.n = 7;
+        const int t4[7] = { HB_TIER_DEMON, 3, HB_TIER_BLIND, HB_TIER_TACTICIAN, 2, 1, 0 };
+        for (int i = 0; i < 7; i++) { b.bot[i].tier = (uint8_t)t4[i]; b.bot[i].team = (uint8_t)(i < 3 ? 0 : 1); sprintf_s(b.bot[i].name, "F%d", i); }
+        uint32_t rng = 5;
+        roster_point_balance(b, humans, rng);
+        CHECK(roster_on_team(b, 0) == 3, "4v4 sizes kept");
+        CHECK(abs(roster_team_points(b, 0) - roster_team_points(b, 1)) <= 200, "4v4 by rating: %d vs %d",
+              roster_team_points(b, 0), roster_team_points(b, 1));
+        printf("ratings: red %d, blue %d; your rating 1600 counted on red\n", roster_team_points(b, 0), roster_team_points(b, 1));
+        DeleteFileW(rf);
+        sr_open(dir);
     }
 
     printf(fails ? "%d FAILED\n" : "all pool checks passed\n", fails);
