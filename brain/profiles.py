@@ -150,7 +150,11 @@ NOBLE = "noble"
 # (Nov 20, owner: "make the noble difficulty to practically be an aimbot ... close to 100%") Noble's view turns at
 # Demon's speed (Bot.turn_cap; it was 3000 deg/s for a while that day, a whip the owner saw as a flick at the ground):
 # its swing onto a man is eased in, then locks (bot.Aim.noble_lock)
-NOBLE_TURN = TURN[DEMON]
+# (Nov 23, owner: "Yes, cap Noble") 700 -> 400 deg/s, the owner's and his friend's own top speed on controller: over six
+# Forge matches the Data collector's view reads of both peaked at 400-413 deg/s, never more than 33-38 degrees in any
+# 0.1 s; RiotRed's 60 degrees in 0.1 s to a radar dot read on the far side as an instant flick (live Asylum
+# 20261123-000210, about 2:59). Its step per update is capped too (bot.TURN_STEP_MAX_S)
+NOBLE_TURN = math.radians(400)
 
 
 def arc_spot(prof):
