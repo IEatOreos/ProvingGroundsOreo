@@ -455,12 +455,16 @@ class InGameOnlyTests(unittest.TestCase):
         self.assertNotIn("<= 9 ?", panel)
         self.assertIn('segmented("tier_nb"', panel)                      # the inspector's Noble row
 
-    def test_not_on_the_site(self):
-        self.assertNotIn("noble", service_record.TIER_KEYS)
+    def test_on_the_site(self):
+        """(Nov 23, the owner: Noble on the site and in the simulation, "Yes like demon") The site's difficulty editor
+        lists and saves it, as the BOTS panel's last key."""
+        self.assertEqual(service_record.TIER_KEYS[-1], "noble")
+        self.assertIn("noble", service_record.NO_WHEELMAN)
+        self.assertEqual(service_record.LOBBY_DIFFICULTY[10], "Noble")
         app = (ROOT / "tools" / "service_record_site" / "app.js").read_text(encoding="utf-8", errors="replace")
         names = re.search(r"const TIER_NAMES = \{([^}]*)\}", app).group(1)
         self.assertIn("mythic", names)
-        self.assertNotIn("noble", names)                                 # (the site's difficulty editor)
+        self.assertIn('noble: "Noble"', names)                           # (the site's difficulty editor)
 
 
 if __name__ == "__main__":

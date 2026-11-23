@@ -98,12 +98,21 @@ SETTINGS = {"pace": 1 / 3, "grinder_pace": 1.0, "other_pace": 0.074, "btb_lean":
 # a bot's chance to be a grinder, by its difficulty: one roll a bot, from its name, so it keeps it (Nov 20, the owner:
 # "every single bot doing like a percentage roll ... demon ... 75% ... mythic ... 65% ... legendary ... 50% ...
 # Tactician will also have a 50% chance. Then heroic, normal will both have a 25% chance. An easy 5%"; Blind and
-# Scaling, not named, as Legendary). sim.grinder_<tier>= in proving_grounds.ini changes one.
-GRINDER_CHANCE = {"demon": 0.75, "mythic": 0.65, "top": 0.50, "tactician": 0.50, "blind": 0.50, "scaling": 0.50,
-                  "strong": 0.25, "average": 0.25, "novice": 0.05}
+# Scaling, not named, as Legendary; Noble as Demon, Nov 23). sim.grinder_<tier>= in proving_grounds.ini changes one.
+GRINDER_CHANCE = {"demon": 0.75, "noble": 0.75, "mythic": 0.65, "top": 0.50, "tactician": 0.50, "blind": 0.50,
+                  "scaling": 0.50, "strong": 0.25, "average": 0.25, "novice": 0.05}
 # tiers that play a game every round, one to each match of yours (Nov 19, the owner: "I would like all the demon
-# difficulties to play just as much as me. So they play 1 game to my 1 game"); a lobby that cannot seat one queues it
-EVERY_ROUND = {"demon"}
+# difficulties to play just as much as me. So they play 1 game to my 1 game"; Noble too, Nov 23: "Yes like demon");
+# a lobby that cannot seat one queues it
+EVERY_ROUND = {"demon", "noble"}
+# tiers that play every other round, in two fixed halves that take turns, whatever their grinder roll (Nov 23, the
+# owner: "make all Heroics and Tacticians ... flip flop ... play 50% of all games"; "Yes, flip flop + B")
+FLIP_FLOP = {"strong", "tactician"}
+
+
+def flip_half(name):
+    """0 or 1: which half of FLIP_FLOP a bot is in (from its name, so it keeps it)."""
+    return se.hash_of(name, 71) % 2
 
 
 # ---------------------------------------------------------------- settings, playlists
@@ -189,7 +198,7 @@ def read_ini(path=None):
 
 def default_difficulty():
     """botcore.ini's difficulty= (the BOTS panel's "for everyone": 0..3 the ranks, 4 Mixed, 5 Scaling, 6 Demon, 7 Blind,
-    8 Tactician, 9 Mythic)."""
+    8 Tactician, 9 Mythic, 10 Noble)."""
     try:
         with open(os.path.join(sr.BIN, "botcore.ini"), encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -208,7 +217,7 @@ def tier_of(name, saved, difficulty):
     if key in saved and saved[key][0] in se.TIERS:
         return saved[key][0]
     d = {0: "novice", 1: "average", 2: "strong", 3: "top", 5: "scaling", 6: "demon", 7: "blind", 8: "tactician",
-         9: "mythic"}.get(difficulty)
+         9: "mythic", 10: "noble"}.get(difficulty)
     return d or se.MIXED[se.hash_of(name, 31) % len(se.MIXED)]
 
 
@@ -242,8 +251,9 @@ def population(paths, settings, model=None):
     # grinders always at their median pace; the others' median whatever brings everyone's average to the pace asked
     # for, but never under other_pace: with many grinders the round grows instead of the grinders shrinking (Nov 20,
     # the owner, "make it bigger"; other_pace is what the others had under the old 30%/10% grinder chances)
-    # (EVERY_ROUND tiers left out of it: they play every round, and the rest keep the pace they had)
-    rest = [b for b in bots if b.tier not in EVERY_ROUND]
+    # (EVERY_ROUND and FLIP_FLOP tiers left out of it: they play every round or every other one, and the rest keep the
+    # pace they had)
+    rest = [b for b in bots if b.tier not in EVERY_ROUND and b.tier not in FLIP_FLOP]
     target = settings["pace"] * len(rest)
     g_sum = sum(b.pace * settings["grinder_pace"] for b in rest if b.grinder)
     c_sum = sum(b.pace for b in rest if not b.grinder)
@@ -251,6 +261,8 @@ def population(paths, settings, model=None):
     for b in bots:
         if b.tier in EVERY_ROUND:
             b.pace = 1.0
+        elif b.tier in FLIP_FLOP:
+            b.pace = 0.5                                     # (every other round: games_this_round)
         else:
             b.pace *= settings["grinder_pace"] if b.grinder else c_med
     return bots
@@ -261,12 +273,17 @@ def grinder_chance(tier, settings):
     return settings.get("grinder_" + tier, GRINDER_CHANCE.get(tier, 0.25))
 
 
-def games_this_round(b, rng):
-    """0 or 1: whether a bot plays this round (one game a round at most). An EVERY_ROUND tier always; the others by
-    their pace (a Poisson draw, so a pace is the chance 1 - e^-pace)."""
+def games_this_round(b, rng, round_no=None):
+    """0 or 1: whether a bot plays this round (one game a round at most). An EVERY_ROUND tier always; a FLIP_FLOP one
+    when its half's turn (round_no, the rounds played so far: odd and even take turns); the others by their pace (a
+    Poisson draw, so a pace is the chance 1 - e^-pace). The draw is made for every bot, so the rounds' randomness
+    stays as it was."""
+    draw = min(1, rng.poisson(b.pace))
     if b.tier in EVERY_ROUND:
         return 1
-    return min(1, rng.poisson(b.pace))
+    if b.tier in FLIP_FLOP and round_no is not None:
+        return int(flip_half(b.name) == round_no % 2)
+    return draw
 
 
 def people_names(paths):
@@ -754,14 +771,15 @@ def play_round(paths, window, seed, settings=None, playlists=None, quiet=True, s
     layouts = forge_layouts(paths)
     by_name = {b.name: b for b in bots}
     rng = se.Rng(seed)
-    skill = lambda b: se.TIER_SKILL.get(b.tier, 0.0)    # (its difficulty only, as the match plays it)
+    skill = lambda b: se.skill_of(b.name, b.tier, model.skill_scale)   # (its difficulty only, as the match plays it)
     stored = []
     con = connect(paths)
     try:
         taken = used_starts(paths, con)
         queue = [by_name[n] for n in meta_get(con, "queue", []) if n in by_name]
         sit = {n.lower() for n in sit_out}
-        games = {b.name: games_this_round(b, rng) for b in bots}    # (one game a round at most; Demons every round)
+        round_no = meta_get(con, "rounds", 0)                        # (FLIP_FLOP's halves take turns by it)
+        games = {b.name: games_this_round(b, rng, round_no) for b in bots}   # (one a round at most; Demons every)
         for b in bots:
             if b.name.lower() in sit:                                # (in your match: that is its game this round)
                 games[b.name] = 0
@@ -946,7 +964,8 @@ def stats(paths):
     med = lambda xs: xs[len(xs) // 2] if xs else 0
     print(f"games per match of yours: everyone {mean:.3f} on average; grinders' median {med(gp):.2f}, "
           f"the others' {med(cp):.3f}")
-    plays = lambda b: 1.0 if b.tier in EVERY_ROUND else 1.0 - math.exp(-b.pace)   # (one a round at most: its chance)
+    plays = lambda b: (1.0 if b.tier in EVERY_ROUND else 0.5 if b.tier in FLIP_FLOP
+                       else 1.0 - math.exp(-b.pace))     # (one a round at most: its chance)
     print(f"per round about {sum(plays(b) for b in bots):.0f} seats: about {sum(plays(b) * (1 - b.lean) for b in bots) / 8:.0f}"
           f" Arena and {sum(plays(b) * b.lean for b in bots) / 16:.0f} Big Team Battle lobbies")
     print(f"model: kills a player a minute {model.kpm:.3f}; by family { {k: round(v, 3) for k, v in model.kpm_by.items()} }")

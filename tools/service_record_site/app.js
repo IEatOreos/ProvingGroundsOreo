@@ -825,7 +825,7 @@
   // the bot is on it, by the editor): only while MCC is closed, played from MCC's next start. "The lobby's": no saved
   // difficulty, it plays at the lobby's. The keys and names are the BOTS panel's (bots_panel.cpp TIER_KEY, TIER_NAME).
   const TIER_NAMES = { novice: "Easy", average: "Normal", strong: "Heroic", top: "Legendary", scaling: "Scaling", demon: "Demon",
-    blind: "Blind", tactician: "Tactician", mythic: "Mythic" };
+    blind: "Blind", tactician: "Tactician", mythic: "Mythic", noble: "Noble" };
   // what the bot plays at: its saved difficulty, else the lobby's (the panel's "for everyone" one, D.lobby_difficulty),
   // and the one it has in the lobby list now when it is on it (p.lobby_tier)
   const lobbyName = () => "The lobby's" + (D.lobby_difficulty ? " (" + D.lobby_difficulty + ")" : "");

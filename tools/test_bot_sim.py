@@ -150,8 +150,9 @@ class Engine(unittest.TestCase):
         self.assertLess(m.skill["r1"], se.TIER_SKILL["strong"])
         self.assertEqual(m.weapons["r0"], {6: 60})
         # (Nov 19, the owner: simulated strength is the difficulty's alone: the fitted skill above changes nothing)
-        self.assertEqual(m.inputs_of("r0", "strong")["s"], se.TIER_SKILL["strong"])
-        self.assertEqual(m.inputs_of("r1", "demon")["s"], se.TIER_SKILL["demon"])
+        # (Nov 23: a fitted model's fights at SKILL_SCALE times the tier's gaps)
+        self.assertEqual(m.inputs_of("r0", "strong")["s"], round(se.SKILL_SCALE * se.TIER_SKILL["strong"], 4))
+        self.assertEqual(m.inputs_of("r1", "demon")["s"], round(se.SKILL_SCALE * se.TIER_SKILL["demon"], 4))
 
 
 class Population(unittest.TestCase):
@@ -161,15 +162,16 @@ class Population(unittest.TestCase):
             few = dict(w.settings, **{"grinder_" + t: 0.05 for t in bot_sim.GRINDER_CHANCE})
             bots = bot_sim.population(w.paths, few)
             self.assertEqual(len(bots), 400)                  # (the person left out)
-            paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND]   # (Demons: every round, pace 1)
+            paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND      # (Demons: every round, pace 1;
+                     and b.tier not in bot_sim.FLIP_FLOP]                     # Heroic, Tactician: every other)
             self.assertAlmostEqual(sum(b.pace for b in paced) / len(paced), w.settings["pace"], places=6)
             self.assertTrue(all(b.pace == 1.0 for b in bots if b.tier in bot_sim.EVERY_ROUND))
             # (Nov 20, the owner, "make it bigger": many grinders keep their full pace and the round grows; the others
             # never drop under other_pace)
             bots = bot_sim.population(w.paths, w.settings)
             base = lambda b: __import__("math").exp(w.settings["spread"] * se.Rng(se.hash_of(b.name, 43)).gauss())
-            paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND]
-            self.assertGreater(sum(b.grinder for b in paced), 100)
+            paced = [b for b in bots if b.tier not in bot_sim.EVERY_ROUND and b.tier not in bot_sim.FLIP_FLOP]
+            self.assertGreater(sum(b.grinder for b in paced), 50)
             for b in paced:
                 want = w.settings["grinder_pace"] if b.grinder else w.settings["other_pace"]
                 if b.grinder:
@@ -238,6 +240,111 @@ class Population(unittest.TestCase):
             _, details, _ = bot_sim.site_entries(w.paths)
             self.assertTrue(sat)
             self.assertFalse(any(p["name"] == "SimBot000" for gid, *_ in sat for p in details[gid]["players"]))
+
+    def test_noble_plays_like_demon_and_btb_slayer_to_100(self):
+        """(Nov 23, the owner: Noble "like demon"; BTB Slayer "to 100", the real matches' name in another case)"""
+        for table in (se.TIER_SKILL, se.SWEAT, bot_sim.GRINDER_CHANCE):     # (Demon's base; its edge: skill_of)
+            self.assertEqual(table["noble"], table["demon"])
+        self.assertIn("noble", bot_sim.EVERY_ROUND)
+        # (Nov 23, the owner: Nobles "5-10% better than demons": each wins 55-60% of even fights against a Demon, its
+        # own fixed roll)
+        wins = [se.sigmoid(se.skill_of(f"Noble{i}", "noble") - se.skill_of("x", "demon")) for i in range(300)]
+        self.assertTrue(all(0.55 - 1e-9 <= w <= 0.60 + 1e-9 for w in wins))
+        self.assertGreater(max(wins) - min(wins), 0.04)                  # (spread over the range)
+        self.assertEqual(se.skill_of("A", "noble"), se.skill_of("A", "noble"))
+        self.assertEqual(se.skill_of("A", "demon"), se.TIER_SKILL["demon"])
+        self.assertEqual(se.Model().inputs_of("A", "noble")["s"], round(se.skill_of("A", "noble"), 4))
+        self.assertIn("noble", se.TIERS)
+        self.assertEqual(bot_sim.tier_of("Anyone", {"anyone": ("noble", "any")}, 4), "noble")
+        self.assertEqual(bot_sim.tier_of("Anyone", {}, 10), "noble")
+        m = se.Model()
+        m.limits = {("TU BTB Team Slayer", 8): (50, 720), ("TU TEAM SLAYER DMR", 4): (50, 600)}
+        self.assertEqual(se.limits_of(m, "TU BTB TEAM SLAYER", 8), (50, 720))      # (a stored slice's: as played)
+        m.score_rules = dict(se.SCORE_RULES)                                         # (as fit sets it)
+        self.assertEqual(se.limits_of(m, "TU BTB TEAM SLAYER", 8), (100, 720))
+        self.assertEqual(se.limits_of(m, "TU TEAM SLAYER DMR", 4), (50, 600))      # (4v4 as it was)
+        self.assertEqual(se.limits_of(se.Model(), "TU MULTI FLAG CTF", 8), (3, 720))
+
+    def test_steeper_gaps_hunting_and_flip_flop(self):
+        """(Nov 23, the owner: "Yes, flip flop + B") New matches' fights at twice TIER_SKILL's gaps with hunting, stored
+        in the slice (an older slice: 1 and 0); a Noble still 55-60% against a Demon; Heroics and Tacticians every other
+        round in two halves that take turns."""
+        self.assertEqual(se.skill_of("A", "demon", 2.0), 2 * se.TIER_SKILL["demon"])
+        edge = se.skill_of("A", "noble", 2.0) - se.skill_of("B", "demon", 2.0)
+        self.assertTrue(0.55 - 1e-9 <= se.sigmoid(edge) <= 0.60 + 1e-9)
+        m = se.Model()
+        self.assertEqual((m.skill_scale, m.hunt), (1.0, 0.0))
+        self.assertEqual(m.inputs_of("A", "demon")["s"], se.TIER_SKILL["demon"])    # (a bare model: as before)
+        m.skill_scale, m.hunt = se.SKILL_SCALE, se.HUNT
+        self.assertEqual(m.inputs_of("A", "demon")["s"], round(se.SKILL_SCALE * se.TIER_SKILL["demon"], 4))
+        sl = se.model_slice(m, "TU TEAM SLAYER DMR", 4)
+        self.assertEqual((sl["scale"], sl["hunt"]), (se.SKILL_SCALE, se.HUNT))
+        back = se.model_from_slice(sl, "TU TEAM SLAYER DMR")
+        self.assertEqual((back.skill_scale, back.hunt), (se.SKILL_SCALE, se.HUNT))
+        del sl["scale"], sl["hunt"]
+        old = se.model_from_slice(sl, "TU TEAM SLAYER DMR")
+        self.assertEqual((old.skill_scale, old.hunt), (1.0, 0.0))
+        # Demons against Heroics: hunting and the steeper gaps lift the Demons' K/D
+        players = [{"name": f"d{j}", "team": 0, "tier": "demon", "style": "any", "clan": ""} for j in range(4)] + \
+                  [{"name": f"h{j}", "team": 1, "tier": "strong", "style": "any", "clan": ""} for j in range(4)]
+        spec = {"gametype": "TU TEAM SLAYER DMR", "size": 4, "players": players}
+
+        def demon_kd(model):
+            k = d = 0
+            for i in range(10):
+                rep, _, _ = se.play(spec, model, countdown(), 70 + i)
+                k += sum(p["kills"] for p in rep if p["team"] == 0)
+                d += sum(p["deaths"] for p in rep if p["team"] == 0)
+            return k / max(1, d)
+        self.assertGreater(demon_kd(m), demon_kd(se.Model()) * 1.5)
+        # flip flop
+        b = bot_sim.Bot()
+        b.name, b.tier, b.pace = "Flipper", "tactician", 0.0
+        rng = se.Rng(1)
+        turns = [bot_sim.games_this_round(b, rng, r) for r in range(10)]
+        self.assertEqual(turns, [int(bot_sim.flip_half("Flipper") == r % 2) for r in range(10)])
+        self.assertEqual(sum(turns), 5)
+        with tempfile.TemporaryDirectory() as tmp:
+            w = World(tmp, names=200)
+            bots = bot_sim.population(w.paths, w.settings)
+            flips = [x for x in bots if x.tier in bot_sim.FLIP_FLOP]
+            self.assertTrue(flips and all(x.pace == 0.5 for x in flips))
+            halves = [bot_sim.flip_half(x.name) for x in flips]
+            self.assertTrue(0 < sum(halves) < len(halves))                   # (both halves have bots)
+
+    def test_multi_flag_as_the_owners_games(self):
+        """(Nov 23, the owner: Multi Flag "to match" his Asylum game, captures about one a team every 25 minutes between
+        even teams, more lopsided with a skill gap) The fitted model carries the rules, the stored slice too, an old
+        slice without them plays as before."""
+        m = se.Model()
+        m.kpm_by, m.kpm_size = {"ctf": 1.29}, {("ctf", 4): 1.38}
+        self.assertEqual(se.kpm_of(m, "ctf", 4, "TU MULTI FLAG CTF"), 1.38)         # (a bare Model: no rules)
+        m.kpm_game, m.obj_rules = dict(se.KPM_RULES), dict(se.OBJ_RULES)
+        self.assertEqual(se.kpm_of(m, "ctf", 4, "TU MULTI FLAG CTF"), 1.73)
+        self.assertEqual(se.kpm_of(m, "ctf", 8, "TU MULTI FLAG CTF"), 1.29)         # (8v8: the real ones')
+        self.assertEqual(se.kpm_of(m, "ctf", 4, "TU ONE FLAG CTF (4-10)"), 1.38)
+        self.assertEqual(se.obj_rule_of(m, "TU MULTI FLAG CTF", "ctf"), se.OBJ_RULES["tu multi flag ctf"])
+        self.assertEqual(se.obj_rule_of(m, "TU ONE FLAG CTF (4-10)", "ctf"), (se.OBJ_RATE["ctf"], 1.0))
+        self.assertIsNone(se.obj_rule_of(m, "TU TEAM SLAYER DMR", "slayer"))
+        sl = se.model_slice(m, "TU MULTI FLAG CTF", 4)
+        self.assertEqual((sl["kpm"], sl["obj"]), (1.73, list(se.OBJ_RULES["tu multi flag ctf"])))
+        back = se.model_from_slice(sl, "TU MULTI FLAG CTF")
+        self.assertEqual(se.obj_rule_of(back, "TU MULTI FLAG CTF", "ctf"), se.OBJ_RULES["tu multi flag ctf"])
+        self.assertEqual(se.kpm_of(back, "ctf", 4, "TU MULTI FLAG CTF"), 1.73)
+        old = dict(sl)
+        del old["obj"]
+        self.assertEqual(se.obj_rule_of(se.model_from_slice(old, "TU MULTI FLAG CTF"), "TU MULTI FLAG CTF", "ctf"),
+                         (se.OBJ_RATE["ctf"], 1.0))
+        # even teams on Countdown: few captures, most games to time
+        caps = mins = 0
+        for i in range(12):
+            players = [{"name": f"b{j}", "team": j % 2, "tier": "top", "style": "any", "clan": ""} for j in range(8)]
+            _, _, res = se.play({"gametype": "TU MULTI FLAG CTF", "size": 4, "players": players}, m, countdown("ctf"),
+                                40 + i)
+            caps += sum(res["scores"].values())
+            mins += res["seconds"] / 60
+        self.assertLess(caps / 12, 2.0)
+        self.assertGreater(mins / 12, 9.0)
 
     def test_a_clan_queues_as_one_group(self):
         """(Nov 20, the owner) A clan that queues together plays the round when any member would, every member, one

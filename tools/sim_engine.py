@@ -119,17 +119,41 @@ def sigmoid(x):
 
 # ---------------------------------------------------------------- tiers, styles
 # bots_panel.cpp TIER_KEY (bot_pool_saved.ini's difficulty names) and its Mixed deal (roster_mixed_tier)
-TIERS = ["novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician", "mythic"]
+TIERS = ["novice", "average", "strong", "top", "scaling", "demon", "blind", "tactician", "mythic", "noble"]
 TIER_NAME = {"novice": "Easy", "average": "Normal", "strong": "Heroic", "top": "Legendary", "scaling": "Scaling",
-             "demon": "Demon", "blind": "Blind", "tactician": "Tactician", "mythic": "Mythic"}
+             "demon": "Demon", "blind": "Blind", "tactician": "Tactician", "mythic": "Mythic", "noble": "Noble"}
 MIXED = ["average", "novice", "strong", "top", "demon", "blind"]
-TOP_TIERS = {"top", "blind", "mythic", "demon"}          # (the owner: "Legendary and above")
+TOP_TIERS = {"top", "blind", "mythic", "demon", "noble"}          # (the owner: "Legendary and above")
 # each tier's skill (logit units: a 1.0 edge wins 73% of even fights), in the difficulty picker's order: a simulated
-# bot plays at its tier's, whatever its real matches
+# bot plays at its tier's, whatever its real matches. Noble (the testing difficulty, Demon's base in game): Demon's
+# (Nov 23, the owner: "Yes like demon")
 TIER_SKILL = {"novice": -1.2, "average": -0.6, "strong": 0.0, "tactician": 0.3, "top": 0.6, "scaling": 0.6,
-              "blind": 0.5, "mythic": 0.85, "demon": 1.1}
+              "blind": 0.5, "mythic": 0.85, "demon": 1.1, "noble": 1.1}
 SWEAT = {"novice": -0.7, "average": -0.35, "strong": 0.0, "top": 0.45, "scaling": 0.2, "demon": 0.85, "blind": 0.45,
-         "tactician": 0.3, "mythic": 0.65}           # (proving_grounds.cpp sweat_of BY_TIER)
+         "tactician": 0.3, "mythic": 0.65, "noble": 0.85}           # (proving_grounds.cpp sweat_of BY_TIER)
+# a Noble wins this share of even fights against a Demon, each Noble its own fixed roll in it from its name (Nov 23, the
+# owner: "In the simulations make the nobles 5-10% better than demons"; asked, he chose fights won, each its own roll)
+NOBLE_EDGE = (0.55, 0.60)
+# (Nov 23, the owner, after "After 46 games not a single bot has a 2 or more kd" and his and a friend's real Infinite
+# games, 2 to 16 K/D: "Yes, flip flop + B") the tiers' strength gaps in fights twice TIER_SKILL's (a Demon beats a
+# Legendary 73% of fights, not 62%), and fights found HUNT times more often between mismatched players
+# (exp(HUNT * gap): the strong hunt the weak, as in a real Big Team Battle). Measured on his pool before it went in:
+# Demons 1.40 -> about 3.5, Nobles 1.77 -> about 5.5. Fitted models carry them; each match stores its own (slice).
+SKILL_SCALE = 2.0
+HUNT = 1.5
+
+
+def skill_of(name, tier, scale=1.0):
+    """A simulated bot's strength: its tier's TIER_SKILL times scale (SKILL_SCALE for new matches); a Noble's, Demon's
+    plus its own NOBLE_EDGE roll (as log-odds: a fight is won with sigmoid of the strengths' difference, so a Noble wins
+    55-60% against a Demon whatever the scale)."""
+    s = TIER_SKILL.get(tier, 0.0) * scale
+    if tier == "noble":
+        p = NOBLE_EDGE[0] + (NOBLE_EDGE[1] - NOBLE_EDGE[0]) * hfloat(name, 67)
+        s += math.log(p / (1.0 - p))
+    return s
+
+
 STYLES = ["rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "wheelman", "any"]
 
 # ---------------------------------------------------------------- weapons, vehicles (tools/service_record_site/weapons.json)
@@ -191,10 +215,28 @@ MODE_MEDALS = {"ctf": [M_FLAG_CARRIER_KILL, M_FLAG_KILL], "assault": [M_BOMB_CAR
 # Reach's usual limits when no real match of the gametype shows them: (score, seconds)
 FAMILY_RULES = {"slayer": (50, 720), "ctf": (3, 720), "assault": (3, 720), "koth": (150, 720),
                 "oddball": (200, 600), "territories": (150, 720), "stockpile": (10, 600), "headhunter": (50, 720)}
+# score limits that hold whatever the real matches showed, (family, team size) -> score (Nov 23, the owner: "the site
+# simulates BTB (8v8) slayer games to a score of 50 but its too 100"; the real BTB Slayer games had all run to time, so
+# the model had kept the 50 above)
+SCORE_RULES = {("slayer", 8): 100}
 FAMILY_TOKENS = {"ctf": ("ctf - flag", "mp_flag_base", "ctf_flag_return"), "assault": ("as_bomb", "as_goal"),
                  "koth": ("koth_hill", "mp_hill_beacon"), "oddball": ("oddball_ball",), "territories": ("terr_object",),
                  "stockpile": ("stp_flag", "stp_goal"), "headhunter": ("hh_drop_point",)}
 OBJ_RATE = {"ctf": 3.0 / 720, "assault": 3.0 / 720, "stockpile": 10.0 / 600}   # a team's scoring rate, even teams
+# Multi Flag as the owner's own games play it (Nov 23, the owner: "use the capture the flag game I played on asylum
+# earlier to match other sim games to ... Multi flags end with too little kills"; asked about captures: "About one
+# capture per team every 25 minutes ... if the difficulties on either team are similar. If the games have more skill
+# diversity on teams you can make it 3-0 or 2-1 or 3-1"). Stored with each match (model_slice), so earlier ones replay.
+# kills a player a minute, (gametype, team size): his Asylum game, Nov 22: 168 kills, 4v4, 12.2 minutes
+KPM_RULES = {("tu multi flag ctf", 4): 1.73}
+# a team's capture rate (per second) between even teams, and how steeply the stronger team's grows with the teams'
+# strength gap (exp(k * gap), the gap of the whole teams this match): his three full-length real Multi Flag games had 3
+# captures in about 74 team-minutes. Tuned on his model (mf_calib, Nov 23): even 4v4 about 1 capture a game (0-0, 1-0,
+# 1-1, 2-0), 11.8 min, 160 kills; Demon against Heroic mostly 3-0 in 7.6 min; 8v8 about 0.5, 12 min, 200 kills
+# The third number (Nov 23, with SKILL_SCALE and HUNT): a team scores at most 16 times the even rate; with the steeper
+# gaps a weaker team was often all dead at once and lost 3-0 in about a minute. With them the even rate is one in 26
+# min (was 40): even 4v4 about 1 capture a game, 11.8 min, 158 kills; Demon against Heroic mostly 3-0 in 6.6 min.
+OBJ_RULES = {"tu multi flag ctf": (1.0 / 1560, 2.2, 16.0)}
 ROUND_SECS, ROUNDS = 180.0, 4                              # One Flag, One Bomb: 4 rounds of 3 minutes, sides swap
 KOTH_HELD = 0.45                                           # (real Crazy King: about 45% of seconds score for someone)
 RESPAWN = 5.0
@@ -359,6 +401,11 @@ class Model:
         self.kpm = 0.9           # kills a player a minute
         self.kpm_by = {}         # family -> kills a player a minute
         self.kpm_size = {}       # (family, team size) -> kills a player a minute (4v4 and 8v8 differ)
+        self.kpm_game = {}       # (gametype lowercased, team size) -> kills a player a minute (fit: KPM_RULES)
+        self.obj_rules = {}      # gametype lowercased -> (even teams' rate a second, steepness) (fit: OBJ_RULES)
+        self.score_rules = {}    # (family, team size) -> score limit (fit: SCORE_RULES)
+        self.skill_scale = 1.0   # the tiers' strength gaps in fights (fit: SKILL_SCALE)
+        self.hunt = 0.0          # mismatched fights' extra rate, exp(hunt * gap) (fit: HUNT)
         self.style_rate = {}     # medal -> per kill
         self.weapon_medal = {}   # medal -> per kill with its weapon
         self.mode_rate = {}      # (family, medal) -> per kill in that family
@@ -375,7 +422,7 @@ class Model:
         d = self.defaults
         # (Nov 19, the owner: "Simulated strength should be based on their difficulty": a bot's tier alone, never
         # its fitted self.skill, which a few bad real games pulled a Demon below Heroic with)
-        return {"s": round(TIER_SKILL.get(tier, 0.0), 4),
+        return {"s": round(skill_of(name, tier, self.skill_scale), 4),
                 "a": round(self.agg.get(name, (d.get("agg") or {}).get(tier, 1.0)), 4),
                 "q": round(self.assist.get(name, d.get("assist", 0.15)), 4),
                 "su": round(self.suicide.get(name, d.get("suicide", 0.02)), 5),
@@ -552,22 +599,40 @@ def fit(real, tiers):
     m.hijack = hijacks / vehicle_kills if vehicle_kills else 0.0
     m.assist_medal = min(1.0, medal_tot.get(M_ASSIST, 0) / assists_tot) if assists_tot else 1.0
     m.limits = {key: limits_from(key[0], seen) for key, seen in gt_seen.items()}
+    m.kpm_game, m.obj_rules, m.score_rules = dict(KPM_RULES), dict(OBJ_RULES), dict(SCORE_RULES)
+    m.skill_scale, m.hunt = SKILL_SCALE, HUNT
     return m
 
 
-def kpm_of(model, fam, size):
-    """Kills a player a minute: real matches of that family at that team size, else of the family, else all."""
-    return getattr(model, "kpm_size", {}).get((fam, size)) or model.kpm_by.get(fam) or model.kpm
+def kpm_of(model, fam, size, gametype=None):
+    """Kills a player a minute: the gametype's own at that team size (KPM_RULES), else real matches of that family at
+    that team size, else of the family, else all."""
+    return (getattr(model, "kpm_game", {}).get(((gametype or "").lower(), size))
+            or getattr(model, "kpm_size", {}).get((fam, size)) or model.kpm_by.get(fam) or model.kpm)
+
+
+def obj_rule_of(model, gametype, fam):
+    """(a team's scoring rate a second between even teams, steepness k: the stronger team's rate grows exp(k * gap)):
+    the gametype's own (OBJ_RULES), else its family's OBJ_RATE and 1; None when the family scores no objective."""
+    rule = getattr(model, "obj_rules", {}).get((gametype or "").lower())
+    if rule:
+        return tuple(rule)
+    return (OBJ_RATE[fam], 1.0) if fam in OBJ_RATE else None
 
 
 def limits_of(model, gametype, size):
     """(score limit, seconds) of a gametype at a team size: its real matches at that size, else at any size, else
-    Reach's usual ones for its family."""
-    hit = model.limits.get((gametype, size))
+    Reach's usual ones for its family; the score SCORE_RULES' when it has one. Names match without case (the real
+    matches say "TU BTB Team Slayer", the playlist "TU BTB TEAM SLAYER")."""
+    low = (gametype or "").lower()
+    hit = model.limits.get((gametype, size)) or next(
+        (v for (g, s), v in model.limits.items() if g.lower() == low and s == size), None)
     if hit is None:
-        any_size = [v for (g, _), v in model.limits.items() if g == gametype]
+        any_size = [v for (g, _), v in model.limits.items() if g.lower() == low]
         hit = any_size[0] if len(any_size) == 1 else None
-    return tuple(hit) if hit else FAMILY_RULES.get(family(gametype), FAMILY_RULES["slayer"])
+    score, secs = tuple(hit) if hit else FAMILY_RULES.get(family(gametype), FAMILY_RULES["slayer"])
+    # (the fitted model's SCORE_RULES; a stored match's slice keeps the limits it was played to)
+    return getattr(model, "score_rules", {}).get((family(gametype), size), score), secs
 
 
 def limits_from(gametype, seen):
@@ -627,8 +692,12 @@ def match_inputs(spec, model, info):
 def model_slice(model, gametype, size):
     """The model's numbers a match of this gametype uses besides its players' (stored with it)."""
     fam = family(gametype)
-    return {"kpm": round(kpm_of(model, fam, size), 5), "size": size,
+    rule = getattr(model, "obj_rules", {}).get(gametype.lower())
+    return {"kpm": round(kpm_of(model, fam, size, gametype), 5), "size": size,
             "limits": list(limits_of(model, gametype, size)),
+            **({"obj": list(rule)} if rule else {}),           # (Nov 23: a gametype's own capture rule)
+            **({"scale": model.skill_scale, "hunt": model.hunt}   # (Nov 23: steeper gaps, hunting)
+               if getattr(model, "skill_scale", 1.0) != 1.0 or getattr(model, "hunt", 0.0) else {}),
             "style_rate": {str(k): round(v, 6) for k, v in model.style_rate.items()},
             "weapon_medal": {str(k): round(v, 6) for k, v in model.weapon_medal.items()},
             "mode_rate": [[f, mid, round(v, 6)] for (f, mid), v in model.mode_rate.items() if f == fam],
@@ -640,6 +709,8 @@ def model_from_slice(sl, gametype):
     fam = family(gametype)
     m.kpm, m.kpm_by = sl["kpm"], {fam: sl["kpm"]}
     m.limits = {(gametype, sl.get("size", 0)): tuple(sl["limits"])}
+    m.obj_rules = {gametype.lower(): tuple(sl["obj"])} if sl.get("obj") else {}
+    m.skill_scale, m.hunt = float(sl.get("scale", 1.0)), float(sl.get("hunt", 0.0))   # (older matches: 1 and 0)
     m.style_rate = {int(k): v for k, v in sl["style_rate"].items()}
     m.weapon_medal = {int(k): v for k, v in sl["weapon_medal"].items()}
     m.mode_rate = {(f, int(mid)): v for f, mid, v in sl["mode_rate"]}
@@ -656,6 +727,8 @@ def play(spec, model, info, seed, inputs=None):
     fam = family(gametype)
     size = max(1, int(spec["size"]))
     score_limit, secs = limits_of(model, gametype, size)
+    scale = getattr(model, "skill_scale", 1.0) or 1.0              # (Nov 23: the fights' steeper gaps, hunting)
+    hunt = getattr(model, "hunt", 0.0)
     n_rounds = rounds_of(gametype)
     if n_rounds > 1:
         score_limit, secs = None, ROUND_SECS * n_rounds
@@ -694,7 +767,7 @@ def play(spec, model, info, seed, inputs=None):
     # the fight rate a pair: the lobby's kills a minute come out as real matches have them. Each player is alive
     # 1 / (1 + kpm * respawn / 60) of the time (a death every 60 / kpm s, then the respawn), so with both teams' fight
     # rates a: kills a second = lam0 * (size * mean a * alive)^2 = 2 * size * kpm / 60
-    kpm = kpm_of(model, fam, size)
+    kpm = kpm_of(model, fam, size, gametype)
     a_mean = sum(p.a for p in ps) / len(ps) if ps else 1.0
     alive_share = 1.0 / (1.0 + kpm * RESPAWN / 60.0)
     lam0 = 2.0 * (kpm / 60.0) / (size * max(0.2, a_mean) ** 2 * alive_share ** 2)
@@ -908,7 +981,8 @@ def play(spec, model, info, seed, inputs=None):
     def strength(tm, at=None):
         at = now() if at is None else at
         al = [p for p in by_team[tm] if p.back <= at]
-        return ((sum(p.s + bonus(p) for p in al) / size) if al else -3.0), len(al)
+        # (objectives on TIER_SKILL's own scale, as they were tuned: the steeper gaps are the fights')
+        return ((sum(p.s + bonus(p) for p in al) / size / scale) if al else -3.0), len(al)
 
     def obj_pick(tm, at=None):
         at = now() if at is None else at
@@ -1003,17 +1077,34 @@ def play(spec, model, info, seed, inputs=None):
                         g = cands[rng.weighted([p.a * (4.0 if p.style == "wheelman" else 1.0) for p in cands])]
                         v[seat], g.veh, g.seat = g, v, seat
 
+    obj_rule = obj_rule_of(model, gametype, fam)
+    # (the steep part on the whole teams' strength this match, all players, dead or not: on the moment's, a team with
+    # men down swung it so hard that even teams swept 3-0)
+    roster = {tm: sum(p.s for p in by_team[tm]) / max(1, len(by_team[tm])) / scale for tm in teams}
+
+    # (hunting moves fights toward mismatched pairs without adding any: the lobby's kills a minute stay kpm's)
+    hunt_norm = 1.0
+    if hunt:
+        cross = [math.exp(hunt * abs(x.s - y.s)) for x in ps for y in ps if x.team != y.team]
+        hunt_norm = sum(cross) / len(cross) if cross else 1.0
+
     def objective_rates():
         out = {}
-        if fam not in OBJ_RATE:
+        if obj_rule is None:
             return out
+        base, steep = obj_rule[0], obj_rule[1]
+        cap = math.log(obj_rule[2]) if len(obj_rule) > 2 else None    # (most times the even rate a team scores)
         for tm in teams:
             if n_rounds > 1 and tm != state["attack"]:
                 continue
             sa, na = strength(tm)
             sb = max((strength(o)[0] for o in teams if o != tm), default=0.0)
+            gap = roster[tm] - max((roster[o] for o in teams if o != tm), default=roster[tm])
+            x = sa - sb + (steep - 1.0) * gap
+            if cap is not None:
+                x = min(x, cap)
             if na:
-                out[tm] = OBJ_RATE[fam] * (2.0 if n_rounds > 1 else 1.0) * math.exp(sa - sb) * na / size
+                out[tm] = base * (2.0 if n_rounds > 1 else 1.0) * math.exp(x) * na / size
         return out
 
     while not over():
@@ -1026,8 +1117,9 @@ def play(spec, model, info, seed, inputs=None):
                     mx = x.a * rate_mult(x)
                     for y in alive_by[tb]:
                         pairs.append((x, y))
-                        weights.append(mx * y.a * rate_mult(y))
-        fight_rate = lam0 * sum(weights)
+                        w = mx * y.a * rate_mult(y)
+                        weights.append(w * math.exp(hunt * abs(x.s - y.s)) if hunt else w)   # (the strong hunt)
+        fight_rate = lam0 * sum(weights) / hunt_norm
         su_rate = sum(p.su + p.bt for p in ps if p.back <= t)
         obj = objective_rates()
         total = fight_rate + su_rate + sum(obj.values())
