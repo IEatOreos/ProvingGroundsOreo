@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Recorded double jumps split into their hops; planting only on the goal's floor, 2026-11-23
+
+The owner's F9 on Powerhouse One Bomb (`reach_30_settlement_20261123-021733`, 190.8 s): "Bots cant get on roof to get bomb on powerhouse"; then "I thought the jump up to get the bomb was mapped, but they cant get it and then they get confused when planting because they try to go to the floor to plant below"; then "Every map".
+
+- **Found (the bomb):** the bomb's stand is on a roof at 40.6. The owner's LiDAR had the climb, floor 39.42 → a rock top at 39.96 → the roof, but the rock top was touched too briefly for LiDAR's landing check (0.1 s). So it was filed as one 1.6-2.4 s "jump" rising 1.2 u, its dip 0.10 u, under `path_rises`' 0.15. The nav routed bots by it. In 62 tries from the rock no bot reached the roof: they peaked at 40.05-40.14 and fell back.
+- **Found (the plant):** the plant goal is on a roof at 41.6 reached the same way. My Nov 18 rule (`Bot.plant_point`, 4 u in a straight line) also counted a carrier on the floor 3.4 u under it as "planting": everything else dropped, walking at the roof from below (bot 5, 243-270 s).
+- `brain/maps.py` `split_hops` (in `_build`, before `usable_links`):
+  - A recorded jump whose path comes down onto walkable floor (within `HOP_TOUCH` 0.12 u) away from its ends (`HOP_END`) and then climbs `HOP_CLIMB` 0.25 more is cut there into hops. Each keeps the person's path, apex and share of the air time; the next leaves from that floor.
+  - Only when every hop is one a person jumps (`HOP_MAX_FLAT` 5 u flat): a Forge man cannon's throw recorded from the step onto its pad (The Cage) stays whole.
+  - Every map; chains `path_rises` dropped before are now split into usable hops instead.
+- `brain/bot.py` `Bot.plant_point`: within `PLANT_HOLD_R` 4 u on the flat and `PLANT_HOLD_DZ` 1 u of the goal's height (its own floor).
+- **Measured:**
+  - Powerhouse: 177 of 540 recordings split into 475 hops (126 had been in use as one jump, 49 dropped); usable links 478 → 818. The bomb climb becomes 39.42 → 40.05 (rise 0.63, 1.74 u) and 40.05 → 40.65 (rise 0.60, 1.25 u). The nav reaches the bomb on its roof and the plant goal on its roof from below with them.
+  - Sword Base, Boneyard and Ivory Tower: nothing split.
+- Validation: `tools/test_split_hops.py` (new, 5: the roof climb is two hops; a plain jump stays one; not at its ends nor a crouch, route or ride; a launch stays whole; three hops in a row). `tools/test_bomb_plant.py` gains one test (not planting under a roof goal; planting on it). Full suite 1360 OK; `live_bots` imports. **Untested in a match.** The terrain cache rebuilds once (this changes `brain/maps.py`).
+
 ### Every bot turns at 400 deg/s, Demon and Noble 450; no stacked step after a late update for any tier, 2026-11-23
 The owner: "Change all the bots speeds to 400. Demon and Noble to 450" (after Noble's cap at 400, 25ebeed).
 - **Turn speeds (`brain/profiles.py` `TURN`, `BOT_TURN_DEG`, `DEMON_TURN_DEG`, `NOBLE_TURN`):** Easy 270 -> 400 deg/s, Normal 435 -> 400, Heroic and Legendary 650 -> 400, Blind (drawn 650-692) and Mythic (675) -> 400 (`blind_ranges`, `mythic_hands`: Blind still draws it, one value, so its other draws per seed are unchanged), Tactician 400 (Legendary's), Demon 700 -> 450, Noble 400 -> 450. The owner and his friend peak at 400-413 deg/s on controller (the Data collector, six Forge matches). The protected head/turret precision keeps every tier's own speed as before (LEGENDARY_AIM has no turn); its shot correction after the cap is unchanged.

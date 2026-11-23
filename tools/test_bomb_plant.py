@@ -91,6 +91,14 @@ class PlantHold(unittest.TestCase):
         self.assertTrue(b.plant_hold(NOW, me, snap, scores))
         self.assertEqual(scores, {("objective", GOAL): botmod.PLANT_HOLD_SCORE})
 
+    def test_not_on_the_floor_under_a_roof_goal(self):
+        """(Nov 23) The goal on a roof 3.4 u up, the carrier on the floor right under it (Powerhouse): not planting, it
+        is still on its way up; on the roof by it, planting."""
+        b, me, man, snap = scene(at=Vec(1.8, 0.6, -3.4))
+        self.assertIsNone(b.plant_point(me, snap))
+        b, me, man, snap = scene(at=Vec(1.8, 0.6, 0.0))
+        self.assertEqual(b.plant_point(me, snap), GOAL)
+
     def test_every_assault_every_game(self):
         for kw in (dict(variant="multi"), dict(game_map="h3_guardian")):
             b, me, man, snap = scene(at=Vec(2.0, 0, 0), **kw)

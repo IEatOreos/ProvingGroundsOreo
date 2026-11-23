@@ -511,6 +511,57 @@ def owner_vblocks(name):
     return out
 
 
+# (custom, Nov 23, the owner: Powerhouse One Bomb, "the jump up to get the bomb was mapped, but they cant get it")
+# split_hops: a person's two hops recorded as one jump. LiDAR ends a jump on 0.1 s on the ground; the owner's climb
+# onto Powerhouse's roof (floor 39.4 -> a rock top at 39.96 -> the roof at 40.65) touched the rock top for less and was
+# filed as one 1.6-2.4 s "jump" rising 1.2 u, its dip on the rock top 0.10 u, under path_rises' 0.15. Bots called it as
+# one jump 62 times (20261123-021733) and peaked at 40.05-40.14, never on the roof. A recorded path that comes down
+# onto walkable floor (within HOP_TOUCH of it) away from its ends and then climbs HOP_CLIMB more is cut there into two
+# jumps, each a person's (its part of the path, apex and air time); the second leaves from that floor
+HOP_TOUCH, HOP_CLIMB, HOP_END = 0.12, 0.25, 0.4
+# ... only when every hop it makes is one a person jumps (HOP_MAX_FLAT u flat at most): a Forge man cannon's recorded
+# throw (The Cage's, 15.5 u) began with the person's step onto its pad, and cut there it lost its take-off on the pad
+HOP_MAX_FLAT = 5.0
+
+
+def split_hops(links, T):
+    """links with every recorded jump that touched walkable floor partway cut into its hops (see HOP_TOUCH)."""
+    out = []
+    for k in links:
+        parts = _split_hop(k, T)
+        if len(parts) > 1 and any(math.dist(p["take_off"][:2], p["land"][:2]) > HOP_MAX_FLAT for p in parts):
+            parts = [k]                          # (a launch, a ride: kept whole)
+        out += parts
+    return out
+
+
+def _split_hop(k, T, depth=0):
+    path = k.get("path") or []
+    if (depth > 6 or k.get("kind") in ("crouch", "route") or k.get("ride") or len(path) < 5
+            or not k.get("take_off") or not k.get("land")):
+        return [k]
+    a, b = k["take_off"], k["land"]
+    for n in range(1, len(path) - 1):
+        x, y, z = path[n][:3]
+        if math.hypot(x - a[0], y - a[1]) < HOP_END or math.hypot(x - b[0], y - b[1]) < HOP_END:
+            continue
+        if max(q[2] for q in path[n + 1:]) < z + HOP_CLIMB or not T.inside(x, y):
+            continue
+        l, j, i = T._node(Vec(x, y, z))
+        if not T.lwalk[l, j, i] or abs(float(T.lz[l, j, i]) - z) > HOP_TOUCH:
+            continue
+        frac = n / (len(path) - 1)
+        air = k.get("air_s")
+        first = dict(k, land=list(path[n][:3]), path=[list(q) for q in path[:n + 1]],
+                     apex=round(max(q[2] for q in path[:n + 1]), 2), split=1)
+        second = dict(k, take_off=list(path[n][:3]), runup=list(path[n][:3]), path=[list(q) for q in path[n:]],
+                      apex=round(max(q[2] for q in path[n:]), 2), split=1)
+        if air is not None:
+            first["air_s"], second["air_s"] = round(air * frac, 2), round(air * (1 - frac), 2)
+        return [first] + _split_hop(second, T, depth + 1)
+    return [k]
+
+
 def usable_links(links, pvp=None):
     """LiDAR links bots may use: people's; jumps a bot called and landed on the call, in a match or in the
     simulator (tools/lidar_sim.py); others bots did twice. Not ones bots keep failing. In PvP matches
@@ -905,7 +956,7 @@ def _build(m, window):
             T.cover_spots = np.array(data["cover"], dtype=float)
         jumps = sorted(data.get("jumps", []))       # apexes LiDAR measured on this map
         T.jump_apex = jumps[len(jumps) // 2] if len(jumps) >= 20 else 0.8
-        links = usable_links(data.get("links", []))
+        links = usable_links(split_hops(data.get("links", []), T))   # (custom, Nov 23: a person's hops, one at a time)
     links = off_gone_pads(anchor_launches(links + painted, m.get("features", [])), m.get("lifts_gone"))
     links = forge_throws(links, m.get("features", []))   # (custom, Nov 18) a Forge cannon's recorded throws
     links += owner_ride_links(names)    # (custom) the owner's lifts and man cannons (LiDAR view, Edit spots)

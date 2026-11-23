@@ -317,6 +317,7 @@ FLAG_FIGHT_AGAIN = 6.0             # s after a fight ends before another drop
 # fight called off) and its walk onto the goal stands (Bot.plant_stay: no step off it for a grenade, the kit or a mate)
 PLANT_HOLD_R = 4.0                 # u (the same as FLAG_FIGHT_HOME: no drop to fight this near, either)
 PLANT_HOLD_SCORE = 9.0
+PLANT_HOLD_DZ = 1.0                # u: (custom, Nov 23) and within this of the goal's height: its own floor, not under it
 # (custom, Nov 18) a Warthog's chaingun spun up on a man just out of sight (Bot.spin_target): the man it was aimed at only,
 # for SPIN_KEEP s, within SPIN_R u, the trigger only with the gun on where he went (SPIN_SLACK: the held turret window)
 SPIN_KEEP, SPIN_R, SPIN_SLACK = 2.0, 30.0, 4.0
@@ -4214,7 +4215,11 @@ class Bot:
             return None
         from .modes import carry_goal
         g = carry_goal("assault", snap, me.team, me.pos)
-        return g if g is not None and dist(me.pos, g) <= PLANT_HOLD_R else None
+        # (custom, Nov 23) on the goal's own floor (PLANT_HOLD_DZ): 4 u in a straight line held a carrier on the floor
+        # 3.4 u under Powerhouse's roof goal "planting", walking at it from below (the owner: "they try to go to the floor
+        # to plant below")
+        return (g if g is not None and (me.pos - g).flat() <= PLANT_HOLD_R and abs(me.pos.z - g.z) <= PLANT_HOLD_DZ
+                else None)
 
     def plant_hold(s, now, me, snap, scores):
         """(custom, Nov 18, owner: "the bomb planter doesnt leave the bomb site if theyre planting or within 4 units of
