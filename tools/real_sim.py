@@ -63,6 +63,14 @@ CAMO_SHOT_REVEAL, CAMO_SHOT_COST = 0.5, 0.05   # s seen after a shot from camo, 
 PHYS = JP.Phys(GAME)
 
 
+def clear(T, a, b):
+    """A frag's step from a to b is open: the line check the bots' throws are planned with (Terrain.point_los)."""
+    try:
+        return bool(T.point_los(a, b))
+    except Exception:
+        return True
+
+
 def floor_crossed(T, x, y, z0, z1):
     """The highest floor at (x, y) a body going down from z0 to z1 crosses (jumpphys.air_step's rule: the level's floors,
     else the top of floorless rock), or None."""
@@ -325,11 +333,15 @@ class RealMatch(BS.Match):
                 keep.append(g)
                 continue
             d = step * (1.0 / ln)
-            hit = s.T.aim_hit(g.pos, math.atan2(d.y, d.x), math.atan2(d.z, max(1e-9, d.flat())), reach=ln)
             q = g.pos + step
+            # the level as the bots' own throw check sees it (Terrain.point_los: brain/nade.py arc_clear), with Forge
+            # pieces' real tops (piece_top); aim_hit's wall bins stood a lip's whole 0.25 u step over its top, and frags
+            # thrown over cover lips bounced back at the thrower's feet (3 to 16 suicides a match, live 7 in 2,639 kills)
             floor = floor_crossed(s.T, q.x, q.y, g.pos.z, q.z) if step.z < 0 else None
-            if floor is not None and (hit is None or (hit - g.pos).length() > (Vec(q.x, q.y, floor) - g.pos).length()):
-                hit, d = Vec(q.x, q.y, floor + 0.05), Vec(d.x, d.y, -1.0)     # onto the floor (aim_hit sees walls)
+            if floor is not None:                 # onto the floor first (a line into the floor is no wall)
+                hit, d = Vec(q.x, q.y, floor + 0.05), Vec(d.x, d.y, -1.0)
+            else:
+                hit = None if clear(s.T, g.pos, q) else g.pos
             if hit is None:
                 g.pos = q
             else:
@@ -338,8 +350,12 @@ class RealMatch(BS.Match):
                     g.bounced = s.now
                 if d.z < -0.3:                    # onto a floor: up a little, on along it slower
                     g.vel = Vec(g.vel.x * BOUNCE_KEEP, g.vel.y * BOUNCE_KEEP, -g.vel.z * BOUNCE_UP)
-                else:                             # a wall: back off it
-                    g.vel = Vec(-g.vel.x * WALL_KEEP, -g.vel.y * WALL_KEEP, g.vel.z * WALL_KEEP)
+                else:                             # a wall: its square-on part reflected, the rest kept (ASSUMED)
+                    bx = None if clear(s.T, g.pos, g.pos + Vec(step.x + math.copysign(0.05, step.x), 0, 0)) else 1
+                    by = None if clear(s.T, g.pos, g.pos + Vec(0, step.y + math.copysign(0.05, step.y), 0)) else 1
+                    fx = -WALL_KEEP if bx is not None or by is None else BOUNCE_KEEP
+                    fy = -WALL_KEEP if by is not None or bx is None else BOUNCE_KEEP
+                    g.vel = Vec(g.vel.x * fx, g.vel.y * fy, g.vel.z * WALL_KEEP)
                 if g.vel.length() < 0.6:
                     g.rest, g.vel = True, Vec()
             keep.append(g)
