@@ -235,7 +235,9 @@ class NeverMissTests(unittest.TestCase):
         try:
             for w in ("dmr", "magnum", "needle_rifle", "battle_rifle", "sniper"):
                 paced = bot.FIRE_GAP.get(w, 0.2)
-                self.assertEqual(b.fire_gap(w, 2.0), paced, w)           # (no Short band spam: the bloom settles)
+                # (no Short band spam: the bloom settles; Nov 22, the owner: the DMR within 7 u at his measured fastest
+                # pace, bot.NOBLE_DMR_FAST, tools/test_noble_pace.py)
+                self.assertEqual(b.fire_gap(w, 2.0), bot.NOBLE_DMR_FAST if w == "dmr" else paced, w)
                 self.assertEqual(b.fire_gap(w, 8.0), paced, w)
                 self.assertAlmostEqual(b.fire_gap(w, 30.0), paced * bot.NOBLE_LONG_PACE, msg=w)
         finally:

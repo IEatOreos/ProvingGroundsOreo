@@ -762,6 +762,9 @@ PL_LOCK_S, PL_LOCK_R, PL_SLIP = 2.2, 1.5, 0.3   # s, u (the reticle on a vehicle
 LUNGE = {"sword": 2.25, "gravity_hammer": 1.35}
 LUNGE_AWAY = 5.0     # (custom, Nov 22) off a sword or hammer's score with nobody near and a loaded gun beside it (choose_weapon)
 ON_SIGHT_R = 0.22    # (custom, Nov 22) u: the view this near a part of a man in sight is on him (Bot.on_sight_fire)
+# (custom, Nov 22) Noble's DMR within NOBLE_FAST_R u (Bot.fire_gap): the owner's measured fastest pace while his shield
+# holds, his paced last shot once it is down
+NOBLE_FAST_R, NOBLE_DMR_FAST, NOBLE_KILL_PACE = 7.0, 0.367, 0.55
 ON_SIGHT_HIT_S = 1.0  # (custom, Nov 22) s: a man who hit it this recently has a line to it, the map's checks or not
 # u: a sword or hammer this near is met with the shotgun. The Flood close 3 u/s, 6 with a thruster: a swap begun here has
 # it out before they are in its reach (2.5 u). Past it the guns go by range (the magnum hits him on his way in): at 10 u
@@ -8119,7 +8122,7 @@ class Bot:
             act.fire = s.shot_now = seen_fire and now < getattr(s, "burst_until", 0.0)
         elif on and now >= s.next_fire:
             act.fire = s.shot_now = True
-            s.next_fire = now + s.fire_gap(w, d)
+            s.next_fire = now + s.fire_gap(w, d, target, snap.shieldless)
             if s.rng.random() < s.p.jumpy * JUMP_SHOT * s.p.jump:
                 act.jump = True    # jump shot (never for bots with jump skill 0)
         act.zoom = s.zoom_level(now, w, d, seen_now)
@@ -8499,7 +8502,7 @@ class Bot:
             s.part_dry = None
             s.note("part dry: the " + ("chest" if head else "head"))
 
-    def fire_gap(s, w, d):
+    def fire_gap(s, w, d, target=None, shieldless=False):
         """Seconds to the next press of a one-shot-a-press weapon: spam up close, the paced cadence at Medium,
         a little slower at Long (guide 03: DMR "At Short band spam; at Medium pace at 0.4 s; at Long 0.5
         s"). A Recruit keeps one pace at every range."""
@@ -8508,6 +8511,14 @@ class Bot:
             return LUNGE_GAP * s.rng.uniform(0.9, 1.2)    # pressed again and again in reach, as the player does
         if s.p.tactics <= 0.15:
             return paced * s.rng.uniform(1.0, 1.5)
+        if profiles.fixed_noble(s.p) and w == "dmr" and d <= NOBLE_FAST_R:
+            # (custom, Nov 22, the owner: "I want the Noble difficulty to shoot at that pace from within 7u. And my last
+            # few shots I kind of showed how to shoot 4 as fast as possible and pace the last one for a headshot") his
+            # recording (logs/dmr_pace_20261122-194712): 38 of 54 back-to-back gaps 360-379 ms, the fastest 364 ms (the
+            # DMR's own limit, 22 ticks), and each string four at that, the fifth 483-650 ms later (median 0.55 s), the
+            # head shot once the shield is down. His shield up: NOBLE_DMR_FAST; down (the kill shot): NOBLE_KILL_PACE
+            down = target is not None and (target.health <= 0.5 if shieldless else target.shield <= 0.05)
+            return NOBLE_KILL_PACE if down else NOBLE_DMR_FAST
         if profiles.fixed_noble(s.p) and w in PRECISION:
             # (custom, Nov 20, owner: "never miss a shot ... with precision weapons") Noble: the paced cadence at every
             # range, its reticle's bloom settled for each shot (no Short band spam), a little slower at Long (its tune's
@@ -10414,7 +10425,7 @@ class Bot:
             s.shot_part = None                     # (no part of him the checks see: the round goes where the view is)
         s.on_sight = (now, k, trust)
         act.fire = s.shot_now = True
-        s.next_fire = now + s.fire_gap(me.weapon, d)
+        s.next_fire = now + s.fire_gap(me.weapon, d, snap.player(k), snap.shieldless)
         s.note(f"on sight: #{k} in the crosshair, fire")
 
     def fire_gate(s, now, me, act, snap):

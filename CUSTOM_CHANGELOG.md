@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Noble's DMR within 7 u at the owner's own pace: four fast, the head shot paced, 2026-11-22
+The owner: "Record my dmr shots at the fastest pace I can shoot"; "I want the Noble difficulty to shoot at that pace from within 7u. And my last few shots I kind of showed how to shoot 4 as fast as possible and pace the last one for a headshot".
+- **His recording** (read-only, the magazine read about 250 times a second: logs/dmr_pace_20261122-194712, Boardwalk, 62 DMR rounds): of 54 back-to-back gaps, 38 fell in 360-379 ms, the fastest 364 ms, median 367 ms. That is the DMR's own limit (22 ticks at 60 a second), hit within milliseconds again and again. His strings: four at that pace, then the fifth 483-650 ms later (median 0.55 s), the head shot once the shield is down. His walls were 6.11 u and 5.31 u from his eye along his aim.
+- **Noble before:** its DMR at the paced 0.4 s at every range (the learned pace within it), no Short band spam.
+- **Now (`fire_gap`, Noble's DMR within `NOBLE_FAST_R` 7 u):** while the man's shield holds, `NOBLE_DMR_FAST` (0.367 s). Once it is down (no shields: his body at half), `NOBLE_KILL_PACE` (0.55 s) for the head shot. `fight` and `on_sight_fire` pass the man. Past 7 u, other guns and every other tier as before.
+- **Validation:** new `tools/test_noble_pace.py` (3); `test_noble_difficulty.py`'s every-range pace now expects 0.367 s for the DMR at 2 u; full suite 1328 OK. **Untested in game.**
+
 ### Noble shoots any part of a Spartan's outline it sees, 2026-11-22
 The owner: "I want to make the Noble bots able to shoot at any part of the spartans model it sees. Legs, feet, head,Chest, shoulders"; "Even add like the sides tops of the heads"; "The entire outline of the spartan should be shootable".
 - **Before:** every tier judged a man by two lines, his chest (0.35 u up) and his head. A man showing only his legs under a ledge's lip, a shoulder past a corner, or the top of his helmet over a wall was not seen at all. One whose head and chest were behind cover got no shot.
