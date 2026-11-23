@@ -1036,10 +1036,15 @@ def main():
     # everyone's drives and flights -> the map's drive mesh and airspace (rides.json), applied to this match as saved
     rides, rides_new = RideWatch(MAP["name"], T=T), [False]
 
+    from lidar_saver import Saver
+    # (custom, Nov 22) the people's LiDAR merge and write in a helper process: on this process's thread its 420-445 ms
+    # once a minute (Asylum's 3 MB lidar.json) froze the bots' thinking (tools/lidar_saver.py)
+    lidar_saver = Saver()
+
     def save_lidar():
         """Both LiDAR saves, each on its own: one failing is logged and the other still saves (a failing people's save
         took the whole match's data with it, Lockout)."""
-        for what, save in (("rides", rides.save), ("people's LiDAR", people.save)):
+        for what, save in (("rides", rides.save), ("people's LiDAR", lambda: people.save(saver=lidar_saver))):
             try:
                 if save() is True and what == "rides":
                     rides_new[0] = True
@@ -1571,6 +1576,7 @@ def main():
     finally:
         save_learned(MAP)
         save_lidar()
+        lidar_saver.close()                      # (custom, Nov 22: its last save written, the helper exits)
         try:                                     # nodrive cells people drove over this match come out (tools/wedges.py)
             import wedges
             n = wedges.prune(MAP.get("base") or MAP["name"].partition("/")[0])

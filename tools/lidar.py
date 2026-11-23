@@ -633,8 +633,17 @@ class Recorder:
                 s.add_fall(d["stood"], d.get("pos"))
             return d
 
-    def save(s, bot_seconds=0.0, human_seconds=0.0):
-        """Merge this run into maps/<map>/lidar.json (atomic). Safe to call every minute."""
+    def save(s, bot_seconds=0.0, human_seconds=0.0, saver=None):
+        """Merge this run into maps/<map>/lidar.json (atomic). Safe to call every minute. (custom, Nov 22) saver
+        (lidar_saver.Saver, live_bots): the merge and write in its helper process, True; else here, what was written."""
+        payload = s.save_payload(bot_seconds, human_seconds)
+        from lidar_saver import merge_save
+        with s.__dict__.setdefault("save_lock", threading.Lock()):     # (one save at a time)
+            return saver.save(payload) if saver is not None else merge_save(payload)
+
+    def save_payload(s, bot_seconds=0.0, human_seconds=0.0):
+        """(custom, Nov 22) What is new since the last save, as plain data for lidar_saver.merge_save (it was the first
+        half of save)."""
         s.classify()
         # what is new, copied under the lock; the file read, merge and write outside it (Spire's 3.5 MB took about 100
         # ms, and with the lock held the bots' tick waited on it once a minute: review). One save at a time
@@ -648,34 +657,14 @@ class Recorder:
             keep = [l for l in s.links if l.get("found_by") != "map" and not (l.get("crouch") and not l.get("human"))]
             links, weapons, cover = json.loads(json.dumps(keep)), [dict(w) for w in s.weapons], sorted(s.cover_spots.values())
             s.count_run, s.saved_deaths, s.jumps = False, len(s.deaths), []
-        with s.__dict__.setdefault("save_lock", threading.Lock()):
-            old = load(s.path)
-            walk = {}
-            for w in old.get("walk", []):
-                if len(w) == 4:
-                    w.insert(3, KIND_BOT)
-                walk[tuple(w[:4])] = w[4]
-            for k, n in new_walk.items():           # only what is new since the last save
-                walk[k] = walk.get(k, 0) + n
-            out = dict(cell=CELL, zstep=ZSTEP,
-                       runs=old.get("runs", 0) + (1 if run else 0),
-                       bot_minutes=round(old.get("bot_minutes", 0) + bot_seconds / 60, 1),
-                       human_minutes=round(old.get("human_minutes", 0) + human_seconds / 60, 1),
-                       walk=[[*k, n] for k, n in sorted(walk.items())],
-                       deaths=(old.get("deaths", []) + deaths)[-3000:],
-                       jumps=(old.get("jumps", []) + jumps)[-2000:],
-                       links=links, weapons=weapons, cover=cover)
-            objectives = s.objectives.saved() if getattr(s, "objectives", None) is not None else old.get("objectives")
-            if objectives:                           # every gametype objective place, reached or not (Objectives)
-                out["objectives"] = objectives
-            if getattr(s, "director", None) is not None and s.director.history:   # this run's coverage, what is left
-                out["coverage"] = s.director.report()
-            os.makedirs(os.path.dirname(s.path), exist_ok=True)
-            tmp = s.path + ".tmp"
-            with open(tmp, "w") as f:
-                json.dump(out, f)
-            os.replace(tmp, s.path)
-            return out
+        has_obj = getattr(s, "objectives", None) is not None    # (its places; none: the file's own are kept)
+        return dict(path=s.path, cell=CELL, zstep=ZSTEP, kind_bot=KIND_BOT, run=run,
+                    bot_seconds=bot_seconds, human_seconds=human_seconds,
+                    new_walk=[[*k, n] for k, n in new_walk.items()], deaths=deaths, jumps=jumps,
+                    links=links, weapons=weapons, cover=cover,
+                    has_objectives=has_obj, objectives=s.objectives.saved() if has_obj else None,
+                    coverage=s.director.report() if getattr(s, "director", None) is not None and s.director.history
+                    else None)
 
 
 _SCAN_INFO = {}
@@ -2332,9 +2321,9 @@ class HumanWatch:
             s.skipped += 1
         return ok
 
-    def save(s):
+    def save(s, saver=None):
         sec, s.seconds = s.seconds, 0.0
-        return s.rec.save(human_seconds=sec)
+        return s.rec.save(human_seconds=sec, saver=saver)    # (saver: lidar_saver.Saver, live_bots)
 
 
 class RideWatch:
