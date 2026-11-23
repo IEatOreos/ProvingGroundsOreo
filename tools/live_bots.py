@@ -558,7 +558,8 @@ def events(bots, directors, before, snap, now):
 
 
 EQUIPMENT_ALIAS = {"over_shield": "overshield", "active_camouflage": "camo",
-                   "powerup_red": "overshield"}       # (custom, Nov 23: Reach's, brain/maps.py POWER)
+                   "powerup_red": "overshield", "powerup_blue": "camo",   # (custom, Nov 23: Reach's, brain/maps.py
+                   "powerup_yellow": "custom_powerup"}                     # POWER)
 
 
 def item_name(path):

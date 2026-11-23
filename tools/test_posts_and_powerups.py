@@ -72,7 +72,9 @@ class Overshield(unittest.TestCase):
 
     def test_the_live_name_is_the_brains(self):
         import live_bots
-        self.assertEqual(live_bots.item_name("objects\\multi\\powerups\\powerup_red\\powerup_red"), "overshield")
+        for tag, name in (("powerup_red", "overshield"), ("powerup_blue", "camo"), ("powerup_yellow", "custom_powerup")):
+            self.assertEqual(live_bots.item_name(f"objects\\multi\\powerups\\{tag}\\{tag}"), name)
+            self.assertEqual(maps.POWER[tag][:2], (name, "powerup"))
 
     def test_without_powerups_as_before(self):
         self.assertEqual([i["name"] for i in maps.power_items(dict(equipment=[dict(item="rockets", pos=[0, 0, 0],

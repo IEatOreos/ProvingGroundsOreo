@@ -213,8 +213,10 @@ POWER = {"rocket launcher": ("rockets", "weapon", 1.0), "sniper rifle": ("sniper
          "h2a_speedboost": ("speed_boost", "powerup", 0.6), "ord_equip_overshield": ("overshield", "powerup", 0.9),
          "speedboost": ("speed_boost", "powerup", 0.6),
          # (custom, Nov 23) Halo: Reach's Forge powerups by their tag names (a .mvar's, the live reader's): the owner,
-         # Beaver Creek Anniversary's powerup_red, "These are overshields"
-         "powerup_red": ("overshield", "powerup", 0.9)}
+         # Beaver Creek Anniversary's powerup_red, "These are overshields"; "Blue camo, yellow custom" (the custom
+         # powerup's traits are the game type's: valued as Halo 4's speed boost)
+         "powerup_red": ("overshield", "powerup", 0.9), "powerup_blue": ("camo", "powerup", 0.7),
+         "powerup_yellow": ("custom_powerup", "powerup", 0.6)}
 
 
 # Halo 4's ordnance guns (custom, Nov 8), beside POWER's, by the exports' item names (the brain's): power 0.8 and up

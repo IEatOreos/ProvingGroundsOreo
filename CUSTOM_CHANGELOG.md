@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reach's blue and yellow powerups, 2026-11-23
+
+The owner: "Blue camo, yellow custom".
+
+- **`brain/maps.py` `POWER`:**
+  - `powerup_blue` is active camo (0.7, the camo pickup's own rules: flankers and snipers, runners).
+  - `powerup_yellow` is the custom powerup (`custom_powerup`, 0.6, as Halo 4's speed boost; its traits are the game type's).
+- **`tools/live_bots.py` `item_name`:** reads them so in the match.
+- **Checks:** `tools/test_posts_and_powerups.py` has all three names. `unittest discover` over `tools` is OK (1406 tests), and so is the `live_bots` import. **Untested in a match.**
+
 ### Bug reports: Sword Base's floor 3, Beaver Creek's overshield, the Wraith at the start, 2026-11-23
 
 The owner: "Do them all and the wraith last. They get called to the wraith just not at the beginning of the match for some reason."
