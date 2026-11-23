@@ -796,6 +796,17 @@ ON_SIGHT_R = 0.22    # (custom, Nov 22) u: the view this near a part of a man in
 # holds, his paced last shot once it is down
 NOBLE_FAST_R, NOBLE_DMR_FAST, NOBLE_KILL_PACE = 7.0, 0.367, 0.55
 NOBLE_FLICKER_S = 1.0   # (custom, Nov 22) s: Noble's fight held on a man seen, or who hit it, this recently (noble_flicker)
+# (custom, Nov 23, the owner: "add the ability for the bots to miss on their opening shot but keep it realistic"; Noble,
+# the DMR and Needle Rifle, the first shot, "Is 1 in 4 a good start?") Noble's opening shot at a man it was not just
+# shooting (none at him for NOBLE_OPENER_GAP s) misses NOBLE_OPENER_MISS of the time on average, more on a big swing onto
+# him or a man strafing, less on one dead ahead and still (Bot.noble_opener_miss). The miss goes just past his edge on
+# the side the swing was going, a flick that went wide: the point Noble aims and the shot correction snaps to (its
+# noble_point; the correction itself unchanged). A planned miss is kept out of the shot book (noble_fired)
+NOBLE_MISS_GUNS = ("dmr", "needle_rifle")
+NOBLE_OPENER_MISS = 0.25
+NOBLE_OPENER_GAP = 3.0      # s with no shot at him before a shot is an opener again
+NOBLE_OPENER_HOLD = 2.0     # s an opener's miss waits for its shot; past it, no miss (it never fired)
+NOBLE_MISS_BODY_LAT, NOBLE_MISS_HEAD_LAT = 0.32, 0.17   # u off his middle: past an arm (0.16) / the side of the head (0.08)
 ON_SIGHT_HIT_S = 1.0  # (custom, Nov 22) s: a man who hit it this recently has a line to it, the map's checks or not
 # u: a sword or hammer this near is met with the shotgun. The Flood close 3 u/s, 6 with a thruster: a swap begun here has
 # it out before they are in its reach (2.5 u). Past it the guns go by range (the magnum hits him on his way in): at 10 u
@@ -2899,10 +2910,51 @@ class Bot:
         s._noble_preaim = (now + noble_habits.PREAIM_KEEP, me.pos, q)
         return q
 
+    def noble_opener_miss(s, now, me, target, tid, head):
+        """(custom, Nov 23) Noble's opening shot at tid (NOBLE_OPENER_MISS): (height over his feet, to the side) of the
+        point just past his edge it aims while this opener is a miss, else None. Decided once, on the first tick it
+        fights him after NOBLE_OPENER_GAP s without a shot at him: the chance NOBLE_OPENER_MISS x the swing (the angle off
+        him then, 30 degrees typical) x his strafe (his speed across the line, 2.2 u/s a run) x its own move."""
+        shot_at = s.__dict__.setdefault("noble_shot_at", {})
+        op = getattr(s, "noble_opener", None)
+        if op is not None and (op[0] != tid or now - op[3] > NOBLE_OPENER_GAP + NOBLE_OPENER_HOLD):
+            op = None                                   # (a switch to another man, or an old one never fired: anew)
+        if op is None:
+            if now - shot_at.get(tid, -99.0) < NOBLE_OPENER_GAP:
+                return None
+            yaw_to = math.atan2(target.pos.y - me.pos.y, target.pos.x - me.pos.x)
+            turn = wrap(yaw_to - me.yaw)
+            dx, dy = target.pos.x - me.pos.x, target.pos.y - me.pos.y
+            n = math.hypot(dx, dy) or 1.0
+            across = abs((target.vel.x * -dy + target.vel.y * dx) / n)
+            mine = math.hypot(me.vel.x, me.vel.y) > 1.5 or abs(me.vel.z) > 0.5
+            k = ((0.6 + 0.4 * min(abs(turn) / math.radians(30.0), 2.0)) * (0.8 + 0.4 * min(across / 2.2, 1.0))
+                 * (1.15 if mine else 1.0))
+            miss = s.rng.random() < min(0.9, NOBLE_OPENER_MISS * k)
+            op = s.noble_opener = (tid, miss, 1.0 if turn > 0 else -1.0, now)
+            st = s.__dict__.setdefault("noble_opener_stats", [0, 0])
+            st[0] += 1
+            st[1] += int(miss)
+        if not op[1] or now - op[3] > NOBLE_OPENER_HOLD:
+            return None
+        if head:
+            h = (target.head_pos.z - target.pos.z) if target.head_pos is not None else aim_height(True, crouched(target))
+            return h, op[2] * NOBLE_MISS_HEAD_LAT
+        return aim_height(False, crouched(target)), op[2] * NOBLE_MISS_BODY_LAT
+
     def noble_fired(s, now, snap, act, was_firing):
         """(custom, Nov 20) A Noble press of a precision gun at the man it fights: watched (noble_learn)."""
         me = snap.player(s.id)
         part_ = getattr(s, "shot_part", None)
+        if act.fire and not was_firing and part_ is not None:
+            # (custom, Nov 23) the first press at him ends his opener; a planned miss is not for the shot book
+            s.__dict__.setdefault("noble_shot_at", {})[part_[0]] = now
+            op = getattr(s, "noble_opener", None)
+            if op is not None and op[0] == part_[0]:
+                s.noble_opener = None
+                if op[1] and now - op[3] <= NOBLE_OPENER_HOLD:
+                    s.note("noble: the opener just wide")
+                    return
         if (not act.fire or was_firing or me is None or not me.alive or me.weapon not in PRECISION or part_ is None
                 or me.vehicle not in (None, -1) or not noble.tune(getattr(s, "game", None))["shot_learn"]):
             return
@@ -7903,6 +7955,10 @@ class Bot:
                 if bp is not None:
                     s.noble_point = (tid, now, bp[1], bp[2])
                     s.note(f"noble: his {bp[0]} shows, on it")
+            if profiles.fixed_noble(s.p) and direct_fire and not h4 and me.weapon in NOBLE_MISS_GUNS:
+                miss = s.noble_opener_miss(now, me, target, tid, head)
+                if miss is not None:
+                    s.noble_point = (tid, now, miss[0], miss[1])     # (custom, Nov 23: the opener goes just wide)
             part_key = (tid, head, crouched(target), getattr(s, "noble_point", None) is not None)
             if getattr(s.aim, "part_key", None) != part_key:
                 s.aim.flick = None
