@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Reach One Bomb / Neutral Bomb: the attackers' team pushes, and the clock kept after round 1, 2026-11-23
+
+The owner: "I want the bots on attack to notice when there is 15 seconds or less on the game clock and if it hits zero they lose. But sudden death starts if youre holding the bomb when the game clock hits zero ... Also I want teams to notice when 3-4 players are dead on defense and the team director does a push order ... Or when the bomb is within 3-5u of the plant site, have everyone urgently push/fight to plant it". Then: "We dont do multi bomb so make it neutral and one bomb. and yes do 75%".
+
+- **Team pushes (`brain/director.py` `Director.bomb_push`, called first in `desperate`):** these apply on Reach maps in Neutral Bomb and One Bomb (`Bot.single_bomb`), for the attacking team only (the one with a goal to plant on), and only while the bomb isn't armed. Each push runs through the team blitz.
+  - **Our bomb within 5 u (flat) of its goal:** everyone goes to the goal ("bomb: at the plant site").
+  - **Our bomb with 15 s or less on the clock:** everyone goes to the goal with it ("bomb: the last seconds"). At 0 it becomes "bomb: sudden death".
+  - **The bomb loose with 15 s or less (or at 0):** everyone goes for it, so someone holds it when the clock runs out ("bomb: the last seconds, take it"). A defender holding it in One Bomb is no push.
+  - **75% or more of the defenders dead (3 of 4):** everyone goes in, to the goal with our bomb or to the loose bomb ("bomb: their defense is down").
+  - The carrier isn't in the blitz team, so he keeps the plant-first rule. Defenders' play is unchanged.
+- **The push goes at once (`blitz_tick`):**
+  - A `bomb:` push never gathers at a rally point and never waits out the 15 s cool-down, so "the last seconds" turning into "at the plant site" carries straight on.
+  - Assault's sudden death counts as overtime (`overtime`), as Invasion's does: no time limit and no pause between pushes.
+- **The clock after round 1 (`tools/live_bots.py` `match_sane`):**
+  - In the owner's One Bomb game on Launch Station (`trace_reach_45_launch_station_20261123-142103`), from round 2 the game kept team 0's score in the upper half of the word ({0: 65536, 1: 0}).
+  - `match_sane` threw that read away whole, the clock with it ("match read dropped"), so the bots had no clock for the match's last 6 minutes.
+  - Now a score whose upper half is a score is read from it. Garbage scores drop only the scores, and the clock and limit are kept.
+- **The replay of that match (the drop rule, Nov 18):** it was active, with 3 drops ("flag: dropping it to fight") and the carriers going back for the bomb. Most carrier deaths were too quick for it: from 1.25-2.0 health to dead within one quarter-second read. About 4 of the 11 were round resets, with the enemy 140 u away. The rule drops only when the damage would empty him within 1.5 s, so it rarely had the chance. Left as it was.
+- **Checks:** new `tools/test_bomb_push.py` (15 tests: each push, its limits, defending, armed, non-Reach maps, two-bomb Assault, One Bomb, sudden death as overtime, the immediate go, no cool-down). `tools/test_land_grab.py` has the 65536 read and keeps the clock with garbage scores. `unittest discover` over `tools` is OK (1392 tests), and so is the `live_bots` import. **Untested in a match.**
+
 ### Psych Profile: set your ratings by hand, and your own win and loss gains, 2026-11-23
 
 The owner: "Also add to the pysch screen the option to custom set my rating. Or change my plus/minus gains". His answers: both; Left/Right 10 and LB/RB 100; kept 1500 to 2500; a separate row for free for all; only the win range and the loss, the wide-gap versions 5 less; friends keep the default gains.

@@ -467,11 +467,23 @@ def match_sane(v):
         return None
     limit = v.get("limit") or 0
     limit = limit if 0 <= limit <= 10000 else 0
-    if not all(-50 <= x <= max(500, 4 * limit) for x in v["score"].values()):
-        return None
     left = v.get("time_left")
     left = left if left is None or 0.0 <= left <= 86400.0 else None
-    out = dict(v, limit=limit, time_left=left)
+    score = dict(v["score"])
+    # (custom, Nov 23) Reach's round games keep a team's score in the upper half of the word from round 2 (One Bomb
+    # Launch Station 20261123-142103: {0: 65536, 1: 0} after team 0 took round 1, then every read dropped, the clock with
+    # it, for the match's last 6 minutes): that half is the score
+    top = max(500, 4 * limit)
+    if any(x > 0xFFFF for x in score.values()) and all(
+            0 <= x <= top or (x > 0xFFFF and (x >> 16) <= top and (x & 0xFFFF) <= top) for x in score.values()):
+        score = {k: (x >> 16 if x > 0xFFFF else x) for k, x in score.items()}   # (both halves scores: not garbage)
+    if not all(-50 <= x <= max(500, 4 * limit) for x in score.values()):
+        # scores out of range (the match end reuses the memory: garbage): no scores, but the clock and limit kept, so a
+        # round game's clock never goes with them
+        if left is None:
+            return None
+        score = {}
+    out = dict(v, score=score, limit=limit, time_left=left)
     return v if out == v else out
 
 

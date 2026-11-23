@@ -85,6 +85,10 @@ PRONG_NAV_DETOUR = 2.5     # a prong's way by the nav at most this many times th
 LANE_R, LANE_ANGLE, LANE_KEEP_S, LANE_NEAR = 14.0, math.radians(60.0), 30.0, 15.0
 LANE_PHASES = (2,)          # the Invasion phases whose push takes the flanks (assign_roles: phase 1 rushes straight)
 BLITZ_MODES = ("ctf", "assault", "stockpile", "king", "headhunter")    # (+ Invasion attacking; desperate says why not others)
+# (custom, Nov 23) Reach's one-bomb Assault (Director.bomb_push): the attackers all in with BOMB_LAST_S or less on the
+# clock (and in sudden death), with their bomb within BOMB_SITE_R of its goal, or with BOMB_DEAD_SHARE of the defenders
+# dead; these pushes go at once, no rally (blitz_tick)
+BOMB_LAST_S, BOMB_SITE_R, BOMB_DEAD_SHARE = 15.0, 5.0, 0.75
 AIR_CALL = 2.5               # a transport aircraft calls riders from this many CALL_R (rider_calls; Bot.crew_coming waits)
 HORN_CALL_R = 40.0           # u: the bot a person's horn picked (his view on him) is called from this far (honk_orders)
 LAND_CALL_R_PERSON = 20.0    # u: (custom) ... a person's aircraft set down (honk_orders)
@@ -309,6 +313,9 @@ class Director:
         carrier, Infection's survivors in one haven, Invasion's defenders on the carrier or the territory being taken;
         in Territories holding is the score (the sim, all in on one: our points 11 -> 8, theirs 4 -> 8). Never while the
         core or a flag is in our hands: that is the carrier's and his escorts' plan."""
+        bomb = s.bomb_push(snap)                 # (custom, Nov 23: Reach's one-bomb Assault, the attackers' pushes)
+        if bomb is not None:
+            return bomb
         if any(p.team == s.team and p.alive and p.has_flag for p in snap.players):
             return None
         if snap.mode == "infection":
@@ -361,8 +368,51 @@ class Director:
     @staticmethod
     def overtime(snap):
         """Invasion's overtime (the game's clock at 0, the phase still on: it lasts only while an attacker stands in the
-        territory): the attack is every second, no gathering and no pause between pushes (blitz_tick)."""
-        return snap.mode == "invasion" and snap.time_left is not None and snap.time_left <= 0.5
+        territory): the attack is every second, no gathering and no pause between pushes (blitz_tick). (custom, Nov 23)
+        Assault's sudden death the same (the clock at 0, the round on while the bomb is in play)."""
+        return snap.mode in ("invasion", "assault") and snap.time_left is not None and snap.time_left <= 0.5
+
+    def bomb_push(s, snap):
+        """(custom, Nov 23, the owner: "I want the bots on attack to notice when there is 15 seconds or less on the game
+        clock ... sudden death starts if youre holding the bomb when the game clock hits zero ... teams to notice when
+        3-4 players are dead on defense and the team director does a push order ... when the bomb is within 3-5u of the
+        plant site, have everyone urgently push/fight to plant it"; "make it neutral and one bomb", "yes do 75%")
+        Reach's Neutral Bomb and One Bomb (Bot.single_bomb), this team attacking (a goal of theirs to plant on): (where,
+        why) for a blitz, else None. Our bomb within BOMB_SITE_R of its goal: all on the goal. Our bomb with BOMB_LAST_S
+        or less on the clock, or in sudden death (the clock at 0): all on the goal with it. The bomb loose with
+        BOMB_LAST_S or less (or at 0): all to it, someone must hold it when the clock runs out. BOMB_DEAD_SHARE of the
+        defenders dead: all in, on our bomb's goal or the loose bomb. Not once it is armed (planted)."""
+        if (snap.mode != "assault" or not str((s.map or {}).get("name", "")).startswith("reach_")
+                or not Bot.single_bomb(snap)):
+            return None
+        if not (snap.obj_goals or {}).get(1 - s.team % 2):
+            return None                          # (nothing of theirs to plant on: we defend)
+        it = snap.obj_items[0]
+        if it.get("armed") is not None:
+            return None
+        from .modes import carry_goal
+        holder = snap.player(it["carrier"]) if it.get("carrier") is not None else None
+        ours = holder is not None and holder.alive and holder.team == s.team
+        goal = carry_goal("assault", snap, s.team, it["pos"])
+        if goal is None:
+            return None
+        left = snap.time_left
+        if ours:
+            if (it["pos"] - goal).flat() <= BOMB_SITE_R:
+                return goal, "bomb: at the plant site"
+            if left is not None and left <= 0.5:
+                return goal, "bomb: sudden death"
+            if left is not None and left <= BOMB_LAST_S:
+                return goal, "bomb: the last seconds"
+        elif holder is None and left is not None and left <= BOMB_LAST_S:
+            return it["pos"], "bomb: the last seconds, take it"
+        them = [p for p in snap.players if p.team != s.team and p.team in (0, 1)]
+        if them and sum(1 for p in them if not p.alive) >= BOMB_DEAD_SHARE * len(them):
+            if ours:
+                return goal, "bomb: their defense is down"
+            if holder is None:
+                return it["pos"], "bomb: their defense is down"
+        return None
 
     def blitz_target(s, snap, c):
         """The objective a blitz goes at: straight_objective's, but in Assault and Stockpile the nearest one we may
@@ -412,7 +462,9 @@ class Director:
             # (in overtime no pause between pushes: match 214711's 15 s cool-downs and 4 s rallies there, 243-353 s,
             # each left the territory to its defenders, and the round ended on one)
             ot = s.overtime(snap)
-            if want is None or (now < getattr(s, "blitz_cool", 0.0) and not ot):
+            # (custom, Nov 23) bomb_push's pushes are never held back by the cool-down: "the last seconds" turning into
+            # "at the plant site" must go on at once
+            if want is None or (now < getattr(s, "blitz_cool", 0.0) and not ot and not want[1].startswith("bomb:")):
                 return
             team = s.blitz_team(snap)
             if len(team) < 2:
@@ -425,7 +477,8 @@ class Director:
             # goes at once (the sim, Spire phase 3: a 6 s rally of a team already together cut pickups 6 of 6 -> 3 of 6)
             # (the infected gather unless already together: from 25 u apart they came in one at a time, issue #3)
             spread = INF_SPREAD if snap.mode == "infection" else BLITZ_SPREAD
-            near = ot or (c - target).flat() < BLITZ_RALLY_D + 6.0 or max((q - c).flat() for q in pos) < spread
+            near = (ot or why.startswith("bomb:") or (c - target).flat() < BLITZ_RALLY_D + 6.0   # (bomb_push: at once)
+                    or max((q - c).flat() for q in pos) < spread)
             bz = s.blitz = dict(t0=now, target=target, rally=rally, why=why, go=now if near else None,
                                 prongs=s.blitz_prongs(rally, target))
             s.event(now, "blitz", f"blitz ({why}): {'go' if near else 'rally'}")

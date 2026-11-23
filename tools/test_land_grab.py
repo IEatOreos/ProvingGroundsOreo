@@ -156,9 +156,19 @@ class MatchRead(unittest.TestCase):
                          dict(score={0: 2, 1: 1}, limit=5, time_left=None))
 
     def test_garbage_score_dropped(self):
-        self.assertIsNone(self.sane(dict(score={0: 99999, 1: 0}, limit=5, time_left=60.0)))
+        # (custom, Nov 23) the scores go, the clock stays: a round game's clock is never lost with them
+        self.assertEqual(self.sane(dict(score={0: 99999, 1: 0}, limit=5, time_left=60.0)),
+                         dict(score={}, limit=5, time_left=60.0))
         self.assertIsNone(self.sane(dict(score={0: -900, 1: 0}, limit=-1, time_left=None)))
         self.assertIsNone(self.sane(None))
+
+    def test_a_round_games_score_in_the_upper_half(self):
+        """(custom, Nov 23) Reach One Bomb from round 2 (Launch Station 20261123-142103): team 0's round read 65536, the
+        clock 0.0; and a Slayer end 50|50 and 25|25: the upper half is the score."""
+        self.assertEqual(self.sane(dict(score={0: 65536, 1: 0}, limit=1, time_left=0.0)),
+                         dict(score={0: 1, 1: 0}, limit=1, time_left=0.0))
+        self.assertEqual(self.sane(dict(score={0: 3276850, 1: 1638425}, limit=50, time_left=340.0))["score"],
+                         {0: 50, 1: 25})
 
 
 class Plan(unittest.TestCase):
