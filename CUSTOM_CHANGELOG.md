@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Reach One Bomb / Neutral Bomb: the carrier drops the bomb to fight when shot, 2026-11-23
+
+The owner: "Make it to where they drop it when theyre shot to fight back? And keep the within 4u rule".
+
+- **The rule (`brain/bot.py` `Bot.flag_fight_check`):**
+  - The bomb's carrier now drops it at any hit taken in the last 1.5 s, and fights the man who shot him (known within 1.5 s, within 10 u).
+  - Before, he dropped it only when the damage would kill him within 1.5 s. Launch Station `20261123-142103` had 3 drops in 11 carrier deaths, most from 1.25-2.0 health to dead within one quarter-second read.
+- **Kept as they were:**
+  - **The 4 u rule:** within 4 u of the goal (on its floor, `plant_point`) he never drops it and only plants.
+  - The 6 s wait after a fight before another drop.
+  - Going back for the bomb after the fight.
+  - Two-bomb Assault, and CTF and Stockpile's rule.
+- **Checks:** three new tests in `tools/test_bomb_plant.py`:
+  - a small hit on full shields drops it, in Neutral Bomb and One Bomb;
+  - within 4 u there's no drop, and at 4.5 u there is;
+  - no hit, or nobody near to fight, means no drop.
+
+  `unittest discover` over `tools` is OK (1395 tests), and so is the `live_bots` import. **Untested in a match.**
+
 ### Reach One Bomb / Neutral Bomb: the attackers' team pushes, and the clock kept after round 1, 2026-11-23
 
 The owner: "I want the bots on attack to notice when there is 15 seconds or less on the game clock and if it hits zero they lose. But sudden death starts if youre holding the bomb when the game clock hits zero ... Also I want teams to notice when 3-4 players are dead on defense and the team director does a push order ... Or when the bomb is within 3-5u of the plant site, have everyone urgently push/fight to plant it". Then: "We dont do multi bomb so make it neutral and one bomb. and yes do 75%".

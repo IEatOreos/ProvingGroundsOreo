@@ -4342,6 +4342,19 @@ class Bot:
         lost = sum(x for t, x in getattr(s.per, "losses", []) if now - t < FLAG_FIGHT_HURT_S)
         if lost <= 0.0:
             return False
+        if snap.mode == "assault":
+            # (custom, Nov 23, the owner: "Make it to where they drop it when theyre shot to fight back? And keep the
+            # within 4u rule") the bomb's carrier drops it at any hit, not only one that would empty it: Launch Station
+            # 20261123-142103 saw 3 drops in 11 carriers' deaths, most from 1.25-2.0 to dead within a quarter-second
+            # read. Never within PLANT_HOLD_R of its goal (plant_point: there it plants, plant_hold)
+            if s.plant_point(me, snap) is not None:
+                return False
+            man = s.flag_man(now, me, snap)
+            if man is None:
+                return False
+            s.flag_fight = dict(man=man, t0=now, at=Vec(me.pos.x, me.pos.y, me.pos.z), dropped=None, back=None)
+            s.note(f"flag: dropping the bomb to fight #{man} (shot: {lost:.2f} in {FLAG_FIGHT_HURT_S:.1f} s)")
+            return True
         home = s.flag_home(me, snap)
         far = dist(me.pos, home) if home is not None else 99.0
         empty = (me.shield + me.health) / (lost / FLAG_FIGHT_HURT_S)

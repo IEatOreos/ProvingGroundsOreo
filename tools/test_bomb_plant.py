@@ -61,6 +61,26 @@ class BombFight(unittest.TestCase):
             b.flag_fight_press(NOW, me, act, b.flag_fight_phase(NOW, me, snap))
             self.assertTrue(act.cycle, variant)
 
+    def test_any_hit_drops_the_bomb(self):
+        """(custom, Nov 23, the owner: "Make it to where they drop it when theyre shot to fight back? And keep the within
+        4u rule") full shields and one small hit: it drops it and fights, in Neutral Bomb and One Bomb."""
+        for variant in ("neutral", "one"):
+            b, me, man, snap = scene(variant, lost=(0.1,), hp=(0.9, 1.0))
+            self.assertTrue(b.flag_fight_check(NOW, me, snap), variant)
+            self.assertEqual(b.flag_fight["man"], 2)
+
+    def test_any_hit_but_not_within_four_units(self):
+        b, me, man, snap = scene(at=Vec(3.5, 0, 0), man_at=Vec(6.0, 0, 0))
+        self.assertFalse(b.flag_fight_check(NOW, me, snap))
+        b, me, man, snap = scene(at=Vec(4.5, 0, 0), man_at=Vec(6.0, 0, 0), lost=(0.1,), hp=(1.0, 1.0))
+        self.assertTrue(b.flag_fight_check(NOW, me, snap))          # (4.5 u: past the plant)
+
+    def test_not_hit_or_nobody_to_fight(self):
+        b, me, man, snap = scene(lost=())
+        self.assertFalse(b.flag_fight_check(NOW, me, snap))
+        b, me, man, snap = scene(man_at=Vec(40.0, 0, 0))            # (the man beyond FLAG_FIGHT_R)
+        self.assertFalse(b.flag_fight_check(NOW, me, snap))
+
     def test_two_bombs_and_other_games_unchanged(self):
         b, me, man, snap = scene("multi")
         self.assertFalse(Bot.single_bomb(snap))
