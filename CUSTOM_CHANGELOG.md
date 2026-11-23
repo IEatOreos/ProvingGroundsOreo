@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Noble shoots any part of a Spartan's outline it sees, 2026-11-22
+The owner: "I want to make the Noble bots able to shoot at any part of the spartans model it sees. Legs, feet, head,Chest, shoulders"; "Even add like the sides tops of the heads"; "The entire outline of the spartan should be shootable".
+- **Before:** every tier judged a man by two lines, his chest (0.35 u up) and his head. A man showing only his legs under a ledge's lip, a shoulder past a corner, or the top of his helmet over a wall was not seen at all. One whose head and chest were behind cover got no shot.
+- **New `NOBLE_BODY`, `noble_body_point`:** 20 points round his outline as Noble faces him, in order: his head, its top and both sides; chest; shoulders, arms and hands on both sides; hips (middle and both sides); knees, legs and feet on both sides. Heights scale with a crouch.
+- **Seeing (`Perception.update`):** a Noble sees a man when any of these has a line, by the sight rules.
+- **Aiming (`fight`):** when neither head nor chest has a shot, the first point with one, by the bullet rules (`Terrain.point_los`), becomes `noble_point`. Its lock aims there, led by the read's age (`lead_ray`). The fire-tick snap in `think` goes to it, and `fire_gate` takes the press. Noble only; Demon and the rest unchanged.
+- **Validation:** new `tools/test_noble_body.py` (9); full suite 1325 OK. A 2-minute 4 Noble vs 4 Demon Asylum sim ran clean: the points used, by ticks, were shoulder 282, side of the head 267, top of the head 121, arm 83, hand 42, knee 20, hips 8, leg 7, hip 6, foot 4. **Untested in game.**
+
 ### Shoot on sight; reloads wait while a man is near, 2026-11-22
 From the owner's Asylum match with his friend (logs/trace_reach_forge_halo_20261122-190403): "Bots are reloading as soon as they get a kill with over more than half a mag of dmr ammo", "when an enemy peaks I want the bot to instantly shoot them at whatever body part they see no matter what", "at the 1:27 mark gravy compass stales to kill bbaventures. Then flicks over to ChlShade and losses a gunfight", "theyre reloading with ammo in the mag when people are shooting them and are on radar", "At 1:59 cactus mailbox ... when repeeking didnt shoot instanly even with a visual".
 - **1:27 (73.0-74.1 s):** GravyCompass (Mythic) had its aim on the owner's friend at 13.6 u for 1.1 s with no press. Its goal was BBAdventures, one shot from dead ("one shot" callout) and out of its line. The friend shot first and won.

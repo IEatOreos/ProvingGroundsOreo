@@ -1100,6 +1100,47 @@ def chest_solution(me, target):
     return eye(me), target.pos + Vec(0, 0, aim_height(False, crouched(target)))
 
 
+# (custom, Nov 22, the owner: "make the Noble bots able to shoot at any part of the spartans model it sees. Legs, feet,
+# head, Chest, shoulders"; "Even add like the sides tops of the heads"; "The entire outline of the spartan should be
+# shootable") the parts Noble may shoot, in its order, round his whole outline as it faces him: (name, height over his
+# feet standing, None: his head point and the offsets from it; to the side across the line to him, u). Crouched, the
+# heights shrink as his head does
+NOBLE_BODY = (("head", None, 0.0), ("top of the head", ("head", 0.07), 0.0), ("side of the head", ("head", 0.0), 0.08),
+              ("side of the head", ("head", 0.0), -0.08), ("chest", 0.35, 0.0), ("shoulder", 0.47, 0.21),
+              ("shoulder", 0.47, -0.21), ("arm", 0.36, 0.25), ("arm", 0.36, -0.25), ("hand", 0.24, 0.26),
+              ("hand", 0.24, -0.26), ("hips", 0.22, 0.0), ("hip", 0.22, 0.14), ("hip", 0.22, -0.14),
+              ("knee", 0.13, 0.1), ("knee", 0.13, -0.1), ("leg", 0.07, 0.1), ("leg", 0.07, -0.1),
+              ("foot", 0.02, 0.1), ("foot", 0.02, -0.1))
+
+
+def body_point(me, target, h, lat):
+    """A point h over target's feet and lat to the side of the line from me to him."""
+    dx, dy = target.pos.x - me.pos.x, target.pos.y - me.pos.y
+    n = math.hypot(dx, dy) or 1.0
+    return target.pos + Vec(-dy / n * lat, dx / n * lat, h)
+
+
+def noble_body_point(me, target, clear):
+    """(name, h, lat, point) of target's first part in NOBLE_BODY order that clear(eye, point) passes; None: none."""
+    k = CROUCH_HEAD / 0.62 if crouched(target) else 1.0
+    o = eye(me)
+    head = (target.head_pos.z - target.pos.z) if target.head_pos is not None else aim_height(True, crouched(target))
+    for name, h, lat in NOBLE_BODY:
+        if h is None:
+            h = head
+        elif isinstance(h, tuple):
+            h = head + h[1]                     # (off his head point: its top, its sides)
+        else:
+            h *= k
+        p = body_point(me, target, h, lat)
+        try:
+            if clear(o, p):
+                return name, h, lat, p
+        except Exception:
+            return None
+    return None
+
+
 def reach_demon_direct_fire(prof, game, me, target):
     return (game == "reach" and profiles.fixed_demon(prof)
             and (me.weapon in AUTO or me.weapon in PRECISION or me.weapon == "shotgun")
@@ -1489,6 +1530,9 @@ class Perception:
                     parts = (chest, terrain.point_los(*ray, mode=vision_mode))
                 s.target_parts[e.id] = parts
                 line = any(parts)
+                if (not line and profiles.fixed_noble(s.p) and getattr(terrain, "point_los", None) is not None
+                        and noble_body_point(me, e, lambda a_, p_: terrain.point_los(a_, p_, mode=vision_mode))):
+                    line = True       # (custom, Nov 22) Noble sees a man by any part of him that shows (NOBLE_BODY)
             elif (in_view and getattr(terrain, "point_los", None) is not None
                   and h4_demon_fire(s.p, game, me, e) and h4_rider(me, e)):
                 # (custom: Halo 4 Demon at a rider: what it can shoot is his seated head from our view, past the level
@@ -3259,6 +3303,9 @@ class Bot:
                 if (target is not None and target.alive
                         and (shot_part[1] or reach_demon_direct_fire(s.p, s.game, me, target))):
                     locked = head_solution(me, target) if shot_part[1] else chest_solution(me, target)
+                    npt = getattr(s, "noble_point", None)
+                    if npt is not None and npt[0] == shot_part[0] and npt[1] == now:
+                        locked = (eye(me), body_point(me, target, npt[2], npt[3]))   # (custom, Nov 22: Noble's part)
                     if reach_demon_direct_fire(s.p, s.game, me, target):
                         locked = lead_ray(me, target, locked, getattr(s.aim, "noble_lead", None))   # Reach Demon: one tick of lead (lead_ray); Noble: its measured one
             if locked is not None:
@@ -7777,7 +7824,17 @@ class Bot:
                 head = noble.part(getattr(s, "game", None), me.weapon, d, target.shield > 0.05, head,
                                   True if n_open else chest_clear, True if n_open else head_clear, s.rng)
             s.shot_part = (tid, head)
-            part_key = (tid, head, crouched(target))
+            s.noble_point = None
+            if (profiles.fixed_noble(s.p) and direct_fire and not h4 and not (chest_clear or head_clear)
+                    and getattr(s.T(), "point_los", None) is not None):
+                # (custom, Nov 22, the owner: "shoot at any part of the spartans model it sees") neither the head nor
+                # the chest has a shot: the first part of him that has one (NOBLE_BODY: shoulders, hips, legs, feet)
+                T = s.T()
+                bp = noble_body_point(me, target, lambda a_, p_: T.point_los(a_, p_))
+                if bp is not None:
+                    s.noble_point = (tid, now, bp[1], bp[2])
+                    s.note(f"noble: his {bp[0]} shows, on it")
+            part_key = (tid, head, crouched(target), getattr(s, "noble_point", None) is not None)
             if getattr(s.aim, "part_key", None) != part_key:
                 s.aim.flick = None
                 s.aim.part_key = part_key
@@ -7797,6 +7854,10 @@ class Bot:
             # (Reach Demon: led one tick, lead_ray; Legendary's protected head point stays as it was)
             ray = lead_ray(me, target, head_solution(me, target) if head else chest_solution(me, target),
                            getattr(s.aim, "noble_lead", None))
+            npt = getattr(s, "noble_point", None)
+            if npt is not None and npt[0] == tid and npt[1] == now:
+                ray = lead_ray(me, target, (eye(me), body_point(me, target, npt[2], npt[3])),
+                               getattr(s.aim, "noble_lead", None))     # (Noble: the part of him that shows)
         if (ray is None and s.game == "h4" and target is not None and target.vehicle not in (None, -1)
                 and me.vehicle in (None, -1)):
             # (custom: Halo 4, every tier on foot at a rider: from our real view to his real head or chest, or to his
@@ -7945,6 +8006,9 @@ class Bot:
         # behind. Grenades go on (the flush below)
         if direct_fire:
             clear = head_clear if head else chest_clear
+            npt = getattr(s, "noble_point", None)
+            if npt is not None and npt[0] == tid and npt[1] == now:
+                clear = True                       # (custom, Nov 22: Noble's line to the part that shows, fight above)
             seen_now = s.per.last_seen.get(tid) == now
             seen_fire = seen_now and clear
         else:
@@ -10371,6 +10435,9 @@ class Bot:
             s.note("no clear line: hold fire")
             return
         selected = getattr(s, "shot_part", None)
+        npt = getattr(s, "noble_point", None)
+        if npt is not None and npt[1] == now and selected is not None and selected[0] == npt[0]:
+            return          # (custom, Nov 22) Noble's shot at the part of him that shows: its line checked in fight
         target = snap.player(selected[0]) if selected is not None else None
         h4 = h4_demon_fire(s.p, s.game, me, target)
         direct_fire = h4 or reach_demon_direct_fire(s.p, s.game, me, target)
