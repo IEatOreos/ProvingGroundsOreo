@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Every-other-pass thinking in 8v8 only, 2026-11-23
+
+The owner: "Can we keep these thinking updates separate from the two modes 8v8 and 4v4?"
+
+- **`tools/live_bots.py` `think_half_on`:** the every-other-pass thinking (`THINK_HALF`, above) is on only in matches of `THINK_HALF_PLAYERS` (12) or more players, such as 8v8 and Big Team. In 4v4, and anything up to 5v5, every bot thinks every pass, as before.
+- **The route searches cut short (`Terrain.field_from`)** stay in every match: they give the same routes, only sooner.
+- **Checks:** `tools/test_think_half.py` +1 (16 and 12 players on, 8 and 10 off). `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match.**
+
 ### Bots with nothing on think every other pass, 2026-11-23
 
 The owner, on the bots thinking every pass in 8v8, fighters first: "Yes, do it".

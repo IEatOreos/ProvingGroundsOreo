@@ -26,6 +26,17 @@ def belief(age, source="eyes"):
     return SimpleNamespace(t=NOW - age, source=source)
 
 
+class BigMatchesOnly(unittest.TestCase):
+    """"Can we keep these thinking updates separate from the two modes 8v8 and 4v4?": 8v8 only."""
+
+    def test_8v8_on_4v4_off(self):
+        players = lambda n: SimpleNamespace(players=[PlayerState(i, i % 2, "p", Vec(0, 0, 0)) for i in range(n)])
+        self.assertTrue(live_bots.think_half_on(players(16)))
+        self.assertTrue(live_bots.think_half_on(players(12)))
+        self.assertFalse(live_bots.think_half_on(players(8)))
+        self.assertFalse(live_bots.think_half_on(players(10)))
+
+
 class FullRate(unittest.TestCase):
     def test_a_plain_walk_is_half(self):
         self.assertFalse(live_bots.full_rate(*scene(), NOW))

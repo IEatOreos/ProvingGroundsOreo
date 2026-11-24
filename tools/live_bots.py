@@ -101,10 +101,18 @@ def roster_pick(styles, tiers, dealt, team):
 # bot with nothing on (full_rate False) thinks every other pass, its last command standing in between (botcore applies a
 # slot's last command each game tick until the next); the rest every pass
 THINK_HALF = True
+# (custom, Nov 23, the owner: "Can we keep these thinking updates separate from the two modes 8v8 and 4v4?") only in
+# matches of this many players or more (8v8, Big Team): 4v4 thinks every pass as before
+THINK_HALF_PLAYERS = 12
 THINK_KNOWN_S = 3.0      # s: an enemy seen or on radar this lately keeps a bot at full rate (an angle held, a corner)
 THINK_HURT_S = 2.0       # s: ... as does damage taken this lately
 HALF_NOTES = ("edge", "jump", "step", "lift", "cannon", "unstuck", "wall", "drop", "ledge", "corner", "grenade")
 FULL_ROLES = ("drive", "ride", "board", "ferry", "driver_wait")
+
+
+def think_half_on(snap):
+    """Is THINK_HALF on for this match: THINK_HALF_PLAYERS or more players in it (8v8; 4v4 never)."""
+    return THINK_HALF and len(getattr(snap, "players", ()) or ()) >= THINK_HALF_PLAYERS
 
 
 def full_rate(b, me, now):
@@ -1522,13 +1530,14 @@ def main():
                 last_think = now
                 passes += 1
                 nade_presses = []
+                half = think_half_on(snap)                     # (custom, Nov 23: 8v8 only, think_half_on)
                 for index, b in think_order(bots, passes):    # (the teams interleaved, the first swapping)
                     me = snap.player(index)
                     if not me or not me.alive:
                         continue
                     # (custom, Nov 23) a bot with nothing on thinks every other pass, half of them each pass: its last
                     # command stands (THINK_HALF, full_rate)
-                    if (THINK_HALF and index in think_last and index not in think_sat and (passes + index) % 2
+                    if (half and index in think_last and index not in think_sat and (passes + index) % 2
                             and now - think_last[index] < 2 * MAX_DT and not full_rate(b, me, now)):
                         think_sat.add(index)
                         continue
