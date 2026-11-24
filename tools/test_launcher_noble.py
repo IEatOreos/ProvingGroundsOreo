@@ -329,15 +329,22 @@ class Terms(unittest.TestCase):
         self.assertIn('Filename: "{app}\\user\\terms.ini"; Section: "terms"; Key: "accepted"; '
                       'String: "{#TermsVersion}"; Check: not WizardSilent', iss)
 
-    def test_release_build_refuses_the_draft(self):
+    def test_release_build_ships_no_draft(self):
+        # (custom, Nov 24) the owner: "No terms this release": a draft is not built in, and nobody is asked
         import build_installer
         self.assertEqual(build_installer.TERMS_DRAFT_MARK, launcher.TERMS_DRAFT_MARK)
         root = os.path.dirname(self.terms)
         with mock.patch.object(build_installer, "ROOT", root), mock.patch("builtins.print"):
             self.write(read(os.path.join("..", "TERMS.md")))
-            with self.assertRaises(SystemExit) as stop:
-                build_installer.terms_check()
-            self.assertIn("draft", str(stop.exception))
+            self.assertIsNone(build_installer.terms_check())
+            with open(os.path.join(root, "NOTICE.md"), "w", encoding="utf-8") as f:
+                f.write("NOTICE")
+            with open(os.path.join(root, "LICENSE.md"), "w", encoding="utf-8") as f:
+                f.write("LICENSE")
+            with mock.patch.object(build_installer, "BUILD", root):
+                build_installer.stage_texts(with_terms=False)
+            with open(os.path.join(root, "license.txt"), encoding="utf-8") as f:
+                self.assertTrue(f.read().startswith("NOTICE"))               # (no draft on the license page)
             os.remove(self.terms)
             self.assertRaises(SystemExit, build_installer.terms_check)
             self.write(FINAL_TERMS)

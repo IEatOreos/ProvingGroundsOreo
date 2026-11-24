@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### The release ships without terms while TERMS.md is a draft, 2026-11-24
+
+The owner, asked how the first 1.0 release treats the draft terms (sections 4 and 8 still to decide): "No terms this release".
+
+- `tools/build_installer.py terms_check` returns no version for a draft (its "OWNER TO DECIDE" notes) instead of refusing to build. The draft `TERMS.md` is taken out of the Setup's payload, the license page is the notices and the license only (as before), and `TermsVersion` is 0.
+- A missing TERMS.md still stops the build. Finished terms (no notes, a `Version` line) go in as built in #70: first on the license page, recorded as accepted.
+- The launcher already never asks for a draft, and a copy without TERMS.md has nothing to ask.
+- **Checks:** `tools/test_launcher_noble.py` 29 OK (the draft test now checks the build goes on without terms).
+
 ### Halo: Reach Classic Firefight: up to 7 bot teammates join the match, 2026-11-24
 
 Upstream 0.3.0's note #13 (build 20261114-0323, his GitHub #28), the brain's half; the panel's is the entry below. The owner: "Reach Firefight, 7 bot teammates: port his 0.2.2 Firefight-bots system too (bigger job; it needs its own overlap check before building, reported to the owner)".

@@ -228,8 +228,9 @@ TERMS_DRAFT_MARK = "OWNER TO DECIDE"           # (custom, Nov 24) the draft's no
 
 
 def terms_check():
-    """(custom, Nov 24) Project Noble's TERMS.md, its version (the installer records it as accepted): no release with
-    the draft (its OWNER TO DECIDE notes), none without the terms."""
+    """(custom, Nov 24) Project Noble's TERMS.md, its version (the installer records it as accepted), or None for the
+    draft (its OWNER TO DECIDE notes): the owner, for the first 1.0 release, "No terms this release", so a draft is
+    left out of the Setup and nobody is asked (the launcher asks only for finished terms). None without TERMS.md stops."""
     step("the terms of use (TERMS.md)")
     try:
         with open(os.path.join(ROOT, "TERMS.md"), encoding="utf-8") as f:
@@ -237,8 +238,9 @@ def terms_check():
     except OSError:
         raise SystemExit("TERMS.md is missing: not building")
     if TERMS_DRAFT_MARK in text:
-        raise SystemExit(f"TERMS.md is still a draft (it has \"{TERMS_DRAFT_MARK}\" notes): the owner finishes it first. "
-                         "Not building")
+        print(f"   still a draft (\"{TERMS_DRAFT_MARK}\" notes): this release ships WITHOUT terms (not in the Setup, "
+              "not asked)", flush=True)
+        return None
     import re
     m = re.search(r"^Version (\S+?)\.", text, re.M)
     if not m:
@@ -247,11 +249,12 @@ def terms_check():
     return m.group(1)
 
 
-def stage_texts():
+def stage_texts(with_terms=True):
     """Plain-text copies of the terms, the notices and the license for the installer's license page. (upstream 0.3.0)
-    The terms come first: that page's I accept is the player's agreement to them."""
+    The terms come first: that page's I accept is the player's agreement to them. (custom, Nov 24) Without terms (a
+    draft): the notices and the license only, as before 1.0."""
     parts = []
-    for name in ("TERMS.md", "NOTICE.md", "LICENSE.md"):
+    for name in (("TERMS.md",) if with_terms else ()) + ("NOTICE.md", "LICENSE.md"):
         with open(os.path.join(ROOT, name), encoding="utf-8") as src:
             parts.append(src.read())
     with open(os.path.join(BUILD, "license.txt"), "w", encoding="utf-8") as f:
@@ -262,7 +265,7 @@ def compile_setup(ver, terms_version):
     step("Setup.exe (Inno Setup)")
     exe = iscc() or sys.exit("Inno Setup 6 was not found (winget install JRSoftware.InnoSetup)")
     r = subprocess.run([exe, f"/DAppVersion={ver}", f"/DPayload={PAYLOAD}", f"/DBuildDir={BUILD}",
-                        f"/DTermsVersion={terms_version}",
+                        f"/DTermsVersion={terms_version or '0'}",
                         os.path.join(ROOT, "installer", "ProjectProvingGrounds.iss")], capture_output=True, text=True,
                        errors="replace")
     if r.returncode:
@@ -288,12 +291,14 @@ def main():
             shutil.rmtree(PAYLOAD)
         os.makedirs(PAYLOAD)
         stage_project()
+        if terms_version is None and os.path.exists(os.path.join(PAYLOAD, "TERMS.md")):
+            os.remove(os.path.join(PAYLOAD, "TERMS.md"))     # (custom, Nov 24) a draft never ships
         stamp_version(ver)
         stage_native()
         stage_map_tools()
         stage_python()
         privacy_scan()
-        stage_texts()
+        stage_texts(with_terms=terms_version is not None)
         compile_setup(ver, terms_version)
     finally:
         git("worktree", "remove", "--force", SRC, out=False)
