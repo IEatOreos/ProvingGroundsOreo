@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### The privacy scan's own notes no longer name this PC's user, 2026-11-24
+
+- The 1.0 build's privacy scan stopped on `tools/privacy.py`: its explanation of the whole-word rule used this PC's user name as the example (copied from `tools/build_installer.py`, where the same example was already public). Both now say it in general terms, so no shipped file and no new commit carries the name.
+- **Checks:** `test_lidar_share` OK; both files parse.
+
 ### The threads test skips without the map pack (the release build's test gate), 2026-11-24
 
 - `tools/test_threads.py` (Nov 23) skipped only when Hang 'Em High's folder was missing. The release build tests a `git archive` copy, which has the folder but not its git-ignored `heightmap.npz`, so the 1.0 build stopped there. It now skips unless the heightmap is there, like the other map tests.

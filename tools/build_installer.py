@@ -201,7 +201,7 @@ def stage_python():
 def privacy_scan():
     step("privacy scan")
     # (custom, Nov 24) the terms and the check live in tools/privacy.py (shared with lidar_share.py), unchanged:
-    # this PC's user name as a whole word only ("marsh" is not Reach's "Field Marshal" armor); paths and the
+    # this PC's user name as a whole word only (a name inside a longer word, like an armor's name, is not a hit); paths and the
     # .private_terms anywhere
     sys.path.insert(0, HERE)
     import privacy
