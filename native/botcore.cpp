@@ -324,7 +324,9 @@ static DWORD g_brain_due;            // match started: start the brain when the 
 static void ini_path(wchar_t* out) { swprintf_s(out, MAX_PATH, L"%sbotcore.ini", g_dir); }
 
 hb_roster g_roster;                  // the BOTS panel's list: exactly the bots of the next match (bots_panel.h)
-hb_roster g_ff_roster;               // Firefight's list: up to 3 bots, all on your team (botcore.ini ffbot=)
+hb_roster g_ff_roster;               // Reach Firefight's list: up to 7 bots, all on your team (botcore.ini ffbot=)
+hb_roster g_od_roster;               // ODST Firefight's: up to 3 bots, all on your team (odbot=; upstream 0.3.0's split)
+static const int FF_REACH_BOTS = 7, FF_ODST_BOTS = 3;   // (bots_panel.cpp ff_bots: Reach 8 players, ODST 4)
 uint32_t g_prejoin = 1;              // H2A, Halo 4: a match's first tick waits for the bots (native/h4f.cpp f_prejoin; botcore.ini prejoin=0: off)
 uint32_t g_collector = 0;            // the brain records the player for the Observer (collector=; tools/collector.py)
 uint32_t g_scale_games = 5;         // Scaling difficulty: the player's last games averaged (scale_games=)
@@ -384,6 +386,7 @@ void save_settings() {
     fprintf(f, "pglink=%u\n", g_pglink);                                // (custom, Nov 18: Project Noble for a friend)
     roster_write(f, g_roster);
     roster_write(f, g_ff_roster, "ff");
+    roster_write(f, g_od_roster, "od");                                 // (upstream 0.3.0: ODST's own list)
     fclose(f);
     bot_pool_save();                                                      // (its queue position moves as bots are named)
 }
@@ -392,19 +395,20 @@ void save_settings() {
 // next pool bots on its own thread, the one the panel edits the list on
 volatile LONG g_pool_due = 0;
 
-// Firefight's own list (4 players: you and 3 bots, all on your team), first made from the list's first 3: the 16-player
-// list is never cut to fit Firefight
-static void ff_seed() {
-    g_ff_roster.n = 0; g_ff_roster.teams = 1;
-    for (int i = 0; i < g_roster.n && g_ff_roster.n < 3; i++) { g_ff_roster.bot[g_ff_roster.n] = g_roster.bot[i]; g_ff_roster.bot[g_ff_roster.n++].team = 0; }
+// Firefight's own lists, all on your team, first made from the 16-player list's first 3 (never cut to fit Firefight):
+// Reach's (8 players: you and up to 7 bots, ffbot=) and ODST's (4 players: you and 3, odbot=). (upstream 0.3.0, builds
+// 20261108-0230 and 20261114-0323: it was the one list, Reach's too, until his split; an old list seeds ODST's)
+static void ff_seed(hb_roster& r) {
+    r.n = 0; r.teams = 1;
+    for (int i = 0; i < g_roster.n && r.n < 3; i++) { r.bot[r.n] = g_roster.bot[i]; r.bot[r.n++].team = 0; }
 }
 
 static void load_settings() {
     g_shm->bots_enabled = 1; g_shm->red_players = 4; g_shm->blue_players = 4; g_shm->difficulty = 4;
     g_shm->lidar_mode = 0; g_shm->lidar_players = HB_MAX_PLAYERS;
     g_roster.n = 0; g_roster.teams = 2;
-    g_ff_roster.n = 0;
-    bool listed = false, ff_listed = false;                 // written by a build with the bot list (Firefight's)
+    g_ff_roster.n = 0; g_od_roster.n = 0;
+    bool listed = false, ff_listed = false, od_listed = false;   // written by a build with the bot list (Firefight's)
     wchar_t p[MAX_PATH]; ini_path(p);
     FILE* f = _wfopen(p, L"r");
     if (f) {
@@ -413,7 +417,9 @@ static void load_settings() {
             unsigned v;
             if (!strncmp(line, "roster=", 7)) listed = true;
             if (!strncmp(line, "ffroster=", 9)) { ff_listed = true; continue; }
-            if (!strncmp(line, "ffbot=", 6)) { if (g_ff_roster.n < 3) roster_parse_line(line + 2, g_ff_roster); continue; }
+            if (!strncmp(line, "ffbot=", 6)) { if (g_ff_roster.n < FF_REACH_BOTS) roster_parse_line(line + 2, g_ff_roster); continue; }
+            if (!strncmp(line, "odroster=", 9)) { od_listed = true; continue; }
+            if (!strncmp(line, "odbot=", 6)) { if (g_od_roster.n < FF_ODST_BOTS) roster_parse_line(line + 2, g_od_roster); continue; }
             if (roster_parse_line(line, g_roster)) continue;
             if (sscanf_s(line, "enabled=%u", &v) == 1) g_shm->bots_enabled = v != 0;
             else if (sscanf_s(line, "red=%u", &v) == 1) g_shm->red_players = v > 8 ? 8 : v;
@@ -445,13 +451,19 @@ static void load_settings() {
                     int tier = roster_difficulty_tier(g_shm->difficulty, g_roster.n);
                     roster_add(g_roster, t, tier, HB_STYLE_ANY, s += 7919);
                 }
-        ff_seed(); ff_listed = true;
+        ff_seed(g_ff_roster); ff_seed(g_od_roster); ff_listed = od_listed = true;
         save_settings();
         logf("bot list made from the old team sizes: %d red, %d blue", red, blue);
     }
-    if (!ff_listed) ff_seed();
+    if (!ff_listed) ff_seed(g_ff_roster);
+    if (!od_listed) {                                       // (from the one Firefight list of before: its first 3)
+        g_od_roster.n = 0;
+        for (int i = 0; i < g_ff_roster.n && g_od_roster.n < FF_ODST_BOTS; i++) g_od_roster.bot[g_od_roster.n++] = g_ff_roster.bot[i];
+    }
     for (int i = 0; i < g_ff_roster.n; i++) g_ff_roster.bot[i].team = 0;
     g_ff_roster.teams = 1;
+    for (int i = 0; i < g_od_roster.n; i++) g_od_roster.bot[i].team = 0;
+    g_od_roster.teams = 1;
     // a list saved on Scaling before it was a bot's own difficulty (s149 and before kept Mixed's on the bots): Scaling
     // for every bot, once, so the list shows what plays
     bool scaled = false;

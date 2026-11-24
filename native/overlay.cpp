@@ -22,7 +22,7 @@
 
 extern hb_shared* g_shm;
 extern hb_roster g_roster;           // botcore.cpp: the BOTS panel's list
-extern hb_roster g_ff_roster;        // botcore.cpp: Firefight's list (3 bots, your team)
+extern hb_roster g_ff_roster, g_od_roster;   // botcore.cpp: Firefight's lists (Reach: up to 7 bots; ODST: 3), yours
 extern uint32_t g_collector;         // botcore.cpp: the brain records the player (Data collector)
 extern uint32_t g_scale_games;       // botcore.cpp: Scaling difficulty's games averaged
 extern uint32_t g_sounds;            // botcore.cpp: the BOTS panel's sound volume, 0-100 (0 off)
@@ -76,9 +76,9 @@ static createfile_fn o_createfile;
 static volatile LONG g_session;      // title of the last custom game lobby opened: 1 CE, 2 Halo 2
                                      // Classic, 3 Halo 3, 5 Reach, 6 H2A, 7 H4, 8 ODST (the titles with bots), 4 any other, 0 none
 static volatile DWORD g_lobby_gfx_at;
-static volatile LONG g_ff_lobby;     // the lobby last opened is Firefight's (FirefightCustomGame.gfx): it holds 4 players
+static volatile LONG g_ff_lobby;     // the lobby last opened is Firefight's (FirefightCustomGame.gfx): Reach's 8 players, ODST's 4
 static bool bots_title(LONG t) { return t >= 1 && t <= 8 && t != 4; }
-extern int hb_panel_firefight;   // (bots_panel.cpp: the roster's cap, 3 bots in Firefight)
+extern int hb_panel_firefight;   // (bots_panel.cpp: the roster's cap, Firefight's 7 bots in Reach, 3 in ODST)
 static const wchar_t* wcsistr(const wchar_t* s, const wchar_t* f) {   // (MCC opens some screens in lower case)
     for (; *s; s++) {
         const wchar_t *a = s, *b = f;
@@ -125,6 +125,10 @@ static HANDLE WINAPI h_createfile(LPCWSTR name, DWORD a, DWORD s, LPSECURITY_ATT
 }
 
 int mcc_lobby_title() { return (int)g_session; }   // (custom, Nov 16) the last lobby's title (lobby_test.cpp)
+// (upstream 0.3.0, build 20261114-0323) the Firefight lobby's own list: ODST's (title 8), else Reach's (bots_panel.cpp
+// decides its cap the same way); session_watch.cpp reads it too
+hb_roster& hb_ff_list() { return g_session == 8 ? g_od_roster : g_ff_roster; }
+static int ff_players() { return g_session == 8 ? 4 : 8; }   // (you included)
 
 int mcc_menu_state() {               // 0 menus, 1 in a game, -1 unknown (used by botcore.cpp)
     __try { return g_exe ? g_exe[0x4000B8C + 0x11] : -1; }
@@ -462,7 +466,7 @@ static void draw_tile(float t) {
     else if (g_shm->bots_enabled)
     {
         // the list in a few words: 7v8 Legendary, 12 bots Mixed (more than two teams), No bots
-        const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;   // (Firefight: its own list of 3)
+        const hb_roster& R = g_ff_lobby ? hb_ff_list() : g_roster;   // (Firefight: its own list)
         int teams = 0, tier = -1, n = R.n;
         for (int t = 0; t < HB_TEAMS_MAX; t++) teams += roster_on_team(R, t) > 0;
         for (int i = 0; i < n; i++) tier = tier < 0 || tier == R.bot[i].tier ? R.bot[i].tier : HB_TIERS;
@@ -590,7 +594,7 @@ static int g_menu_frame = -1;          // the frame it opened on: that click is 
 static bool bot_ui() { return g_bot_menu >= 0 || g_bot_card; }
 static void draw_session(float t) {
     if (!g_shm || !g_shm->bots_enabled || g_shm->lidar_mode || g_sess_x1 <= 0) return;
-    const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;
+    const hb_roster& R = g_ff_lobby ? hb_ff_list() : g_roster;
     if (!R.n) return;
     g_sess_hover = -1;
     ImVec2 mouse = ImGui::GetIO().MousePos;
@@ -608,7 +612,7 @@ static void draw_session(float t) {
     ImVec4 hr = to_ui(mcc_session_header(bb.y, x1));
     float s = (hr.w - hr.y) / 36.0f;                           // px per 1080 unit (the header bar: 36 units)
     char cnt[16];
-    sprintf_s(cnt, "%d/%d", R.n + 1, g_ff_lobby ? 4 : 16);
+    sprintf_s(cnt, "%d/%d", R.n + 1, g_ff_lobby ? ff_players() : 16);   // (Nov 24: Reach Firefight /8, ODST /4)
     float cs = 19.0f * s;
     ImVec2 ct = g_font_label->CalcTextSizeA(cs, 1e9f, 0, cnt);
     dl->AddText(g_font_label, cs, ImVec2(hr.z - ct.x - 12 * s, (hr.y + hr.w - ct.y) * 0.5f), IM_COL32(205, 222, 235, 235), cnt);
@@ -777,7 +781,7 @@ static void play_sound(int kind, uint32_t volume) {
 static void panel_env(bots_panel_env& e) {
     e.make_texture = make_texture;
     e.render_model = render_model; e.model_has = model_has; e.model_zoom = mv_set_zoom; e.model_head = mv_head; e.model_headroom = mv_set_headroom;
-    e.roster = g_ff_lobby ? &g_ff_roster : &g_roster;     // (Firefight: its own list of 3; the 16-player list is kept)
+    e.roster = g_ff_lobby ? &hb_ff_list() : &g_roster;    // (Firefight: its own list; the 16-player list is kept)
     e.enabled = &g_shm->bots_enabled; e.difficulty = &g_shm->difficulty;
     e.lidar_mode = &g_shm->lidar_mode; e.lidar_players = &g_shm->lidar_players;
     e.collector = &g_collector;

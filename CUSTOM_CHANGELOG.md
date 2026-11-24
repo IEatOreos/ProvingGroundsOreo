@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Halo: Reach Classic Firefight: the BOTS panel takes up to 7 bot teammates; ODST keeps its 3 on a list of its own, 2026-11-24
+
+Upstream 0.3.0's note #13 (build 20261114-0323, his GitHub #28), with the list split of his 0.2.2 Firefight-bots system (build 20261108-0230). The owner: "Reach Firefight, 7 bot teammates: port his 0.2.2 Firefight-bots system too (bigger job; it needs its own overlap check before building, reported to the owner)". This is the panel and list half; the brain's half (botctl, play.py) is the next entry. His Spartan/Elite teams, Generator Defense and Covenant ranks are not taken here (overlap report to the owner).
+
+- `native/bots_panel.cpp`: `roster_cap()` in a Firefight lobby is `ff_bots()`: 7 in Reach's (8 players with you, MCC's custom Firefight since July 2023), 3 in ODST's (4 players, as before: more crashed ODST, Oct 25). The panel tells them apart by the lobby's title (`e.title == 8` ODST, else Reach; his rule was `title == 5`, ours sends any non-ODST Firefight lobby to Reach's list so the list and its cap always agree). The "Firefight holds N players", "Choose up to N bots" and "N of M bots" lines follow the cap; a list longer than the cap is cut on open (it never is: botcore reads at most the cap).
+- Ours kept: every bot on your team in both Firefights (his Reach panel has a Spartan team and an Elite team, `FF_SIDE`, `side_name`; not taken, their Elite brain is not ported); Bot Matchmaking, the bot card, the difficulty picker, the pool and team points still skip Firefight as before.
+- `native/botcore.cpp` (his split): Reach's list `g_ff_roster` (`ffbot=`, up to 7) and ODST's own `g_od_roster` (`odroster=` / `odbot=`, up to 3). A botcore.ini from before the split seeds ODST's from the first 3 of the one Firefight list, so nobody's ODST bots change; both lists stay one team (yours).
+- `native/overlay.cpp`: `hb_ff_list()` gives the Firefight lobby's list (ODST's in an ODST lobby, else Reach's) to the BOTS tile's summary, the panel and our lobby rows; our lobby rows' count reads /8 in Reach Firefight, /4 in ODST (was /4). `native/session_watch.cpp` (our MCC session list test, `sessionbots=`) takes the same list.
+- **Checks:** built `botcore_up030c.dll` (no new warnings); the next entry's `tools/test_firefight_bots.py` checks the native caps agree with botctl and that the ODST list is written. **Untested in game:** Reach Classic Firefight with 4-7 bots joining and respawning, the panel in an ODST lobby, an old botcore.ini's lists after the split.
+
 ### Halo: Reach third person: a smaller reticle, only while third person is on, 2026-11-24
 
 Upstream 0.3.0's note #65 (build 20261117-2300). The owner: "smaller reticle: with #53, Reach only, only while third person is on".

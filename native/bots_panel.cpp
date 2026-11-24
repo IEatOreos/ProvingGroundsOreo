@@ -34,8 +34,15 @@
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_internal.h"             // (SetKeyOwner: the 3D view keeps its arrow keys)
 
-int hb_panel_firefight = 0;      // overlay.cpp: the lobby open is Firefight's (it holds 4 players: you and 3 bots)
-static int roster_cap() { return hb_panel_firefight ? 3 : HB_ROSTER_MAX; }
+// overlay.cpp: the lobby open is Firefight's; bots_panel sets which by the lobby's title: 2 Reach's, 1 ODST's.
+// (upstream 0.3.0, build 20261114-0323, GitHub #28: Classic Firefight takes up to 7 bot teammates) Reach's custom
+// Firefight holds 8 players since MCC's July 2023 update: you and up to 7 bots. (custom, Nov 24) all on your team, as
+// before: his Spartan and Elite teams (Versus) are not taken, their brain is not ported; ODST keeps 4 players (you and
+// 3 bots: more crashed ODST, Oct 25)
+int hb_panel_firefight = 0;
+static const int FF_REACH_BOTS = 7, FF_ODST_BOTS = 3;
+static int ff_bots() { return hb_panel_firefight == 2 ? FF_REACH_BOTS : FF_ODST_BOTS; }   // (Firefight: its bots at most)
+static int roster_cap() { return hb_panel_firefight ? ff_bots() : HB_ROSTER_MAX; }
 
 // ------------------------------------------------------------------ tables
 static const char* TEAM_NAME[HB_TEAMS_MAX] = { "Red", "Blue", "Green", "Orange", "Purple", "Gold", "Brown", "Pink" };
@@ -2614,8 +2621,10 @@ static void inspector(bots_panel_env& e, bool& changed) {
         if (hb_panel_firefight) {                            // (Firefight: one team, yours)
             muted("Pick a bot to change its difficulty or play style. Names, clan tags and armor are in Settings.");
             ImGui::Dummy(ImVec2(0, px(12)));
-            muted("Firefight holds 4 players: you and up to 3 bots, all on your team. "
-                  "Right-click a bot for more; Del removes the picked one.");
+            char ffl[160];                                   // (Reach: 8 players, 7 bots; ODST: 4, 3)
+            sprintf_s(ffl, "Firefight holds %d players: you and up to %d bots, all on your team. "
+                      "Right-click a bot for more; Del removes the picked one.", ff_bots() + 1, ff_bots());
+            muted(ffl);
             return;
         }
         muted("Pick a bot to change its team, difficulty or play style. Names, clan tags and armor are in Settings.");
@@ -5035,6 +5044,9 @@ bool bots_panel(bots_panel_env& e) {
     g_make_texture = e.make_texture;
     g_env = &e;
     hb_roster& r = *e.roster;
+    if (hb_panel_firefight)                                  // (upstream 0.3.0, 20261114-0323) the lobby's title decides
+        hb_panel_firefight = e.title == 8 ? 1 : 2;           // the Firefight: ODST's (3 bots), else Reach's (7)
+    if (hb_panel_firefight && r.n > roster_cap()) r.n = roster_cap();
     if (hb_panel_firefight) { r.teams = 1; for (int i = 0; i < r.n; i++) r.bot[i].team = 0; }   // (Firefight: yours)
     else if (r.teams < 2) r.teams = 2;
     if (r.teams > HB_TEAMS_MAX) r.teams = HB_TEAMS_MAX;
@@ -5234,8 +5246,9 @@ bool bots_panel(bots_panel_env& e) {
         dl->AddText(ImVec2(body0.x + (grid_w - ts.x) * 0.5f, body0.y + body_h * 0.36f), TEXT, t1);
         pop();
         push(BODY);
-        const char* t2 = hb_panel_firefight ? "Choose up to 3 bots for your team, and how hard they play."
-                                            : "Choose how many teams and bots, and how hard they play.";
+        char ff2[96];
+        sprintf_s(ff2, "Choose up to %d bots for your team, and how hard they play.", ff_bots());
+        const char* t2 = hb_panel_firefight ? ff2 : "Choose how many teams and bots, and how hard they play.";
         ImVec2 t2s = ImGui::CalcTextSize(t2);
         dl->AddText(ImVec2(body0.x + (grid_w - t2s.x) * 0.5f, body0.y + body_h * 0.36f + px(48)), TEXT2, t2);
         pop();
@@ -5294,7 +5307,7 @@ bool bots_panel(bots_panel_env& e) {
         scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
     ImGui::EndDisabled();
     char lim[96];
-    if (hb_panel_firefight) sprintf_s(lim, "%d of 3 bots. Firefight holds 4 players.", r.n);
+    if (hb_panel_firefight) sprintf_s(lim, "%d of %d bots. Firefight holds %d players.", r.n, ff_bots(), ff_bots() + 1);
     else sprintf_s(lim, "%d of %d bots. The game holds 16 players.", r.n, HB_ROSTER_MAX);
     push(SMALL);
     float lw2 = ImGui::CalcTextSize(lim).x;
