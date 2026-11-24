@@ -717,6 +717,14 @@ REGROUP_MATE = 8.0                  # a teammate this close is support (brain/tr
 HUNT_R = 12.0                       # an Invasion defender sent at the carrier / a territory being taken strays no farther
 # (upstream 0.3.0, build 20261112-2117) games whose objectives are taken on a press of Use (Bot.take taps it), s a beat
 TAKE_TAP, TAKE_TAP_S = ("h2",), 0.3
+# (upstream 0.3.0, build 20261112-1507) Bot.walk_fire: on foot, a gun in hand, on its way somewhere else (the objective,
+# a gun, a hunt), it shoots a man in view within WALK_FIRE_CONE of the way it walks and in its gun's reach (or hurting
+# it) and walks on, as a person runs at the flag shooting the man in front of him. His live Sandtrap 20261112-135123: on
+# those goals bots had a man within 6 u in front with no aim on anyone 62 s, 26 first hits on foot with a gun never
+# answered (only watched). (custom, Nov 24, the owner: "Easy to Legendary only; Demon, Noble and Mythic keep only our
+# rule") never for profiles.demon_rules (Demon, Noble, Mythic): on_way_target stays theirs. The walk to a vehicle seat
+# keeps ours, vehicle_way_target (every tier)
+WALK_FIRE, WALK_FIRE_CONE = True, math.radians(60)
 # (custom, Nov 10) CTF: the emblem over the man carrying our flag (Halo 4 shows it to everyone): every bot knows where
 # he is, as an exact "marker" belief, never a sighting (no shot or recognition through walls), when he is within
 # MARKER_R u or its job is him (hunter, cutoff; Perception.update). A cut-off (director.intercepts) keeps within CUT_R
@@ -4124,7 +4132,12 @@ class Bot:
                 look = s.walk_cone(me, look, act.yaw + math.atan2(act.strafe, act.forward))
             # (the quick turn also when it is told to walk but slowed by the turn rule below: under 1 u/s it never came)
             s.aim.quick_ok = (me.vel.flat() > 1.0 or walking) and not s.per.pending
-            act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
+            # (upstream 0.3.0, build 20261112-1507) a man to shoot on the way (walk_fire; Easy to Legendary, never
+            # profiles.demon_rules): its aim is the fight's, one aim step a tick (a second one, the look's first,
+            # spoilt the swing's timing: his test_fluidity_fixes 9)
+            shoot = gate is None and s.walk_target(now, me, act) is not None
+            if not shoot:
+                act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
             pre = kind != "retreat" and s.prenade(now, dt, me, snap, act)   # (custom, Nov 13: Legendary, Blind,
                                                                              # Demon; its view and feet while on)
             arr = getattr(s, "arrive", None)       # Heroic and up: a grenade onto a landing he is 0.8-2.5 s from (a lift
@@ -4142,10 +4155,13 @@ class Bot:
             # (75 degrees before: walking 60+ degrees off the view 16% of the time to the player's 9%, live Spire)
             if (off > math.radians(60) and not s.notes and now >= getattr(s, "exact_until", 0.0) and gate is None
                     and glance is None   # (a Demon's glance at a dot: it runs on at full speed, dot_glance)
-                    and not (s.att and s.att[0] == "radar")):   # (and its watch on a radar threat: on its way at full
-                                                                 # speed, its aim held on his corner: radar_threat)
+                    and not (s.att and s.att[0] == "radar")   # (and its watch on a radar threat: on its way at full
+                                                               # speed, its aim held on his corner: radar_threat)
+                    and not shoot):                            # (shooting on the way: walks on at full speed)
                 act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
-            if kind == "hold":
+            # a man in front: shot on the way (upstream 0.3.0; not over a pre-nade's throw, which keeps its view)
+            fired = shoot and not pre and s.walk_fire(now, dt, me, snap, act, nav)
+            if kind == "hold" and not fired:
                 act.crouch = s.p.crouchy > 0.5 and dist(me.pos, point) < 1.5
             if (kind == "objective" and snap.mode != "slayer" and s.p.tactics > 0.15 and now >= s.grenade_ready_at
                     and not pre and not me.has_flag and me.weapon not in LUNGE   # (a Flood: 15 throws into its run, live Adrift)
@@ -8046,6 +8062,53 @@ class Bot:
             if best is None or score > best[1]:
                 best = (it["pos"], score)
         return best
+
+    def walk_target(s, now, me, act):
+        """(upstream 0.3.0, build 20261112-1507) WALK_FIRE: the man to shoot on the way (the nearest in view within
+        WALK_FIRE_CONE of the walk and in the gun's reach, max(its band's far end, CLOSE_FIGHT_R), or the man hurting it
+        now at any range), None for none. Not carrying (no gun), not in a seat, not with a sword or hammer (that is a run
+        at him), not a man last seen over 0.3 s ago or behind glass (fight goes round for those, and that walk is not
+        this one). (custom, Nov 24) Never Demon, Noble or Mythic (profiles.demon_rules: on_way_target is theirs), nor
+        with every gun dry (as vehicle_way_target)."""
+        if (not WALK_FIRE or profiles.demon_rules(s.p) or me.has_flag or me.vehicle not in (None, -1)
+                or me.weapon in LUNGE or me.weapon in (None, "", "none") or s.dry(me)):
+            return None
+        heading = act.yaw + math.atan2(act.strafe, act.forward) if math.hypot(act.forward, act.strafe) > 0.3 else act.yaw
+        reach = max(WEAPON_RANGE.get(me.weapon, (5.0, 25.0))[1], CLOSE_FIGHT_R)
+        hurt = getattr(s.per, "attacker_id", None) if now - getattr(s.per, "attacker_t", -9.0) < 1.5 else None
+        glass = getattr(s, "glassed", {})
+        best = None
+        for k in s.per.visible_enemies():
+            b = s.per.beliefs.get(k)
+            if b is None:
+                continue
+            d = dist(me.pos, b.pos)
+            if (now - s.per.last_seen.get(k, -9.0) > 0.3 or k in glass
+                    or abs(wrap(angles_to(me.pos, b.pos)[0] - heading)) > WALK_FIRE_CONE or (d > reach and k != hurt)):
+                continue
+            if best is None or d < best[0]:
+                best = (d, k)
+        return best[1] if best else None
+
+    def walk_fire(s, now, dt, me, snap, act, nav):
+        """(upstream 0.3.0, build 20261112-1507) WALK_FIRE: aim and fire at walk_target as a fight does (fight: its aim,
+        trigger, grenade and melee) and keep the walk it was on (the same way over the ground, whatever way it now faces;
+        no crouch, no sprint while firing). The fight's own state (engaged_since: its strafe, grenade and press draws)
+        carries over while it stays on one man."""
+        tid = s.walk_target(now, me, act)
+        if tid is None:
+            s.walk_fire_on = None
+            return False
+        c, sn = math.cos(act.yaw), math.sin(act.yaw)
+        mx, my = c * act.forward - sn * act.strafe, sn * act.forward + c * act.strafe      # (strafe + = left)
+        on = getattr(s, "walk_fire_on", None)
+        s.engaged_since = on[1] if on is not None and on[0] == tid and now - on[2] < 0.5 else None
+        s.fight(now, dt, me, snap, tid, act, nav)
+        s.walk_fire_on = (tid, s.engaged_since, now)
+        c, sn = math.cos(act.yaw), math.sin(act.yaw)
+        act.forward, act.strafe = c * mx + sn * my, -sn * mx + c * my
+        act.crouch = act.sprint = False
+        return True
 
     def fight(s, now, dt, me, snap, tid, act, nav):
         b = s.per.beliefs.get(tid)

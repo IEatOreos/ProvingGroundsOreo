@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Bots shoot the man in front of them on their way, Easy to Legendary only, 2026-11-24
+
+Upstream 0.3.0's note #2 (build 20261112-1507). The owner: "Easy to Legendary only; Demon, Noble and Mythic keep only our rule".
+
+- `Bot.walk_target` / `Bot.walk_fire` (his, `WALK_FIRE`, 60° cone `WALK_FIRE_CONE`): on foot, a gun in hand, on its way to the objective, a gun, a hunt or a post, a bot shoots the nearest man in view within 60° of the way it walks and in its gun's reach (or the man hurting it now), and walks on along the same line over the ground (no crouch, no sprint while firing). The aim and trigger are `fight`'s, unchanged. His live Sandtrap count: bots on those goals had a man within 6 u in front 62 s with no aim on anyone.
+- Called from `plan`'s general walk branch only: the look's aim step is skipped on a tick it shoots, the 60°-off-the-view slow-down too, and the hold crouch.
+- Kept of ours:
+  - `walk_target` returns nothing for `profiles.demon_rules` (Demon, Noble, Mythic), so `on_way_target` (Nov 7/13, no fighting in the last 3 u onto a point or gun) stays their only rule.
+  - The walk to a vehicle seat keeps our `vehicle_way_target` (Nov 15, every tier); his call there was left out, so nothing fires twice.
+  - A pre-nade's throw keeps its view (no walk fire over it); with every gun dry nothing is fired (as `vehicle_way_target`).
+- Who counts as "Easy to Legendary": Easy, Normal, Heroic, Legendary, Blind, Tactician and Scaling (all of tier `top` but Mythic) get it; every personality (Wheelman, Rusher, ...) by its tier.
+- **Checks:** `tools/test_upstream_030_brain.py` +4 (every tier Easy to Legendary plus Blind/Tactician/Scaling target the man in front; Demon/Noble/Mythic never; behind it, carrying or seated never; the walk's ground line is kept while `fight` turns the view) OK; full suite 1,494 OK. **Untested in a live match.**
+
 ### CTF: bots step onto a flag or gun standing against a wall, 2026-11-24
 
 Upstream 0.3.0's note #11, the walking part (build 20261114-0323). The owner: "take both; test a Reach CTF map with a flag against a wall". The CE/H2 capture counting (`tools/live_bots.py`) is a separate later port.

@@ -112,5 +112,73 @@ class ObjectiveReachTests(unittest.TestCase):
             self.assertAlmostEqual(act.strafe, botmod.math.sin(0.52), 3, goal)
 
 
+class _Belief:
+    def __init__(self, pos):
+        self.pos, self.t = pos, 0.0
+
+
+class _Eyes:
+    """A Perception stand-in: the men in view and when they were seen."""
+
+    def __init__(self, men, now=10.0):
+        self.beliefs = {k: _Belief(p) for k, p in men.items()}
+        self.last_seen = {k: now for k in men}
+
+    def visible_enemies(self):
+        return list(self.beliefs)
+
+
+def tier_bot(tier):
+    if tier == "scaling":
+        from dataclasses import replace
+        b = make_bot(tier="top")
+        b.p = replace(b.p, extra={"scaling": 1})
+        return b
+    return make_bot(tier=tier)
+
+
+class WalkFireTests(unittest.TestCase):
+    """#2 (build 20261112-1507): bots shoot the man in front of them on their way, Easy to Legendary only."""
+
+    def target(self, tier, man=Vec(6.0, 0.5, 0.0), **me_kw):
+        b = tier_bot(tier)
+        b.per = _Eyes({7: man})
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(0, 0, 0), weapon="dmr", weapons=["dmr"], ammo=[30], **me_kw)
+        act = Action(forward=1.0, yaw=0.0)
+        return b.walk_target(10.0, me, act)
+
+    def test_easy_to_legendary_shoot_the_man_in_front(self):
+        for tier in ("novice", "average", "strong", "top", "blind", "tactician", "scaling"):
+            self.assertEqual(self.target(tier), 7, tier)
+
+    def test_demon_noble_mythic_keep_only_our_rule(self):
+        for tier in ("demon", "noble", "mythic"):
+            self.assertIsNone(self.target(tier), tier)
+
+    def test_behind_it_carrying_or_seated_no(self):
+        self.assertIsNone(self.target("top", man=Vec(-6.0, 0.0, 0.0)))     # behind: past WALK_FIRE_CONE
+        self.assertIsNone(self.target("top", has_flag=True))
+        self.assertIsNone(self.target("top", vehicle=3))
+
+    def test_walk_kept_while_firing(self):
+        b = tier_bot("strong")
+        b.per = _Eyes({7: Vec(6.0, 2.0, 0.0)})
+        seen = {}
+        def fight(now, dt, me, snap, tid, act, nav):
+            seen["tid"] = tid
+            act.yaw, act.forward, act.strafe, act.fire = 0.3, 0.0, 1.0, True
+        b.fight = fight
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(0, 0, 0), weapon="dmr", weapons=["dmr"], ammo=[30])
+        act = Action(forward=1.0, yaw=0.0)
+        self.assertTrue(b.walk_fire(10.0, 0.03, me, None, act, None))
+        self.assertEqual(seen["tid"], 7)
+        # still walking along +x over the ground, now facing 0.3 rad off it
+        gx = botmod.math.cos(act.yaw) * act.forward - botmod.math.sin(act.yaw) * act.strafe
+        gy = botmod.math.sin(act.yaw) * act.forward + botmod.math.cos(act.yaw) * act.strafe
+        self.assertAlmostEqual(gx, 1.0, 6)
+        self.assertAlmostEqual(gy, 0.0, 6)
+        self.assertTrue(act.fire)
+
+
 if __name__ == "__main__":
     unittest.main()
