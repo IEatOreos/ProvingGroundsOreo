@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Bots with nothing on think every other pass, 2026-11-23
+
+The owner, on the bots thinking every pass in 8v8, fighters first: "Yes, do it".
+
+- **`tools/live_bots.py` (`THINK_HALF`, `full_rate`):** the bots think one after another, so a pass is all fifteen thinks added up.
+  - A bot with nothing on now thinks every other pass, half of them on each pass. Its last command stands in between, since botcore applies a slot's last command every game tick until the next one, so a press lasts one pass longer at most.
+  - Its next think's time step is its own since it last thought (up to twice `MAX_DT`). A bot never sits out two passes running, nor once its last think is 2 × `MAX_DT` old.
+- **Who thinks every pass:**
+  - anyone in a vehicle or on a vehicle job, or carrying;
+  - anyone fighting;
+  - anyone with a jump, lift or cannon ride under way;
+  - anyone hurt in the last 2 s, or with an enemy seen or on radar in the last 3 s (an angle held, a corner);
+  - anyone whose last think hit an edge, a wall, a step, a jump, a corner or a grenade.
+- **In the owner's last 8v8 CTF** (`20261123-190955`), by the recording (which lacks the bots' radar), about a quarter of the bots' passes would have been sat out: some 12% less thinking.
+- **Checks:** new `tools/test_think_half.py` (5: a plain walk, fighting, driving and carrying, an enemy known lately, hurt lately, at an edge or a jump). `unittest discover` over `tools` is OK, and so is the `live_bots` import. The pass loop's skipping is not unit-tested. **Untested in a match.**
+
 ### Walking routes searched only as far as the walker, 2026-11-23
 
 The owner, after another 8v8 CTF on that Forge World layout (`20261123-190955`, with the profile fixes): "The bots play really bad in 8v8 and idk why, Almost unplayable", and "Bug reports also show cosmic playing slow" ("Comis toook too long to shoot back", 192.9 s). His Task Manager showed 25–31% CPU: the brain runs on one of the PC's 16 threads, so at full load it shows only about 6% of the total.

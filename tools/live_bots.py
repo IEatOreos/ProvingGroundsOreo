@@ -95,6 +95,39 @@ def roster_pick(styles, tiers, dealt, team):
     return styles[k % len(styles)], tiers[k % len(tiers)]
 
 
+# (custom, Nov 23, the owner on 8v8: "The bots play really bad in 8v8 and idk why, Almost unplayable", "Bug reports also
+# show cosmic playing slow"; then "Yes, do it") the bots think one after another, so a pass is all their thinks added
+# up (8v8 Forge World CTF 20261123-190955: passes 153 ms median, Cosmic's think 33 ms, 86 at the 90th percentile). A
+# bot with nothing on (full_rate False) thinks every other pass, its last command standing in between (botcore applies a
+# slot's last command each game tick until the next); the rest every pass
+THINK_HALF = True
+THINK_KNOWN_S = 3.0      # s: an enemy seen or on radar this lately keeps a bot at full rate (an angle held, a corner)
+THINK_HURT_S = 2.0       # s: ... as does damage taken this lately
+HALF_NOTES = ("edge", "jump", "step", "lift", "cannon", "unstuck", "wall", "drop", "ledge", "corner", "grenade")
+FULL_ROLES = ("drive", "ride", "board", "ferry", "driver_wait")
+
+
+def full_rate(b, me, now):
+    """Does this bot think every pass (THINK_HALF)? In or getting into a vehicle, carrying, fighting, a jump or a lift
+    under way, hurt lately, an enemy known lately, or its last think at an edge, a wall, a jump or a corner (HALF_NOTES):
+    everything but a plain walk with nobody about."""
+    if me.vehicle not in (None, -1) or me.has_flag:
+        return True
+    goal = (getattr(b, "goal", None) or ("",))[0]
+    if goal in ("fight", "board", "vehicle") or getattr(getattr(b, "order", None), "role", None) in FULL_ROLES:
+        return True
+    if now < getattr(b, "jump_until", 0.0) or getattr(b, "lift_ride", None) or getattr(b, "cannon_ride", None):
+        return True
+    per = getattr(b, "per", None)
+    if per is not None:
+        if any(now - t < THINK_HURT_S for t, _ in getattr(per, "losses", ()) or ()):
+            return True
+        if any(now - bl.t < THINK_KNOWN_S and bl.source in ("eyes", "radar")
+               for bl in (getattr(per, "beliefs", None) or {}).values()):
+            return True
+    return any(k in n for n in (getattr(b, "notes", None) or ()) for k in HALF_NOTES)
+
+
 def think_dt(elapsed):
     """The time step the bots think with: the real time since the last pass, so turning, aiming and moving keep their
     real-time speeds on a PC that needs longer than 1/HZ for a pass; never under 1/HZ (a pass that came early or the
@@ -1100,6 +1133,8 @@ def main():
     last_items = 0.0
     last_think = None                  # the time of the last pass the bots thought on (think_dt)
     passes = 0                         # think passes so far (think_order: which team goes first)
+    think_last = {}                    # (custom, Nov 23) bot index -> when it last thought (THINK_HALF)
+    think_sat = set()                  # ... and the bots that sat the last pass out
     names_due = None if o.game == "reach" else float("inf")   # Reach: logs/reach_names.txt once, 20 s after bots join (after any refresh)
     # Reach Invasion (brain/invasion.py): the map's setup from its scenario; the watcher runs while the variant is it
     inv_styles = None                             # a map variant read from its file: its game variant's phases
@@ -1491,11 +1526,22 @@ def main():
                     me = snap.player(index)
                     if not me or not me.alive:
                         continue
+                    # (custom, Nov 23) a bot with nothing on thinks every other pass, half of them each pass: its last
+                    # command stands (THINK_HALF, full_rate)
+                    if (THINK_HALF and index in think_last and index not in think_sat and (passes + index) % 2
+                            and now - think_last[index] < 2 * MAX_DT and not full_rate(b, me, now)):
+                        think_sat.add(index)
+                        continue
+                    # its own step since it last thought when it sat the last pass out (up to 2 * MAX_DT); else the
+                    # pass's, as ever
+                    bdt = min(2 * MAX_DT, max(1 / HZ, now - think_last[index])) if index in think_sat else dt
+                    think_sat.discard(index)
+                    think_last[index] = now
                     d = directors[key(b)]
                     last_wp["w"] = None
                     decide_was = b.next_decide
                     th0 = time.perf_counter()
-                    a = b.think(now, dt, snap, T.sees, nav, d.callouts, d.item_up)   # (sight: windows and fences pass)
+                    a = b.think(now, bdt, snap, T.sees, nav, d.callouts, d.item_up)   # (sight: windows and fences pass)
                     th = (time.perf_counter() - th0) * 1000.0      # (custom, Nov 22: each bot's think, ms: PERF)
                     PERF["think"][index] = max(PERF["think"].get(index, 0.0), th)
                     PERF["think_pass"] += th
