@@ -1211,7 +1211,7 @@ def main():
     SCALE, SCALE_CFG = None, scaling.settings()
     panel = (botctl.roster(o.roster) or []) if o.roster else []
     if o.roster and o.ff_list:   # Firefight's own list (play.py), else the list's first 3 till it is saved (ff_seed)
-        ff_list = botctl.roster(o.roster, firefight=True)
+        ff_list = botctl.roster(o.roster, firefight=True, game=o.game)   # (Reach's or ODST's: upstream 0.3.0)
         panel = ff_list if ff_list is not None else panel[:botctl.FIREFIGHT_PLAYERS - 1]
     on_list = [b["tier"] for b in panel]
     if "scaling" in o.tier.split(",") + on_list:

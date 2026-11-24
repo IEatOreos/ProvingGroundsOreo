@@ -524,7 +524,8 @@ LOBBY_DIFFICULTY = ("Easy", "Normal", "Heroic", "Legendary", "Mixed", "Scaling",
 def read_lobby(path):
     """(Nov 18) The BOTS panel's lobby (botcore.ini): its "for everyone" difficulty's name (difficulty=, shared.h:
     0..3 the ranks, 4 Mixed, 5 Scaling, 6 Demon, 7 Blind, 8 Tactician, 9 Mythic, 10 Noble; "" when not read) and {lower name:
-    tier key} of the bots on its lists (bot=<team>,<tier>,<style>,<name>; ffbot= Firefight's, the bot= line first)."""
+    tier key} of the bots on its lists (bot=<team>,<tier>,<style>,<name>; ffbot= Reach Firefight's, odbot= ODST's (Nov 24),
+    the bot= line first)."""
     level, tiers = "", {}
     try:
         with open(path, encoding="utf-8", errors="replace") as f:
@@ -533,7 +534,7 @@ def read_lobby(path):
                 if line.startswith("difficulty=") and line[11:].strip().isdigit():
                     d = int(line[11:].strip())
                     level = LOBBY_DIFFICULTY[d] if d < len(LOBBY_DIFFICULTY) else ""
-                for key in ("bot=", "ffbot="):
+                for key in ("bot=", "ffbot=", "odbot="):
                     parts = line[len(key):].split(",", 3) if line.startswith(key) else []
                     if len(parts) == 4 and pool_name(parts[3]):
                         tiers.setdefault(pool_name(parts[3]).lower(), parts[1].strip().lower())
@@ -2139,7 +2140,7 @@ def set_bot_difficulty(paths, name, tier, running=None):
     """(Nov 18, the owner: "edit a bot's difficulty on the website and have it change in the game") a bot's saved
     difficulty, written as the BOTS panel writes it when its difficulty is changed (bots_panel.cpp bot_pool_remember):
     its saved=<difficulty>,<style>,<name> line in native/bin/bot_pool_saved.ini, which Bot Matchmaking seats it with,
-    its play style kept (Demon, Mythic and Noble never Wheelman, NO_WHEELMAN: then any), and its tier in the lobby list's bot=/ffbot= lines of
+    its play style kept (Demon, Mythic and Noble never Wheelman, NO_WHEELMAN: then any), and its tier in the lobby list's bot=/ffbot=/odbot= lines of
     botcore.ini when it is on that list. "" takes its saved line out (it takes the lobby's difficulty again; the lobby
     list is left as it is). Refused while MCC runs (botcore holds both files and writes them back); in game from MCC's
     next start. A copy of each file as it was is kept beside it (.before_site_edit). Names match as the panel matches
@@ -2187,7 +2188,7 @@ def set_bot_difficulty(paths, name, tier, running=None):
         nl = "\r\n" if "\r\n" in text else "\n"
         lines, hit = text.split(nl), False
         for i, line in enumerate(lines):
-            key = "ffbot=" if line.startswith("ffbot=") else "bot=" if line.startswith("bot=") else None
+            key = next((k for k in ("ffbot=", "odbot=", "bot=") if line.startswith(k)), None)   # (odbot=: ODST's, Nov 24)
             parts = line[len(key):].split(",", 3) if key else []
             if len(parts) == 4 and pool_name(parts[3]).lower() == name.lower():
                 parts[1] = tier

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Halo: Reach Classic Firefight: up to 7 bot teammates join the match, 2026-11-24
+
+Upstream 0.3.0's note #13 (build 20261114-0323, his GitHub #28), the brain's half; the panel's is the entry below. The owner: "Reach Firefight, 7 bot teammates: port his 0.2.2 Firefight-bots system too (bigger job; it needs its own overlap check before building, reported to the owner)".
+
+- `tools/botctl.py`: `REACH_FF_PLAYERS` 8 (his); `player_cap` gives Reach's Firefight 8 players, ODST 4 as before (`FIREFIGHT_PLAYERS`; his `ODST_FF_PLAYERS` 8, note 20261108-1120, is not taken: ODST crashed with more). His `FF_SIDE` (players a side, for his Spartan and Elite teams) is not taken. `roster(path, firefight, game)` (his): Reach's `ffbot=` list or ODST's `odbot=`, an ini from before the split read as ODST's from `ffbot=`.
+- `tools/play.py`: the Firefight list read for the match's game, the "N bots at most (M players in all)" line from `player_cap`; the cap (`room`) was already `player_cap`. Ours kept: every bot on the person's team (`team = players[0]["team"] if ff`), our `add_bot` (waits out a paused game), the no-list fallback of 3, `save_humans` and the rest. His `ff_plan` (4 a side, Spartans and Elites) is not taken.
+- `tools/live_bots.py`: the brain reads the same game's Firefight list for the bots' tiers. Nothing of the brain's Firefight play changes: the escorts, the safe spots while you are down, the dead-Covenant rule (#12) are as before, now for up to 7.
+- `tools/service_record.py` (ours): the site's lobby tiers and a bot's difficulty set on the site also read and write ODST's `odbot=` lines.
+- **Checks:** `tools/test_firefight_bots.py` (new, 5): caps (Reach 8, ODST 4, other modes 16), each game's list, an old ini for ODST, the native caps agreeing with botctl, the site reading `odbot=` tiers; `tools/test_bot_difficulty.py` OK; full suite (see the report). **Untested in a live match:** Reach Classic Firefight with 4-7 bots (joining, respawning on the shared lives, escorting), Versus with more than 3 bots on your side, ODST after the split.
+
 ### Halo: Reach Classic Firefight: the BOTS panel takes up to 7 bot teammates; ODST keeps its 3 on a list of its own, 2026-11-24
 
 Upstream 0.3.0's note #13 (build 20261114-0323, his GitHub #28), with the list split of his 0.2.2 Firefight-bots system (build 20261108-0230). The owner: "Reach Firefight, 7 bot teammates: port his 0.2.2 Firefight-bots system too (bigger job; it needs its own overlap check before building, reported to the owner)". This is the panel and list half; the brain's half (botctl, play.py) is the next entry. His Spartan/Elite teams, Generator Defense and Covenant ranks are not taken here (overlap report to the owner).
