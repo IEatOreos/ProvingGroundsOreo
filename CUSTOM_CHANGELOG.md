@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### More maps' navigation kept ready; the background build cuts to the play area, 2026-11-23
+
+The owner: "Can we have them preloaded so the bots can then only worry about playing?"
+
+- **What was ready already:**
+  - Each map's terrain is built after a match in the background and loaded at the next match's start.
+  - The fixed targets' routes are worked out by the helpers in its first second.
+  - What a match can't have ready are routes to where people are now and sight lines: the helpers' work.
+- **`brain/maps.py` `CACHE_KEEP` 6 → 24:** the 8v8 rotation alone is 9 layouts, and each kept terrain is 3–72 MB.
+- **`tools/terrain_prebuild.py` `play_cut`:** a map variant's saved inputs are cut to its play window as the next match will load them (its `variant.json` as it is now). Renegade, given one since its last match, would otherwise have been built whole, under a key the match never asks for.
+- **Done now:** today's changes to the terrain code made every kept terrain out of date. All 17 maps with saved inputs were built again (51 s in all, Renegade cut to its play area), so their next matches load at once.
+  - Maps with no saved inputs (Utopie, Rasu, Brick, Paradiso, Hemorrhage, not played since the cache began) are built at their next match's start, as before, then kept.
+  - Any later change to the terrain code makes them out of date again until each map's next match.
+- **Checks:** `tools/test_play_window.py` +1 (`play_cut`). `unittest discover` over `tools` is OK, and so is the `live_bots` import.
+
 ### A Forge layout's nav cut to its play area (Renegade), 2026-11-23
 
 The owner, on Renegade's nav (`reach_forge_halo/variants/vf1ed8bb6`, the 8v8 CTF layout): "Remove the waste from renegade and see what you can do".

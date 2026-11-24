@@ -705,7 +705,8 @@ def terrain(m, live_blocks=None):
 # after a match the next match's terrain is built from the saved data in the background (prebuild_after_match,
 # tools/terrain_prebuild.py) while the person is in the post-game. CACHE_KEEP files are kept, the newest
 CACHE_DIR = os.path.join(os.path.dirname(ROOT), "logs", "terrain_cache")
-CACHE_KEEP = 6
+CACHE_KEEP = 24     # (custom, Nov 23, was 6: "Can we have them preloaded so the bots can then only worry about playing?" -
+                    # the 8v8 rotation alone is 9 layouts; 3-72 MB each)
 CACHE_VERSION = b"terrain-cache 1"
 CACHE_SKIP = frozenset(("stations.json", "lore.json", "oob.json", "owner_profile.json", "topdown.png", "lidar_sim.json",
                         "variant.json"))     # (variant.json: in the loaded map, m["variant"], its times left out)
