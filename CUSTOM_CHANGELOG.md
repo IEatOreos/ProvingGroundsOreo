@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Reach Invasion: the attackers are read from the team playing Elites, 2026-11-24
+
+Upstream 0.3.0's note #75 (build 20261120-1620). The owner: "take all 3 (elite_team, score_attacker, round reset); test Invasion on Breakpoint and Spire". His bug report: on Noble, Anniversary and Defiant maps (Condemned 100 s, Headlong 37 s) the bots played the wrong side until the first capture.
+
+- `brain/live.py LiveReach.elite_team` (his, `ELITE_SIDE = 7`): the team whose living players' units read `UNIT_TEAM` 7 (Elites; Spartans read 1). It answers only when exactly one team is all Elites and at least 2 players read; else None.
+- `brain/invasion.py Watch.update` (upstream's 20261107 Invasion, never customized by us):
+  - Twice a second, the Elites' team becomes the attackers whenever it reads (`elite_ok`). The spawn labels and the score stand in only when it doesn't (no read, or a failed read).
+  - `score_attacker` (his): inside a round, the one team whose score rises by 1-2 is the attackers. It is gated by `elite_ok`, waits `SCORE_SETTLE` (10 s) into a round, and ignores a round's jump of 3 or more or both teams rising.
+  - The round reset (his): at a new round the sides are unread again (`sides_set` False, the score's zero re-taken), so a failed read can't keep last round's side; `spawn_check` holds its picks until the round's own spawns, the Elites or the score say the sides.
+- His own note: the Elite byte is **unverified in Invasion** (read in Beachhead's Versus). A misread would flip the sides every half second; none in tests.
+- **Checks:** `tools/test_upstream_030_modes.py` +8:
+  - `elite_team`: the Elites' team; none with one player read, both or neither, or a mixed team; the dead not read;
+  - `score_attacker`: the scoring team attacks; held while the Elites read; a round's jump and both up ignored;
+  - on Boneyard's real Invasion layout: the Elites' team attacks; no read (or a failed one) plays as before; a new round resets the sides.
+  - All OK; `test_wheel_and_one_bomb`, `test_breakpoint_sight` OK. **Untested in a live match**: the owner tests Invasion on Breakpoint and Spire.
+
 ### Reach Headhunter: bots bank only at the drop points the game has open; a failed skull read is kept 2 s, 2026-11-24
 
 Upstream 0.3.0's note #34, the rest (build 20261118-1525). The owner: "our brain kept; take only open_drops, skull_point and the 2 s keep". `skull_point` was committed earlier; this is `open_drops` and the 2 s keep, wired into our own Headhunter brain.

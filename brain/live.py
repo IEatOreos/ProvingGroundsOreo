@@ -1729,6 +1729,28 @@ class LiveReach(LiveH3):
         fx, fy = struct.unpack_from("<2f", head, 0x50)
         return x, y, z, math.atan2(fy, fx)
 
+    ELITE_SIDE = 7          # UNIT_TEAM of an Elite player's unit (Spartans 1: live Beachhead, Classic and Versus)
+
+    def elite_team(s, players):
+        """Invasion: the team whose living players are Elites (their units' UNIT_TEAM byte ELITE_SIDE; the attackers,
+        every round), or None unless exactly one team's are and at least two players read. The sides came from the
+        spawn labels and were wrong on Anniversary and Defiant maps until the first capture (Discord bug report Nov 20:
+        Condemned 100 s, Headlong 37 s). UNVERIFIED in Invasion: Beachhead's Versus is where the byte was read.
+        (upstream 0.3.0, build 20261120-1620; brain/invasion.py Watch)"""
+        teams, n = {}, 0
+        for d in players:
+            if d.get("pos") is None:
+                continue
+            o = s.object(d.get("unit", NONE))
+            if not o:
+                continue
+            n += 1
+            teams.setdefault(d["team"], set()).add(s.g.read(o + s.UNIT_TEAM, 1)[0])
+        elite = [t for t, sides in teams.items() if sides == {s.ELITE_SIDE}]
+        if n < 2 or len(elite) != 1 or any(s.ELITE_SIDE in sides for t, sides in teams.items() if t != elite[0]):
+            return None
+        return elite[0]
+
     def core(s, players, stand, key="core"):
         """Invasion's core: the weapon object first seen on its stand (a Vec), found as flags are (flags_by_stand),
         once phase 3 puts it there. [{pos, carrier}] (empty before phase 3). key: another object's own tags (Breakpoint's

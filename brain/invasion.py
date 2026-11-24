@@ -235,10 +235,34 @@ class Watch:
         s.phase, s.attackers, s.sides_set = 1, inv["attackers"], False
         s.score_base = "first"                    # (attacking team, its score at the round's start); "first": 0 (a brain
                                                   # started mid-round counts the phases taken so far)
+        s.score_seen, s.round_t = None, -99.0     # every team's score at the round's start (first read); when it began
+                                                  # (upstream 0.3.0, build 20261120-1620: score_attacker)
         s.core, s.carrier, s.core_t = None, None, -9.0
         s.gates_t, s.gates = -9.0, [b for b in inv["barriers"] if b["kind"] == "gate"]
         s.gates_n, s.gates_low, s.step_t, s.gate_steps = None, None, -99.0, 0   # gates at the last step; last read
         apply_barriers(T, inv)
+
+    SCORE_SETTLE = 10.0      # s into a round before its scores are taken as its zero (the round's change settles first)
+
+    def score_attacker(s, scores, now):
+        """The team whose score rises inside a round is the attackers (only they score: a phase taken). scores: {team:
+        score} (low 16 bits). One team up by 1-2 since the round's start and not the one read: the sides were misread
+        (a reported City match: the side's guess from its labels was a near tie, the score route read the other team's 0
+        and phase 1 stood for 135 s after the capture), corrected, and that capture counts. Two teams up at once, a jump
+        of 3 or more (a round's points), or within SCORE_SETTLE s of a round's start: nothing. Not while the Elites'
+        team reads (elite_ok: that read decides). (upstream 0.3.0, build 20261120-1620)"""
+        if s.score_seen is None:
+            if now - s.round_t >= s.SCORE_SETTLE:
+                s.score_seen = dict(scores)
+            return
+        for t, v in scores.items():
+            if v < s.score_seen.get(t, 0):        # (a reset: the new zero)
+                s.score_seen[t] = v
+        up = [t for t, v in scores.items() if 1 <= v - s.score_seen.get(t, 0) <= 2]
+        jumps = [t for t, v in scores.items() if v - s.score_seen.get(t, 0) > 2]
+        if len(up) == 1 and not jumps and up[0] != s.attackers and not s.__dict__.get("elite_ok"):
+            t = up[0]
+            s.attackers, s.sides_set, s.score_base = t, True, (t, s.score_seen.get(t, 0))
 
     def update(s, live, snap, now, raw=None):
         for p in snap.players:                    # spawns: alive again after a death, or first seen alive (the
@@ -267,6 +291,10 @@ class Watch:
             s.gate_steps, s.gates_n = 0, None     # (the gates stand again)
             s.score_base = None                   # the attackers' score now is the round's zero
             s.score_cap = 1 if s.__dict__.get("score_cap") is not None else None   # (the score reads: phase 1 until it says)
+            # the sides unread until this round's spawns say them (a failed read kept last round's: the teams swap, so
+            # the stale side is the wrong one; a reported City match). Until then no picks go out (spawn_check, the zone
+            # path): the game's own opening spawns stand and tell the sides (upstream 0.3.0, build 20261120-1620)
+            s.sides_set, s.score_seen, s.round_t = False, None, now
         recent = [(team, pos) for _, team, pos in s.spawns]
         # the sides: from the round's start, where everyone spawns in their side's first zone, then kept for the round
         # (live: defenders' later respawns sometimes land nearer an attackers' zone and flipped the sides every tick)
@@ -293,8 +321,17 @@ class Watch:
             # territory; the next round started 0-0). The low 16 bits: the next team's cell reads 65536 for 0 counted
             # from the round's start: the score carries over (live: red won round 1 defending, then 0 -> 3 at its
             # first territory in round 2)
+            try:                                  # the Elites attack, every round: their team is the attackers when it
+                et = live.elite_team(raw) if hasattr(live, "elite_team") else None   # reads (LiveReach.elite_team), the
+            except Exception:                     # spawn labels and the score only stand in when it does not
+                et = None                         # (upstream 0.3.0, build 20261120-1620)
+            s.elite_ok = et is not None
+            if et is not None and (et != s.attackers or not s.sides_set):
+                s.attackers, s.sides_set = et, True
             try:
-                sc = live.match_state()["score"].get(s.attackers, 0) & 0xFFFF
+                scores = {t: v & 0xFFFF for t, v in live.match_state()["score"].items()}
+                s.score_attacker(scores, now)
+                sc = scores.get(s.attackers, 0)
                 if s.score_base == "first":
                     s.score_base = (s.attackers, 0)
                 elif s.score_base is None or s.score_base[0] != s.attackers or sc < s.score_base[1]:

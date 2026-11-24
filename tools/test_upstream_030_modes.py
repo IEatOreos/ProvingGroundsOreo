@@ -418,5 +418,124 @@ class HeadhunterOpenDrops(unittest.TestCase):
         self.assertTrue(callable(LiveReach.open_drops))
 
 
+class StubT:
+    """A terrain stand-in for invasion.Watch: barriers and link gates taken and ignored, every line clear."""
+    hjumps = ()
+
+    def set_barrier(self, *a, **k):
+        pass
+
+    def los(self, a, b):
+        return True
+
+
+def boneyard():
+    import json
+    from brain import invasion
+    objs = json.load(open(Path(__file__).resolve().parents[1] / "maps" / "reach_70_boneyard" / "objects.json",
+                          encoding="utf-8"))
+    return invasion.layout(objs)
+
+
+class InvasionElites(unittest.TestCase):
+    """#75 (build 20261120-1620): the attackers are read from the team playing Elites (LiveReach.elite_team), with
+    his score check (score_attacker, gated by elite_ok) and the sides reset at each round."""
+
+    def elite(self, rows):
+        r = object.__new__(LiveReach)
+        r.g = stock.Memory()
+        players = []
+        for k, (team, side, alive) in enumerate(rows):
+            o = stock.OBJ + k * stock.OBJ_SIZE
+            r.g.buf[o + LiveReach.UNIT_TEAM] = side
+            players.append(dict(team=team, unit=k, pos=(0.0, 0.0, 0.0) if alive else None))
+        r.object = lambda h: stock.OBJ + h * stock.OBJ_SIZE
+        return r.elite_team(players)
+
+    def test_the_elites_team(self):
+        self.assertEqual(self.elite([(0, 1, True), (1, 7, True), (1, 7, True), (0, 1, True)]), 1)
+
+    def test_none_unless_one_team_is_all_elites(self):
+        self.assertIsNone(self.elite([(1, 7, True)]))                          # one player read
+        self.assertIsNone(self.elite([(0, 7, True), (1, 7, True)]))            # both
+        self.assertIsNone(self.elite([(0, 1, True), (1, 1, True)]))            # neither
+        self.assertIsNone(self.elite([(0, 7, True), (0, 1, True), (1, 1, True)]))   # a mixed team
+        self.assertEqual(self.elite([(0, 1, True), (1, 7, True), (0, 7, False)]), 1)   # (the dead are not read)
+
+    def watch(self):
+        from brain import invasion
+        return invasion.Watch(boneyard(), StubT())
+
+    def test_score_attacker(self):
+        w = self.watch()
+        w.attackers, w.round_t = 1, 0.0
+        w.score_attacker({0: 0, 1: 0}, 5.0)                 # settling
+        self.assertIsNone(w.score_seen)
+        w.score_attacker({0: 0, 1: 0}, 11.0)
+        w.score_attacker({0: 1, 1: 0}, 12.0)                 # team 0 scored: it attacks
+        self.assertEqual((w.attackers, w.sides_set, w.score_base), (0, True, (0, 0)))
+
+    def test_score_attacker_holds_while_the_elites_read(self):
+        w = self.watch()
+        w.attackers, w.round_t, w.elite_ok = 1, 0.0, True
+        w.score_attacker({0: 0, 1: 0}, 11.0)
+        w.score_attacker({0: 1, 1: 0}, 12.0)
+        self.assertEqual(w.attackers, 1)
+
+    def test_score_attacker_ignores_a_rounds_jump_and_both_up(self):
+        w = self.watch()
+        w.attackers, w.round_t = 1, 0.0
+        w.score_attacker({0: 0, 1: 0}, 11.0)
+        w.score_attacker({0: 3, 1: 0}, 12.0)
+        w.score_attacker({0: 1, 1: 1}, 13.0)
+        self.assertEqual(w.attackers, 1)
+
+    def run_watch(self, w, elites, scores=None, now=20.0, players=None):
+        from brain.core import PlayerState, Snapshot
+
+        class Fake:
+            def elite_team(s, raw):
+                if elites == "fail":
+                    raise OSError("read")
+                return elites
+
+            def match_state(s):
+                return dict(score=scores or {0: 0, 1: 0})
+
+            def core(s, raw, stand, key="core"):
+                return []
+
+            def present(s, pts, names=None):
+                return set(range(len(pts)))
+
+        sn = Snapshot(now, players or [PlayerState(i, i % 2, str(i), Vec(0, 0, 0), alive=True) for i in range(4)], {})
+        w.update(Fake(), sn, now, raw=[{}])
+        return sn
+
+    def test_the_elites_team_attacks(self):
+        w = self.watch()
+        inv_att = w.attackers
+        sn = self.run_watch(w, 1 - inv_att)
+        self.assertEqual((sn.inv_attackers, w.sides_set, w.elite_ok), (1 - inv_att, True, True))
+
+    def test_no_elite_read_plays_as_before(self):
+        w = self.watch()
+        inv_att = w.attackers
+        for el in (None, "fail"):
+            sn = self.run_watch(w, el)
+            self.assertEqual(sn.inv_attackers, inv_att)
+            self.assertFalse(w.elite_ok)
+
+    def test_a_new_round_resets_the_sides(self):
+        from brain.core import PlayerState
+        w = self.watch()
+        w.sides_set, w.score_seen = True, {0: 0, 1: 0}
+        dead = [PlayerState(i, i % 2, str(i), Vec(0, 0, 0), alive=False) for i in range(6)]
+        self.run_watch(w, None, now=30.0, players=dead)
+        far = Vec(999, 999, 0)                              # (spawns no label says anything of: the sides stay unread)
+        self.run_watch(w, None, now=31.0, players=[PlayerState(i, i % 2, str(i), far, alive=True) for i in range(6)])
+        self.assertEqual((w.sides_set, w.score_seen, w.round_t), (False, None, 31.0))
+
+
 if __name__ == "__main__":
     unittest.main()
