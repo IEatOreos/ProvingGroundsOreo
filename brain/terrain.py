@@ -440,10 +440,91 @@ class Terrain:
     lid_rule = True   # drops into a column whose floor goes on at our own height cost LID_COST (_build_nav; tests: off)
     corner_rule = True   # a diagonal drop between two cells shut at our height costs LID_COST (_build_nav)
 
+    # (upstream 0.3.0, build 20261114-1215) floor under spawn points and teleporter pads / exits (spawn_floor, exit_floor)
+    SPAWN_FLOOR_R, SPAWN_FLOOR_DZ = 10.0, 1.5   # u: people's walk this near a floorless spawn, this far up or down
+    SPAWN_FLOOR_FILL = 2                        # cells round each walked point filled at its height (spawn_floor)
+
+    EXIT_FLOOR_R, EXIT_FLOOR_DZ = 3.0, 1.0      # u: round a teleporter's pad and exit, people's walk is floor
+
+    def exit_floor(s, points, walked):
+        """(upstream 0.3.0, build 20261114-1215) Round each teleporter pad and exit (where the game puts players): the
+        cells people stood on within EXIT_FLOOR_R and EXIT_FLOOR_DZ, as walked floor whatever the level's wall bits say
+        there (_add_floor's cells are walkable in _build_nav). Battle Creek's blue base: the exit's floor read as walled
+        by the frame round it, its neighbours had none, and a bot out of the teleporter stood 25 s by it (live, Nov 14);
+        people walked it 245 times. (custom, Nov 24: the walk as one array, not a Python loop per exit and cell.)"""
+        out = []
+        if not points or not walked:
+            return out
+        w = np.asarray(list(walked), float).reshape(-1, 3) * (0.25, 0.25, 0.1)
+        for p in points:
+            near = ((np.abs(w[:, 0] - p.x) <= s.EXIT_FLOOR_R) & (np.abs(w[:, 1] - p.y) <= s.EXIT_FLOOR_R)
+                    & (np.abs(w[:, 2] - p.z) <= s.EXIT_FLOOR_DZ)
+                    & (np.hypot(w[:, 0] - p.x, w[:, 1] - p.y) <= s.EXIT_FLOOR_R))
+            out += [(float(x), float(y), float(z)) for x, y, z in w[near] if s.inside(x, y)]
+        return out
+
+    def spawn_floor(s, spawns, walked, split=False):
+        """(upstream 0.3.0, build 20261114-1215) Floor the level data lacks where the map spawns players: round each
+        spawn point with no floor within 1 u of its height, the cells people stood on (walked, LiDAR) within
+        SPAWN_FLOOR_R and SPAWN_FLOOR_DZ of it whose own cell has no floor within 0.6 of theirs, and the spawn point
+        itself. A spawn point is the map's own word that a floor is there (Sword Base: 29 spawns on the base's upper
+        floors over cells with no floor at all; people walked them at the spawns' heights; a bot respawned there had no
+        nav under it, the sim's fell to z 0). split (custom, Nov 24): (the walked cells and spawn points, the fill round
+        them) apart, as __init__ forces only the first walkable."""
+        out = []
+        if not spawns or not walked:
+            return (out, []) if split else out
+        by = {}
+        for k in walked:
+            by.setdefault((int(k[0] * 0.25 // 4), int(k[1] * 0.25 // 4)), []).append(k)
+
+        def free(x, y, z, tol):
+            j, i = (int(v) for v in s._ij(np.asarray(x), np.asarray(y)))
+            col = s.floors[:, j, i]
+            fin = col[np.isfinite(col)]
+            return not fin.size or float(np.min(np.abs(fin - z))) > tol
+
+        seen = set()
+        for p in spawns:
+            if not s.inside(p.x, p.y) or not free(p.x, p.y, p.z, 1.0):
+                continue
+            mine, walked_here = [], False
+            n = int(s.SPAWN_FLOOR_R // 4) + 1
+            for bx in range(int(p.x // 4) - n, int(p.x // 4) + n + 1):
+                for bj in range(int(p.y // 4) - n, int(p.y // 4) + n + 1):
+                    for k in by.get((bx, bj), ()):
+                        x, y, z = k[0] * 0.25, k[1] * 0.25, k[2] * 0.1
+                        if (math.hypot(x - p.x, y - p.y) > s.SPAWN_FLOOR_R or abs(z - p.z) > s.SPAWN_FLOOR_DZ
+                                or not s.inside(x, y) or not free(x, y, z, 0.6)):
+                            continue
+                        walked_here = True
+                        if k not in seen:
+                            seen.add(k)
+                            mine.append((x, y, z))
+            if walked_here:         # (nobody walked there: no island of floor under the spawn alone)
+                out += [(p.x, p.y, p.z)] + mine
+        # people's walk is a trail, not a floor: each point fills its cell's neighbours within SPAWN_FLOOR_FILL cells at
+        # its height (no floor near it there), so the trail becomes floor a body walks on (Sword Base's deck: a trail
+        # of single cells left two spawns with no way off)
+        fill = int(s.SPAWN_FLOOR_FILL)
+        filled = {}
+        for x, y, z in out:
+            for dx in range(-fill, fill + 1):
+                for dy in range(-fill, fill + 1):
+                    if dx * dx + dy * dy > fill * fill:
+                        continue
+                    qx, qy = x + dx * s.cell, y + dy * s.cell
+                    key = (round(qx / s.cell), round(qy / s.cell))
+                    if key not in filled and s.inside(qx, qy) and free(qx, qy, z, 0.6):
+                        filled[key] = (qx, qy, z)
+        return (out, list(filled.values())) if split else out + list(filled.values())
+
     def __init__(s, npz_path, bases, extra_floor=(), blocks=(), slit_rule=False, window=None, stair_rule=False,
-                 walked=None, lifts=()):
+                 walked=None, lifts=(), spawns=(), exits=()):
         # walked: cells people stood on (LiDAR walk keys, maps.terrain people_walked): a low ceiling over floor nobody
         # walked is no floor (_low_ceiling). lifts: gravity lifts' base markers (x, y, z): no drop into their columns
+        # spawns, exits: where the game puts players (spawn points; teleporter pads and exits): people's walk round
+        # them is floor (spawn_floor, exit_floor; upstream 0.3.0, build 20261114-1215)
         s.walked_cells = walked
         s.lift_pads = [tuple(p[:3]) for p in lifts]
         # slit_rule: no drops into slits no body fits (_build_nav). Reach only: a crack rule on Halo CE cut real drops
@@ -482,6 +563,14 @@ class Terrain:
         s.slope = None            # (L, h, w) a ramp floor's slope, rise over run (add_faces); None: no ramps placed
         s.piece = None            # (L, h, w) the floor level is a placed piece's (add_faces); None: none placed
         s.blocks = s.add_blocks(blocks)
+        # (upstream 0.3.0, build 20261114-1215) people's walk round spawn points and teleporter pads / exits as floor.
+        # (custom, Nov 24) After the layout's pieces, not before as his: a Forge layout's pieces are its floor, and
+        # read before them every spawn on a piece had "no floor" (The Cage: 10,864 cells of people's walk forced
+        # walkable through its pieces' walls). And the fill round people's walk is floor the walls still judge; only
+        # the cells people stood on, the spawn points and the exits' cells are walkable whatever the wall bits say.
+        walk_sp, fill_sp = s.spawn_floor(spawns, walked, split=True)
+        s._add_floor(walk_sp + s.exit_floor(exits, walked), more=True)
+        s._add_floor(fill_sp, more=True, forced=False)
         s._build_nav()
         s._fields = FieldCache()     # (custom, Nov 23: its clear() counts the nav's weight changes, tools/field_pool.py)
 
@@ -732,12 +821,17 @@ class Terrain:
             return (np.zeros(0, int),) * 3 + (np.zeros(0),)
         return tuple(np.concatenate(v) for v in zip(*out))
 
-    def _add_floor(s, cells):
+    def _add_floor(s, cells, more=False, forced=True):
         """Floor people walked that the level data lacks, reviewed and approved (tools/review_moves.py,
         maps/<map>/moves_review.json: crate tops, ledges, rails): each (x, y, z) becomes a floor level of its
-        cell unless the cell has one within 0.3 already; a cell with no free level adds one for all."""
-        s.walked_ok = [tuple(c) for c in cells if s.inside(c[0], c[1])]
-        for x, y, z in s.walked_ok:
+        cell unless the cell has one within 0.3 already; a cell with no free level adds one for all.
+        (custom, Nov 24) more: added to the cells already given (spawn_floor, exit_floor), not in their place. forced:
+        the cells are walkable whatever the wall bits say (s.walked_ok, _build_nav); False: floor only. A placed piece's
+        ramp slope and piece mark (s.slope, s.piece, add_faces) stay with their own floor levels."""
+        cells = [tuple(c) for c in cells if s.inside(c[0], c[1])]
+        if forced or not more:
+            s.walked_ok = (list(s.__dict__.get("walked_ok", ())) if more else []) + (cells if forced else [])
+        for x, y, z in cells:
             j, i = (int(v) for v in s._ij(np.asarray(x), np.asarray(y)))
             col = s.floors[:, j, i]
             fin = col[np.isfinite(col)]
@@ -748,11 +842,20 @@ class Terrain:
                 if abs(float(col[l]) - z) > 0.02:
                     s.floors[l, j, i] = z
                 continue
+            lv = np.nonzero(np.isfinite(col))[0]          # (its levels, before the column is written again)
             if fin.size == s.floors.shape[0]:
                 s.floors = np.concatenate([s.floors, np.full((1,) + s.floors.shape[1:], np.nan, s.floors.dtype)])
-            vals = np.sort(np.append(fin, z))
+                if getattr(s, "slope", None) is not None:
+                    s.slope = np.concatenate([s.slope, np.zeros((1,) + s.slope.shape[1:], s.slope.dtype)])
+                    s.piece = np.concatenate([s.piece, np.zeros((1,) + s.piece.shape[1:], bool)])
+            vals = np.append(fin, z)
+            order = np.argsort(vals, kind="stable")
             s.floors[:, j, i] = np.nan
-            s.floors[:len(vals), j, i] = vals
+            s.floors[:len(vals), j, i] = vals[order]
+            if getattr(s, "slope", None) is not None:      # (custom, Nov 24: after the pieces, spawn_floor)
+                sl, pc = np.append(s.slope[lv, j, i], 0.0), np.append(s.piece[lv, j, i], False)
+                s.slope[:, j, i], s.piece[:, j, i] = 0.0, False
+                s.slope[:len(vals), j, i], s.piece[:len(vals), j, i] = sl[order], pc[order]
 
     def inside(s, x, y):
         """Is (x, y) in this terrain's window (the whole level unless a map variant's area: brain/variants.py)? Things

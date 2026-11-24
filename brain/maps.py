@@ -943,7 +943,14 @@ def _build(m, window):
     walked = people_walked(names, kinds=(1, 3))
     T = Terrain(m["heightmap"], m["bases"], extra_floor=floor, blocks=blocks, slit_rule=m["name"].startswith(SLIT_GAMES),
                 stair_rule=m["name"].startswith(("h4_", "h2a_")),
-                window=window, walked=walked, lifts=[f["pos"] for f in m.get("features", []) if f.get("kind") == "lift"])
+                window=window, walked=walked, lifts=[f["pos"] for f in m.get("features", []) if f.get("kind") == "lift"],
+                # (upstream 0.3.0, build 20261114-1215) where the game puts players: floor (Terrain.spawn_floor,
+                # exit_floor). (custom, Nov 24: a layout's own spawn points when it has them, as its bots respawn
+                # there; the map's scenario spawns otherwise, as his. Never its respawn zones: a zone's centre hangs
+                # over the floor, and Breakpoint's layout got floor islands in the air at three of them)
+                spawns=[_v(o[1:4]) for o in (m.get("variant") or {}).get("objects", ()) if o[0].endswith("spawn_point")]
+                or [q for g in (m.get("spawns") or {}).values() for side in g.values() for q in side],
+                exits=[q for pair in m.get("teleporters") or () for q in pair])
     T.add_links(m["teleporters"])
     T.vblocks = [b for nm in names for b in owner_vblocks(nm)]   # (custom, Nov 13: no vehicle in these, every size)
     if not m["name"].startswith(("h2_", "h3_", "reach_", "odst_", "h2a_", "h4_")):  # jump links, for skilled bots (CE jump physics; ponytail:

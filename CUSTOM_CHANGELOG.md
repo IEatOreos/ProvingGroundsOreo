@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+### Bots walk off spawn points and teleporter exits: people's walk there is floor, 2026-11-24
+
+Upstream 0.3.0's note #16 (build 20261114-1215). The owner: "take it; check Sword Base spawns in the sim".
+
+- `brain/terrain.py` (his): `Terrain.spawn_floor` and `Terrain.exit_floor`, from two new `Terrain.__init__` arguments, `spawns=()` and `exits=()`, into `_add_floor`.
+  - Round a spawn point with no floor within 1 u of its height: the cells people walked (LiDAR, standing or crouched) within 10 u and 1.5 u up or down whose own cell has no floor near them, the spawn point itself, and 2 cells round each, become floor. Nobody walked there: nothing (no floor island under a spawn alone).
+  - Round each teleporter pad and exit: the cells people walked within 3 u and 1 u up or down are walked floor, walkable whatever the level's wall bits say.
+- Ours on his (custom, Nov 24):
+  - **After the layout's pieces, not before as his.** A Forge layout's floor is its pieces, and read before them every spawn on a piece had "no floor": The Cage got 10,864 cells of people's walk forced walkable through its pieces' walls (and a second, wrong man-cannon launch). `_add_floor` takes `more` (added to the reviewed floor, not in its place) and keeps a piece's ramp slope and piece mark (`s.slope`, `s.piece`) with their own floor levels.
+  - **The fill round the walk is floor the walls still judge.** Only the cells people stood on, the spawn points and the exits' cells are forced walkable (`walked_ok`); `spawn_floor(split=True)` gives the fill apart.
+  - `exit_floor`: the walk as one array instead of his Python loop over every walked cell per exit (same cells).
+  - **The spawns:** a layout's own spawn points (`initial_spawn_point`, `respawn_point`) when it has them, as its bots respawn there; the map's scenario spawns otherwise, as his. Never a layout's respawn zones: `spawn_points` counts them as spawns, but a zone's centre hangs over the floor. Breakpoint's layout (`reach_dlc_invasion`) got floor islands in the air at three of them, which no bot could route to.
+- `brain/maps.py _build` passes them; the exits are the map's teleporter pairs, as his.
+- Kept of ours: `_add_floor`'s reviewed floor (first, as before), `walked_under`, the window cut, our `T.vblocks` line right after the build, `spawn_points` unchanged.
+- **The check** (27 layouts built old and new: the 22 Reach layouts and maps with people's walks, both Sword Base layouts, The Cage, Renegade and Forge World's 8v8; spawn points with floor within 1 u under them, and routes between every pair):
+  - **Sword Base** (`reach_20_sword_slayer`, both layouts, 18 and 14 spawns): no change. Every spawn already had floor and a route to every other one in our data (our Sword Base level and LiDAR are not his), so nothing was added there.
+  - **Gained floor under spawns, routes the same or more:** Battle Canyon 34 -> 35 and Beaver Creek Anniversary 46 -> 48 (`reach_cex_beaver_creek`), Hang 'Em High 39 -> 40, Forge World's `v8e4a8930` 115 -> 120 (pairs with a route 14,162 -> 14,400, every one).
+  - **Unchanged or a few cells:** the other 20, The Cage and Renegade among them (Renegade's nav +4 nodes of 260,083).
+  - **Mixed: Condemned's built-in layout** (`reach_condemned`, floor under 20 -> 24). Four initial spawns at z 1.5 sit under a floor at 3.8. Two of them had no nav node at all, and two read as up on that floor. All four now stand on their own floor at 1.5, but it is a small island: people's walk ends about 1 u short of it, so three of them have no route off. Pairs with a route: 468 -> 446.
+  - Build times are unchanged (0.2-8 s a layout).
+- **Checks:** new `tools/test_spawn_floor.py` (7) OK:
+  - a floorless spawn with people's walk through it gets floor and a way off and back;
+  - nobody walked there, no floor;
+  - a spawn on the level's floor adds nothing;
+  - the fill is floor but not forced walkable;
+  - a spawn on a layout's piece adds nothing;
+  - floor added after the pieces keeps their slopes and piece marks with their levels;
+  - an exit's walked cells within 3 u and 1 u up or down are walked floor.
+
+  Full suite OK. **Untested in a live match.**
+
 ### Bug reports and match exports include the bots' log, 2026-11-24
 
 Upstream 0.3.0's note #74 (build 20261120-1620). The owner: "take it".
