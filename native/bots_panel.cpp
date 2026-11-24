@@ -4477,6 +4477,20 @@ static uint32_t g_exp_passenger_fp, g_exp_third_person, g_exp_tp_reticle = 1;
 // them in play: virtual key codes, any keyboard key or mouse button the player presses for them in the panel; no
 // controller button (the owner, Nov 24). 0: none
 static int g_exp_shoulder, g_exp_distance = 1, g_exp_side_key = VK_XBUTTON1, g_exp_dist_key = VK_XBUTTON2;
+static void vk_name(int vk, char* out, size_t cap) {          // a key's name as the keyboard prints it
+    switch (vk) {
+    case 0: strcpy_s(out, cap, "None"); return;
+    case VK_LBUTTON: strcpy_s(out, cap, "Left mouse"); return;
+    case VK_RBUTTON: strcpy_s(out, cap, "Right mouse"); return;
+    case VK_MBUTTON: strcpy_s(out, cap, "Middle mouse"); return;
+    case VK_XBUTTON1: strcpy_s(out, cap, "Mouse 4"); return;
+    case VK_XBUTTON2: strcpy_s(out, cap, "Mouse 5"); return;
+    }
+    UINT sc = MapVirtualKeyA((UINT)vk, MAPVK_VK_TO_VSC);
+    bool ext = vk == VK_LEFT || vk == VK_RIGHT || vk == VK_UP || vk == VK_DOWN || vk == VK_INSERT || vk == VK_DELETE ||
+               vk == VK_HOME || vk == VK_END || vk == VK_PRIOR || vk == VK_NEXT || vk == VK_RCONTROL || vk == VK_RMENU;
+    if (!sc || !GetKeyNameTextA((LONG)(sc << 16 | (ext ? 1 << 24 : 0)), out, (int)cap)) sprintf_s(out, cap, "Key %d", vk);
+}
 static void exp_load() {
     if (g_exp_read) return;
     g_exp_read = true;
@@ -4529,6 +4543,54 @@ static void experimental_settings(bots_panel_env& e, bool& changed, ImVec2 body0
     ImGui::PushTextWrapPos(w - px(52));
     muted("Features still being tried, for Halo: Reach only. They may not play well yet. Every one is off until you "
           "turn it on.");
+    // (upstream 0.3.0, build 20261116-2330) third person: reach.cpp hr_tp_apply and third_person.cpp
+    ImGui::Dummy(ImVec2(0, px(18)));
+    if (toggle("Third person", &g_exp_third_person)) exp_save();
+    muted("Halo: Reach: play from over your Spartan's shoulder. A scope switches to first person until you lower it. "
+          "Vehicles keep their own cameras. Not in Theater films.");
+    if (g_exp_third_person) {
+        static const char* const SIDES[2] = { "Right", "Left" };
+        static const char* const DISTS[3] = { "Near", "Middle", "Far" };
+        // a key: its button shows it; pressed, it waits for the next key or mouse button (Esc: none), any of them
+        static int* waiting = nullptr;               // the key being set
+        static ULONGLONG wait_from = 0;
+        static bool held[256];                       // keys down when the wait began (a click that started it)
+        struct row { const char* cap; const char* id; const char* const* labels; int n; int* v; float w; };
+        row rows[4] = { { "SHOULDER", "tpside", SIDES, 2, &g_exp_shoulder, px(220) },
+                        { "SHOULDER KEY", "tpsidekey", nullptr, 0, &g_exp_side_key, px(260) },
+                        { "DISTANCE", "tpdist", DISTS, 3, &g_exp_distance, px(330) },
+                        { "DISTANCE KEY", "tpdistkey", nullptr, 0, &g_exp_dist_key, px(260) } };
+        for (const row& r : rows) {
+            ImGui::Dummy(ImVec2(0, px(6)));
+            push(SMALL);
+            ImGui::TextColored(v4(TEXT2), "%s", r.cap);
+            pop();
+            if (r.labels) { if (segmented(r.id, r.labels, r.n, r.v, r.w)) exp_save(); continue; }
+            char name[64], label[96];
+            vk_name(*r.v, name, sizeof name);
+            if (waiting == r.v) sprintf_s(label, "Press a key or mouse button...##%s", r.id);
+            else sprintf_s(label, "%s##%s", name, r.id);
+            if (button(label, waiting == r.v ? PRIMARY : SECONDARY, ImVec2(r.w, px(36))) && !waiting) {
+                waiting = r.v;
+                wait_from = GetTickCount64();
+                for (int k = 1; k < 256; k++) held[k] = (GetAsyncKeyState(k) & 0x8000) != 0;
+            }
+        }
+        if (waiting) {                               // the next key pressed (not one already down when it began)
+            for (int k = 1; k < 256 && waiting; k++) {
+                bool down = (GetAsyncKeyState(k) & 0x8000) != 0;
+                if (!down) { held[k] = false; continue; }
+                if (held[k] || GetTickCount64() - wait_from < 150) continue;
+                *waiting = k == VK_ESCAPE ? 0 : k;
+                waiting = nullptr;
+                exp_save();
+            }
+            if (waiting && GetTickCount64() - wait_from > 8000) waiting = nullptr;   // (nothing pressed: as it was)
+        }
+        muted("In a match, the shoulder key moves the view to the other shoulder and the distance key steps it nearer or "
+              "farther. Click a key's button, then press the keyboard key or mouse button you want (Esc: none). No "
+              "controller button.");
+    }
     ImGui::Dummy(ImVec2(0, px(10)));
     ImGui::PopTextWrapPos();
     ImGui::EndChild();

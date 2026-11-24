@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Halo: Reach in third person: a switch on the Experimental tab, off until turned on, 2026-11-24
+
+Upstream 0.3.0's note #53 (build 20261116-2330). The owner: "third person: Reach only, off by default, hand-merged at our Reach hook spots"; #53b controller button: "no, keyboard keys are fine".
+
+- `native/third_person.cpp` (new, his file cut to Reach's part): `tp_view` (the shoulder view: near / middle / far behind the eye, aside by the shoulder, the forward turned to where the aim meets the world so the crosshair is on the shot, shoulder and distance changes eased over about a quarter second), `tp_up`, `tp_keys` (a key or mouse button, read only with MCC in front) and `tp_on`. Left out: his `tp_gate` (Halo 3 / ODST's zoom check) and every other game's callers. `native/build.bat` builds it.
+- `native/reach.cpp`: his Reach block hand-merged after `hr_object`: hooks on the following camera's update (haloreach +0x1DCADC), the camera mode setter (+0xC5834) and the first person camera's update (+0xC6EE8, out of a scope on the frame it drops); calls, without a hook, to the game's line test (+0x12AFCC, the aim's wall test) and the unit's eye (+0x48A1C0). `hr_tp_apply` puts the local player's director on the following camera on foot, alive and with no scope up; dead, in a seat or scoped it leaves the game's own camera.
+- Ours, not his: the camera hooks are made only once the switch is first seen on (`hr_tp_hook`, from `reach_watch` in botcore's loop), each after its first 16 bytes read as the decoded build's (the line test's first 4 and 12 bytes at +0x13, the eye's first 16); his made them at every load. Never turned on, the game is not touched for third person. Turned off, the hooks stay and pass straight through, and the view goes back to first person. On a haloreach.dll reload they come out with ours (`hr_tp_unhook`) and are made again only if the switch is on. A failed check is logged once a load and nothing is hooked.
+- Ours, not his: in a Theater film nothing of third person runs (`hr_tp_film` clears the hold and the body; his only skipped `hr_tp_apply`, so a film of the same match could still have taken the player's unit for ours).
+- `h_hr_update`: one line after `hr_spawn_moves`; our armory, netwatch, net pump and net relay lines are untouched. `reach_watch`: our `if (g_hr) MH_RemoveHook` line and `hr_chk_hook` kept; two lines added (`hr_tp_unhook`, `hr_tp_hook`) and one before the hooked return.
+- `native/bots_panel.cpp`, the Experimental tab: the Third person switch and, under it while on, his Shoulder (Right / Left), Shoulder key, Distance (Near / Middle / Far) and Distance key (any keyboard key or mouse button pressed after clicking; Esc: none). Defaults as his: right shoulder, middle, Mouse 4 / Mouse 5. No controller button.
+- No clashes: none of the five addresses is hooked or called anywhere else in our native code (reach.cpp's netbots hooks are +0x3C4004, +0x418FF8, +0x394D48), and the new names (`HR_CAM_*`, `gr_tp_*`, `tp_*`) are new.
+- **Checks:** `tools/test_reach_third_person.py` (new: the tab, the switches' defaults and keys, Reach only, every hook made after its bytes are checked and only with the switch on, our `h_hr_update` / `reach_watch` lines kept); built in `botcore_up030b.dll`. **Untested in game** (Reach on foot, scoping, vehicles, respawn, the keys, a Theater film, a friend's session).
+
 ### BOTS panel: an Experimental tab, the home of Halo: Reach's third person switches, 2026-11-24
 
 Upstream 0.3.0's note #56a (build 20261114-2230). The owner: "take it (home for the #53/#55 switches; CE body block left out)"; #56b Vehicle Warfare: "skip for now".
