@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Paint the nav: a map list (M key), organized as the LiDAR tools', 2026-11-24
+
+Upstream 0.3.0's note #57 (build 20261114-2230). The owner: "take it (both files whole)".
+
+- `tools/paint_view.html` (his, whole; ours was upstream's own apart from one comment, kept: "the owner, Nov 6"): the map drop-down is now a **Map** button (and **M**) opening a list.
+  - A tab per game with MCC's logo and how many of its maps are painted, plus **Modded** and **Map Studio** tabs, each with a game drop-down.
+  - Each map shows its picture, real name and whether it is painted. A modded map not read yet is listed but cannot be opened. Esc closes the list.
+- `tools/paint.py` (his, whole but one line): `maps_list` gives each map its real name (`lidar.map_title`, so our own titles), its game and whether MCC has it, then `lidar.modded` (the modded maps). `/art/games|maps/<file>.png|jpg` serves the logos and pictures from `tools/view_art` only.
+- **Kept of ours:** the window opens with our `appwindow.open_window` as before. His `appwindow.when_closed` (the tool ending with its window) is not in our `appwindow.py`, so that one line stays ours.
+- `tools/lidar.py modded()`: an empty stub here; the next entry (#58) fills it.
+- **Checks:** `tools/test_paint_maps.py` (new, 3) OK: maps carry their game, title and painted flag, with the modded ones after; the art route takes only view_art's logos and pictures; the page has the list, the M key and our comment. `paint.py` imports and lists this tree's 149 maps. **Not opened in its window.**
+
 ### Setup: one bot model that fails to build no longer stops the rest; ODST's squad and Dare models in the list, 2026-11-24
 
 Upstream 0.3.0's note #29 (build 20261114-2230). The owner: "take it, his ODST models included (check at build what else the ODST models need)".

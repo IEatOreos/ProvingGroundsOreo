@@ -813,6 +813,12 @@ def map_list():
     return out
 
 
+def modded(known=()):
+    """(custom, Nov 24: a stub for upstream 0.3.0's Modded tab, note #58, which fills it) The modded maps to list beside
+    the game's own: none yet."""
+    return []
+
+
 def scans_of(name):
     """{"scan": info, "sim": info} of a map's LiDAR scans that have something in them (map_list; the view's scan switch,
     custom): runs, minutes, floor cells, links, when updated."""

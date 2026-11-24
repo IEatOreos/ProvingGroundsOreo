@@ -232,7 +232,13 @@ def maps_list():
         has_mesh = os.path.exists(os.path.join(d, "heightmap.npz"))
         if has_view or has_mesh:
             out.append(dict(name=name, view=has_view, painted=os.path.exists(os.path.join(d, "paint.json"))))
-    return out
+    # organized as the LiDAR view's list (tools/lidar.py map_list): each map's game and real name, and the Workshop's
+    # modded maps (ready once they have level data; until then listed, not openable)
+    import jumpphys
+    import lidar
+    for m in out:
+        m.update(title=lidar.map_title(m["name"]), game=jumpphys.game_of(m["name"]), mcc=m["name"] in lidar.map_titles())
+    return out + lidar.modded(out)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -266,6 +272,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, dict(view=json.load(open(view)) if os.path.exists(view) else None,
                                         paint=pd.get("layers", {}), jumps=pd.get("jumps", []),
                                         links=recorded_links(d), marks=objectives(d)))
+        art = re.fullmatch(r"/art/(games|maps)/([a-z0-9_]+\.(png|jpg))", u.path)   # (the game logos and map pictures)
+        if art:
+            p = os.path.join(HERE, "view_art", art.group(1), art.group(2))
+            if os.path.exists(p):
+                return self.reply(200, open(p, "rb").read(), "image/png" if p.endswith(".png") else "image/jpeg")
+            return self.reply(404, {"error": "not found"})
         m = re.match(r"^/view/([a-z0-9_]+)/(level_\d+\.png)$", u.path)
         if m and map_dir(m.group(1)):
             p = os.path.join(map_dir(m.group(1)), "roofless", m.group(2))
@@ -323,7 +335,7 @@ def main():
         return
     print("Paint the nav:", url, flush=True)
     if "--open" in sys.argv:
-        appwindow.open_window(url)
+        appwindow.open_window(url)   # (custom, Nov 24: ours; his when_closed is not in our appwindow.py)
     srv.serve_forever()
 
 
