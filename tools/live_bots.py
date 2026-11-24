@@ -1536,6 +1536,14 @@ def main():
                 people.update(now, [(p.id, (p.pos.x, p.pos.y, p.pos.z) if p.alive else None, p.alive, bool(crouching) and p.id == 0,
                                      steering if p.id == 0 else None, p.vehicle != -1)
                                     for p in snap.players if p.id not in st["bots"].values() and p.name != "ai"])
+                # (upstream 0.3.0, build 20261114-1215) bots' judged jumps onto the map's non-human links
+                # (HumanWatch.bot_jump: bot_ok / bot_fail; maps.usable_links drops one with 3 shorts, none landed)
+                try:
+                    for b in bots.values():
+                        for at, land, ok in b.__dict__.pop("jump_results", None) or ():
+                            people.bot_jump(at, land, ok)
+                except Exception as e:           # never stops the bots
+                    print(f"{now:6.1f}s bot jump count skipped: {type(e).__name__}: {e}", flush=True)
                 rides.update(now, snap.vehicles, snap.players, set(st["bots"].values()))
                 if rides_new[0]:                 # saved new rides: on this match's terrain now (main thread)
                     rides_new[0] = False

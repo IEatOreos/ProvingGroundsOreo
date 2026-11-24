@@ -11815,14 +11815,28 @@ class Bot:
     def judge_jump(s, me):
         """A planned jump's outcome once it is down (1.5 s on, or the long fall's window): more than 1 u from its landing
         on the flat or 0.4 u under it is short. Short twice: this bot leaves that jump (by its take-off) for 60 s and
-        goes another way (jump_blocked); jumps were judged only in LiDAR mode, so a carrier tried one for good."""
+        goes another way (jump_blocked); jumps were judged only in LiDAR mode, so a carrier tried one for good.
+        (upstream 0.3.0, build 20261114-1215) Judged by its nearest approach to the landing while down on the landing's
+        level (not rising past it), not where it stood 1.5 s on: a bot that landed and ran on was 3 u off and "short"
+        (his live Lockout, Nov 14: a 0.8 u hop 0 landed of 3). Each result is also queued (jump_results) for live_bots
+        to count on the map's LiDAR link (HumanWatch.bot_jump: bot_ok / bot_fail; maps.usable_links drops a link with 3
+        shorts and none landed). (custom, Nov 24) Our layout memory (lore.add_jump) gets the same result."""
         t = getattr(s, "jump_try", None)
         now = getattr(s, "now", 0.0)
-        if t is None or now < max(t[2] + 1.5, getattr(s, "jump_until", 0.0) + 0.3):
+        if t is None:
             return
         key, land, _ = t
+        if getattr(s, "jump_near_of", None) is not t:
+            s.jump_near_of, s.jump_near = t, 1e9
+        if land.z - 0.4 < me.pos.z < land.z + 0.6 and me.vel.z <= 0.5:
+            s.jump_near = min(s.jump_near, (me.pos - land).flat())
+        if now < max(t[2] + 1.5, getattr(s, "jump_until", 0.0) + 0.3):
+            return
         s.jump_try = None
-        made = (me.pos - land).flat() <= 1.0 and me.pos.z > land.z - 0.4
+        made = s.jump_near <= 1.0
+        res = s.__dict__.setdefault("jump_results", [])      # (live_bots: counted on the map's link, bot_ok / bot_fail)
+        res.append((key, (land.x, land.y, land.z), made))
+        del res[:-20]
         lb = s.lore()
         if lb is not None:                  # (custom, Nov 19) the layout's memory of it: jump_learned_bad
             lb.add_jump(key, made)

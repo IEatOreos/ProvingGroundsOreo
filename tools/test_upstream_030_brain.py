@@ -180,5 +180,66 @@ class WalkFireTests(unittest.TestCase):
         self.assertTrue(act.fire)
 
 
+class _Lore:
+    def __init__(self):
+        self.jumps = []
+
+    def add_jump(self, key, made):
+        self.jumps.append((key, made))
+
+
+class JumpJudgeTests(unittest.TestCase):
+    """#15 (build 20261114-1215): a landing judged by the nearest approach, results queued for the map's LiDAR link
+    (HumanWatch.bot_jump) and our layout memory (lore.add_jump) both."""
+
+    def jump(self, path, tier="top"):
+        b = make_bot(tier=tier)
+        lore = _Lore()
+        b.lore = lambda: lore
+        land = Vec(6.0, 4.0, 2.0)
+        b.jump_try = ((3.0, 4.0), land, 3.0)
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(3.0, 4.0, 2.0))
+        for t, pos in path:
+            b.now = t
+            me.pos = pos
+            b.judge_jump(me)
+        return b, lore
+
+    def test_landed_and_ran_on_is_made(self):
+        # down 0.2 u from the landing at 3.8 s, 3 u past it when judged at 4.6 s: made (it was "short" before)
+        b, lore = self.jump([(3.4, Vec(5.0, 4.0, 3.0)), (3.8, Vec(6.2, 4.0, 2.0)), (4.6, Vec(9.0, 4.0, 2.0))])
+        self.assertIsNone(b.jump_try)
+        self.assertEqual(b.jump_results, [((3.0, 4.0), (6.0, 4.0, 2.0), True)])
+        self.assertEqual(lore.jumps, [((3.0, 4.0), True)])
+        self.assertFalse(getattr(b, "jump_fails", {}))
+
+    def test_fell_under_it_is_short(self):
+        b, lore = self.jump([(3.8, Vec(6.0, 4.0, -1.0)), (4.6, Vec(6.0, 4.0, -1.0))])
+        self.assertEqual(b.jump_results, [((3.0, 4.0), (6.0, 4.0, 2.0), False)])
+        self.assertEqual(lore.jumps, [((3.0, 4.0), False)])
+        self.assertEqual(b.jump_fails[(3.0, 4.0)][0], 1)
+
+    def test_lidar_link_counts_and_drops_after_three(self):
+        import threading
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import lidar
+        from brain.maps import usable_links
+
+        class Rec:
+            lock = threading.Lock()
+            links = [dict(kind="jump", take_off=[3.0, 4.0, 2.0], land=[6.0, 4.0, 2.0], human=0, bot_ok=2, bot_fail=0),
+                     dict(kind="jump", take_off=[3.0, 4.0, 2.0], land=[6.0, 4.0, 2.0], human=1, bot_ok=0, bot_fail=0)]
+        w = lidar.HumanWatch("none", rec=Rec())
+        self.assertIs(w.bot_jump((3.0, 4.0), (6.0, 4.0, 2.0), True), Rec.links[0])
+        self.assertEqual(Rec.links[0]["bot_ok"], 3)
+        Rec.links[0]["bot_ok"] = 0
+        for _ in range(3):
+            w.bot_jump((3.05, 4.0), (6.0, 4.5, 2.0), False)
+        self.assertEqual(Rec.links[0]["bot_fail"], 3)
+        self.assertEqual(Rec.links[1]["bot_fail"], 0, "a person's jump is never counted")
+        self.assertNotIn(Rec.links[0], usable_links(Rec.links))
+        self.assertIsNone(w.bot_jump((20.0, 4.0), (6.0, 4.0, 2.0), False), "no link at another take-off")
+
+
 if __name__ == "__main__":
     unittest.main()

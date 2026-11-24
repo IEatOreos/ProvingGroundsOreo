@@ -2321,6 +2321,23 @@ class HumanWatch:
             s.skipped += 1
         return ok
 
+    def bot_jump(s, at, land, ok):
+        """(upstream 0.3.0, build 20261114-1215) A bot's planned jump, judged (brain/bot.py judge_jump: its take-off's x,
+        y and where it meant to land), counted on the map's link as LiDAR bots count theirs (bot_ok / bot_fail), so a
+        jump bots keep falling short of leaves their routes (brain/maps.py usable_links: 3 short, none landed). Only
+        links no person made (the simulator's, a bot's): people's jumps stay. His live Hang 'Em High, Nov 14: the
+        simulator's 3.8 u jump onto the middle hill needs 2.3 u/s at take-off, bots made 1.8-2.0 and fell under it each
+        try. The link counted, or None."""
+        with s.rec.lock:
+            for l in s.rec.links:
+                if (not l.get("human") and l.get("take_off") and l.get("land")
+                        and math.hypot(l["take_off"][0] - at[0], l["take_off"][1] - at[1]) < 0.3
+                        and math.dist(l["land"][:3], land) < 1.0):
+                    k = "bot_ok" if ok else "bot_fail"
+                    l[k] = l.get(k, 0) + 1
+                    return l
+        return None
+
     def save(s, saver=None):
         sec, s.seconds = s.seconds, 0.0
         return s.rec.save(human_seconds=sec, saver=saver)    # (saver: lidar_saver.Saver, live_bots)

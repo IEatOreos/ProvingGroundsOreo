@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Jumps bots keep missing drop out after 3 misses; landings judged by the nearest approach, 2026-11-24
+
+Upstream 0.3.0's note #15 (build 20261114-1215). The owner: "merge, our jump memory and lore call kept, his landing judging used".
+
+- `Bot.judge_jump` judges a planned jump by how near the bot came to its landing while down on the landing's level (not rising past it), not by where it stood 1.5 s on. A bot that landed and ran on had been counted short 3 u off (his live Lockout: a 0.8 u hop "landed" 0 of 3).
+- Each result goes to both:
+  - our layout memory, `lore.add_jump` (Nov 19, Legendary and up, `jump_learned_bad`), as before, now with the new judging;
+  - a queue `jump_results` (last 20) that `tools/live_bots.py` empties each tick into `HumanWatch.bot_jump` (`tools/lidar.py`, new). It counts `bot_ok` / `bot_fail` on the map's LiDAR link with that take-off (0.3 u) and landing (1 u), only links no person made. `maps.usable_links`'s existing rule then drops a link with 3 shorts and none landed from every bot's routes from the next match. His live Hang 'Em High: a simulator jump needing 2.3 u/s at take-off that bots (1.8-2.0) fell under every try.
+- Kept of ours: the bot's own two-shorts 60 s ban (`jump_fails`, `jump_blocked`), `jump_learned_bad`, our saver's filters (links found by the map, and bots' crouch-jumps, are still never saved), the threads' held-back lore writes. The count in `live_bots` is wrapped so it never stops the bots.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (landed and ran on = made; fell under it = short, both fed to lore and the queue; the LiDAR link counts and drops out after 3 shorts, a person's link is never counted); `test_map_memory` still OK; full suite 1,497 OK; `bot.py`, `lidar.py`, `live_bots.py` parse and import. **Untested in a live match.**
+
 ### Bots shoot the man in front of them on their way, Easy to Legendary only, 2026-11-24
 
 Upstream 0.3.0's note #2 (build 20261112-1507). The owner: "Easy to Legendary only; Demon, Noble and Mythic keep only our rule".
