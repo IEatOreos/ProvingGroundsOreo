@@ -1,5 +1,9 @@
-"""Builds the Windows installer for a GitHub release of this custom build: ProjectProvingGrounds-Setup-<CUSTOM_VERSION>.exe,
+"""Builds the Windows installer for a GitHub release of this custom build: ProjectProvingGrounds-Setup-<version>.exe,
 everything a player needs in one file, so nobody has to install Python, build tools or anything else.
+
+(custom, Nov 24) The version is Project Noble's X.Y.Z (tools/noble_version.py next_release: X one past the last
+release tag, Y.Z the commits of HEAD), stamped into the payload's NOBLE_VERSION for the installed launcher and updater;
+the release's tag is "v" + it (printed). CUSTOM_VERSION is no longer the release's version (older installs still read it).
 
 (custom, Nov 12) Adapted from upstream's tools/build_installer.py (AyoItzKye/project-proving-grounds, main), which needs
 its tools/make_release.py, not in this install. Here:
@@ -66,8 +70,19 @@ def git(*a, cwd=ROOT, out=True):
     return r.stdout if out else None
 
 
-def custom_version():
-    return open(os.path.join(ROOT, "CUSTOM_VERSION"), encoding="utf-8").read().strip()
+def release_version():
+    """(custom, Nov 24) (version, tag) of the release built from HEAD (tools/noble_version.py)."""
+    sys.path.insert(0, HERE)
+    import noble_version
+    if not git("tag", "--list", "v*").strip():
+        print("   (no release tags here: run git fetch --tags first, or the version's X is too low)", flush=True)
+    return noble_version.next_release(ROOT)
+
+
+def stamp_version(ver):
+    """The payload's NOBLE_VERSION: the installed copy's version (tools/noble_version.py stamped)."""
+    with open(os.path.join(PAYLOAD, "NOBLE_VERSION"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(ver + "\n")
 
 
 def match(rel, pats):
@@ -216,10 +231,9 @@ def stage_texts():
         f.write(open(os.path.join(ROOT, "LICENSE.md"), encoding="utf-8").read())
 
 
-def compile_setup():
+def compile_setup(ver):
     step("Setup.exe (Inno Setup)")
     exe = iscc() or sys.exit("Inno Setup 6 was not found (winget install JRSoftware.InnoSetup)")
-    ver = custom_version()
     r = subprocess.run([exe, f"/DAppVersion={ver}", f"/DPayload={PAYLOAD}", f"/DBuildDir={BUILD}",
                         os.path.join(ROOT, "installer", "ProjectProvingGrounds.iss")], capture_output=True, text=True,
                        errors="replace")
@@ -235,6 +249,8 @@ def compile_setup():
 
 
 def main():
+    ver, tag = release_version()
+    step(f"Project Noble {ver} (its release's tag: {tag}; HEAD's commits must be GitHub's main once it is pushed)")
     committed_copy()
     try:
         if "--skip-tests" not in sys.argv:
@@ -243,12 +259,13 @@ def main():
             shutil.rmtree(PAYLOAD)
         os.makedirs(PAYLOAD)
         stage_project()
+        stamp_version(ver)
         stage_native()
         stage_map_tools()
         stage_python()
         privacy_scan()
         stage_texts()
-        compile_setup()
+        compile_setup(ver)
     finally:
         git("worktree", "remove", "--force", SRC, out=False)
         git("worktree", "prune", out=False)

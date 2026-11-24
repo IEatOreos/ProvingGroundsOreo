@@ -54,7 +54,7 @@ last_ping = [time.time()]
 
 
 def version():
-    return updater.current()      # (custom: CUSTOM_VERSION, the custom releases' version, else upstream's VERSION)
+    return updater.current()      # (custom, Nov 24: Project Noble's X.Y.Z, tools/noble_version.py; else CUSTOM_VERSION)
 
 
 def lidar_counts():
