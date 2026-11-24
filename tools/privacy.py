@@ -3,7 +3,7 @@
 
 (custom, Nov 24) Factored out of build_installer.privacy_scan, unchanged: this PC's profile path (USERPROFILE) and the
 terms listed in .private_terms (one per line, in the repository's root, never in Git), lower case, 4 letters or more,
-found anywhere; and this PC's user name (USERNAME) as a whole word only ("marsh" is not Reach's "Field Marshal" armor).
+found anywhere; and this PC's user name (USERNAME) as a whole word only (a name inside a longer word, like an armor's name, is not a hit).
 """
 import os
 import re
