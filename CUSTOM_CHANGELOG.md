@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### "Open the install folder" opens the folder, never a second launcher, 2026-11-24
+
+Upstream 0.3.0's note #79 (build 20261120-1620). The owner: "take it".
+
+- `tools/launcher.py` `/folder`: `os.startfile(os.path.normpath(ROOT), "explore")` (his line, with his comment) in place of a plain `os.startfile(ROOT)`, which let Windows pick what to run and on a custom install folder started a second launcher.
+- **Checks:** `tools/test_launcher_noble.py` +1 OK (4): `/folder` calls the explore verb on the normalized folder (startfile mocked). Not pressed in the real launcher window.
+
 ### The guide's and the launcher's links go to Project Noble's GitHub, with one credit link to the original, 2026-11-24
 
 The owner's own request (the side finding of upstream 0.3.0's note #44, "our links fixed afterwards, as planned"). His website links (#44) are not taken.

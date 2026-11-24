@@ -304,7 +304,10 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = choose_mcc(body)
             self.send({"ok": ok, "message": msg})
         elif self.path == "/folder":
-            os.startfile(ROOT)
+            # (upstream 0.3.0, build 20261120-1620) the folder's "explore" verb: plain open let Windows pick what to
+            # run, and on a custom install it started a second launcher (his Discord bug report, Nov 20). (explorer.exe
+            # with the path as an argument opened Documents: it misreads a quoted path ending in a backslash)
+            os.startfile(os.path.normpath(ROOT), "explore")
             self.send({"ok": True})
         elif self.path == "/docs":                   # the guide in the mod's own window (it opened README.md as raw text)
             url = f"http://127.0.0.1:{self.server.server_address[1]}/guide"
