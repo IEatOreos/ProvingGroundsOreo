@@ -4819,28 +4819,40 @@ static void confirm_clear(bots_panel_env& e, bool& changed) {
 }
 
 // the panel's sounds as WAV files in memory (overlay.cpp plays them, panel_preview --wavs writes them for
-// tools/test_panel_sounds.py): short tones made here, no sound files: 16-bit mono 22.05 kHz; the bytes written, 0 when
-// kind or cap is wrong
+// tools/test_panel_sounds.py): made here, no sound files: 16-bit mono 22.05 kHz; the bytes written, 0 when kind or cap
+// is wrong. In the style of Halo's own menus: short, low, muffled digital clicks and thunks, a falling pitch and a little
+// filtered noise on the attack (Nov 14: the clean sine chimes before, up and down a step, sounded more like a fantasy
+// RPG than Halo) (upstream 0.3.0, build 20261114-1630)
 int panel_sound_wav(int kind, uint32_t volume, char* out, int cap) {
     if (kind < PS_MOVE || kind > PS_ERROR || cap < 44 + 2) return 0;
-    struct part { float s, f0, f1, a; };                 // seconds, from Hz, to Hz, loudness
+    // seconds, from Hz, to Hz (an exponential glide), tone loudness, noise loudness, noise low-pass (0..1, higher
+    // brighter), decay (higher shorter), square-ness of the tone (0 sine .. 1 buzz)
+    struct part { float s, f0, f1, a, nz, lp, dk, sq; };
     static const part P[5][2] = {
-        { { 0.014f, 1900, 1900, 0.10f }, {} },                                // move: a tick
-        { { 0.022f, 1300, 1300, 0.20f }, { 0.032f, 1950, 1950, 0.20f } },     // select: up a step
-        { { 0.022f, 1600, 1600, 0.18f }, { 0.036f, 1050, 1050, 0.18f } },     // back: down a step
-        { { 0.130f, 700, 1500, 0.16f }, {} },                                 // open: a rising swell
-        { { 0.080f, 220, 220, 0.22f }, { 0.080f, 196, 196, 0.22f } } };       // error: low, twice
+        { { 0.020f, 640, 520, 0.11f, 0.06f, 0.35f, 7.0f, 0.15f }, {} },                       // move: a soft tick
+        { { 0.060f, 360, 210, 0.22f, 0.10f, 0.30f, 5.0f, 0.25f }, {} },                       // select: a thunk
+        { { 0.064f, 300, 160, 0.20f, 0.08f, 0.22f, 5.0f, 0.20f }, {} },                       // back: a lower thunk
+        { { 0.180f, 90, 180, 0.16f, 0.12f, 0.10f, 0.0f, 0.10f }, {} },                        // open: a low swell
+        { { 0.075f, 150, 140, 0.18f, 0.03f, 0.25f, 1.5f, 0.85f },
+          { 0.085f, 150, 135, 0.18f, 0.03f, 0.25f, 1.5f, 0.85f } } };                         // error: a buzz, twice
     const int rate = 22050, most = (cap - 44) / 2;
     short* pcm = (short*)(out + 44);
     int n = 0;
+    uint32_t seed = 0x1234567u;
     for (const part& p : P[kind]) {
+        if (p.s <= 0) continue;
         int m = (int)(p.s * rate);
+        float ph = 0, lp = 0, g = p.f1 / p.f0;
         for (int i = 0; i < m && n < most; i++, n++) {
             float t = i / (float)rate, u = t / p.s;
-            float env = kind == PS_OPEN ? sinf(3.14159f * u) : expf(-5.0f * u) * (1.0f - expf(-t * 4000.0f));
-            float ph = 6.28318f * (p.f0 * t + 0.5f * (p.f1 - p.f0) * t * u);      // (a rising tone: its phase)
-            float w = sinf(ph) + (kind == PS_ERROR ? 0.35f * sinf(3.0f * ph) : 0.0f);
-            pcm[n] = (short)(32767.0f * p.a * (volume / 100.0f) * env * w);
+            float env = kind == PS_OPEN ? sinf(3.14159f * u) * sinf(3.14159f * u)       // swells in and out
+                      : expf(-p.dk * u) * (1.0f - expf(-t * 2500.0f)) * (1.0f - u * u);   // hit, fall, end clean
+            ph += 6.28318f * p.f0 * powf(g, u) / rate;
+            float s = sinf(ph), w = (1.0f - p.sq) * s + p.sq * (s > 0 ? 0.6f : -0.6f);
+            seed = seed * 1664525u + 1013904223u;                                         // noise, low-passed
+            lp += p.lp * (((seed >> 9) / 4194304.0f - 1.0f) - lp);
+            float nz = p.nz * lp * (kind == PS_OPEN ? 1.0f : expf(-t * 160.0f) * 3.0f);   // (a click on the attack)
+            pcm[n] = (short)(32767.0f * (volume / 100.0f) * env * (p.a * w + nz));
         }
     }
     char* h = out;

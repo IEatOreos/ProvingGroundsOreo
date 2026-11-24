@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### BOTS panel sounds: short low Halo-style clicks instead of bright chimes (our Project Noble / Reach screens' sounds too), 2026-11-24
+
+Upstream 0.3.0's note #20 (build 20261114-1630). The owner: "take it; the owner listens in game, revert if disliked".
+
+- `native/bots_panel.cpp` `panel_sound_wav()`: his rewrite. Each sound is a falling-pitch tone (an exponential glide, a little square-ness) with low-passed noise on the attack: move a soft tick (640 to 520 Hz, 20 ms), select a thunk (360 to 210 Hz, 60 ms), back a lower thunk (300 to 160 Hz, 64 ms), open a low swell (90 to 180 Hz, 180 ms), error a buzz twice (150 Hz, 75 + 85 ms). Before: clean sine chimes, 1050-1950 Hz, up or down a step. Still 16-bit mono 22.05 kHz from memory; the longest (open, about 7.9 KB) fits `play_sound`'s 12000-byte buffers; at volume 100 the peak stays under full scale.
+- `panel_sounds()` (when each sound plays) unchanged, and `play_sound` / the Settings volume unchanged.
+- **Also changes** our Project Noble / Reach screens' sounds, the BOTS tile's and the bot card's: they play through the same `play_sound` (the owner knows and listens in game).
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). Not listened to here. **Untested in game.**
+
 ### The low performance card, its overlay side: a "!" notice is a small red-outlined card in the upper right for 7 s, 2026-11-24
 
 Upstream 0.3.0's note #47 (build 20261118-2107), the native part. The owner: "take it, with our own ~20-line check instead of bot_capacity.py" (the brain's check, `tools/live_bots.py` `speed_note` sending `"!BOT PERFORMANCE LOW"`, is already on this branch).
