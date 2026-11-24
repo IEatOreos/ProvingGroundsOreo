@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Runners reroute instead of giving up their objective, 2026-11-23
+
+The owner's Renegade CTF bug report (`20261123-223329`, 375 s): "Several teammates on their base not pulliung the flag". Then: "They need to have the ability to reroute. If the route they take fails they go the next route that makes it reachable. I think they shouldnt ban runners anymore", and "On that map its just a little rock jump up thats below the flag on blue side they get hung up on. But their is plenty of routes to their flag".
+
+- **The cause:**
+  - Three runners stood 2–8 u from their flag, still on its stand, from 345 to 385 s, waiting for a defender to look away ("peek") and for their shields.
+  - `Bot.headway` saw 6 s with no progress and banned the flag for 30 s as unreachable. "Another spot by the objective" stood in at 0.7–0.98, and guns lying under the stand (2.1, a 16 u way back up) beat it.
+  - The flag was reachable (6 u by route), and the team carried it at other times. A loose objective was already never banned; one on its stand was.
+- **Fix (`brain/bot.py` `runner_objective`, `reroute`, `reroute_hazards`; `headway`; the bans in `decide`; `think`):**
+  - A runner's objective (its order's point) is never banned.
+  - A stalled way marks the spot it stalled at: its next waypoint, 2 u round (`REROUTE_R`). That spot is a hazard to its route for 30 s (`REROUTE_S`), the last 3 of them (`REROUTE_MAX`), kept while the objective is the same: `Terrain.nav` treats it as a wall while any other way exists, and goes through it when there is none.
+  - A runner's side trips (a gun it can't reach) are still dropped, so it can't loop on one.
+- **On Renegade:** from where a runner stood under the blue flag, its way of 14.6 became 22.0 round the stall, and from under the stand 16.2 became 28.1. The next step turned away from the rock jump.
+- **Checks:** new `tools/test_runner_reroute.py` (5: a stalled runner reroutes, not bans; spots add up to 3, then expire; a new objective drops them; others still give up, and a runner's side trip too; `runner_objective`). `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match.**
+
 ### The brain's speed benchmark; each tier's thinking budget, 2026-11-23
 
 The owner, on keeping the bots fast according to their own tiers: "Yes both". His tiers' order wasn't given; assumed Demon and Noble first, then Mythic. A tier simplifying its plan when the pass runs late was assumed acceptable, with aiming and shooting never cut.

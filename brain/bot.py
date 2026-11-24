@@ -301,6 +301,8 @@ ON_WAY_LAST = 1.5                        # u from the gun: the pickup's last ste
 # halo 4". A man in view this near: shot on the way home (Bot.carrier_shot), every tier
 CARRIER_SHOOT_R = 25.0
 ON_WAY_OBJ_LAST = 3.0                    # u from an objective run's point (outside Slayer, Race): its own last steps
+# (custom, Nov 23) a runner's stalled way (Bot.reroute): the spot gone round, its reach (u), how long (s), how many at once
+REROUTE_R, REROUTE_S, REROUTE_MAX = 2.0, 30.0, 3
 # (custom, Nov 13) Demon this near its objective point plays it (Bot.demon_objective): guns, hunts, holds, patrols and,
 # off the point, fights stay DEMON_OBJ_MARGIN under the objective (over the 0.15 pick noise and the 0.2 kept-goal bonus);
 # a man within DEMON_OBJ_ARM is still fought. Roles whose point is a place to be (not a carrier to chase)
@@ -3402,6 +3404,7 @@ class Bot:
             T0.opt_left = fields              # (custom, Nov 22: this think's fresh route fields for tactics, optional_search)
         me0 = snap.player(s.id)
         haz = s.kit.hazards(me0, snap) if me0 is not None and getattr(snap, "deployed", None) else ()
+        haz = tuple(haz) + s.reroute_hazards(now)    # (custom, Nov 23: a runner's stalled spots gone round, reroute)
         if haz:
             nav = (lambda nav0: lambda a, b, **kw: nav0(a, b, hazards=haz, **kw))(nav)
         lanes = s.danger_lanes(me0)
@@ -5373,6 +5376,8 @@ class Bot:
                   and bans.get(s._goal_key(k), 0) > now]:
             if k[0] == "objective" and grab is not None and dist(k[1], grab) < 1.0:
                 continue                    # an objective to pick up is never given up (headway; Spire, live)
+            if s.runner_objective(k):
+                continue                    # (custom, Nov 23) nor a runner's: it reroutes (reroute)
             del scores[k]                   # gave up on it lately: it could not be reached
             if k[0] == "objective" and s.order.point is not None:
                 # another spot by the objective, not a roam
@@ -8857,8 +8862,51 @@ class Bot:
             s.way_key, s.way_best, s.way_t = key, d, now
         elif now - s.way_t > (EASY_HEADWAY_S if s.easy_mover() else 6.0) and d > (1.5 if goal[0] == "item" else 4.0):
             # (posts: loitering is near. custom, Nov 13: Easy gives a goal up sooner, EASY_HEADWAY_S)
+            if s.runner_objective(goal):
+                # (custom, Nov 23) a runner never gives up the objective it is sent for: its way there round the spot it
+                # stalled at (reroute_hazards), the next way that reaches it
+                s.reroute(now, me, goal)
+                s.way_key = None
+                return
             s.__dict__.setdefault("goal_ban", {})[key] = now + 30.0
             s.way_key, s.next_decide = None, now
+
+    def runner_objective(s, goal):
+        """(custom, Nov 23) Is goal the objective a runner is sent for (its order's point, a way point on it, the live
+        point)? Never banned (headway, the bans in decide): it reroutes instead (reroute)."""
+        return goal[0] == "objective" and getattr(s.order, "role", None) == "runner" and s.order.point is not None
+
+    def reroute(s, now, me, goal):
+        """(custom, Nov 23, the owner: "They need to have the ability to reroute. If the route they take fails they go
+        the next route that makes it reachable. I think they shouldnt ban runners anymore") A runner's way to its
+        objective stalled (headway): the spot it stalled at, REROUTE_R round its next waypoint, is a hazard to its route
+        (Terrain.nav: a wall while any other way exists, the way through it when there is none) for REROUTE_S s, the
+        last REROUTE_MAX of them, kept while the objective is the same. Live Renegade CTF 20261123-223329, 345-385 s:
+        three runners 2-8 u from their flag, still on its stand, waited for a defender to look away and for their
+        shields; 6 s with no progress banned the flag for 30 s and they took guns lying under the stand instead."""
+        aim = getattr(s, "wp", None)
+        if aim is None or (aim - me.pos).flat() < REROUTE_R + 0.5:
+            to = goal[1] - me.pos
+            n = to.flat()
+            aim = me.pos + to * ((REROUTE_R + 1.0) / n) if n > 0.5 else None
+        if aim is None:
+            return False
+        okey = s._goal_key(("objective", s.order.point))
+        spots = [h for h in getattr(s, "reroute_spots", []) if h[5] == okey and h[4] > now][-(REROUTE_MAX - 1):]
+        spots.append((round(aim.x, 1), round(aim.y, 1), round(aim.z, 1), REROUTE_R, now + REROUTE_S, okey))
+        s.reroute_spots = spots
+        s.note(f"route failed: another way in ({len(spots)} spot{'s' if len(spots) > 1 else ''} gone round)")
+        return True
+
+    def reroute_hazards(s, now):
+        """The spots a runner's route goes round now (reroute): ((x, y, z, r), ...), while its objective is the same."""
+        spots = getattr(s, "reroute_spots", None)
+        if not spots or getattr(s.order, "role", None) != "runner" or s.order.point is None:
+            return ()
+        okey = s._goal_key(("objective", s.order.point))
+        live = [h for h in spots if h[4] > now and h[5] == okey]
+        s.reroute_spots = live
+        return tuple(h[:4] for h in live)
 
     def detour(s, now, me, kind, point):
         """Not every long trip by the shortest way: once per goal, a trip over 15 units goes by a zone off the straight
