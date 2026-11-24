@@ -724,5 +724,53 @@ class SmartInvasionSpawns(unittest.TestCase):
         self.assertIn("maps/*/inv_vehicles.json", gi.splitlines())
 
 
+class InvasionSecondSquad(unittest.TestCase):
+    """#45 (build 20261118-1714): with 4 or more attackers in phases 1-2, LANE_SPLIT of the team takes the other
+    territory at the same time. The owner: behind a switch, off (0 = today's play) until checked in the sim; every tier
+    (our assign_roles decides who fills the slots)."""
+
+    def slots(self, n, split=None, phase_t=5.0):
+        from brain import director as D
+        from brain.core import Snapshot
+        d = D.Director.__new__(D.Director)
+        d.team, d.map = 1, {"points": {"mid": Vec(50, 0, 0)}}
+        d.spread = lambda p, k, r: p
+        d.overlooks = lambda p, n: []
+        A, B = Vec(0, 0, 0), Vec(100, 0, 0)
+        sn = Snapshot(10.0, [], {}, mode="invasion")
+        sn.inv_zones, sn.inv_zone_r, sn.inv_phase, sn.inv_attackers, sn.inv_phase_t = [A, B], [2.5, 2.5], 1, 1, phase_t
+        sn.inv_core, sn.inv_armed = None, False
+        old = D.LANE_SPLIT
+        if split is not None:
+            D.LANE_SPLIT = split
+        try:
+            out = d.invasion_slots(10.0, sn, n)
+        finally:
+            D.LANE_SPLIT = old
+        at = lambda z: sum(1 for r, q, _ in out if r == "defender" and q is z)
+        return at(A), at(B), len(out)
+
+    def test_off_by_default(self):
+        from brain import director as D
+        self.assertEqual(D.LANE_SPLIT, 0.0)
+        self.assertEqual(self.slots(8), (8, 0, 8))               # today's play: all on one territory
+
+    def test_his_split(self):
+        self.assertEqual(self.slots(8, split=0.35), (5, 3, 8))   # round(0.35 * 8) = 3 in the other territory
+        self.assertEqual(self.slots(3, split=0.35), (3, 0, 3))   # fewer than 4: no second squad
+
+    def test_off_keeps_the_old_one_man_split_before_the_push(self):
+        from brain import director as D
+        old = D.PUSH_AFTER
+        D.PUSH_AFTER = 60.0
+        try:
+            a, b, _ = self.slots(6, phase_t=5.0)
+            self.assertEqual((a, b), (2, 1))                       # (two in, one to the other: as before)
+            a, b, _ = self.slots(6, split=0.35, phase_t=5.0)
+            self.assertEqual((a, b), (2, 2))                       # (his squad of 2 replaces the one man)
+        finally:
+            D.PUSH_AFTER = old
+
+
 if __name__ == "__main__":
     unittest.main()

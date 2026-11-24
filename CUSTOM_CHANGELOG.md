@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reach Invasion: a second squad on the other territory, behind a switch (off), 2026-11-24
+
+Upstream 0.3.0's note #45 (build 20261118-1714). The owner: "behind a switch (LANE_SPLIT, 0 = today's play), checked in the sim before shipping"; #45b: "no exclusion, our role assignment decides".
+
+- `brain/director.py`: `LANE_SPLIT` (his 0.35, **ours 0.0: off**). With it on, in phases 1-2 with 4 or more attackers, `invasion_slots` gives `round(LANE_SPLIT * n)` attacker slots in the other territory, right after the first two in the target. The pile-on fills the rest, and the old single other-territory slot (5 or more, before the push) is skipped while the squad is set. His Spire: a deathmatch by one territory and nothing on the other side.
+- At 0 nothing changes: the second squad's count is 0, the pile-on and the old one-man split are exactly as before.
+- Every tier may fill the squad's slots; our `assign_roles` decides who (no Demon/Noble exclusion, the owner's #45b).
+- **The sim:** neither `tools/real_sim.py` (Reach Slayer by the real rules) nor `tools/bot_sim.py` (the matchmaking simulation) plays Invasion, so there are no switch-on/switch-off numbers. The owner's "checked in the sim before shipping" needs an Invasion sim first, or a live check with `LANE_SPLIT = 0.35`.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (off by default: all eight on one territory; on at 0.35: 5 and 3, none with fewer than 4; before the push, off keeps the old one man, on puts a squad of 2) OK. **Untested in a live match** (off, so live play is unchanged).
+
 ### Reach Invasion: smarter spawns; a waiting vehicle gets a driver its tier may drive, 2026-11-24
 
 Upstream 0.3.0's note #46 (build 20261118-1714), with #46b. The owner: "the named-spawn part now, the label part with #35 (our may_drive guard kept at the errand spot)"; then both parts approved now, and #46b "vehicle job only for vehicles the bot's tier may drive: yes, filter".

@@ -26,6 +26,13 @@ SPLIT_CHANCE = 0.5          # a CTF attack cycle (40-70 s) split over two lanes 
 # phase 1 in 7 of 9 rounds; round 1's split for 60 s (two in, one to the other territory, escorts, overlooks) 2 of 9,
 # with the same movement and speed on both sides (logs/tmp/invasion_regress sidecmp.py / speeds.py, tools/test_round_plan)
 PUSH_AFTER = 0.0
+# Invasion phases 1-2, attacking with 4 or more: this share of the team takes the other territory at the same time,
+# standing in it (his Nov 18: split across both lanes each phase; Spire was a deathmatch by one territory with nothing
+# on the other side of the map). Either territory takes the phase, so the defence has to split too. Not the old split
+# that lost (B17-B25 round 1: one man to the other territory, the rest escorts and overlooks outside both): both squads
+# go in. (upstream 0.3.0, build 20261118-1714, his 0.35.) (custom, Nov 24, the owner: behind a switch, OFF until checked
+# in the sim: 0 = today's play, his 0.35 = his split; every tier, our assign_roles decides who goes)
+LANE_SPLIT = 0.0
 INV_STALL = 25.0            # ... and kept while one of the team was within 8 u of it in the last this many s (director)
 INV_COMMIT = 30.0           # an Invasion attack keeps its territory at least this long after picking it (director)
 # a CTF carry as the team's play: three escorts from six of us, one screen SCREEN_BACK u toward their base, the pushers
@@ -2848,15 +2855,20 @@ class Director:
             # inside its boundary too (Boneyard's territories are boxes of about 1.75 x 2.5 u)
             tr = radius(target)
             slots += [("defender", s.spread(target, k, 0.6 * tr), "objective") for k in range(2)]
+            # the second squad (LANE_SPLIT, off at 0): in the other territory at the same time, right after the first
+            # two so it is always manned (slots go in order to the nearest bot: the ones that spawned by it,
+            # invasion.spawn_offers) (upstream 0.3.0, build 20261118-1714)
+            k2 = int(round(LANE_SPLIT * n)) if other and n >= 4 else 0
+            slots += [("defender", s.spread(other[0], k, 0.6 * radius(other[0])), "objective") for k in range(k2)]
             # the pile-on: a teammate already taking it, or the phase running on, and everyone goes in; once on, it
             # stays on for this territory (the one inside dying turned the team round before 60 s)
             taking = inside(target)
             if taking:
                 s.inv_push = target
             if taking or snap.inv_phase_t > PUSH_AFTER or getattr(s, "inv_push", None) is target:
-                slots += [("defender", s.spread(target, k + 2, 0.6 * tr), "objective") for k in range(max(0, n - 2))]
+                slots += [("defender", s.spread(target, k + 2, 0.6 * tr), "objective") for k in range(max(0, n - 2 - k2))]
                 return slots
-            if n >= 5 and other:
+            if n >= 5 and other and not k2:
                 slots += [("defender", other[0], "objective")]
             slots += [("escort", target, "aggression")] * 2
             slots += [("mid", q, "aggression") for q in s.overlooks(target, n)]
