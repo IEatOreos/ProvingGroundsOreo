@@ -193,7 +193,8 @@ class AlwaysTests(Base):
                 b, me = self.fresh(tier, style)
                 self.assertEqual(self.go(b, me, snap(me), 1.0), {("hold", Vec(10, 0, 0)): bot.SPACE_SCORE},
                                  (tier, style))
-        for tier, style in (("novice", "flanker"), ("novice", "rusher"), ("strong", "camper"), ("top", "sniper")):
+        for tier, style in (("novice", "flanker"), ("novice", "rusher"), ("strong", "camper"), ("top", "sniper"),
+                            ("strong", "rusher"), ("demon", "rusher")):    # (Rushers out since Nov 24: they push)
             b, me = self.fresh(tier, style)
             self.assertEqual(self.go(b, me, snap(me), 1.0), {}, (tier, style))   # (no kill: nothing, as before)
 

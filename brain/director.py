@@ -55,6 +55,17 @@ CUT_CHASE_R, CUT_NEAR_GOAL, CUT_CANDIDATES, CUT_MAX_STEPS = 15.0, 8.0, 6, 1600
 # (else the sweep's power position), and hold it ("mid"); the lead hunter still goes straight at the fight
 POST_EXTEND, POST_HOLD_MAX, POST_QUIET, POST_LOSS_R, POST_LOSS_S = 15.0, 120.0, 20.0, 12.0, 30.0
 PERCH_MIN, PERCH_MAX, PERCH_DZ = 5.0, 25.0, 1.0
+# (custom, Nov 24, the owner: "I do want parts of the map utilized more" ... "Build 1,2,3,4,5 all in one phase") the map
+# used more, on every map. The team remembers when one of ours (bot or person) last stood within COVER_R u (and
+# COVER_DZ of its height) of each power position (coverage_tick: Director.cover_seen, handed to the bots as
+# Bot.cover_seen); a spot nobody has stood on for COVER_STALE_S s or more is fully stale (stale_of 0..1). The Slayer post
+# is picked x OWNER_POST_W on the owner's own hot spots (LiDAR Edit spots, before: score 1.0 over 0.7-0.95, 43% of
+# Boneyard's picks for 5 of 13 spots) and x (1 + COVER_POST_W stale) on a stale one; the sweep goes to a power position
+# by the same weights SWEEP_SPOT of the time, else a zone as before. Live Boneyard 20261120-164229 / 20261124-003150: the
+# bots on foot 87% on the ground, Mid 46-49%, the east building (rockets, laser, sniper, Banshee) 0.0-0.2%
+COVER_R, COVER_DZ, COVER_STALE_S = 6.0, 2.5, 60.0
+OWNER_POST_W, COVER_POST_W, SWEEP_SPOT = 3.5, 1.0, 0.6
+RUSHER_SNEAK = 10.0         # (pick_route: a Rusher's sneak route over every lane)
 # the getaway ride: one transport driver parks GETAWAY_D u from their stand on our side while our runners go in, then
 # fetches our carrier at any distance
 GETAWAY, GETAWAY_D = True, 16.0
@@ -268,10 +279,12 @@ class Director:
             if b.goal[0] == "fight" and snap.player(b.id) and snap.player(b.id).alive:
                 focus[b.goal[1]] = focus.get(b.goal[1], 0) + 1
         hot = s.hot_spot(now)          # map brain MAP-10: what a bot at its post watches with nobody known (Bot.look_point)
+        s.coverage_tick(now, snap)     # (custom, Nov 24: when ours last stood on each power position)
         for b in s.bots.values():
             # Easy ignores the team: no team shot, no score posture (it plays the same at 0-10 and 10-0), no hot zone
             b.team_focus, b.posture, b.hot_spot = (focus, s.posture.value, hot) \
                 if b.p.teamwork > 0 else ({}, 0.5, None)
+            b.cover_seen = s.cover_seen if b.p.teamwork > 0 else None
         dibs = s.wheel_dibs_of(snap)
         for b in s.bots.values():
             b.wheel_dibs = dibs                  # (custom, Nov 13: Easy too; Bot.wheel_yield)
@@ -2089,9 +2102,13 @@ class Director:
                 total += max(0.0, lvl - (now - t) / 6.0)   # threat fades over about a minute
             return total
 
+        # (custom, Nov 24, the owner: "Rushes should always just use sneak paths or flanks and push the entire time") a
+        # Rusher takes a sneak route whenever the map has one (RUSHER_SNEAK over any threat or spread)
+        rush = RUSHER_SNEAK if b.p.personality == "rusher" else 0.0
+
         def score(opt):
             route, sneaky = opt
-            return (-r * 0.5 * threat(route) + (0.9 * r * r if sneaky else 0.0)   # sneaking is a top-player habit
+            return (-r * 0.5 * threat(route) + (0.9 * r * r + rush if sneaky else 0.0)   # sneaking is a top-player habit
                     - ((3.0 if getattr(s, "split", False) else 0.6) if route in used else 0.0)   # split: another lane
                     + s.rng.uniform(0, 1.0 - 0.5 * r))
         return max(options, key=score)[0]
@@ -2921,6 +2938,36 @@ class Director:
         cache[key] = list(out)
         return out
 
+    @staticmethod
+    def cover_key(q):
+        return (round(q.x, 1), round(q.y, 1), round(q.z, 1))
+
+    def coverage_tick(s, now, snap):
+        """(custom, Nov 24) cover_seen {power position's key: when one of ours last stood within COVER_R / COVER_DZ of
+        it}; every spot starts at the match's first tick (stale only after COVER_STALE_S of nobody)."""
+        pts = s.map.get("positions") or ()
+        seen = s.__dict__.setdefault("cover_seen", {})
+        ours = [p.pos for p in snap.players if p.team == s.team and p.alive]
+        for q in pts:
+            k = s.cover_key(q)
+            if k not in seen or any((u - q).flat() < COVER_R and abs(u.z - q.z) < COVER_DZ for u in ours):
+                seen[k] = now
+
+    def post_weights(s, now, pts):
+        """(custom, Nov 24) Each power position's weight for the Slayer post and the sweep, before the hot zone's x2: its
+        score (tools/power_positions.py), x OWNER_POST_W on the owner's own hot spots, x (1 + COVER_POST_W stale) on one
+        nobody of ours stood on lately."""
+        info = s.map.get("position_info") or []
+        w = [i["score"] for i in info] if len(info) == len(pts) else [1.0] * len(pts)
+        own = [bool(i.get("owner")) for i in info] if len(info) == len(pts) else [False] * len(pts)
+        return [max(0.05, v) * (OWNER_POST_W if o else 1.0) * (1.0 + COVER_POST_W * s.stale_of(q, now))
+                for v, o, q in zip(w, own, pts)]
+
+    def stale_of(s, q, now):
+        """0 (one of ours on it just now) .. 1 (nobody for COVER_STALE_S s or more); 0 for a spot not kept."""
+        t = getattr(s, "cover_seen", {}).get(s.cover_key(q))
+        return 0.0 if t is None else min(1.0, max(0.0, now - t) / COVER_STALE_S)
+
     def hot_spot(s, now):
         """Where the enemy last was in the zone the team's threat map rates hottest (seen and died in, a level fading 1
         per 5 s), reported in the last 20 s; else None. Where the team last saw him in that zone, not its centre:
@@ -2998,15 +3045,17 @@ class Director:
             # map brain MAP-06 / MAP-05: the anchor's post by its score (tools/power_positions.py: floor seen, height,
             # items), twice as likely where it sees the hot zone (where the enemy is now); a flat pick held the 8th
             # spot as often as the best, wherever the fights were
-            info = s.map.get("position_info") or []
-            w = [i["score"] for i in info] if len(info) == len(pts) else [1.0] * len(pts)
+            cover = s.post_weights(now, pts)
             T = s.terrain()
-            w = [max(0.05, v) * (2.0 if heat is not None and T.los(q, heat) else 1.0) for v, q in zip(w, pts)]
+            w = [v * (2.0 if heat is not None and T.los(q, heat) else 1.0) for v, q in zip(cover, pts)]
             if lost is not None:          # (custom) not straight back to the post we just lost men on
                 w = [v * (0.2 if dist(q, lost) < 1.0 else 1.0) for v, q in zip(w, pts)]
             s.post = s.rng.choices(pts, weights=w)[0]
             zones = [z.center for z in s.zones.zones] or [s.map["points"]["mid"]]
-            s.sweep = s.rng.choice(zones + list(pts))     # (a zone centre is its lowest floor: the power spots too)
+            if pts and s.rng.random() < SWEEP_SPOT:      # (custom, Nov 24: a power position, owner's and stale first)
+                s.sweep = s.rng.choices(list(pts), weights=cover)[0]
+            else:
+                s.sweep = s.rng.choice(zones + list(pts))     # (a zone centre is its lowest floor: the power spots too)
             s.sweep_high = s.rng.choices(pts, weights=w)[0]   # (custom: the high-ground tiers' sweep, a power position)
             s.look_their_side = s.rng.random() < 0.7     # decided per rotation: no flip-flopping
         target = heat if heat is not None else s.likely_enemy(now, pts, snap)

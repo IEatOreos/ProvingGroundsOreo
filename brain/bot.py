@@ -503,8 +503,20 @@ TAKE_SPACE_TIERS = ("demon", "noble")       # (profiles.fixed_demon, its Noble l
 # needed, no SPACE_STEPS or SPACE_ACTIVE end; with no spot forward it looks again after SPACE_RETRY s. Power weapon
 # grabs, power vehicle jobs, fights, hunts and recharges still win. Every Take Space picks the owner's own hot spots
 # (LiDAR Edit spots: positions.json "owner") first, as if OWN_SPOT_BONUS u nearer
-SPACE_ALWAYS = ("flanker", "rusher")
+SPACE_ALWAYS = ("flanker",)
 SPACE_RETRY, OWN_SPOT_BONUS = 3.0, 6.0
+# (custom, Nov 24, the owner: "Build 1,2,3,4,5 all in one phase"; Rushers out of SPACE_ALWAYS: "Rushes should always
+# just use sneak paths or flanks and push the entire time", Bot.detour / director.pick_route) the next Take Space spot
+# (space_pick), as u off its distance:
+#   OWN_SPOT_HIGH   the owner's own hot spot, for Legendary and up (profiles.fixed_high; the others OWN_SPOT_BONUS)
+#   SPACE_STALE     x how stale the spot is for the team (Director.coverage_tick: nobody of ours on it lately)
+#   HIGH_SPOT       Legendary and up: x its height over its surroundings (positions.json "height") / HIGH_SPOT_U
+#   CROSS_BONUS     a Flanker: x how far round the fight (the target) it is from every teammate, CROSS_FULL deg and
+#                   more full; a Flanker also takes a spot to the side that sees the target (not only one forward),
+#                   no more than CROSS_BACK u farther from the target than it is now, and weighs the target's distance
+#                   CROSS_TARGET_K, not 0.3 (round it, not straight at it)
+OWN_SPOT_HIGH, SPACE_STALE, HIGH_SPOT, HIGH_SPOT_U = 15.0, 8.0, 4.0, 5.0
+CROSS_BONUS, CROSS_FULL, CROSS_BACK, CROSS_TARGET_K = 20.0, 75.0, 5.0, 0.15
 SPACE_REACH, SPACE_FORWARD, SPACE_QUIET, SPACE_KILLS, SPACE_STEPS, SPACE_ACTIVE = 25.0, 2.0, 6.0, 2, 3, 25.0
 # (SPACE_SCORE 1.45 first: in the sim the director's Slayer slot, scored "objective" up to 2.0, took 25-40% of its
 # ticks and the spot was reached 0-3% of them; 2.2 is over that and under committed fights 2.6+, hunts and cover 3.0+,
@@ -3246,23 +3258,58 @@ class Bot:
         d_me = dist(me.pos, target)
         bans = getattr(s, "goal_ban", {})
         free, taken = [], []
-        own = [i["pos"] for i in (s.map or {}).get("position_info") or () if i.get("owner")]   # (custom, Nov 24)
+        # (custom, Nov 24) the owner's spots, the team's stale ones, high ground, a Flanker's crossfire: OWN_SPOT_HIGH ..
+        info = {(round(i["pos"].x, 1), round(i["pos"].y, 1), round(i["pos"].z, 1)): i
+                for i in (s.map or {}).get("position_info") or ()}
+        high = profiles.fixed_high(s.p)
+        flank = s.p.personality == "flanker"
+        cover = getattr(s, "cover_seen", None) or {}
+        from .director import COVER_STALE_S
+        try:
+            T = s.T() if flank else None
+        except Exception:
+            T = None
+        eye = Vec(0.0, 0.0, 0.62)
+        mate_way = [math.atan2(p.pos.y - target.y, p.pos.x - target.x) for p in mates]
         for q in (s.map or {}).get("positions") or ():
-            if dist(q, me.pos) > SPACE_REACH or dist(q, target) > d_me - SPACE_FORWARD:
+            if dist(q, me.pos) > SPACE_REACH:
                 continue
+            side = False
+            if dist(q, target) > d_me - SPACE_FORWARD:
+                # (a Flanker: a spot to the side that sees the target too, not much farther from it)
+                if not (flank and T is not None and dist(q, target) <= d_me + CROSS_BACK):
+                    continue
+                try:
+                    if not T.los(q + eye, target + eye):
+                        continue
+                except Exception:
+                    continue
+                side = True
             if any(dist(q, h) < 1.0 for h in held) or bans.get(s._goal_key(("hold", q)), 0.0) > now:
                 continue
             who = {j for j, c in live.items() if dist(c, q) < SPACE_TAKEN_R + SPACE_PAIR_R}
             who |= {p.id for p in mates if dist(p.pos, q) < SPACE_TAKEN_R}
-            v = dist(me.pos, q) + 0.3 * dist(q, target)    # (the next one forward: a step, not a run to the far end)
-            if any(dist(q, o) < 0.1 for o in own):
-                v -= OWN_SPOT_BONUS                         # (the owner's own hot spot first)
+            # (the next one forward: a step, not a run to the far end)
+            v = dist(me.pos, q) + (CROSS_TARGET_K if flank else 0.3) * dist(q, target)
+            k = (round(q.x, 1), round(q.y, 1), round(q.z, 1))
+            i = info.get(k) or {}
+            if i.get("owner"):
+                v -= OWN_SPOT_HIGH if high else OWN_SPOT_BONUS   # (the owner's own hot spot first)
+            if k in cover:
+                v -= SPACE_STALE * min(1.0, max(0.0, now - cover[k]) / COVER_STALE_S)   # (nobody of ours there lately)
+            if high:
+                v -= HIGH_SPOT * min(1.0, max(0.0, float(i.get("height", 0.0) or 0.0)) / HIGH_SPOT_U)
+            if flank and mate_way:
+                a = math.atan2(q.y - target.y, q.x - target.x)
+                sep = min(abs(wrap(a - m)) for m in mate_way)
+                v -= CROSS_BONUS * min(1.0, math.degrees(sep) / CROSS_FULL)   # (round the fight from the team)
             if not who:
-                free.append((v, q))
+                free.append((v, q, side))
             elif len(who) < 2:
                 taken.append((v, q, min(who)))
         if free:
-            return min(free, key=lambda x: x[0])[1], f"the next hot spot toward {why}"
+            _, q, side = min(free, key=lambda x: x[0])
+            return q, (f"a hot spot to the side of {why}" if side else f"the next hot spot toward {why}")
         if taken:
             _, q, j = min(taken, key=lambda x: x[0])
             return s.space_pair(q, me.pos), f"#{j} has the spot toward {why}: moving up with him"
@@ -8980,6 +9027,8 @@ class Bot:
             s.detour_key, s.detour_pt = key, None
             far = (point - me.pos).flat()
             want = (0.3 + 0.5 * s.p.routes) * (1.5 if s.p.personality == "flanker" else 1.0)
+            if s.p.personality == "rusher":
+                want = 1.0                # (custom, Nov 24, the owner: Rushers "use sneak paths or flanks": every trip)
             if far > 15.0 and s.rng.random() < want:
                 line = math.atan2(point.y - me.pos.y, point.x - me.pos.x)
                 cands = []

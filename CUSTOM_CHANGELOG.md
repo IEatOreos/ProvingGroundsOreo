@@ -2,6 +2,49 @@
 
 ## Unreleased
 
+### More of every map used: your hot spots count, stale spots pull, Flanker crossfires, Rushers push, high ground, 2026-11-24
+
+The owner: "bots dont use alot of space on the map. Like Boneyard rocket building is a stronghold in game but barely is ever used. Banshee building isnt utilized enough. They all just stay outside in mid", "I usually place hot spots where I want bots of high caliber to go, but even then it doesnt seem to affect them a ton", and "Rushes should always just use sneak paths or flanks and push the entire time". Then: "Build 1,2,3,4,5 all in one phase".
+
+Measured first, from his last two Boneyard 8v8 Slayer matches (`20261120-164229`, `20261124-003150`, both before today's Take Space change):
+- Bots on foot were on the ground 87% of the time and in Mid 46–49%.
+- The east building (rockets, Spartan Laser, sniper, the neutral Banshee) got 0.0–0.2%.
+- The bots can walk there from mid and both bases.
+- The owner's 5 marked spots (of 13) got 43% of the Slayer post weight, against 38% unmarked: score 1.0 over the computed spots' 0.7–0.95.
+
+The changes:
+1. **Your hot spots count.**
+   - `Director.post_weights`: Slayer posts weigh the owner's own hot spots ×3.5 (`OWNER_POST_W`). On Boneyard that's 72% of the post weight, before the hot zone's ×2 for spots that see the fight.
+   - Take Space (`Bot.space_pick`) counts them 15 u nearer for Legendary and up (`OWN_SPOT_HIGH`, `profiles.fixed_high`). Other difficulties keep 6 u.
+2. **Team map coverage.** `Director.coverage_tick` records when one of the team (bot or person) last stood within 6 u of each power position (`cover_seen`, handed to the bots). A spot nobody has stood on for 60 s is fully stale.
+   - Slayer posts weigh a stale spot up to ×2 (`COVER_POST_W`).
+   - The sweep goes to a power position by those weights 60% of the time (`SWEEP_SPOT`), and otherwise anywhere as before.
+   - Take Space counts a stale spot up to 8 u nearer (`SPACE_STALE`), for everyone using it.
+3. **Flanker crossfires.** A Flanker's Take Space can also take a spot to the side of the fight that sees it, no more than 5 u farther from it (`CROSS_BACK`).
+   - It counts a spot up to 20 u nearer the farther round the fight it is from every teammate, in full at 75° (`CROSS_BONUS`, `CROSS_FULL`).
+   - It weighs the fight's distance 0.15, not 0.3 (`CROSS_TARGET_K`).
+4. **Rushers push.**
+   - They're out of always-on Take Space (`SPACE_ALWAYS` is Flankers only).
+   - Every trip of theirs over 15 u to the fight or the objective goes round by a side zone (`Bot.detour`). Easy's still runs straight.
+   - In CTF they always take a sneak route when the map has one (`RUSHER_SNEAK` in `pick_route`).
+5. **High ground.** Legendary and up count a Take Space spot up to 4 u nearer for its height over its surroundings (`HIGH_SPOT`, full at 5 u).
+
+Fights, hunts, recharges, power weapon calls and grabs, power vehicle jobs and objective jobs still come first.
+
+- **Validation:**
+  - `tools/test_map_use.py` (11 new): coverage and staleness; post weights; Boneyard's owner share 65–75%; Rushers no longer always on; the owner's spot for Legendary vs Heroic; a stale spot's pull; high ground for Legendary and up only; Flanker crossfires and side spots (and not without a line to the fight, nor for others); Rushers' detours; the CTF sneak route.
+  - `tools/test_take_space.py`: Rushers are now in the list of styles that aren't always on.
+  - Full suite: 1,483 tests OK; `live_bots` imports.
+  - **Simulation:** Boneyard's variant, 8v8 Slayer in `tools/real_sim.py` (the real brain), 3 seeds × 6 minutes, the same tiers on both teams. Bots on foot, sampled every 0.5 s, with these rules off → on:
+    - on a hot spot: 9.5% → 13.4%;
+    - on one of the owner's: 4.3% → 6.2%;
+    - high ground (z > -7.5): 18.2% → 19.0%;
+    - the east building: 11.5% → 9.7%;
+    - the mid strip: 47.0% → 50.1%.
+  - **What the simulation shows:** the bots use hot spots about 40% more, but no more of the east building. Three of the owner's five Boneyard spots are in the mid strip, so weighing them more pulls bots there, and one computed east spot (297, 90.8, -4) can't be reached.
+  - **The simulation's limits:** it doesn't reproduce live's 0–0.2% in the east (it has no weapon pickups and no vehicles but the Banshee). Three seeds are noisy: the east share was 7–13% per seed.
+  - **Untested in a live match.**
+
 ### Flankers and Rushers take space all match; your own hot spots first, 2026-11-24
 
 The owner, asked what the LiDAR view's hot spot marker does: "Make all Flanker personalities do this, Add it Rusher also", then "Exclude easy only". "This" was the proposal: always-on Take Space, giving way to a power weapon call or a power vehicle, with the owner's marked hot spots picked first.
