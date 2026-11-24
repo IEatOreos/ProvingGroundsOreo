@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Modded maps: our mod_maps.py uses MCC Map Studio's own bot export when the mod has one, 2026-11-24
+
+Upstream 0.3.0's note #84 (build 20261120-1802). The owner: "our mod_maps.py stays the only builder, and uses Map Studio's own bot export when present".
+
+- `tools/mod_maps.py build` (ours): when the mod has MCC Map Studio's bot export (`studio_export`), the map is built from it and the .map is not read (no bsp2obj). The export is `ppg/<our folder>`, or `ppg/<game>_<the .map's name>` as Map Studio and upstream name it, holding a `heightmap.npz`.
+  - The height map always comes in.
+  - `objects.json` replaces only a stand-in, and `callouts.json` only a generated one.
+  - Its `features.json`, `killzones.json` and `paint.json` come in only where there are none: the owner's paint is never replaced.
+  - Each file is swapped in whole. `.gitignore` "*" and `mod.json` (with `studio_export`) are written as always.
+  - An export without spawns or callouts falls back to reading the .map as well, as upstream's does.
+- Borrowed from his `tools/modded_export.py`: only that idea and its file list (`STUDIO_FILES`). His builder itself is not here. Our ModManifest/Workshop discovery, bsp2obj + height map, stand-in spawns, callouts and mod.json are unchanged.
+- **Checks:**
+  - `tools/test_mod_maps.py` +3 OK (13): no export gives None; built from the export by the .map's name, with no bsp2obj called; ours made by hand kept (objects, paint) and a generated callouts file replaced.
+  - `tools/test_modded_tab.py` OK.
+  - No Map Studio export is on this PC (no mod has a `ppg` folder), so **untested on a real Map Studio export**.
+
 ### Modded and Map Studio tabs in the LiDAR Viewer, Simulator and Paint the nav; "Read its level" runs our mod_maps.py, 2026-11-24
 
 Upstream 0.3.0's notes #58 (build 20261114-2230) and #83 (build 20261120-1802). The owner: #58 "tab UI and his mod listing only; our mod_maps.py stays the only builder, our titles first"; #83 "take it with #58".

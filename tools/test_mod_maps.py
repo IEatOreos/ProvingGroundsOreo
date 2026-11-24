@@ -127,6 +127,74 @@ class ModMaps(unittest.TestCase):
             mod_maps.stand_ins([])
 
 
+class StudioExport(unittest.TestCase):
+    """(custom, Nov 24) Upstream 0.3.0's note #84: our build uses MCC Map Studio's own bot export (ppg/<name>) when the
+    mod has one, never reading the .map (no bsp2obj), and keeps what is ours by hand."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = self.tmp.name
+        self.mod = os.path.join(root, "mods", "my_map")
+        os.makedirs(os.path.join(self.mod, "maps"))
+        open(os.path.join(self.mod, "maps", "My_Map.map"), "wb").close()
+        self.maps = os.path.join(root, "maps")
+        os.makedirs(self.maps)
+        self.old_maps, mod_maps.MAPS = mod_maps.MAPS, self.maps
+        self.row = dict(folder="h3_my_scenario", game="h3", stem="my_scenario", title="My Map", mod="MY MAP",
+                        mod_dir=self.mod, map=os.path.join(self.mod, "maps", "My_Map.map"), stock=False, built=False,
+                        stale=False)
+
+    def tearDown(self):
+        mod_maps.MAPS = self.old_maps
+        self.tmp.cleanup()
+
+    def export(self, name, files):
+        d = os.path.join(self.mod, "ppg", name)
+        os.makedirs(d)
+        for fn, data in files.items():
+            with open(os.path.join(d, fn), "wb" if fn.endswith(".npz") else "w") as fh:
+                fh.write(data if fn.endswith(".npz") else json.dumps(data))
+        return d
+
+    def load(self, *p):
+        with open(os.path.join(*p), encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_none_without_an_export(self):
+        self.assertIsNone(mod_maps.studio_export(self.row))
+
+    def test_built_from_the_export(self):
+        made = self.export("h3_my_map", {"heightmap.npz": b"studio", "objects.json": {"spawns": [1]},
+                                         "callouts.json": {"zones": {}}, "paint.json": {"layers": {}}})
+        self.assertEqual(mod_maps.studio_export(self.row), made)     # (by the .map's name, as Map Studio names it)
+        from unittest import mock
+        with mock.patch.object(mod_maps.paths, "map_tool", side_effect=AssertionError("no bsp2obj")):
+            self.assertEqual(mod_maps.build(self.row, log=lambda *a: None), "built")
+        d = os.path.join(self.maps, "h3_my_scenario")
+        with open(os.path.join(d, "heightmap.npz"), "rb") as fh:
+            self.assertEqual(fh.read(), b"studio")
+        self.assertEqual(self.load(d, "objects.json")["spawns"], [1])
+        self.assertTrue(os.path.exists(os.path.join(d, "paint.json")))
+        with open(os.path.join(d, ".gitignore"), encoding="utf-8") as fh:
+            self.assertIn("*", fh.read())
+        mod = self.load(d, "mod.json")
+        self.assertEqual((mod["title"], mod["studio_export"]), ("My Map", made))
+
+    def test_ours_by_hand_kept(self):
+        self.export("h3_my_scenario", {"heightmap.npz": b"studio", "objects.json": {"spawns": [1]},
+                                       "callouts.json": {"zones": {"x": 1}}, "paint.json": {"layers": {"walk": 1}}})
+        d = os.path.join(self.maps, "h3_my_scenario")
+        os.makedirs(d)
+        for fn, data in (("objects.json", {"spawns": [9], "by_hand": True}), ("callouts.json", {"generated": True}),
+                         ("paint.json", {"layers": {"mine": 1}})):
+            with open(os.path.join(d, fn), "w", encoding="utf-8") as fh:
+                json.dump(data, fh)
+        self.assertEqual(mod_maps.build(dict(self.row, built=True, stale=True), log=lambda *a: None), "built")
+        self.assertEqual(self.load(d, "objects.json")["spawns"], [9])          # (made by hand: kept)
+        self.assertEqual(self.load(d, "callouts.json")["zones"], {"x": 1})     # (generated: Map Studio's instead)
+        self.assertEqual(self.load(d, "paint.json")["layers"], {"mine": 1})    # (the owner's paint kept)
+
+
 class TagSource(unittest.TestCase):
     def test_mod_fallback(self):
         old = mod_maps.map_file
