@@ -115,5 +115,33 @@ class FirefightDeadCovenant(unittest.TestCase):
         self.assertEqual(self.units(bit=False), [1000, 1001, 1002])
 
 
+class CEFreeForAll(unittest.TestCase):
+    """#14 (build 20261114-0323): in a CE free for all every player is his own side (team = his slot), even with the
+    lobby's red and blue left on; a team game keeps the lobby's teams."""
+
+    def players(self, teams):
+        r = object.__new__(livemod.Live)
+        r.g = stock.Memory(0x10000)
+        r.g.base = 0
+        base, size = 0x1000, 0x200
+        struct.pack_into("<i", r.g.buf, 0x8000 + 0x34, 1 if teams else 0)
+        r.VARIANT = 0x8000
+        for i, team in enumerate((0, 1, 1, 0)):
+            p = base + i * size
+            struct.pack_into("<H", r.g.buf, p, 0x100 + i)
+            struct.pack_into("<I", r.g.buf, p + 0x64, NONE)
+            struct.pack_into("<i", r.g.buf, p + 0x4C, team)
+        r._array = lambda at: (base, 4, size)
+        r.object = lambda h: 0
+        r.tracker = lambda p: []
+        return [d["team"] for d in r.players()]
+
+    def test_free_for_all_every_player_his_own_side(self):
+        self.assertEqual(self.players(teams=False), [0, 1, 2, 3])
+
+    def test_team_game_keeps_the_lobby_teams(self):
+        self.assertEqual(self.players(teams=True), [0, 1, 1, 0])
+
+
 if __name__ == "__main__":
     unittest.main()

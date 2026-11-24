@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Halo: CE free for all: every bot plays for itself, 2026-11-24
+
+Upstream 0.3.0's note #14 (build 20261114-0323). The owner: "take it".
+
+- `brain/live.py`: CE's reader gets `Live.teams_on()` (the running variant's teams flag, +0x34). In a free for all `Live.players()` gives every player his own side (`team` = his player slot), whatever red or blue team number the lobby left him. His live Rocket Slayer free for all on Hang 'Em High: the bots sat on red and blue and same-team bots never fought. The person keeps slot 0's side; CE's free-for-all score read (`match_state`) already scores each player by his `team`.
+- CE only: Halo 2, Halo 3, ODST, Reach and Halo 4 have their own `players()` and are untouched.
+- **Checks:** `tools/test_upstream_030_modes.py` +2 (free for all: teams 0-3 by slot; a team game keeps the lobby's teams) OK; `live.py` parses. **Untested in a live match** (CE).
+
 ### Reach Firefight: bots stop shooting Covenant that are already dead, 2026-11-24
 
 Upstream 0.3.0's note #12 (build 20261114-0323, his GitHub #29). The owner: "take it".

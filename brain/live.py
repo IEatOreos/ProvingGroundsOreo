@@ -259,6 +259,11 @@ class Live:
     def engine(s):
         return struct.unpack("<i", s.g.read(s.g.base + s.VARIANT + 0x30, 4))[0]
 
+    def teams_on(s):
+        """The running variant is a team game (+0x34 nonzero); free for all: False. (upstream 0.3.0, build
+        20261114-0323)"""
+        return struct.unpack("<i", s.g.read(s.g.base + s.VARIANT + 0x34, 4))[0] != 0
+
     # an object's parent (what it rides, its holder): +0xD8, the field players() reads for the vehicle a unit rides. The
     # vehicle list's default (+0x14) is another field in CE: live Blood Gulch Race, all 8 race vehicles read 0x2CDD1E..
     # there and were left out as guns riding something, so no bot ever took one; +0xD8 read NONE on all 8 and on 5 guns
@@ -355,12 +360,18 @@ class Live:
         """[{index, name, team, unit, pos, fwd, aim, health, shield, weapon}] per player slot in use (pos None = dead)."""
         base, mx, size = s._array(PLAYERS_PTR)
         out = []
+        # free for all: every player his own side whatever team number the lobby left him (a Rocket Slayer free for all
+        # on Hang 'Em High had its bots on red and blue, each seeing only the other team's eight: same-team bots never
+        # fought, Nov 13); the person keeps index 0's side as before (upstream 0.3.0, build 20261114-0323)
+        ffa = not s.teams_on()
         for i in range(mx):
             p = base + i * size
             if not struct.unpack("<H", s.g.read(p, 2))[0]:
                 continue
             b = s.g.read(p, 0x68)
             unit, team = struct.unpack_from("<I", b, 0x64)[0], struct.unpack_from("<i", b, 0x4C)[0]
+            if ffa:
+                team = i
             name = b[0x20:0x40].decode("utf-16-le", "replace").partition(chr(0))[0]
             o = s.object(unit)
             d = dict(index=i, name=name, team=team, unit=unit, pos=None, fwd=None, aim=None, vehicle=-1, health=0.0, shield=0.0,
