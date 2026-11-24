@@ -1189,6 +1189,11 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 // message called itself without end
                 if (!o_wndproc) o_wndproc = (WNDPROC)SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, (LONG_PTR)wndproc);
                 g_ready = true;
+                // (upstream 0.3.0, build 20261119-1940) tools/loading_tag.py: the loading banner closes. (custom) once:
+                // the handle is kept, so the named event lives while the mod is loaded (ready again after a fault: no
+                // second handle)
+                static HANDLE ready_event;
+                if (!ready_event) ready_event = CreateEventW(nullptr, TRUE, TRUE, L"Local\\PPG_overlay_ready");
                 logf("overlay ready (window %p)", g_hwnd);
                 logf("overlay: drawing on thread %lu", GetCurrentThreadId());
             }

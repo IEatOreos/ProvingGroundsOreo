@@ -227,5 +227,41 @@ class MapStudio(unittest.TestCase):
             self.assertIn(bit, page)
 
 
+class LoadingBanner(unittest.TestCase):
+    """(upstream 0.3.0 note #73) the loading banner says PROJECT NOBLE; #60's loading message is not anywhere."""
+
+    def test_banner_draws_project_noble(self):
+        import loading_banner
+        self.assertEqual(loading_banner.NAME, "PROJECT NOBLE")
+        self.assertFalse(hasattr(loading_banner, "HINT"))
+        self.assertTrue(loading_banner.BADGE.endswith(os.path.join("installer", "linux", "icon.png")))
+        self.assertIsNotNone(loading_banner.badge(68))               # (our Noble logo is there)
+        for scale, fade in ((1.0, 1.0), (2.0, 0.5), (0.75, 0.0)):
+            img = loading_banner.frame(1.3, scale, fade)
+            self.assertEqual(img.size, (int(loading_banner.W * scale), int(loading_banner.H * scale)))
+            self.assertEqual(img.mode, "RGBA")
+
+    def test_no_open_multiplayer_message(self):
+        import loading_tag
+        for name in ("loading_banner.py", "loading_tag.py", "launch.py"):
+            text = read(name).lower()
+            self.assertNotIn("open multiplayer once", text, name)
+            self.assertNotIn('"project proving grounds"', text, name)
+        self.assertIn("Project Noble", loading_tag.TEXT)
+        self.assertEqual(loading_tag.READY_EVENT, "Local\\PPG_overlay_ready")
+
+    def test_play_starts_and_closes_it_not_under_linux(self):
+        src = read("launch.py")
+        self.assertIn("if not exe:", src)
+        self.assertLess(src.index("tag = loading_tag.LoadingTag()"), src.index("for _ in range(180):"))
+        self.assertLess(src.index("subprocess.run([inj"), src.index("tag.wait_ready(120)"))
+        self.assertLess(src.index("tag.wait_ready(120)"), src.index('print("Bots are ready'))
+
+    def test_overlay_says_ready(self):
+        cpp = read(os.path.join("..", "native", "overlay.cpp"))
+        at = cpp.index('L"Local\\\\PPG_overlay_ready"')
+        self.assertLess(cpp.rindex("g_ready = true;", 0, at), at)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -76,6 +76,16 @@ def main():
         if where and not os.path.normcase(where).startswith(os.path.normcase(os.path.join(paths.chosen(), ""))):
             print(f"MCC is already running from {where}, not from your chosen folder ({paths.chosen()}): the bots load "
                   "into the running one. To play the other copy, quit MCC and press Play again.")
+    tag = None
+    if not exe:
+        # (upstream 0.3.0, build 20261119-1940) the loading banner on MCC until the overlay is up (tools/loading_tag.py).
+        # (custom, Nov 24) the launcher's Play only: not under Steam's Linux launch option
+        try:
+            import loading_tag
+            tag = loading_tag.LoadingTag()
+            tag.start()
+        except Exception:
+            tag = None                               # (a missing banner never stops the launch)
     for _ in range(180):
         if running(MCC):
             break
@@ -94,6 +104,8 @@ def main():
         sys.exit(1)
     r = subprocess.run([inj, os.path.abspath(dll)], capture_output=True, text=True)
     print(r.stdout.strip() or r.stderr.strip())
+    if tag:
+        tag.wait_ready(120)                          # (upstream 0.3.0) the overlay's first frame; then the banner closes
     print("Bots are ready: open Multiplayer > Custom Multiplayer > Halo: CE, Halo 2, Halo 2 Anniversary, Halo 3, Halo: Reach or Halo 4; the BOTS tile is next to"
           " START (or press B).", flush=True)
     if exe:                                          # (Steam counts the game as running while this does)

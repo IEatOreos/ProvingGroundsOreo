@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### A "PROJECT NOBLE" loading banner on MCC while the bots load (the launcher's Play), 2026-11-24
+
+Upstream 0.3.0's note #73 (build 20261119-1940). The owner: "take it with "PROJECT NOBLE" text on the in-repo Play (it shares loading_tag.py/launch.py with the skipped #60: bring only what the banner needs, no "Open Multiplayer" message)".
+
+- `tools/loading_banner.py` (his, Pillow): the see-through panel, ember corner marks, the badge, a sliding bar and a light streak. Ours: "PROJECT NOBLE" for his name; the badge is `installer/linux/icon.png`, which in ours is the Project Noble logo (kept); his hint line "Open Multiplayer once this banner closes." is gone and the name and "Loading the bots ..." sit lower in its space.
+- `tools/loading_tag.py` (his): the topmost, click-through banner window over MCC, closed when the overlay is ready (or after 120 s). Ours: windows named "Project Noble"; the plain fallback tag (if the banner cannot draw) says "Project Noble is loading the bots ...", not #60's "Open Multiplayer once this message closes".
+- `tools/launch.py` (ours, his two hooks): the banner starts once MCC is being started and closes after the injection with `wait_ready(120)`, before "Bots are ready". Only on the launcher's Play: not under Steam's Linux launch option (`--exe`). A banner that cannot start never stops the launch. The standalone Project Noble launcher (Play.bat, its own repo) is not touched and does not use launch.py.
+- `native/overlay.cpp`: beside our `g_ready = true`, the named event `Local\PPG_overlay_ready` is created once (the handle kept, none again after a fault restart). **The DLL is not rebuilt here** (overlay.cpp compiled alone with cl /c: no error; the one C4996 warning is an existing `_wfopen`); until a DLL with it is built and loaded, the banner closes after its 120 s timeout instead of when the overlay is up.
+- Pillow: the bundled Python has it (12.3.0).
+- **Checks:** `tools/test_launcher_noble.py` +4 OK (22): frames at three scales, our badge loads, no hint; no "Open Multiplayer once" text and no "Project Proving Grounds" window name in the three files; Play starts it before waiting for MCC and closes it after the injection, not under `--exe`; overlay.cpp sets the event after `g_ready`. Frames looked at as PNGs (`loading_banner.py <dir>`). **Untested on MCC** (the banner over the game, and its close on the overlay's event).
+
 ### A Map Studio tile in the launcher: it finds MCC Map Studio and opens it, never downloads it, 2026-11-24
 
 Upstream 0.3.0's notes #49 (build 20261117-2100) and #78 (build 20261120-1620). The owner: #49 "locate and open only, no download"; #78 "take it with #49". (#85, downloading Map Studio, skipped.)
