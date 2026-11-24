@@ -985,8 +985,13 @@ class LiveH3(LiveH2):
     def _weapons_held(s, players):
         """([(handle, tag, +0x14, pos)] of every weapon object, {weapon handle: player} of those in a unit's slots)."""
         held, s._third, s._attached, s._riding, s._riding_frame = {}, set(), set(), {}, {}
+        # (custom, Nov 23) each player's unit object, looked up once: below, every weapon riding something looked every
+        # player's up again (3-4 reads each), 12.7% of the brain's whole time in an 8v8 Forge World CTF with a dozen
+        # vehicles' guns (logs/brain_profile_reach_forge_halo_20261123-184158.txt)
+        units = set()
         for p in (p for p in players if p.get("pos") is not None):
             o = s.object(p["unit"])
+            units.add(o)
             if o:
                 for k, w in enumerate(struct.unpack("<4I", s.g.read(o + s.SLOTS_AT, 16))):
                     if w != NONE:
@@ -1011,7 +1016,7 @@ class LiveH3(LiveH2):
                 # riding something that is no player's hands: Reach's ball sits on its spawn marker at (0, 0, 0.2)
                 # (Boardwalk Oddball): its place is the marker's plus that
                 po = s.object(parent)
-                if po and po not in (s.object(p["unit"]) for p in players if p.get("pos") is not None):
+                if po and po not in units:
                     base = struct.unpack("<3f", s.g.read(po + s.POS_AT, 12))
                     pos = (base[0] + pos[0], base[1] + pos[1], base[2] + pos[2])
                     # and that marker on a vehicle (Halo 3 Sandtrap: each CTF flag's stand rides its team's Elephant;

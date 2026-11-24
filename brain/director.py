@@ -3083,6 +3083,28 @@ class Director:
             return rets.get(t) or s.map["flags"][t]
         return rets.get(s.side) or s.map["flags"][s.side]
 
+    HOME_POST_R = 40.0     # u: (custom, Nov 23) a base post a carrier waits at is this near our capture point at most
+
+    def home_posts(s, snap):
+        """(custom, Nov 23) The base's posts a carrier waits at for our flag to come home (carry_point): our holds past
+        the first, only those on our half (nearer our capture point than theirs) within HOME_POST_R of it. The owner's
+        CTF on a new Forge World layout (20261123-182210): "My driver drove me back to their base when I was carrying
+        flag", "Why do the rrun it backwards?". Its holds were the blank canvas's: ours 300 u off the layout (the ferry
+        drove him there), theirs right behind our base (their carriers, their own flag out, ran ours there); a layout's
+        own strategy gives both teams the same holds (tools/variant_strategy.py), two of them at our base."""
+        ours = s.capture_point(snap)
+        theirs = s.map["flags"].get(1 - s.side)
+        rets = s.map.get("returns", {})
+        theirs = rets.get(1 - s.side) or theirs
+        out = []
+        for h in s.map["holds"][s.side][1:]:
+            if dist(h, ours) > s.HOME_POST_R:
+                continue
+            if theirs is not None and dist(h, theirs) <= dist(h, ours):
+                continue
+            out.append(h)
+        return out
+
     def carry_point(s, snap):
         """Where a carrier goes: CTF home (our flag out and the variant needs it home: the base's post farthest from
         where our flag is, off the open stand, until it is back); Oddball a team hold spot far from the enemies seen;
@@ -3096,7 +3118,7 @@ class Director:
             return g or s.map["points"]["mid"]
         if snap.mode != "oddball":
             own = (snap.flags or {}).get(s.team)
-            posts = s.map["holds"][s.side][1:]
+            posts = s.home_posts(snap)
             if own is not None and own.state != "home" and s.home_rule and posts:
                 return max(posts, key=lambda h: dist(h, own.pos))
             return s.capture_point(snap)

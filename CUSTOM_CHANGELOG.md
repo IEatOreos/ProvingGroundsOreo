@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### The brain's slow spots from its first profile; CTF carriers and Spire's top, 2026-11-23
+
+The owner: "Check bug reports, and finish this task" (the profile). The first profile, `logs/brain_profile_reach_forge_halo_20261123-184158.txt` (8v8 CTF on Forge World), had 26% of the passes over 100 ms. In them:
+- `Terrain._field` (a full route search over the layout's 3.46 million nodes, about 40 ms each) was 44% of the time (self).
+- The weapons reader's memory reads were 21% of the whole match.
+
+- **The slow spots:**
+  - **The progress check (`brain/bot.py` `headway`, 18.8% of the slow passes)** built a route field of its own on the walking graph for every goal: a second full search beside the one the bot's walk uses. It now uses the walk's own field (its jump and people's ways, as `Terrain.nav`), from the same cache.
+  - **"Where he comes into view" (`route_view`, about 16%)** asked `path_ahead` for up to 200 steps, then stopped at the first one out of sight. The steps are now worked out as they are checked (`Terrain.path_steps`, `path_ahead` its list). Same answers, 8% faster on that layout's nav.
+  - **The weapons reader (`brain/live.py` `_weapons_held`, 12.7% of the match):** every weapon riding something (every vehicle's gun) looked every player's unit up again, 3–4 reads each. The units are now looked up once a call.
+- **The bug reports:**
+  - **This match (`20261123-184158`), "Cosmic wasnt shooting me" and "Are the bots not working?":** the brain. At 75–80 s Cosmic (a Demon) was 4–5 u from the owner with him in sight, and sent 30 commands in 15 s and 3 shots: its passes ran 160–330 ms. Around 202 s one pass took 1,452 ms. These are the slow spots above.
+  - **CTF on a new Forge World layout (`20261123-182210`), "My driver drove me back to their base when I was carrying flag" and "Why do the rrun it backwards? Because of the lanes?":** not the lanes.
+    - A carrier whose own flag is out waits at "the base's post farthest from our flag" (`carry_point`). That match had the blank canvas's holds: ours 300 u off the layout (the ferry's target, (64.8, 207.4)), and theirs at (−58, −205), (−53, −202), (−62, −200), behind our base. Team 1's carriers ran our flag there, south to y −200 and −212, their base at y −92.
+    - A layout's own strategy gives both teams the same holds (`tools/variant_strategy.py`), two of them at our base.
+    - **Fix (`brain/director.py` `home_posts`):** only our holds on our half (nearer our capture point than theirs) and within 40 u of it; none, and it is the stand.
+  - **Spire BTB (`20261123-172845`), "Why do bots sit at the top of spire in btb?":**
+    - The spire's top (z −24) has no way down in the nav (`Terrain.trap`: reached by the lift, no route out). Three of the layout's power positions and a Fuel Rod are up there.
+    - A Mythic posted there went up at 255 s and stayed the last 420 s, its every goal 30 u under it ("edge stop" 3,968 times up there).
+    - **Fix (`brain/maps.py`):** posts and items in a trap are left out (`_in_trap`).
+  - **Its other report, "Bot wont shoot in banshee":** the Banshee work already has it.
+- **Checks:**
+  - New `tools/test_weapons_held_units.py` (3: a weapon on a marker placed by it, one on a body not, the slots held).
+  - New `tools/test_home_posts.py` (4: the canvas's holds, the shared ones, the flag home).
+  - `tools/test_posts_and_powerups.py` +1 (a trap).
+  - `unittest discover` over `tools` is OK (1416 tests), and so is the `live_bots` import.
+  - **Untested in a match:** the speed-up is to be read from the next profile.
+
 ### The brain's profile in every match, 2026-11-23
 
 The owner, after an 8v8 CTF on a new Forge World layout (`20261123-182210`) where the brain's passes took 194 ms (median; 15–35 ms in the day's other matches) and the bots played badly: "Yes, profile first" (before spreading the bots across cores).

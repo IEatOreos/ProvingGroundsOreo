@@ -2777,11 +2777,20 @@ class Terrain:
         the route a walker sees ahead of him (brain/bot.py route_view)."""
         if not all(math.isfinite(c) for c in (a.x, a.y, a.z, b.x, b.y, b.z)):
             return []
+        return list(s.path_steps(a, b, n, jump, human, safe, limit, no_tele))
+
+    def path_steps(s, a, b, n=80, jump=False, human=False, safe=False, limit=None, no_tele=False):
+        """path_ahead's points one at a time, each worked out only when asked for (custom, Nov 23: brain/bot.py
+        route_view stops at the first one out of sight, mostly a few units on, and the 200 steps it asked for up front,
+        each a step down the field in numpy, were 9.6% of the brain's slow passes in an 8v8 Forge World CTF)."""
+        if not all(math.isfinite(c) for c in (a.x, a.y, a.z, b.x, b.y, b.z)):
+            return
         cost = s._field(b, jump, human, safe, limit, no_tele)
         l, j, i = s._node(a)
         if not np.isfinite(cost[l, j, i]):
-            return []
-        return [s._center(*q) for q in s._down(l, j, i, cost, n)]
+            return
+        for q in s._down(l, j, i, cost, n):
+            yield s._center(*q)
 
     def walkable(s, p):
         j, i = s._cell(p)

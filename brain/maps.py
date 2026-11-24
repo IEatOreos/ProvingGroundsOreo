@@ -981,6 +981,8 @@ def _build(m, window):
     T.set_spawns(spawn_points(m))
     for it in m["items"]:                # an item on a rock top nobody can reach is not worth a trip
         it["reachable"] = T.inside(it["pos"].x, it["pos"].y) and bool(T.reach[T._node(it["pos"])])
+        if it["reachable"] and _in_trap(T, it["pos"]):
+            it["reachable"] = False      # (custom, Nov 23) nor one no way leads back from (keep_reachable_positions)
     keep_reachable_positions(m, T)       # (custom, Nov 23) power positions nobody can stand on: left out
 
     def snap(p):                         # a point no player can stand on (Halo 2 Lockout's mid at
@@ -1037,14 +1039,23 @@ def _build(m, window):
     return T
 
 
+def _in_trap(T, p):
+    """(custom, Nov 23) p on floor a player reaches but no way leads out of to a spawn (Terrain.set_spawns' trap)."""
+    trap = getattr(T, "trap", None)
+    return trap is not None and T.inside(p.x, p.y) and bool(trap[T._node(p)])
+
+
 def keep_reachable_positions(m, T):
     """(custom, Nov 23, the owner on Sword Base: "Make bots use this lift ... it leads to floor 3. So make routes worth
     it", "Swordbase is usually height is most important") The power positions (positions.json) no player can stand on
     are left out, with their position_info: Sword Base's four on its roof (z 38) got 40% of the bots' orders in match
     20261123-132333 while nobody stood over z 33, and the bots held the floor under them (z 24.5-29.6) instead of floor
-    3's four posts. Outside a variant's window they are kept as they are."""
+    3's four posts. Outside a variant's window they are kept as they are. (custom, Nov 23, the owner on Spire BTB, "Why
+    do bots sit at the top of spire in btb?") Nor those no way leads back from (Terrain.trap: reached by a lift, no
+    route down): three of v704f87f3's twelve sit on the spire's top (z -24), and a Mythic posted there at 19 s went up
+    at 255 s and stayed the match's last 420 s, its every goal 30 u under it ("edge stop" 3968 times up there)."""
     pts, info = m.get("positions") or [], m.get("position_info") or []
-    ok = [not T.inside(p.x, p.y) or bool(T.reach[T._node(p)]) for p in pts]
+    ok = [not T.inside(p.x, p.y) or (bool(T.reach[T._node(p)]) and not _in_trap(T, p)) for p in pts]
     if all(ok):
         return
     gone = [p for p, k in zip(pts, ok) if not k]

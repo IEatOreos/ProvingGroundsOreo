@@ -49,6 +49,21 @@ class ReachablePositions(unittest.TestCase):
         maps.keep_reachable_positions(m, FakeT())
         self.assertEqual(m, before)
 
+    def test_no_way_back_left_out(self):
+        """(Spire BTB) a post reached by a lift with no route down (Terrain.trap) is no post."""
+        class TrapT(FakeT):
+            trap = {True: False, False: False, "top": True}
+            reach = {True: True, False: False, "top": True}
+
+            def _node(s, p):
+                return "top" if p.z > 35 else p.z < 30.0
+        T = TrapT()
+        m = dict(positions=[Vec(10, 0, 28), Vec(20, 0, 40)], position_info=[dict(score=1.0), dict(score=0.9)])
+        maps.keep_reachable_positions(m, T)
+        self.assertEqual(m["positions"], [Vec(10, 0, 28)])
+        self.assertTrue(maps._in_trap(T, Vec(20, 0, 40)))
+        self.assertFalse(maps._in_trap(FakeT(), Vec(20, 0, 40)))      # (no trap known: none)
+
     def test_kept_by_the_terrain_cache(self):
         self.assertIn("positions", maps.CACHE_M_STATE)
         self.assertIn("position_info", maps.CACHE_M_STATE)

@@ -8810,7 +8810,11 @@ class Bot:
             from .maps import terrain
             T = s._terrain = terrain(s.map)
         try:
-            c = float(T._field(goal[1])[T._node(me.pos)])
+            # (custom, Nov 23) the field move_to's nav walks (its jump / human ways: Terrain.nav), not one of its own
+            # on the walking graph: that was a second full route search per goal, 18.8% of the brain's slow passes in
+            # an 8v8 Forge World CTF (logs/brain_profile_reach_forge_halo_20261123-184158.txt)
+            human = bool(getattr(T, "hjumps", None) or getattr(T, "hroutes", None))
+            c = float(T._field(goal[1], s.nav_jumps(), human)[T._node(me.pos)])
             if math.isfinite(c):
                 d = c
         except Exception:
@@ -12387,7 +12391,11 @@ class Bot:
         where the way goes out of view (a corner, a doorway, a brow). None: no way there, or that point under 2 u off.
         way: Terrain.path_ahead's jump / human / safe / limit."""
         T, last = s.T(), None
-        for q in T.path_ahead(me.pos, point, n=int(far / 0.25), **way)[3::4]:
+        # (custom, Nov 23) the way's points worked out as they are checked (Terrain.path_steps), every 4th from the 4th
+        # as before: the first out of sight ends it
+        for k, q in enumerate(T.path_steps(me.pos, point, n=int(far / 0.25), **way)):
+            if k % 4 != 3:
+                continue
             if not T.los(me.pos, q):
                 break
             last = q
