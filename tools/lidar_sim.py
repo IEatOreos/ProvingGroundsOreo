@@ -542,6 +542,8 @@ class Control:
         with s.lock:
             if act == "pick":
                 name = d.get("name")
+                if name not in s.names:              # (upstream 0.3.0) a modded map whose level was read since: the
+                    s.names = lidar.map_list_names()  # list again
                 if name not in s.names:
                     return 404, dict(error="no level data for that map")
                 s.queue = [name]

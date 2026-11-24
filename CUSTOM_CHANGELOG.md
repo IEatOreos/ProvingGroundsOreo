@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Modded and Map Studio tabs in the LiDAR Viewer, Simulator and Paint the nav; "Read its level" runs our mod_maps.py, 2026-11-24
+
+Upstream 0.3.0's notes #58 (build 20261114-2230) and #83 (build 20261120-1802). The owner: #58 "tab UI and his mod listing only; our mod_maps.py stays the only builder, our titles first"; #83 "take it with #58".
+
+- `brain/paths.py` (his, whole; ours was upstream's own): `workshop_maps`, `local_mod_roots` and `WORKSHOP_GAMES` list the modded maps on this PC. These are the Steam Workshop's and the local mods in MCC's ModManifest.txt, each with its game and mod. A local mod is "studio" when its ModInfo says MCC Map Studio or it has a `ppg` folder.
+- `tools/lidar.py`:
+  - `modded(listed)` (his, hand-merged): marks the maps with level data as modded, with their mod, and lists the others as not ready. `map_list` adds them, and so does Paint the nav's list (#57).
+  - His `workshop_title` is used last only. His `PREPARING` and the `/prepare` POST route stay behind the `X-LiDAR: prepare` header.
+  - Discovery is read at most every 20 s, since the list is asked every few seconds.
+- **Ours wins:**
+  - The name is our builder's folder for that map file (`tools/mod_maps.py`, as `play.py` names the running map), and a map only our builder finds is listed too.
+  - Titles are ours first: `map_title` (mod.json's, FP_GUARDIAN), then the mod's multiplayer title, his `workshop_title` last.
+  - A mod on a stock map's scenario (The Great Forge's Sword Base) stays that map, not a modded one.
+  - A modded map's layouts go to its tab with it.
+- **"Read its level"** (`prepare_modded`): runs **our** `tools/mod_maps.py <folder>` in the background (bsp2obj + heightmap, stand-in spawns, callouts, mod.json, `.gitignore` "*"). It is offered only where our builder has a row with a .map file, and otherwise the row says why not (Halo CE / Halo 2 levels are not read by the map tools; a mod with no multiplayer map). His `tools/modded_export.py` is **not** ported.
+- `tools/lidar_view.html` (ours, hand-merged, the map list only):
+  - Modded and Map Studio tabs after the seven games, each with a game drop-down. The games' own tabs count only their own maps.
+  - A modded map shows its game's logo and "From <mod>". One not read yet cannot be opened or simulated; it has a **Read its level** / **Try again** button and shows its progress, polled every 3 s.
+  - Our Edit spots, scan switch, drives, Open a map, Simulate all and Who maps are unchanged.
+- `tools/lidar_sim.py`: a pick of a map not in the simulator's list reads the list again (a modded map whose level was read since).
+- **Checks:**
+  - `tools/test_modded_tab.py` (new, 7) OK: our folder and title win; a stock-scenario mod stays the stock map; a map only our builder knows is listed; Map Studio is flagged; CE is not readable, with why; Read its level runs `mod_maps.py <folder>` and nothing else; a failed read shows our builder's reason; `modded_export.py` is not here; the page has the tabs; `workshop_maps` finds a local Map Studio mod and skips `shared.map`; the simulator takes a map read since.
+  - All LiDAR, paint and mod_maps tests OK.
+  - **Seen in the browser** (the worktree's viewer on another port): the Modded tab lists 27 Reach mods, with FP_GUARDIAN and the FP ports under our titles. FP_PROOF's Read its level ran our builder and showed its reason: "bsp2obj exported no geometry", the same as `mod_maps.py reach_fp_proof` by hand.
+  - **Not tried in the Simulator window or Paint the nav's window.**
+
 ### Paint the nav: a map list (M key), organized as the LiDAR tools', 2026-11-24
 
 Upstream 0.3.0's note #57 (build 20261114-2230). The owner: "take it (both files whole)".

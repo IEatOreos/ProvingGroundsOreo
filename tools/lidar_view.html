@@ -169,7 +169,13 @@
   #maps.on { display: flex; }
   #maps .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   #maps .head h2 { margin: 0; }
-  #games { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+  #games { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+  /* (upstream 0.3.0) the Modded and Map Studio tabs' game drop-down, and a modded map not read yet */
+  #games button[data-key="g:mod"], #games button[data-key="g:studio"] { justify-content: center; }
+  #mod-game { grid-column: 1 / -1; width: 100%; min-height: 28px; padding: 2px 6px; background: #0e1824; color: var(--text);
+              border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 13px; cursor: pointer; }
+  .mrow.waiting .mopen { cursor: default; }
+  .mrow.waiting .mname { color: #9fb0c2; }
   #games button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 3px 5px; }
   #games img { height: 30px; max-width: 100%; object-fit: contain; }
   #games .gname { font-size: 12px; font-weight: 600; line-height: 1.2; text-align: center; }
@@ -188,6 +194,7 @@
            text-align: left; border-radius: 6px; }
   .mopen:hover { border: none; }
   .mopen img { width: 96px; height: 48px; object-fit: cover; border-radius: 4px; background: var(--bg); flex: none; }
+  .mopen img.modlogo { object-fit: contain; padding: 6px; box-sizing: border-box; }
   .mtext { flex: 1; min-width: 0; }
   .mname { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mstat { display: block; color: var(--dim); font-size: 12px; line-height: 1.35; }
@@ -671,6 +678,18 @@ function setCoverage(c) {   // tools/lidar_director.py view(): coverage of the r
     (open === 1 ? "" : "es") + " open" + (left ? ", " + left + " no way" : "");
   for (const p of c.patches) patchBufs[p[4]].push(p[0], p[1], p[2] + 0.15);
 }
+// (upstream 0.3.0) a modded map's level read from its .map file (tools/lidar.py prepare_modded: our tools/mod_maps.py
+// builds it): asked once, the list polled until it is in
+let prepPoll = null;
+async function prepareMap(m) {
+  try { await fetch("/prepare?name=" + encodeURIComponent(m.name), { method: "POST", headers: { "X-LiDAR": "prepare" } }); } catch (e) {}
+  await loadMaps();
+  if (!prepPoll) prepPoll = setInterval(async () => {
+    await loadMaps();
+    if (!mapsData || !mapsData.maps.some(x => x.preparing && x.preparing.state === "running")) { clearInterval(prepPoll); prepPoll = null; }
+  }, 3000);
+}
+
 async function simPost(body) {
   try {
     const r = await fetch("/sim", { method: "POST", headers: { "X-LiDAR": "sim", "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -1054,7 +1073,7 @@ async function loadStored() {
   if (!browsing) poll(); else simPoll();
 }
 // --- the maps list: maps sorted by game, scan status, open one
-let mapsData = null, mapsGame = null, mapsTimer = null, mapsKey = "", expanded = null;
+let mapsData = null, mapsGame = null, mapsTimer = null, mapsKey = "", expanded = null, modGame = null;
 const baseOf = n => n.split("/")[0];
 const ago = t => { const s = Date.now() / 1000 - t; return s < 3600 ? Math.max(1, Math.round(s / 60)) + " min ago"
   : s < 86400 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " days ago"; };
@@ -1072,9 +1091,12 @@ function renderMaps() {
   // (custom) a simulator with no map running has no live map: the last one stopped is a map like any other
   const liveMode = mapsData.mode !== "stored" && !(simState && !simState.current);
   const cur = browseName || mapsData.live;
-  if (!mapsGame) mapsGame = gameOf(cur);
+  const curMap = mapsData.maps.find(m => m.name === cur);
+  if (!mapsGame) mapsGame = curMap && curMap.modded ? (curMap.studio ? "studio" : "mod") : gameOf(cur);
+  if (curMap && curMap.modded && !modGame) modGame = curMap.game;
   for (const [k, label] of GAMES) {      // MCC's own game logos (tools/map_art.py)
-    const all = mapsData.maps.filter(m => m.game === k), scanned = all.filter(m => m.scan || m.sim).length;
+    // ((upstream 0.3.0) the game's own maps: the modded ones have their tab)
+    const all = mapsData.maps.filter(m => m.game === k && !m.modded), scanned = all.filter(m => m.scan || m.sim).length;
     const b = document.createElement("button");
     b.innerHTML = '<img alt="" src="/art/games/' + k + '.png"><span class="gname">' + label + '</span><span class="gcount">' +
       scanned + "/" + all.length + " scanned</span>";
@@ -1083,13 +1105,41 @@ function renderMaps() {
     b.onclick = () => { mapsGame = k; $("maplist").scrollTop = 0; renderMaps(); };
     tabs.appendChild(b);
   }
+  // (upstream 0.3.0) Modded: maps downloaded from the Workshop (and other local mods); Map Studio: the maps made with MCC
+  // Map Studio. Each one game at a time (its drop-down), none of the game's own maps
+  const kinds = { mod: m => m.modded && !m.studio, studio: m => m.modded && m.studio };
+  for (const [key, label, what, tip] of [["mod", "Modded", " downloaded", "Maps downloaded from the Steam Workshop, and other mods, by game"],
+                                         ["studio", "Map Studio", " made", "Maps made with MCC Map Studio, by game"]]) {
+    const these = mapsData.maps.filter(m => kinds[key](m) && !m.name.includes("/variants/"));
+    const mb = document.createElement("button");
+    mb.innerHTML = '<span class="gname">' + label + '</span><span class="gcount">' + these.length + what + "</span>";
+    mb.title = tip;
+    mb.dataset.key = "g:" + key; mb.setAttribute("aria-pressed", mapsGame === key);
+    mb.onclick = () => {
+      if (!these.some(m => m.game === modGame)) modGame = (these[0] || {}).game || "ce";
+      mapsGame = key; $("maplist").scrollTop = 0; renderMaps();
+    };
+    tabs.appendChild(mb);
+  }
+  if (kinds[mapsGame]) {
+    const sel = document.createElement("select"), these = mapsData.maps.filter(m => kinds[mapsGame](m) && !m.name.includes("/variants/"));
+    sel.id = "mod-game"; sel.setAttribute("aria-label", "Game of the " + (mapsGame === "studio" ? "Map Studio" : "modded") + " maps"); sel.dataset.key = "mod-game";
+    for (const [k, label] of GAMES) {
+      const n = these.filter(m => m.game === k).length, o = document.createElement("option");
+      o.value = k; o.textContent = label + " (" + n + ")"; sel.appendChild(o);
+    }
+    sel.value = modGame || "ce";
+    sel.onchange = () => { modGame = sel.value; $("maplist").scrollTop = 0; renderMaps(); };
+    tabs.appendChild(sel);
+  }
   // one entry per map; a map with Forge layouts (maps/<map>/variants) opens a list: the base map, then each layout
   const scannedOnly = $("scanned-only").checked, has = m => !!(m.scan || m.sim);
   const isLive = m => liveMode && m.name === mapsData.live;
   const first = m => isLive(m) * 2 + (m.name === cur);     // the live map, then the open one, then scanned ones
   if (!expanded) expanded = new Set([baseOf(cur)]);        // the open map's layouts start listed
   const groups = new Map();
-  for (const m of mapsData.maps) if (m.game === mapsGame) {
+  const inTab = m => kinds[mapsGame] ? kinds[mapsGame](m) && m.game === modGame : m.game === mapsGame && !m.modded;
+  for (const m of mapsData.maps) if (inTab(m)) {
     if (!groups.has(baseOf(m.name))) groups.set(baseOf(m.name), []);
     groups.get(baseOf(m.name)).push(m);
   }
@@ -1102,19 +1152,29 @@ function renderMaps() {
   }
   list.sort((a, b) => b.rank - a.rank || b.scanned - a.scanned || a.title.localeCompare(b.title));
   if (!list.length) {
-    box.innerHTML = '<li class="empty">No scanned ' + gameName(mapsGame) + ' maps yet. Untick "Scanned maps only" to see them all.</li>';
+    box.innerHTML = kinds[mapsGame] && !mapsData.maps.some(m => kinds[mapsGame](m) && m.game === modGame)
+      ? (mapsGame === "studio"
+        ? '<li class="empty">No ' + gameName(modGame) + ' maps made with MCC Map Studio yet. Export one from Map Studio and it shows here.</li>'
+        : '<li class="empty">No modded ' + gameName(modGame) + ' maps downloaded. Subscribe to one on the Steam Workshop and it shows here.</li>')
+      : '<li class="empty">No scanned ' + gameName(kinds[mapsGame] ? modGame : mapsGame) + ' maps yet. Untick "Scanned maps only" to see them all.</li>';
   }
   const badge = m => isLive(m) ? '<span class="pill live">LIVE</span>' : m.name === cur ? '<span class="pill stored">OPEN</span>' : "";
   const status = (m, inGroup) => { const s = m.scan || m.sim;
-    return (s ? (m.scan ? "" : "Simulator: ") + s.runs + " run" + (s.runs === 1 ? "" : "s") + ", " +
+    if (m.modded && !m.ready) return "From " + m.mod + " · " + (m.preparing && m.preparing.state === "running"
+      ? "reading its level from its map file (a minute or two) ..."
+      : m.preparing && m.preparing.state === "failed" ? "its level could not be read: " + m.preparing.error
+      : m.readable ? "not read yet: press Read its level to scan it" : "its level cannot be read here: " + m.why);
+    return (m.modded ? "From " + m.mod + " · " : "") + (s ? (m.scan ? "" : "Simulator: ") + s.runs + " run" + (s.runs === 1 ? "" : "s") + ", " +
       s.cells.toLocaleString() + " floor cells, " + s.links + " path" + (s.links === 1 ? "" : "s") + " · " + ago(s.updated) : "No scan yet (map features only)") +
-      (m.scan && m.sim ? " · simulator scan too" : "") + (m.mcc ? "" : " · editing kit test level, not in MCC") +
+      (m.scan && m.sim ? " · simulator scan too" : "") + (m.mcc || m.modded ? "" : " · editing kit test level, not in MCC") +
       (!inGroup && m.name.includes("/variants/") ? " · Forge layout from your matches" : ""); };
   const row = (m, label, inGroup) => {   // a map (or one layout of it): open it, simulate it, remove its scan
     const li = document.createElement("li"), b = document.createElement("button");
     li.className = "mrow" + (m.name === cur ? " cur" : "");
     b.className = "mopen";
-    b.innerHTML = (inGroup ? "" : '<img alt="" loading="lazy" src="/art/maps/' + baseOf(m.name) + '.jpg">') +
+    // ((upstream 0.3.0) a modded map: no MCC picture of it, its game's logo instead)
+    const pic = m.modded ? '/art/games/' + m.game + '.png" class="modlogo' : '/art/maps/' + baseOf(m.name) + '.jpg';
+    b.innerHTML = (inGroup ? "" : '<img alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" src="' + pic + '">') +
       '<span class="mtext"><span class="mname"></span><span class="mstat"></span></span>' + badge(m);
     b.querySelector(".mname").textContent = label;
     const st = b.querySelector(".mstat");
@@ -1123,10 +1183,19 @@ function renderMaps() {
     b.title = m.title;
     b.dataset.key = "m:" + m.name;
     if (m.name === cur) b.setAttribute("aria-current", "true");
-    b.onclick = () => openMap(m, isLive(m));   // (custom) open it; its Simulate button (or the panel's) starts it
+    const waiting = m.modded && !m.ready;   // ((upstream 0.3.0) its level not read: nothing to open or simulate)
+    if (waiting) { b.setAttribute("aria-disabled", "true"); li.classList.add("waiting"); }
+    b.onclick = () => waiting ? null : openMap(m, isLive(m));   // (custom) open it; its Simulate button (or the panel's) starts it
     const acts = document.createElement("span");
     acts.className = "macts";
-    if (simState) {               // the simulator serves this view: simulate any map from here
+    if (waiting && m.readable && !(m.preparing && m.preparing.state === "running")) {   // read once, then it scans
+      const prep = document.createElement("button");
+      prep.className = "msim"; prep.textContent = m.preparing ? "Try again" : "Read its level"; prep.dataset.key = "p:" + m.name;
+      prep.title = "Read " + m.title + "'s level from its map file so it can be scanned"; prep.setAttribute("aria-label", prep.title);
+      prep.onclick = () => prepareMap(m);
+      acts.appendChild(prep);
+    }
+    if (simState && !waiting) {   // the simulator serves this view: simulate any map from here
       const go = document.createElement("button");
       go.className = "msim"; go.textContent = "Simulate"; go.dataset.key = "s:" + m.name;
       go.title = "Watch the bots map " + m.title; go.setAttribute("aria-label", go.title);
