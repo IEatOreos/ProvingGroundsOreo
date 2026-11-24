@@ -542,6 +542,28 @@ def is_warthog(name):
     return kind_of(name) in WARTHOGS
 
 
+# (custom, Nov 24, the owner: "Dont let Mythic noble or demon ride passenger in mongoose or warthogs, unless theyre
+# carrying the objective. Only gunners of Gauss hog and normal warthogs. Not rocket hogs" ... "No passenger seat in the
+# rocket hog unless carrying objective. Any difficulty can feel [fill] those seats that isnt mythic demon or noble") the seats
+# of these a Demon, Noble or Mythic (profiles.demon_rules) takes: the gun of DEMON_GUNS only; a passenger's seat only
+# with the objective in hand. Every other vehicle's seats as before
+DEMON_SEAT_RULE = WARTHOGS | {"mongoose", "gungoose"}
+DEMON_GUNS = {"warthog", "gauss"}
+
+
+def demon_seat_ok(name, seat, carrying=False):
+    """A Demon, Noble or Mythic may sit in this seat of vehicle name: seat "gunner" (or the order "ride") or "passenger"
+    (or "board"); the wheel is may_drive's (DEMON_NO_DRIVE)."""
+    k = kind_of(name) or name
+    if k not in DEMON_SEAT_RULE:
+        return True
+    if seat in ("gunner", "ride"):
+        return k in DEMON_GUNS
+    if seat in ("passenger", "board"):
+        return bool(carrying)
+    return True
+
+
 # (custom, Nov 7) a light vehicle's body as boxes in its own frame (forward, left, up from its origin; u), for whether a
 # round at a rider's head goes through the vehicle first (hull_blocks). INFERRED around the owner's seat capture
 # (logs/h4_seat_capture_20261107-233231, Halo 4): heads (fwd, left, up) Warthog driver (0.01, 0.13, 0.24), passenger

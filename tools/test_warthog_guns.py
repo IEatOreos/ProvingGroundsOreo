@@ -107,7 +107,8 @@ class RocketHogTests(unittest.TestCase):
 def parked_gunner(riders=2, now=100.0):
     """A bot on a rocket Warthog's gun, a bot passenger, nobody driving, still since 90 s: it gets out (Bot.drive)."""
     mapdata = dict(name="reach_dlc_medium", flags={}, points={}, items=[])
-    b = Bot(0, 0, profiles.make_profile("demon", "rusher", random.Random(3)), mapdata, random.Random(5))
+    # (a Legendary: since Nov 24 a Demon takes no Rocket Warthog gun at all, Bot.seat_ok)
+    b = Bot(0, 0, profiles.make_profile("top", "rusher", random.Random(3)), mapdata, random.Random(5))
     b.seat, b.seat_for, b.seat_since, b.notes = "gunner", HOG, 90.0, []
     b.order = Order("ride", Vec(10, 18, 0), target=HOG)
     b._terrain = Flat()

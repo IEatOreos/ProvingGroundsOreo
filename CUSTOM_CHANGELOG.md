@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Demon, Noble and Mythic: a Warthog's or Gauss Warthog's gun only, no passenger seat without the objective, 2026-11-24
+
+The owner: "Dont let Mythic noble or demon ride passenger in mongoose or warthogs, unless theyre carrying the objective. Only gunners of Gauss hog and normal warthogs. Not rocket hogs", then "No passenger seat in the rocket hog unless carrying objective. Any difficulty can feel [fill] those seats that isnt mythic demon or noble". Before this, those three were barred only from driving Warthogs, Mongooses and Ghosts; they rode any gun or passenger seat.
+
+- `vehicles.demon_seat_ok` (new, `DEMON_SEAT_RULE`, `DEMON_GUNS`), for every Warthog (chaingun, Rocket, Gauss, Transport) and the Mongoose and Gungoose:
+  - **Gun:** the normal Warthog's and the Gauss Warthog's only. Never the Rocket Warthog's.
+  - **Passenger seat:** only while carrying the objective (flag, bomb or ball).
+  - Every other vehicle's seats are unchanged, and so is the driving ban.
+- `Bot.seat_ok` applies it to Demon, Noble and Mythic (`profiles.demon_rules`). Every other difficulty takes every seat as before.
+- The director no longer sends them to those seats, and the next bot in line gets the seat instead:
+  - a honk's gun and passenger seats (`honk_orders`);
+  - a driver's calls for riders (`rider_calls`);
+  - the hop-on-the-gun call;
+  - a lone driver's trip to fetch a gunner (`gunner_pickup`).
+- A bot that still has such an order doesn't walk to the seat (`decide`).
+- **Already seated in a seat it doesn't take:** it gets out, with Use held as for every get-out (`Bot.drive`). This also covers a carrier who scores or drops the objective while in a passenger seat. It doesn't look for a vehicle of its own for 20 s, as after the driving ban's get-out.
+- **Validation:**
+  - `tools/test_demon_seats.py` (10 new): the seat table, which difficulties are held to it, honks on Rocket, normal and Gauss Warthogs and a Mongoose (with and without the objective), driver calls, the gun call, a driver's pickup, and getting out or staying seated.
+  - `tools/test_warthog_guns.py`: the parked-gunner test now uses a Legendary, since a Demon no longer sits on a Rocket Warthog gun.
+  - Full suite: 1,468 tests OK; `live_bots` imports.
+  - **Untested in a match.**
+
 ### The minute's drive-path refresh no longer stops the bots, 2026-11-24
 
 The owner, after several matches on the threaded brain: "The boneyard game I just had, had a couple of long hangups. Other than that it was really good over seveeral matches", then "Yes, fix it".

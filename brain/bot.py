@@ -5441,7 +5441,8 @@ class Bot:
             v = next((v for v in snap.vehicles if v["handle"] == s.order.target), None)
             if v is not None and dist(me.pos, Vec(*v["pos"])) < (50 if s.order.role == "drive" else 30) \
                     and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now) \
-                    and (s.order.role != "drive" or (s.may_drive(v, snap) and not s.wheel_yield(v))):
+                    and (s.order.role != "drive" or (s.may_drive(v, snap) and not s.wheel_yield(v))) \
+                    and (s.order.role == "drive" or s.seat_ok(v, s.order.role, me.has_flag)):
                 s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
                 return ("vehicle", v["handle"])
         if s.goal[0] == "vehicle" and best[0] != "fight" and not urgent:
@@ -5451,7 +5452,8 @@ class Bot:
                            and vehicles.wheel_open(v, snap)))
                     and now < getattr(s, "vehicle_until", 0.0)
                     and vehicles.usable(v, now, s.duds()) and not s.veh_banned(v, now)
-                    and (s.order.role in ("ride", "board") or (s.may_drive(v, snap) and not s.wheel_yield(v)))):
+                    and (s.order.role in ("ride", "board") or (s.may_drive(v, snap) and not s.wheel_yield(v)))
+                    and (s.order.role not in ("ride", "board") or s.seat_ok(v, s.order.role, me.has_flag))):
                 return s.goal                  # committed to this vehicle run
             if now >= getattr(s, "vehicle_until", 0.0):
                 s.vehicle_retry_at = now + 20.0   # could not get in: walk for a while
@@ -5501,6 +5503,12 @@ class Bot:
         their guns and seats; the owner's ask Nov 7). Race laps excepted: every racer drives."""
         return (getattr(snap, "mode", None) == "race" or not profiles.demon_rules(s.p)
                 or not (vehicles.demon_no_drive(v["kind"]) or s.ghost_spent(v)))
+
+    def seat_ok(s, v, seat, carrying=False):
+        """(custom, Nov 24, the owner) This bot may take seat ("gunner"/"ride", "passenger"/"board") in vehicle v: a
+        Demon, Noble or Mythic only a Warthog's or a Gauss Warthog's gun among the Warthogs and Mongooses, and their
+        passenger seats only with the objective in hand (vehicles.demon_seat_ok). The other tiers every seat."""
+        return not profiles.demon_rules(s.p) or vehicles.demon_seat_ok(v["kind"], seat, carrying)
 
     def wheel_yield(s, v):
         """(custom, Nov 13, owner: "Make wheelman get priority for driving warthogs") A Warthog a Wheelman of ours is on
@@ -6250,6 +6258,16 @@ class Bot:
             s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
             s.vehicle_retry_at = now + 20.0
             s.note("vehicle: Ghost nearly gone, out" if s.ghost_spent(v) else "vehicle: Demon does not drive this, out")
+            return
+        if s.seat != "driver" and v is not None and not s.seat_ok(v, s.seat, me.has_flag):
+            # (custom, Nov 24, the owner) a Demon, Noble or Mythic in a seat it does not take (seat_ok: a Rocket Warthog's
+            # gun, a Warthog's or a Mongoose's passenger seat without the objective, or the objective scored or dropped
+            # on the way): out, Use held as every get-out
+            act.action, act.fire = True, False
+            act.forward = act.strafe = 0.0
+            s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
+            s.vehicle_retry_at = now + 20.0
+            s.note(f"vehicle: Demon rules, no {s.seat} seat in this {vehicles.kind_of(v['kind'])}, out")
             return
         if s.seat != "driver":
             if s.order.role == "give_seat":      # our objective holder needs this seat (director): out

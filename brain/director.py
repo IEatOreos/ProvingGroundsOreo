@@ -1201,7 +1201,8 @@ class Director:
             vp = Vec(*v["pos"])
             if any(b.order.role == "ride" and b.order.target == v["handle"] for b in alive):
                 continue
-            near = min((b for b in foot if dist(players[b.id].pos, vp) <= 25.0),
+            near = min((b for b in foot if dist(players[b.id].pos, vp) <= 25.0
+                        and Bot.seat_ok(b, v, "ride", players[b.id].has_flag)),     # (custom, Nov 24: Bot.seat_ok)
                        key=lambda b: (profiles.gunner_priority(b.p), dist(players[b.id].pos, vp)), default=None)
             if near is None or dist(players[near.id].pos, vp) > 25.0:
                 continue
@@ -1294,6 +1295,8 @@ class Director:
                 seat = "ride" if gun_free else "board" if "passenger" in sp["seats"] else None
                 if seat is None:
                     break
+                if not Bot.seat_ok(b, v, seat, players[b.id].has_flag):
+                    continue                     # (custom, Nov 24: not this seat for a Demon, Noble or Mythic)
                 gun_free = gun_free and seat != "ride"
                 b.set_order(Order(seat, vp, target=h), sure=b.id in was or person)   # (a person's call, as a honk)
                 if b.order.role == seat:
@@ -1408,6 +1411,7 @@ class Director:
                  and players[x.id].vehicle == -1 and not players[x.id].has_flag and x.p.teamwork > 0
                  and x.p.tier != "novice" and now - skip.get(x.id, -99.0) > 30.0 and s.gunner_available(x)
                  and x.order.role not in ("ride", "board", "ferry")
+                 and (v is None or Bot.seat_ok(x, v, "ride") or (anyone and Bot.seat_ok(x, v, "board")))   # (custom, Nov 24)
                  and (s.wheel_rider_ok(x) if anyone else s.rider_ok(x, players, True, [players[x.id].pos]))
                  and (goal is None or way(me.pos, players[x.id].pos) + way(players[x.id].pos, goal) - way(me.pos, goal)
                       <= s.PICKUP_DETOUR)]
@@ -1992,8 +1996,9 @@ class Director:
             holders = [b for b in foot if players[b.id].has_flag]
             others = [b for b in foot if not players[b.id].has_flag]
             took = 0
-            if free > 0 and vehicles.needs_gunner(v, snap) and not any(b.order.role == "ride" for b in coming) and others:
-                b = min(others, key=lambda b: (profiles.gunner_priority(b.p), dist(players[b.id].pos, vp)))
+            gunners = [b for b in others if Bot.seat_ok(b, v, "ride")]          # (custom, Nov 24: Bot.seat_ok)
+            if free > 0 and vehicles.needs_gunner(v, snap) and not any(b.order.role == "ride" for b in coming) and gunners:
+                b = min(gunners, key=lambda b: (profiles.gunner_priority(b.p), dist(players[b.id].pos, vp)))
                 others.remove(b)
                 b.set_order(Order("ride", vp, target=h), sure=True)
                 s.roles[b.id], free, took = "ride", free - 1, 1
@@ -2003,6 +2008,8 @@ class Director:
                 0, v.get("riders", 0) - 1)
             while "passenger" not in sp["seats"] and free > 0 and others and guns > 0:
                 b = others.pop(0)
+                if not Bot.seat_ok(b, v, "ride"):
+                    continue
                 b.set_order(Order("ride", vp, target=h), sure=True)
                 s.roles[b.id], free, guns = "ride", free - 1, guns - 1
                 s.event(now, "vehicle", f"{players[b.id].name}: on the other gun (honked)")
@@ -2010,6 +2017,8 @@ class Director:
                 for b in holders + others:
                     if free <= 0:
                         break
+                    if not Bot.seat_ok(b, v, "board", players[b.id].has_flag):
+                        continue                 # (custom, Nov 24: a Demon, Noble or Mythic without the objective)
                     b.set_order(Order("board", vp, target=h), sure=True)
                     s.roles[b.id], free = "board", free - 1
                     s.event(now, "vehicle", f"{players[b.id].name}: in the passenger seat (honked)")
