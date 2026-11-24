@@ -136,6 +136,79 @@ def full_rate(b, me, now):
     return any(k in n for n in (getattr(b, "notes", None) or ()) for k in HALF_NOTES)
 
 
+FIELD_HELPERS = True     # (custom, Nov 23) route searches on helper processes (tools/field_pool.py)
+
+
+def prefetch_routes(T, bots, snap):
+    """(custom, Nov 23) Ask the route-search helpers ahead (Terrain.prefetch) for the fields each bot on foot will likely
+    walk this pass: to its goal's point (a man's place for a fight or a hunt on him) and its order's point."""
+    for index, b in bots.items():
+        me = snap.player(index)
+        if me is None or not me.alive or me.vehicle not in (None, -1):
+            continue
+        pts = []
+        goal = getattr(b, "goal", None) or (None, None)
+        g = goal[1] if len(goal) > 1 else None
+        if isinstance(g, Vec):
+            pts.append(g)
+        elif isinstance(g, int):
+            p = snap.player(g)
+            if p is not None and p.alive:
+                pts.append(p.pos)
+        op = getattr(getattr(b, "order", None), "point", None)
+        if isinstance(op, Vec) and all(op is not q for q in pts):
+            pts.append(op)
+        jump = b.nav_jumps() if hasattr(b, "nav_jumps") else False
+        for q in pts:
+            if (q - me.pos).flat() > 2.5:
+                T.prefetch(me.pos, q, jump=jump, human=True, safe=me.has_flag)
+
+
+def fixed_targets(m, snap):
+    """(custom, Nov 23) The places bots go that never move (Terrain.pin_targets), most wanted first: the flag stands and
+    returns, the objectives' goals and zones (the hill), the power positions, the reachable power items."""
+    out = []
+    for f in list((m.get("returns") or {}).values()) + list((m.get("flags") or {}).values()):
+        out.append(f)
+    for goals in (getattr(snap, "obj_goals", None) or {}).values():
+        out += list(goals)
+    out += [z for z, _, _ in (getattr(snap, "obj_zones", None) or [])]
+    if getattr(snap, "hill", None) is not None:
+        out.append(snap.hill)
+    out += list(m.get("positions") or [])
+    out += [it["pos"] for it in m.get("items") or [] if it.get("reachable", True) and it.get("value", 0) >= 0.5]
+    seen, keep = [], []
+    for p in out:
+        if isinstance(p, Vec) and not any((p - q).flat() < 1.0 and abs(p.z - q.z) < 1.0 for q in seen):
+            seen.append(p)
+            keep.append(p)
+    return keep
+
+
+ABOVE_NORMAL_PRIORITY_CLASS = 0x00008000
+
+
+def raise_priority():
+    """(custom, Nov 23, the owner: "Do 1 and 4 through completion") The brain's process at Windows' above-normal
+    priority: its one busy thread is not kept waiting by the PC's ordinary programs (the game itself is never starved:
+    not high). Never stops the bots: a failure is printed."""
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k = ctypes.WinDLL("kernel32", use_last_error=True)
+        k.GetCurrentProcess.restype = wintypes.HANDLE          # (the pseudo handle -1: 64 bits, not a C int's 32)
+        k.SetPriorityClass.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+        k.SetPriorityClass.restype = wintypes.BOOL
+        ok = bool(k.SetPriorityClass(k.GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS))
+        print(f"brain priority: {'above normal' if ok else 'not raised'}", flush=True)
+        return ok
+    except Exception as e:
+        print(f"brain priority not raised: {type(e).__name__}: {e}", flush=True)
+        return False
+
+
 def think_dt(elapsed):
     """The time step the bots think with: the real time since the last pass, so turning, aiming and moving keep their
     real-time speeds on a PC that needs longer than 1/HZ for a pass; never under 1/HZ (a pass that came early or the
@@ -954,6 +1027,7 @@ def main():
                     "for this match (brain/profiles.py LOOSE_AIM, the default)")
     o = ap.parse_args()
     startup_mark("brain started")
+    raise_priority()
     # Scaling difficulty (brain/scaling.py): one skill rating with no limit, set from the person's last Scaling games'
     # K/D; every bot on Scaling (its row on the BOTS list, else --tier) is made from it, both teams
     SCALE, SCALE_CFG = None, scaling.settings()
@@ -1189,6 +1263,13 @@ def main():
     except Exception as e:                            # (never stops the bots)
         print(f"brain profile not started: {type(e).__name__}: {e}", flush=True)
         sampler = None
+    routes = None                                     # (custom, Nov 23) the route-search helpers (tools/field_pool.py)
+    if FIELD_HELPERS:
+        try:
+            from field_pool import Pool
+            routes = Pool()
+        except Exception as e:                        # (never stops the bots: searches in the brain as before)
+            print(f"route-search helpers not started: {type(e).__name__}: {e}", flush=True)
     startup_mark("first tick")
     _STARTUP[1] = False
     try:
@@ -1531,6 +1612,16 @@ def main():
                 passes += 1
                 nade_presses = []
                 half = think_half_on(snap)                     # (custom, Nov 23: 8v8 only, think_half_on)
+                if routes is not None and not routes.broken:
+                    # (custom, Nov 23) the helpers on the nav the bots walk now (a grown window's too), asked ahead
+                    Tnow = map_terrain(MAP)
+                    if routes.bind(Tnow):
+                        Tnow.field_pool = routes
+                        if passes % 60 == 1:              # (the fixed targets' fields, kept: asked once, then checked)
+                            Tnow.pin_targets(fixed_targets(MAP, snap))
+                        prefetch_routes(Tnow, bots, snap)
+                    else:
+                        Tnow.__dict__.pop("field_pool", None)
                 for index, b in think_order(bots, passes):    # (the teams interleaved, the first swapping)
                     me = snap.player(index)
                     if not me or not me.alive:
@@ -1658,6 +1749,14 @@ def main():
     finally:
         if sampler is not None:
             sampler.stop()                       # (its last report written)
+        if routes is not None:                   # (custom, Nov 23) the route-search helpers exit
+            print(f"route-search helpers: {routes.stats}", flush=True)
+            try:
+                for t in {id(x): x for x in (T, map_terrain(MAP))}.values():
+                    t.__dict__.pop("field_pool", None)
+            except Exception:
+                pass
+            routes.close()
         save_learned(MAP)
         save_lidar()
         lidar_saver.close()                      # (custom, Nov 22: its last save written, the helper exits)

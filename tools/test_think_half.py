@@ -37,6 +37,18 @@ class BigMatchesOnly(unittest.TestCase):
         self.assertFalse(live_bots.think_half_on(players(10)))
 
 
+class FixedTargets(unittest.TestCase):
+    def test_stands_goals_posts_items_once_each(self):
+        from brain.core import Snapshot
+        m = dict(flags={0: Vec(0, 0, 0), 1: Vec(50, 0, 0)}, returns={0: Vec(0, 0, 0)}, positions=[Vec(20, 5, 3)],
+                 items=[dict(pos=Vec(30, 0, 0), value=0.9, reachable=True), dict(pos=Vec(31, 9, 0), value=0.2),
+                        dict(pos=Vec(40, 0, 0), value=0.9, reachable=False)])
+        s = Snapshot(0, [], mode="assault")
+        s.obj_goals = {1: [Vec(60, 0, 0)]}
+        got = live_bots.fixed_targets(m, s)
+        self.assertEqual(got, [Vec(0, 0, 0), Vec(50, 0, 0), Vec(60, 0, 0), Vec(20, 5, 3), Vec(30, 0, 0)])
+
+
 class FullRate(unittest.TestCase):
     def test_a_plain_walk_is_half(self):
         self.assertFalse(live_bots.full_rate(*scene(), NOW))

@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Route searches on helper processes; the fixed targets' routes kept all match; the brain at above-normal priority, 2026-11-23
+
+The owner, on giving the bots room in 8v8 without changing their play: "Do 1 and 4 through completion. And then 3 afterwards". Python's threads take turns: 8 route searches on 8 threads ran 1.1× faster. So:
+
+- **4. Priority (`tools/live_bots.py` `raise_priority`):** the brain's process is at Windows' above-normal priority, not high, so the game is never starved. It needed the 64-bit pseudo handle; with a plain `int` Windows refused.
+- **1. The route-search helpers (new `tools/field_pool.py` `Pool`; hooks in `brain/terrain.py` `_field`):**
+  - **The helpers:** three helper processes (numpy and scipy only) work out route fields on other cores. Each holds a copy of the nav's graphs in shared memory, never the brain's own: the brain changes weights in place for a moment (a carrier's risky edges). A lasting weight change clears the walking fields (`FieldCache.gen`), and the graphs are published again (5 ms on the 8v8 layout). A result of an older graph is dropped.
+  - **Results:** they land in shared-memory slots (24), read in place with no copy. A slot read in the last 0.5 s is not used again.
+  - **`_field` asks the pool first:**
+    - a finished field goes into the cache;
+    - one in the works is waited for (80 ms at most);
+    - otherwise a cached field of the same search for a goal within 1.5 u (the same floor) stands in while the exact one is worked out, so a chase never waits for its moving target's field.
+  - **Asked ahead (`prefetch_routes`, `Terrain.prefetch`):** each pass, the fields each bot on foot will likely walk (its goal's point, the man it fights or hunts, its order's point) are asked for before the bots think.
+  - **A helper gone:** the searches are the brain's again, as before.
+  - **Measured on the 8v8 Forge World layout** (15 walkers, two thirds chasing a moving man, 40 passes): the brain's thread spent 33.7 ms a pass on routes instead of 86.5. 570 of 600 next steps were the same; the other 30 walked by a stand-in at most 1.5 u off for a pass or two. Sharing the nav at the match's start takes 38 ms.
+- **3. The fixed targets' routes (`Terrain.pin_targets`, `fixed_targets`, `Pool.pin`):** the flag stands and returns, the objectives' goals and zones, the hill, the power positions and the reachable power items.
+  - The helpers work them out at the match's start (13 on that layout in 0.63 s) and they are kept all match, apart from the cache's turnover, up to 600 MB.
+  - They are worked out again when the nav's weights change. A search cut short (`field_from`) is in them too.
+  - **On that layout:** 180 walks to six of them took 39 ms instead of 710, the next step the same in all 180.
+  - Not built after the match as first proposed: with the helpers, they take under a second at the start, and need no disk.
+- **Checks:**
+  - New `tools/test_field_pool.py` (6: the helpers' field is the brain's, a limited one; a weight change taken; a stand-in near, none far or of another search; a fixed target kept and redone on a weight change; a helper gone).
+  - `tools/test_think_half.py` +1 (`fixed_targets`).
+  - `unittest discover` over `tools` is OK, and so is the `live_bots` import.
+  - **Untested in a match:** the next profile shows the passes. `brain/terrain.py` changed, so the next match's terrain is built afresh (its cache key).
+
 ### Every-other-pass thinking in 8v8 only, 2026-11-23
 
 The owner: "Can we keep these thinking updates separate from the two modes 8v8 and 4v4?"

@@ -179,6 +179,17 @@ class FieldBudget(BaseException):
 OPT_FIELDS = 3      # (custom, Nov 22) fresh route fields an optional tactic may build in one bot's think
 
 
+class FieldCache(dict):
+    """(custom, Nov 23) The walking route fields' cache. Every change to the nav's edge weights clears it (a learned stuck
+    spot, paint, out of bounds, barriers): gen counts those clears, so the route-search helpers (tools/field_pool.py)
+    know to take the graphs again."""
+    gen = 0
+
+    def clear(s):
+        s.gen += 1
+        super().clear()
+
+
 def keep_field(cache, key, cost):
     """Cache a route field, the least recently used out first past FIELD_BYTES."""
     while cache and (len(cache) + 1) * cost.nbytes > FIELD_BYTES:
@@ -412,7 +423,7 @@ class Terrain:
         s.piece = None            # (L, h, w) the floor level is a placed piece's (add_faces); None: none placed
         s.blocks = s.add_blocks(blocks)
         s._build_nav()
-        s._fields = {}
+        s._fields = FieldCache()     # (custom, Nov 23: its clear() counts the nav's weight changes, tools/field_pool.py)
 
     def clearance(s, p, yaw, far=3.0, height=CHEST, waist=True):
         """How far a body can go from p along yaw (flat) before a wall at `height` over its feet: a bot's 'crosshair
@@ -2236,7 +2247,30 @@ class Terrain:
                 return cost
         return s._field(b, jump, human, safe, None, no_tele, hazards)
 
-    def _field(s, goal, jump=False, human=False, safe=False, limit=None, no_tele=False, hazards=()):
+    def prefetch(s, a, b, jump=False, human=False, safe=False):
+        """(custom, Nov 23) Ask the route-search helpers now (tools/field_pool.py) for the field a walk from a to b will
+        want (Terrain.nav's: its jump / human ways, field_from's search out to a), worked out on another core while the
+        bots think. Nothing without helpers or for a field cached already."""
+        if s.__dict__.get("field_pool") is None or not all(math.isfinite(c) for c in (a.x, a.y, a.z, b.x, b.y, b.z)):
+            return
+        human = (human or jump) and bool(getattr(s, "hjumps", None) or getattr(s, "hroutes", None))
+        lim = s.FIELD_NEAR_K * math.hypot(b.x - a.x, b.y - a.y) + s.FIELD_NEAR_ADD
+        s._field(b, jump, human, safe, lim if lim < s.FIELD_NEAR_MAX else None, ask_only=True)
+
+    def pin_targets(s, goals):
+        """(custom, Nov 23, the owner: "And then 3 afterwards") The fields to the map's fixed targets (goals: flag stands,
+        objectives, posts, power items), the way bots walk (Terrain.nav with people's ways and jumps), worked out by the
+        route-search helpers and kept all match (tools/field_pool.py pin): no bot searches its way to one again. Nothing
+        without helpers; one asked already is not asked again."""
+        if s.__dict__.get("field_pool") is None:
+            return
+        human = bool(getattr(s, "hjumps", None) or getattr(s, "hroutes", None))
+        for g in goals:
+            if all(math.isfinite(c) for c in (g.x, g.y, g.z)) and s.inside(g.x, g.y):
+                s._field(g, True, human, False, None, ask_only=True, pin=True)
+
+    def _field(s, goal, jump=False, human=False, safe=False, limit=None, no_tele=False, hazards=(), ask_only=False,
+               pin=False):
         # limit: costs out to this far only (a search round the goal, not the map: brain/bot.py man_appears)
         """Cost-to-goal over the walkable grid (Dijkstra), cached per goal node; with jump=True over the grid plus jump
         links (and people's jumps), with human=True plus people's jumps. safe=True: people's jumps down more than
@@ -2278,8 +2312,29 @@ class Terrain:
             limit = 10.0 * math.ceil(limit / 10.0)          # (shared out to the next 10 u)
             ckey = ("limit", limit) + ckey
         f = cached_field(cache, ckey)
+        # (custom, Nov 23) the route-search helpers (tools/field_pool.py, tools/live_bots.py sets field_pool): a field
+        # they finished, are finishing, or one for a goal just by it while they work this one out; ask_only: only ask
+        # them for it (prefetch), nothing searched here
+        pool = s.__dict__.get("field_pool")
         if f is not None:
+            if pool is not None:
+                pool.touch(f)
             return f
+        start = (key[0] * s.nh + key[1]) * s.nw + key[2]
+        if pool is not None and not len(risky):
+            kind = "jump" if jump else "h" if human else "walk"
+            if ask_only:
+                (pool.pin if pin else pool.submit)(cache, ckey, kind, start, limit, goal)
+                return None
+            # a fixed target's field, kept all match (pin_targets: the whole map's, so a search cut short is in it too)
+            f = pool.pinned.get((id(cache), key))
+            if f is None:
+                f = pool.lookup(cache, ckey, kind, start, limit, goal, keep_field)
+            if f is not None:
+                pool.touch(f)
+                return f
+        if ask_only:
+            return None
         if s.__dict__.get("opt_depth", 0) > 0:
             # (custom, Nov 22) inside an optional tactic (a pre-nade's doorways, a break-off's rings, cover, a guess where
             # he went): OPT_FIELDS fresh fields a think. Live, single thinks of 400-800 ms froze every bot; profiled, the
@@ -2288,7 +2343,6 @@ class Terrain:
                 raise FieldBudget()
             s.opt_left = s.__dict__.get("opt_left", OPT_FIELDS) - 1
         from scipy.sparse.csgraph import dijkstra
-        start = (key[0] * s.nh + key[1]) * s.nw + key[2]
         old = graph.data[risky].copy() if len(risky) else None
         if old is not None:
             graph.data[risky] = s.BARRIER_COST
@@ -2298,7 +2352,10 @@ class Terrain:
         finally:
             if old is not None:
                 graph.data[risky] = old
-        return keep_field(cache, ckey, cost)
+        cost = keep_field(cache, ckey, cost)
+        if pool is not None and not len(risky):
+            pool.note(cache, ckey, goal)     # (a stand-in for goals by it: tools/field_pool.py near)
+        return cost
 
     VEH_ROOM, VEH_RISE, VEH_DROP = 3, 0.12, 1.5   # cells clear of walls around; climb and drop a cell, world units
     # the player's driving keeps off walls (tools/vehicle_clearance.py, recorded Forge World drives: 10th percentile
