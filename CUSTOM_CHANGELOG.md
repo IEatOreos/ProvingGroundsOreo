@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### BOTS panel on a controller: pressing both sticks no longer reaches MCC (no stuck chat box or save menu), 2026-11-24
+
+Upstream 0.3.0's note #36 (build 20261118-2107). The owner: "take it, hand-inserted; DLL rebuild, test in the Reach lobby".
+
+- `native/overlay.cpp` `h_xinput_get` (ours): his two lines hand-inserted inside our `!t_ours` block, as an `else` of our `g_pad_held` blanking: while the BOTS tile is up (`g_show_tile`), MCC's own pad reads never see L3 / R3. Before the change, the first stick pressed reached MCC and opened its chat or its save menu, then the panel took the pad and that menu could not be left.
+- Ours kept: the LB + RB chord read (`g_mcc_chord`, read before the mask, shoulders only), `g_pad_held`, the `g_back_until` B-back and `menu_route_pad` (it runs after the mask, so the menu route's presses go through untouched). Our own frame's reads (`t_ours`, ImGui's XInput 1.4) still see both sticks, so `pad_frame`'s both-sticks panel toggle works as before; no other code of ours uses the stick buttons (grep of THUMB / GamepadL3 / R3 in native).
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the Reach lobby on a pad).
+
 ### Project Noble's terms of use: a draft for the owner, agreed once when final, no release while it is a draft, 2026-11-24
 
 Upstream 0.3.0's note #70 (build 20261119-1831). The owner: "our own Project Noble terms, drafted for the owner to edit (he decides the friend-join wording); upstream credit stays".

@@ -933,6 +933,10 @@ static DWORD WINAPI h_xinput_get(DWORD user, XINPUT_STATE* st) {
         }
         g_pad_ok_at = GetTickCount64();
         if (g_pad_held) memset(&st->Gamepad, 0, sizeof st->Gamepad);
+        // (upstream 0.3.0, build 20261118-2107) the lobby with the BOTS tile up: MCC never sees the stick presses, both
+        // of which open the panel (a Steam Deck: the first stick down reached MCC and opened its chat or its save menu,
+        // then the panel took the pad and that menu could not be left: the game looked frozen)
+        else if (g_show_tile) st->Gamepad.wButtons &= (WORD)~(XINPUT_GAMEPAD_LEFT_THUMB | XINPUT_GAMEPAD_RIGHT_THUMB);
         if (GetTickCount64() < g_back_until) {
             memset(&st->Gamepad, 0, sizeof st->Gamepad);
             st->Gamepad.wButtons = XINPUT_GAMEPAD_B;
