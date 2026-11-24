@@ -5,6 +5,7 @@ base roof and the doorway under it are separate places.
 """
 import math
 import re
+import threading
 
 import numpy as np
 
@@ -190,19 +191,78 @@ class FieldCache(dict):
         super().clear()
 
 
-def keep_field(cache, key, cost):
-    """Cache a route field, the least recently used out first past FIELD_BYTES."""
-    while cache and (len(cache) + 1) * cost.nbytes > FIELD_BYTES:
-        cache.pop(next(iter(cache)))
-    cache[key] = cost
+# (custom, Nov 23) the bots thinking on several threads (brain/threads.py Pass): no graph is changed in place then
+# (_field's one-off costs on a copy), the route-field caches are locked (a pop and a re-insert, an eviction loop), and
+# each thread keeps its own think's search budget (opt_state). As upstream 0.3.0's terrain.THREADS / _FIELDS
+THREADS = False
+_FIELDS = threading.Lock()
+_OPT = threading.local()
+# ... and the vehicle ground: its car and tank graphs swap in and out of the Terrain on use (use_vground), so one vehicle
+# route at a time (vlocked: vnav, drive_clear, vwedge, use_vground, _vreset; brain/bot.py takes it round vroomy reads)
+VLOCK = threading.RLock()
+
+
+def vlocked(fn):
+    import functools
+
+    @functools.wraps(fn)
+    def run(*a, **k):
+        with VLOCK:
+            return fn(*a, **k)
+    return run
+
+
+_PASS = {"seq": 0}         # the threaded pass under way (brain/threads.Pass.run counts them)
+_BORN = {}                  # (id(cache), key) -> (pass seq, who) of a field kept while a pass was under way
+
+
+def pass_who():
+    """This thread's player place in the threaded pass (brain/threads.py), -1 outside one."""
+    return getattr(_OPT, "who", -1)
+
+
+def set_pass_who(k):
+    _OPT.who = k
+
+
+def fresh_to_me(cache, key):
+    """A cached field another thread kept during this pass: it counts as a fresh search to an optional tactic, so the
+    budget spent does not depend on which thread got there first (threaded or not, the same: brain/threads.py)."""
+    born = _BORN.get((id(cache), key))
+    return born is not None and born[0] == _PASS["seq"] and born[1] != pass_who()
+
+
+def opt_state():
+    """This thread's think budget for optional tactics' route searches (brain/bot.py optional_search, Bot.think):
+    depth (inside one) and left (fresh fields it may still build)."""
+    st = getattr(_OPT, "st", None)
+    if st is None:
+        st = _OPT.st = {"depth": 0, "left": OPT_FIELDS}
+    return st
+
+
+def keep_field(cache, key, cost, gen=None):
+    """Cache a route field, the least recently used out first past FIELD_BYTES (not if gen is given and the cache was
+    cleared since: a search that began before a learned wall, on another thread, is not kept stale)."""
+    with _FIELDS:
+        if gen is not None and getattr(cache, "gen", 0) != gen:
+            return cost
+        while cache and (len(cache) + 1) * cost.nbytes > FIELD_BYTES:
+            cache.pop(next(iter(cache)))
+        cache[key] = cost
+        if THREADS:
+            if len(_BORN) > 4096:
+                _BORN.clear()
+            _BORN[(id(cache), key)] = (_PASS["seq"], pass_who())
     return cost
 
 
 def cached_field(cache, key):
     """A cached route field, now the most recently used, or None."""
-    cost = cache.pop(key, None)
-    if cost is not None:
-        cache[key] = cost
+    with _FIELDS:
+        cost = cache.pop(key, None)
+        if cost is not None:
+            cache[key] = cost
     return cost
 
 
@@ -2316,6 +2376,11 @@ class Terrain:
         # they finished, are finishing, or one for a goal just by it while they work this one out; ask_only: only ask
         # them for it (prefetch), nothing searched here
         pool = s.__dict__.get("field_pool")
+        if f is not None and THREADS and fresh_to_me(cache, ckey) and opt_state()["depth"] > 0:
+            st = opt_state()                 # (custom, Nov 23: another thread's this pass: fresh to this tactic)
+            if st["left"] <= 0:
+                raise FieldBudget()
+            st["left"] -= 1
         if f is not None:
             if pool is not None:
                 pool.touch(f)
@@ -2335,15 +2400,20 @@ class Terrain:
                 return f
         if ask_only:
             return None
-        if s.__dict__.get("opt_depth", 0) > 0:
+        st = opt_state()                     # (custom, Nov 23: this thread's think's budget, opt_state)
+        if st["depth"] > 0:
             # (custom, Nov 22) inside an optional tactic (a pre-nade's doorways, a break-off's rings, cover, a guess where
             # he went): OPT_FIELDS fresh fields a think. Live, single thinks of 400-800 ms froze every bot; profiled, the
             # slow ones built 15-28 fresh fields at 4-7 ms each (brain/bot.py optional_search)
-            if s.__dict__.get("opt_left", OPT_FIELDS) <= 0:
+            if st["left"] <= 0:
                 raise FieldBudget()
-            s.opt_left = s.__dict__.get("opt_left", OPT_FIELDS) - 1
+            st["left"] -= 1
         from scipy.sparse.csgraph import dijkstra
+        gen = getattr(cache, "gen", None)    # (custom, Nov 23: a clear meanwhile, on another thread: not kept stale)
         old = graph.data[risky].copy() if len(risky) else None
+        if old is not None and THREADS:      # (custom, Nov 23: other threads walk this graph meanwhile: a copy carries
+            graph, old = graph.copy(), None  # the one-off costs, as upstream 0.3.0's)
+            graph.data[risky] = s.BARRIER_COST
         if old is not None:
             graph.data[risky] = s.BARRIER_COST
         try:
@@ -2352,7 +2422,7 @@ class Terrain:
         finally:
             if old is not None:
                 graph.data[risky] = old
-        cost = keep_field(cache, ckey, cost)
+        cost = keep_field(cache, ckey, cost, gen)
         if pool is not None and not len(risky):
             pool.note(cache, ckey, goal)     # (a stand-in for goals by it: tools/field_pool.py near)
         return cost
@@ -2374,6 +2444,7 @@ class Terrain:
     VWEDGE_AHEAD, VWEDGE_R, VWEDGE_COST, VWEDGE_MAX = 1.5, 1.25, 40.0, 64
     VGROUND_KEYS = ("graph_v", "graph_v_to", "vroomy", "_vfields", "_vground", "_vpiece", "_vnear")
 
+    @vlocked
     def use_vground(s, big=False):
         """(custom, Nov 13) The vehicle ground vnav / drive_clear answer on: a tank's (big) or every other vehicle's.
         Each size keeps its own graph and caches, swapped in on use (built on its first)."""
@@ -2386,11 +2457,13 @@ class Terrain:
         s.__dict__.update(store.pop(want, {}))
         s._vsize = want
 
+    @vlocked
     def _vreset(s):
         """The vehicle ground of every size to be built again (paint, rides, out of bounds changed)."""
         s.__dict__.pop("graph_v", None)
         s.__dict__.pop("_vstore", None)
 
+    @vlocked
     def vwedge(s, p, yaw):
         """(custom, Nov 13) A vehicle wedged at p pushing along yaw: the floor ahead of it costs VWEDGE_COST times more
         on every size's ground built or to be built (_build_vnav applies the list). Returns the point marked, or None
@@ -2572,6 +2645,7 @@ class Terrain:
             s.__dict__.pop(k, None)
         s._vwedge_apply(s.__dict__, s.__dict__.get("vwedges", []))   # (custom, Nov 13) where vehicles wedged
 
+    @vlocked
     def drive_clear(s, p, yaw, far=6.0, big=False):
         """A ground vehicle's short look ahead (Bot.ground_guard): how far its centre goes from p along yaw (flat) before
         a wall, stepping cell to cell as the nav does (_layer: each floor a step up or a drop on from the last, so ramps
@@ -2610,6 +2684,7 @@ class Terrain:
             t += step
         return far
 
+    @vlocked
     def vnav(s, a, b, lookahead=24, big=False):
         """Next point to drive toward from a to b (vehicles: _build_vnav's ground, a longer look ahead than on foot),
         or the walking answer where the vehicle's ground does not reach (off it; no way on it: see below). big: a
@@ -2793,8 +2868,9 @@ class Terrain:
         (custom, Nov 19) Kept per graph and hazard set: the danger lanes (nav avoid) are the same every call."""
         memo = s.__dict__.setdefault("_haz_memo", {})
         mk = (id(graph), graph.nnz, tuple(hazards))
-        if mk in memo:
-            return memo[mk]
+        got = memo.get(mk)                   # (custom, Nov 23: one read: another thread may clear it meanwhile)
+        if got is not None:
+            return got
         if len(memo) > 32:
             memo.clear()
         memo[mk] = out = s._hazard_edges_of(graph, hazards)

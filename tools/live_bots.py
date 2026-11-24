@@ -138,6 +138,33 @@ def full_rate(b, me, now):
 
 
 FIELD_HELPERS = True     # (custom, Nov 23) route searches on helper processes (tools/field_pool.py)
+# (custom, Nov 23, the owner: "Yes, start the port") the bots' thinking on several threads (brain/threads.py, upstream
+# 0.3.0's): only where Python runs without its one-core lock (the free-threaded 3.14t: with the lock, threads only slow
+# the brain). PPG_THINK_THREADS: a count, 0 off; else Auto, half the PC's threads, 2 to 6 (upstream's), never past the PC's
+# threads less one
+THINK_AUTO_MIN, THINK_AUTO_MAX = 2, 6
+
+
+def gil_on():
+    f = getattr(sys, "_is_gil_enabled", None)
+    return True if f is None else bool(f())
+
+
+def think_threads(cpus=None, gil=None, env=None):
+    """How many threads the bots think on: 0 or 1 = one (the old loop)."""
+    n = (os.cpu_count() if cpus is None else cpus) or 4
+    env = os.environ.get("PPG_THINK_THREADS") if env is None else env
+    want = None
+    if env not in (None, ""):
+        try:
+            want = int(env)
+        except ValueError:
+            want = None
+    if gil_on() if gil is None else gil:
+        return 0 if want is None or want <= 1 else min(want, n - 1)
+    if want is not None:
+        return max(0, min(want, n - 1))
+    return min(n - 1, max(THINK_AUTO_MIN, min(THINK_AUTO_MAX, n // 2)))   # (the game keeps one at least)
 
 
 def prefetch_routes(T, bots, snap):
@@ -1150,12 +1177,71 @@ def main():
     if book_on and kills is not None:
         book.kill_match(book_stamp)              # (its kills recorded: it counts toward trusting the danger spots)
     respawned = {}                               # player -> when he came back (his place is read 0.25 s on)
-    last_wp = {}
+    last_wp = threading.local()               # (custom, Nov 23: per thread: bots may think on several, brain/threads.py)
 
     def nav(a, b, **kw):                      # remember each bot's waypoint for the trace
         w = T.nav(a, b, **kw)
-        last_wp["w"] = w
+        last_wp.w = w
         return w
+
+    def think_job(b, d, bdt):
+        """(custom, Nov 23) One bot's think of this pass (on a think thread when the bots think on several, brain/threads.py):
+        its command, its think's ms and its waypoint (this thread's nav)."""
+        last_wp.w = None
+        th0 = time.perf_counter()
+        a = b.think(now, bdt, snap, T.sees, nav, d.callouts, d.item_up)   # (sight: windows and fences pass)
+        return a, (time.perf_counter() - th0) * 1000.0, getattr(last_wp, "w", None)
+
+    def finish_bot(index, b, me, d, a, th, w, decide_was):
+        """(custom, Nov 23) A bot's think done: its timing, its trace lines, its reports, its command to the game. In the
+        players' order, on this thread (the think threads' writes held back till here: brain/threads.py)."""
+        PERF["think"][index] = max(PERF["think"].get(index, 0.0), th)      # (custom, Nov 22: each bot's think, ms)
+        PERF["think_pass"] += th
+        if trace:
+            g = b.goal
+            line = dict(t=round(now, 3), id=index, pos=[round(v, 2) for v in (me.pos.x, me.pos.y, me.pos.z)],
+                        yaw=round(me.yaw, 3), pitch=round(me.pitch, 3), goal=g[0], arg=str(g[1])[:60],
+                        veh=me.vehicle, wpn=me.weapon, wp=[round(w.x, 2), round(w.y, 2)] if w else None,
+                        foes=[[p.id, round(p.shield, 2), round(p.health, 2)] for p in snap.players
+                              if p.team != me.team],
+                        cmd=[round(a.forward, 2), round(a.strafe, 2), round(a.yaw, 3), buttons(a), round(a.pitch, 3)])
+            if me.vehicle not in (None, -1):
+                line["seat"] = getattr(b, "seat", None)   # (tools/live_qc.py: who drove, who took a gun)
+                if me.turret:
+                    line["turret"] = me.turret
+            if b.fx:
+                line["fx"] = b.fx
+            if getattr(b.aim, "noble_lead", None) is not None:
+                line["lead"] = round(b.aim.noble_lead, 3)   # (Nov 21: Noble's lead this tick, s)
+            if b.att:
+                line["att"] = b.att               # what it looks at and why
+            if b.notes:
+                line["notes"] = b.notes
+            if now < getattr(b, "jump_until", 0.0) and getattr(b, "jump_land", None) is not None:
+                jl = b.jump_land          # a planned jump's window: seconds left, its landing (edge_guard)
+                line["jw"] = [round(b.jump_until - now, 2), round(jl.x, 2), round(jl.y, 2), round(jl.z, 2)]
+            if me.equipment:
+                line["eq"] = [me.equipment, me.ability_on]
+            if len(me.weapons) > 1:
+                line["inv"] = me.weapons          # (tools/engagement.py: what it could switch to)
+            line["hp"] = [round(me.shield, 2), round(me.health, 2)]
+            uz = unit_zoom(live, index)
+            if uz is not None:
+                line["uz"] = uz              # the game's own zoom state (cmd bits 12-13: the ask)
+            if any(x >= 0 for x in me.ammo):
+                line["ammo"], line["mag"] = me.ammo, me.mag
+        if trace:
+            trace.write(json.dumps(line) + chr(10))
+            if b.next_decide != decide_was:      # it decided this tick: what it weighed and why
+                trace.write(think_line(now, index, b))
+        for kind, eid, pos, t, busy in b.reports:
+            d.report(t, index, kind, pos, enemy=eid, busy=busy)
+        b.reports.clear()
+        botctl.act(m, slots[index], a.forward, a.strafe, a.yaw, a.pitch, buttons(a))
+        last_yaw[index] = a.yaw
+        crouch_cmd[index] = a.crouch and o.game in BOT_CROUCH
+        if a.grenade and me.vehicle in (None, -1):
+            nade_presses.append((index, me.pos + Vec(0.0, 0.0, 0.62), a.yaw, a.pitch))
     cur = [None]                                 # this tick's snapshot, for key()
 
     def key(b):                                  # one director per team or side, or per bot in free for all
@@ -1271,6 +1357,19 @@ def main():
             routes = Pool()
         except Exception as e:                        # (never stops the bots: searches in the brain as before)
             print(f"route-search helpers not started: {type(e).__name__}: {e}", flush=True)
+    think_pass, pass_jobs = None, []                  # (custom, Nov 23) the bots' thinking on several threads
+    workers = think_threads()
+    if workers >= 2:
+        try:
+            from brain.threads import Pass
+            think_pass = Pass(workers)
+            if routes is not None:
+                routes.no_wait = True                 # (a think thread searches itself rather than wait on a helper)
+        except Exception as e:
+            print(f"think threads not started: {type(e).__name__}: {e}", flush=True)
+            think_pass = None
+    print(f"bots think on {workers if think_pass is not None else 1} "
+          f"{'threads' if think_pass is not None else 'thread'} (Python's lock: {'on' if gil_on() else 'off'})", flush=True)
     startup_mark("first tick")
     _STARTUP[1] = False
     try:
@@ -1640,58 +1739,21 @@ def main():
                     think_sat.discard(index)
                     think_last[index] = now
                     d = directors[key(b)]
-                    last_wp["w"] = None
                     decide_was = b.next_decide
-                    th0 = time.perf_counter()
-                    a = b.think(now, bdt, snap, T.sees, nav, d.callouts, d.item_up)   # (sight: windows and fences pass)
-                    th = (time.perf_counter() - th0) * 1000.0      # (custom, Nov 22: each bot's think, ms: PERF)
-                    PERF["think"][index] = max(PERF["think"].get(index, 0.0), th)
-                    PERF["think_pass"] += th
-                    if trace:
-                        g, w = b.goal, last_wp["w"]
-                        line = dict(t=round(now, 3), id=index, pos=[round(v, 2) for v in (me.pos.x, me.pos.y, me.pos.z)],
-                                    yaw=round(me.yaw, 3), pitch=round(me.pitch, 3), goal=g[0], arg=str(g[1])[:60],
-                                    veh=me.vehicle, wpn=me.weapon, wp=[round(w.x, 2), round(w.y, 2)] if w else None,
-                                    foes=[[p.id, round(p.shield, 2), round(p.health, 2)] for p in snap.players
-                                          if p.team != me.team],
-                                    cmd=[round(a.forward, 2), round(a.strafe, 2), round(a.yaw, 3), buttons(a), round(a.pitch, 3)])
-                        if me.vehicle not in (None, -1):
-                            line["seat"] = getattr(b, "seat", None)   # (tools/live_qc.py: who drove, who took a gun)
-                            if me.turret:
-                                line["turret"] = me.turret
-                        if b.fx:
-                            line["fx"] = b.fx
-                        if getattr(b.aim, "noble_lead", None) is not None:
-                            line["lead"] = round(b.aim.noble_lead, 3)   # (Nov 21: Noble's lead this tick, s)
-                        if b.att:
-                            line["att"] = b.att               # what it looks at and why
-                        if b.notes:
-                            line["notes"] = b.notes
-                        if now < getattr(b, "jump_until", 0.0) and getattr(b, "jump_land", None) is not None:
-                            jl = b.jump_land          # a planned jump's window: seconds left, its landing (edge_guard)
-                            line["jw"] = [round(b.jump_until - now, 2), round(jl.x, 2), round(jl.y, 2), round(jl.z, 2)]
-                        if me.equipment:
-                            line["eq"] = [me.equipment, me.ability_on]
-                        if len(me.weapons) > 1:
-                            line["inv"] = me.weapons          # (tools/engagement.py: what it could switch to)
-                        line["hp"] = [round(me.shield, 2), round(me.health, 2)]
-                        uz = unit_zoom(live, index)
-                        if uz is not None:
-                            line["uz"] = uz              # the game's own zoom state (cmd bits 12-13: the ask)
-                        if any(x >= 0 for x in me.ammo):
-                            line["ammo"], line["mag"] = me.ammo, me.mag
-                    if trace:
-                        trace.write(json.dumps(line) + chr(10))
-                        if b.next_decide != decide_was:      # it decided this tick: what it weighed and why
-                            trace.write(think_line(now, index, b))
-                    for kind, eid, pos, t, busy in b.reports:
-                        d.report(t, index, kind, pos, enemy=eid, busy=busy)
-                    b.reports.clear()
-                    botctl.act(m, slots[index], a.forward, a.strafe, a.yaw, a.pitch, buttons(a))
-                    last_yaw[index] = a.yaw
-                    crouch_cmd[index] = a.crouch and o.game in BOT_CROUCH
-                    if a.grenade and me.vehicle in (None, -1):
-                        nade_presses.append((index, me.pos + Vec(0.0, 0.0, 0.62), a.yaw, a.pitch))
+                    if think_pass is not None:              # (custom, Nov 23: thought together below, brain/threads.py)
+                        pass_jobs.append((index, b, me, d, bdt, decide_was))
+                        continue
+                    a, th, w = think_job(b, d, bdt)
+                    finish_bot(index, b, me, d, a, th, w, decide_was)
+                if pass_jobs:
+                    # (custom, Nov 23) every bot's think of this pass on the think threads, what one would change for the
+                    # others held back and applied after, in this order (brain/threads.py Pass); then each finished as
+                    # before, in the same order
+                    got = think_pass.run([(think_job, (b, d, bdt)) for index, b, me, d, bdt, _ in pass_jobs],
+                                         T=map_terrain(MAP), mapdata=MAP)
+                    for (index, b, me, d, bdt, decide_was), (a, th, w) in zip(pass_jobs, got):
+                        finish_bot(index, b, me, d, a, th, w, decide_was)
+                    pass_jobs.clear()
                 if nade_watch is not None and (nade_presses or nade_watch.active(now)):
                     try:
                         projs = nade.watch_objects(live, now)   # (Reach: its hand grenades only, nade.watch_objects)
@@ -1751,6 +1813,8 @@ def main():
     finally:
         if sampler is not None:
             sampler.stop()                       # (its last report written)
+        if think_pass is not None:               # (custom, Nov 23) the think threads end
+            think_pass.close()
         if routes is not None:                   # (custom, Nov 23) the route-search helpers exit
             print(f"route-search helpers: {routes.stats}", flush=True)
             try:

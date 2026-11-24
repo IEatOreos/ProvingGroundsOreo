@@ -94,10 +94,24 @@ class _Helper:
             pass
 
 
+def _locked(fn):
+    """(custom, Nov 23) One of the Pool's methods at a time: the bots may think on several threads (brain/threads.py)."""
+    import functools
+
+    @functools.wraps(fn)
+    def run(s, *a, **k):
+        with s._lock:
+            return fn(s, *a, **k)
+    return run
+
+
 class Pool:
-    """The helpers and their shared memory, for one Terrain at a time (bind). Every method runs on the brain's thread."""
+    """The helpers and their shared memory, for one Terrain at a time (bind). Its methods take turns (a lock: the bots may
+    think on several threads); no_wait: a think thread never waits for a helper's field (it searches it itself)."""
 
     def __init__(s, workers=WORKERS, slots=SLOTS, cmd=None):
+        s._lock = threading.RLock()
+        s.no_wait = False
         s.cmd = cmd or [_python(), "-I", os.path.abspath(__file__), "--worker"]
         s.n_workers, s.n_slots = workers, slots
         s.helpers, s.T, s.shape, s.n = [], None, None, 0
@@ -113,6 +127,7 @@ class Pool:
         s.stats = dict(jobs=0, used=0, near=0, waited=0, dropped=0, stale=0)
 
     # --- setting up
+    @_locked
     def bind(s, T):
         """Use the pool for T: its result slots sized to T's nodes, its graphs published (again when T changed)."""
         if s.broken:
@@ -179,6 +194,7 @@ class Pool:
         s.gen = gen
 
     # --- asking
+    @_locked
     def submit(s, cache, ckey, kind, start, limit, goal, now=None, pin=False):
         """Ask for the field to node start on graph kind (Terrain._field's ckey into cache), unless it is cached, in
         flight or waiting already. pin: kept all match (pinned), never dropped as old."""
@@ -194,6 +210,7 @@ class Pool:
             s.stats["dropped"] += 1
         s._dispatch()
 
+    @_locked
     def pin(s, cache, ckey, kind, start, limit, goal):
         """A fixed target's field (Terrain.pin_targets): worked out once and kept all match (PIN_BYTES in all)."""
         k = (id(cache), ckey)
@@ -259,6 +276,7 @@ class Pool:
             if cache.get(ckey) is s.slot_view[slot]:
                 cache.pop(ckey, None)
 
+    @_locked
     def drain(s, keep):
         """Take the helpers' finished fields into their caches (keep: brain/terrain.py keep_field)."""
         if s.broken:
@@ -300,6 +318,7 @@ class Pool:
         keep(cache, ckey, view)
         s.note(cache, ckey, goal)
 
+    @_locked
     def wait(s, cache, ckey, keep, timeout=WAIT_S):
         """The field a helper is working on, waited for up to timeout; None."""
         k = (id(cache), ckey)
@@ -324,12 +343,14 @@ class Pool:
         return cache.get(ckey)
 
     # --- what the cache holds
+    @_locked
     def touch(s, f):
         """A field read now: its slot (if one) not used again for SLOT_HOLD_S."""
         slot = s.view_slot.get(id(f))
         if slot is not None and s.slot_view[slot] is f:
             s.slot_used[slot] = time.perf_counter()
 
+    @_locked
     def note(s, cache, ckey, goal):
         """A field now in cache for goal: a stand-in for goals NEAR_R from it (near)."""
         if goal is None or not isinstance(ckey, tuple) or len(ckey) < 3:
@@ -340,6 +361,7 @@ class Pool:
         while len(idx) > 64:
             idx.pop(next(iter(idx)))
 
+    @_locked
     def near(s, cache, ckey, goal):
         """The cached field of the same search (all but its goal node in ckey) whose goal is nearest goal within NEAR_R
         flat and NEAR_DZ up or down; None."""
@@ -352,6 +374,7 @@ class Pool:
                 best = (d, k)
         return cache.get(best[1]) if best else None
 
+    @_locked
     def lookup(s, cache, ckey, kind, start, limit, goal, keep):
         """For Terrain._field, a field it does not have cached: the helpers' if done (or nearly: WAIT_S), else a stand-in
         near it while a helper works it out; None: search it here."""
@@ -367,7 +390,7 @@ class Pool:
             s.submit(cache, ckey, kind, start, limit, goal)
             s.stats["near"] += 1
             return stand
-        if (id(cache), ckey) in s.inflight:
+        if (id(cache), ckey) in s.inflight and not s.no_wait:
             f = s.wait(cache, ckey, keep)
             if f is not None:
                 s.stats["used"] += 1
@@ -398,6 +421,7 @@ class Pool:
             h.job = None
         s.gen = None
 
+    @_locked
     def close(s):
         for h in s.helpers:
             h.stop()

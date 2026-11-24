@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from brain import bot as B  # noqa: E402
 from brain.core import Vec  # noqa: E402
 from brain.profiles import make_profile  # noqa: E402
-from brain.terrain import NAV_CELL, OPT_FIELDS, FieldBudget, Terrain  # noqa: E402
+from brain.terrain import NAV_CELL, OPT_FIELDS, FieldBudget, Terrain, opt_state  # noqa: E402
 
 N = 12
 
@@ -83,36 +83,36 @@ class CapTests(unittest.TestCase):
 
     def test_three_fresh_fields_then_its_default(self):
         b = self.capped()
-        self.T.opt_left = OPT_FIELDS
+        opt_state()["left"] = OPT_FIELDS
         self.assertEqual(b.far(self.goals), "waited")
         self.assertEqual(len(self.T._fields), OPT_FIELDS)        # (the three built are kept)
         self.assertEqual(b.capped, 1)
-        self.assertEqual(self.T.opt_depth, 0)
+        self.assertEqual(opt_state()["depth"], 0)
 
     def test_next_think_goes_on_from_the_kept_fields(self):
         b = self.capped()
-        self.T.opt_left = OPT_FIELDS
+        opt_state()["left"] = OPT_FIELDS
         b.far(self.goals)
-        self.T.opt_left = OPT_FIELDS                             # (Bot.think's reset)
+        opt_state()["left"] = OPT_FIELDS                             # (Bot.think's reset)
         got = b.far(self.goals)
         self.assertEqual(len(got), 5)
         self.assertTrue(all(v is not None for v in got))         # (not swallowed as a failed search)
 
     def test_the_walk_is_never_capped(self):
-        self.T.opt_left = 0
+        opt_state()["left"] = 0
         for g in self.goals:
             self.T._field(g)                                     # (outside a capped tactic: nav, the director)
         self.assertEqual(len(self.T._fields), 5)
 
     def test_only_the_outermost_catches(self):
         b = self.capped()
-        self.T.opt_left = 1
+        opt_state()["left"] = 1
         self.assertIsNone(b.outer(self.goals))                   # (the outer default, not "waited" handed up)
-        self.assertEqual(self.T.opt_depth, 0)
+        self.assertEqual(opt_state()["depth"], 0)
 
     def test_think_resets_the_count(self):
         b = bot(self.T)
-        self.T.opt_left = 0
+        opt_state()["left"] = 0
         snap = types.SimpleNamespace(player=lambda i: None)
         try:
             b.think(1.0, 0.03, snap, None, None, None)
@@ -120,7 +120,7 @@ class CapTests(unittest.TestCase):
             pass                                                 # (only the reset at its start matters here)
         # (custom, Nov 23) its tier's count (brain/bot.py tier_budget: this Noble's TOP_OPT_FIELDS, everyone else's
         # OPT_FIELDS on time)
-        self.assertEqual(self.T.opt_left, B.tier_budget(b.p, False)[0])
+        self.assertEqual(opt_state()["left"], B.tier_budget(b.p, False)[0])
         self.assertEqual(B.tier_budget(make_profile("top", "rusher", random.Random(3)), False)[0], OPT_FIELDS)
 
     def test_cover_not_kept_as_none_when_cut(self):
@@ -134,7 +134,7 @@ class CapTests(unittest.TestCase):
             return Vec(1, 1, 0)
         b.hidden_spot = hidden
         me = types.SimpleNamespace(pos=Vec(0, 0, 0))
-        self.T.opt_left = OPT_FIELDS
+        opt_state()["left"] = OPT_FIELDS
         self.assertIsNone(b.los_cover(me, [Vec(5, 5, 0)]))
         self.assertEqual(b.los_cover(me, [Vec(5, 5, 0)]), Vec(1, 1, 0))     # (searched again, not the cut's None)
 

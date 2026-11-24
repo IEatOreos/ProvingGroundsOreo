@@ -24,6 +24,23 @@ from brain.live import Live, LiveH2, LiveH3, LiveReach, LiveODST, LiveH4F  # noq
 from brain.names import make_names  # noqa: E402
 from brain import looks  # noqa: E402
 
+
+# (custom, Nov 23, the owner: "Yes, start the port") the brain's own Python: the free-threaded one (3.14t, no lock: the
+# bots think on several threads, brain/threads.py) where it is, else this one. PPG_BRAIN_PYTHON: its path;
+# PPG_THINK_THREADS=0: this Python (the old loop)
+FT_PYTHONS = (os.path.join(ROOT, "python314t", "python.exe"), os.path.join(ROOT, "..", "python314t", "python", "python.exe"))
+
+
+def brain_python():
+    """The Python live_bots runs on."""
+    if os.environ.get("PPG_THINK_THREADS", "").strip() == "0":
+        return sys.executable
+    want = os.environ.get("PPG_BRAIN_PYTHON", "").strip()
+    for p in ([want] if want else []) + list(FT_PYTHONS):
+        if p and os.path.isfile(p):
+            return os.path.abspath(p)
+    return sys.executable
+
 HB_MAGIC = 0x54424248
 VARIANT = 0x2E9F770     # halo1 global game variant (MCC 1.3528)
 H4F_DLL = {"h2a": "groundhog.dll", "h4": "halo4.dll"}
@@ -351,9 +368,10 @@ def main():
         return
     # (Scaling difficulty reads each match's trace back with its post-game report, brain/scaling.py: always kept then)
     print("bots added, starting the brain", stamp(), flush=True)
+    print("brain Python:", brain_python(), flush=True)
     scaled = "scaling" in o.tier.split(",") + [b["tier"] for b in roster or []]   # (a bot on Scaling: either team)
     trace = match_trace(map_name, after=recording.since()) if (os.path.exists(os.path.join(ROOT, "logs", "trace_on")) or scaled) else None
-    subprocess.run([sys.executable, "-u", "-I", os.path.join(HERE, "live_bots.py"), str(o.minutes * 60),
+    subprocess.run([brain_python(), "-u", "-I", os.path.join(HERE, "live_bots.py"), str(o.minutes * 60),
                     "--tier", o.tier, "--personality", "rusher,flanker,camper,objector,spammer,grudger,sniper",
                     "--map", map_name, "--game", o.game, "--quiet"] + ([] if teams else ["--ffa"]) +
                    (["--roster", o.roster] if roster is not None else []) +   # each bot's own settings

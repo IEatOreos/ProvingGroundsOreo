@@ -630,6 +630,8 @@ class Match:
         acts = {}
         order = list(s.men)
         s.rng.shuffle(order)
+        tp = getattr(s, "think_pass", None)     # (custom, Nov 23: brain/threads.Pass, the thinks on several threads)
+        jobs = []
         for pid in order:
             m = s.men[pid]
             if not m.alive:
@@ -642,11 +644,22 @@ class Match:
                 if me is None or not me.alive:      # (live: a bot its read has dead does not think)
                     continue
                 s.think_snapshot(seen, age)
+            if tp is not None:
+                jobs.append((pid, b, d, seen))
+                continue
             a = b.think(s.now, DT, seen, s.T.sees, s.T.nav, d.callouts, d.item_up)
             for kind, eid, pos, t, busy in b.reports:
                 d.report(t, pid, kind, pos, enemy=eid, busy=busy)
             b.reports.clear()
             acts[pid] = a
+        if tp is not None and jobs:
+            got = tp.run([(b.think, (s.now, DT, seen, s.T.sees, s.T.nav, d.callouts, d.item_up))
+                          for pid, b, d, seen in jobs], T=s.T, mapdata=s.M)
+            for (pid, b, d, seen), a in zip(jobs, got):   # (reports after the pass, in its order: brain/threads.py)
+                for kind, eid, pos, t, busy in b.reports:
+                    d.report(t, pid, kind, pos, enemy=eid, busy=busy)
+                b.reports.clear()
+                acts[pid] = a
         for pid, a in acts.items():
             m = s.men[pid]
             if not m.alive:

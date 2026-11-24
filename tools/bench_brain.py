@@ -46,7 +46,7 @@ def tier_of(p):
     return p.label or p.tier
 
 
-def bench(name, seconds=20.0, seed=1, helpers=True, budgets=True):
+def bench(name, seconds=20.0, seed=1, helpers=True, budgets=True, threads=0):
     """One layout's numbers: dict(passes, pass_ms (median), pass_p90_ms, tiers {tier: mean think ms}, sim_s, real_s)."""
     import real_sim as RS
     from brain import bot as botmod
@@ -62,6 +62,21 @@ def bench(name, seconds=20.0, seed=1, helpers=True, budgets=True):
         else:
             pool = None
     think_ms, passes, cur = {}, [], [0.0]
+    tp, run_ms = None, [0.0]
+    if threads >= 2:                       # (custom, Nov 23: the thinks on several threads, brain/threads.py)
+        from brain.threads import Pass
+        tp = m.think_pass = Pass(threads)
+        if pool is not None:
+            pool.no_wait = True
+        orig_run = tp.run
+
+        def timed_run(jobs, **kw):
+            t0 = time.perf_counter()
+            try:
+                return orig_run(jobs, **kw)
+            finally:
+                run_ms[0] += (time.perf_counter() - t0) * 1000.0
+        tp.run = timed_run
     orig_think, orig_tick = Bot.think, m.tick
     tiers = {pid: tier_of(b.p) for pid, b in m.bots.items()}
 
@@ -85,10 +100,10 @@ def bench(name, seconds=20.0, seed=1, helpers=True, budgets=True):
                 m.T.pin_targets(live_bots.fixed_targets(m.M, snap))
                 pinned[0] = True
             live_bots.prefetch_routes(m.T, m.bots, snap)
-        cur[0] = 0.0
+        cur[0] = run_ms[0] = 0.0
         orig_tick()
         if m.now >= WARMUP_S:
-            passes.append(cur[0])
+            passes.append(run_ms[0] if tp is not None else cur[0])   # (threaded: the thinks' wall time)
     Bot.think, m.tick = think, tick
     t0 = time.time()
     try:
@@ -97,6 +112,8 @@ def bench(name, seconds=20.0, seed=1, helpers=True, budgets=True):
     finally:
         Bot.think = orig_think
         botmod.PASS_CLOCK[0] = None
+        if tp is not None:
+            tp.close()
         if pool is not None:
             m.T.__dict__.pop("field_pool", None)
             pool.close()
@@ -105,7 +122,7 @@ def bench(name, seconds=20.0, seed=1, helpers=True, budgets=True):
                 pass_p90_ms=round(passes[int(len(passes) * 0.9)], 1) if passes else None,
                 tiers={k: round(st.mean(v), 2) for k, v in sorted(think_ms.items())},
                 sim_s=round(m.now, 1), real_s=round(time.time() - t0, 1),
-                helpers=pool is not None, budgets=budgets)
+                helpers=pool is not None, budgets=budgets, threads=threads if tp is not None else 1)
 
 
 def compare(results, baseline, tolerance=TOLERANCE):
@@ -128,13 +145,14 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--no-helpers", action="store_true")
     ap.add_argument("--no-budgets", action="store_true")
+    ap.add_argument("--threads", type=int, default=0, help="the bots think on this many threads (free-threaded Python)")
     ap.add_argument("--save", action="store_true")
     ap.add_argument("--check", action="store_true")
     o = ap.parse_args()
     results = {}
     for key in o.maps.split(","):
         name = LAYOUTS.get(key, key)
-        r = bench(name, o.seconds, o.seed, helpers=not o.no_helpers, budgets=not o.no_budgets)
+        r = bench(name, o.seconds, o.seed, helpers=not o.no_helpers, budgets=not o.no_budgets, threads=o.threads)
         results[key] = r
         print(json.dumps({key: r}), flush=True)
     if o.save:

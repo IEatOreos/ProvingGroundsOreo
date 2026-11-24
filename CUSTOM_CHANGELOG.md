@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+### The bots think on several cores (upstream 0.3.0's threads, ported), 2026-11-23
+
+The owner, after reading the upstream author's 0.3.0 release ("the bots split their thinking over several cores"), unpacked from its installer without installing it: "Yes, download it", then "Yes, start the port".
+
+- **The free-threaded Python:** Astral's python-build-standalone `cpython-3.14.10+20261026-x86_64-pc-windows-msvc-freethreaded-install_only` (the release's SHA-256 checked) in `E:\Proving Grounds\python314t`, outside the project, with numpy 2.5.3, scipy 1.18.1 and Pillow 12.3.0 (our versions).
+  - The whole brain and tools load on it with Python's lock off, and every test passes on it.
+  - On one thread it is about 10% slower than our Python (Renegade benchmark 26.7 / 73.0 ms against 24.1 / 67.0).
+- **New `brain/threads.py` (`Pass`)**, adapted from upstream's (its notice kept): every bot's think of a pass on a pool of threads, on what the pass started with. What one bot's think would change for the others is held back and applied after the pass, in the players' order:
+  - the Terrain's learning;
+  - our team tables (`TEAM_SIGHTINGS`, `TEAM_EYES`, `TEAM_FACING`, `TEAM_TARGETS`, `TEAM_CRACKED`, `TEAM_ATTACKERS`, `TEAM_SPACE`, `BOT_PROFILES`, `DEAD_SPOTS`) and the map's vehicle duds;
+  - Noble's hit book and habits, and the lore's jumps.
+
+  A bot reads the pass's start plus its own writes (one more than upstream's: its own claim holds within its think).
+- **Made safe for threads:**
+  - **`brain/terrain.py`:**
+    - the route-field caches are locked, and a field from before a learned wall is not kept (`gen`);
+    - a route with one-off costs runs on a copy of the graph;
+    - the optional tactics' search budget is per thread (`opt_state`); a field another thread kept this pass counts as fresh to it (`fresh_to_me`), so the budget doesn't depend on which thread got there first;
+    - the vehicle ground, whose car and tank graphs swap in on use, takes one route at a time (`VLOCK`, `vlocked`; `brain/bot.py` holds it round its `vroomy` reads);
+    - the hazard memo reads once.
+  - **`tools/field_pool.py`:** a lock; a think thread never waits on a helper (`no_wait`).
+- **The rule (upstream's): a threaded pass plays the one-thread match.** New `tools/test_threads.py`: 8 against 8 on Hang 'Em High, 240 ticks, every man's place, facing, shield, health and life the same on 4 threads as on 1.
+  - Checked longer by hand: 600 ticks on 1, 4 and 6 threads all the same.
+  - The old serial loop, without the held-back writes, plays another match from tick 17, so the test can tell.
+- **Live (`tools/live_bots.py`):**
+  - The thinks run through `Pass` (`think_job`; each bot finished in the players' order after: `finish_bot`).
+  - The thread count (`think_threads`): `PPG_THINK_THREADS`, else Auto, half the PC's threads, 2 to 6, never past its threads less one, and none while Python's lock is on. The owner's PC (16 threads): 6.
+  - `tools/play.py` `brain_python` starts the brain on the free-threaded Python where it is (`PPG_BRAIN_PYTHON` names another; `PPG_THINK_THREADS=0` keeps ours).
+  - The simulator takes a `Pass` too (`tools/banshee_sim.py` `think_pass`); `tools/bench_brain.py --threads N`.
+- **Measured** (60 simulated seconds of 8v8, the thinks' wall time per pass, median / slowest tenth):
+
+  | Threads | Renegade | Utopie |
+  |---|---|---|
+  | 1 | 27.8 / 68.1 ms | 23.4 / 98.5 ms |
+  | 2 | 17.8 / 51.9 ms | 12.9 / 78.0 ms |
+  | 4 | 9.7 / 46.9 ms | 7.9 / 72.2 ms |
+  | 6 | 7.9 / 45.3 ms | 6.8 / 73.2 ms |
+
+  The slowest passes wait on one bot's long think, which threads can't split.
+- **Checks:**
+  - New `tools/test_threads.py` and `tools/test_think_threads.py` (the count, the brain's Python).
+  - `tools/test_route_cap.py` reads the per-thread budget.
+  - `unittest discover` over `tools` is OK on both Pythons (1452 tests), and so is the `live_bots` import.
+  - **Untested in a match.**
+
 ### Runners reroute instead of giving up their objective, 2026-11-23
 
 The owner's Renegade CTF bug report (`20261123-223329`, 375 s): "Several teammates on their base not pulliung the flag". Then: "They need to have the ability to reroute. If the route they take fails they go the next route that makes it reachable. I think they shouldnt ban runners anymore", and "On that map its just a little rock jump up thats below the flag on blue side they get hung up on. But their is plenty of routes to their flag".

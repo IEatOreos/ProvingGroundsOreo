@@ -11,6 +11,8 @@ from .equipment import Kit, game_of, hold_bit
 from .profiles import HANDS
 from . import profiles
 from .terrain import MAX_DROP, MAX_RISE, ROUTE_JUMP, ROUTE_CROUCH, EYE, CHEST, FieldBudget, OPT_FIELDS
+from .terrain import opt_state as termod_opt_state   # (custom, Nov 23: per thread, brain/threads.py)
+from .terrain import VLOCK                            # (custom, Nov 23: the vehicle ground, brain/threads.py)
 from . import vehicles
 from . import anticipate
 from . import odds as odds_model
@@ -128,24 +130,25 @@ def optional_search(default):
         @functools.wraps(fn)
         def run(s, *a, **k):
             try:
-                d = s.T().__dict__
+                s.T()
             except Exception:
                 return fn(s, *a, **k)
-            if getattr(s, "skip_optional", False) and not d.get("opt_depth", 0):
+            d = termod_opt_state()        # (custom, Nov 23: this thread's think's budget, terrain.opt_state)
+            if getattr(s, "skip_optional", False) and not d["depth"]:
                 # (custom, Nov 23) its tier's budget says not this think (tier_budget): the tactic's default
                 s.note(f"{fn.__name__}: skipped, the update is late (its tier's budget)")
                 return default(s, *a, **k) if callable(default) else default
-            d["opt_depth"] = d.get("opt_depth", 0) + 1
+            d["depth"] += 1
             try:
                 return fn(s, *a, **k)
             except FieldBudget:
-                if d.get("opt_depth", 1) > 1:
+                if d["depth"] > 1:
                     raise
                 s.capped = getattr(s, "capped", 0) + 1
                 s.note(f"{fn.__name__}: route searches for this update spent, again next update")
                 return default(s, *a, **k) if callable(default) else default
             finally:
-                d["opt_depth"] = d.get("opt_depth", 1) - 1
+                d["depth"] -= 1
         return run
     return wrap
 
@@ -3398,10 +3401,9 @@ class Bot:
 
     # --- per tick
     def think(s, now, dt, snap, los, nav, callouts, items=None):
-        T0 = s.__dict__.get("_terrain")
         fields, s.skip_optional = tier_budget(s.p, pass_late())   # (custom, Nov 23: its tier's budget, tier_budget)
-        if T0 is not None:
-            T0.opt_left = fields              # (custom, Nov 22: this think's fresh route fields for tactics, optional_search)
+        st = termod_opt_state()               # (custom, Nov 22: this think's fresh route fields for tactics, optional_search;
+        st["left"], st["depth"] = fields, 0   # Nov 23: this thread's, terrain.opt_state)
         me0 = snap.player(s.id)
         haz = s.kit.hazards(me0, snap) if me0 is not None and getattr(snap, "deployed", None) else ()
         haz = tuple(haz) + s.reroute_hazards(now)    # (custom, Nov 23: a runner's stalled spots gone round, reroute)
@@ -6696,15 +6698,16 @@ class Bot:
                     from .maps import terrain
                     T = s._terrain = terrain(s.map)
                 # (custom, Nov 13: a tank on a tank's ground, Terrain.use_vground)
-                w = T.vnav(me.pos, target, **tank_ground(v, T)) if hasattr(T, "vnav") else nav(me.pos, target)
-                w = w if w is not None else target       # (no route read: straight at it)
-                # as near the goal as the vehicle's ground goes: out here. Only on that ground: off it, its edge is 0.25
-                # u away, so a Warthog wedged by it "arrived" every tick, was sent on again and never counted as stuck
-                # (H2A Bloodline: 0.35 throttle into a rock for 30 s, no reverse; drivers under 0.5 u/s 61% of the time
-                # with the throttle down). The end is vnav answering where it is, never a short step: on Spire's
-                # people's road by a wall the next point was 0.25 u on and a driver got out 39 u short
-                vg = getattr(T, "vroomy", None)
-                on_vg = vg is None or bool(vg[T._node(me.pos)])
+                with VLOCK:                              # (custom, Nov 23: the route and its ground together, threads)
+                    w = T.vnav(me.pos, target, **tank_ground(v, T)) if hasattr(T, "vnav") else nav(me.pos, target)
+                    w = w if w is not None else target       # (no route read: straight at it)
+                    # as near the goal as the vehicle's ground goes: out here. Only on that ground: off it, its edge is
+                    # 0.25 u away, so a Warthog wedged by it "arrived" every tick, was sent on again and never counted as
+                    # stuck (H2A Bloodline: 0.35 throttle into a rock for 30 s, no reverse; drivers under 0.5 u/s 61% of
+                    # the time with the throttle down). The end is vnav answering where it is, never a short step: on
+                    # Spire's people's road by a wall the next point was 0.25 u on and a driver got out 39 u short
+                    vg = getattr(T, "vroomy", None)
+                    on_vg = vg is None or bool(vg[T._node(me.pos)])
                 s.ground_end = w == me.pos and on_vg
             act.yaw = math.atan2(w.y - me.pos.y, w.x - me.pos.x)
             act.pitch, act.forward = 0.0, 1.0
@@ -7620,19 +7623,20 @@ class Bot:
         the line itself."""
         T = s.T()
         far = Vec(me.pos.x + FLEE_D * math.cos(away), me.pos.y + FLEE_D * math.sin(away), me.pos.z)
-        w = T.vnav(me.pos, far) if hasattr(T, "vnav") else None
-        if w is not None and (w - me.pos).flat() > 0.3:
-            return math.atan2(w.y - me.pos.y, w.x - me.pos.x)
-        vg = getattr(T, "vroomy", None)
-        if vg is not None:
-            for off in (0.6, -0.6, 1.2, -1.2, 1.9, -1.9):
-                q = Vec(me.pos.x + FLEE_D * math.cos(away + off), me.pos.y + FLEE_D * math.sin(away + off), me.pos.z)
-                try:
-                    if vg[T._node(q)]:
-                        return away + off
-                except (IndexError, ValueError):
-                    continue
-        return away
+        with VLOCK:                                      # (custom, Nov 23: the route and its ground together, threads)
+            w = T.vnav(me.pos, far) if hasattr(T, "vnav") else None
+            if w is not None and (w - me.pos).flat() > 0.3:
+                return math.atan2(w.y - me.pos.y, w.x - me.pos.x)
+            vg = getattr(T, "vroomy", None)
+            if vg is not None:
+                for off in (0.6, -0.6, 1.2, -1.2, 1.9, -1.9):
+                    q = Vec(me.pos.x + FLEE_D * math.cos(away + off), me.pos.y + FLEE_D * math.sin(away + off), me.pos.z)
+                    try:
+                        if vg[T._node(q)]:
+                            return away + off
+                    except (IndexError, ValueError):
+                        continue
+            return away
 
     def ram_boost(s, now, me, v, b, act, splat=False):
         """The boost into a man close ahead (a Ghost or Chopper, vehicles.BOOSTS; the player's Chopper and Ghost boosts
