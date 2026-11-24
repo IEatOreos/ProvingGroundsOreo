@@ -9217,6 +9217,8 @@ class Bot:
     LEARN_IN_FIGHT = False          # stuck pushes during a fight teach spots (A/B: tools/sim_variant.py)
 
     REDIRECT_D = 0.55                   # a wall closer than this along the way we walk: step around it
+    OBJ_REACH = 3.0                     # u: an objective this near with a clear line is walked at straight (redirect;
+                                        # upstream 0.3.0, build 20261114-0323)
     RUNUP_GIVE_UP = 5.0                 # s: a person's run-up not reached by then, the take-off within 2.5 u: from there
 
     def redirect(s, now, me, act):
@@ -9233,6 +9235,19 @@ class Bot:
         ahead = T.clearance(s.feet(me), walk, 1.5)
         if ahead >= s.REDIRECT_D:
             return
+        # (upstream 0.3.0, build 20261114-0323) the objective or gun within OBJ_REACH and nothing between: straight onto
+        # it, not turned off by the wall behind it (his live Battle Creek CTF, Nov 14: red's runners came within 4 u of
+        # blue's flag 10 times and took it once, "wall ahead: stepping around" 1.3-2.6 u from the flag, the stand being
+        # against the base's wall)
+        g = s.goal[1] if s.goal[0] in ("objective", "item") else None
+        if isinstance(g, Vec) and abs(g.z - me.pos.z) < 1.0:
+            dg = math.hypot(g.x - me.pos.x, g.y - me.pos.y)
+            to_g = math.atan2(g.y - me.pos.y, g.x - me.pos.x)
+            if 0.2 < dg < s.OBJ_REACH and T.clearance(s.feet(me), to_g, 1.5) >= min(dg, 1.5) - 0.1:
+                rel = to_g - act.yaw
+                act.forward, act.strafe = math.cos(rel), math.sin(rel)
+                s.note("objective in reach: straight at it")
+                return
         att = getattr(s, "att", None)                               # the nav's next point is short of the wall: a
         if att and att[0] == "path" and math.hypot(att[2] - me.pos.x, att[3] - me.pos.y) < ahead + 0.2:
             return                                                  # corner it turns at, not a wall in the way

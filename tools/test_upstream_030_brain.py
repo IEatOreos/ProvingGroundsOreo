@@ -79,5 +79,38 @@ class HeadwayTests(unittest.TestCase):
         self.assertIn(key, getattr(b, "goal_ban", {}))
 
 
+class _Wall:
+    """A wall right along yaw 1.0 (the way the bot walks), room everywhere else."""
+
+    def clearance(self, pos, yaw, r):
+        return 0.3 if abs(yaw - 1.0) < 0.2 else 3.0
+
+
+class ObjectiveReachTests(unittest.TestCase):
+    """#11, the walking part (build 20261114-0323): an objective or gun within OBJ_REACH with a clear line is walked
+    at straight, not stepped round the wall behind it."""
+
+    def step(self, goal):
+        b = make_bot()
+        b._terrain = _Wall()
+        b.goal = goal
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(0, 0, 0))
+        act = Action(forward=1.0, yaw=1.0)
+        b.redirect(0.0, me, act)
+        return act
+
+    def test_flag_in_reach_straight_at_it(self):
+        for kind in ("objective", "item"):
+            act = self.step((kind, Vec(2.0, 0, 0)))
+            self.assertAlmostEqual(act.forward, botmod.math.cos(-1.0), 3, kind)
+            self.assertAlmostEqual(act.strafe, botmod.math.sin(-1.0), 3, kind)
+
+    def test_farther_or_another_floor_steps_round_as_before(self):
+        for goal in (("objective", Vec(5.0, 0, 0)), ("objective", Vec(2.0, 0, 2.0)), ("hunt", Vec(2.0, 0, 0))):
+            act = self.step(goal)
+            self.assertAlmostEqual(act.forward, botmod.math.cos(0.52), 3, goal)
+            self.assertAlmostEqual(act.strafe, botmod.math.sin(0.52), 3, goal)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### CTF: bots step onto a flag or gun standing against a wall, 2026-11-24
+
+Upstream 0.3.0's note #11, the walking part (build 20261114-0323). The owner: "take both; test a Reach CTF map with a flag against a wall". The CE/H2 capture counting (`tools/live_bots.py`) is a separate later port.
+
+- `Bot.redirect` (the "wall ahead: stepping around" turn, upstream code): when the bot's objective or gun is within `OBJ_REACH` (3 u), on its floor (under 1 u up or down) and the line to it is clear, the bot walks straight at it instead of being turned off by the wall behind it. His live Battle Creek CTF: runners came within 4 u of a flag standing against the base wall 10 times and took it once.
+- Every tier, every game, on foot only (fights, routes people walked and vehicles still skip `redirect`, as before). Nothing of ours touched.
+- **Checks:** `tools/test_upstream_030_brain.py` +2 (a flag/gun 2 u off is walked at straight; one 5 u off, one a floor up, or a hunt still steps round) OK; `bot.py` parses, `live_bots` imports. **Untested in a live match** (the owner's check: a Reach CTF map with a flag against a wall).
+
 ### A bot's weapon patience restarts each life, 2026-11-24
 
 Upstream 0.3.0's note #41 (build 20261118-2355). The owner: "take it, hand-inserted into our headway".
