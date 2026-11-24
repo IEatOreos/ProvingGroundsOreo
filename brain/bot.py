@@ -715,6 +715,8 @@ PRESS_NEAR = 3.0                    # u: a press (press_on) walks in to here; cl
 POWER_NEAR = 15.0                   # u: a power weapon up this near is not held back by a post (keep_role)
 REGROUP_MATE = 8.0                  # a teammate this close is support (brain/tracefmt.py FORM_R): no pull-back (regroup_point)
 HUNT_R = 12.0                       # an Invasion defender sent at the carrier / a territory being taken strays no farther
+# (upstream 0.3.0, build 20261112-2117) games whose objectives are taken on a press of Use (Bot.take taps it), s a beat
+TAKE_TAP, TAKE_TAP_S = ("h2",), 0.3
 # (custom, Nov 10) CTF: the emblem over the man carrying our flag (Halo 4 shows it to everyone): every bot knows where
 # he is, as an exact "marker" belief, never a sighting (no shot or recognition through walls), when he is within
 # MARKER_R u or its job is him (hunter, cutoff; Perception.update). A cut-off (director.intercepts) keeps within CUT_R
@@ -5871,16 +5873,21 @@ class Bot:
         f = (snap.flags or {}).get(1 - me.team % 2)
         return f.pos if f is not None and f.state != "carried" and dist(me.pos, f.pos) < reach else None
 
-    @staticmethod
-    def take(me, act, pos):
+    def take(s, me, act, pos):
         """Pick up the objective at pos: Use held with the view on it. Reach's Use takes what the view is on: with a gun
         lying on the CTF stand it swapped guns instead (Boardwalk, live: a runner 50 s on the flag), and a Spire runner
         0.6 u off the core held Use 45 s looking past it (live; the pickups came as a view swept over it). The walk
-        keeps its way under the turned view."""
+        keeps its way under the turned view. Halo 2 takes on a press, not a hold (TAKE_TAP): Use tapped there. Live
+        Triplicate Oddball 20261112-204733: all 26 bot pickups came on a fresh press; in all 9 spells of a bot on the loose
+        ball 2.8-8.9 s with no pickup Use was held throughout (upstream 0.3.0, build 20261112-2117; a method now, it reads
+        the game). Every other game holds Use as before."""
         move, sp = act.yaw + math.atan2(act.strafe, act.forward), math.hypot(act.forward, act.strafe)
         act.yaw, act.pitch = angles_to(eye(me), pos)
         act.forward, act.strafe = sp * math.cos(move - act.yaw), sp * math.sin(move - act.yaw)
-        act.action = True
+        if getattr(s, "game", None) in TAKE_TAP:
+            act.action = (getattr(s, "now", 0.0) % TAKE_TAP_S) < TAKE_TAP_S / 2   # down half the beat, up half
+        else:
+            act.action = True
 
     @staticmethod
     def seat_point(v, seat, side=1):

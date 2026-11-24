@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Halo 2: bots standing on the ball pick it up, 2026-11-24
+
+Upstream 0.3.0's note #6 (build 20261112-2117). The owner: "take it".
+
+- `Bot.take` is a method now (it was a static method) and reads the game: in Halo 2 (`TAKE_TAP = ("h2",)`) Use is tapped, down half of a 0.3 s beat and up the other half (`TAKE_TAP_S`), as Halo 2 takes the ball only on a fresh press. His live Triplicate Oddball count: all 26 pickups came on a fresh press; 9 spells of 2.8-8.9 s on the loose ball with Use held throughout took nothing.
+- Every other game (Reach, Halo 3, Halo 4, H2A, CE) still holds Use, as before. All callers already used `s.take(...)`; no static `Bot.take` call is left.
+- **Checks:** `tools/test_upstream_030_brain.py` (new, 3 tests: H2 taps, every other game holds, no static call left) OK; `bot.py` parses and `live_bots` imports. **Untested in a live match.**
+
 ### Stale spots pull harder; the map-use simulation re-measured by building, 2026-11-24
 
 The owner, on the first simulation: the Boneyard hot spots I'd called "mid" are upper floors, not mid ("Two are by west upper level. hot spot 4 is 3rd story by their sniper and two are in banshee building. None of them are (mid)"), and every spot is reachable on foot. Both were right. My "mid strip" was an x/y box that ignored height. The one "unreachable" spot, (297, 90.8, -4), is reached by bots, which walk with people's routes (`human=True`); my check had left them out. Then: "Stronger and re test."
