@@ -1308,6 +1308,8 @@ def main():
     import recording                         # the longest recording (the Observer's Recording settings): its last
     rec_s = recording.settings()["minutes"] * 60.0   # minutes kept, trimmed on disk as it is written
     trace = recording.RollingFile(o.trace, rec_s) if o.trace else None
+    if o.trace:                               # (names this log's match: tools/match_export.py attaches the log by it)
+        print("recording:", os.path.basename(o.trace), flush=True)   # (upstream 0.3.0, build 20261120-1620)
     if trace and SCALE is not None:          # the match ran on Scaling: brain/scaling.py counts it after (and its settings)
         trace.write(json.dumps(dict(t=0.0, scaling=round(SCALE, 5))) + chr(10))
     # (custom, Nov 15) every kill as the game itself keeps it, into the recording: who the game credits, with what,

@@ -822,5 +822,53 @@ class LowPerformanceWarning(unittest.TestCase):
         self.assertFalse(self.lb.speed_note(buf, 500.0, boom))
 
 
+class BugReportsBrainLog(unittest.TestCase):
+    """#74 (build 20261120-1620): bug reports carry the bots' log (logs/brain.txt), and a match export adds it, scrubbed,
+    only when the log names this match's recording (live_bots prints "recording: <file>")."""
+
+    def test_the_report_folder_gets_the_log(self):
+        import os
+        import tempfile
+        import bug_reports
+        d = tempfile.mkdtemp()
+        log = os.path.join(d, "brain.txt")
+        with open(log, "w", encoding="utf-8") as f:
+            f.write("recording: trace_x.jsonl\n  1.0s tick failed\n")
+        old = bug_reports.BRAIN_LOG
+        bug_reports.BRAIN_LOG = log
+        try:
+            folder = os.path.join(d, "match")
+            os.makedirs(folder)
+            bug_reports._brain_log(folder)
+            self.assertIn("tick failed", open(os.path.join(folder, "brain.txt"), encoding="utf-8").read())
+            bug_reports.BRAIN_LOG = os.path.join(d, "none.txt")
+            bug_reports._brain_log(os.path.join(d, "missing"))      # (no log, no folder: nothing, no error)
+        finally:
+            bug_reports.BRAIN_LOG = old
+
+    def test_the_export_adds_this_matchs_log_only(self):
+        import os
+        import tempfile
+        import match_export
+        d = tempfile.mkdtemp()
+        tr = os.path.join(d, "trace_testmap_20261124-120000.jsonl")
+        open(tr, "w").close()
+        brain = os.path.join(d, "brain.txt")
+        with open(brain, "w", encoding="utf-8") as f:
+            f.write("bots added\nrecording: trace_testmap_20261124-120000.jsonl\n")
+        self.assertEqual(match_export.match_files(tr, logs=d, mcc_temp=d).get("brain.txt"), brain)
+        with open(brain, "w", encoding="utf-8") as f:
+            f.write("recording: trace_other_20261124-110000.jsonl\n")
+        self.assertNotIn("brain.txt", match_export.match_files(tr, logs=d, mcc_temp=d))
+        self.assertIn("brain.txt", match_export.IMPORT_PARTS)
+        self.assertIn("Project Noble", match_export.README)          # (ours, kept)
+        self.assertEqual(match_export.README.count("Proving Grounds"), 0)
+
+    def test_live_bots_names_its_recording(self):
+        import inspect
+        import live_bots
+        self.assertIn('print("recording:", os.path.basename(o.trace)', inspect.getsource(live_bots.main))
+
+
 if __name__ == "__main__":
     unittest.main()

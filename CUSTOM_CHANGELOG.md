@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Bug reports and match exports include the bots' log, 2026-11-24
+
+Upstream 0.3.0's note #74 (build 20261120-1620). The owner: "take it".
+
+- `tools/bug_reports.py _brain_log` (his): `logs/brain.txt` (the running brain's output, this match's) is copied next to the reports: when a report is filed (`attach_new`) and at the match's end (`finish`). A missing log or folder is skipped quietly.
+- `tools/match_export.py`: an export adds `brain.txt` only when the log names this match's recording (`recording: <trace file>` in its first 64 KB). It goes through the same privacy scrub as every part (the Windows user folder -> `<home>`, people's names -> Player N), and an import takes it back (`IMPORT_PARTS`).
+- `tools/live_bots.py` prints `recording: <trace file>` at the start, so the log names its match.
+- Kept of ours: `match_export`'s tier names (Demon, Noble, Mythic, Blind, Tactician) and the Project Noble README text.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (the report folder gets the log, none without one; the export takes this match's log only, `brain.txt` is an import part, our README kept; `live_bots` names its recording) OK; `match_export.py`'s own selftest OK; `live_bots.py`, `bug_reports.py`, `match_export.py` import. **Untested in a live match** (a bug report filed in a match).
+
 ### A low performance warning when the bots fall far behind (the brain's check), 2026-11-24
 
 Upstream 0.3.0's note #47, its live_bots part (build 20261118-2107). The owner: "take it, with our own ~20-line check instead of bot_capacity.py".
