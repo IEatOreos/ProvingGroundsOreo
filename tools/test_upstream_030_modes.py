@@ -274,5 +274,58 @@ class CEH2Captures(unittest.TestCase):
         self.assertIn("snap.score_live = bool(MATCH", inspect.getsource(self.lb.snapshot))   # (ours, Nov 13, kept)
 
 
+class PullFirst(unittest.TestCase):
+    """#3b (build 20261112-1632): their flag on its stand, our runner or escort within PULL_FIRST_R of it is not called
+    into a vehicle (the horn, an empty gun) until the pull; one extra condition only, our seat and Demon rules kept."""
+
+    def scene(self, role0, d0, d1, flag_state="home", mode="ctf"):
+        from brain.core import FlagState
+        from test_resource_calls import scene
+        d, snap, bots, players = scene("warthog", distances=(d0, d1), tiers=("strong", "average"))
+        d.side = 0
+        d.roles[0] = role0
+        snap.mode = mode
+        at = Vec(d0, 0, 0)
+        snap.flags = {0: FlagState(0, Vec(-80, 0, 0), Vec(-80, 0, 0)),
+                      1: FlagState(1, at, at if flag_state == "home" else Vec(d0 + 3, 0, 0), state=flag_state)}
+        snap.vehicles[0].update(occupied=True, riders=1)
+        return d, snap, bots, players
+
+    def honk(self, *a, **k):
+        d, snap, bots, players = self.scene(*a, **k)
+        snap.honks = [10]
+        d.honk_orders(100, snap, bots, players)
+        return [b.order.role for b in bots]
+
+    def gun_call(self, *a, **k):
+        d, snap, bots, players = self.scene(*a, **k)
+        for name in ("honk_orders", "crew_orders", "rider_calls", "ferry_orders", "vehicle_jobs", "wheel_calls"):
+            setattr(d, name, lambda *a: None)
+        d.vehicle_orders(100, snap, bots)
+        return [b.order.role for b in bots]
+
+    def test_horn_skips_the_runner_by_their_flag(self):
+        self.assertEqual(self.honk("runner", 2, 12), ["mid", "ride"])
+
+    def test_horn_calls_him_once_the_flag_is_off_its_stand(self):
+        self.assertEqual(self.honk("runner", 2, 12, flag_state="dropped")[0], "ride")
+
+    def test_horn_as_before_outside_ctf(self):
+        self.assertEqual(self.honk("runner", 2, 12, mode="slayer")[0], "ride")
+
+    def test_gun_call_skips_the_escort_by_their_flag(self):
+        self.assertEqual(self.gun_call("escort", 5, 20), ["mid", "ride"])
+        self.assertEqual(self.gun_call("escort", 5, 20, flag_state="dropped"), ["ride", "mid"])
+
+    def test_switch_off(self):
+        from brain import director
+        old = director.PULL_FIRST
+        director.PULL_FIRST = False
+        try:
+            self.assertEqual(self.honk("runner", 2, 12)[0], "ride")
+        finally:
+            director.PULL_FIRST = old
+
+
 if __name__ == "__main__":
     unittest.main()

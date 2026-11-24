@@ -34,6 +34,11 @@ INV_COMMIT = 30.0           # an Invasion attack keeps its territory at least th
 # the play before (A/B)
 CARRY_PLAY, CUTOFF = True, True
 CTF_DEFEND_LEAD = 2         # (custom, Nov 9) CTF: one defender only this many captures ahead or more (role_slots)
+# CTF: their flag on its stand, a runner or escort of ours within PULL_FIRST_R u of it is not called into a teammate's
+# vehicle by its horn (honk_orders) nor sent to a vehicle's empty gun (vehicle_orders): the pull first, the carrier
+# rides (upstream 0.3.0, build 20261112-1632; only this one extra condition of his note #3: our role_slots and the
+# Nov 9 one-defender rule decide who runs)
+PULL_FIRST, PULL_FIRST_R = True, 15.0
 # (custom, Nov 10) CTF cut-offs (Director.intercepts): a hunter goes to the first point on the enemy carrier's way home
 # it reaches CUT_MARGIN_S s before him (both at CUT_RUN u/s, his pace CARRIER_PACE of ours: ASSUMED equal, a Halo 4
 # carrier's speed is unmeasured), points every CUT_STEP u from CUT_MIN_AHEAD u ahead of him; never one behind him. His
@@ -1191,7 +1196,8 @@ class Director:
         s.carrying = any(p.team == s.team and p.alive and p.has_flag for p in snap.players)
         foot = [b for b in alive if players[b.id] is not None and players[b.id].vehicle == -1
                 and not players[b.id].has_flag and s.roles.get(b.id) not in ("runner", "defender", "ride", "board")
-                and not (s.carrying and s.roles.get(b.id) == "escort")]
+                and not (s.carrying and s.roles.get(b.id) == "escort")
+                and b.id not in s.pulling(snap, alive, players)]   # (pulling their flag: PULL_FIRST)
         # (a power vehicle by a bot on an objective job: its pool, crew_orders)
         busy = [b for b in alive if b not in foot and players[b.id] is not None and players[b.id].alive
                 and players[b.id].vehicle == -1 and not players[b.id].has_flag and b.p.tier != "novice"
@@ -1977,6 +1983,16 @@ class Director:
                 out.append(h)
         return out
 
+    def pulling(s, snap, alive, players):
+        """PULL_FIRST: the bots of ours pulling their flag: this pass's runners and escorts within PULL_FIRST_R of it while
+        it is on its stand (no horn or crew job takes them off it; the carrier rides, honk_orders). (upstream 0.3.0,
+        build 20261112-1632)"""
+        theirs = (snap.flags or {}).get(1 - s.side) if snap.mode == "ctf" and PULL_FIRST else None
+        if theirs is None or theirs.state != "home":
+            return set()
+        return {b.id for b in alive if players.get(b.id) is not None and s.roles.get(b.id) in ("runner", "escort")
+                and dist(players[b.id].pos, theirs.pos) < PULL_FIRST_R}
+
     def honk_orders(s, now, snap, alive, players):
         """A teammate in a vehicle honks at us: the nearest bot on foot within 20 u takes the gun, then the passenger
         seats go to our objective holders first, then to the next nearest bots. A bot passenger gives its seat up
@@ -1994,6 +2010,11 @@ class Director:
         calls = [(h, picks.get(h), 20.0) for h in honks] + [
             (h, None, LAND_CALL_R_PERSON if h in person_in else LAND_CALL_R)
             for h in s.landed_aircraft(now, snap) if h not in honks]
+        # their flag on its stand: a runner or escort of ours by it pulls it first; the ride waits for the carry (the
+        # holder is called first once he has it, below). His live Sandtrap 20261112-162033: the player's Warthog stopped
+        # by their flag called the runners in, the next role pass sent them back to it, every 1-2 s for 25 s
+        # (upstream 0.3.0, build 20261112-1632)
+        pulling = s.pulling(snap, alive, players)
         for h, picked, reach in calls:
             v = next((x for x in snap.vehicles if x["handle"] == h and x.get("team") == s.team), None)
             sp = vehicles.spec(v["kind"]) if v else None
@@ -2004,7 +2025,7 @@ class Director:
             coming = [b for b in alive if b.order.target == h and b.order.role in ("ride", "board")]
             free = len(sp["seats"]) - v.get("riders", 0) - len(coming)
             foot = sorted((b for b in alive if b not in coming and players[b.id] is not None and players[b.id].alive
-                           and players[b.id].vehicle == -1
+                           and players[b.id].vehicle == -1 and b.id not in pulling
                            and dist(players[b.id].pos, vp) < (HORN_CALL_R if b.id == picked else reach) and s.gunner_available(b)),
                           key=lambda b: (b.id != picked, not players[b.id].has_flag, dist(players[b.id].pos, vp)))
             holders = [b for b in foot if players[b.id].has_flag]

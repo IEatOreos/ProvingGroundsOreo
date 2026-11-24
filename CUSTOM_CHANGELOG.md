@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### CTF: a bot pulling the enemy flag finishes the pull before a horn or a gun calls it, 2026-11-24
+
+Upstream 0.3.0's note #3b (build 20261112-1632). The owner: "take it (one extra condition in our horn and vehicle-order code)". #3a (his 25% defence split) and #3c (carrier fixes after boarding) were answered skip and are not taken.
+
+- `brain/director.py`: `PULL_FIRST, PULL_FIRST_R = True, 15.0` and `Director.pulling` (his): their flag on its stand, our runners and escorts within 15 u of it.
+  - `honk_orders`: one extra condition in our foot filter (`b.id not in pulling`). His live Sandtrap: a Warthog stopped by their flag called the runners in, the next role pass sent them back to it, every 1-2 s for 25 s.
+  - `vehicle_orders`: the same condition in our foot list for an empty gun's call.
+  - Once the flag is off its stand the carrier rides as before (the holder is called first).
+- Kept of ours: `gunner_available`, `Bot.seat_ok` (Demon, Noble and Mythic seats), `LAND_CALL_R_PERSON`, the horn's pick, `role_slots` and our Nov 9 one-defender rule (`CTF_DEFEND_LEAD`) untouched. Not taken: his `LEAD_KEEPS_SPLIT`, `OWNER_SPLITS`, `DEFEND_SHARE`, `THIEF_HUNT`, `KEEP_RUNNERS`, and his `b.order.said` foot test.
+- **Checks:** `tools/test_upstream_030_modes.py` +5 (the horn skips the runner by their flag on its stand and calls him once it is off it; as before outside CTF; an empty gun skips the escort by their flag; `PULL_FIRST = False` plays as before) OK; `test_demon_seats`, `test_resource_calls`, `test_ctf_defender`, `test_ctf_cutoff`, `test_demon_vehicles` OK. **Untested in a live match.**
+
 ### CTF in Halo: CE and Halo 2: the bots count captures, 2026-11-24
 
 Upstream 0.3.0's note #11, its live_bots part (build 20261114-0323). The owner: "take both" (the wall-flag walk was committed earlier as its own part).
