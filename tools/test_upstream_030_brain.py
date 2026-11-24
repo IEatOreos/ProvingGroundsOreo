@@ -397,5 +397,40 @@ class CeWarthogTests(unittest.TestCase):
         self.assertIsNone(live_bots.vehicle_fwd(reader((1.0, 0.0, 0.0), (1.0, 0.0, 0.0)), 5), "not square to up")
 
 
+class SkullPointTests(unittest.TestCase):
+    """#34, the bot part (build 20261118-1525): Headhunter bots go for the skull lying nearest (grab_point), and leave
+    one they cannot take."""
+
+    def scene(self, skulls):
+        from brain.core import Snapshot
+        b = make_bot()
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(0, 0, 0))
+        snap = Snapshot(100, [me], mode="headhunter")
+        snap.obj_items = [dict(pos=q, carrier=None, kind="skull", team=8) for q in skulls]
+        return b, me, snap
+
+    def test_the_nearest_on_its_floor(self):
+        b, me, snap = self.scene([Vec(5, 0, 0), Vec(2, 0, 0), Vec(1, 0, 6)])
+        self.assertEqual(b.skull_point(0.0, me, snap), Vec(2, 0, 0))
+        b, me, snap = self.scene([Vec(1, 0, 6)])
+        q = b.skull_point(0.0, me, snap)
+        self.assertEqual(q, Vec(1, 0, 6))          # (another floor: returned, never counted as stood by)
+
+    def test_one_it_stands_by_without_taking_is_left_alone(self):
+        b, me, snap = self.scene([Vec(0.5, 0, 0)])
+        t = 0.0
+        while t <= botmod.SKULL_TRY + 0.2:
+            got = b.skull_point(t, me, snap)
+            t += 0.1
+        self.assertIsNone(got)
+        self.assertIsNone(b.skull_point(t + 1.0, me, snap), "left alone SKULL_LEAVE s")
+        self.assertEqual(b.skull_point(t + botmod.SKULL_LEAVE + 1.0, me, snap), Vec(0.5, 0, 0))
+
+    def test_grab_point_only_in_headhunter(self):
+        b, me, snap = self.scene([Vec(2, 0, 0)])
+        snap.mode = "slayer"
+        self.assertIsNone(Bot.loose_point(me, snap))
+
+
 if __name__ == "__main__":
     unittest.main()

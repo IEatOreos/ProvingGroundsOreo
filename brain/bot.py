@@ -707,6 +707,11 @@ ZONE_STEP_IN = 3.0   # u: a zone holder fighting this near its zone (on its floo
 STAY_R, STAY_HOLD_R = 2.0, 0.6   # u: this near a loose objective it works by standing on it, a bot stays on it (stay_on),
                                  # its fights kept within STAY_HOLD_R of it (the pickups came 0.07-0.59 u off; at 0.9 a fight drifted 1.3 u off)
 STAY_SCORE = 1.4     # staying on it: over all but a fight (a man in sight 1.5 +; it shoots from on it)
+# (upstream 0.3.0, build 20261118-1525) Headhunter: a skull the bot has been within SKULL_BY u of for SKULL_TRY s without
+# taking, or within STAY_R (where it is held on it, stay_on) for SKULL_PIN s, is left alone SKULL_LEAVE s (Bot.skull_point).
+# His simulated 4v4 180 s, skull piles lying on average (Settlement seeds 1 and 2, Boardwalk seed 1): 0.8 u / 4 s 3.1,
+# 1.8, 3.3; 2 u / 8 s 3.6, 1.9, 3.9; 2 u / 15 s 3.6, 2.5, 2.9
+SKULL_BY, SKULL_TRY, SKULL_PIN, SKULL_LEAVE = 0.8, 4.0, 15.0, 30.0
 DEFEND_R, ESCORT_R = 15.0, 12.0     # how far a defender strays from its post, an escort from our flag carrier (keep_role)
 DEFEND_HOLD = 6.0                   # a CTF defender closes on a man only this near its post (fight): from cover otherwise
 CLOSE_FIGHT_R = 8.0                 # a man in sight this close is fought whatever the role (decide)
@@ -3841,7 +3846,8 @@ class Bot:
         if prev is not None and (me.pos - prev).flat() > 4.0:
             s.came_through(now, me, prev)                  # out of a teleporter: watch its exit
         # an objective lying loose for us to take, or ours lying dropped to return by standing on it (move_to's last steps)
-        s.grab_point = s.loose_point(me, snap)
+        # (upstream 0.3.0, build 20261118-1525: Headhunter's, the skull lying nearest, skull_point)
+        s.grab_point = s.skull_point(now, me, snap) if snap.mode == "headhunter" else s.loose_point(me, snap)
         ret = s.return_point(me, snap) if s.grab_point is None else None
         if ret is not None:
             s.grab_point = ret
@@ -5896,6 +5902,31 @@ class Bot:
         for k in [k for k in scores if not (k[0] == "fight" or (k[0] == "retreat" and dying))]:
             del scores[k]
         scores[("objective", q)] = job
+
+    def skull_point(s, now, me, snap):
+        """(upstream 0.3.0, build 20261118-1525) Headhunter: the skull lying nearest, the bot's loose objective: walked
+        onto all the way (move_to's last steps) and stood on from STAY_R off (stay_on), never taken with Use
+        (on_loose_objective reads loose_point, None in Headhunter). The game hands a skull over within about 0.5 u. His
+        live Boardwalk Nov 17: bots ordered onto skulls stopped 0.6-1.0 u off them, 30 to 40 skulls lay about by the
+        fourth minute, some for three minutes with bots beside them. One the bot has been by (within SKULL_BY) SKULL_TRY
+        s without taking lies where feet do not reach, as one it is held by (within STAY_R) SKULL_PIN s and cannot get
+        to: left alone SKULL_LEAVE s. (custom, Nov 24) Who banks and where stays our brain's (brain/headhunter.py,
+        director.hh_bankers)."""
+        left = s.__dict__.setdefault("skull_left", {})
+        key = lambda q: (round(q.x, 1), round(q.y, 1), round(q.z, 1))   # noqa: E731
+        best = min((it["pos"] for it in (getattr(snap, "obj_items", None) or [])
+                    if it.get("carrier") is None and left.get(key(it["pos"]), 0.0) <= now),
+                   key=lambda q: dist(q, me.pos), default=None)
+        k = key(best) if best is not None and abs(best.z - me.pos.z) < 2.0 else None
+        flat = (best - me.pos).flat() if k is not None else 99.0
+        since = s.__dict__.setdefault("skull_since", {})     # reach -> (the skull, since when the bot is within it)
+        for reach, limit in ((SKULL_BY, SKULL_TRY), (STAY_R, SKULL_PIN)):
+            if flat >= reach or since.get(reach, (None, 0.0))[0] != k:
+                since[reach] = (k if flat < reach else None, now)
+            elif now - since[reach][1] > limit:
+                left[k] = now + SKULL_LEAVE
+                return None
+        return best
 
     @staticmethod
     def on_loose_objective(me, snap, reach=0.9):

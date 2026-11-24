@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Reach Headhunter: bots pick up skulls lying near them (the bot part), 2026-11-24
+
+Upstream 0.3.0's note #34, its bot part (build 20261118-1525). The owner: "our brain kept; take only open_drops, skull_point and the 2 s keep". This commit is `skull_point`; `open_drops` and the 2 s keep (`brain/modes.py`) are a separate later port.
+
+- `Bot.skull_point` (his): in Headhunter the bot's `grab_point` is the skull lying nearest (from our `modes.py` skull reads, `obj_items`). Within `STAY_R` (2 u) on its floor it is stood on (`stay_on`, `walk_onto`: walked onto all the way), never taken with Use (`on_loose_objective` reads `loose_point`, which has nothing in Headhunter). The game hands a skull over within about 0.5 u. His live Boardwalk: bots stopped 0.6-1.0 u off skulls and 30-40 skulls lay about by the fourth minute; his test match went from 56 skulls left on the ground to 12.
+- A skull the bot stood within 0.8 u of for 4 s (`SKULL_BY`, `SKULL_TRY`), or within 2 u for 15 s (`SKULL_PIN`), without getting it is left alone for 30 s (`SKULL_LEAVE`).
+- Kept of ours: our Headhunter brain (`brain/headhunter.py`: who carries how many, which drop point banks; `director.hh_bankers`) is untouched. A banker within 2 u of a loose skull now steps onto it first, as `stay_on` does for every loose objective.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (the nearest skull; one it can't take is left alone and comes back after `SKULL_LEAVE`; outside Headhunter `loose_point` as before) OK; `tools/test_headhunter.py` OK; full suite 1,512 OK. **Untested in a live match.**
+
 ### Halo: CE bots drive Warthogs again, 2026-11-24
 
 Upstream 0.3.0's note #33 (build 20261115-0215). The owner: "take it, hand-merged; front-right passenger door in CE only".
