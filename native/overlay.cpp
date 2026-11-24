@@ -1163,6 +1163,7 @@ static bool notice_active() {
         size_t n = strnlen(g_shm->notice, 128);
         g_notice_ms = 3500 + (n > 50 ? (DWORD)(n - 50) * 45 : 0);
         if (g_notice_ms > 7000) g_notice_ms = 7000;
+        if (g_shm->notice[0] == '!') g_notice_ms = 7000;   // (upstream 0.3.0, build 20261118-2107) a warning card: 7 s
     }
     return g_notice_at && GetTickCount() - g_notice_at < g_notice_ms;
 }
@@ -1173,6 +1174,11 @@ static void draw_notice() {
     text[128] = 0;
     char* line = strchr(text, '|');
     if (line) *line++ = 0;
+    // (upstream 0.3.0, build 20261118-2107) a title starting "!" is a warning (tools/live_bots.py speed_note: "BOT
+    // PERFORMANCE LOW"): see-through, a red outline and a warning triangle, 7 s (notice_active); the "!" itself is not
+    // drawn in the title
+    bool warn = text[0] == '!';
+    const char* title = warn ? text + 1 : text;
     float t = (GetTickCount() - g_notice_at) / 1000.0f, end = g_notice_ms / 1000.0f;
     float a = t < 0.15f ? t / 0.15f : (t > end - 0.6f ? (end - t) / 0.6f : 1.0f);   // fade in, hold, fade out
     if (a <= 0) return;
@@ -1180,11 +1186,34 @@ static void draw_notice() {
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     ui_page pg = mcc_content(io.DisplaySize.x, io.DisplaySize.y);    // (MCC's page: 16:10 and 32:9 alike)
     float h = pg.h, ts = h * 0.036f, ls = h * 0.022f;
+    int A = (int)(a * 255);
+    if (warn) {
+        // a small card in the page's upper right corner (it spread across the whole top of a Steam Deck's screen): the
+        // title on one line beside the triangle, the line wrapped under it at a fixed narrow width
+        float wt = h * 0.022f, wl = h * 0.016f, pad = h * 0.012f, maxw = h * 0.34f;
+        ImVec2 tz = g_font_label->CalcTextSizeA(wt, 1e9f, 0, title);
+        float tri = tz.y * 1.05f, gap = pad * 0.7f;
+        float cw = ui_max(tz.x + tri + gap, ui_min(maxw, line ? g_font_small->CalcTextSizeA(wl, 1e9f, 0, line).x : 0.0f));
+        ImVec2 lz = line ? g_font_small->CalcTextSizeA(wl, 1e9f, cw, line) : ImVec2(0, 0);
+        float bw = cw + pad * 2, bh2 = tz.y + (line ? lz.y + pad * 0.5f : 0.0f) + pad * 2;
+        ImVec2 q1(pg.x0 + pg.w - h * 0.02f, pg.y0 + h * 0.02f + bh2), q0(q1.x - bw, q1.y - bh2);
+        dl->AddRectFilled(q0, q1, IM_COL32(40, 6, 6, (int)(a * 110)), h * 0.006f);       // see-through
+        dl->AddRect(q0, q1, IM_COL32(235, 45, 45, (int)(a * 240)), h * 0.006f, 0, 2.0f);
+        float tx = q0.x + pad, ty = q0.y + pad;
+        ImVec2 a0(tx + tri * 0.5f, ty), a1(tx + tri, ty + tri * 0.9f), a2(tx, ty + tri * 0.9f);
+        dl->AddTriangleFilled(a0, a1, a2, IM_COL32(235, 45, 45, A));
+        ImVec2 bsz = g_font_label->CalcTextSizeA(wt * 0.8f, 1e9f, 0, "!");               // (the triangle's own mark)
+        dl->AddText(g_font_label, wt * 0.8f, ImVec2(tx + (tri - bsz.x) * 0.5f, ty + tri * 0.5f - bsz.y * 0.45f),
+                    IM_COL32(255, 255, 255, A), "!");
+        dl->AddText(g_font_label, wt, ImVec2(tx + tri + gap, ty), IM_COL32(255, 90, 90, A), title);
+        if (line)
+            dl->AddText(g_font_small, wl, ImVec2(tx, ty + tz.y + pad * 0.5f), IM_COL32(240, 236, 236, A), line, nullptr, cw);
+        return;
+    }
     ImVec2 tsz = g_font_label->CalcTextSizeA(ts, 1e9f, 0, text);
     ImVec2 lsz = line ? g_font_small->CalcTextSizeA(ls, 1e9f, 0, line) : ImVec2(0, 0);
     float w = (tsz.x > lsz.x ? tsz.x : lsz.x) + h * 0.06f, bh = tsz.y + lsz.y + h * 0.035f;
     ImVec2 p0(io.DisplaySize.x * 0.5f - w * 0.5f, pg.y0 + h * 0.17f), p1(p0.x + w, p0.y + bh);
-    int A = (int)(a * 255);
     dl->AddRectFilled(p0, p1, IM_COL32(6, 18, 28, (int)(a * 215)));
     dl->AddRect(p0, p1, IM_COL32(110, 200, 255, (int)(a * 230)), 0, 0, 2.0f);
     dl->AddRectFilled(p0, ImVec2(p0.x + h * 0.006f, p1.y), IM_COL32(255, 201, 77, A));          // gold edge

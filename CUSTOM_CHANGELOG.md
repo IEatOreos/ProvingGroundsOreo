@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### The low performance card, its overlay side: a "!" notice is a small red-outlined card in the upper right for 7 s, 2026-11-24
+
+Upstream 0.3.0's note #47 (build 20261118-2107), the native part. The owner: "take it, with our own ~20-line check instead of bot_capacity.py" (the brain's check, `tools/live_bots.py` `speed_note` sending `"!BOT PERFORMANCE LOW"`, is already on this branch).
+
+- `native/overlay.cpp` `draw_notice` (ours as base): his warning card for a notice whose title starts with "!": see-through dark red, a red outline, a red warning triangle with a white "!" mark, the title in red on one line beside it and the line under it wrapped at a narrow width, in the upper right corner of MCC's page (`mcc_content`). The "!" itself is not drawn in the title (the title starts after it).
+- 7 s on screen: ours sets it in `notice_active()` when the notice arrives (his set it inside `draw_notice`, after the first frame had already been timed by the length rule).
+- Every other notice (BUG REPORT SAVED, the brain's notices) is drawn as before: the centred card with the gold edge, timed by its length.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the card over a match).
+
 ### Steam Deck: the Report bot bug tab shows only in the pause menu, 2026-11-24
 
 Upstream 0.3.0's note #9 (build 20261113-1500). The owner: "take it".
