@@ -424,6 +424,34 @@ def name_layouts(write=True, files=None):
     return out
 
 
+def find_invasion(base, pieces, files=None):
+    """The map variant file of a match on base whose Invasion labels (inv_res_*, inv_objective ...) the match runs, for a
+    layout that adds only labels and hills to a built-in map (GitHub #26, the reporter's Tempest: no Forge building
+    pieces of its own, so it was never filed as a variant, its labels never read and its Invasion played as Slayer with
+    the game's own respawns, both teams' bots in the same zones): of this map's files with Invasion labels, the one
+    placing the most live pieces (our find), else the only one there is. -> (variant, share) or (None, 0.0).
+    (upstream 0.3.0, build 20261118-1714; it calls our find with its files, find and candidates unchanged)"""
+    mid = map_id_of(base)
+    if mid is None:
+        return None, 0.0
+    with_inv = []
+    for path in library() if files is None else files:
+        try:
+            if header_map_id(path) != mid:
+                continue
+            v = _cached(path)
+        except (OSError, ValueError, zlib.error, struct.error):
+            continue
+        if v["ok"] and any((o.get("label") or "").startswith(("inv_res", "inv_objective")) for o in v["objects"]):
+            with_inv.append(path)
+    if not with_inv:
+        return None, 0.0
+    v, share = find(base, pieces, files=with_inv)
+    if v is None and len(with_inv) == 1:
+        return _cached(with_inv[0]), share
+    return v, share
+
+
 # --- the variant's objects in the scenario schema (tools/reach_export.py writes the same from a map's own scenario),
 # for brain/maps.py load_map, brain/invasion.py layout, tools/lidar.py objective_points
 SPAWN_POINTS = ("respawn_point", "respawn_point_invisible")

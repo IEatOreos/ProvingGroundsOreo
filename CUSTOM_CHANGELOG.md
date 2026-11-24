@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Reach Invasion on custom maps: bots respawn in the map's own labelled zones, 2026-11-24
+
+Upstream 0.3.0's note #35 (build 20261118-1714, his GitHub #26: a custom Tempest whose bots never spawned in its zones). The owner: "take it, score_attacker plus the plain label spawns (label_pick waits for #46)". `score_attacker` and the round reset came in with #75.
+
+- `brain/invasion.py` (upstream's Invasion, never customized by us):
+  - `label_spawns` (his): `layout()` gives `spawn_res` = {label team: {phase: [zones]}}. `inv_res_p1..p3` serve their own phase; an `inv_res_zone` of sequence k serves phase k and later; team 8 serves both.
+  - `label_spawn` (his): a dead bot's zone, its side's this phase (earlier phases if none), the one nearest the phase's objective.
+  - `roles_from_spawns` / `phase_from_spawns` take `res`. `Watch` retries the sides by every label (`spawn_res`) when the p labels give no single attacking side. The phase vote reads a spawn the p labels say nothing of by every label; a zone that also serves phase 1 says nothing of the phase.
+- `tools/live_bots.py`:
+  - `label_zone` (his, plain: `label_spawn` only; his `label_pick` branch is #46's): the zone path (maps with no named spawns) sends a dead bot to its side's labelled zone, facing the objective, else the zone the game gives it (`live.respawn_zone`), as before.
+  - During a round's change (sides unread) every zone pick is called off, and our label picks are kept out of the Watch's reading of the sides and phase (`zone_placed` -> `Watch.placed`).
+  - A layout that only adds labels to a built-in map is read from its `.mvar` file (`mvar.find_invasion`, once a match, when Invasion is on and no setup was found).
+- `brain/mvar.py find_invasion` (his): of the map's files with Invasion labels, the one placing the most live pieces (calling our `find`), else the only one. Our `find`, `candidates`, `layout_name` and `name_layouts` are untouched, and `find`'s signature is the same.
+- Built-in Invasion maps (Boneyard, Spire, Breakpoint) all have named spawns (`inv_spawns.json`), so they keep `spawn_check`; the zone path is only for maps without them.
+- **Checks:** `tools/test_upstream_030_modes.py` +6:
+  - `label_spawns` by label, sequence and team 8;
+  - `label_spawn` nearest the goal, none without zones;
+  - the Watch reads the sides by every label when the p labels read both teams defending;
+  - a zone serving phase 1 says nothing of the phase;
+  - `label_zone`'s zone and memo, none during a round's change;
+  - `find_invasion` takes the only labelled file; `find`'s signature is unchanged.
+  - All OK; Invasion tests (`test_wheel_and_one_bomb`, `test_breakpoint_sight`) OK; `live_bots.py` imports. **Untested in a live match** (a custom Invasion map).
+
 ### Reach Invasion: the attackers are read from the team playing Elites, 2026-11-24
 
 Upstream 0.3.0's note #75 (build 20261120-1620). The owner: "take all 3 (elite_team, score_attacker, round reset); test Invasion on Breakpoint and Spire". His bug report: on Noble, Anniversary and Defiant maps (Condemned 100 s, Headlong 37 s) the bots played the wrong side until the first capture.

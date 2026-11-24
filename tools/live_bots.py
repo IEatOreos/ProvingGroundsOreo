@@ -33,7 +33,7 @@ from brain import scaling  # noqa: E402
 from brain import nade  # noqa: E402
 from brain.live import Live, LiveH2, LiveH3, LiveReach, LiveODST, LiveH4F, WEAPON_ALIAS  # noqa: E402
 from brain.invasion import layout as invasion_layout, Watch, clear_barriers, honor_spawn, honor_spawns, \
-    ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR  # noqa: E402
+    ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR, label_spawn  # noqa: E402
 from brain.modes import Watch as ModeWatch, OBJECT_MODES, mode_of, stands_by_spawn, spawn_bases  # noqa: E402
 import botctl  # noqa: E402
 
@@ -915,6 +915,34 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
     watch.placed = {index for index, st in state.items() if st.get("pick")}
 
 
+def label_zone(inv, snap, index, watch=None, memo=None):
+    """(x, y, z, yaw) of the labelled zone a dead bot respawns at on an Invasion map with labelled zones and no named
+    spawns, facing the phase's objective, or None (no setup, no phase read yet, no zone for its side, or a round's change
+    pending with the old sides still read: live Breakpoint Nov 14, the 15 picks of round 2's first second all went to
+    round 1's sides): then the game's own zone. The phase and the sides are the Watch's (watch.phase / attackers): the
+    snapshot's are only filled by Watch.update later in the tick. The zone nearest the phase's objective
+    (invasion.label_spawn); memo["label"] marks a pick of ours (Watch.placed). (upstream 0.3.0, build 20261118-1714)"""
+    me = snap.player(index)
+    phase = getattr(watch, "phase", None) or getattr(snap, "inv_phase", None)
+    attackers = getattr(watch, "attackers", getattr(snap, "inv_attackers", -1))
+    if memo is not None:
+        memo.pop("label", None)
+    if not inv or not inv.get("spawn_res") or me is None or not phase:
+        return None
+    if watch is not None and (not watch.sides_set or snap.time < getattr(watch, "round_wait_until", -1.0)):
+        return None
+    goal = inv.get("core") if phase == 3 else None
+    pts = inv["phases"].get(phase) or []
+    if goal is None and pts:
+        goal = Vec(sum(q.x for q in pts) / len(pts), sum(q.y for q in pts) / len(pts), sum(q.z for q in pts) / len(pts))
+    z = label_spawn(inv, phase, me.team == attackers, goal)
+    if z is None:
+        return None
+    if memo is not None:
+        memo["label"] = True
+    return (z.x, z.y, z.z, math.atan2(goal.y - z.y, goal.x - z.x) if goal is not None else 0.0)
+
+
 def zone_spawn_check(send, bots, snap, zone_of, state, rng, T, now, trace=None):
     """Invasion on a map with no Invasion setup of its own (a Forge map variant): a dead bot respawns in the zone the
     game gives it (zone_of(index): LiveReach.respawn_zone, the script's zone of its side and phase), within 2 u of the
@@ -1378,7 +1406,8 @@ def main():
                                                                         and not o.forge_invasion) else None
     if inv_layout is not None:
         inv_layout["map"] = MAP["name"]           # (its phase rules by map: brain/invasion.py phase_link_gates)
-    inv_watch, inv_check, inv_unread = [None], [-9.0], [False]
+    inv_watch, inv_check, inv_unread, inv_file_tried = [None], [-9.0], [False], [False]
+    zone_placed = set()                           # bots sent to a labelled zone of ours (Watch.placed on the zone path)
     zone_check, zone_state = [-9.0], {}           # Invasion with no setup of its own: the game's zones (zone_spawn_check)
     # a map variant's pieces that come and go (brain/forge.py PieceWatch): walls while they stand
     piece_watch, piece_check = None, [-9.0, 0]
@@ -1516,6 +1545,28 @@ def main():
                                                  and "SLAYER" not in live.variant_name().upper())
                     except Exception:
                         on = False
+                    if on and not inv_layout and not inv_unread[0] and not inv_file_tried[0]:
+                        # a layout that only adds labels and hills to a built-in map (GitHub #26: a custom Tempest):
+                        # its Invasion setup and respawn zones from its map variant file (brain/mvar.py find_invasion)
+                        # (upstream 0.3.0, build 20261118-1714)
+                        inv_file_tried[0] = True
+                        try:
+                            from brain import mvar
+                            from brain.forge import live_pieces
+                            fv, share = mvar.find_invasion(MAP["name"], live_pieces(live))
+                            if fv is not None:
+                                fo = mvar.scenario_objects(fv)
+                                objs = dict(MAP["objects"], netgame_flags=list(MAP["objects"].get("netgame_flags", []))
+                                            + fo["netgame_flags"])
+                                inv_layout = invasion_layout(objs)
+                                if inv_layout is not None:
+                                    inv_layout["map"] = MAP["name"]
+                                print(f"{now:6.1f}s Invasion on {MAP['name']}: its labels from the map variant file "
+                                      f"{os.path.basename(fv['path'])} ({fv['title']!r}, {share:.0%} of its pieces live): "
+                                      f"{'respawn zones for ' + str(sorted((inv_layout or {}).get('spawn_res') or {})) if inv_layout else 'no Invasion setup in it'}",
+                                      flush=True)
+                        except Exception as e:
+                            print("Invasion labels from the map variant file not read:", e, flush=True)
                     if on and not inv_layout and not inv_unread[0]:
                         # its objectives and gates are the map variant's labelled Forge objects, whose labels are not
                         # read from the game yet (tools/forge_label_probe.py): played as Slayer, respawns in the zones
@@ -1536,14 +1587,40 @@ def main():
                 # (also on a map variant whose file gave the setup, brain/mvar.py, but no honor spawns are named)
                 if (inv_unread[0] or (inv_watch[0] is not None and not inv_spawns)) and now - zone_check[0] > 0.5:
                     zone_check[0] = now
+                    w = inv_watch[0]
                     try:
-                        zone_spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap, live.respawn_zone,
-                                         zone_state, rng, T, now, trace)
+                        if w is not None and (not w.sides_set or snap.time < getattr(w, "round_wait_until", -1.0)):
+                            # a round's change: the game's own opening spawns, every pick out called off (the zone the
+                            # game reports then is the old round's: live Breakpoint, round 2's first 15 picks went to
+                            # the old sides' zones) (upstream 0.3.0, build 20261118-1714)
+                            for i, st in zone_state.items():
+                                if st.get("zone") is not None:
+                                    botctl.spawn_at(m, i, math.nan, math.nan, math.nan, 0.0)
+                                    st.clear()
+                        else:
+                            # (the map's labelled zone for its side and phase where the layout has them: label_zone,
+                            # else the zone the game gives it, as before; upstream 0.3.0, build 20261118-1714)
+                            zone_spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap,
+                                             lambda i: label_zone(inv_layout, snap, i, w, zone_state.setdefault(i, {}))
+                                             or live.respawn_zone(i),
+                                             zone_state, rng, T, now, trace)
+                            # (our label picks are kept out of the Watch's reading of the phase and sides: Watch.placed,
+                            # until it has seen the bot spawn; a dead bot on the game's own zone counts)
+                            for i, st in zone_state.items():
+                                if st.get("label"):
+                                    zone_placed.add(i)
+                                elif snap.player(i) is not None and not snap.player(i).alive:
+                                    zone_placed.discard(i)
                     except Exception as e:           # (never the whole tick: bots then spawn where the game puts them)
                         inv_unread[0], zone_check[0] = False, float("inf")
                         print(f"{now:6.1f}s zone spawns off ({type(e).__name__}: {e})", flush=True)
                 if inv_watch[0] is not None:
+                    if not inv_spawns:                    # (the zone path's picks: upstream 0.3.0, build 20261118-1714)
+                        inv_watch[0].placed = set(zone_placed)
                     inv_watch[0].update(live, snap, now, getattr(live, "raw", None))
+                    if not inv_spawns:
+                        zone_placed.difference_update({i for i in zone_placed if snap.player(i) is None
+                                                       or snap.player(i).alive})
                     oob.set_phase(T, inv_watch[0].phase)   # (its gates' kill volumes stand until their phase is taken)
                     if inv_spawns:
                         try:

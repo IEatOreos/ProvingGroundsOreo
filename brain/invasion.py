@@ -138,7 +138,45 @@ def layout(objs, shapes=None, styles=None):
     # phase 3 only); phase_link_gates closes the people's links off them before then
     launchers = [(_v(f["pos"]), f.get("phase", f.get("seq"))) for f in flags if f.get("type") == "inv_mancannon"]
     return dict(attackers=att, defenders=dfn, phases=phases, core=stand, res=res, barriers=bars, zone_r=zone_r,
-                bomb=bomb, bomb_phase=(bp if staged else 2) if bomb is not None else None, launchers=launchers)
+                bomb=bomb, bomb_phase=(bp if staged else 2) if bomb is not None else None, launchers=launchers,
+                spawn_res=label_spawns(flags))
+
+
+def label_spawns(flags):
+    """{label team: {phase: [Vec]}}: where a side respawns each phase by the map's Invasion labels (GitHub #26, a
+    custom Tempest map: the bots never spawned in its zones). inv_res_p1..p3 serve their own phase only; an inv_res_zone
+    with spawn sequence k serves phase k and every later one (sequence 1: all three; 2: phases 2 and 3; 3: phase 3; no
+    sequence: all). Team 8 (neutral) zones serve both teams. The labels' team is the map's: the side that attacks a
+    round uses the map attackers' zones (the teams swap each round, the zones do not). (upstream 0.3.0, build
+    20261118-1714)"""
+    out = {}
+    for f in flags:
+        t, team, seq = f.get("type", ""), f.get("team"), f.get("phase", f.get("seq"))
+        if t in ("inv_res_p1", "inv_res_p2", "inv_res_p3"):
+            phases = (int(t[-1]),)
+        elif t == "inv_res_zone":
+            k = seq if seq in (1, 2, 3) else 1
+            phases = tuple(range(k, 4))
+        else:
+            continue
+        for tm in ((0, 1) if team not in (0, 1) else (team,)):
+            for ph in phases:
+                out.setdefault(tm, {}).setdefault(ph, []).append(_v(f["pos"]))
+    return out
+
+
+def label_spawn(inv, phase, attacking, goal):
+    """The zone a dead bot respawns at on a map with labelled zones and no named spawns (label_spawns): its side's
+    zones this phase (the attackers': the map attackers' labels), the one nearest the phase's objective `goal` (the
+    reporter's play: later, forward spawns; a phase with none: the nearest phase before). None where the map has none.
+    (upstream 0.3.0, build 20261118-1714)"""
+    team = inv["attackers"] if attacking else inv["defenders"]
+    zones = (inv.get("spawn_res") or {}).get(team) or {}
+    for ph in range(phase, 0, -1):
+        if zones.get(ph):
+            pts = zones[ph]
+            return min(pts, key=lambda q: (q - goal).flat()) if goal is not None else pts[0]
+    return None
 
 
 # the ways up to a phase 3 core on high (a Spire playtest, Nov 6 19:11-19:38: the attackers all funnelled
@@ -188,16 +226,23 @@ def zone_radius(inv, p):
     return best[1] if best is not None and (best[0] - p).flat() < 1.0 else TERRITORY_R
 
 
-def phase_from_spawns(inv, spawns):
+def phase_from_spawns(inv, spawns, res=None):
     """The phase the attackers' respawns say: spawns [(team, Vec)] (the attacking team's recent respawn positions). Each
     votes for the phase of the attackers' zone nearest it; phases 2 and 3 share zones on most maps, so this tells 1
     from 2+. Only the attackers' zones: Boneyard's defender spawns lie nearest the attackers' phase 3 zone (live,
-    round 2 of an 8v3: the defenders' respawns read as phase 3 for four minutes)."""
+    round 2 of an 8v3: the defenders' respawns read as phase 3 for four minutes). res: the zones to read (default the
+    p labels, inv["res"]; Watch falls back to every label, inv["spawn_res"], where they say nothing): there a zone that
+    serves phase 1 and later ones (an inv_res_zone of sequence 1) says nothing of the phase. (upstream 0.3.0, build
+    20261118-1714)"""
     votes = {}
-    zones = inv["res"].get(inv["attackers"], {})
+    zones = (res or inv["res"]).get(inv["attackers"], {})
     for team, p in spawns:
-        best = min(((ph, min((q - p).flat() for q in zs)) for ph, zs in zones.items() if zs),
-                   key=lambda x: x[1], default=None)
+        near = {ph: min((q - p).flat() for q in zs) for ph, zs in zones.items() if zs}
+        best = min(near.items(), key=lambda x: x[1], default=None)
+        if best is not None and res is not None:
+            tied = {ph for ph, d in near.items() if d <= best[1] + 0.01}
+            if 1 in tied and len(tied) > 1:
+                continue
         # only a spawn in (or by) a zone says anything (live: blue respawns 20-50 u from every attackers' zone voted
         # phase 2 a minute early); phases 2 and 3 share their zones: a spawn says 2 at most
         if best is not None and best[1] < SPAWN_NEAR:
@@ -207,13 +252,16 @@ def phase_from_spawns(inv, spawns):
     return max(votes, key=lambda ph: (votes[ph], ph))
 
 
-def roles_from_spawns(inv, spawns, phase=1):
+def roles_from_spawns(inv, spawns, phase=1, res=None):
     """{player team: True if attacking} from recent respawns [(team, Vec)]: the side of the zone each team respawns in
     (the teams swap roles between rounds, so the scenario's team labels name roles, not the players' colours). Only
     that phase's zones count: the defenders' opening spawns on Boneyard lie nearer the attackers' phase 3 zone than
-    any of their own (live: both teams read as attackers)."""
+    any of their own (live: both teams read as attackers). res: the zones to read (default inv["res"], the p labels;
+    Watch retries with inv["spawn_res"], every label, when they give no one attacker side: a custom Tempest's
+    inv_res_zone spawns lie 8-25 u from its p labels and read as both teams defending). (upstream 0.3.0, build
+    20261118-1714)"""
     votes = {}
-    zones = {lb: zs.get(phase) or zs.get(1) or [] for lb, zs in inv["res"].items()}
+    zones = {lb: zs.get(phase) or zs.get(1) or [] for lb, zs in (res or inv["res"]).items()}
     for team, p in spawns:
         label = min(zones, key=lambda lb: min(((q - p).flat() for q in zones[lb]), default=1e9))
         votes.setdefault(team, []).append(label == inv["attackers"])
@@ -299,16 +347,22 @@ class Watch:
         # the sides: from the round's start, where everyone spawns in their side's first zone, then kept for the round
         # (live: defenders' later respawns sometimes land nearer an attackers' zone and flipped the sides every tick)
         if new_round or (not s.sides_set and len(recent) >= 4):
-            roles = roles_from_spawns(s.inv, [(t, p) for _, t, p in (burst if new_round else s.spawns)],
-                                      1 if new_round else s.phase)
-            score = {t: a for t, a in roles.items()}
-            att = [t for t, a in score.items() if a]
+            seen = [(t, p) for _, t, p in (burst if new_round else s.spawns)]
+            ph = 1 if new_round else s.phase
+            att = [t for t, a in roles_from_spawns(s.inv, seen, ph).items() if a]
+            if len(att) != 1 and s.inv.get("spawn_res"):
+                # (the p labels gave no one side: every label, a map whose spawns are inv_res_zone objects; upstream
+                # 0.3.0, build 20261118-1714)
+                att = [t for t, a in roles_from_spawns(s.inv, seen, ph, s.inv["spawn_res"]).items() if a]
             if len(att) == 1:
                 s.attackers, s.sides_set = att[0], True
         attacking = [x for x in recent if x[0] == s.attackers]
         if s.sides_set and len(attacking) >= 3:
             # respawns back the phase up only with a clear majority (they lag: a phase change shows only after deaths)
-            votes = [v for v in (phase_from_spawns(s.inv, [x]) for x in attacking[-8:]) if v is not None]
+            # (by the p labels; a spawn they say nothing of, by every label: upstream 0.3.0, build 20261118-1714)
+            sr = s.inv.get("spawn_res")
+            votes = [v for v in ((phase_from_spawns(s.inv, [x]) or (phase_from_spawns(s.inv, [x], sr) if sr else None))
+                                 for x in attacking[-8:]) if v is not None]
             best = max(set(votes), key=votes.count, default=None)
             # (never past what the attackers' score says once it reads: live Spire, round 2, the vote said phase 2 with
             # the score 0 and the attackers held phase 2's empty territories for 197 s while phase 1 ran out)

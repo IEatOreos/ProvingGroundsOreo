@@ -537,5 +537,101 @@ class InvasionElites(unittest.TestCase):
         self.assertEqual((w.sides_set, w.score_seen, w.round_t), (False, None, 31.0))
 
 
+def custom_invasion(zone_seq=1):
+    """A labelled custom Invasion layout like the reporter's Tempest (GitHub #26): three objectives, the core's stand,
+    each team's p1 labels, and inv_res_zone spawns nearer the middle, both nearer team 0's p1 label (team 1 attacks:
+    it starts farther out)."""
+    f = lambda t, pos, team=8, **k: dict(type=t, pos=list(pos), team=team, **k)
+    return dict(netgame_flags=[
+        f("inv_objective", (0, 0, 0)), f("inv_objective", (10, 0, 0)), f("inv_objective", (60, 0, 0)),
+        f("inv_obj_flag", (5, 5, 0)),
+        f("inv_res_p1", (-30, 0, 0), 0), f("inv_res_p1", (120, 0, 0), 1),
+        f("inv_res_zone", (30, -30, 0), 0, phase=zone_seq), f("inv_res_zone", (40, 30, 0), 1, phase=zone_seq),
+        f("inv_res_zone", (40, 40, 0), 8, phase=3),
+    ])
+
+
+class InvasionCustomMaps(unittest.TestCase):
+    """#35 (build 20261118-1714, GitHub #26): Invasion on custom maps: bots respawn in the map's own labelled zones for
+    each phase on the side attacking that round (label_spawns / label_spawn, live_bots.label_zone), the sides and the
+    phase read by every label where the p labels say nothing, and a layout's labels read from its .mvar file
+    (mvar.find_invasion). label_pick is #46's."""
+
+    def test_label_spawns(self):
+        from brain import invasion
+        res = invasion.label_spawns(custom_invasion(zone_seq=2)["netgame_flags"])
+        self.assertEqual(sorted(res[0]), [1, 2, 3])
+        self.assertEqual(res[0][1], [Vec(-30, 0, 0)])                       # p1 only for phase 1
+        self.assertEqual(res[0][2][0], Vec(30, -30, 0))                     # sequence 2: phases 2 and 3
+        self.assertIn(Vec(30, -30, 0), res[0][3])
+        self.assertIn(Vec(40, 40, 0), res[0][3])                            # team 8: both teams
+        self.assertIn(Vec(40, 40, 0), res[1][3])
+
+    def test_label_spawn_nearest_the_goal_and_earlier_phases(self):
+        from brain import invasion
+        inv = invasion.layout(custom_invasion())
+        self.assertEqual((inv["attackers"], inv["defenders"]), (1, 0))
+        att = invasion.label_spawn(inv, 1, True, Vec(0, 0, 0))
+        self.assertEqual(att, Vec(40, 30, 0))                                # (nearer the goal than its p1 label)
+        self.assertEqual(invasion.label_spawn(inv, 1, False, Vec(0, 0, 0)), Vec(-30, 0, 0))
+        self.assertIsNone(invasion.label_spawn(dict(inv, spawn_res={}), 1, True, None))
+
+    def test_sides_read_by_every_label(self):
+        from brain import invasion
+        from brain.core import PlayerState, Snapshot
+        inv = invasion.layout(custom_invasion())
+        w = invasion.Watch(inv, StubT())
+        # the teams swapped: team 0 spawns on the map attackers' inv_res_zone, team 1 on the defenders'; both lie
+        # nearer the defenders' p1 label, so the p labels read both teams defending
+        self.assertFalse(any(invasion.roles_from_spawns(inv, [(0, Vec(40, 30, 0)), (1, Vec(30, -30, 0))]).values()))
+        ps = [PlayerState(i, 0, str(i), Vec(40, 30, 0)) for i in range(3)] + \
+             [PlayerState(i, 1, str(i), Vec(30, -30, 0)) for i in range(3, 6)]
+        sn = Snapshot(5.0, ps, {})
+        w.update(type("L", (), {})(), sn, 5.0)
+        self.assertEqual((w.attackers, w.sides_set), (0, True))
+
+    def test_phase_by_every_label_skips_a_zone_serving_phase_1(self):
+        from brain import invasion
+        inv = invasion.layout(custom_invasion(zone_seq=1))
+        sr = inv["spawn_res"]
+        self.assertIsNone(invasion.phase_from_spawns(inv, [(1, Vec(40, 30, 0))], sr))   # serves 1, 2, 3: says nothing
+        self.assertEqual(invasion.phase_from_spawns(inv, [(1, Vec(120, 1, 0))]), 1)      # (the p labels as before)
+
+    def test_label_zone(self):
+        import live_bots
+        from brain import invasion
+        from brain.core import PlayerState, Snapshot
+        inv = invasion.layout(custom_invasion())
+        w = type("W", (), dict(phase=1, attackers=1, sides_set=True, round_wait_until=-1.0))()
+        sn = Snapshot(9.0, [PlayerState(3, 1, "b", Vec(0, 0, 0), alive=False)], {})
+        memo = {}
+        x, y, z, yaw = live_bots.label_zone(inv, sn, 3, w, memo)
+        self.assertEqual((x, y), (40, 30))
+        self.assertTrue(memo["label"])
+        w.sides_set = False                                       # a round's change: the game's own zone
+        self.assertIsNone(live_bots.label_zone(inv, sn, 3, w, memo))
+        self.assertNotIn("label", memo)
+        self.assertIsNone(live_bots.label_zone(dict(inv, spawn_res={}), sn, 3, w))
+
+    def test_find_invasion(self):
+        import inspect
+        from brain import mvar
+        self.assertEqual(list(inspect.signature(mvar.find).parameters), ["base", "pieces", "files"])   # ours, kept
+        files = {"a.mvar": dict(ok=True, objects=[dict(label="inv_res_zone", name="x", pos=(0, 0, 0))]),
+                 "b.mvar": dict(ok=True, objects=[dict(label=None, name="x", pos=(0, 0, 0))])}
+        saved = mvar.map_id_of, mvar.header_map_id, mvar._cached, mvar.find
+        try:
+            mvar.map_id_of = lambda base: 1
+            mvar.header_map_id = lambda path: 1
+            mvar._cached = lambda path: files[path]
+            mvar.find = lambda base, pieces, files=None: (None, 0.1)
+            v, share = mvar.find_invasion("reach_t", [], files=list(files))
+            self.assertIs(v, files["a.mvar"])                     # the only one with Invasion labels
+            files["a.mvar"]["objects"][0]["label"] = None
+            self.assertEqual(mvar.find_invasion("reach_t", [], files=list(files)), (None, 0.0))
+        finally:
+            mvar.map_id_of, mvar.header_map_id, mvar._cached, mvar.find = saved
+
+
 if __name__ == "__main__":
     unittest.main()
