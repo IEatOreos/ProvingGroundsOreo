@@ -446,6 +446,10 @@ class Terrain:
 
     EXIT_FLOOR_R, EXIT_FLOOR_DZ = 3.0, 1.0      # u: round a teleporter's pad and exit, people's walk is floor
 
+    # (custom, Nov 24) a layout's grid grows (__init__) only to pieces at most GROW_PIECE_R from their origin to their
+    # farthest corner and within GROW_MAX u of the level's edge
+    GROW_PIECE_R, GROW_MAX = 40.0, 300.0
+
     def exit_floor(s, points, walked):
         """(upstream 0.3.0, build 20261114-1215) Round each teleporter pad and exit (where the game puts players): the
         cells people stood on within EXIT_FLOOR_R and EXIT_FLOOR_DZ, as walked floor whatever the level's wall bits say
@@ -540,17 +544,48 @@ class Terrain:
         h, w = top.shape
         s.full = (s.x0, s.y0, s.x0 + w * s.cell, s.y0 + h * s.cell)
         cj, ci = slice(0, h), slice(0, w)
+        pad = ((0, 0), (0, 0))                         # cells added before / after the level's grid (rows, columns)
         if window is not None:
-            i0, i1 = max(0, int((window[0] - s.x0) / s.cell)), min(w, int(math.ceil((window[2] - s.x0) / s.cell)))
-            j0, j1 = max(0, int((window[1] - s.y0) / s.cell)), min(h, int(math.ceil((window[3] - s.y0) / s.cell)))
+            # (upstream 0.3.0, builds 20261115-0350 and 20261116-2330) a layout built past the level's grid (the
+            # heightmap's extent) gets the grid grown out to its pieces there (within its window), the new cells as the
+            # level's own no-data cells (as its open sea and sky inside the grid), and its pieces' floors go in them
+            # (add_faces). Before, the grid stopped at the level's edge and every piece beyond it was lost (his GitHub
+            # #33, Halo 4's Onyx layout on Forge Island, built west of the heightmap: bots stood still all match).
+            # Only out to the PIECES, never the whole window: stray objects stretch a layout's window far out
+            # (Solitary's to 5,500 u a side) and the grid grown to it took minutes to build before every match (his
+            # GitHub #34, Reach). (custom, Nov 24) The window is ours, cut to the play area (maps.load_map,
+            # variants.play_limit), so the growth stops there too. And no growth for a piece over GROW_PIECE_R (the sky's
+            # warships, placed in the layout: Condemned's corvette and frigate 170 and 95 u, Anchor 9's frigates 99 u;
+            # the biggest other piece in any of our layouts is under 17) or past GROW_MAX from the level's edge: such a piece is left off, as
+            # before, not grown to (Condemned's ships would have grown its grid from 51 u a side to 720 by 660)
+            ext = s.full
+            for b in blocks or ():
+                r = max(math.hypot(*b[2]), math.hypot(*b[3]))
+                if r > s.GROW_PIECE_R:
+                    continue
+                r += 2.0
+                bx = (b[0][0] - r, b[0][1] - r, b[0][0] + r, b[0][1] + r)
+                if (bx[0] < s.full[0] - s.GROW_MAX or bx[1] < s.full[1] - s.GROW_MAX or bx[2] > s.full[2] + s.GROW_MAX
+                        or bx[3] > s.full[3] + s.GROW_MAX):
+                    continue
+                ext = (min(ext[0], bx[0]), min(ext[1], bx[1]), max(ext[2], bx[2]), max(ext[3], bx[3]))
+            win =(max(window[0], ext[0]), max(window[1], ext[1]), min(window[2], ext[2]), min(window[3], ext[3]))
+            i0, i1 = math.floor((win[0] - s.x0) / s.cell), int(math.ceil((win[2] - s.x0) / s.cell))
+            j0, j1 = math.floor((win[1] - s.y0) / s.cell), int(math.ceil((win[3] - s.y0) / s.cell))
             if i0 < i1 and j0 < j1:
-                cj, ci = slice(j0, j1), slice(i0, i1)
+                pad = ((max(0, -j0), max(0, j1 - h)), (max(0, -i0), max(0, i1 - w)))
+                cj, ci = slice(max(0, j0), min(h, j1)), slice(max(0, i0), min(w, i1))
                 s.x0, s.y0 = s.x0 + i0 * s.cell, s.y0 + j0 * s.cell
-        cut = np.ascontiguousarray                     # (a copy only when cut down: the whole level's arrays go)
-        s.top = np.nan_to_num(top[cj, ci], nan=1e3)  # outside the level counts as a wall
-        s.low = cut(d["low"][cj, ci])
-        s.floors = cut(d["floors"][:, cj, ci])        # (L, h, w) walkable floor levels per cell, lowest first
-        s.walls = cut(d["walls"][cj, ci])             # per cell: bit k = a steep face at wall_z0 + k * wall_bin
+                s.full = (min(s.full[0], win[0]), min(s.full[1], win[1]), max(s.full[2], win[2]), max(s.full[3], win[3]))
+
+        def cut(a, fill, lead=0):                      # (a copy only when cut down or grown: the whole level's arrays go)
+            if pad == ((0, 0), (0, 0)):
+                return np.ascontiguousarray(a)
+            return np.pad(a, ((0, 0),) * lead + pad + ((0, 0),) * (a.ndim - lead - 2), constant_values=fill)
+        s.top = np.nan_to_num(cut(top[cj, ci], np.nan), nan=1e3)  # outside the level counts as a wall
+        s.low = cut(d["low"][cj, ci], np.nan)
+        s.floors = cut(d["floors"][:, cj, ci], np.nan, lead=1)   # (L, h, w) walkable floor levels per cell, lowest first
+        s.walls = cut(d["walls"][cj, ci], 0)          # per cell: bit k = a steep face at wall_z0 + k * wall_bin
         s.wall_z0, s.wall_bin = float(d["wall_z0"]), float(d["wall_bin"])
         s.h, s.w = s.top.shape
         s.window = (s.x0, s.y0, s.x0 + s.w * s.cell, s.y0 + s.h * s.cell)
@@ -718,7 +753,13 @@ class Terrain:
         start = np.r_[True, q_c[1:] != q_c[:-1]]
         cum = np.cumsum(np.r_[False, np.diff(q_z) >= LAYER_GAP] & ~start)
         level = cum - cum[np.nonzero(start)[0]][np.cumsum(start) - 1]
-        last = np.r_[(q_c[1:] != q_c[:-1]) | (level[1:] != level[:-1]), True]
+        # (upstream 0.3.0, build 20261115-0350) no surface left at all, every one buried (his GitHub #33, Halo 4's Onyx
+        # layout on Forge Island: the brain stopped here before the match and no bot moved). (custom, Nov 24: as no
+        # levels too, not his one-level stand-in, so nothing leans on numpy's empty-mask leniency)
+        if len(q_c):
+            last = np.r_[(q_c[1:] != q_c[:-1]) | (level[1:] != level[:-1]), True]
+        else:
+            level, last = np.zeros(0, int), np.zeros(0, bool)
         need = int(level.max()) + 1 if len(level) else 0
         if need > s.floors.shape[0]:
             grow = (need - s.floors.shape[0],) + s.floors.shape[1:]

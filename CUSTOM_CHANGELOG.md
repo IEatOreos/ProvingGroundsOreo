@@ -2,6 +2,45 @@
 
 ## Unreleased
 
+### Forge layouts built past the map's edge: the grid grows to their pieces (never to sky warships), 2026-11-24
+
+Upstream 0.3.0's notes #26 (his GitHub #33, build 20261115-0350) and #24 (his GitHub #34, build 20261116-2330), together. The owner: "take both; check Renegade's navigation and route times".
+
+- `brain/terrain.py Terrain.__init__` (his): a layout whose pieces stand past the level's grid (the heightmap's extent) gets the grid grown out to them, within its window. The new cells are the level's own no-data cells (no floor, no walls, `top` a wall), and the pieces' floors and walls go in them (`add_faces`).
+  - `cut()` is now the padding helper for `top`, `low`, `floors` and `walls`.
+  - `s.full` takes in the grown cells.
+  - Before, every piece beyond the level's edge was lost: his Halo 4 Onyx on Forge Island, bots standing still all match.
+- #24 (his): only out to the pieces' extent (from the blocks), never the whole layout window, which stray objects stretch far out. His fix for the minutes-long build #26 first caused.
+- `add_faces` (his #33 guard): a piece with no surface left at all (every one buried, or only undersides over grown cells) no longer stops the build. (custom, Nov 24) Written as no levels rather than his one-level stand-in: his works only because numpy lets an empty mask through.
+- Ours on his (custom, Nov 24):
+  - **The window is ours**, cut to the play area inside the kill zones (`maps.load_map`, `variants.play_limit`, Nov 23), so the growth stops there too.
+  - **No growth to a piece bigger than `GROW_PIECE_R` (40 u, origin to farthest corner) or past `GROW_MAX` (300 u) from the level's edge.** Such a piece is left off, as before. Our Reach data has the sky's warships placed in two built-in layouts: Condemned's corvette (170 u) and frigate (95 u), 470-610 u out, and Anchor 9's two frigates (99 u). The biggest other piece in any layout is 16 u (Ridgeline's tree). His rule would have grown Condemned's grid from 51 u a side to about 720 by 660 u (7.6 million cells), his #34 slow start again.
+- **Renegade** (`reach_forge_halo/variants/vf1ed8bb6`, no piece past the level), old -> new:
+  - grid 689 x 393 -> the same; nav 260,087 walk nodes and 1,918,190 edges -> the same;
+  - build 8.48 s -> 8.47 s; a route field 16.3 ms -> 16.1 ms (20 seeded routes, 10 of 20 found either way).
+  - Forge World 8v8 (`v8e4a8930`) and Boneyard: identical too.
+- **Layouts that grow** (pieces just past the level's edge, `brain/forge.py nav_pieces`). Walk nodes and edges are the same or a few more; builds within 0.15 s:
+
+  | Layout | Grid, old -> new |
+  | --- | --- |
+  | Condemned | 204 x 206 -> 276 x 209 (its walls north of the level) |
+  | Anchor 9 | 128 x 146 -> 150 x 178 |
+  | Highlands | 287 x 446 -> 325 x 459 |
+  | Rasu (Forge World) | 1025 x 521 -> 1025 x 561, +55 walk nodes |
+  | Boardwalk | 142 x 232 -> 148 x 255, +2 nodes |
+
+  Battle Canyon and Powerhouse SWAT also grow by a few cells.
+- Kept of ours: the window cut by `play_limit` and `clip`, `grow()` clipped to the play window, the reviewed-floor / spawn-floor order (#16), `_face_walls`' level walls and piece tops (Nov 22), `piece_wz`.
+- **Checks:** new `tools/test_grid_growth.py` (6) OK:
+  - no piece past the level, the same grid; a window inside the level still cuts;
+  - the grid grows east to a piece (not to the window) and bots walk it;
+  - growth west and south moves the origin and keeps the level's cells;
+  - never past the window;
+  - no growth to a warship-sized piece or one 380 u out;
+  - a piece with no surface left builds (without the guard: `IndexError`).
+
+  `tools/test_play_window.py` (5), `test_route_cap.py`, `test_terrain_cache.py` and the full suite OK. **Untested in a live match** (no layout past its level in our Reach data besides the ones above).
+
 ### Bots walk off spawn points and teleporter exits: people's walk there is floor, 2026-11-24
 
 Upstream 0.3.0's note #16 (build 20261114-1215). The owner: "take it; check Sword Base spawns in the sim".
