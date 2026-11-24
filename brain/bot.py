@@ -6891,6 +6891,10 @@ class Bot:
         moving = getattr(s, "drive_pos", None)
         if moving is None or dist(me.pos, moving) > 1.5:
             s.drive_pos, s.drive_since = me.pos, now
+        if getattr(s, "seat_at", None) is None or s.seat_at[0] != me.vehicle:
+            s.seat_at, s.seat_moved = (me.vehicle, me.pos), False     # where it got in (the dud rule below; upstream
+        elif not s.seat_moved and dist(me.pos, s.seat_at[1]) > 1.5:  # 0.3.0, build 20261114-1900)
+            s.seat_moved = True
         spot = getattr(s, "wedge_spot", None)
         if spot is not None and dist(me.pos, spot) > 4.0:
             s.wedge_spot, s.reversed_n = None, 0       # got away from where it was wedged
@@ -7015,6 +7019,18 @@ class Bot:
             if s.exit_tries >= 3:                # (the third try still in the seat: 30 s of driving before the next)
                 s.exit_tries, s.exit_block_until = 0, now + 30.0
             act.action, act.forward, act.fire = True, 0.0, False
+            if stuck and not arrived and v is not None and not air and getattr(s, "seat_moved", True) and not keep:
+                # (upstream 0.3.0, build 20261114-1900) wedged past its back-offs: a dud for everyone vehicles.DUD_FOR
+                # s, so neither this bot nor a teammate gets back in to wedge it again (his live Street Sweeper Oddball
+                # 20261114-172658: three of a team took turns at the wheel of a Warthog stuck at one spot, 45 s). Not
+                # one that never moved since we got in (most likely a seat that does not steer: his live Blood Gulch,
+                # Warthogs held at full throttle by their spawn spots, then left as duds nobody drove). (custom, Nov 24,
+                # the owner: "vehicles a Wheelman is keeping exempt") never a vehicle a Wheelman keeps (keep): its
+                # WHEEL_WEDGED_MAX other ways done, it gets out as before and the vehicle stays anyone's
+                s.duds()[v["handle"]] = now + vehicles.DUD_FOR
+                s.note("vehicle: wedged, left for everyone")
+            elif stuck and not arrived and v is not None and not air and not keep:
+                s.note("vehicle: never moved, not at the wheel: out")
             # held in Reach (a one-tick press did not get out) and, untested, the games after Halo 2; CE and Halo 2: a press
             s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
             if mongoose:

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### A wedged vehicle is left; nobody gets back in for 2 minutes (not a Wheelman's), 2026-11-24
+
+Upstream 0.3.0's note #21 (build 20261114-1900). The owner: "take it, vehicles a Wheelman is keeping exempt".
+
+- `Bot.drive` remembers where the driver got in (`seat_at`) and whether the vehicle has moved 1.5 u since (`seat_moved`).
+- A driver still wedged after its back-offs, getting out, marks the vehicle a dud for everyone for `vehicles.DUD_FOR` (120 s, the existing dud table), so no teammate gets back in to wedge it again. His live Street Sweeper Oddball: three of a team took turns at the wheel of a Warthog stuck in one spot for 45 s. A vehicle that never moved since the bot got in is not marked (most likely a seat that doesn't steer).
+- Kept of ours, all before this rule as before: the two back-offs, the tank's `TANK_BACK_S` back-off and "the tank is kept" other way, the Wheelman's `WHEEL_WEDGED_MAX` other ways, our Mongoose trip end and the 30 s exit block.
+- **The owner's exemption:** a vehicle a Wheelman keeps (`keep`: a Wheelman, not a runner or ferry, not a Mongoose) is never marked. Once its other ways run out it still gets out as before, and the vehicle stays anyone's.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (through the real `Bot.drive`: wedged past its back-offs = dud for 120 s; a seat that never moved = no dud; a Wheelman's = no dud) OK; full suite 1,500 OK. **Untested in a live match.**
+
 ### Jumps bots keep missing drop out after 3 misses; landings judged by the nearest approach, 2026-11-24
 
 Upstream 0.3.0's note #15 (build 20261114-1215). The owner: "merge, our jump memory and lore call kept, his landing judging used".

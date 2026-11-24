@@ -241,5 +241,45 @@ class JumpJudgeTests(unittest.TestCase):
         self.assertIsNone(w.bot_jump((20.0, 4.0), (6.0, 4.0, 2.0), False), "no link at another take-off")
 
 
+class WedgedDudTests(unittest.TestCase):
+    """#21 (build 20261114-1900): a wedged vehicle is left and nobody gets back in for vehicles.DUD_FOR s; (custom) a
+    vehicle a Wheelman keeps is never marked."""
+
+    def wedged(self, style="rusher", moved=True, now=100.0):
+        from types import SimpleNamespace
+        from brain.bot import Order
+        from brain.core import Snapshot
+        from brain import vehicles
+        mapdata = dict(name="reach_test", flags={0: Vec(100, 0, 0), 1: Vec(200, 0, 0)}, points={"mid": Vec(80, 0, 0)})
+        b = Bot(0, 0, make_profile("strong", style, random.Random(3)), mapdata, random.Random(2))
+        b.order = Order("mid", Vec(80, 0, 0))
+        b.seat = "driver"
+        b.drive_to = Vec(80, 0, 0)
+        b._terrain = SimpleNamespace(vnav=lambda start, goal, **k: goal)
+        b.notes = []
+        me = PlayerState(0, 0, "driver", Vec(), vehicle=10)
+        v = dict(handle=10, kind="warthog", pos=(0, 0, 0), occupied=True, team=0, riders=1, fwd=(1, 0, 0))
+        snap = Snapshot(100, [me], vehicles=[v], mode="slayer")
+        b.seat_at, b.seat_moved = (10, Vec(-5, 0, 0) if moved else Vec()), moved
+        b.drive_pos, b.drive_since = Vec(), now - 10.0          # 10 s without moving 1.5 u: stuck
+        b.reversed_n, b.wedge_spot = 2, Vec()                   # both back-offs done here
+        b.wheel_wedged = botmod.WHEEL_WEDGED_MAX                # (a Wheelman's other ways done too)
+        b.seat_since = now - 20.0
+        b.drive(now, 1 / 30, me, snap, Action(), lambda a, c, **k: c)
+        return b.duds().get(10), vehicles.DUD_FOR, b.notes
+
+    def test_wedged_past_its_back_offs_is_a_dud_for_everyone(self):
+        until, dud_for, notes = self.wedged()
+        self.assertEqual(until, 100.0 + dud_for, notes)
+
+    def test_a_seat_that_never_moved_is_no_dud(self):
+        until, _, notes = self.wedged(moved=False)
+        self.assertIsNone(until, notes)
+
+    def test_a_wheelmans_vehicle_is_never_marked(self):
+        until, _, notes = self.wedged(style="wheelman")
+        self.assertIsNone(until, notes)
+
+
 if __name__ == "__main__":
     unittest.main()
