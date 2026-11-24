@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### BOTS panel no longer disappears in lobbies: six missed probes in a row before the lobby counts as gone, beside our title hold, 2026-11-24
+
+Upstream 0.3.0's note #8 (build 20261113-1500). The owner: "add beside our Nov 21 hold, after the open overlay.cpp edits are committed; test the Reach lobby".
+
+- `native/overlay.cpp` `probe_lobby`, his two pieces hand-merged into ours:
+  - the strip test: START's strip no longer has to be non-solid (`ok = rows > h * 7 / 10 && (e == 1 || solid < h * 6 / 10)`); OPTIONS' strip still must not be filled, which keeps the carnage report out. His evidence: START's strip read 95-192 solid rows now and then from the lobby's video and focus while the player cycled game types and edited options.
+  - the miss tolerance: `PROBE_MISSES = 6`; the lobby shows at the first hit and counts as gone only after 6 misses in a row (a probe every 8 frames, about 0.8 s at 60 fps). His `lobby shown / hidden` log line added; the `lobby probe:` evidence line now logs when the probe's own answer changes.
+- Ours kept: the Nov 21 title hold (MCC's lobby screen still running, `pg_lobby_screen_live()`, and its title's letter pixels within a quarter of what they were when the frames were last seen) runs first and unchanged; the miss count is of its answer, so a held lobby is a hit. The hold still asks `g_lobby_visible`, which the tolerance keeps up through a short miss. `in_ce_menus` (MCC's menu byte 0) still hides the tile at once when a match starts.
+- Side effect: what waits for the lobby to be not seen (our Nov 23 `pg_post`, Project Noble's carnage report over MCC's post-game report) starts up to 6 probes later; a screen over the lobby (carnage report, Options) takes the tile away up to about 0.8 s later.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the Reach lobby: cycling game types and maps, the session list, the carnage report).
+
 ### BOTS panel on a controller: pressing both sticks no longer reaches MCC (no stuck chat box or save menu), 2026-11-24
 
 Upstream 0.3.0's note #36 (build 20261118-2107). The owner: "take it, hand-inserted; DLL rebuild, test in the Reach lobby".
