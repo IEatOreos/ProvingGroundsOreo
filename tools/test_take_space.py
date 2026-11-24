@@ -20,9 +20,9 @@ def man(i, team, pos, shield=1.0):
     return PlayerState(i, team, f"p{i}", pos, shield=shield)
 
 
-def mk(tier="demon", i=1):
+def mk(tier="demon", i=1, style="camper"):
     b = bot.Bot.__new__(bot.Bot)
-    b.p, b.game, b.notes, b.id = make_profile(tier, "camper", random.Random(1)), "reach", [], i
+    b.p, b.game, b.notes, b.id = make_profile(tier, style, random.Random(1)), "reach", [], i
     b.map = {"name": "test_space", "positions": list(SPOTS)}
     b.order = bot.Order("hunter", None)
     b.per = types.SimpleNamespace(beliefs={})
@@ -176,6 +176,59 @@ class ShuffleOnSpot(Base):
         a2 = types.SimpleNamespace(forward=0.0, strafe=0.0, yaw=0.0, sprint=False, crouch=False)
         b.space_shuffle(2.0, me, a2, "hold", Vec(-10, 0, 0))     # (another hold: as it was)
         self.assertEqual(a2.strafe, 0.0)
+
+
+class AlwaysTests(Base):
+    """(custom, Nov 24) The owner: "Make all Flanker personalities do this, Add it Rusher also" ... "Exclude easy only"."""
+    go = TakeTests.go
+
+    def fresh(self, tier, style):
+        b, me = mk(tier, style=style), man(1, 0, Vec(0, 0, 0))
+        b.per.beliefs[9] = types.SimpleNamespace(pos=Vec(40, 0, 0), t=0.0)
+        return b, me
+
+    def test_flankers_and_rushers_without_a_kill_not_easy(self):
+        for tier in ("average", "strong", "top", "mythic", "blind", "tactician", "demon", "noble"):
+            for style in bot.SPACE_ALWAYS:
+                b, me = self.fresh(tier, style)
+                self.assertEqual(self.go(b, me, snap(me), 1.0), {("hold", Vec(10, 0, 0)): bot.SPACE_SCORE},
+                                 (tier, style))
+        for tier, style in (("novice", "flanker"), ("novice", "rusher"), ("strong", "camper"), ("top", "sniper")):
+            b, me = self.fresh(tier, style)
+            self.assertEqual(self.go(b, me, snap(me), 1.0), {}, (tier, style))   # (no kill: nothing, as before)
+
+    def test_never_ends_and_looks_again(self):
+        b, me = self.fresh("strong", "flanker")
+        me.pos = Vec(10, 0, 0)
+        b.space = dict(steps=bot.SPACE_STEPS - 1, until=1.0, spot=Vec(10, 0, 0), at=1.0, kills=bot.SPACE_KILLS,
+                       held=[Vec(20, 0, 0)], why="")
+        sc = self.go(b, me, snap(me), 5.0)                       # (past SPACE_ACTIVE and its last step: on)
+        self.assertEqual(list(sc), [("hold", Vec(20, 0, 0))])
+        self.assertGreater(b.space["until"], 5.0)
+        b.per.beliefs[9].pos = Vec(400, 0, 0)                    # (past the last spot: nothing forward of it)
+        me.pos = Vec(30, 0, 0)
+        b.space = None
+        self.assertEqual(self.go(b, me, snap(me), 6.0), {})
+        self.assertEqual(b.space_retry, 6.0 + bot.SPACE_RETRY)    # (looks again later)
+        b.per.beliefs[9].pos = Vec(-400, 0, 0)                   # (now they are back the other way)
+        self.assertEqual(self.go(b, me, snap(me), 7.0), {})       # (not before SPACE_RETRY)
+        self.assertEqual(list(self.go(b, me, snap(me), 6.0 + bot.SPACE_RETRY + 0.1)), [("hold", Vec(20, 0, 0))])
+
+    def test_hurt_still_waits(self):
+        b, me = self.fresh("top", "rusher")
+        me.shield = 0.4
+        self.assertEqual(self.go(b, me, snap(me), 1.0), {})
+
+    def test_owner_spot_first(self):
+        b, me = self.fresh("demon", "camper")
+        b.map["positions"] = [Vec(10, 0, 0), Vec(14, 0, 0)]
+        b.map["position_info"] = [dict(pos=Vec(10, 0, 0)), dict(pos=Vec(14, 0, 0), owner=True)]
+        b.kill_seen = (0.5, Vec(5, 0, 0))
+        self.assertEqual(list(self.go(b, me, snap(me), 1.0)), [("hold", Vec(14, 0, 0))])
+        b, me = self.fresh("demon", "camper")
+        b.map["positions"] = [Vec(10, 0, 0), Vec(14, 0, 0)]
+        b.kill_seen = (0.5, Vec(5, 0, 0))
+        self.assertEqual(list(self.go(b, me, snap(me), 1.0)), [("hold", Vec(10, 0, 0))])   # (none marked: nearest)
 
 
 if __name__ == "__main__":

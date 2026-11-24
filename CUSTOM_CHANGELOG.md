@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Flankers and Rushers take space all match; your own hot spots first, 2026-11-24
+
+The owner, asked what the LiDAR view's hot spot marker does: "Make all Flanker personalities do this, Add it Rusher also", then "Exclude easy only". "This" was the proposal: always-on Take Space, giving way to a power weapon call or a power vehicle, with the owner's marked hot spots picked first.
+
+- **Who:** every Flanker and Rusher except Easy (`SPACE_ALWAYS`, `Bot.space_always`). That covers Normal, Heroic, Legendary, Blind, Tactician, Scaling, Mythic, Demon and Noble. A Noble follows its tune's `take_space`, as before.
+- **Always on:** Take Space starts as soon as they're alive and well, with no kill or cleared fight needed. Neither `SPACE_ACTIVE` nor `SPACE_STEPS` ends it. After 3 spots it carries on, and any spot but the last one held can be picked again. With no spot forward, it looks again after `SPACE_RETRY` (3 s).
+- **What still wins:** power weapon grabs and calls, power vehicle jobs (the `drive` role), fights, hunts and recharges. So do objective jobs (runner, escort, defender), the Slayer anchor post and carrying the objective.
+- **Modes:** the same as before: Slayer, CTF, King of the Hill, Oddball and Invasion; not Race, Infection or Firefight. Going spot to spot takes the place of most of a Flanker's long side routes.
+- **Your hot spots first:** every Take Space (these and Demon and Noble after a kill) now treats the owner's own hot spots (LiDAR Edit spots, `positions.json` rows marked `owner`) as 6 u nearer (`OWN_SPOT_BONUS`).
+  - `brain/maps.py` keeps the `owner` mark in `position_info`.
+  - Changing `maps.py` means each map's terrain cache is rebuilt once, on its first load.
+- **No change:** Campers, Snipers, Objectors and the rest, and Easy, play as before.
+- **Validation:**
+  - `tools/test_take_space.py` (4 new, 17 in all): Flankers and Rushers of every difficulty but Easy start without a kill (Easy and the other styles do not); it never ends and looks again after `SPACE_RETRY`; hurt still waits; your marked spot is picked over a nearer computed one.
+  - Full suite: 1,472 tests OK; `live_bots` imports.
+  - **Untested in a match or in the Noble simulations.**
+
 ### Demon, Noble and Mythic: a Warthog's or Gauss Warthog's gun only, no passenger seat without the objective, 2026-11-24
 
 The owner: "Dont let Mythic noble or demon ride passenger in mongoose or warthogs, unless theyre carrying the objective. Only gunners of Gauss hog and normal warthogs. Not rocket hogs", then "No passenger seat in the rocket hog unless carrying objective. Any difficulty can feel [fill] those seats that isnt mythic demon or noble". Before this, those three were barred only from driving Warthogs, Mongooses and Ghosts; they rode any gun or passenger seat.

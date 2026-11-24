@@ -498,6 +498,13 @@ SHUFFLE_STEP, SHUFFLE_MAG, SHUFFLE_CROUCH, SHUFFLE_LEASH, SHUFFLE_PROBE = (0.35,
 # SPACE_PAIR_R u beside him. Scored SPACE_SCORE: over the team's slot, items and patrols, under every fight and hunt.
 TEAM_SPACE = {}             # {(map, team): {bot id: (t, spot)}}
 TAKE_SPACE_TIERS = ("demon", "noble")       # (profiles.fixed_demon, its Noble label: the owner, "Demon and Noble first")
+# (custom, Nov 24, the owner: "Make all Flanker personalities do this, Add it Rusher also" ... "Exclude easy only") a
+# Flanker or Rusher of every difficulty but Easy takes space all match (Bot.space_always): from its spawn, no kill
+# needed, no SPACE_STEPS or SPACE_ACTIVE end; with no spot forward it looks again after SPACE_RETRY s. Power weapon
+# grabs, power vehicle jobs, fights, hunts and recharges still win. Every Take Space picks the owner's own hot spots
+# (LiDAR Edit spots: positions.json "owner") first, as if OWN_SPOT_BONUS u nearer
+SPACE_ALWAYS = ("flanker", "rusher")
+SPACE_RETRY, OWN_SPOT_BONUS = 3.0, 6.0
 SPACE_REACH, SPACE_FORWARD, SPACE_QUIET, SPACE_KILLS, SPACE_STEPS, SPACE_ACTIVE = 25.0, 2.0, 6.0, 2, 3, 25.0
 # (SPACE_SCORE 1.45 first: in the sim the director's Slayer slot, scored "objective" up to 2.0, took 25-40% of its
 # ticks and the spot was reached 0-3% of them; 2.2 is over that and under committed fights 2.6+, hunts and cover 3.0+,
@@ -3155,12 +3162,24 @@ class Bot:
 
     # --- (custom, Nov 22) Take Space: see TEAM_SPACE above ---
     def take_space_on(s):
-        """Take Space for this bot: Demon or Noble as TAKE_SPACE_TIERS names them (Noble: its tune's take_space too)."""
+        """Take Space for this bot: Demon or Noble as TAKE_SPACE_TIERS names them (Noble: its tune's take_space too), and
+        every Flanker and Rusher but Easy's (space_always)."""
+        if s.space_always():
+            return True
         if not profiles.fixed_demon(s.p):
             return False
         if profiles.fixed_noble(s.p):
             return "noble" in TAKE_SPACE_TIERS and bool(noble.tune(getattr(s, "game", None))["take_space"])
         return "demon" in TAKE_SPACE_TIERS
+
+    def space_always(s):
+        """(custom, Nov 24, the owner) A Flanker or Rusher, not Easy: Take Space all match (SPACE_ALWAYS). A Noble's as
+        its tune's take_space says."""
+        if s.p.personality not in SPACE_ALWAYS or s.p.tier == "novice":
+            return False
+        if profiles.fixed_noble(s.p):
+            return bool(noble.tune(getattr(s, "game", None))["take_space"])
+        return True
 
     def space_anchor(s, snap):
         """The team's Slayer anchor on its post (director.slayer_slots): it keeps its post, it takes no space."""
@@ -3227,6 +3246,7 @@ class Bot:
         d_me = dist(me.pos, target)
         bans = getattr(s, "goal_ban", {})
         free, taken = [], []
+        own = [i["pos"] for i in (s.map or {}).get("position_info") or () if i.get("owner")]   # (custom, Nov 24)
         for q in (s.map or {}).get("positions") or ():
             if dist(q, me.pos) > SPACE_REACH or dist(q, target) > d_me - SPACE_FORWARD:
                 continue
@@ -3235,6 +3255,8 @@ class Bot:
             who = {j for j, c in live.items() if dist(c, q) < SPACE_TAKEN_R + SPACE_PAIR_R}
             who |= {p.id for p in mates if dist(p.pos, q) < SPACE_TAKEN_R}
             v = dist(me.pos, q) + 0.3 * dist(q, target)    # (the next one forward: a step, not a run to the far end)
+            if any(dist(q, o) < 0.1 for o in own):
+                v -= OWN_SPOT_BONUS                         # (the owner's own hot spot first)
             if not who:
                 free.append((v, q))
             elif len(who) < 2:
@@ -3255,7 +3277,9 @@ class Bot:
         down) or a fight ended with nobody known within SPACE_CLEAR_R for SPACE_CLEAR_S s, the next hot spot forward
         (space_pick) as a hold goal (SPACE_SCORE), then the next after SPACE_KILLS more kills or SPACE_QUIET s quiet there.
         Not hurt (a recharge first), carrying, in a vehicle, as the objective's runner, an escort, a defender or crew, as the
-        team's Slayer anchor, in Race, Infection or Firefight, or on a map with no hot spots. Fights and hunts win."""
+        team's Slayer anchor, in Race, Infection or Firefight, or on a map with no hot spots. Fights and hunts win.
+        (custom, Nov 24) A Flanker or Rusher but Easy (space_always): all match, started without a kill, never ended by
+        SPACE_ACTIVE or SPACE_STEPS; nothing forward: again after SPACE_RETRY s."""
         key = ((s.map or {}).get("name"), me.team)
         claims = TEAM_SPACE.setdefault(key, {})
         if (not s.take_space_on() or me.has_flag or me.vehicle not in (None, -1) or not me.alive
@@ -3275,9 +3299,10 @@ class Bot:
                    for k, b in s.per.beliefs.items())
         cleared = SPACE_CLEAR_S <= fought < 6.0 and not near and not seen
         hurt = now < getattr(s, "recharge_until", 0.0) or (not snap.shieldless and me.shield < 0.9)
+        always = s.space_always()                        # (custom, Nov 24: a Flanker or Rusher, all match)
         sp = getattr(s, "space", None)
         if sp is None:
-            if not (new_kill or cleared) or hurt:
+            if not (new_kill or cleared or (always and now >= getattr(s, "space_retry", 0.0))) or hurt:
                 claims.pop(me.id, None)
                 return
             sp = s.space = dict(steps=0, until=now + SPACE_ACTIVE, spot=None, at=None, kills=0, held=[], why="")
@@ -3291,8 +3316,10 @@ class Bot:
             if sp["at"] is not None:
                 sp["at"] = now                            # (its quiet time there starts again)
         if now > sp["until"]:
-            s.space_end(claims, me)
-            return
+            if not always:
+                s.space_end(claims, me)
+                return
+            sp["until"] = now + SPACE_ACTIVE              # (all match: never runs out)
         if sp["spot"] is not None:
             if sp["at"] is None and (me.pos - sp["spot"]).flat() < SPACE_AT_R and abs(me.pos.z - sp["spot"].z) < 1.5:
                 sp["at"] = now
@@ -3303,12 +3330,16 @@ class Bot:
                 sp["spot"] = None
                 sp["steps"] += 1
                 if sp["steps"] >= SPACE_STEPS:
-                    s.space_end(claims, me)
-                    return
+                    if not always:
+                        s.space_end(claims, me)
+                        return
+                    sp["steps"], sp["held"] = 0, sp["held"][-1:]   # (all match: on, every spot again but the last)
         if sp["spot"] is None:
             got = s.space_pick(now, me, snap, claims, sp["held"])
             if got is None:
                 s.space_end(claims, me)
+                if always:
+                    s.space_retry = now + SPACE_RETRY     # (no spot forward now: again in a moment)
                 return
             sp["spot"], sp["at"], sp["kills"], sp["why"] = got[0], None, 0, got[1]
             s.note(f"take space: {got[1]}")
@@ -5397,7 +5428,8 @@ class Bot:
         s.peek_timing(now, me, snap, scores, seen)          # (custom, Nov 18: Reach Demon / Mythic: go as he looks away)
         s.noble_push(me, snap, scores, seen)                # (custom, Nov 20: Noble: the man in view first)
         s.noble_spot(now, me, snap, scores, seen)           # (custom, Nov 20: Noble: a winning spot, not a walk at him)
-        s.take_space(now, me, snap, scores, seen)           # (custom, Nov 22: Demon / Noble: Take Space after a kill)
+        s.take_space(now, me, snap, scores, seen)           # (custom, Nov 22: Demon / Noble: Take Space after a kill;
+        #                                                     Nov 24: Flankers and Rushers but Easy, all match)
         s.flag_fight_scores(now, me, snap, scores)      # (custom, Nov 17: Reach carrier dying anyway: drop it and fight)
         s.power_commit(now, me, snap, scores, hit_recent)   # (custom, Nov 18: a power weapon run is finished)
         # what the bot weighed and why (tools/observer.py): the scores and the facts behind them

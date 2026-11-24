@@ -170,7 +170,8 @@ def load_map(name):
     m["positions"] = [_v(p["pos"]) for p in rows]
     # and why each one is: height over its surroundings, floor it sees, cover to duck behind (the commander)
     m["position_info"] = [dict(pos=_v(p["pos"]), height=p.get("height", 0.0), sees=p.get("sees", 0),
-                               duck=bool(p.get("duck")), score=p.get("score", 0.0)) for p in rows]
+                               duck=bool(p.get("duck")), score=p.get("score", 0.0),
+                               owner=bool(p.get("owner"))) for p in rows]   # (owner: LiDAR Edit spots, Bot.space_pick)
     m["base"] = base_of(name)
     v = info(name)
     if v is not None:
