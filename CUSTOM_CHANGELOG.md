@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### The minute's drive-path refresh no longer stops the bots, 2026-11-24
+
+The owner, after several matches on the threaded brain: "The boneyard game I just had, had a couple of long hangups. Other than that it was really good over seveeral matches", then "Yes, fix it".
+
+- **The cause** (Boneyard 8v8, `20261124-003150`): every 60 s the brain stopped for about 7 s, 11 times in the match. The profile's slow passes were 77% `Terrain.add_rides` → `_node_at`.
+  - After each minute's save, the drive paths people and bots drove (`rides.json`) were applied again on the main thread, every sample's 21 footprint cells looked up one at a time.
+  - Boneyard: 47,382 samples. Renegade: 1.2–1.4 s every minute.
+- **Fix (`brain/terrain.py` `_nodes_at`, `_ride_cells`; `add_rides`):**
+  - The floors are found all at once with numpy: the floor nearest the sample's height within 0.6 u, the lowest layer of equals, the very node `_node_at` finds.
+  - Only samples not seen at an earlier call are looked up (`_ride_done`), and their nodes are kept (`_ride_nodes`), so a repaint's reset of `drive_paint` gets them back.
+- **On the maps' own data, the same nodes:**
+
+  | | Boneyard | Renegade |
+  |---|---|---|
+  | Nodes | 48,685 | 29,041 |
+  | Full lookup | 6,030 → 158 ms | 859 → 34 ms |
+  | The next minute's refresh | 7 ms | 3 ms |
+
+- **Checks:** new `tools/test_ride_cells.py` (3: the same nodes as one at a time, four seeds with gaps, ties and floor that isn't walkable; each point as `_node_at`; only new samples, and a reset keeps them). `unittest discover` over `tools` is OK on both Pythons, and so is the `live_bots` import. **Untested in a match.**
+
 ### Warthog drivers stay on their way in a fight, 2026-11-24
 
 The owner: "What causes a warthog driver to veer off their driving path? It only seems to happen when they get shot at or their gunner starts to shoot", then "I would like it if Warthogs almost always stayed their driving paths". His picks: still flee boarders, still ram what is straight ahead.

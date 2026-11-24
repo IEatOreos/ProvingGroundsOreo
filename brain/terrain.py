@@ -850,6 +850,35 @@ class Terrain:
         getattr(s, "_jfields", {}).clear()
         getattr(s, "_hfields", {}).clear()
 
+    def _nodes_at(s, xs, ys, zs, tol=1.0):
+        """(custom, Nov 23) _node_at for many points at once (arrays): (ok, layer, row, col), ok where _node_at would
+        give a node; the same node (the floor nearest z, the lowest layer of equals)."""
+        xs, ys, zs = (np.asarray(v, dtype=np.float64) for v in (xs, ys, zs))
+        j = np.clip(((ys - s.y0) / NAV_CELL).astype(np.int64), 0, s.nh - 1)     # (_cell: int() of a value >= 0, clipped)
+        i = np.clip(((xs - s.x0) / NAV_CELL).astype(np.int64), 0, s.nw - 1)
+        lz = s.lz[:, j, i].astype(np.float64)                                 # (L, points)
+        d = np.abs(lz - zs[None, :])
+        d[~np.isfinite(lz)] = np.inf
+        layer = np.argmin(d, axis=0)                                          # (the first of equals: the lowest layer)
+        best = d[layer, np.arange(d.shape[1])]
+        return best <= tol, layer, j, i
+
+    def _ride_cells(s, drive):
+        """The walkable nodes a vehicle covers round each driven sample (add_rides' footprint), all at once."""
+        foot = [(dx * NAV_CELL, dy * NAV_CELL) for dx in range(-2, 3) for dy in range(-2, 3) if dx * dx + dy * dy <= 5]
+        c = np.asarray([v[:3] for v in drive], dtype=np.float64)
+        if not len(c):
+            return set()
+        off = np.asarray(foot, dtype=np.float64)
+        xs = (c[:, 0:1] + off[None, :, 0]).ravel()
+        ys = (c[:, 1:2] + off[None, :, 1]).ravel()
+        zs = np.repeat(c[:, 2], len(foot))
+        w = s.window
+        inn = (xs >= w[0]) & (xs < w[2]) & (ys >= w[1]) & (ys < w[3])
+        ok, l, j, i = s._nodes_at(xs[inn], ys[inn], zs[inn], tol=0.6)
+        ok &= s.lwalk[l, j, i]
+        return set(zip(l[ok].tolist(), j[ok].tolist(), i[ok].tolist()))
+
     def _node_at(s, x, y, z, tol=1.0):
         """(layer, row, col) of the floor at (x, y) nearest height z within tol, or None."""
         j, i = s._cell(Vec(x, y, z))
@@ -945,10 +974,17 @@ class Terrain:
         travelling) clearance over the floor; marks: take-offs, landings, turn-backs. Added to the painting, applied
         at once (the vehicles' ground is built again on the next drive)."""
         # (each sample marks what the vehicle covers, about 0.4 u round it: one cell a sample left gaps in a 0.25 u grid)
-        foot = [(dx * NAV_CELL, dy * NAV_CELL) for dx in range(-2, 3) for dy in range(-2, 3) if dx * dx + dy * dy <= 5]
-        s.drive_paint = list(set(getattr(s, "drive_paint", [])) | {   # (applied again after every save: no repeats)
-            n for c in drive for dx, dy in foot if s.inside(c[0] + dx, c[1] + dy)
-            for n in [s._node_at(c[0] + dx, c[1] + dy, c[2], tol=0.6)] if n is not None and s.lwalk[n]})
+        # (custom, Nov 23, the owner: "The boneyard game I just had, had a couple of long hangups"; "Yes, fix it") the
+        # samples' floors found all at once (_nodes_at, the very ones _node_at finds) and only the samples not seen at an
+        # earlier call: live, this ran after every minute's save on every sample one at a time, 7 s on Boneyard with every
+        # bot stopped (20261124-003150, 11 times), 1.2-1.4 s on Renegade
+        done = s.__dict__.setdefault("_ride_done", set())
+        rides = s.__dict__.setdefault("_ride_nodes", set())
+        new = [c for c in drive if tuple(c[:3]) not in done]
+        if new:
+            rides |= s._ride_cells(new)
+            done.update(tuple(c[:3]) for c in new)
+        s.drive_paint = list(set(getattr(s, "drive_paint", [])) | rides)   # (applied again after every save: no repeats)
         fc = s.__dict__.setdefault("fly_cells", {"low": {}, "high": {}})
         for k in ("low", "high"):
             layer = fc.setdefault(k, {})
