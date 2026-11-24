@@ -143,5 +143,78 @@ class CEFreeForAll(unittest.TestCase):
         self.assertEqual(self.players(teams=True), [0, 1, 1, 0])
 
 
+class KingOddballCEH2(unittest.TestCase):
+    """#17 (build 20261114-1215): King and Oddball in CE and Halo 2 play a real score: the hill is the circle inside its
+    corners (inscribed; Halo 2 at least 1.5 u), CE's limit in seconds, and team seconds in the hill / with the ball where
+    the reader has no team score (held_tally), for CE and Halo 2 only. The KING_CALLS callouts line is not taken."""
+
+    def setUp(self):
+        import live_bots
+        self.lb = live_bots
+        self.saved = dict(live_bots.HELD), live_bots.HELD["pts"]
+        live_bots.HELD.update(t=None, pts={})
+
+    def tearDown(self):
+        self.lb.HELD.update(self.saved[0])
+
+    def test_inscribed_square(self):
+        r = livemod.inscribed((0.0, 0.0, 0.0), [(2, 0), (0, 2), (-2, 0), (0, -2)])
+        self.assertAlmostEqual(r, 2 * 0.7071, places=3)
+
+    def test_halo_2_hill_radius(self):
+        h2 = object.__new__(livemod.LiveH2)
+        corners = [dict(type="King Hill 0", pos=p) for p in ((2.2, 0, 0), (0, 2.2, 0), (-2.2, 0, 0), (0, -2.2, 0))]
+        tiny = [dict(type="King Hill 1", pos=p) for p in ((10.5, 0, 0), (9.5, 0, 0), (10, 0.5, 0))]
+        h2.set_map({"netgame_flags": corners + tiny})
+        self.assertAlmostEqual(h2._h2_hills[0][1], 2.2 * 0.7071, places=3)
+        self.assertEqual(h2._h2_hills[1][1], 1.5)
+
+    def test_other_games_keep_their_hill(self):
+        self.assertEqual(livemod.LiveH3.HILL_R, 3.0)
+        self.assertEqual(LiveReach.HILL_R, 3.0)
+        self.assertEqual(livemod.LiveH2.HILL_R, 1.5)
+
+    def test_ce_limit_in_seconds(self):
+        r = object.__new__(livemod.Live)
+        r.g = stock.Memory(0x10000)
+        r.g.base = 0
+        r.VARIANT, r.GAME_TICKS, r.SLAYER = 0x100, 0x400, 0x500
+        for engine, want in ((4, 120), (3, 120), (2, 2), (1, 2)):
+            struct.pack_into("<ii", r.g.buf, 0x100 + 0x30, engine, 1)
+            struct.pack_into("<i", r.g.buf, 0x100 + 0x58, 2)
+            self.assertEqual(r.match_state([])["limit"], want, engine)
+
+    def snap(self, mode, where, carrier=None):
+        from brain.core import PlayerState, Snapshot, Vec
+        ps = [PlayerState(id=i, team=t, name=str(i), pos=Vec(*p)) for i, (t, p) in enumerate(where)]
+        s = Snapshot(0.0, ps, {}, mode=mode)
+        if mode == "king":
+            s.hill, s.hill_r = Vec(0, 0, 0), 2.0
+        else:
+            s.ball_carrier = carrier
+        return s
+
+    def test_held_tally_king(self):
+        lb = self.lb
+        alone = self.snap("king", [(0, (0.5, 0, 0)), (1, (8, 0, 0))])
+        both = self.snap("king", [(0, (0.5, 0, 0)), (1, (0, 1, 0))])
+        lb.held_tally(alone, 0.0)
+        lb.held_tally(alone, 1.0)
+        lb.held_tally(both, 2.0)                       # contested: nobody scores
+        self.assertEqual(lb.held_tally(alone, 3.0), {0: 2, 1: 0})
+
+    def test_held_tally_oddball(self):
+        lb = self.lb
+        s = self.snap("oddball", [(0, (0, 0, 0)), (1, (5, 0, 0))], carrier=1)
+        for t in range(4):
+            got = lb.held_tally(s, float(t))
+        self.assertEqual(got, {0: 0, 1: 3})
+
+    def test_only_ce_and_halo_2_tally(self):
+        import inspect
+        self.assertIn("TALLIED = type(live) in (Live, LiveH2)", inspect.getsource(self.lb.main))
+        self.assertFalse(self.lb.TALLIED)              # (set per match in main; off until then)
+
+
 if __name__ == "__main__":
     unittest.main()

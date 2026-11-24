@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### King of the Hill and Oddball in Halo: CE and Halo 2: bots play the real score, 2026-11-24
+
+Upstream 0.3.0's note #17 (build 20261114-1215). The owner: "take it, without the KING_CALLS callouts line".
+
+- `brain/live.py`:
+  - `inscribed()` (his): a King hill drawn by its corner markers is the circle inside them, not the ring round the farthest corner. CE's `king_hill` and Halo 2's `set_map` use it. His live Halo 2 Lockout Team King: the bots held the hill from outside it.
+  - Halo 2's `HILL_R` floor 3.0 -> 1.5 u (Lockout's hills are 1.7-2.7 u). Halo 3, ODST and Reach keep their own `HILL_R` (3.0) and their own hill reads.
+  - CE's `match_state`: Oddball and King limits are minutes in the variant; read as seconds (Team King's 2 = 120).
+- `tools/live_bots.py`: `held_tally` (his, `HELD`, `HELD_DZ` 2.5 u): where the reader has no team score, a team's seconds alone in the hill or carrying the ball stand in for the score. Before, the Slayer kill tally stood in and was held against CE Team King's limit of 2, so both teams played "the enemy is about to win" all match.
+- Ours, narrower than his: the tally stands in only on CE and Halo 2 (`TALLIED = type(live) in (Live, LiveH2)`, set in `main`). Halo 3, ODST, Reach, Halo 4 and H2A play exactly as before, even on a tick whose score read is empty or dropped. Our `score_live` (Nov 13) stays the game's own read only, so Land Grab's `score_read` never takes a tally for a score.
+- Left out: his `bot.py` `KING_CALLS` line (the owner: without the callouts line; we have no callouts feature).
+- **Checks:** `tools/test_upstream_030_modes.py` +7 (inscribed square; Halo 2 hill radii with the 1.5 u floor; Halo 3 and Reach keep 3.0; CE's limit in seconds for King and Oddball only; held_tally for King (alone scores, contested doesn't) and Oddball; only CE and Halo 2 tally) OK; `live.py` parses, `live_bots.py` imports. **Untested in a live match** (CE and Halo 2 King and Oddball).
+
 ### Halo: CE free for all: every bot plays for itself, 2026-11-24
 
 Upstream 0.3.0's note #14 (build 20261114-0323). The owner: "take it".

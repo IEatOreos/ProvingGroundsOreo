@@ -116,6 +116,16 @@ def one_flag_owner(flag, players, state):
     return state["team"] if state["team"] is not None else flag["team"]
 
 
+def inscribed(c, corners):
+    """A King hill drawn by its corner markers (CE's hill flags, Halo 2's "King Hill <n>"): the radius of the circle
+    inside it, the corners' mean distance from the middle times cos(pi / n), as for a regular n-gon. The farthest corner
+    took in the ring outside it: live Halo 2 Lockout Team King Nov 14, the HUD's 20-1 held read 14-0 at its 2.22 u
+    (both teams in it 84 of 102 s), its 1.91 u inside lies between 1.5 u's 31 and 2.0 u's 16. (upstream 0.3.0, build
+    20261114-1215; CE and Halo 2 only)"""
+    ds = [math.dist(c[:2], p[:2]) for p in corners]
+    return sum(ds) / len(ds) * math.cos(math.pi / max(3, len(ds)))
+
+
 class Live:
     # the unit's desired zoom byte (0xFF none, 0 first level, 1 second), for the trace's "uz" (tools/live_bots.py
     # unit_zoom): CE +0x301 (ghidra/ce_uc.c line 65); Halo 2 +0x255 and Halo 3 +0x299 below; None: not decoded
@@ -300,6 +310,9 @@ class Live:
         limit, tlimit = struct.unpack_from("<i", v, 0x58)[0], struct.unpack_from("<i", v, 0x78)[0]
         ticks = struct.unpack("<i", s.g.read(s.g.base + s.GAME_TICKS, 4))[0]
         left = max(0.0, (tlimit - ticks) / 30.0) if tlimit > 0 else None
+        if engine in (3, 4):        # Oddball / King: minutes (Team King reads 2, its rules "Score to Win 2 Minutes";
+            limit *= 60             # Team Oddball's 2 ended at 2:00 of ball time, live Battle Creek Nov 14): seconds
+                                    # (upstream 0.3.0, build 20261114-1215)
         score = {}
         if engine == 2:
             sc = struct.unpack("<32i", s.g.read(s.g.base + s.SLAYER, 128))
@@ -317,8 +330,8 @@ class Live:
         if not 0 < n <= 12:
             return None
         c = struct.unpack_from("<3f", b, 0xF4)
-        r = max(math.dist(c[:2], struct.unpack_from("<2f", b, 4 + 12 * k)) for k in range(n))
-        return c, r
+        # (upstream 0.3.0, build 20261114-1215) the circle inside its corners, not round the farthest one (inscribed)
+        return c, inscribed(c, [struct.unpack_from("<2f", b, 4 + 12 * k) for k in range(n)])
 
     def balls(s, players):
         """Oddball: [{pos, carrier}] from ball weapon objects (carried = in an inventory). Halo 2 too (its tag names,
@@ -549,11 +562,15 @@ class LiveH2(Live):
     # +0xE80500 points to (live, Lockout Team King, Moving Hill 30 s: it stepped 1, 5, 4 at 9, 39 and 69 s, 30 s apart,
     # always one of Lockout's six hills; logs/tmp/h2_hill_index.py). Before: no hill, Team King played as Slayer
     KING_HILL = (0xE80500, 0x29C)
-    HILL_R = 3.0             # ponytail: Halo 2's hill boundary (its King Hill flags) not sized; Halo 3's measure
+    # Halo 2's hill: as big as its King Hill flags draw it (Lockout 1.7-2.7 u), at least this. The floor was 3 u (Halo 3's
+    # measure): on Lockout's 2.2 u hill 0 the bots held it from outside it, and a 3 u ring read the HUD's 0:37 as 0:22 held
+    # (live Team King Nov 14, trace_h2_lockout_20261114-115624: its own 2.2 u, about 0:38). (upstream 0.3.0, build
+    # 20261114-1215; Halo 3, ODST and Reach keep their own HILL_R)
+    HILL_R = 1.5
 
     def set_map(s, objs):
         """Each hill as its flags draw it (Halo 2: a hill's corners are several "King Hill <n>" flags): {n: (centre,
-        radius)}, the centre their middle, the radius the farthest corner's (HILL_R at least)."""
+        radius)}, the centre their middle, the radius the circle inside them (inscribed; HILL_R at least)."""
         pts = {}
         for f in objs.get("netgame_flags", []):
             if f["type"].startswith("King Hill") and f["type"].split()[-1].isdigit():
@@ -561,7 +578,7 @@ class LiveH2(Live):
         s._h2_hills = {}
         for k, ps in pts.items():
             c = tuple(sum(p[i] for p in ps) / len(ps) for i in range(3))
-            s._h2_hills[k] = (c, max([s.HILL_R] + [math.dist(c[:2], p[:2]) for p in ps]))
+            s._h2_hills[k] = (c, max(s.HILL_R, inscribed(c, ps)))   # (upstream 0.3.0, build 20261114-1215)
 
     def king_hill(s):
         """(centre, radius) of the active hill, or None (no King game: the number is off the map's hills)."""

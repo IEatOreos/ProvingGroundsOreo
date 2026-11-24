@@ -537,6 +537,10 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
             snap.ball, snap.ball_carrier = Vec(*b["pos"]), b["carrier"]
             for p in players:
                 p.has_flag = p.has_flag or p.id == b["carrier"]   # carries the objective: no shooting
+    if TALLIED and snap.mode in ("king", "oddball") and not (MATCH.get("v") or {}).get("score"):
+        snap.score = held_tally(snap, now)       # (not the kill tally set above: that is Slayer's; the limit is
+                                                 # seconds: CE's reader turns its minutes into them, Halo 2 stores them)
+                                                 # (upstream 0.3.0, build 20261114-1215; score_live stays the read's)
     return snap
 
 
@@ -648,6 +652,39 @@ HORN = {"down": False, "call": None}  # call: (vehicle, bot id or None, until)
 HORN_CONE, HORN_R, HORN_HOLD = 0.26, 40.0, 10.0
 RIDE_ONLY = None                     # test override (--ride-only): the empty vehicles bots may take, by kind
 TALLY = {0: 0, 1: 0}                 # deaths counted as the other team's points (no score reader)
+# (custom, Nov 24) the objective tallies below (held_tally, and CTF's captures) stand in only for the readers with no
+# team score of their own: Halo: CE and Halo 2 (Live, LiveH2; set in main). Halo 3, ODST, Reach, Halo 4 and H2A play
+# exactly as before, even on a tick whose score read is empty or dropped
+TALLIED = False
+HELD = {"t": None, "pts": {}}        # King / Oddball seconds per team where the score is not decoded (held_tally)
+HELD_DZ = 2.5                        # u up or down that still counts as in the hill (brain/sim_modes.py ZONE_DZ)
+
+
+def held_tally(snap, now):
+    """King and Oddball points where the reader has no team score (Halo: CE, Halo 2): seconds a team was alone in the
+    hill (its flat radius, HELD_DZ up or down: the sim's rule) or carried the ball. Before, the kill tally stood in and
+    was held against the variant's limit (CE Team King: 2), so both teams played "the enemy is about to win" all match
+    (live Hang 'Em High, Nov 14). {team: whole seconds}, every team on the field listed. (upstream 0.3.0, build
+    20261114-1215)
+    ponytail: team time, not the game's own count: Halo 2's HUD ran above it (Lockout Team King: 20-1 read 16-1, 25-19
+    read 14-15) and below the players' summed time (36-2, 42-33); right leader and size of a lead, so the posture holds.
+    Read Halo 2's team score from memory to replace it."""
+    dt = 0.0 if HELD["t"] is None else max(0.0, min(1.0, now - HELD["t"]))
+    HELD["t"] = now
+    pts = HELD["pts"]
+    for p in snap.players:
+        pts.setdefault(p.team, 0.0)
+    if snap.mode == "king" and snap.hill is not None:
+        teams = {p.team for p in snap.players if p.alive and (p.pos - snap.hill).flat() <= snap.hill_r
+                 and abs(p.pos.z - snap.hill.z) < HELD_DZ}
+        if len(teams) == 1:
+            k = teams.pop()
+            pts[k] += dt
+    elif snap.mode == "oddball" and snap.ball_carrier is not None:
+        c = snap.player(snap.ball_carrier)
+        if c is not None:
+            pts[c.team] = pts.get(c.team, 0.0) + dt
+    return {k: int(v) for k, v in pts.items()}
 
 
 def unit_zoom(live, index):
@@ -1077,13 +1114,14 @@ def main():
         brain.profiles.LOOSE_AIM = o.aim_loose == "on"
     global RIDE_ONLY
     RIDE_ONLY = set(o.ride_only.split(",")) if o.ride_only else None
-    global MAP, FIREFIGHT, TEAMS
+    global MAP, FIREFIGHT, TEAMS, TALLIED
     import brain.maps
     brain.maps.PVP = True                       # simulator-only jumps wait for a real landing (maps.usable_links)
     MAP = get_map(o.map)
     TEAMS = not o.ffa
     live, m = ({"h2": LiveH2, "h3": LiveH3, "reach": LiveReach, "odst": LiveODST, "h2a": lambda: LiveH4F("groundhog.dll"),
       "h4": LiveH4F}.get(o.game, Live))(), botctl.shm()
+    TALLIED = type(live) in (Live, LiveH2)      # (custom, Nov 24) CE and Halo 2: no team score read of their own
     FIREFIGHT = hasattr(live, "firefight") and live.firefight()
     startup_mark("game attached")
     T = None
