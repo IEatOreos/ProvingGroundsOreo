@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Reach Headhunter: bots bank only at the drop points the game has open; a failed skull read is kept 2 s, 2026-11-24
+
+Upstream 0.3.0's note #34, the rest (build 20261118-1525). The owner: "our brain kept; take only open_drops, skull_point and the 2 s keep". `skull_point` was committed earlier; this is `open_drops` and the 2 s keep, wired into our own Headhunter brain.
+
+- `brain/live.py LiveReach.open_drops` (his): the open drop points, read from the game type script's table (`MEGALO_OBJECTS`, +0x10 = 1 on an open drop point; his live Boardwalk: two open at a time, a new pair every 30 s). Halo 4 and H2A's reader (`LiveH4F`, which inherits Reach's) sets `open_drops = None`: Reach's script table is not read there.
+- `brain/modes.py`: read twice a second in Headhunter; a failed read keeps the last answer. Only reads within 1 u of one of the map's drop points count (other scripted objects can read 1 there). `snap.obj_zones` still lists every drop point, as before.
+- `brain/headhunter.py Skulls` (ours, Nov 12) takes them as its **preferred source**, our score inference the fallback:
+  - `bank_zone`: the nearest open drop point while the read works (so `director.hh_bankers` and the drop-point cover in `mode_slots` go there). No read: the seen-banking drop point, else the nearest not found dead, as before.
+  - A drop point the game reads closed banks nothing on a no-score guess (a score rise still banks: the score shows it).
+  - One it reads open is never judged "dead" by our 3 s no-score rule.
+- The 2 s keep (his, `brain/modes.py`): a failed skull read keeps the last list for 2 s. Before, an empty list read as every skull picked up at once, by whoever stood nearest. Past 2 s the list empties, and `Skulls.update` is told the read failed (`loose=None`): nobody is credited and the next read starts fresh.
+- Not taken (the owner): his `hh_track`, `hh_bank`, `assign_roles` and `mode_slots` Headhunter blocks. Our `director.hh_bankers`, hunters and drop-point cover are unchanged.
+- **Checks:** `tools/test_upstream_030_modes.py` +7:
+  - bankers go to the open drop point (none read: as before);
+  - a closed drop point banks nothing without a score;
+  - an open one is never judged dead, and the score's rise banks;
+  - a failed read credits nobody;
+  - the watch keeps the last skulls 2 s and credits no pickup after;
+  - the watch reads the open drop points (one off every drop point dropped);
+  - Halo 4 reads none.
+  - All OK; `tools/test_headhunter.py`, `test_upstream_030_brain.py` OK. **Untested in a live match** (Reach Headhunter).
+
 ### CTF: a bot pulling the enemy flag finishes the pull before a horn or a gun calls it, 2026-11-24
 
 Upstream 0.3.0's note #3b (build 20261112-1632). The owner: "take it (one extra condition in our horn and vehicle-order code)". #3a (his 25% defence split) and #3c (carrier fixes after boarding) were answered skip and are not taken.

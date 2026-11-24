@@ -327,5 +327,96 @@ class PullFirst(unittest.TestCase):
             director.PULL_FIRST = old
 
 
+class HeadhunterOpenDrops(unittest.TestCase):
+    """#34, the rest (build 20261118-1525): the game's read of the open drop points (LiveReach.open_drops) comes first
+    in our Headhunter brain (headhunter.Skulls; our score inference the fallback), and a failed skull read keeps the
+    last list 2 s, then credits nobody with a pickup."""
+
+    def setUp(self):
+        from brain import headhunter as HH
+        from test_headhunter import ZONES, pl, snap
+        self.HH, self.ZONES, self.pl, self.snap = HH, ZONES, pl, snap
+
+    def test_bankers_go_to_the_open_drop_point(self):
+        h = self.HH.Skulls()
+        h.update(0.0, self.snap(0.0, [self.pl(1, 0, Vec(10, 5, 0))]), self.ZONES, [], open_zones={1})
+        self.assertEqual(h.bank_zone(Vec(1, 0, 0), 0.0), self.ZONES[1][0])     # though the other is nearer
+        h.update(0.5, self.snap(0.5, [self.pl(1, 0, Vec(10, 5, 0))]), self.ZONES, [], open_zones=None)
+        self.assertEqual(h.bank_zone(Vec(1, 0, 0), 0.5), self.ZONES[0][0])     # no read: as before
+
+    def test_a_closed_drop_point_banks_nothing_without_a_score(self):
+        h = self.HH.Skulls()
+        h.held = {1: 3}
+        me = [self.pl(1, 0, Vec(0.5, 0, 0))]
+        for t in (0.0, 1.0, 2.0, 3.5):
+            h.update(t, self.snap(t, me, score={}), self.ZONES, [], open_zones={1})
+        self.assertEqual(h.held[1], 3)
+        for t in (4.0, 5.0, 6.0, 7.5):                  # (no read: taken as banked, our rule as before)
+            h.update(t, self.snap(t, me, score={}), self.ZONES, [], open_zones=None)
+        self.assertEqual(h.held[1], 0)
+
+    def test_an_open_drop_point_is_never_judged_dead(self):
+        h = self.HH.Skulls()
+        h.held = {1: 3}
+        me = [self.pl(1, 0, Vec(0.5, 0, 0))]
+        for t in (0.0, 1.0, 2.0, 3.5):
+            h.update(t, self.snap(t, me), self.ZONES, [], open_zones={0})
+        self.assertEqual(h.dead, {})
+        self.assertEqual(h.held[1], 3)
+        h.update(4.0, self.snap(4.0, me, {0: 3, 1: 0}), self.ZONES, [], open_zones={0})   # the score shows the bank
+        self.assertEqual(h.held[1], 0)
+
+    def test_a_failed_read_credits_nobody(self):
+        h = self.HH.Skulls()
+        sk = Vec(20, 5, 0)
+        h.update(0.0, self.snap(0.0, [self.pl(1, 0, Vec(20.2, 5, 0))]), self.ZONES, [sk])
+        h.update(0.25, self.snap(0.25, [self.pl(1, 0, Vec(20.2, 5, 0))]), self.ZONES, None)
+        h.update(0.5, self.snap(0.5, [self.pl(1, 0, Vec(20.2, 5, 0))]), self.ZONES, [])
+        self.assertEqual(h.held, {})
+
+    def watch(self, reads, drops=None):
+        from brain import modes
+        from test_headhunter import A, B
+        w = modes.Watch("headhunter", {})
+        w.lay = {"drop_point": [(A, 2.0, 8), (B, 2.0, 8)]}
+
+        class Fake:
+            def __init__(s):
+                s.read = None
+
+            def loose_named(s, name):
+                if s.read is None:
+                    raise OSError("freed")
+                return [(q.x, q.y, q.z) for q in s.read]
+
+        live = Fake()
+        if drops is not None:
+            live.open_drops = lambda: [(q.x, q.y, q.z) for q in drops]
+        out = []
+        for t, loose, where in reads:
+            live.read = loose
+            sn = self.snap(t, [self.pl(1, 0, where)])
+            w.update(live, sn, t, raw=[{}])
+            out.append((sn, list(w.skulls)))
+        return w, out
+
+    def test_the_watch_keeps_the_last_skulls_2_s(self):
+        sk, by = Vec(20, 5, 0), Vec(20.2, 5, 0)
+        w, out = self.watch([(0.0, [sk], Vec(10, 5, 0)), (0.5, None, by), (1.5, None, by), (2.6, None, by),
+                             (3.0, None, by)])
+        self.assertEqual([len(s) for _, s in out], [1, 1, 1, 0, 0])
+        self.assertEqual(out[-1][0].skulls_held, {})       # the empty list past 2 s was not his pickup
+
+    def test_the_watch_reads_the_open_drop_points(self):
+        from test_headhunter import B
+        w, out = self.watch([(0.0, [], Vec(10, 5, 0))], drops=[Vec(40.3, 0.2, 0), Vec(90, 90, 0)])
+        self.assertEqual(w.hh.open, {1})                    # (the one off every drop point dropped)
+        self.assertEqual(w.hh.bank_zone(Vec(0, 0, 0), 0.0), B)
+
+    def test_halo_4_reads_no_drop_points(self):
+        self.assertIsNone(livemod.LiveH4F.open_drops)
+        self.assertTrue(callable(LiveReach.open_drops))
+
+
 if __name__ == "__main__":
     unittest.main()

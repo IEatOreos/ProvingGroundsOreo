@@ -13,6 +13,11 @@ Nothing in the game's memory is read for this; it is worked out from what the sn
   in some variants). It is skipped DEAD_FOR s. With no score to read for his team (Reach's free-for-all scores are
   not decoded: brain/live.py match_state reads the two team scores only) he is taken to have banked there.
 
+(custom, Nov 24) Where the game's own read of the open drop points works (upstream 0.3.0's LiveReach.open_drops,
+brain/modes.py), it comes first: the bankers go to the nearest open drop point, a drop point it reads closed banks
+nothing (with no score read) and one it reads open is never judged dead. No read: the score inference above, as before.
+A skull read that failed past its 2 s keep (loose None) credits nobody with a pickup.
+
 All counts are estimates; a skull picked up out of the reads' sight (between two reads 0.25 s apart, by two men on
 it at once) can be missed or given to the wrong man."""
 from .core import Vec, dist
@@ -41,6 +46,7 @@ class Skulls:
         s.inside = {}        # player id -> (zone index, since)
         s.zones = []         # [(Vec, radius)]
         s.banked = []        # [(t, player id, zone index, skulls)] for the trace and the tests
+        s.open = None        # (custom, Nov 24) zone indices the game reads open now (open_drops), None: not read
 
     def zone_of(s, q):
         for k, (z, r) in enumerate(s.zones):
@@ -48,15 +54,19 @@ class Skulls:
                 return k
         return None
 
-    def update(s, now, snap, zones, loose):
-        """zones: the drop points [(Vec, radius)]; loose: the skulls lying loose now [Vec]."""
+    def update(s, now, snap, zones, loose, open_zones=None):
+        """zones: the drop points [(Vec, radius)]; loose: the skulls lying loose now [Vec] (None: not read, nobody is
+        credited and the next read starts fresh); open_zones: the zone indices the game reads open (None: not read)."""
         s.zones = list(zones)
+        s.open = set(open_zones) if open_zones else None
         for p in snap.players:
             if not p.alive:
                 s.held.pop(p.id, None)
                 s.inside.pop(p.id, None)
         alive = [p for p in snap.players if p.alive]
-        if s.prev is not None:
+        if loose is None:                               # (custom, Nov 24) a failed skull read: nothing to compare
+            s.prev = None
+        elif s.prev is not None:
             for q in s.prev:
                 if any(dist(q, r) < GONE_R for r in loose):
                     continue
@@ -65,7 +75,8 @@ class Skulls:
                 if on:
                     pid = min(on)[1]
                     s.held[pid] = s.held.get(pid, 0) + 1
-        s.prev = list(loose)
+        if loose is not None:
+            s.prev = list(loose)
         score = dict(snap.score or {})
         rose = {t for t, v in score.items() if v > s.score.get(t, v)}
         for p in alive:
@@ -77,12 +88,15 @@ class Skulls:
             since = was[1] if was and was[0] == k else now
             s.inside[p.id] = (k, since)
             n = s.held.get(p.id, 0)
+            closed = s.open is not None and k not in s.open     # (custom, Nov 24) the game reads it closed
             if p.team in rose:
                 s.bank(now, p.id, k, n)
                 s.live = (k, now)
                 s.dead.pop(k, None)
-            elif n > 0 and now - since >= BANK_WAIT:
-                if p.team in score:
+            elif n > 0 and now - since >= BANK_WAIT and not closed:
+                if p.team in score and s.open is not None:
+                    pass                                # read open: never judged dead; the score shows the bank
+                elif p.team in score:
                     s.dead[k] = now + s.dead_for        # stood in it with skulls, no score: not live
                     if s.live and s.live[0] == k:
                         s.live = None
@@ -106,6 +120,8 @@ class Skulls:
         found dead: the nearest of all). None: no drop points."""
         if not s.zones:
             return None
+        if s.open:                                      # (custom, Nov 24) the game's own read first
+            return min((s.zones[k][0] for k in s.open if k < len(s.zones)), key=lambda z: dist(z, q))
         if s.live is not None and now - s.live[1] <= s.live_keep and s.dead.get(s.live[0], 0.0) <= now:
             return s.zones[s.live[0]][0]
         ok = [z for k, (z, r) in enumerate(s.zones) if s.dead.get(k, 0.0) <= now] or [z for z, r in s.zones]

@@ -495,9 +495,22 @@ class Watch:
             # Oddball share objects\weapons\multiplayer\skull\skull). Never filled before: no runner went for one live
             s.items_t = now
             try:
-                s.skulls = [Vec(*q) for q in live.loose_named("skull")]
+                s.skulls, s.skulls_t = [Vec(*q) for q in live.loose_named("skull")], now
             except Exception:
-                s.skulls = []
+                # a failed read keeps the last list for 2 s: an empty one reads as every skull taken at once, by
+                # whoever stands nearest (headhunter.Skulls) (upstream 0.3.0, build 20261118-1525); past that the
+                # list empties and Skulls is told it was not read (nothing credited)
+                if now - getattr(s, "skulls_t", -9.0) > 2.0:
+                    s.skulls = []
+        if s.mode == "headhunter" and raw is not None and getattr(live, "open_drops", None) is not None \
+                and now - getattr(s, "open_t", -9.0) > 0.5:
+            # (upstream 0.3.0, build 20261118-1525) the drop points open now (two at a time on Boardwalk, moving every
+            # 30 s), read twice a second; a failed read keeps the last answer (headhunter.Skulls takes them first)
+            s.open_t = now
+            try:
+                s.open = [Vec(*q) for q in live.open_drops()]
+            except Exception:
+                pass
         if s.mode == "headhunter":
             snap.obj_items = [dict(pos=q, carrier=None, kind="skull", team=8) for q in getattr(s, "skulls", [])]
         if s.mode == "infection" and raw is not None:
@@ -545,7 +558,15 @@ class Watch:
                 # (custom, Nov 12) who carries how many skulls, and which drop point banks (brain/headhunter.py)
                 from .headhunter import Skulls
                 s.hh = getattr(s, "hh", None) or Skulls(getattr(s, "hh_move", None))   # (hh_move: live_bots)
-                s.hh.update(now, snap, [(pos, r) for pos, r, _ in out], list(getattr(s, "skulls", [])))
+                # (custom, Nov 24) the drop points the game reads open (upstream 0.3.0's open_drops: those within 1 u
+                # of a drop point; none read: None, our score inference alone), and a skull read failed past its 2 s
+                # keep: None (nothing credited as picked up)
+                opened = getattr(s, "open", None)
+                open_k = {k for k, (pos, r, _) in enumerate(out) if any(dist(pos, q) < 1.0 for q in opened)} \
+                    if opened else None
+                lost = raw is not None and now - getattr(s, "skulls_t", now) > 2.0
+                s.hh.update(now, snap, [(pos, r) for pos, r, _ in out],
+                            None if lost else list(getattr(s, "skulls", [])), open_zones=open_k or None)
                 snap.skulls_held, snap.hh = dict(s.hh.held), s.hh
         if s.mode in ("assault", "stockpile"):
             stand_kind, goal_kind = ("bomb", "bomb_goal") if s.mode == "assault" else ("stockpile_flag", "stockpile_goal")

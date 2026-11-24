@@ -1661,6 +1661,25 @@ class LiveReach(LiveH3):
     # 1, 2, 7 a minute apart, and blue scored 3 while standing on hill 1 as it named hill 1)
     REACH_HILL = 0x253C8
     HILL_R = 3.0               # ponytail: the hill's boundary (a Forge shape) not decoded; players within 4 u scored
+    MEGALO_OBJECTS = 0x4F0     # TLS slot: the game type script's variables per object, 0x94 an entry
+
+    def open_drops(s):
+        """Headhunter: where the open drop points are, [(x, y, z)]. A scripted object's entry in megalo_objects holds
+        its handle at +0x38 and the script's first number for it at +0x10: 1 on a drop point while it is open.
+        OBSERVED live Nov 17 (Boardwalk, built-in Headhunter, 9 drop points, sampled twice a second): two entries at
+        1 at a time, a new pair every 30 s (drop points 7 and 3, then 4 and 2, then 7 and 1, then 5 and 3). Other
+        scripted objects may read 1 there for their own reasons: the caller keeps the ones on a drop point.
+        (upstream 0.3.0, build 20261118-1525; brain/headhunter.py Skulls takes them first)"""
+        base, mx, size = s._array(s.MEGALO_OBJECTS)
+        b = s.g.read(base, mx * size)
+        out = []
+        for i in range(mx):
+            if not struct.unpack_from("<H", b, i * size)[0] or struct.unpack_from("<h", b, i * size + 0x10)[0] != 1:
+                continue
+            o = s.object(struct.unpack_from("<I", b, i * size + 0x38)[0])
+            if o:
+                out.append(struct.unpack("<3f", s.g.read(o + s.POS_AT, 12)))
+        return out
 
     def variant_name(s):
         return s.g.read(s._vbase() + s.VARIANT_NAME, 64).decode("utf-16-le", "replace").partition(chr(0))[0]
@@ -2039,6 +2058,7 @@ class LiveH4F(LiveReach):
     PATHS = {"halo4.dll": 0x2A30288, "groundhog.dll": 0x1457018}     # the running map's path ('levels\multi\<map>\<map>')
     TRACKER_AT = 0x758         # (LiveH3.tracker; both games: Unchanged 3, Off 1 seen live)
     GRENADE_READ = False       # (LiveReach.grenades: Reach's object and tag layout only, not checked in these games)
+    open_drops = None          # (custom, Nov 24) LiveReach.open_drops: Reach's script table only, not read in these games
     # (Live.vehicle_dead / vehicle_left: halo4.dll 0x180683124 and groundhog.dll 0x180683e80, object_get_health)
     DEAD_AT, HEALTH_BLOCK = 0x16C, 0x1D0
     # (custom, Nov 8) a Halo 4 gun's reserve +0x5AA and loaded rounds +0x5AE (int16), found live (Blood Crash, every
