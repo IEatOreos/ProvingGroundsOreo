@@ -1409,6 +1409,11 @@ def main():
     # (custom, Nov 22) the people's LiDAR merge and write in a helper process: on this process's thread its 420-445 ms
     # once a minute (Asylum's 3 MB lidar.json) froze the bots' thinking (tools/lidar_saver.py)
     lidar_saver = Saver()
+    try:                                         # (custom, Nov 24) a match runs: user/match.running (tools/match_lock.py),
+        import match_lock                        # so a LiDAR import waits for its end (tools/lidar_share.py)
+        match_lock.hold(MAP["name"])
+    except Exception as e:
+        print("match lock not written:", e, flush=True)
 
     def save_lidar():
         """Both LiDAR saves, each on its own: one failing is logged and the other still saves (a failing people's save
@@ -2048,6 +2053,11 @@ def main():
         save_learned(MAP)
         save_lidar()
         lidar_saver.close()                      # (custom, Nov 22: its last save written, the helper exits)
+        try:                                     # (custom, Nov 24) the LiDAR saves are done: imports may run again
+            import match_lock
+            match_lock.release()
+        except Exception as e:
+            print("match lock not removed:", e, flush=True)
         try:                                     # nodrive cells people drove over this match come out (tools/wedges.py)
             import wedges
             n = wedges.prune(MAP.get("base") or MAP["name"].partition("/")[0])

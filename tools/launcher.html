@@ -393,6 +393,22 @@
         <span id="mcc-state" class="msg" aria-live="polite"></span>
       </div>
     </details>
+
+    <!-- (upstream 0.3.0, build 20261112-1342) LiDAR scans: (custom, Nov 24) a shared zip picked by hand only, never a
+         download of the author's scans -->
+    <details class="card" id="scans-card">
+      <summary><h2 id="scans-h">LiDAR scans</h2><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg>
+        <span class="path">Add a scan someone shared</span></summary>
+      <div class="folder-body">
+        <p class="help">Bots play a map better the more of it is scanned. An imported scan adds to your own; nothing is
+          replaced, and your scan before it is kept beside it. Not while a match is running.</p>
+        <div class="actions">
+          <button id="scan-file"><svg class="i sm" aria-hidden="true"><use href="#i-folder"/></svg>Import a shared zip ...</button>
+          <input id="scan-pick" type="file" accept=".zip" hidden>
+        </div>
+        <span id="scan-state" class="msg" aria-live="polite"></span>
+      </div>
+    </details>
   </div>
 
   <section class="card wide tools-sec" aria-labelledby="tools-h">
@@ -587,6 +603,24 @@ $("mcc-path").setAttribute("aria-describedby", "mcc-state");
 $("mcc-browse").onclick = () => chooseMcc({browse: true});
 $("mcc-auto").onclick = () => chooseMcc({auto: true});
 $("mcc-form").onsubmit = e => { e.preventDefault(); chooseMcc({path: $("mcc-path").value}); };
+
+// (upstream 0.3.0) LiDAR scans: a zip a player shared, added to this PC's scans. (custom, Nov 24) by hand only: no
+// download of the author's scans
+$("scan-file").onclick = () => $("scan-pick").click();
+$("scan-pick").onchange = async () => {
+  const f = $("scan-pick").files[0], b = $("scan-file");
+  $("scan-pick").value = "";
+  if (!f) return;
+  b.disabled = true; b.setAttribute("aria-busy", "true");
+  setText("scan-state", `Adding ${f.name} ...`, "dim");
+  try {
+    const r = await fetch("/lidar/import", {method: "POST", headers: {"X-Launcher": "1", "Content-Type": "application/zip"}, body: f})
+      .then(x => x.json()).catch(() => ({ok: false, message: "No answer from the launcher. Close it and open it again."}));
+    setText("scan-state", r.message, r.ok ? "ok" : "bad");
+  } catch (e) { setText("scan-state", "No answer from the launcher. Close it and open it again.", "bad"); }
+  b.disabled = false; b.setAttribute("aria-busy", "false");
+  refresh();
+};
 
 $("play").onclick = async () => {
   if (state && state.wine) { location.href = "steam://rungameid/976730"; setText("play-state", "Steam starts MCC: choose the anti-cheat off option. The bots load as it starts.", "dim"); return; }

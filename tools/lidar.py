@@ -654,7 +654,7 @@ class Recorder:
             # (a copy of each weapon record: dict() of the list failed every save on a map with weapons, since 7f95635)
             # (not the map's rides, tools/lidar_rides.py, rebuilt each run; not crouch-jumps bots found: the fighting
             # brain does not crouch in the air yet, and a plain try of one falls short)
-            keep = [l for l in s.links if l.get("found_by") != "map" and not (l.get("crouch") and not l.get("human"))]
+            keep = [l for l in s.links if saved_link(l)]
             links, weapons, cover = json.loads(json.dumps(keep)), [dict(w) for w in s.weapons], sorted(s.cover_spots.values())
             s.count_run, s.saved_deaths, s.jumps = False, len(s.deaths), []
         has_obj = getattr(s, "objectives", None) is not None    # (its places; none: the file's own are kept)
@@ -665,6 +665,13 @@ class Recorder:
                     has_objectives=has_obj, objectives=s.objectives.saved() if has_obj else None,
                     coverage=s.director.report() if getattr(s, "director", None) is not None and s.director.history
                     else None)
+
+
+def saved_link(l):
+    """(custom, Nov 24: factored out of Recorder.save_payload, the same rule) Whether a jump link goes into lidar.json:
+    never the map's rides (found_by "map", tools/lidar_rides.py, rebuilt each run), never a crouch-jump no person made
+    (the bots': the fighting brain does not crouch in the air yet). tools/lidar_share.py filters imports with it."""
+    return l.get("found_by") != "map" and not (l.get("crouch") and not l.get("human"))
 
 
 _SCAN_INFO = {}

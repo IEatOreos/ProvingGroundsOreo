@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Import a LiDAR scan someone shared, by hand from a zip you pick, never during a match, 2026-11-24
+
+Upstream 0.3.0's note #63 (build 20261112-1342). The owner: "by hand from a zip the owner picks, no fetch; bots' crouch-jumps and found_by "map" links filtered like our saver; blocked while a match runs (this extends #1's lidar_share.py)".
+
+- `tools/lidar_share.py` (his `_key`, `_join`, `merge`, `_ok_name`, `_import_one`, `import_any`, `import_zip`, `summary`, and `import <file.zip>`): a shared zip (one map's, or a game's bundle) is merged into `maps/<map>/lidar.json`, never replacing it. Floor counts are added, deaths and jump heights appended to the save's own limits (3000 / 2000), and links, teleporters, cover, weapons, objectives and holds joined with exact duplicates dropped. The scan before is kept as `lidar.json.before-import-<date>`, and `lidar_imported.json` remembers each imported scan, so a second import adds nothing. A map this version lacks, or a name with a folder in it, is skipped.
+- **Ours on his:**
+  - Their links are filtered by our own save's rule: never the map's rides (`found_by` "map") and never a crouch-jump no person made. The rule is now one function, `tools/lidar.py saved_link`, used by `Recorder.save_payload` (unchanged behaviour) and by the import.
+  - An import is refused while a match runs, before anything is read or written.
+  - A scan member over 64 MB is skipped, and the seen-list is written atomically.
+- **The match signal (new):** nothing in the mod knew reliably that a match was running (MCC open is not a match). `tools/match_lock.py` (new): `tools/live_bots.py` writes `user/match.running` (its process id and map) as the match's LiDAR saver starts, and removes it after the last LiDAR save at the match's end (and at exit). A file left by a crash counts only while that process still runs (checked with OpenProcess, never a kill).
+- **Not taken:** his `fetch`, `fetch_all`, `summary_all`, `BUNDLE_URLS` and `urllib`. Nothing in `lidar_share.py` or the launcher downloads anything.
+- **In-repo launcher:**
+  - `tools/launcher.py`: his `lidar_import` and `LIDAR_ZIP_MAX`, with our match check first. The `/lidar/import` POST route sits behind our `X-Launcher` check; a body over 64 MB is never read. No `/lidar/fetch`.
+  - `tools/launcher.html`: a "LiDAR scans" card under Game folder with only **Import a shared zip ...** (his game select, author Import button and the Simulator tile's download are left out).
+  - Kept of ours: the Project Noble text, our What's-new dialog and our updater.
+- **Checks:**
+  - `tools/test_lidar_share.py` +9 OK: floor counts added, duplicate, ride and bot crouch-jump links dropped, a person's crouch-jump kept; another grid refused; an import keeps its backup and a second one changes nothing; a missing map or a folder name is skipped; a bundle imports; refused while a match runs, by the tool and by the launcher, then allowed once it ends; a crashed match's lock does not block; a bad zip is refused; no download code.
+  - `tools/test_lidar_saver.py` OK. `lidar_share.py`, `lidar.py`, `match_lock.py`, `launcher.py` and `live_bots.py` import.
+  - **Untested in a live match** (the lock written and removed by a real match) and in the launcher window (the card was not clicked).
+
 ### Export a LiDAR scan to share it, checked by our installer's privacy scan, 2026-11-24
 
 Upstream 0.3.0's note #1 (build 20261112-1342). The owner: "export, bundle and list only, plus our installer's privacy scan".

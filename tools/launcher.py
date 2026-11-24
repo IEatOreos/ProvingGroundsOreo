@@ -63,6 +63,29 @@ def lidar_counts():
     return sum(os.path.exists(os.path.join(maps, d, "lidar.json")) for d in known), len(known)
 
 
+# (upstream 0.3.0, build 20261112-1342) LiDAR scans: a zip the player chose, its bytes posted by the page. (custom,
+# Nov 24) By hand only: no download of the author's scans (his /lidar/fetch is not here), and none while a match runs
+LIDAR_ZIP_MAX = 64 << 20      # bytes: a shared LiDAR zip larger than this is refused (a game's whole bundle is ~3 MB)
+
+
+def lidar_import(data):
+    """Import LiDAR scans: a zip the player chose (a map's or a game's bundle). {ok, message}."""
+    import lidar_share
+    import zipfile
+    if lidar_share.match_running():
+        return {"ok": False, "message": "A match is running. Import the scan after it ends."}
+    if not data:
+        return {"ok": False, "message": "That file is empty or too big."}
+    path = os.path.join(ROOT, "user", "downloads", "lidar-import.zip")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+    try:
+        return {"ok": True, "message": lidar_share.summary(lidar_share.import_any(path)) + "."}
+    except (SystemExit, zipfile.BadZipFile, ValueError, KeyError, TypeError, AttributeError) as e:
+        return {"ok": False, "message": f"Not a LiDAR scan zip ({e})." if str(e) else "Not a LiDAR scan zip."}
+
+
 def uninstaller():
     """The installer's uninstaller (unins000.exe in the install folder), or None in a copy not installed with it."""
     found = sorted(glob.glob(os.path.join(ROOT, "unins*.exe")))
@@ -255,6 +278,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("X-Launcher") != "1":    # only the launcher's own page (a plain form post cannot set it)
             return self.send({"error": "refused"}, code=403)
         n = int(self.headers.get("Content-Length") or 0)
+        if self.path == "/lidar/import":             # (upstream 0.3.0) a shared LiDAR zip the player chose: its bytes
+            if not 0 < n <= LIDAR_ZIP_MAX:           # (custom: too big is never read)
+                return self.send(lidar_import(None))
+            return self.send(lidar_import(self.rfile.read(n)))
         body = json.loads(self.rfile.read(n) or b"{}") if n else {}
         if self.path == "/ping":
             last_ping[0] = time.time()
