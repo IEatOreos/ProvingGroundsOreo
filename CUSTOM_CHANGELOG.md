@@ -400,6 +400,89 @@ The owner: "Do them all and the wraith last. They get called to the wraith just 
   - `unittest discover` over `tools` is OK (1406 tests), and so is the `live_bots` import.
   - **Untested in a match.**
 
+### Firefight starts in MCC's own Firefight lobby (first step, needs a live run), 2026-11-23
+
+The owner: "Start Firefight". Asked, he chose: GAME OPTIONS view only, the route to MCC's Firefight lobby recorded later, and today's work left uncommitted for now. There are no bots in Firefight.
+
+- **What MCC does (static read with Ghidra, Oct 31 2026 build):**
+  - The registry's FirefightCustomGame screen (create `FUN_14031F4D8`, vtable `0x1432BE518`) is the custom game lobby's own class: the same constructor, the same Update (`FUN_1404DECDC`, already hooked), and the same fields. The game type is at `+0x16D8`, with `+0x16E0` its entry, and the map's 16-byte content id is at `+0x16E8`. The difficulty is its own byte at `+0x1840`, handed to the lobby's settings by its commit (`FUN_1404D01D8`).
+  - Its init loads the variant library in Firefight's mode (`FUN_14043CDB8(lib, title, title, 4)`), so while it is open the library's Reach lists are Firefight's missions and game types.
+  - Its START tile (`FUN_1404CF934`, step 5) runs, in order: MCC's party-size check (`FUN_1404D070C`), the host's `+0x48` set to the game type's category, the apply step (`FUN_1404D4C8C`), then its Start (`FUN_1404D03A8`).
+- **botcore (`native/pg_lobby.cpp`):**
+  - On the same Update hook, for Halo: Reach (title index 6) only: the Firefight lists are copied every 2 s while the lobby is open, along with MCC's own picks and difficulty. The first copy is written to `native\bin\firefight_library.txt`, as the evidence.
+  - START sets the mission, game type and difficulty in, then runs the START tile's steps. MCC's party-size message, if any, stays on screen and is reported.
+  - The new byte heads are checked at start-up; with another MCC build it says "firefight: ... off".
+- **Project Noble's FIREFIGHT lobby (`native/proving_grounds_reach.inc` `rm_firefight`, `rm_ff_list`, `rm_ff_options`; pages `RP_FF_TYPE`, `RP_FF_MAP`, `RP_FF_OPTIONS`):**
+  - GAME TYPE and MISSION are MCC's own Firefight lists, the pick marked; the lists are kept once read.
+  - DIFFICULTY is Easy, Normal, Heroic or Legendary (Left / Right, or A to go round).
+  - GAME OPTIONS is view only, as the owner chose; the rules are changed in MCC's own lobby.
+  - START GAME presses MCC's own Start, and Project Noble closes.
+  - The picks are saved in `reach_menus.ini [firefight]`. With none saved, MCC's own are used.
+  - Until MCC's Reach Firefight lobby has been open, it says so: the lists are read there. Walking MCC there waits for the owner's recorded route.
+- **Preview:** case 52 (`reach_firefight_missions`); case 42 with `PG_LOBBY=1` shows the lobby; `PG_FF_LIVE=1` gives made-up lists, as if read.
+- **Checks:** `build.bat pg61` builds `botcore_pg61.dll`, and the preview builds and renders. The difficulty numbers 0-3 for Easy to Legendary are assumed (MCC's default 1). **Untested in game:** all of it. `firefight_library.txt` and the "firefight:" lines in `botcore_pg61.log` will show how far it got.
+
+### Reach Banshee pilot: it can see the men it dives on, and its trigger is the bomb only, 2026-11-23
+
+The owner, live Spire (bug report 20261123-173345, "Bot wont shoot in banshee"): "Had a ton of great angles and good shot opprutunities. Its flying well, its just not shooting", then "I dont care about the plasma cannons. I want them to only use the bomb".
+
+- Cause: `Terrain._ray` stops a line that crosses the shooter's own floor within `FEET_SLAB` of it. A Banshee has no floor under it, so every line more than about 45 degrees down read blocked. In that match's recording (`logs/bug_reports/reach_35_island_20261123-172845`, the Demon pilot's 310 s first ride) 8 of 1318 enemy positions 45-90 degrees under it within 28 u read in sight; 58% of its rows were "out of sight, the run goes on", its presses went to "no clear line: hold fire", and it let go about 5 bombs.
+- `brain/terrain.py`: the shooter's-floor rule is skipped when the shooter is more than `NO_FLOOR_H` = 1.5 u over the floor under it (`height_over`). The target's-floor rule is unchanged, so a man on the ground still has no line to an aircraft steeply over him (the earlier two-way fix lost kills in the sim and was reverted).
+- `brain/bot.py` (`think`): a Reach Banshee pilot's trigger goes out only as its bomb's shot (`fuel_rod`, the bomb selected); its cannons never fire.
+- Validation: the same recording replayed against the map's check: 1020 of those 1318 positions now read in sight and with a round's line (15-45 degrees unchanged, 186 of 340). Full suite 1395 OK; `brain.bot` and `brain.terrain` import. `tools/banshee_sim.py`, Boneyard seeds 1-5 (with the uncommitted sticky target too): 6, 13, 4, 6, 7 Banshee kills, mean 7.2, no gain there over the last batch's 7.3; "no clear line" 0-6 rows a game, 10-25 bomb shots a game. **Untested in game.**
+
+### Theater plays your films through MCC's own Theater, and walks MCC there, 2026-11-23
+
+The owner: "Start making all of the other menus that arent Matchmaking work accordingly". Asked, he chose the full way (like Custom Game: the pick set in MCC's own screen, started by MCC's own start), Theater first, and no bots in these modes for now.
+
+- **What MCC does (static read with Ghidra of the Oct 31 2026 MCC-Win64-Shipping.exe; addresses in `native/theater.cpp`'s head):**
+  - MCC's screen registry names "Theatre". Its screen (vtable `0x143296FB0`) has its film list at `+0x920`, each film's 16-byte content id at the item's `+0x2A0`, and the chosen film's id at `+0xFF4`.
+  - `FUN_14035B3EC(screen)` is its START FILM. It finds the film in the content library `[0x1440016C0]` (kind 2, films), sets the launch up for theater and asks MCC's UI to launch.
+- **botcore (`native/theater.cpp`, new; `theater_hooks` from `session_watch.cpp`; in `build.bat`):**
+  - It hooks the Theatre screen's Update (`FUN_14035B0E0`, MCC's UI thread). While MCC's Theater is open, it reads MCC's film list when the screen opens or the list changes.
+  - Each film is matched to its file on disk by the file's name or its header's unique id (`_blf` chdr, 8 bytes at `0x60`) somewhere in MCC's library entry. Which of the two works is not known yet. The first reading is written to `native\bin\theater_library.txt` with three entries dumped, as the evidence for the next step.
+  - START FILM puts the film's id into the screen and calls MCC's own START FILM, unless MCC is already counting down. The screen closing within 10 s counts as started.
+  - The byte heads of every function it calls are checked first. With any other MCC build it stays off and says so.
+- **Project Noble's THEATER lobby (`native/proving_grounds_reach.inc` `rm_theater`, `rm_film`; page `RP_FILM`):**
+  - **CHOOSE FILM** lists this PC's films (Temporary History and Local Files, as the File Browser reads them), newest first. Each row shows its map and its time; the focused film's game, map, date and recorder are at the right. MCC's map keys show as map names.
+  - **START FILM** plays the chosen film in MCC's Theater. Project Noble closes once MCC leaves its Theater.
+  - Until MCC's Theater is open it says "Open Halo: Reach's Theater in MCC first: the film plays there". Walking MCC there by itself waits for the route to Reach's Theater from MCC's main menu.
+  - The film files' header ids are now kept by the File Browser's scan (`fb_file.uid`).
+- **Preview:** case 50 (`reach_choose_film`); case 42 with `PG_LOBBY=3` shows the lobby; `PG_TH_LIVE=1` shows it as if MCC's Theater were open.
+- **First live run (botcore_pg58, the owner, 3:43 PM):** it worked. MCC's 12 films were read, START FILM went to MCC's own, MCC's Theater closed and loaded the chosen film (`asq_mglo-6_45_launch_9AD58628_6B0494FA.mov` opened, the launcher's `boot.log`), and Project Noble closed.
+  - `theater_library.txt` showed 0 matches only because MCC's Theater was read before Project Noble's lobby handed over the files. The next reading matched, since START FILM needs a match.
+  - MCC's library entry holds the film's whole path (a text record at `+0x1F8`), so the file-name match is the one that works. The file is now written on the first reading that has the files.
+- **MCC walked to its Theater (the owner recorded the route; botcore_pg59):**
+  - From MCC's main menu it is Down, Down, A, Down, A, then `Theatre.gfx` opens (`boot.log`).
+  - `native/menu_route.cpp` now has a second route, `MR_THEATER`: out with B and to the top with Up as before, then those five presses 1.5 s apart, until `Theatre.gfx` opens and MCC's Theatre screen runs.
+  - `overlay.cpp` starts it once each time Theater's pages are opened (`pg_wants_theater`) while MCC's Theater is not open. Project Noble stays drawn while MCC leaves Reach's lobby under it.
+  - The custom game lobby's screens see a Theater route only while it runs (`lobby_route`), so a stopped one never blocks a search.
+  - The lobby says "Opening Halo: Reach's Theater..." and then "Reading MCC's Theater...". START FILM pressed meanwhile goes once the film is listed.
+- **Checks:** `build.bat pg59` builds `botcore_pg59.dll`, and the preview builds.
+- **Live (pg59, the owner, 3:50 PM):** the walk worked, with all 12 films matched and the film loaded, but the owner said "it takes quite a while". In `boot.log`, `Theatre.gfx` opened about 20 s after the Theater lobby: 13 s of B ×8 (0.9 s apart) and Up ×10 (0.5 s apart), then 6 s of his five presses at 1.5 s. MCC itself then takes about 5 s from START FILM to its loading screen, as it did when he pressed it by hand.
+- **Faster (botcore_pg60, `menu_route.cpp` `to_top`):**
+  - The way out and up is now B ×7 at 0.6 s and Up ×8 at 0.35 s (7.7 s).
+  - It is skipped entirely when the launcher opened Project Noble at MCC's main menu and Project Noble has been up since, with MCC's pad held back and no match (`overlay.cpp` `g_mcc_untouched`). MCC is then still on its top item.
+  - The Theater's presses are 0.8 s apart, 1.5 s after its A (his own pace was about 0.7 s a move). Custom Games' recorded waits are unchanged.
+  - The launcher (`src/route.cpp`) now sends its ProjectNoble.Open message before its LB + RB press, so botcore knows the launcher opened it. The press had been arriving first. The launcher is rebuilt (`build.bat` OK, after MCC closed).
+- **Untested in game:** the shorter B and Up from deep menus, and the skip.
+
+### Prior Game Stats from matchmaking at any time: searching, the vote, the game starting, 2026-11-23
+
+The owner: "allow the last games Carnage report be able to be shown from the matchmaking screen at all times. Even when searching. in a new lobby, anytime until a new game is printed". Asked, he chose: the report closes by itself when the vote starts, and it opens over the vote and the game starting too.
+
+- **Where (`native/proving_grounds.cpp`):**
+  - The search (the first one, and the next game's lobby after a match), the vote and the result (the game starting) now offer **Prior Game Stats** in their footers: View on the pad, G on the keys, or a click. Before, it was on the matchmaking page only.
+  - It shows the last game's carnage report (`last_carnage.txt`), as before, so a new match's report replaces it.
+- **Over the stage, which goes on under it (`carnage_over_open`):**
+  - The stage's own screen still runs every frame (the search filling, the vote's timer and the bots' votes, the launch), drawn into an ImGui channel that is dropped, and taking no input (`g_inert`; `prompt` takes no click then either). The report is drawn over it, with what is going on at the top right (SEARCHING FOR PLAYERS..., VOTING IN PROGRESS, GAME STARTING).
+  - Its Back (B, Esc) or Exit returns to the screen with its focus.
+  - It closes by itself when the stage moves on: the vote starting, the vote's winner, or the match. The result going on to the game starting keeps it open.
+  - The roster (RB) is off while it is up, since RB turns the report's tabs.
+  - The game launched under it keeps its own map and gametype for its report (`g_played_under`).
+- **Preview:** case 49 (`prior_stats_over_search`).
+- **Checks:** `build.bat pg57` builds `botcore_pg57.dll` (and pg58 with Theater); the preview renders the search's and the vote's footers (keys and pad) and the report over the search. **Untested in game.**
+
 ### Reach One Bomb / Neutral Bomb: the carrier drops the bomb to fight when shot, 2026-11-23
 
 The owner: "Make it to where they drop it when theyre shot to fight back? And keep the within 4u rule".
@@ -611,6 +694,14 @@ The owner: "I want you to continuously run simulations until 4 nobles can beat 4
 - **Correction:** 25ebeed's sim line had the teams the wrong way round (fixed below).
 - **Validation:** new `tools/test_real_sim.py` (8), `tools/test_noble_opener.py` (5); full suite 1376 OK. **The opener untested in game.**
 
+### A mode can be kept off a single map (removepair=), 2026-11-23
+
+The owner: "Remove multi flag, multi bomb and neutral bomb from sword base, damnation, hang em high, boardwalk and prisoner".
+
+- New proving_grounds.ini line `<playlist>.removepair=MAP|GAMETYPE`: that gametype is never drawn on that map, and both stay everywhere else. `native/proving_grounds.cpp` (`playlist.skip`, `pair_skipped`, checked in `draw_candidates` by the map's shown name) and `tools/bot_sim.py` (`read_ini`, `draw_options`) read it the same way, so simulated matches keep the same rule.
+- The owner's ini now has 15 arena lines: TU MULTI FLAG CTF, TU MULTI BOMB ASSAULT and TU NEUTRAL BOMB ASSAULT (4-10) off Sword Base, Damnation, Hang 'Em High, Boardwalk and Prisoner. Arena has 120 of its 135 pairs left.
+- Validation: built as `botcore_pg43.dll`. 20,000 simulated arena ballots offered 120 distinct pairs and none of the 15 removed. Full `tools/test_*.py` suite OK. **In game from MCC's next start; not yet seen live.**
+
 ### Bot simulation: no more one-bot 100-kill games (hunting capped, gaps 3x), 2026-11-23
 
 The owner: "On the site cloudybarracude going 91/4 in a 100 kill game isnt realistic. 4 of the top 5 games all have over 100 kills. The sim went a little to crazy on obj modes." Asked to choose between three settings, he chose "Balanced".
@@ -705,15 +796,6 @@ The owner: "In the simulations make the nobles 5-10% better than demons" (asked:
 - Measured on his model (no match stored), 4v4 Multi Flag: even teams (Legendary/Tactician/Mythic, Demon against Demon) about 1 capture a game, mostly 0-0, 1-0, 1-1 and 2-0, 11.6-11.9 min, 159-164 kills; Mythic against Legendary 0.8; Demon against Heroic mostly 3-0 in 7.6 min (101 kills). 8v8 even: 12 min, 204 kills, 0.5 captures (his real 8v8 Multi Flag: 1-0, 225 kills).
 - Validation: `test_bot_sim` 19 OK (new `test_multi_flag_as_the_owners_games`; Noble checks in `test_noble_plays_like_demon_and_btb_slayer_to_100`). Full suite 1361 OK. `bot_sim --verify 40`: 20 of the last 40 stored matches play again the same, 7 with the committed engine (the rest differ by map and kill-spot files changed since; none by this change). **Not yet seen after a real match.**
 
-### Service Record and bot simulation: Noble as Demon; Big Team Battle Slayer to 100, 2026-11-23
-
-The owner: "The website didnt change my demons I saved in the txt to nobles?", then "Yes like demon, and also the site simulates BTB (8v8) slayer games to a score of 50 but its too 100".
-
-- Noble (the BOTS panel's tenth difficulty, Nov 20) was in the game only. Its profile page already read "Noble", but the simulation did not know the key: the 12 bots saved `noble` in `bot_pool_saved.ini` were dealt a random Mixed difficulty in simulated games (MS3S played as Heroic, Banevent as Easy, Overshield as Normal), and the site's difficulty picker had no Noble and refused to save it.
-- `tools/sim_engine.py`: `noble` in `TIERS`, `TIER_NAME`, `TOP_TIERS`; `TIER_SKILL` 1.1 and `SWEAT` 0.85, Demon's (as `proving_grounds.cpp` `sweat_of` already had it). `tools/bot_sim.py`: `EVERY_ROUND` = Demon and Noble (one game to each of yours), `GRINDER_CHANCE` 75%, lobby difficulty 10 = Noble. `tools/service_record.py`: `TIER_KEYS`, `NO_WHEELMAN` (as `bots_panel.h` `hb_style_fits`), `LOBBY_DIFFICULTY[10]`. `app.js` `TIER_NAMES`: the picker lists Noble last, as the panel does. `test_noble_difficulty.py` `test_not_on_the_site` is now `test_on_the_site`.
-- `sim_engine.SCORE_RULES` `{("slayer", 8): 100}` and `limits_of`: an 8v8 Slayer gametype plays to 100 whatever the real matches showed. The real BTB Slayer games had all run to time, so the model had kept Slayer's default 50; the lookup also failed on case ("TU BTB Team Slayer" real, "TU BTB TEAM SLAYER" in the playlist), now without case. TU TEAM SLAYER DMR 8v8 was already 100; other gametypes and 4v4 are unchanged. Six sample BTB Slayer games on the owner's model: four reached 100 in 588-688 s, two hit the 720 s limit at 98-94 and 88-82.
-- Validation: `test_bot_sim` (new `test_noble_plays_like_demon_and_btb_slayer_to_100`) and `test_noble_difficulty` OK; full suite 1359, 2 failures in `test_layout_lifts` (Forge cage lifts, not touched here). `bot_sim`, `sim_engine`, `service_record`, `service_record_edit` import. Site rebuilt and its editor restarted: MS3S's picker lists Noble, selected. Earlier simulated games stay as they were played. **Not yet seen after a real match.**
-
 ### Recorded double jumps split into their hops; planting only on the goal's floor, 2026-11-23
 
 The owner's F9 on Powerhouse One Bomb (`reach_30_settlement_20261123-021733`, 190.8 s): "Bots cant get on roof to get bomb on powerhouse"; then "I thought the jump up to get the bomb was mapped, but they cant get it and then they get confused when planting because they try to go to the floor to plant below"; then "Every map".
@@ -729,6 +811,15 @@ The owner's F9 on Powerhouse One Bomb (`reach_30_settlement_20261123-021733`, 19
   - Powerhouse: 177 of 540 recordings split into 475 hops (126 had been in use as one jump, 49 dropped); usable links 478 → 818. The bomb climb becomes 39.42 → 40.05 (rise 0.63, 1.74 u) and 40.05 → 40.65 (rise 0.60, 1.25 u). The nav reaches the bomb on its roof and the plant goal on its roof from below with them.
   - Sword Base, Boneyard and Ivory Tower: nothing split.
 - Validation: `tools/test_split_hops.py` (new, 5: the roof climb is two hops; a plain jump stays one; not at its ends nor a crouch, route or ride; a launch stays whole; three hops in a row). `tools/test_bomb_plant.py` gains one test (not planting under a roof goal; planting on it). Full suite 1360 OK; `live_bots` imports. **Untested in a match.** The terrain cache rebuilds once (this changes `brain/maps.py`).
+
+### Service Record and bot simulation: Noble as Demon; Big Team Battle Slayer to 100, 2026-11-23
+
+The owner: "The website didnt change my demons I saved in the txt to nobles?", then "Yes like demon, and also the site simulates BTB (8v8) slayer games to a score of 50 but its too 100".
+
+- Noble (the BOTS panel's tenth difficulty, Nov 20) was in the game only. Its profile page already read "Noble", but the simulation did not know the key: the 12 bots saved `noble` in `bot_pool_saved.ini` were dealt a random Mixed difficulty in simulated games (MS3S played as Heroic, Banevent as Easy, Overshield as Normal), and the site's difficulty picker had no Noble and refused to save it.
+- `tools/sim_engine.py`: `noble` in `TIERS`, `TIER_NAME`, `TOP_TIERS`; `TIER_SKILL` 1.1 and `SWEAT` 0.85, Demon's (as `proving_grounds.cpp` `sweat_of` already had it). `tools/bot_sim.py`: `EVERY_ROUND` = Demon and Noble (one game to each of yours), `GRINDER_CHANCE` 75%, lobby difficulty 10 = Noble. `tools/service_record.py`: `TIER_KEYS`, `NO_WHEELMAN` (as `bots_panel.h` `hb_style_fits`), `LOBBY_DIFFICULTY[10]`. `app.js` `TIER_NAMES`: the picker lists Noble last, as the panel does. `test_noble_difficulty.py` `test_not_on_the_site` is now `test_on_the_site`.
+- `sim_engine.SCORE_RULES` `{("slayer", 8): 100}` and `limits_of`: an 8v8 Slayer gametype plays to 100 whatever the real matches showed. The real BTB Slayer games had all run to time, so the model had kept Slayer's default 50; the lookup also failed on case ("TU BTB Team Slayer" real, "TU BTB TEAM SLAYER" in the playlist), now without case. TU TEAM SLAYER DMR 8v8 was already 100; other gametypes and 4v4 are unchanged. Six sample BTB Slayer games on the owner's model: four reached 100 in 588-688 s, two hit the 720 s limit at 98-94 and 88-82.
+- Validation: `test_bot_sim` (new `test_noble_plays_like_demon_and_btb_slayer_to_100`) and `test_noble_difficulty` OK; full suite 1359, 2 failures in `test_layout_lifts` (Forge cage lifts, not touched here). `bot_sim`, `sim_engine`, `service_record`, `service_record_edit` import. Site rebuilt and its editor restarted: MS3S's picker lists Noble, selected. Earlier simulated games stay as they were played. **Not yet seen after a real match.**
 
 ### Every bot turns at 400 deg/s, Demon and Noble 450; no stacked step after a late update for any tier, 2026-11-23
 The owner: "Change all the bots speeds to 400. Demon and Noble to 450" (after Noble's cap at 400, 25ebeed).
@@ -1025,6 +1116,20 @@ The owner, asked whether to read the tilt test or fix the angled ramp tops next:
 - **Validation:** three new tests in `tools/test_forge_printer_fit.py` (44 in all); full suite 1189 OK.
 - **Untested in game:** the sixth print. Floors the owner saw as good in the fifth print have moved where they had been levelled with a neighbour more than 0.1 away.
 
+### Reach: a bot no longer takes the player's reticle target as its own (missed rounds), 2026-11-21
+The owner's reports "Sword shoots the ground twice" (with theater screenshots: Sword117's view on him, its rounds into the grass at its feet), "Sword missed 2 shots on me" and the 1v4 he could not be killed in.
+- Cause: `native/reach.cpp` builds each bot's action from the player's own action of the tick and overwrites it field by field; of the aim-assist block it zeroed only the weights (+0x8C / +0x90) and left his +0x78 (target set), +0x80 (the unit under his red reticle) and +0x88 (weight 1.0). A bot he aimed at had itself as its target.
+- Evidence (logs/trace_reach_forge_halo_20261121-135535 and -150927; the owner's own trace row carries the player under his reticle): Noble DMR rounds at him within 15 u, counted a hit when his shield or health fell within 0.25 s: with his reticle on the shooter 11 of 41 and 24 of 66 (27%, 36%), with it elsewhere or on nobody 36 of 66 and 28 of 59 (55%, 47%). Every difficulty used the same action path: not Noble's alone.
+- Fix: every bot's action gets the block as the player's carries it with nobody under the reticle (5659 of 5659 ticks of logs/reload_capture_20261120-234526): +0x78 0, +0x7C / +0x80 / +0x84 0xFFFFFFFF, +0x88..+0x9F 0. A bot's own red-reticle target (hb_target: sword, hammer and melee lunges) is still written after it, unchanged.
+- Validation: `build.bat pg41` builds `botcore_pg41.dll` (the native files also hold the collaborator's uncommitted lobby edits, the same ones already in pg40). Full Python suite unchanged. **Untested in game:** from MCC's next start; the check is Noble's hit rate on the owner with his reticle on the shooter, up to the rate without.
+
+### Noble: taps a running sprint off to shoot; the close lock checked live, 2026-11-21
+From the owner's next Asylum match (logs/bug_reports/reach_forge_halo_20261121-150927, owner + 3 Demon vs 4 Noble):
+- The close-range lock above, live: ticks of a DMR fight with a clear line where Noble's trigger was free, under 3 u 30% -> 91%, 3-6 u 70% -> 90% (Demon 100%). Reloads again 68 of 75 Noble, 61 of 65 Demon, median 1.2 s.
+- "queen just refuses to shoot me": Queen of Dark pressed sprint for 0.6 s at 33.6 s while running from a fight; the game's sprint came on at 34.7 s and stayed on to 38.3 s with the button let go, through a fight with the owner 2.5 u off: 7 trigger presses, the magazine never left 15, dead at 38.6 s. In that match 0 of 45 DMR presses made with sprint on fired (40 Noble, 5 Demon). A second press ended a running sprint within 0.2 s in 77 of 79 cases (the last six Reach traces). New `Bot.noble_sprint_off`: Noble in a fight with a man in view taps the button once while the game reads its sprint on, again after NOBLE_SPRINT_RETAP (0.4 s); not while its own sprint is held to close a gap. Noble only; Demon unchanged.
+- "Sword missed 2 shots on me" and "The entire blue team couldnt kill me in a 1v4": both are Noble rounds that do not land although the trace has the view on the owner's head. Counting each Noble DMR round at the owner within 15 u as a hit when his shield or health fell within 0.25 s: 45% hit in both matches, 31-33% when the shooter looked up more than 8 degrees (the owner on higher ground; in the 1v4 his shield recharged to full twice), about 50% level. With the owner's theater screenshots of Sword's two ground hits at 71.6 / 72.1 s (its view on his head in its own theater view), the game sends some rounds away from where the view points. The trace does not record where a round goes: not fixed, open. Next: capture the shot's own path (or a still owner on a ledge vs on the level).
+- Validation: `test_noble_difficulty.py` `SprintOffTests` (2 new); full suite 1188 OK. The sprint tap is not checked live yet.
+
 ### Reach Forge Printer: no floor standing proud of a ramp; landings where the floor blocks stop short, 2026-11-21
 
 The owner loaded the fourth Guardian print (HUD $26,980, as predicted) and sent two screenshots. Enlarged, the ramps reach their floors, but on the 4.15-long ramp the lower floor block still stands about 0.15 proud of the ramp where they meet; the fitter's own numbers say the same (run at 16.09 at the floor's edge, floor at 16.24).
@@ -1089,20 +1194,6 @@ The owner, on the third Guardian print's screenshots: "Two of those screenshots 
 - **`docs/REACH_FORGE_PRINTER_PLAN.md`:** where phase 3 stands against the plan, what a first pass still leaves for hand work, and what phase 4 needs from this code.
 - **Validation:** seven new tests in `tools/test_forge_printer_fit.py` (limits by slots and by budget, the order pieces are dropped in, an unpriced piece named, print's stored budget and its left-out line); full suite 1174 OK.
 - **Not applied:** per-piece or per-category limits, because none has been seen (185 Building Blocks loaded). **Still unread:** the tilt test.
-
-### Reach: a bot no longer takes the player's reticle target as its own (missed rounds), 2026-11-21
-The owner's reports "Sword shoots the ground twice" (with theater screenshots: Sword117's view on him, its rounds into the grass at its feet), "Sword missed 2 shots on me" and the 1v4 he could not be killed in.
-- Cause: `native/reach.cpp` builds each bot's action from the player's own action of the tick and overwrites it field by field; of the aim-assist block it zeroed only the weights (+0x8C / +0x90) and left his +0x78 (target set), +0x80 (the unit under his red reticle) and +0x88 (weight 1.0). A bot he aimed at had itself as its target.
-- Evidence (logs/trace_reach_forge_halo_20261121-135535 and -150927; the owner's own trace row carries the player under his reticle): Noble DMR rounds at him within 15 u, counted a hit when his shield or health fell within 0.25 s: with his reticle on the shooter 11 of 41 and 24 of 66 (27%, 36%), with it elsewhere or on nobody 36 of 66 and 28 of 59 (55%, 47%). Every difficulty used the same action path: not Noble's alone.
-- Fix: every bot's action gets the block as the player's carries it with nobody under the reticle (5659 of 5659 ticks of logs/reload_capture_20261120-234526): +0x78 0, +0x7C / +0x80 / +0x84 0xFFFFFFFF, +0x88..+0x9F 0. A bot's own red-reticle target (hb_target: sword, hammer and melee lunges) is still written after it, unchanged.
-- Validation: `build.bat pg41` builds `botcore_pg41.dll` (the native files also hold the collaborator's uncommitted lobby edits, the same ones already in pg40). Full Python suite unchanged. **Untested in game:** from MCC's next start; the check is Noble's hit rate on the owner with his reticle on the shooter, up to the rate without.
-
-### Noble: taps a running sprint off to shoot; the close lock checked live, 2026-11-21
-From the owner's next Asylum match (logs/bug_reports/reach_forge_halo_20261121-150927, owner + 3 Demon vs 4 Noble):
-- The close-range lock above, live: ticks of a DMR fight with a clear line where Noble's trigger was free, under 3 u 30% -> 91%, 3-6 u 70% -> 90% (Demon 100%). Reloads again 68 of 75 Noble, 61 of 65 Demon, median 1.2 s.
-- "queen just refuses to shoot me": Queen of Dark pressed sprint for 0.6 s at 33.6 s while running from a fight; the game's sprint came on at 34.7 s and stayed on to 38.3 s with the button let go, through a fight with the owner 2.5 u off: 7 trigger presses, the magazine never left 15, dead at 38.6 s. In that match 0 of 45 DMR presses made with sprint on fired (40 Noble, 5 Demon). A second press ended a running sprint within 0.2 s in 77 of 79 cases (the last six Reach traces). New `Bot.noble_sprint_off`: Noble in a fight with a man in view taps the button once while the game reads its sprint on, again after NOBLE_SPRINT_RETAP (0.4 s); not while its own sprint is held to close a gap. Noble only; Demon unchanged.
-- "Sword missed 2 shots on me" and "The entire blue team couldnt kill me in a 1v4": both are Noble rounds that do not land although the trace has the view on the owner's head. Counting each Noble DMR round at the owner within 15 u as a hit when his shield or health fell within 0.25 s: 45% hit in both matches, 31-33% when the shooter looked up more than 8 degrees (the owner on higher ground; in the 1v4 his shield recharged to full twice), about 50% level. With the owner's theater screenshots of Sword's two ground hits at 71.6 / 72.1 s (its view on his head in its own theater view), the game sends some rounds away from where the view points. The trace does not record where a round goes: not fixed, open. Next: capture the shot's own path (or a still owner on a ledge vs on the level).
-- Validation: `test_noble_difficulty.py` `SprintOffTests` (2 new); full suite 1188 OK. The sprint tap is not checked live yet.
 
 ### Noble: locks on up close, and joins a teammate's fight instead of waiting, 2026-11-21
 From the owner's bug reports on Asylum (logs/bug_reports/reach_forge_halo_20261121-135535, owner + 3 Demon vs 4 Noble, 50-25):

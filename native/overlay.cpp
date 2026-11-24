@@ -482,6 +482,10 @@ static volatile bool g_pg_open_req;      // P pressed (wndproc): opened on the n
 // my left and right bumpers instead of triggers. the triggers interact with the main menu": LT + RT before)
 static bool g_menus_now;                  // MCC's menus are up (no match, no film): the badge and the buttons count
 static bool g_pg_anywhere;                // Project Noble opened away from Halo: Reach's lobby, drawn where it was opened
+// (Nov 23, the owner: the walk to the Theater "takes quite a while") the launcher opened Project Noble at MCC's main menu
+// and it has been up since (MCC's pad held back, no match): MCC is still on its main menu's top item, so a menu route
+// needs no B and Up first
+static volatile bool g_mcc_untouched;
 static volatile LONG g_badge_x0, g_badge_y0, g_badge_x1, g_badge_y1;   // the badge, window px (0 wide: not drawn)
 static void draw_pg_badge() {
     ImDrawList* dl = ImGui::GetForegroundDrawList();
@@ -1036,6 +1040,7 @@ static int wndproc_route(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     if (g_ready && open_msg && msg == open_msg) {
         logf("overlay: the launcher asked Project Noble to open (menus %d)", (int)g_menus_now);
         g_pg_open_req = true;
+        g_mcc_untouched = !pg_running();         // (opened now, at MCC's main menu, nothing pressed there yet)
         return WP_OURS;
     }
     // (Nov 23) the badge clicked, in any of MCC's menus: Project Noble opens (the click and its release kept from MCC)
@@ -1244,13 +1249,31 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 if (ms != seen_state) { logf("overlay: MCC's menu byte %d (session title %ld)", ms, (long)g_session); seen_state = ms; }
                 g_menus_now = ms != 1 && ms != -1 && !g_playback;
             }
-            if (!g_menus_now || !pg_running() || pg_lobby) g_pg_anywhere = false;
+            // (a route running keeps it drawn: MCC leaves the lobby under it on the way to its Theater)
+            if (!g_menus_now || !pg_running() || (pg_lobby && menu_route_state() != 1)) g_pg_anywhere = false;
             pg_lobby = pg_lobby || g_pg_anywhere;
             // (Nov 23, the owner: "number 3 it right") opened away from Reach's lobby and its screens need it now (the
             // search, Custom Game): MCC is walked there behind them (menu_route.cpp), once each time it is opened away
-            static bool route_asked;
+            static bool route_asked, theater_asked, untouched_ran;
+            if (g_mcc_untouched) {                   // (gone once MCC may have moved: Project Noble down, or a match)
+                if (pg_running()) untouched_ran = true;
+                if (!g_menus_now || (untouched_ran && !pg_visible())) { g_mcc_untouched = false; untouched_ran = false; }
+            }
             if (!g_pg_anywhere) route_asked = false;
-            else if (!route_asked && pg_wants_lobby() && !pg_lobby_screen_live()) { route_asked = true; menu_route_start(); }
+            else if (!route_asked && menu_route_state() != 1 && pg_wants_lobby() && !pg_lobby_screen_live()) {
+                route_asked = true;
+                menu_route_start(MR_LOBBY, g_mcc_untouched);
+                g_mcc_untouched = false;
+            }
+            // (Nov 23, the owner's recorded route) Theater's pages need MCC's own Theater: walked there the same way, once
+            // each time they are opened (Project Noble drawn there as anywhere else in MCC's menus)
+            if (!pg_running() || !pg_wants_theater()) theater_asked = false;
+            else if (!theater_asked && g_menus_now && menu_route_state() != 1 && !pg_theater_live()) {
+                theater_asked = true;
+                g_pg_anywhere = true;
+                menu_route_start(MR_THEATER, g_mcc_untouched);
+                g_mcc_untouched = false;
+            }
             if (pg_running() && !pg_lobby) {
                 EnterCriticalSection(&g_imgui_lock); held = true;
                 pg_env pe{};

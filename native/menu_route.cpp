@@ -1,6 +1,7 @@
 // menu_route.cpp (custom, Nov 23): MCC walked to Halo: Reach's custom game lobby from wherever its menus are, behind
 // Project Noble's screens.
 //
+// (Nov 23, later: the B and Up shorter, and skipped when MCC has not moved: to_top below)
 // The owner, after his friend's mod: Project Noble opens from any menu with LB + RB (LT + RT at first), and "number 3 it right": when it
 // needs Reach's custom game lobby (Start Matchmaking, Custom Game) and MCC is on another menu, it takes MCC there itself.
 // His answers about MCC's main menu (Nov 23): B does nothing on it, and Up stops at its top item. So the route is:
@@ -11,6 +12,9 @@
 //    MultiplayerCustomGame.gfx opens; with its timings (a 120 ms press, 1.5 s between presses, 6 s for a checkpoint,
 //    0.7 s after one) never shortened (the owner, Nov 19: the mod may not load when Custom Games opens too fast);
 //  - the lobby must be Halo: Reach's (overlay.cpp mcc_lobby_title 5).
+// (Nov 23, the owner's recording, the launcher's boot.log: from MCC's main menu Down, Down, A, Down, A opened
+// Theatre.gfx, Halo: Reach's Theater with its films) MR_THEATER: the same way out and up, then Down, Down, A, Down, A
+// until Theatre.gfx opens, then MCC's Theatre screen running (theater.cpp), 1.5 s between presses as the launcher's.
 // The presses go into MCC's own pad reads (overlay.cpp h_xinput_get: the pad MCC read first while the route ran), the
 // player's own presses held back meanwhile; the checkpoints are the files MCC opens (overlay.cpp h_createfile).
 #include <windows.h>
@@ -54,11 +58,36 @@ static void stop(const char* why) {
     InterlockedExchange(&g_state, -1);
 }
 
-static DWORD WINAPI route_thread(void*) {
-    logf("menu route: from MCC's menus to Halo: Reach's custom game lobby");
-    for (int i = 0; i < 8; i++) { press(XINPUT_GAMEPAD_B, 0); Sleep(900); }       // (out to the main menu)
-    for (int i = 0; i < 10; i++) { press(0, 32767); Sleep(500); }                  // (its top item)
+static volatile LONG g_to;                       // MR_LOBBY or MR_THEATER
+static volatile LONG g_at_top;                   // MCC known to be on its main menu's top item: no B and Up first
+
+// (Nov 23, the owner: the walk to the Theater "takes quite a while": its B and Up came to 13 s of its 20) out to MCC's
+// main menu and up to its top item: B 7 times 0.6 s apart (it does nothing on the main menu), Up 8 times 0.35 s apart
+// (it stops at the top); none of it when the launcher opened Project Noble there and MCC has not moved since
+static void to_top() {
+    if (g_at_top) { logf("menu route: MCC is still on its main menu's top item (the launcher's): no B or Up"); return; }
+    for (int i = 0; i < 7; i++) { press(XINPUT_GAMEPAD_B, 0); Sleep(600); }       // (out to the main menu)
+    for (int i = 0; i < 8; i++) { press(0, 32767); Sleep(350); }                   // (its top item)
     Sleep(700);
+}
+
+static DWORD WINAPI route_thread(void*) {
+    bool theater = g_to == MR_THEATER;
+    logf("menu route: from MCC's menus to Halo: Reach's %s", theater ? "Theater" : "custom game lobby");
+    to_top();
+    if (theater) {                               // (the owner's recording, Nov 23: his own pace about 0.7 s a move)
+        press(0, -32767); Sleep(800);                                              // Down
+        press(0, -32767); Sleep(800);                                              // Down
+        press(XINPUT_GAMEPAD_A, 0); Sleep(1500);                                   // A (its next menu comes in)
+        press(0, -32767); Sleep(800);                                              // Down
+        if (!press_until(XINPUT_GAMEPAD_A, 0, L"theatre.gfx")) { stop("MCC's Theater did not open"); return 0; }
+        for (int i = 0; i < 60 && !pg_theater_live(); i++) Sleep(100);            // (its screen running)
+        if (!pg_theater_live()) { stop("MCC's Theater screen was not seen"); return 0; }
+        logf("menu route: Halo: Reach's Theater is open");
+        g_why[0] = 0;
+        InterlockedExchange(&g_state, 2);
+        return 0;
+    }
     press(0, -32767); Sleep(1500);                                                 // Down
     press(XINPUT_GAMEPAD_A, 0); Sleep(1500);                                       // A
     press(0, -32767); Sleep(1500);                                                 // Down
@@ -75,8 +104,10 @@ static DWORD WINAPI route_thread(void*) {
     return 0;
 }
 
-void menu_route_start() {
+void menu_route_start(int to, bool at_top) {
     if (InterlockedExchange(&g_state, 1) == 1) return;   // (one at a time: already running)
+    InterlockedExchange(&g_to, to);
+    InterlockedExchange(&g_at_top, at_top ? 1 : 0);
     if (!g_cp_ev) g_cp_ev = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     g_why[0] = 0;
     HANDLE h = CreateThread(nullptr, 0, route_thread, nullptr, 0, nullptr);
@@ -85,6 +116,7 @@ void menu_route_start() {
 }
 
 int menu_route_state() { return g_state; }
+int menu_route_to() { return g_to; }
 const char* menu_route_why() { return g_why; }
 
 // (overlay.cpp h_createfile) a file MCC opens: the step's checkpoint when its path holds it

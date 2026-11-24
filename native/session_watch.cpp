@@ -396,10 +396,12 @@ static DWORD WINAPI refresh_thread(void*) {
 void career_hooks();                             // career.cpp (Nov 13: the bots' numbers on MCC's Career page)
 
 void lobby_test_hooks();                         // lobby_test.cpp (Nov 16: Project Noble, the lobby's own picks)
+void theater_hooks();                            // theater.cpp (Nov 23: Project Noble's Theater on MCC's Theatre screen)
 
 void session_watch_hooks() {
     career_hooks();
     lobby_test_hooks();
+    theater_hooks();
     g_mcc = (uint8_t*)GetModuleHandleW(nullptr);
     bool ok = false;
     __try {

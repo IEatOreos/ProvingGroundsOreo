@@ -110,6 +110,9 @@ struct playlist {
     int size;                    // players a team
     std::vector<pl_gametype> gametypes;
     std::vector<std::string> maps;
+    // (Nov 23, the owner: "Remove multi flag, multi bomb and neutral bomb from sword base, damnation, hang em high,
+    // boardwalk and prisoner") <playlist>.removepair=MAP|GAMETYPE: that gametype never drawn on that map
+    std::vector<std::pair<std::string, std::string>> skip;
 };
 static playlist g_pl[2];
 
@@ -175,6 +178,7 @@ static void load_settings() {
     g_loaded = true;
     find_dirs();
     default_playlists();
+    for (playlist& pl : g_pl) pl.skip.clear();
     wchar_t p[MAX_PATH];
     ini_path(p);
     FILE* f = nullptr;
@@ -202,6 +206,17 @@ static void load_settings() {
             const char* rest = line + kl + 1;
             bool add = !_strnicmp(rest, "add", 3), drop = !_strnicmp(rest, "remove", 6);
             const char* what = add ? rest + 3 : drop ? rest + 6 : rest;
+            if (drop && !_strnicmp(what, "pair=", 5)) {      // (Nov 23) removepair=MAP|GAMETYPE
+                char pair[160];
+                strncpy_s(pair, what + 5, _TRUNCATE);
+                char* bar = strchr(pair, '|');
+                if (!bar) continue;
+                *bar = 0;
+                char* gt = bar + 1;
+                trim(pair); trim(gt);
+                if (pair[0] && gt[0]) g_pl[k].skip.push_back({ pair, gt });
+                continue;
+            }
             if (!_strnicmp(what, "gametype=", 9)) {
                 char name[96];
                 strncpy_s(name, what + 9, _TRUNCATE);
@@ -607,11 +622,25 @@ static int g_npool_names;
 enum { RP_TITLE, RP_MAIN, RP_MM, RP_PLAYLIST, RP_RESTRICT, RP_PSYCH, RP_OPTIONS, RP_MENU, RP_SR, RP_CAREER, RP_DIFF,
        RP_ARMORY, RP_ARM_ITEMS, RP_ARM_FAMILY,     // (Nov 19, phase 3: the Armory, proving_grounds_reach.inc)
        RP_FILES, RP_FILE_LIST, RP_CONTROLLER,      // (phase 4: the File Browser, the controller)
-       RP_CUSTOM, RP_CG_TYPE, RP_CG_MAP, RP_CG_OPTIONS, RP_LOBBY };   // (phase 5: Custom Game, the other lobbies)
+       RP_CUSTOM, RP_CG_TYPE, RP_CG_MAP, RP_CG_OPTIONS, RP_LOBBY,     // (phase 5: Custom Game, the other lobbies)
+       RP_FILM,                                    // (Nov 23: Theater's CHOOSE FILM)
+       RP_FF_TYPE, RP_FF_MAP, RP_FF_OPTIONS };     // (Nov 23: Firefight's pages)
 static int g_rpage = RP_MAIN, g_rpage_from = RP_MAIN;
 bool pg_wants_lobby() {                          // (Nov 23: above, by pg_launching)
     if (g_stage == S_SEARCH || g_stage == S_VOTE || g_stage == S_RESULT) return true;
     return g_stage == S_MENU && (g_cg_wait || g_rpage == RP_CUSTOM || g_rpage == RP_CG_TYPE || g_rpage == RP_CG_MAP);
+}
+// (Nov 23) the menu route as the custom game lobby's screens see it: any route running is MCC on the move (1); its
+// end (2 there, -1 stopped) only when it went to Reach's lobby (a Theater route's end is not the lobby's)
+static int lobby_route() {
+    int s = menu_route_state();
+    return s == 1 ? 1 : menu_route_to() == MR_LOBBY ? s : 0;
+}
+static int g_lobby_mode;                         // the other lobbies: 0 campaign, 1 firefight, 2 forge, 3 theater
+// (Nov 23) Theater's pages need MCC's own Theater open behind them (its film list, its START FILM): the overlay walks
+// MCC there (menu_route.cpp, the owner's recorded route)
+bool pg_wants_theater() {
+    return g_stage == S_MENU && !g_invite && (g_rpage == RP_FILM || (g_rpage == RP_LOBBY && g_lobby_mode == 3));
 }
 static bool g_rtitled;                           // the title was shown this session (later opens: the main menu)
 static bool rmenu_back();
@@ -620,7 +649,9 @@ static void credits_done(double now);
 static void carnage_back();
 static bool carnage_enter(const char* id, bool from_menu, double now);
 static bool carnage_on_disk();
-static int g_cg_menu_focus;                      // (Prior Game Stats: the matchmaking page's focus to come back to)
+static bool carnage_over_open(double now);
+static bool g_cg_over;                           // (Nov 23: Prior Game Stats over the search, the vote, the result: below)
+static int g_cg_menu_focus;                     // (Prior Game Stats: the matchmaking page's focus to come back to)
 static int g_rm_psych[4];                        // (the psych profile, also shown in MY PARTY DETAILS)
 static void rm_load();
 static const char* rm_psych_text(int k);
@@ -658,6 +689,7 @@ void pg_back() {
         return;
     }
     if (g_stage == S_MENU && rmenu_back()) return;   // (Reach's pages: one page back; from the title, closed)
+    if (g_cg_over) { carnage_back(); return; }   // (Nov 23: Prior Game Stats over the search or the vote)
     switch (g_stage) {
     case S_MENU: g_stage = S_OFF; logf("proving grounds: closed"); break;
     case S_SEARCH: case S_VOTE: case S_ERROR: to_menu(); break;
@@ -665,6 +697,17 @@ void pg_back() {
     case S_CARNAGE: carnage_back(); break;       // (Nov 23: Player Carnage back to Stats, else out)
     default: break;                              // (the result and the countdown: MCC's lobby is starting the game)
     }
+}
+
+// (Nov 23) a map and gametype the playlist's removepair= lines keep apart (the map's name as the maps list matches it)
+static bool pair_skipped(const playlist& pl, const char* map, const char* gt) {
+    char a[64], b[64];
+    squash(map, a, sizeof a);
+    for (const auto& s : pl.skip) {
+        squash(s.first.c_str(), b, sizeof b);
+        if (!strcmp(a, b) && !_stricmp(s.second.c_str(), gt)) return true;
+    }
+    return false;
 }
 
 // three options MCC accepts: candidates drawn by weight (not the last game, a map at most twice), checked by MCC
@@ -683,6 +726,9 @@ static void draw_candidates() {
         while (r >= gts[k].weight) { r -= gts[k].weight; k++; }
         const pg_entry* m = maps[rnd() % maps.size()];
         int gid = gts[k].e->id;
+        char shown[64];                                  // (Nov 23: removepair=, the map by its shown name)
+        pg_map_name(m->name, m->key, shown, sizeof shown);
+        if (pair_skipped(cur_pl(), shown, gts[k].e->name)) continue;
         if (m->id == g_last_map && gid == g_last_gt) continue;
         bool dup = false;
         for (auto& c : g_cands) dup |= c.first == m->id && c.second == gid;
@@ -860,10 +906,10 @@ static bool start_search(pg_env& e) {
     // (Nov 23, the owner's "GAME DIDN'T START" over MCC's main menu) started away from Reach's lobby: the search starts
     // anyway and holds while the overlay walks MCC there (menu_route.cpp); the vote is drawn once MCC's lists are read
     // in that lobby (search_screen). Only a route that already stopped still says to open the lobby by hand
-    bool away = !pg_lobby_live() && menu_route_state() != -1;
+    bool away = !pg_lobby_live() && lobby_route() != -1;
     if (!away && (!pg_lobby_live() || !g_nlmaps)) {
         strcpy_s(g_error, "Project Noble needs MCC's Halo: Reach custom game lobby open behind it (Custom Multiplayer, Halo: Reach).");
-        if (menu_route_state() == -1 && menu_route_why()[0])
+        if (lobby_route() == -1 && menu_route_why()[0])
             sprintf_s(g_error, "Project Noble could not open MCC's Halo: Reach custom game lobby (%s). Open it in MCC (Custom "
                                "Multiplayer, Halo: Reach), then try again.", menu_route_why());
         g_stage = S_ERROR; return false;
@@ -1413,7 +1459,7 @@ static float prompt(float x, float y, const char* pad, const char* key, const ch
     const char* g = g_pad_in ? pad : key;
     float gw = g_pad_in ? pad_glyph_w(pad) : text_w(g_fs, 18, g) / g_pg.s + 16, w = gw + 10 + text_w(g_fl, 22, label) / g_pg.s;
     ImVec2 m = ImGui::GetIO().MousePos, a = P(x - 6, y - 4), b = P(x + w + 8, y + 34);
-    bool over = clicked && m.x >= a.x && m.x <= b.x && m.y >= a.y && m.y <= b.y;
+    bool over = clicked && !g_inert && m.x >= a.x && m.x <= b.x && m.y >= a.y && m.y <= b.y;   // (Nov 23: not under a screen over it)
     if (over) g_dl->AddRectFilled(a, b, A(IM_COL32(96, 102, 108, 170)));
     ImU32 gc = over ? C_TEXT : IM_COL32(214, 218, 222, 255);
     if (g_pad_in) pad_glyph(x, y, g, IM_COL32(150, 156, 162, 220));
@@ -1427,6 +1473,8 @@ static float prompt(float x, float y, const char* pad, const char* key, const ch
 }
 // (Nov 19) the screens with the roster beside them also name the way into it: RB on the pad (or Right), Right on the keys
 static bool g_footer_players;                    // the footer's Players clicked this frame
+// (Nov 23) the search's, the vote's and the result's footers also offer Prior Game Stats (the last game's carnage report)
+static bool g_footer_prior_on, g_footer_prior;
 static void footer_line() {                      // (Nov 19) Reach's thin line over its button prompts
     g_dl->AddLine(P(96, 981), P(1240, 981), A(IM_COL32(206, 212, 218, 90)), U(1));
 }
@@ -1435,7 +1483,8 @@ static void footer(const char* hint = nullptr, const char* select = nullptr, boo
     if (hint && hint[0]) text(g_fs, 21, 100, 948, IM_COL32(200, 206, 212, 255), hint);
     float x = prompt(100, 992, "B", "Esc", "Back", &g_footer_back);
     if (select) x = prompt(x, 992, "A", "Enter", select, nullptr);
-    if (players) prompt(x, 992, "RB", "Right", "Players", &g_footer_players);
+    if (players) x = prompt(x, 992, "RB", "Right", "Players", &g_footer_players);
+    if (g_footer_prior_on) prompt(x, 992, "View", "G", "Prior Game Stats", &g_footer_prior);   // (Nov 23)
 }
 
 // (Nov 17) the screens' own ground, opaque: MCC's custom game lobby is not seen behind them. A playlist's map, faint and
@@ -2481,7 +2530,7 @@ static void search_screen(pg_env& e, float t) {
     // (Nov 23) MCC being walked to Reach's lobby behind this screen (menu_route.cpp): the search goes on till it is there
     // and its lists are read, so the vote is drawn from them
     library();                                           // (MCC's lists, once its Reach lobby has been read)
-    bool walking = menu_route_state() == 1 || (menu_route_state() == 2 && (!g_nlgts || !g_nlmaps));
+    bool walking = lobby_route() == 1 || (lobby_route() == 2 && (!g_nlgts || !g_nlmaps));
     if (walking && !g_follow && t > g_search_s - 0.5f) g_search_s = t + 0.5f;
     // started away from the lobby, no lists then: the vote's candidates drawn once MCC's lists are in
     if (!walking && !g_follow && !g_check_ticket && !g_nopt && g_nlgts && g_nlmaps) draw_candidates();
@@ -3078,7 +3127,15 @@ static struct {
 static struct { char id[64], map_key[40], map_name[48], gt_name[48]; int family; } g_played = { "", "", "", "", -1 };
 static int g_cg_tab, g_cg_page, g_cg_sel, g_cg_player;
 static bool g_cg_menu;                           // opened from the matchmaking page (Prior Game Stats): out goes back
-static bool g_cg_leaving;                        // out asked over MCC's post-game report: waiting for MCC's lobby
+// (Nov 23, the owner: "allow the last games Carnage report be able to be shown from the matchmaking screen at all times.
+// Even when searching. in a new lobby, anytime until a new game is printed"; asked: it closes when the vote starts, and
+// opens over the vote and the game starting too) the report drawn over the search, the vote or the result while they go on
+// under it (their screens run, unseen and taking no input); out, or the stage moving on, back to that screen
+// (g_cg_over: above, by carnage_enter's declaration)
+static int g_cg_over_stage, g_cg_over_focus;
+static double g_cg_over_t0;
+static decltype(g_played) g_played_under;        // (the game under it, kept while the report shows the prior one's)
+static bool g_cg_leaving;                      // out asked over MCC's post-game report: waiting for MCC's lobby
 static double g_cg_press_t;
 static int g_cg_presses;
 // (Nov 23, the owner's screenshot of Reach's: RATING the second page, each player's skill rating after the match)
@@ -3329,8 +3386,29 @@ static bool carnage_enter(const char* id, bool from_menu, double now) {
 }
 // out of the report (or the credits, with no report to show): over MCC's own post-game report, MCC is sent a Back and
 // the screen waits for MCC's lobby; over the lobby, the next game's lobby; from the menu, back to it
+static void carnage_over_close(bool back = true) {   // (back: on the screen's focus it had; else the new stage's own)
+    g_cg_over = false;
+    g_cg_tab = 0;
+    g_played = g_played_under;
+    if (back) g_focus_after = g_cg_over_focus;
+}
+static bool carnage_over_open(double now) {       // (Nov 23: Prior Game Stats over the search, the vote, the result)
+    auto stage = g_stage;
+    int focus = g_focus;
+    double t0 = g_t0;
+    g_played_under = g_played;
+    if (!carnage_enter(nullptr, true, now)) { g_played = g_played_under; return false; }
+    g_stage = stage; g_t0 = t0;                  // (the stage under it goes on as it was)
+    g_cg_menu = false;
+    g_cg_over = true;
+    g_cg_over_stage = stage == S_LAUNCH ? S_RESULT : stage;
+    g_cg_over_focus = focus;
+    g_cg_over_t0 = now;
+    return true;
+}
 static void carnage_exit(double now) {
     sound(PS_SELECT);
+    if (g_cg_over) { carnage_over_close(); return; }
     if (g_cg_menu && g_stage == S_CARNAGE) { g_stage = S_MENU; g_rpage = RP_MM; g_focus_after = g_cg_menu_focus; g_t0 = now; return; }
     if (!g_over_post || g_follow) { g_stage = S_SEARCH; g_t0 = now; return; }
     g_stage = S_CARNAGE;
@@ -4043,6 +4121,16 @@ void pg_preview_stage(int which, float t, pg_env& e) {
         g_credit_steps = { {0, "Recruit", 0}, {1, "Private", 7500}, {2, "Corporal", 10000} };
         g_promoted_to = -1;
         break;
+    // (Nov 23) Prior Game Stats over the search (the search going on under it)
+    case 49:
+        pg_open(); start_search(e);
+        if (!carnage_over_open(now)) printf("carnage report: no last_carnage.txt\n");
+        g_played = { "", "HReachMP_Boneyard", "Boneyard", "One Bomb", F_ASSAULT };   // (its picture; nothing saved)
+        break;
+    // (Nov 23) Theater's CHOOSE FILM over this PC's films (PG_LOBBY=3 with case 42: its lobby)
+    case 50: pg_open(); lobby_open(3); g_rpage = RP_FILM; g_focus = 2; break;
+    // (Nov 23) Firefight's SELECT MISSION (PG_FF_LIVE=1: MCC's lists as if read; case 42 with PG_LOBBY=1: its lobby)
+    case 51: pg_open(); lobby_open(1); g_rpage = RP_FF_MAP; g_focus = 1; break;
     }
     if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Project Noble's own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
@@ -4203,6 +4291,31 @@ static bool pg_frame_body(pg_env& e) {
     if (!g_follow) pts_poll(now);                        // (Nov 23: the player's points after each reported match)
     if (!g_follow && (g_stage == S_SEARCH || g_stage == S_VOTE || (g_stage == S_RESULT && t < 2.5f)))   // (Nov 17: before
         redeal_if_people_changed(*e.roster, e.difficulty, t);                                           // the launch)
+    // (Nov 23) Prior Game Stats over the search, the vote and the result (the game starting): View / G or the footer's
+    // prompt opens the last game's carnage report over them; it closes when the stage moves on (the vote starting, its
+    // winner) or leaves matchmaking (the match), and its own Back / Exit goes back to the screen under it
+    bool mm_flow = !g_follow && (g_stage == S_SEARCH || g_stage == S_VOTE || g_stage == S_RESULT || g_stage == S_LAUNCH);
+    int mm_stage = g_stage == S_LAUNCH ? S_RESULT : g_stage;
+    if (g_cg_over && (!mm_flow || mm_stage != g_cg_over_stage)) {
+        logf("proving grounds: prior game stats closed: the stage moved on");
+        carnage_over_close(false);
+    }
+    g_footer_prior_on = mm_flow && !g_cg_over && !g_ros_on && carnage_on_disk();
+    if (g_footer_prior_on && (g_footer_prior || ImGui::IsKeyPressed(ImGuiKey_GamepadBack, false) ||
+                              ImGui::IsKeyPressed(ImGuiKey_G, false)) && carnage_over_open(now)) {
+        sound(PS_SELECT);
+        g_footer_prior_on = false;
+    }
+    g_footer_prior = false;
+    // (the stage's own screen drawn into a channel of its own that is dropped unshown; no input taken under the report)
+    static ImDrawListSplitter unseen;
+    const bool over_now = g_cg_over;
+    if (over_now) {
+        unseen.Split(g_dl, 2);
+        unseen.SetCurrentChannel(g_dl, 1);
+        g_inert = true;
+        g_ros_on = false;
+    }
     switch (g_stage) {
     case S_MENU:
         if (g_chal) { challenges_screen(e, t); break; }  // (Nov 17: the Challenges page)
@@ -4219,14 +4332,16 @@ static bool pg_frame_body(pg_env& e) {
         result_screen(e, t);
         // (Nov 23) started away from Reach's lobby: the game goes to MCC once that lobby is open (a minute at most;
         // MCC's own refusal after that is the error screen's, as before)
-        if (t > 3.0f && !g_follow && (pg_lobby_live() || menu_route_state() != 1 || t > 60.0f)) {
+        if (t > 3.0f && !g_follow && (pg_lobby_live() || lobby_route() != 1 || t > 60.0f)) {
             const option& o = g_opt[g_winner];
             g_last_map = o.map; g_last_gt = o.gametype;
             // (Nov 23) the game kept for its carnage report: its map's picture and name, its gametype
-            g_played = { "", "", "", "", o.family };
-            strcpy_s(g_played.map_key, o.map_key);
-            strcpy_s(g_played.map_name, o.map_name);
-            strcpy_s(g_played.gt_name, o.gt_name);
+            // (Nov 23: under Prior Game Stats, kept for when it closes: it shows the prior game's)
+            auto& played = g_cg_over ? g_played_under : g_played;
+            played = { "", "", "", "", o.family };
+            strcpy_s(played.map_key, o.map_key);
+            strcpy_s(played.map_name, o.map_name);
+            strcpy_s(played.gt_name, o.gt_name);
             pg_lobby_launch(o.map, o.gametype);
             g_stage = S_LAUNCH;
             g_launch_t = now;
@@ -4239,10 +4354,28 @@ static bool pg_frame_body(pg_env& e) {
     case S_CARNAGE: carnage_screen(e, t, now); break;    // (Nov 23: Reach's carnage report)
     default: break;
     }
+    // (Nov 23) the result has no footer of its own: Prior Game Stats offered at the footer's place
+    if (g_footer_prior_on && (g_stage == S_RESULT || g_stage == S_LAUNCH)) {
+        footer_line();
+        prompt(100, 992, "View", "G", "Prior Game Stats", &g_footer_prior);
+    }
+    if (over_now) {                              // (Nov 23: Prior Game Stats over the stage, its screen unseen)
+        unseen.SetCurrentChannel(g_dl, 0);
+        unseen._Channels[1]._CmdBuffer.resize(0);
+        unseen._Channels[1]._IdxBuffer.resize(0);
+        unseen.Merge(g_dl);
+        g_inert = false;
+        g_footer_back = g_footer_players = false;
+        carnage_screen(e, (float)(now - g_cg_over_t0), now);
+        // what goes on under it, at the top right (the report closes by itself when the vote starts)
+        const char* under = g_stage == S_SEARCH ? "SEARCHING FOR PLAYERS..." : g_stage == S_VOTE ? "VOTING IN PROGRESS"
+                                                                                               : "GAME STARTING";
+        text(g_fs, 21, 1592, 34, IM_COL32(200, 206, 212, 230), under, 2);
+    }
     // (Nov 17) the roster, as Reach's party list: into it with Right or a click on it, out with Left, Esc, B or a click
     // away from it and its panel; the list slides between MCC's place and Reach's in 0.22 s
-    bool ros_here = (g_stage == S_MENU && !g_invite && !g_chal && !g_comm && rmenu_party()) || g_stage == S_SEARCH ||
-                    g_stage == S_VOTE, ros_out = false;
+    bool ros_here = !g_cg_over && ((g_stage == S_MENU && !g_invite && !g_chal && !g_comm && rmenu_party()) ||
+                                   g_stage == S_SEARCH || g_stage == S_VOTE), ros_out = false;   // (Nov 23: not under the report)
     if (!ros_here) { g_ros_on = false; g_ros_k = 0; }
     else if (!g_ros_on) {
         // (Nov 19) RB (the footer's Players prompt) as well as Right: Right is GAME SIZE's and the rounds' on those rows

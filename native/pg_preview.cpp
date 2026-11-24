@@ -98,7 +98,34 @@ static int g_ticket;
 int pg_lobby_check(const int*, const int*, int) { return ++g_ticket; }
 bool pg_lobby_checked(int ticket, uint8_t* ok, int n) { for (int i = 0; i < n; i++) ok[i] = 1; return ticket == g_ticket; }
 void pg_lobby_launch(int, int) {}
+// (Nov 23: MCC's Theatre screen, theater.cpp: open in the preview (PG_TH_LIVE=1) with no films of its own)
+bool pg_theater_ready() { return true; }
+bool pg_theater_live() { char v[4]; return GetEnvironmentVariableA("PG_TH_LIVE", v, sizeof v) > 0; }
+void pg_theater_files(const pg_film_file*, int) {}
+int pg_theater_films(pg_film*, int) { return 0; }
+uint32_t pg_theater_seq() { return 1; }
+void pg_theater_start(const uint8_t*) {}
+int pg_theater_state(char* why, int cap) { if (why && cap) why[0] = 0; return 0; }
+void pg_theater_reset() {}
+// (Nov 23: MCC's Firefight lobby, pg_lobby.cpp: open with Reach's missions and game types (PG_FF_LIVE=1), else none read)
+static bool pv_ff() { char v[4]; return GetEnvironmentVariableA("PG_FF_LIVE", v, sizeof v) > 0; }
+bool pg_ff_ready() { return true; }
+bool pg_ff_live() { return pv_ff(); }
+uint32_t pg_ff_seq() { return 1; }
+int pg_ff_lists(pg_entry* maps, int* nmaps, pg_entry* gts, int* ngts, int cap, int* difficulty, int* cur_map, int* cur_gt) {
+    static const char* M[] = { "Beachhead", "Corvette", "Courtyard", "Glacier", "Holdout", "Outpost", "Overlook", "Waterfront" };
+    static const char* G[] = { "Firefight Arcade", "Score Attack", "Gruntpocalypse", "Rocketfight", "Sniper Fight", "Generator Defense" };
+    *nmaps = *ngts = 0; *difficulty = 1; *cur_map = *cur_gt = -1;
+    if (!pv_ff()) return 1;
+    for (int i = 0; i < 8 && i < cap; i++) { pg_entry& m = maps[(*nmaps)++]; memset(&m, 0, sizeof m); m.id = 100 + i; m.kind = 1; strcpy_s(m.name, M[i]); }
+    for (int i = 0; i < 6 && i < cap; i++) { pg_entry& g = gts[(*ngts)++]; memset(&g, 0, sizeof g); g.id = 200 + i; g.kind = 2; strcpy_s(g.name, G[i]); }
+    return 2;
+}
+void pg_ff_launch(int, int, int) {}
+int pg_ff_launch_state(char* why, int cap) { if (why && cap) why[0] = 0; return 0; }
+void pg_ff_reset() {}
 int menu_route_state() { return 0; }                    // (Nov 23: the menu route, menu_route.cpp: never in the preview)
+int menu_route_to() { return 0; }
 const char* menu_route_why() { return ""; }
 int pg_lobby_launch_state(char* why, int cap) { if (why) why[0] = 0; return 1; }
 // (Nov 18) the link to a joined friend's copy (pg_link.cpp): a loopback here, so pg_11 draws the host's state as a
@@ -328,17 +355,18 @@ int main(int argc, char** argv) {
                             "reach_firefight_lobby",
                             // (Nov 23) the carnage report after a game
                             "carnage_overview", "carnage_stats", "carnage_stats_credits", "carnage_player",
-                            "credits_not_counted", "credits_after_match" };
+                            "credits_not_counted", "credits_after_match",
+                            "prior_stats_over_search", "reach_choose_film", "reach_firefight_missions" };   // (Nov 23)
     // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
     // band (8.9 s), the promotion (11.5 s; six lines)
     const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f,
                          3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
                          2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
-                         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 2.0f };
+                         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 2.0f };
     // (PG_ONLY=<n>: that screen alone, 1-based as its file's number)
     char only_s[8];
     int only = GetEnvironmentVariableA("PG_ONLY", only_s, sizeof only_s) ? atoi(only_s) : 0;
-    for (int s = 0; s < 49; s++) {
+    for (int s = 0; s < 52; s++) {
         if (only && s + 1 != only) continue;
         g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};

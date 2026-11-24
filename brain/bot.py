@@ -3876,6 +3876,10 @@ class Bot:
             s.air_roof_guard(me, act, snap)
             s.air_snap_bomb(now, me, act, snap)    # (custom, Nov 19: Reach, the bomb on whoever is under the nose)
             s.air_snap_fire(now, me, act, snap)
+            if act.fire and getattr(s, "rod", None) is None and s.piloting(me, snap) and s.reach_bomber():
+                # (custom, Nov 23, the owner: "I dont care about the plasma cannons. I want them to only use the bomb")
+                # a Reach Banshee's trigger is its bomb's shot only (fuel_rod, the bomb selected: s.rod)
+                act.fire = False
             s.fire_gate(now, me, act, snap)
             return act
         # on foot: the next seat is a new one, in the same vehicle too (H2A Bloodline s133: out of a Warthog's gun with

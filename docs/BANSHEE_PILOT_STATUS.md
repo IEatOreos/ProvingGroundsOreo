@@ -66,12 +66,27 @@ This matches what the owner saw live: it "gets a glimpse of one, shoots at it, t
 switch to any man in sight within `AIR_RUN_SWITCH_R` = 22 u. A Reach bomber now only switches for a man within 9 u.
 **Untested:** rerun the 10 games and compare against f1's 7.3.
 
+## Nov 23: the pilot's line down fixed, bomb only
+
+Live Spire (bug report 20261123-173345): the pilot dived on men and did not fire. `Terrain._ray`'s shooter's-floor rule
+read every line steeper than about 45° down from the Banshee as blocked: 8 of 1318 enemy positions under it were in
+sight, about 5 bombs in a 310 s ride.
+
+- `brain/terrain.py`: the rule is skipped for a shooter more than `NO_FLOOR_H` = 1.5 u over the floor (a pilot). On the
+  same recording 1020 of the 1318 now read in sight.
+- `brain/bot.py`: a Reach Banshee pilot never fires its cannons; its trigger is the bomb's shot only (the owner's order).
+- The other direction is unchanged: a man on the ground still has no line to a Banshee steeply over him.
+- Tests 1395 OK. Untested in game. The k1 batch (sticky target) was never finished and is now mixed with this change.
+- Sim batch b1 (seeds 1–5, same setup, with this change and the sticky target): 6, 13, 4, 6, 7, mean 7.2. No gain over
+  f1's 7.3 on Boneyard. "No clear line: hold fire" is nearly gone (0–6 rows a game), but the pilots still let go only
+  about 10–25 bombs a game and spend 24–39% of their rows on a man out of sight. Bombs per minute is the next thing to
+  raise.
+
 ## Known open problems
 
-- **The Terrain feet-floor rule.** In `Terrain._ray`, `FEET_SLAB` reads lines steeper than about 51° between an aircraft
-  and a man as blocked, in both directions. That affects `sees` / `shot_los` / `fire_gate`; `aim_hit` is not affected.
-  A fix was tried and reverted because kills went down: Red could then see the Banshee overhead. Whether to fix it is the
-  owner's call.
+- **The Terrain feet-floor rule, upward.** `FEET_SLAB` still reads lines steeper than about 45° from a man up to an
+  aircraft as blocked. Fixing both directions was tried and reverted because kills went down: Red could then see the
+  Banshee overhead. Whether to fix that half is the owner's call.
 - **Learned fly cells.** The high fly cells on Boneyard are fragmented into 580 pieces, and `fly_way` returns None
   between pieces. There is no learned air over the middle (x 244–280, y 76–116), which is where Red spends a lot of
   time.

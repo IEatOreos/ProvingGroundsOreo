@@ -1620,7 +1620,8 @@ static void rm_arm_items(pg_env& e, float t) {
 // at 0xAC). File Share and the searches were Bungie.net's: dim. CONTROLLER shows Reach's controller settings as MCC
 // keeps them (its GameUserSettings.ini, the seventh of each list: Halo: Reach); they are changed in MCC's own Settings,
 // which writes that file. NETWORK STATUS, on the menu as Reach's: Project Noble plays on this PC.
-struct fb_file { std::wstring path; std::string name, desc, by, edited; ULONGLONG when = 0; uint64_t size = 0; };
+struct fb_file { std::wstring path; std::string name, desc, by, edited; ULONGLONG when = 0; uint64_t size = 0;
+                 uint64_t uid = 0; };            // (Nov 23: the header's unique id, chdr 8 bytes at 0x60: Theater's match)
 static const char* FB_KIND[4] = { "GAME TYPES", "MAP VARIANTS", "FILMS", "SCREENSHOTS" };
 static const wchar_t* FB_DIR[4] = { L"GameType", L"Map", L"Movie", L"Screenshot" };
 static std::vector<fb_file> g_fb[2][4];          // [temporary history, local files][kind]
@@ -1657,6 +1658,7 @@ static void fb_header(fb_file& f) {               // the name and the rest from 
     f.desc = fb_text16(b + 0x1C0, 128);
     f.by = fb_text8(b + 0x88, 16);
     f.edited = fb_text8(b + 0xAC, 16);
+    memcpy(&f.uid, b + 0x60, 8);
 }
 static void fb_scan_dir(const std::wstring& dir, std::vector<fb_file>& out, bool header) {
     WIN32_FIND_DATAW fd;
@@ -2005,7 +2007,7 @@ static int g_cg_col, g_cg_fam = -1, g_cg_scroll;  // the game type page's column
 static uint8_t g_cg_fit[160];                    // MCC's check: the game type on each map (by g_lmaps index)
 static int g_cg_fit_gt = -1, g_cg_ticket, g_cg_chunk;
 static bool g_cg_fit_have;
-static int g_lobby_mode;                         // the look-only lobby: 0 campaign, 1 firefight, 2 forge, 3 theater
+// (g_lobby_mode, the other lobbies' mode: in proving_grounds.cpp, by pg_wants_theater)
 
 static const int CG_ORDER[F_N] = { F_ASSAULT, F_CTF, F_HH, F_INFECTION, F_INVASION, F_JUGG, F_KING, F_ODDBALL, F_RACE,
                                    F_SLAYER, F_STOCK, F_TERR, F_INSANE };   // (Reach's order, its names in capitals)
@@ -2141,11 +2143,11 @@ static void rm_custom(pg_env& e, float t) {
         g_cg_t0 = ImGui::GetTime();
         logf("proving grounds: custom game asked of MCC once its lobby opened: %s on %s", g->name, m->name);
     }
-    if (g_cg_wait && menu_route_state() == -1) {
+    if (g_cg_wait && lobby_route() == -1) {
         g_cg_wait = 0;
         g_cg_msg = std::string("Could not open Halo: Reach's custom game lobby (") + menu_route_why() + "). Open it in MCC, then start.";
     }
-    bool walking = menu_route_state() == 1;
+    bool walking = lobby_route() == 1;
     std::string status = g_cg_state == 1 ? "Starting..." : walking || g_cg_wait ? "Opening Halo: Reach's custom game lobby..."
                        : !g_nlgts ? "Open MCC's Halo: Reach custom game lobby first."
                        : !fits ? "That game type does not go on that map." : "Ready";
@@ -2349,9 +2351,461 @@ static void rm_cg_options(pg_env& e, float t) {
 static const char* LB_TITLE[4] = { "CAMPAIGN", "FIREFIGHT", "FORGE", "THEATER" };
 static const wchar_t* LB_ART[4] = { L"campaign", L"firefight", L"forge", L"theater" };
 static void cg_open() { g_rpage = RP_CUSTOM; g_focus_after = 3; g_cg_msg.clear(); g_cg_state = 0; }
-static void lobby_open(int mode) { g_lobby_mode = mode & 3; g_rpage = RP_LOBBY; g_focus_after = 0; }
+static void th_open();
+static void lobby_open(int mode) {
+    g_lobby_mode = mode & 3; g_rpage = RP_LOBBY; g_focus_after = 0;
+    if (g_lobby_mode == 3) th_open();            // (Nov 23: Theater's films read again)
+}
 static const pic* rm_lobby_art() { return rm_picture(g_rpage == RP_CUSTOM ? L"custom_game" : LB_ART[g_lobby_mode & 3]); }
+
+// ---- (Nov 23, the owner: the other lobbies to work as Custom Game does; Theater first) THEATER: this PC's films
+// (TEMPORARY HISTORY and LOCAL FILES, as the File Browser reads them), MCC's own Theatre screen starting the one chosen
+// (theater.cpp): its film list read while it is open, each film matched to its file; START FILM presses MCC's own
+struct th_film {
+    std::string name, desc, by, map;             // (map: from its description, "<game> on <map>, <date>")
+    ULONGLONG when = 0;
+    bool on_disk = false, have_id = false;
+    uint8_t id[16] = {};
+    std::wstring path;
+};
+static std::vector<th_film> g_th;                // this PC's films, newest first, then MCC's that matched no file
+static bool g_th_built;
+static uint32_t g_th_seq = 0xFFFFFFFF;
+static std::wstring g_th_pick_path;              // the film chosen: its file, or (MCC's only) its id
+static uint8_t g_th_pick_id[16];
+static bool g_th_pick_set;
+static int g_th_state, g_th_scroll;              // (state 1: asked of MCC's Theater)
+static double g_th_t0;
+static bool g_th_wait;                           // START FILM pressed while MCC was walked to its Theater
+static double g_th_live_at;                      // MCC's Theater seen open since (0: not open)
+static std::string g_th_msg;
+static std::string th_text(std::string s);
+static void th_build() {
+    uint32_t seq = pg_theater_seq();
+    if (g_th_built && seq == g_th_seq) return;
+    bool handed = g_th_built;
+    g_th_built = true;
+    g_th_seq = seq;
+    if (!g_fb_read[0]) fb_scan(0);
+    if (!g_fb_read[1]) fb_scan(1);
+    g_th.clear();
+    for (int s = 0; s < 2; s++)
+        for (const fb_file& f : g_fb[s][2]) {
+            th_film t;
+            t.name = f.name; t.desc = th_text(f.desc); t.by = f.by; t.when = f.when; t.path = f.path; t.on_disk = true;
+            size_t on = t.desc.find(" on "), comma = on == std::string::npos ? on : t.desc.find(',', on);
+            if (comma != std::string::npos) t.map = cg_upper(t.desc.substr(on + 4, comma - on - 4).c_str());
+            for (const char* tail : { " ANNIVERSARY", " ANNIV" })    // (the row's room: as the vote names them)
+                if (t.map.size() > strlen(tail) && !t.map.compare(t.map.size() - strlen(tail), strlen(tail), tail))
+                    t.map.resize(t.map.size() - strlen(tail));
+            memcpy(t.id, &f.uid, 8);                 // (for now: its header id, handed over below)
+            g_th.push_back(t);
+        }
+    std::stable_sort(g_th.begin(), g_th.end(), [](const th_film& a, const th_film& b) { return a.when > b.when; });
+    if (g_th.size() > PG_MAX_FILMS) g_th.resize(PG_MAX_FILMS);
+    if (!handed) {                               // the files to theater.cpp, to match MCC's list to (once an open)
+        static pg_film_file files[PG_MAX_FILMS];
+        int n = 0;
+        for (const th_film& t : g_th) {
+            pg_film_file& f = files[n++];
+            memset(&f, 0, sizeof f);
+            const wchar_t* slash = wcsrchr(t.path.c_str(), L'\\');
+            WideCharToMultiByte(CP_UTF8, 0, slash ? slash + 1 : t.path.c_str(), -1, f.file, sizeof f.file, nullptr, nullptr);
+            if (char* dot = strrchr(f.file, '.')) *dot = 0;
+            memcpy(&f.uid, t.id, 8);
+        }
+        pg_theater_files(files, n);
+    }
+    for (th_film& t : g_th) memset(t.id, 0, 16);
+    static pg_film mcc[PG_MAX_FILMS];
+    int nm = pg_theater_films(mcc, PG_MAX_FILMS);
+    for (int i = 0; i < nm; i++) {
+        if (mcc[i].file >= 0 && mcc[i].file < (int)g_th.size() && g_th[mcc[i].file].on_disk) {
+            memcpy(g_th[mcc[i].file].id, mcc[i].id, 16);
+            g_th[mcc[i].file].have_id = true;
+        } else if ((int)g_th.size() < PG_MAX_FILMS) {   // (MCC's, no file matched: by its own name)
+            th_film t;
+            t.name = mcc[i].name[0] ? mcc[i].name : "FILM";
+            t.desc = "In MCC's Theater list.";
+            memcpy(t.id, mcc[i].id, 16);
+            t.have_id = true;
+            g_th.push_back(t);
+        }
+    }
+}
+static std::string th_text(std::string s) {      // a film's header text with MCC's map keys as the maps' names
+    for (size_t at; (at = s.find("$HReach_MPMap_")) != std::string::npos;) {
+        size_t end = s.find("_Title", at);
+        if (end == std::string::npos) break;
+        end += 6;
+        char nm[64];
+        pg_map_name(s.substr(at, end - at).c_str(), "", nm, sizeof nm);
+        s.replace(at, end - at, nm);
+    }
+    return s;
+}
+static int th_picked() {                         // the chosen film's place in g_th (the newest when none or gone)
+    for (int i = 0; i < (int)g_th.size(); i++) {
+        const th_film& t = g_th[i];
+        if (g_th_pick_set && (t.on_disk ? t.path == g_th_pick_path : !g_th_pick_path.size() && !memcmp(t.id, g_th_pick_id, 16)))
+            return i;
+    }
+    return g_th.empty() ? -1 : 0;
+}
+static void th_pick(int i) {
+    g_th_pick_set = true;
+    g_th_pick_path = g_th[i].on_disk ? g_th[i].path : std::wstring();
+    memcpy(g_th_pick_id, g_th[i].id, 16);
+}
+static std::string th_when(ULONGLONG when) {     // "Nov 23, 2:21 PM"
+    if (!when) return "";
+    FILETIME ft = { (DWORD)when, (DWORD)(when >> 32) }, lt;
+    SYSTEMTIME st;
+    FileTimeToLocalFileTime(&ft, &lt);
+    FileTimeToSystemTime(&lt, &st);
+    static const char* MON[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+    char s[48];
+    sprintf_s(s, "%s %d, %d:%02d %s", MON[(st.wMonth + 11) % 12], st.wDay, st.wHour % 12 ? st.wHour % 12 : 12, st.wMinute,
+              st.wHour < 12 ? "AM" : "PM");
+    return s;
+}
+static void th_open() { g_th_built = false; fb_forget(); g_th_msg.clear(); g_th_state = 0; g_th_wait = false; }
+static bool th_walking() { return menu_route_state() == 1 && menu_route_to() == MR_THEATER; }
+static void th_start(const th_film& f) {         // MCC's own START FILM for it (theater.cpp)
+    pg_theater_reset();
+    pg_theater_start(f.id);
+    g_th_state = 1;
+    g_th_wait = false;
+    g_th_t0 = ImGui::GetTime();
+    logf("proving grounds: Theater: START FILM for \"%s\" (%s)", f.name.c_str(), f.desc.c_str());
+}
+
+static void rm_theater(pg_env& e, float t) {
+    (void)t;
+    if (ros_up()) { rm_party(e, "IN THEATER LOBBY", "In Theater Lobby"); return; }
+    th_build();
+    int pi = th_picked();
+    const th_film* f = pi >= 0 ? &g_th[pi] : nullptr;
+    // the start, as MCC's Theater takes it: its screen gone, the film loading (Project Noble closes), or why not
+    if (g_th_state == 1) {
+        char why[200];
+        int s = pg_theater_state(why, sizeof why);
+        if (s == 3) {
+            g_th_state = 0;
+            g_stage = S_OFF;
+            logf("proving grounds: closed: a film started from Project Noble's Theater lobby");
+            return;
+        }
+        if (s == -1) { g_th_state = 0; g_th_msg = why; }
+        else if (ImGui::GetTime() - g_th_t0 > 14) { g_th_state = 0; g_th_msg = "MCC's Theater did not start the film."; }
+    }
+    panel(243, 66, 940, 322, IM_COL32(18, 20, 23, 200));
+    if (const pic* p = rm_picture(LB_ART[3])) image(p, 245, 68, 938, 320, 0.9f);
+    else rm_diamonds(590, 194, 150, IM_COL32(120, 176, 230, 120));
+    const char* L[2] = { "CHOOSE FILM", "START FILM" };
+    std::string V[2] = { !f ? "NO FILMS" : f->map.empty() ? cg_upper(f->name.c_str()) : cg_upper(f->name.c_str()) + " ON " + f->map, "" };
+    bool live = pg_theater_live(), walking = th_walking();
+    double now = ImGui::GetTime();
+    if (!live) g_th_live_at = 0;
+    else if (!g_th_live_at) g_th_live_at = now;
+    bool listed = live && now - g_th_live_at > 3;    // (its list read by then)
+    // (Nov 23) MCC walked to its Theater (menu_route.cpp): a START FILM pressed meanwhile goes once the film is listed
+    if (menu_route_to() == MR_THEATER && menu_route_state() == -1 && g_th_wait) {
+        g_th_wait = false;
+        g_th_msg = std::string("Could not open MCC's Theater (") + menu_route_why() + "). Open it in MCC, then start.";
+    }
+    if (g_th_wait && live && f && f->have_id && g_th_state == 0) th_start(*f);
+    else if (g_th_wait && listed && f && !f->have_id) {
+        g_th_wait = false;
+        g_th_msg = "MCC's Theater list does not show this film. Pick another, or play it in MCC.";
+    }
+    bool ON[2] = { !g_th.empty(), f && (!listed || f->have_id) };
+    const char* D[2] = { "Pick one of your films: the newest games' films (Temporary History) and the ones you saved.",
+                         "Play the film in MCC's own Theater. MCC is taken to Halo: Reach's Theater behind Project Noble." };
+    std::string status = g_th_state == 1 ? "Starting the film..."
+                       : !g_th_msg.empty() ? g_th_msg
+                       : !pg_theater_ready() ? "This MCC build is not the one Project Noble was made for."
+                       : walking || (g_th_wait && !live) ? "Opening Halo: Reach's Theater..."
+                       : !live ? "Open Halo: Reach's Theater in MCC first: the film plays there."
+                       : g_th_wait || !listed ? "Reading MCC's Theater..."
+                       : f && !f->have_id ? "MCC's Theater list does not show this film."
+                       : "Ready";
+    int base = (int)g_items.size();
+    cg_lobby(e, "THEATER", status.c_str(), L, V, ON, 2, D, "IN THEATER LOBBY", "In Theater Lobby");
+    if (rm_prompts(256, 966, false, true, true)) rm_open_options();
+    if (pressed(base + 0)) {
+        if (g_th.empty()) sound(PS_ERROR);
+        else { sound(PS_SELECT); g_rpage = RP_FILM; g_focus_after = pi > 0 ? pi : 0; g_th_scroll = 0; }
+    }
+    if (pressed(base + 1)) {
+        g_th_msg.clear();
+        if (!f || g_th_state == 1 || g_th_wait) sound(PS_ERROR);
+        else if (!pg_theater_ready()) { sound(PS_ERROR); g_th_msg = "This MCC build is not the one Project Noble was made for."; }
+        else if (walking || (live && !listed && !f->have_id)) { sound(PS_SELECT); g_th_wait = true; }   // (goes when it can)
+        else if (!live) { sound(PS_ERROR); g_th_msg = "Open Halo: Reach's Theater in MCC first (it lists the films), then start."; }
+        else if (!f->have_id) { sound(PS_ERROR); g_th_msg = "MCC's Theater list does not show this film. Pick another, or play it in MCC."; }
+        else { sound(PS_SELECT); th_start(*f); }
+    }
+}
+
+// CHOOSE FILM: the films, newest first; the one focused described at the right
+static void rm_film(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("CHOOSE FILM", "THEATER");
+    th_build();
+    const int V = 15;
+    int n = (int)g_th.size(), base = (int)g_items.size(), sel = -1, pi = th_picked();
+    int ff = g_focus - base;
+    if (ff < 0 || ff >= n) ff = 0;
+    if (ff < g_th_scroll) g_th_scroll = ff;
+    if (ff >= g_th_scroll + V) g_th_scroll = ff - V + 1;
+    bool live = pg_theater_live();
+    for (int k = 0; k < n; k++) {
+        bool shown = k >= g_th_scroll && k < g_th_scroll + V;
+        float y = 145 + 41.0f * (k - g_th_scroll);
+        bool fo = shown ? item(390, y, 775, y + 38) : item(-2000, -2000, -1990, -1990);
+        if (fo) sel = k;
+        if (!shown) continue;
+        g_dl->PushClipRect(P(390, y), P(775, y + 38), true);
+        // (the map, the time at the right: most films are the same game type)
+        std::string when = th_when(g_th[k].when), at = when.substr(when.find(", ") == std::string::npos ? 0 : when.find(", ") + 2);
+        rm_row(390, y, 775, y + 38, fo, g_th[k].map.empty() ? cg_upper(g_th[k].name.c_str()).c_str() : g_th[k].map.c_str(),
+               !live || g_th[k].have_id, at.empty() ? nullptr : at.c_str());
+        g_dl->PopClipRect();
+        if (k == pi) cg_mark(757, y + 19);
+    }
+    if (g_th_scroll > 0) g_dl->AddTriangleFilled(P(582, 128), P(572, 140), P(592, 140), A(C_DIM));
+    if (g_th_scroll + V < n) g_dl->AddTriangleFilled(P(572, 150 + 41.0f * V), P(592, 150 + 41.0f * V), P(582, 162 + 41.0f * V), A(C_DIM));
+    int s = sel >= 0 ? sel : ff;
+    if (s >= 0 && s < n) {
+        const th_film& m = g_th[s];
+        panel(800, 160, 1505, 420, IM_COL32(18, 20, 23, 200));
+        if (const pic* p = rm_picture(LB_ART[3])) image(p, 802, 162, 1503, 418, 0.6f);
+        fb_icon(2, 1152, 290, 90, IM_COL32(222, 226, 230, 200));
+        text(g_fl, 34, 808, 438, C_TEXT, cg_upper(m.name.c_str()).c_str());
+        std::string w = m.desc;
+        if (!m.by.empty()) w += (w.empty() ? "" : "\n") + std::string("Recorded by ") + m.by + ".";
+        if (m.when) w += std::string("\n") + th_when(m.when);
+        w += !live ? (th_walking() ? "\nMCC is being taken to its Theater." : "\nMCC's Theater is not open yet.")
+           : m.have_id ? "\nIn MCC's Theater list." : "\nMCC's Theater list does not show this film.";
+        rm_wrap(g_fl, 23, 808, 488, 690, IM_COL32(222, 226, 230, 255), w.c_str());
+    }
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    for (int k = 0; k < n; k++) {
+        if (!pressed(base + k)) continue;
+        th_pick(k);
+        g_th_msg.clear();
+        sound(PS_SELECT);
+        g_rpage = RP_LOBBY; g_focus_after = 1;           // (on START FILM)
+    }
+}
+
+// ---- (Nov 23, the owner: the other lobbies "full, like Custom"; Firefight after Theater, GAME OPTIONS view only) FIREFIGHT:
+// MCC's own Halo: Reach Firefight lobby's missions and game types (pg_lobby.cpp, read while it is open, kept after),
+// the picks and the difficulty set into it and its own START pressed
+static const int MAX_PG_LIST = 160;              // (pg_lobby.cpp's lists hold as many)
+static pg_entry g_ffm[MAX_PG_LIST], g_ffg[MAX_PG_LIST];
+static int g_nffm, g_nffg, g_ff_seq_seen = -1;
+static int g_ff_map = -1, g_ff_gt = -1, g_ff_diff = -1;  // (the picks: -1 none yet, MCC's own then)
+static int g_ff_mcc_diff = -1, g_ff_state, g_ff_scroll;
+static double g_ff_t0;
+static std::string g_ff_msg;
+static const char* FF_DIFF[4] = { "EASY", "NORMAL", "HEROIC", "LEGENDARY" };
+static std::string ff_name(const pg_entry& e) {  // (a "$..." string key: the name from its picture's key, words split)
+    if (e.name[0] && e.name[0] != '$') return cg_upper(e.name);
+    const char* k = e.key[0] ? e.key : e.name;
+    const char* us = strrchr(k, '_');
+    std::string s, w = us ? us + 1 : k;
+    for (size_t i = 0; i < w.size(); i++) {
+        if (i && isupper((unsigned char)w[i]) && islower((unsigned char)w[i - 1])) s += ' ';
+        s += (char)toupper((unsigned char)w[i]);
+    }
+    return s.empty() ? std::string("FIREFIGHT") : s;
+}
+static void ff_save() {
+    wchar_t p[MAX_PATH], v[160];
+    rm_ini(p);
+    if (const pg_entry* g = cg_find(g_ffg, g_nffg, g_ff_gt)) { swprintf_s(v, L"%d|%S", g->kind, g->name); WritePrivateProfileStringW(L"firefight", L"gametype", v, p); }
+    if (const pg_entry* m = cg_find(g_ffm, g_nffm, g_ff_map)) { swprintf_s(v, L"%d|%S", m->kind, m->name); WritePrivateProfileStringW(L"firefight", L"map", v, p); }
+    if (g_ff_diff >= 0) { swprintf_s(v, L"%d", g_ff_diff); WritePrivateProfileStringW(L"firefight", L"difficulty", v, p); }
+}
+static void ff_resolve() {                       // MCC's lists copied in; the picks: saved, else MCC's own, else the first
+    int dm = -1, cm = -1, cg = -1;
+    int seq = pg_ff_lists(g_ffm, &g_nffm, g_ffg, &g_nffg, MAX_PG_LIST, &dm, &cm, &cg);
+    if (seq == g_ff_seq_seen) return;
+    g_ff_seq_seen = seq;
+    g_ff_mcc_diff = dm;
+    wchar_t p[MAX_PATH], v[160];
+    rm_ini(p);
+    for (int k = 0; k < 2; k++) {
+        int& id = k ? g_ff_map : g_ff_gt;
+        const pg_entry* list = k ? g_ffm : g_ffg;
+        int n = k ? g_nffm : g_nffg;
+        if (id >= 0 && cg_find(list, n, id)) continue;
+        id = -1;
+        GetPrivateProfileStringW(L"firefight", k ? L"map" : L"gametype", L"", v, 160, p);
+        char want[160] = "";
+        WideCharToMultiByte(CP_UTF8, 0, v, -1, want, sizeof want, nullptr, nullptr);
+        int kind = atoi(want);
+        const char* nm = strchr(want, '|') ? strchr(want, '|') + 1 : "";
+        for (int i = 0; i < n && id < 0; i++) if (list[i].kind == kind && !strcmp(list[i].name, nm)) id = list[i].id;
+        int mine = k ? cm : cg;
+        if (id < 0 && cg_find(list, n, mine)) id = mine;
+        if (id < 0 && n) id = list[0].id;
+    }
+    if (g_ff_diff < 0) {
+        int d = GetPrivateProfileIntW(L"firefight", L"difficulty", -1, p);
+        g_ff_diff = d >= 0 && d <= 3 ? d : dm >= 0 && dm <= 3 ? dm : 1;
+    }
+}
+
+static void rm_firefight(pg_env& e, float t) {
+    (void)t;
+    if (ros_up()) { rm_party(e, "IN FIREFIGHT LOBBY", "In Firefight Lobby"); return; }
+    ff_resolve();
+    if (g_ff_diff < 0) g_ff_diff = 1;
+    const pg_entry* g = cg_find(g_ffg, g_nffg, g_ff_gt);
+    const pg_entry* m = cg_find(g_ffm, g_nffm, g_ff_map);
+    bool live = pg_ff_live();
+    if (g_ff_state == 1) {                       // (the start, as MCC's Firefight lobby takes it)
+        char why[160];
+        int s = pg_ff_launch_state(why, sizeof why);
+        if (s == 2) {
+            g_ff_state = 0;
+            g_stage = S_OFF;
+            logf("proving grounds: closed: a Firefight game started from Project Noble's Firefight lobby");
+            return;
+        }
+        if (s == -1) { g_ff_state = 0; g_ff_msg = why; }
+        else if (ImGui::GetTime() - g_ff_t0 > 8) { g_ff_state = 0; g_ff_msg = "MCC's Firefight lobby did not take the game."; }
+    }
+    panel(243, 66, 940, 322, IM_COL32(18, 20, 23, 200));
+    const pic* mp = m ? map_picture(m->key) : nullptr;
+    if (mp) image(mp, 245, 68, 938, 320, 0.95f);
+    else if (const pic* p = rm_picture(LB_ART[1])) image(p, 245, 68, 938, 320, 0.9f);
+    else rm_diamonds(590, 194, 150, IM_COL32(120, 176, 230, 120));
+    const char* L[5] = { "GAME TYPE", "MISSION", "DIFFICULTY", "GAME OPTIONS", "START GAME" };
+    std::string V[5] = { g ? ff_name(*g) : "", m ? ff_name(*m) : "", FF_DIFF[g_ff_diff & 3], "", "" };
+    bool have = g_nffg && g_nffm;
+    bool ON[5] = { have, have, true, g != nullptr, g && m };
+    const char* D[5] = { "Choose the kind of Firefight: its waves, its skulls and its lives are the game type's.",
+                         "Choose where to fight.",
+                         "Choose how hard the Covenant fight back. Left and Right change it.",
+                         "See the game type's rules.",
+                         "Start the selected game in MCC's own Firefight lobby." };
+    std::string status = g_ff_state == 1 ? "Starting..."
+                       : !g_ff_msg.empty() ? g_ff_msg
+                       : !pg_ff_ready() ? "This MCC build is not the one Project Noble was made for."
+                       : !have ? "Open Halo: Reach's Firefight lobby in MCC first: its missions and game types are read there."
+                       : !live ? "Open Halo: Reach's Firefight lobby in MCC to start: the game starts there."
+                       : "Ready";
+    int base = (int)g_items.size();
+    int focus = cg_lobby(e, "FIREFIGHT", status.c_str(), L, V, ON, 5, D, "IN FIREFIGHT LOBBY", "In Firefight Lobby");
+    if (rm_prompts(256, 966, true, true, true)) rm_open_options();
+    if (focus == 2 && g_left_right) {           // (DIFFICULTY: Left / Right)
+        g_lr_taken = true;
+        int d = g_ff_diff + g_left_right;
+        if (d >= 0 && d <= 3) { g_ff_diff = d; ff_save(); sound(PS_MOVE); } else sound(PS_ERROR);
+    }
+    if (pressed(base + 0)) { if (have) { sound(PS_SELECT); g_rpage = RP_FF_TYPE; g_ff_scroll = 0; g_focus_after = 0;
+                                         for (int i = 0; i < g_nffg; i++) if (g_ffg[i].id == g_ff_gt) g_focus_after = i; } else sound(PS_ERROR); }
+    if (pressed(base + 1)) { if (have) { sound(PS_SELECT); g_rpage = RP_FF_MAP; g_ff_scroll = 0; g_focus_after = 0;
+                                         for (int i = 0; i < g_nffm; i++) if (g_ffm[i].id == g_ff_map) g_focus_after = i; } else sound(PS_ERROR); }
+    if (pressed(base + 2)) { g_ff_diff = (g_ff_diff + 1) % 4; ff_save(); sound(PS_MOVE); }
+    if (pressed(base + 3)) { if (g) { sound(PS_SELECT); g_rpage = RP_FF_OPTIONS; g_focus_after = 0; } else sound(PS_ERROR); }
+    if (pressed(base + 4)) {
+        g_ff_msg.clear();
+        if (!g || !m || g_ff_state == 1) sound(PS_ERROR);
+        else if (!live) { sound(PS_ERROR); g_ff_msg = "Open Halo: Reach's Firefight lobby in MCC first: the game starts there."; }
+        else {
+            sound(PS_SELECT);
+            pg_ff_reset();
+            pg_ff_launch(m->id, g->id, g_ff_diff);
+            g_ff_state = 1;
+            g_ff_t0 = ImGui::GetTime();
+            logf("proving grounds: Firefight: START GAME, %s on %s, %s", g->name, m->name, FF_DIFF[g_ff_diff & 3]);
+        }
+    }
+}
+
+// GAME TYPE and MISSION: MCC's Firefight lists, the pick marked; the focused one at the right
+static void rm_ff_list(pg_env& e, float t, bool maps) {
+    (void)e; (void)t;
+    rm_small_header(maps ? "SELECT MISSION" : "SELECT GAME TYPE", "FIREFIGHT");
+    ff_resolve();
+    const pg_entry* list = maps ? g_ffm : g_ffg;
+    int n = maps ? g_nffm : g_nffg, pick = maps ? g_ff_map : g_ff_gt;
+    const int V = 15;
+    int base = (int)g_items.size(), sel = -1, ff = g_focus - base;
+    if (ff < 0 || ff >= n) ff = 0;
+    if (ff < g_ff_scroll) g_ff_scroll = ff;
+    if (ff >= g_ff_scroll + V) g_ff_scroll = ff - V + 1;
+    for (int k = 0; k < n; k++) {
+        bool shown = k >= g_ff_scroll && k < g_ff_scroll + V;
+        float y = 145 + 41.0f * (k - g_ff_scroll);
+        bool fo = shown ? item(390, y, 775, y + 38) : item(-2000, -2000, -1990, -1990);
+        if (fo) sel = k;
+        if (!shown) continue;
+        g_dl->PushClipRect(P(390, y), P(775, y + 38), true);
+        rm_row(390, y, 775, y + 38, fo, ff_name(list[k]).c_str());
+        g_dl->PopClipRect();
+        if (list[k].id == pick) cg_mark(757, y + 19);
+    }
+    if (g_ff_scroll > 0) g_dl->AddTriangleFilled(P(582, 128), P(572, 140), P(592, 140), A(C_DIM));
+    if (g_ff_scroll + V < n) g_dl->AddTriangleFilled(P(572, 150 + 41.0f * V), P(592, 150 + 41.0f * V), P(582, 162 + 41.0f * V), A(C_DIM));
+    int s = sel >= 0 ? sel : ff;
+    if (s >= 0 && s < n) {
+        const pg_entry& x = list[s];
+        panel(800, 160, 1505, 560, IM_COL32(18, 20, 23, 200));
+        if (const pic* p = maps ? map_picture(x.key) : nullptr) image(p, 802, 162, 1503, 558, 0.95f);
+        else if (const pic* p2 = rm_picture(LB_ART[1])) image(p2, 802, 162, 1503, 558, 0.6f);
+        text(g_fl, 34, 808, 578, C_TEXT, ff_name(x).c_str());
+        const char* w = x.kind == 1 ? "Built into Halo: Reach." : x.kind == 2 ? "One MCC ships." : "One you saved.";
+        rm_wrap(g_fl, 23, 808, 624, 690, IM_COL32(222, 226, 230, 255), w);
+    }
+    rm_band();
+    float x = prompt(318, 966, "A", "Enter", "Select", nullptr);
+    prompt(x, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) { rm_exit(); return; }
+    for (int k = 0; k < n; k++) {
+        if (!pressed(base + k)) continue;
+        (maps ? g_ff_map : g_ff_gt) = list[k].id;
+        ff_save();
+        g_ff_msg.clear();
+        sound(PS_SELECT);
+        g_rpage = RP_LOBBY; g_focus_after = maps ? 1 : 0;
+    }
+}
+
+// GAME OPTIONS: what is known of the game type; its rules are changed in MCC's own Firefight lobby
+static void rm_ff_options(pg_env& e, float t) {
+    (void)e; (void)t;
+    rm_small_header("GAME OPTIONS", "FIREFIGHT");
+    const pg_entry* g = cg_find(g_ffg, g_nffg, g_ff_gt);
+    const char* L[3] = { "GAME TYPE", "DIFFICULTY", "FROM" };
+    std::string V[3] = { g ? ff_name(*g) : "", FF_DIFF[g_ff_diff & 3], !g ? "" : g->kind == 1 ? "BUILT IN" : g->kind == 2 ? "MCC" : "YOUR FILES" };
+    for (int k = 0; k < 3; k++) {
+        float y = 145 + 41.0f * k;
+        bool f = item(390, y, 1515, y + 38);
+        if (f) focus_band(390, y, 1515, y + 38);
+        text(g_fl, 25, 400, y + 6, f ? C_TEXT : C_DIM, L[k]);
+        text(g_fl, 25, 980, y + 6, C_TEXT, V[k].c_str());
+    }
+    g_dl->AddLine(P(400, 281), P(1500, 281), A(IM_COL32(150, 158, 166, 70)), U(1));
+    rm_wrap(g_fl, 24, 400, 297, 1100, IM_COL32(222, 226, 230, 255),
+            "The game type's rules (waves, skulls, lives, weapons) are kept in its own file. Change them in MCC's own "
+            "Firefight lobby, under Game Options, and save the game type: Project Noble starts it as saved.");
+    rm_band();
+    prompt(318, 966, "B", "Esc", "Back", &g_footer_back);
+    if (rm_exit_prompt()) rm_exit();
+}
+
 static void rm_lobby(pg_env& e, float t) {
+    if (g_lobby_mode == 3) { rm_theater(e, t); return; }   // (Nov 23: Theater, on MCC's own)
+    if (g_lobby_mode == 1) { rm_firefight(e, t); return; } // (Nov 23: Firefight, on MCC's own)
     (void)t;
     const char* caps[4] = { "IN CAMPAIGN LOBBY", "IN FIREFIGHT LOBBY", "IN FORGE LOBBY", "IN THEATER LOBBY" };
     const char* where[4] = { "In Campaign Lobby", "In Firefight Lobby", "In Forge Lobby", "In Theater Lobby" };
@@ -2411,6 +2865,10 @@ static void reach_menu_screen(pg_env& e, float t) {
     case RP_CG_MAP: rm_cg_map(e, t); break;
     case RP_CG_OPTIONS: rm_cg_options(e, t); break;
     case RP_LOBBY: rm_lobby(e, t); break;
+    case RP_FILM: rm_film(e, t); break;         // (Nov 23: Theater's CHOOSE FILM)
+    case RP_FF_TYPE: rm_ff_list(e, t, false); break;   // (Nov 23: Firefight's pages)
+    case RP_FF_MAP: rm_ff_list(e, t, true); break;
+    case RP_FF_OPTIONS: rm_ff_options(e, t); break;
     default: break;
     }
     g_inert = false;
@@ -2456,6 +2914,10 @@ static bool rmenu_back() {
         g_rpage = RP_CUSTOM; g_focus_after = 0; return true;
     case RP_CG_MAP: g_rpage = RP_CUSTOM; g_focus_after = 1; return true;
     case RP_CG_OPTIONS: g_rpage = RP_CUSTOM; g_focus_after = 2; return true;
+    case RP_FILM: g_rpage = RP_LOBBY; g_focus_after = 0; return true;
+    case RP_FF_TYPE: g_rpage = RP_LOBBY; g_focus_after = 0; return true;
+    case RP_FF_MAP: g_rpage = RP_LOBBY; g_focus_after = 1; return true;
+    case RP_FF_OPTIONS: g_rpage = RP_LOBBY; g_focus_after = 3; return true;
     case RP_LOBBY: g_rpage = RP_MAIN; g_focus_after = g_lobby_mode == 0 ? 0 : g_lobby_mode == 1 ? 2 : g_lobby_mode == 2 ? 4 : 5; return true;
     }
     return false;

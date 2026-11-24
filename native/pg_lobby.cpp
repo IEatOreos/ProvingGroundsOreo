@@ -249,6 +249,117 @@ static void tick(uint8_t* screen) {
     }
 }
 
+// ---- (Nov 23, the owner: the other lobbies "full, like Custom"; Firefight after Theater) MCC's Firefight custom game
+// lobby (static read with Ghidra, Nov 23; not yet proved live): the registry's "FirefightCustomGame" (factory 0x14329AA50,
+// create FUN_14031F4D8) is the custom game lobby's own class (its constructor FUN_1404D3D7C, 0x1860 bytes) with the
+// vtable 0x1432BE518: the same Update (FUN_1404DECDC, hooked above), the same fields (+0x16C8 the title index, +0x16D8 the
+// gametype, +0x16E0 FUN_1404E1188(title, gametype), +0x16E8 the map's content id) and +0x1840 the difficulty (a byte;
+// its commit FUN_1404D01D8 hands it to the lobby's settings). Its init (FUN_1404CCC24) loads the variant library in
+// Firefight's mode (FUN_14043CDB8(lib, title, title, 4)), so while it is open the library's lists for the title are
+// Firefight's maps and gametypes. Its START tile (its pick handler FUN_1404CF934, step 5): FUN_1404D070C (MCC's party
+// size message: true = stop), the host's +0x48 = the gametype's category, the apply step FUN_1404D4C8C, then its Start
+// FUN_1404D03A8 (its vtable +0x1B8). Done here the same way, on MCC's thread, for Halo: Reach (title index 6) only.
+static const uintptr_t FF_SCREEN_VT = 0x32BE518, FF_START = 0x4D03A8, FF_BUSY = 0x4D070C;
+static const uint8_t FF_START_HEAD[] = {0x48, 0x8B, 0xC4, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x68, 0xA1, 0x48, 0x81, 0xEC, 0x00};
+static const uint8_t FF_BUSY_HEAD[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x57, 0x48, 0x83, 0xEC, 0x30, 0x48};
+static const int FF_TITLE = 6, SCR_DIFF = 0x1840;
+typedef bool(__fastcall* busy_fn)(uint8_t* screen);
+static bool g_ff_ok;
+static volatile ULONGLONG g_ff_live_at;
+static pg_entry g_ff_maps[MAX_ENTRIES], g_ff_gts[MAX_ENTRIES];
+static int g_ff_nmaps, g_ff_ngts, g_ff_diff = -1, g_ff_cur_map = -1, g_ff_cur_gt = -1;
+static volatile uint32_t g_ff_seq;
+static ULONGLONG g_ff_copied_at;
+static bool g_ff_dumped;
+static int g_ff_state, g_ff_map, g_ff_gt, g_ff_want_diff;   // (state: 0 none, 1 waiting, 2 started, -1 failed)
+static char g_ff_why[160];
+
+static void ff_fail(const char* why) {
+    g_ff_state = -1;
+    strcpy_s(g_ff_why, why);
+    logf("firefight: launch failed: %s", why);
+}
+
+static void ff_copy(uint8_t* lib, uint8_t* screen) {
+    pg_entry maps[MAX_ENTRIES], gts[MAX_ENTRIES];
+    int nm = 0, ng = 0, n = 0;
+    for (uint8_t* e = first(lib, LIST_MAP, FF_TITLE); more(lib, LIST_MAP, FF_TITLE, e, n) && nm < MAX_ENTRIES; e = *(uint8_t**)(e + 8), n++)
+        if (*(int32_t*)(e + 0x14) != 4) fill(maps[nm++], e, false);
+    n = 0;
+    for (uint8_t* e = first(lib, LIST_GT, FF_TITLE); more(lib, LIST_GT, FF_TITLE, e, n) && ng < MAX_ENTRIES; e = *(uint8_t**)(e + 8), n++)
+        if (*(int32_t*)(e + 0x14) != 4) { fill(gts[ng], e, false); gts[ng].category = *(int32_t*)(e + 0x450); ng++; }
+    int cur_map = -1;                            // (MCC's own picks: the map by its content id)
+    n = 0;
+    for (uint8_t* e = first(lib, LIST_MAP, FF_TITLE); more(lib, LIST_MAP, FF_TITLE, e, n); e = *(uint8_t**)(e + 8), n++)
+        if (!memcmp(e + 0x3E8, screen + SCR_MAP_ID, 16)) { cur_map = *(int32_t*)(e + 0x1C); break; }
+    EnterCriticalSection(&g_lock);
+    memcpy(g_ff_maps, maps, sizeof(pg_entry) * nm); g_ff_nmaps = nm;
+    memcpy(g_ff_gts, gts, sizeof(pg_entry) * ng); g_ff_ngts = ng;
+    g_ff_diff = (int8_t)screen[SCR_DIFF];
+    g_ff_cur_map = cur_map;
+    g_ff_cur_gt = *(int32_t*)(screen + SCR_GT);
+    g_ff_seq++;
+    LeaveCriticalSection(&g_lock);
+    if (!g_ff_dumped) {                          // (native\bin\firefight_library.txt, once a session: the evidence)
+        g_ff_dumped = true;
+        logf("firefight: MCC's Firefight lists: %d maps, %d gametypes; difficulty %d", nm, ng, g_ff_diff);
+        wchar_t path[MAX_PATH];
+        swprintf_s(path, L"%s\\firefight_library.txt", g_bin);
+        FILE* f = nullptr;
+        if (!_wfopen_s(&f, path, L"w") && f) {
+            fprintf(f, "MCC's Halo: Reach Firefight lists as Project Noble read them (pg_lobby.cpp); difficulty %d, map #%d, gametype #%d.\n\n== maps\n",
+                    g_ff_diff, cur_map, g_ff_cur_gt);
+            for (int i = 0; i < nm; i++) fprintf(f, "  #%d kind %d \"%s\" %s\n", maps[i].id, maps[i].kind, maps[i].name, maps[i].key);
+            fprintf(f, "\n== gametypes (category)\n");
+            for (int i = 0; i < ng; i++) fprintf(f, "  #%d kind %d category %d \"%s\" %s\n", gts[i].id, gts[i].kind, gts[i].category, gts[i].name, gts[i].key);
+            fclose(f);
+        }
+    }
+}
+
+static void ff_launch(uint8_t* screen, uint8_t* lib, uint8_t* host) {
+    void* settings = ((settings_fn)(g_mcc + LT_SETTINGS))(1);
+    if (!settings) { ff_fail("MCC's lobby settings were not there."); return; }
+    if (((counting_fn)(g_mcc + LT_COUNTING))(settings)) { ff_fail("MCC's Firefight lobby was already counting down."); return; }
+    uint8_t* gt = by_id(lib, LIST_GT, FF_TITLE, g_ff_gt);
+    uint8_t* map = by_id(lib, LIST_MAP, FF_TITLE, g_ff_map);
+    if (!gt || !map) { ff_fail("That mission or game type is no longer in MCC's Firefight lists."); return; }
+    if (g_ff_want_diff < 0 || g_ff_want_diff > 3) { ff_fail("That difficulty is not one of Halo: Reach's."); return; }
+    memcpy(screen + SCR_MAP_ID, map + 0x3E8, 16);
+    *(int32_t*)(screen + SCR_GT) = g_ff_gt;
+    *(uint8_t**)(screen + SCR_GT_ENTRY) = ((gt_entry_fn)(g_mcc + LT_GT_ENTRY))(FF_TITLE, g_ff_gt);
+    screen[SCR_DIFF] = (uint8_t)g_ff_want_diff;
+    if (((busy_fn)(g_mcc + FF_BUSY))(screen)) { ff_fail("MCC says the party is too big for Firefight (its message is on screen)."); return; }
+    *(int32_t*)(host + HOST_CAT) = *(int32_t*)(gt + 0x450);
+    ((apply_fn)(g_mcc + LT_APPLY))(screen);
+    ((start_fn)(g_mcc + FF_START))(screen);      // (its Start: MCC's checks, its commit, the launch)
+    char m[64], g[64];
+    entry_text(map, 0x58, m, sizeof m);
+    entry_text(gt, 0x58, g, sizeof g);
+    bool counting = ((counting_fn)(g_mcc + LT_COUNTING))(settings);
+    g_ff_state = 2;                              // (Start ran: the screen going away is the start, counted by the screens)
+    g_ff_why[0] = 0;
+    logf("firefight: MCC's Start pressed: map #%d (%s), gametype #%d (%s), difficulty %d; countdown %d; host gametype #%d",
+         g_ff_map, m, g_ff_gt, g, g_ff_want_diff, (int)counting, *(int32_t*)(host + HOST_GT));
+}
+
+static void ff_tick(uint8_t* screen) {
+    if (!g_ff_ok || *(uint8_t**)screen != g_mcc + FF_SCREEN_VT) return;
+    uint8_t* lib = *(uint8_t**)(g_mcc + LT_LIB);
+    uint8_t* host = *(uint8_t**)(g_mcc + LT_HOST);
+    if (!lib || !host || *(int32_t*)(screen + SCR_TITLE) != FF_TITLE) return;
+    ULONGLONG now = GetTickCount64();
+    bool back = !g_ff_live_at || now - g_ff_live_at > 1000;
+    g_ff_live_at = now;
+    if (back || !g_ff_copied_at || now - g_ff_copied_at > 2000) { g_ff_copied_at = now; ff_copy(lib, screen); }
+    EnterCriticalSection(&g_lock);
+    bool go = g_ff_state == 1;
+    LeaveCriticalSection(&g_lock);
+    if (go) {
+        __try { ff_launch(screen, lib, host); } __except (EXCEPTION_EXECUTE_HANDLER) { ff_fail("MCC's Firefight lobby could not be read."); }
+    }
+}
+
 // (Nov 21) MCC's custom game lobby screen ran its Update (any title): the overlay keeps the BOTS and Project Noble tiles
 // up while it runs, even when MCC greys its top row (the focus on the maps or the session list)
 static volatile ULONGLONG g_screen_at;
@@ -261,6 +372,10 @@ static void __fastcall h_update(uint8_t* screen, float dt) {
     __try { tick(screen); } __except (EXCEPTION_EXECUTE_HANDLER) {
         static int told;
         if (told++ < 3) logf("proving grounds: lobby unreadable this frame");
+    }
+    __try { ff_tick(screen); } __except (EXCEPTION_EXECUTE_HANDLER) {   // (Nov 23: the Firefight lobby, the same Update)
+        static int told;
+        if (told++ < 3) logf("firefight: lobby unreadable this frame");
     }
 }
 
@@ -333,6 +448,45 @@ int pg_lobby_launch_state(char* why, int cap) {
     return s;
 }
 
+// ---- (Nov 23) the Firefight lobby, for the screens (any thread)
+bool pg_ff_live() { return g_ff_ok && g_ff_live_at && GetTickCount64() - g_ff_live_at < 500; }
+bool pg_ff_ready() { return g_ff_ok; }
+uint32_t pg_ff_seq() { return g_ff_ok ? g_ff_seq : 0; }
+int pg_ff_lists(pg_entry* maps, int* nmaps, pg_entry* gts, int* ngts, int cap, int* difficulty, int* cur_map, int* cur_gt) {
+    if (!g_ff_ok) { *nmaps = *ngts = 0; return 0; }
+    EnterCriticalSection(&g_lock);
+    *nmaps = g_ff_nmaps < cap ? g_ff_nmaps : cap;
+    *ngts = g_ff_ngts < cap ? g_ff_ngts : cap;
+    memcpy(maps, g_ff_maps, sizeof(pg_entry) * *nmaps);
+    memcpy(gts, g_ff_gts, sizeof(pg_entry) * *ngts);
+    *difficulty = g_ff_diff; *cur_map = g_ff_cur_map; *cur_gt = g_ff_cur_gt;
+    uint32_t s = g_ff_seq;
+    LeaveCriticalSection(&g_lock);
+    return (int)s;
+}
+void pg_ff_launch(int map, int gametype, int difficulty) {
+    if (!g_ff_ok) return;
+    EnterCriticalSection(&g_lock);
+    g_ff_map = map; g_ff_gt = gametype; g_ff_want_diff = difficulty;
+    g_ff_state = 1;
+    g_ff_why[0] = 0;
+    LeaveCriticalSection(&g_lock);
+    logf("firefight: a game asked of MCC's Firefight lobby: map #%d, gametype #%d, difficulty %d", map, gametype, difficulty);
+}
+int pg_ff_launch_state(char* why, int cap) {
+    if (!g_ff_ok) { if (why) strcpy_s(why, cap, "This MCC build is not the one Project Noble was made for."); return -1; }
+    EnterCriticalSection(&g_lock);
+    int s = g_ff_state;
+    if (why) strcpy_s(why, cap, g_ff_why);
+    LeaveCriticalSection(&g_lock);
+    return s;
+}
+void pg_ff_reset() {
+    EnterCriticalSection(&g_lock);
+    g_ff_state = 0; g_ff_why[0] = 0;
+    LeaveCriticalSection(&g_lock);
+}
+
 void lobby_test_hooks() {                        // (session_watch.cpp calls it at start; the name kept)
     InitializeCriticalSection(&g_lock);
     g_mcc = (uint8_t*)GetModuleHandleW(nullptr);
@@ -366,4 +520,11 @@ void lobby_test_hooks() {                        // (session_watch.cpp calls it 
     }
     g_ok = true;
     logf("proving grounds: on MCC's Halo: Reach custom game lobby (its Update and Start)");
+    __try {                                      // (Nov 23: the Firefight lobby, on the same Update)
+        g_ff_ok = !memcmp(g_mcc + FF_START, FF_START_HEAD, sizeof FF_START_HEAD) &&
+                  !memcmp(g_mcc + FF_BUSY, FF_BUSY_HEAD, sizeof FF_BUSY_HEAD) &&
+                  *(uint8_t**)(g_mcc + FF_SCREEN_VT + 0x58) == g_mcc + LT_UPDATE &&
+                  *(uint8_t**)(g_mcc + FF_SCREEN_VT + 0x1B8) == g_mcc + FF_START;
+    } __except (EXCEPTION_EXECUTE_HANDLER) { g_ff_ok = false; }
+    logf(g_ff_ok ? "firefight: on MCC's Firefight lobby (the same Update)" : "firefight: MCC's Firefight lobby not as decoded: off");
 }

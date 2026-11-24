@@ -153,6 +153,11 @@ def read_ini(path=None):
             low = rest.lower()
             is_add, is_drop = low.startswith("add"), low.startswith("remove")
             what = rest[3:] if is_add else rest[6:] if is_drop else rest
+            if is_drop and what.lower().startswith("pair=") and "|" in what:   # (Nov 23) removepair=MAP|GAMETYPE
+                m, g = (x.strip() for x in what[5:].split("|", 1))
+                if m and g:
+                    pls[key].setdefault("skip", []).append((m, g))
+                continue
             for kind, field in (("gametype=", "gametypes"), ("map=", "maps")):
                 if not what.lower().startswith(kind):
                     continue
@@ -193,6 +198,7 @@ def read_ini(path=None):
         maps = [m for m in pl["maps"] if all(squash(m) != squash(d) for d in drop[key]["maps"])]
         maps += add[key]["maps"]
         pl["maps"] = [m for m in maps if m in MAP_FILES]
+        pl["skip"] = {(squash(m), g.upper()) for m, g in pl.get("skip", [])}
     return pls, settings
 
 
@@ -427,6 +433,8 @@ def draw_options(pl, rng, fits):
             break
         g = gts[rng.weighted([w for _, w in gts])][0]
         m = rng.pick(maps)
+        if ("".join(c for c in m.lower() if c.isalnum()), g.upper()) in pl.get("skip", ()):
+            continue                                                 # (Nov 23: removepair=)
         if (m, g) not in cands and fits(m, g):
             cands.append((m, g))
     opts = []

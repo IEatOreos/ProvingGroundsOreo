@@ -16,6 +16,7 @@ from .core import Vec
 EYE = 0.62       # standing eye height above the feet (world units, CE)
 CHEST = 0.40
 FEET_SLAB = 0.6  # a ray crossing the plane of a man's feet this close to him goes through the floor he stands on (_ray)
+NO_FLOOR_H = 1.5  # u: (custom, Nov 23) a shooter this far over the floor under it stands on none (_ray: a pilot's line down)
 RAY_MAX = 1000.0  # u: no line of sight longer than this (_ray: its samples grow with its length)
 LIP_R = 3.0           # u: from the eye, a wall's top step's upper half is rounding, not its cover's lip (_ray)
 PIECE_TOP_EPS = 0.03  # u: a line this far over a placed piece's real wall top passes it (_ray; its faces' samples stop
@@ -1291,10 +1292,15 @@ class Terrain:
             return False                             # a shield in the way stops a shot and a move (sight passes it)
         # the floor a man stands on stops a ray from straight below him, and the shooter's own floor one from straight
         # above: whatever the heightmap holds
-        for fz, cx, cy in ((b.z, b.x, b.y), (a.z, a.x, a.y)):
+        for own, (fz, cx, cy) in enumerate(((b.z, b.x, b.y), (a.z, a.x, a.y))):
             if (za - fz) * (zb - fz) < 0:            # the ray crosses that floor's plane ...
                 u = (fz - za) / (zb - za)
                 if math.hypot(a.x + dx * u - cx, a.y + dy * u - cy) < FEET_SLAB:
+                    if own and s.height_over(a.x, a.y, a.z) > NO_FLOOR_H:
+                        # (custom, Nov 23) a shooter in the air (a pilot) has no floor under it: its line down stays.
+                        # Live Spire 20261123-172845: a Banshee's men 45-90 deg under it within 28 u, 8 of 1318 read in
+                        # sight (1020 without this rule); its dives went by with "no clear line", 5 bombs in 310 s
+                        continue
                     return False                     # ... under his feet
         n = max(3, int(max(L, abs(zb - za)) / (s.cell * 0.8)))
         t = np.linspace(0.0, 1.0, n)[1:-1]          # skip both end points (the players themselves)

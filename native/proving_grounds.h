@@ -24,14 +24,47 @@ struct pg_entry {
 bool pg_lobby_live();                                    // MCC's Halo: Reach custom game lobby ran in the last 0.5 s
 bool pg_lobby_screen_live();                             // (Nov 21) MCC's custom game lobby screen (any title) ran its
                                                          // Update in the last 0.5 s
-// ---- menu_route.cpp (Nov 23): MCC walked to Halo: Reach's custom game lobby from any menu, behind Project Noble
-void menu_route_start();
-int menu_route_state();                                  // 0 idle, 1 running, 2 the lobby open, -1 stopped
+// ---- menu_route.cpp (Nov 23): MCC walked to Halo: Reach's custom game lobby (or its Theater) from any menu, behind
+// Project Noble
+enum { MR_LOBBY, MR_THEATER };
+void menu_route_start(int to = MR_LOBBY, bool at_top = false);   // (at_top: MCC on its main menu's top item already)
+int menu_route_to();                                     // where the last route went (MR_LOBBY, MR_THEATER)
+int menu_route_state();                                  // 0 idle, 1 running, 2 there, -1 stopped
 const char* menu_route_why();                            // why it stopped ("" otherwise)
 void menu_route_file(const wchar_t* path);               // (overlay.cpp's file hook)
 struct _XINPUT_STATE;
 bool menu_route_pad(_XINPUT_STATE* st);                  // (overlay.cpp's pad hook)
 bool pg_wants_lobby();                                   // (proving_grounds.cpp) its screens need Reach's lobby now
+bool pg_wants_theater();                                 // (proving_grounds.cpp) Theater's pages need MCC's Theater now
+// ---- pg_lobby.cpp (Nov 23): Project Noble's Firefight lobby on MCC's own Firefight custom game lobby (Halo: Reach)
+bool pg_ff_ready();                                      // its hook is in (this MCC build)
+bool pg_ff_live();                                       // MCC's Reach Firefight lobby ran its Update in the last 0.5 s
+uint32_t pg_ff_seq();                                    // changes with each new copy of its lists
+// its missions (maps) and gametypes as MCC lists them while it is open, and MCC's own picks (-1 unread); returns the seq
+int  pg_ff_lists(pg_entry* maps, int* nmaps, pg_entry* gts, int* ngts, int cap, int* difficulty, int* cur_map, int* cur_gt);
+void pg_ff_launch(int map, int gametype, int difficulty);   // MCC's own START for them (difficulty 0 easy .. 3 legendary)
+int  pg_ff_launch_state(char* why, int cap);             // 0 none, 1 waiting, 2 Start pressed, -1 failed
+void pg_ff_reset();
+// ---- theater.cpp (Nov 23): Project Noble's Theater lobby on MCC's own Theatre screen
+#define PG_MAX_FILMS 200
+struct pg_film {                // a film in MCC's Theatre list
+    uint8_t id[16];             // MCC's content id (the screen's +0xFF4 when chosen)
+    char name[96];              // its name as MCC shows it
+    int mode;                   // MCC's game mode of it (the library entry's +0x468)
+    int file;                   // the pg_film_file it was matched to (-1: none)
+};
+struct pg_film_file {           // a film on disk, handed over to be matched to MCC's list
+    char file[96];              // its file name without the folder or .mov
+    uint64_t uid;               // its header's unique id (_blf chdr, 8 bytes at 0x60; 0 unread)
+};
+bool pg_theater_ready();                                 // the hook is in (this MCC build)
+bool pg_theater_live();                                  // MCC's Theatre screen ran its Update in the last 0.5 s
+void pg_theater_files(const pg_film_file* files, int n); // the films on disk, to match MCC's list to
+int  pg_theater_films(pg_film* out, int cap);            // MCC's list (read on its thread when it opens or changes)
+uint32_t pg_theater_seq();                               // changes with each new reading
+void pg_theater_start(const uint8_t id[16]);             // MCC's START FILM for that film (on its next frame)
+int  pg_theater_state(char* why, int cap);               // 0 none, 1 asked, 2 started, 3 MCC left its Theater, -1 failed
+void pg_theater_reset();
 int  pg_lobby_maps(pg_entry* out, int cap);             // the library's maps (a copy made on MCC's thread)
 int  pg_lobby_gametypes(pg_entry* out, int cap);        // its gametypes
 uint32_t pg_lobby_seq();                                 // changes when a new copy is made (0: none yet)

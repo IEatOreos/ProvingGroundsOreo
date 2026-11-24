@@ -440,6 +440,23 @@ class Site(unittest.TestCase):
             with open(os.path.join(paths.out, "last_match.txt"), encoding="utf-8") as f:
                 self.assertIn("match\tmine", f.read())
 
+    def test_last_match_says_how_it_ended_for_the_person(self):
+        # (Nov 23, the owner's live points: +2 a win, -1 a loss; the game reads the result line)
+        worth = {"game": 1000, "win": 1000, "kill": 100, "assist": 50, "medal": 25}
+        for won, my_st, bot_st, want in ((True, 0, 1, "win"), (False, 1, 0, "loss"), (False, 0, 0, "tie")):
+            with tempfile.TemporaryDirectory() as tmp:
+                paths = sr.Paths(store=os.path.join(tmp, "store"), out=os.path.join(tmp, "site"))
+                os.makedirs(paths.out)
+                me = {"n": "Me", "bot": False, "listed": True, "k": 5, "d": 5, "a": 2, "won": won, "md": 1, "st": my_st}
+                bot = {"n": "Bot", "bot": True, "listed": True, "k": 5, "d": 5, "a": 2, "won": not won and bot_st == 0,
+                       "md": 1, "st": bot_st}
+                data = {"matches": [{"id": "g1", "game": "reach", "rows": [me, bot]}],
+                        "players": [{"name": "Me", "person": True, "cr": 2000, "rank": 0, "chal": {"cr": 0}}],
+                        "ranks": [["Recruit", 0, 0, 0], ["Private", 7500, 1, 0]], "credits": worth}
+                sr.write_last_match(data, paths)
+                with open(os.path.join(paths.out, "last_match.txt"), encoding="utf-8") as f:
+                    self.assertIn(f"result\tMe\t{want}\n", f.read())
+
     def test_today_top_five_and_activity(self):
         now = time.time()
         today = time.strftime("%Y-%m-%d %H:%M", time.localtime(now))
