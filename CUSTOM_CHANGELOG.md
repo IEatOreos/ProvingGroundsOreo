@@ -16,7 +16,7 @@ Upstream 0.3.0's note #41 (build 20261118-2355). The owner: "take it, hand-inser
 
 - `Bot.headway` keeps the time of its last call (`way_seen`). After more than a second with no call (dead, riding, fighting), the no-progress clock starts again. Before, a bot that reached a gun, died and went for it again could be banned from it at once on the old clock and wander off.
 - Hand-inserted into our customized `headway`: our `field_from` path distance (Nov 23), Easy's shorter patience (`EASY_HEADWAY_S`, Nov 13) and the runner's reroute instead of a ban (`runner_objective`/`reroute`, Nov 23) are unchanged.
-- **Checks:** `tools/test_upstream_030_brain.py` +3 (6 s with no headway still bans; a 5 s gap restarts the clock; Easy keeps its shorter patience) OK; `bot.py` parses, `live_bots` imports. **Untested in a live match.**
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (6 s with no headway still bans; a 5 s gap restarts the clock; Easy keeps its shorter patience) OK; `bot.py` parses, `live_bots` imports. `tools/test_runner_reroute.py` stalled a runner with two `headway` calls 7 s apart, which now reads as a gap: its stall now calls every 0.1 s, as `plan` does every tick (fixed in the commit after this note's; it passes). **Untested in a live match.**
 
 ### Halo 2: bots standing on the ball pick it up, 2026-11-24
 

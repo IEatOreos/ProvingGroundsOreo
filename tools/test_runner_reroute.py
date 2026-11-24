@@ -33,8 +33,10 @@ def scene(role="runner"):
 
 
 def stall(b, me, snap, goal, t0=100.0, secs=7.0):
-    b.headway(t0, me, goal, snap)
-    b.headway(t0 + secs, me, goal, snap)
+    # (Nov 24) a call every tick, as plan makes them: a gap over a second restarts the clock (upstream 0.3.0's
+    # note #41, headway's way_seen)
+    for i in range(int(secs * 10) + 1):
+        b.headway(t0 + i * 0.1, me, goal, snap)
 
 
 class Reroute(unittest.TestCase):
