@@ -3911,7 +3911,9 @@ class Bot:
                                                       or (want != "driver" and v.get("team") == me.team)) \
                     and not (want == "driver" and s.wheel_yield(v)):
                 # (the other side's door every 3 s it does not get in: a Falcon's second gun)
-                vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1)
+                # (upstream 0.3.0, build 20261115-0215: Halo CE, its facing read, the door right by the hull, close)
+                ce = s.game == "ce" and bool(v.get("fwd"))
+                vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1, close=ce)
                 foe = s.vehicle_way_target(now, me, snap, vp)
                 if foe is not None:
                     # (custom, Nov 15, the owner: "make bots fight on the way to a vehicle") the fight's aim and trigger
@@ -3943,7 +3945,17 @@ class Bot:
                         act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
                 s.enter_riders = v.get("riders", 0)     # who was in it: tells our seat once in (drive)
                 s.enter_want = want                     # the seat it asks for (drive: where that is the one it gets)
-                if dist(me.pos, vp) < 1.6 or dist(me.pos, Vec(*v["pos"])) < 2.2:
+                if ce:
+                    # (upstream 0.3.0, build 20261115-0215) Halo: CE seats a player by the seat nearest him: Use only by
+                    # the hull and nearer the wanted seat's door than any other's (2.2 u from the middle, his bot coming
+                    # from behind sat at the gun of an empty Warthog; Nov 15)
+                    pts = [s.seat_point(v, k, close=True) for k in ("driver", "passenger", "gunner")
+                           if k in ((vehicles.spec(v["kind"]) or {}).get("seats") or ())]
+                    near_door = dist(me.pos, Vec(*v["pos"])) < 1.8 and all(
+                        dist(me.pos, vp) <= dist(me.pos, q) + 0.05 for q in pts)
+                else:
+                    near_door = dist(me.pos, vp) < 1.6 or dist(me.pos, Vec(*v["pos"])) < 2.2
+                if near_door:
                     act.action = int(now * 6) % 2 == 0   # tap action until in: only presses count
                     # which seat (Reach: native fills the enter-seat interaction; a bot's own is empty, so Use alone
                     # entered nothing)
@@ -5923,10 +5935,14 @@ class Bot:
             act.action = True
 
     @staticmethod
-    def seat_point(v, seat, side=1):
+    def seat_point(v, seat, side=1, close=False):
         """Where to stand to get into a vehicle's seat: the driver's door is front left, a gun at the back (a Warthog's
-        turret, an Elephant's guns), by the vehicle's facing; its middle when the facing is not read (CE). A Falcon's guns
-        are at its side doors, one each side (side +1 left, -1 right)."""
+        turret, an Elephant's guns), by the vehicle's facing; its middle when the facing is not read. A Falcon's guns
+        are at its side doors, one each side (side +1 left, -1 right). (upstream 0.3.0, build 20261115-0215) close
+        (Halo: CE, which seats a player by the seat nearest him): right by the hull, 1.0 u behind and 0.8 u to the side
+        (2 u behind, his bots pressed Use where CE seats nobody: they stood at a person's Warthog until he reversed into
+        them, Nov 15), and a Warthog's passenger door front right. (custom, Nov 24, the owner: "front-right passenger
+        door in CE only") every other game keeps the passenger at the front left, as before."""
         c = Vec(*v["pos"])
         f = v.get("fwd")
         sp = vehicles.spec(v["kind"])
@@ -5939,9 +5955,12 @@ class Bot:
             # gun nearest the bot)
             return Vec(c.x - fy * 1.6 * side, c.y + fx * 1.6 * side, c.z)
         if seat == "gunner" and "gunner" in sp["seats"]:
-            back = 2.0 if sp["move"] != "air" else 1.0
+            back = 1.0 if close or sp["move"] == "air" else 2.0
             return Vec(c.x - fx * back, c.y - fy * back, c.z)
-        return Vec(c.x + fx * 0.3 - fy * 1.3, c.y + fy * 0.3 + fx * 1.3, c.z)   # front left
+        out = 0.8 if close else 1.3
+        if close and seat == "passenger" and vehicles.kind_of(v["kind"]) in ("warthog", "rwarthog", "gauss", "thog"):
+            out = -out                                                        # front right (CE only)
+        return Vec(c.x + fx * 0.3 - fy * out, c.y + fy * 0.3 + fx * out, c.z)   # front left
 
     def weak_point(s, me, k, b, snap, gun):
         """Where an explosive or gauss shot goes on a tank (guide 17 §4.4; Reach's materials: its back hatch takes 3x a

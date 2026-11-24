@@ -252,6 +252,12 @@ class Live:
     # vehicle list's default (+0x14) is another field in CE: live Blood Gulch Race, all 8 race vehicles read 0x2CDD1E..
     # there and were left out as guns riding something, so no bot ever took one; +0xD8 read NONE on all 8 and on 5 guns
     PARENT_AT = 0xD8
+    # (upstream 0.3.0, build 20261115-0215) an object's facing and up vectors: +0x30 and +0x3C, after its position
+    # (+0x18) and velocity (+0x24), as players() reads a biped's facing (INFERRED for vehicles: unread before his Nov 14).
+    # A bot walked to a Warthog's middle, CE seated it by where it stood, seemingly often the passenger's seat, and it sat
+    # "driving" a Warthog that never moved (tools/live_bots.py vehicle_fwd checks they are unit vectors, square to each
+    # other, before it trusts them). CE only: LiveH2 sets None, so Halo 2, Halo 3, ODST and Reach read as before
+    ORIENT_AT = 0x30
 
     def race_type(s):
         """Race's type: 0 normal (in order), 1 any order, 2 flag rally; the variant's game type options at +0x7C (MCC's
@@ -374,6 +380,7 @@ class LiveH2(Live):
     parent, +0x64 position, +0x70 body forward; unit +0x168 aiming vector, +0xEC health (of 45),
     +0xF0 shield (of 70), +0x226 primary weapon index, +0x22C 4 weapon handles. Tag names: [halo2+0x15E4B68] int32 offsets by
     tag index into the names buffer at [halo2+0x15E4B78]."""
+    ORIENT_AT = None       # (CE's; here the facing follows the position, POS_AT: tools/live_bots.py vehicle_fwd)
     UNIT_ZOOM = 0x255      # the unit's desired zoom byte (found live with tools/zoom_probe.py --scan)
     VEH_VITAL = (0xEC, False)   # (Live.vehicle_left: the unit health field players() reads)
     DEAD_AT = 0x10A             # (Live.vehicle_dead; ghidra/h2_object_get_health.c)

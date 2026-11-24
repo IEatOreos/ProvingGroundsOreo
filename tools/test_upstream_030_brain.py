@@ -348,5 +348,54 @@ class GunnerStaysTests(unittest.TestCase):
         self.assertEqual(botmod.AT_WHEEL.get(10), (5, 1.0))
 
 
+class CeWarthogTests(unittest.TestCase):
+    """#33 (build 20261115-0215): Halo: CE bots drive Warthogs again: CE's vehicle facing read (checked), the door right
+    by the hull, the passenger's front right in CE only."""
+
+    HOG = dict(handle=1, kind="warthog", pos=(0.0, 0.0, 0.0), fwd=(1.0, 0.0, 0.0))
+
+    def test_every_other_game_as_before(self):
+        sp = Bot.seat_point
+        self.assertEqual(sp(self.HOG, "driver"), Vec(0.3, 1.3, 0.0))
+        self.assertEqual(sp(self.HOG, "passenger"), Vec(0.3, 1.3, 0.0))      # (front left, as before)
+        self.assertEqual(sp(self.HOG, "gunner"), Vec(-2.0, 0.0, 0.0))
+
+    def test_ce_close_by_the_hull_passenger_front_right(self):
+        sp = Bot.seat_point
+        self.assertEqual(sp(self.HOG, "driver", close=True), Vec(0.3, 0.8, 0.0))
+        self.assertEqual(sp(self.HOG, "passenger", close=True), Vec(0.3, -0.8, 0.0))
+        self.assertEqual(sp(self.HOG, "gunner", close=True), Vec(-1.0, 0.0, 0.0))
+
+    def test_only_ce_reads_its_facing(self):
+        from brain import live
+        self.assertEqual(live.Live.ORIENT_AT, 0x30)
+        for cls in (live.LiveH2, live.LiveH3, live.LiveReach, live.LiveODST):
+            self.assertIsNone(cls.ORIENT_AT, cls.__name__)
+
+    def test_ce_facing_trusted_only_unit_and_square(self):
+        import struct
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import live_bots
+        from brain.live import Live
+
+        class Mem:
+            def __init__(self, f, u):
+                self.data = struct.pack("<3f", *f) + struct.pack("<3f", *u)
+
+            def read(self, at, n):
+                return self.data[at - 0x1030:at - 0x1030 + n]
+
+        def reader(f, u):
+            r = Live.__new__(Live)
+            r.g = Mem(f, u)
+            r.object = lambda h: 0x1000
+            return r
+        good = reader((1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+        self.assertEqual(live_bots.vehicle_fwd(good, 5), (1.0, 0.0, 0.0))
+        self.assertEqual(live_bots.vehicle_fwd(good, 5, 1), (0.0, 0.0, 1.0))
+        self.assertIsNone(live_bots.vehicle_fwd(reader((3.0, 0.0, 0.0), (0.0, 0.0, 1.0)), 5), "not a unit vector")
+        self.assertIsNone(live_bots.vehicle_fwd(reader((1.0, 0.0, 0.0), (1.0, 0.0, 0.0)), 5), "not square to up")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Halo: CE bots drive Warthogs again, 2026-11-24
+
+Upstream 0.3.0's note #33 (build 20261115-0215). The owner: "take it, hand-merged; front-right passenger door in CE only".
+
+- `brain/live.py`: CE's reader (`Live`) reads a vehicle's facing and up vectors at object +0x30 / +0x3C (`ORIENT_AT = 0x30`, INFERRED in his notes). `LiveH2` sets `ORIENT_AT = None`, so Halo 2, Halo 3, ODST and Reach read exactly as before; Halo 4 keeps its own 0x70.
+- `tools/live_bots.py vehicle_fwd`: CE's read is trusted only when both vectors are unit length and square to each other; otherwise the vehicle's middle, as before. Before, a CE bot walked to a Warthog's middle, CE seated it by where it stood (often the passenger seat), and it sat "driving" a Warthog that never moved.
+- `Bot.seat_point(..., close=False)`: `close` (CE with its facing read) is the door right by the hull, 0.8 u to the side and 1.0 u behind for the gun. **The Warthog's passenger door is front right in CE only**; every other game keeps the passenger at the front left.
+- Hand-merged into our vehicle-entry block in `plan`: in CE (facing read) the bot walks to that close door and presses Use only within 1.8 u of the middle and nearer the wanted seat's door than any other seat's (CE seats a player by the nearest seat). Every other game keeps the 1.6 u / 2.2 u test. Kept of ours: `wheel_open`, `wheel_yield`, the Wheelman's pick, `vehicle_way_target` (fighting on the way to the seat), `dud_check`, `reach_seat`.
+- **Checks:** `tools/test_upstream_030_brain.py` +4 (other games' seat points unchanged; CE's close points with the passenger front right; only CE has `ORIENT_AT`; CE's facing trusted only unit and square) OK; full suite 1,509 OK; `live.py`, `live_bots.py` parse and import. **Untested in a live match** (CE).
+
 ### Gunners stay in while someone drives, 2026-11-24
 
 Upstream 0.3.0's note #32a (build 20261114-2230). The owner: "merge only that rule (AT_WHEEL) into our block; parked_ban stays (add AT_WHEEL to our threads held-back tables)". #32b ("a gunner out at the objective only with 2 or fewer aboard") was answered no and is not taken.

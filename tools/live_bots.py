@@ -555,7 +555,11 @@ def vehicle_fwd(live, handle, k=0):
         if not o:
             return None
         if at is not None:
-            return struct.unpack("<3f", live.g.read(o + at + 12 * k, 12))
+            f, u = struct.unpack("<3f", live.g.read(o + at, 12)), struct.unpack("<3f", live.g.read(o + at + 12, 12))
+            unit = all(0.95 < math.sqrt(sum(c * c for c in w)) < 1.05 for w in (f, u))
+            if type(live) is Live and not (unit and abs(sum(a * b for a, b in zip(f, u))) < 0.15):
+                return None      # (upstream 0.3.0, build 20261115-0215: CE's read checked before trusted, else the
+            return u if k else f  # middle, as before; Halo 4's as before)
         f = struct.unpack("<3f", live.g.read(o + live.POS_AT + 12, 12))
         if not k:
             return f
