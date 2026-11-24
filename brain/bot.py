@@ -515,7 +515,7 @@ SPACE_RETRY, OWN_SPOT_BONUS = 3.0, 6.0
 #                   more full; a Flanker also takes a spot to the side that sees the target (not only one forward),
 #                   no more than CROSS_BACK u farther from the target than it is now, and weighs the target's distance
 #                   CROSS_TARGET_K, not 0.3 (round it, not straight at it)
-OWN_SPOT_HIGH, SPACE_STALE, HIGH_SPOT, HIGH_SPOT_U = 15.0, 8.0, 4.0, 5.0
+OWN_SPOT_HIGH, SPACE_STALE, HIGH_SPOT, HIGH_SPOT_U = 15.0, 15.0, 4.0, 5.0   # (SPACE_STALE 8 -> 15: "Stronger")
 CROSS_BONUS, CROSS_FULL, CROSS_BACK, CROSS_TARGET_K = 20.0, 75.0, 5.0, 0.15
 SPACE_REACH, SPACE_FORWARD, SPACE_QUIET, SPACE_KILLS, SPACE_STEPS, SPACE_ACTIVE = 25.0, 2.0, 6.0, 2, 3, 25.0
 # (SPACE_SCORE 1.45 first: in the sim the director's Slayer slot, scored "objective" up to 2.0, took 25-40% of its

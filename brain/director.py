@@ -64,7 +64,8 @@ PERCH_MIN, PERCH_MAX, PERCH_DZ = 5.0, 25.0, 1.0
 # by the same weights SWEEP_SPOT of the time, else a zone as before. Live Boneyard 20261120-164229 / 20261124-003150: the
 # bots on foot 87% on the ground, Mid 46-49%, the east building (rockets, laser, sniper, Banshee) 0.0-0.2%
 COVER_R, COVER_DZ, COVER_STALE_S = 6.0, 2.5, 60.0
-OWNER_POST_W, COVER_POST_W, SWEEP_SPOT = 3.5, 1.0, 0.6
+# (the owner, on the first sim: "Stronger and re test": COVER_POST_W 1.0 -> 3.0, SWEEP_SPOT 0.6 -> 0.8; Bot.SPACE_STALE)
+OWNER_POST_W, COVER_POST_W, SWEEP_SPOT = 3.5, 3.0, 0.8
 RUSHER_SNEAK = 10.0         # (pick_route: a Rusher's sneak route over every lane)
 # the getaway ride: one transport driver parks GETAWAY_D u from their stand on our side while our runners go in, then
 # fetches our carrier at any distance

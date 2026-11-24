@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Stale spots pull harder; the map-use simulation re-measured by building, 2026-11-24
+
+The owner, on the first simulation: the Boneyard hot spots I'd called "mid" are upper floors, not mid ("Two are by west upper level. hot spot 4 is 3rd story by their sniper and two are in banshee building. None of them are (mid)"), and every spot is reachable on foot. Both were right. My "mid strip" was an x/y box that ignored height. The one "unreachable" spot, (297, 90.8, -4), is reached by bots, which walk with people's routes (`human=True`); my check had left them out. Then: "Stronger and re test."
+
+- `director.COVER_POST_W` 1.0 → 3.0: a stale spot weighs a Slayer post up to ×4.
+- `SWEEP_SPOT` 0.6 → 0.8.
+- `bot.SPACE_STALE` 8 → 15 u.
+- **Simulation:** re-measured by building and height, as the owner described them (approximate boxes). Boneyard's variant, 8v8 Slayer in `tools/real_sim.py`, 3 seeds × 6 minutes, bots on foot every 0.5 s. Rules off / first build (b4a0a4f) / stronger:
+  - mid ground: 30.3% / 39.0% / 33.7%;
+  - Banshee building: 9.9% / 6.4% / 7.5%;
+  - rocket building upper level: 4.8% / 4.9% / 5.6%;
+  - sniper tower: 0.8% / 1.2% / 1.0%;
+  - high ground: 20.7% / 18.1% / 19.0%;
+  - on a hot spot: 10.0% / 9.8% / 8.6%; on one of the owner's: 5.2% / 4.2% / 4.0%.
+- **What it shows: no version measurably moves bots out of mid.**
+  - The sim isn't repeatable: the brain thinks on several threads. The first build's own numbers differed between the two runs (on a hot spot 13.4% then 9.8%; seed 1's score 63–37 then 67–37).
+  - Seeds of one version differed by up to 10 points (mid ground 30–40%).
+  - Where bots are is decided mostly by fights and the hunters' orders to the fight. The changes here only steer the two Slayer anchors, the sweep bot and Take Space.
+- Full suite: 1,483 tests OK; `live_bots` imports. **Untested in a live match.**
+
 ### More of every map used: your hot spots count, stale spots pull, Flanker crossfires, Rushers push, high ground, 2026-11-24
 
 The owner: "bots dont use alot of space on the map. Like Boneyard rocket building is a stronghold in game but barely is ever used. Banshee building isnt utilized enough. They all just stay outside in mid", "I usually place hot spots where I want bots of high caliber to go, but even then it doesnt seem to affect them a ton", and "Rushes should always just use sneak paths or flanks and push the entire time". Then: "Build 1,2,3,4,5 all in one phase".
