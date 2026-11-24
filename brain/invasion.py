@@ -137,9 +137,16 @@ def layout(objs, shapes=None, styles=None):
     # the phase's man cannons: an inv_mancannon spawns in its sequence's phase (Spire's three: 3, a Nov 6 playtest:
     # phase 3 only); phase_link_gates closes the people's links off them before then
     launchers = [(_v(f["pos"]), f.get("phase", f.get("seq"))) for f in flags if f.get("type") == "inv_mancannon"]
+    # a map variant's own Invasion vehicles (inv_vehicle, its team the side's label, its sequence the phase it first
+    # spawns in; the built-in maps' come from their scenario: inv_vehicles); label_pick sends a driver for each
+    # (upstream 0.3.0, build 20261118-1714)
+    vehicles = [dict(kind=f.get("object"), pos=_v(f["pos"]),
+                     side="att" if f.get("team") == att else "def" if f.get("team") == dfn else None,
+                     phase=f.get("phase", f.get("seq")) if f.get("phase", f.get("seq")) in (1, 2, 3) else 1)
+                for f in flags if f.get("type") == "inv_vehicle"]
     return dict(attackers=att, defenders=dfn, phases=phases, core=stand, res=res, barriers=bars, zone_r=zone_r,
                 bomb=bomb, bomb_phase=(bp if staged else 2) if bomb is not None else None, launchers=launchers,
-                spawn_res=label_spawns(flags))
+                spawn_res=label_spawns(flags), vehicles=vehicles)
 
 
 def label_spawns(flags):
@@ -538,39 +545,185 @@ def free_rides(n, phase, vehicles, errands=()):
             and min(math.dist(v["pos"][:2], p[:2]) for p in pts) <= FOR_VEHICLE_R]
 
 
-def honor_spawn(spawns, phase, side, me, players, rng, T, taken=(), goal=None, vehicles=(), errands=()):
-    """Where dead bot `me` respawns: one of its side's offers this phase by weight (a named spawn's free point, or behind
-    the teammate out of the fight nearest `goal`). side "att" / "def"; taken: points other bots spawn at; a spawn kept
-    for vehicles (free_rides) is offered only with one free that no other bot is sent to (errands: their handles). ->
+# (upstream 0.3.0, build 20261118-1714) smart Invasion spawns: honor_spawn, spawn_offers, _weighted, _named_point
+# and the smart-spawn helpers below are his, replacing upstream s181's honor_spawn (never customized by us);
+# the vehicles passed in are already the ones the bot's tier may drive (tools/live_bots.py drivable, #46b)
+def honor_spawn(spawns, phase, side, me, players, rng, T, taken=(), goal=None, vehicles=(), errands=(), lanes=(),
+                inv_veh=()):
+    """Where dead bot `me` respawns: one of its side's offers this phase (a named spawn's free point, or behind a
+    teammate out of the fight). side "att" / "def"; taken: points other bots spawn at; lanes: the phase's territories
+    (snap.inv_zones, two in phases 1-2); inv_veh: the map's Invasion vehicles (inv_vehicles). A job first: a free
+    vehicle of its side waiting at its spot by one of its spawns this phase (one bot each: errands) sends it to that
+    spawn for it (Nov 18: back at the earliest spawn to take a vehicle, never for no reason); a spawn kept
+    for vehicles ("for_vehicles": River in phases 2-3) is used for that only. Else by weight (spawn_offers) ->
     dict(pos=Vec, yaw=radians, name=str, mate=player id or None, ride=vehicle handle or None), or None."""
     named, ally = spawns
-    offers = []
-    for n in named:
+    for n in named:                                   # the job: a vehicle waiting for a driver
         if n["side"] != side or str(phase) not in n["points"] or spawn_weight(n, phase) <= 0:
             continue
-        rides = free_rides(n, phase, vehicles, errands)
-        if rides == []:
-            continue
-        offers.append((spawn_weight(n, phase), dict(n, ride=rides[0]["handle"] if rides else None)))
-    mates = [p for p in players if p.team == me.team and p.id != me.id and mate_clear(p, players, T)]
-    if mates and ally.get(side):
-        mates.sort(key=lambda p: (p.pos - goal).flat() if goal is not None else rng.random())
-        for mate in mates:
-            spot = ally_spot(mate, players, T, taken)
-            if spot is not None:
-                offers.append((ally[side], dict(pos=spot, yaw=mate.yaw, name=f"ally #{mate.id}", mate=mate.id, ride=None)))
-                break
+        rides = (free_rides(n, phase, vehicles, errands) or []) + waiting_rides(inv_veh, side, phase, vehicles, errands,
+                                                                                n["points"][str(phase)])
+        if rides:
+            return dict(_named_point(n, phase, players, taken, rng, me, T), ride=rides[0]["handle"])
+    offers = spawn_offers(spawns, phase, side, me, players, T, taken, goal, lanes)
     if not offers:
         return None
+    o = _weighted(offers, rng)
+    if "mate" in o:
+        return o
+    return dict(_named_point(o, phase, players, taken, rng, me, T), ride=None)
+
+
+def spawn_offers(spawns, phase, side, me, players, T, taken=(), goal=None, lanes=()):
+    """[(weight, offer)]: a side's named spawns this phase (offer: the spawn's dict) and teammates to spawn on (offer:
+    dict(pos, yaw, name, mate, ride)), weighted (Nov 18: random but smart, split across both lanes;
+    Spire phases 2-3: the attackers' Conveyor Belt took 80% of their spawns 31 u from the defenders' High Trail, a
+    deathmatch by the spire and nothing on the other side of the map):
+      the file's weight, times lane_factor (by the territory short of its share of the team: likelier), times
+      ENEMY_SPAWN_W where the other side spawns within ENEMY_SPAWN_R this phase, 0 with a seen enemy within DANGER_R
+      of every point; a teammate spawn per lane (the ally weight shared), on the clear mate nearest that lane.
+    Every weight 0: the file's weights (never fewer spawns than before). A spawn kept for vehicles is not offered."""
+    named, ally = spawns
+    me_team = me.team if me is not None else None
+    live = [n for n in named if str(phase) in n["points"] and spawn_weight(n, phase) > 0]
+    counts = lane_counts(lanes, players, me_team, me)
+    offers = []
+    for n in live:
+        if n["side"] != side or str(phase) in n.get("for_vehicles", ()):
+            continue
+        pts = [Vec(*p) for p in n["points"][str(phase)]]
+        c = _centroid(pts)
+        w = spawn_weight(n, phase)
+        smart = w * lane_factor(c, lanes, counts)
+        if any(o["side"] != side and (_centroid([Vec(*q) for q in o["points"][str(phase)]]) - c).flat() < ENEMY_SPAWN_R
+               for o in live):
+            smart *= ENEMY_SPAWN_W
+        if all(danger(p, players, me_team, T) for p in pts):
+            smart = 0.0
+        offers.append((smart, w, n))
+    mates = [p for p in players if me is not None and p.team == me.team and p.id != me.id and mate_clear(p, players, T)]
+    if mates and ally.get(side):
+        ways = list(lanes) if len(lanes) >= 2 else [goal]
+        used = set()
+        for z in ways:
+            for mate in sorted(mates, key=lambda p: (p.pos - z).flat() if z is not None else 0.0):
+                if mate.id in used:
+                    continue
+                spot = ally_spot(mate, players, T, taken)
+                if spot is not None:
+                    used.add(mate.id)
+                    w = ally[side] / len(ways)
+                    offers.append((w * lane_factor(mate.pos, lanes, counts), w,
+                                   dict(pos=spot, yaw=mate.yaw, name=f"ally #{mate.id}", mate=mate.id, ride=None)))
+                    break
+    if offers and not any(sw > 0 for sw, _, _ in offers):
+        return [(w, o) for _, w, o in offers]
+    return [(sw, o) for sw, _, o in offers if sw > 0]
+
+
+def _weighted(offers, rng):
+    """One offer of [(weight, offer)], by weight."""
     k = rng.random() * sum(w for w, _ in offers)
     for w, o in offers:
         k -= w
         if k < 0:
-            break
-    if "mate" in o:
-        return o
-    pts = [Vec(*p) for p in o["points"][str(phase)]]
+            return o
+    return offers[-1][1]
+
+
+def _named_point(n, phase, players, taken, rng, me=None, T=None):
+    """A named spawn's point for a dead bot: free (no one on it, no other pick), out of a seen enemy's reach if one is."""
+    pts = [Vec(*p) for p in n["points"][str(phase)]]
     free = [p for p in pts if all((q.pos - p).flat() >= SPAWN_CLEAR for q in players if q.alive)
             and all((q - p).flat() >= SPAWN_CLEAR for q in taken)]
-    return dict(pos=rng.choice(free or pts), yaw=math.radians(o["at"][str(phase)][3]), name=o["name"], mate=None,
-                ride=o["ride"])
+    safe = [p for p in free if not danger(p, players, me.team if me is not None else None, T)]
+    return dict(pos=rng.choice(safe or free or pts), yaw=math.radians(n["at"][str(phase)][3]), name=n["name"], mate=None)
+
+
+# --- smart spawns (Nov 18: random but smart, split across both lanes each phase; upstream 0.3.0, build 20261118-1714)
+DANGER_R = 15.0          # u: an enemy this near a spawn point, seeing it, rules the point out
+ENEMY_SPAWN_R, ENEMY_SPAWN_W = 40.0, 0.25   # a spawn this near the other side's spawn this phase counts this much
+LANE_W = 3.0             # a spawn by a territory with none of an even share of the team there: 1 + LANE_W times as likely
+LANE_MIN = 0.25          # ... by one with twice its share or more: this much
+NEAR_BIAS = 1.5          # labelled zones (label_pick): the one nearest the phase's objective, this many times as likely
+RIDE_AT = 6.0            # u: an Invasion vehicle this near its spot is waiting there (not driven off)
+
+
+def danger(p, players, team, T=None):
+    """An enemy alive within DANGER_R of p, seeing it (no wall between; without a nav, any that near)."""
+    return any(q.alive and q.team != team and (q.pos - p).flat() < DANGER_R and (T is None or T.los(q.pos, p))
+               for q in players)
+
+
+def lane_counts(lanes, players, team, me=None):
+    """Teammates alive by their nearest lane (territory); [] with fewer than two lanes."""
+    if len(lanes) < 2:
+        return []
+    out = [0] * len(lanes)
+    for p in players:
+        if p.alive and p.team == team and (me is None or p.id != me.id):
+            out[min(range(len(lanes)), key=lambda i: (lanes[i] - p.pos).flat())] += 1
+    return out
+
+
+def lane_factor(p, lanes, counts):
+    """How much likelier a spawn at p is by its nearest lane's shortfall from an even share of the team: 1 + LANE_W
+    with nobody there, 1 at its share, down to LANE_MIN at twice it. 1 with fewer than two lanes."""
+    if len(lanes) < 2 or not counts:
+        return 1.0
+    share = max(1.0, sum(counts) / len(lanes))
+    need = (share - counts[min(range(len(lanes)), key=lambda i: (lanes[i] - p).flat())]) / share
+    return 1.0 + LANE_W * need if need >= 0 else max(LANE_MIN, 1.0 + need)
+
+
+def inv_vehicles(map_name):
+    """The map's Invasion vehicles (maps/<map>/inv_vehicles.json, tools/inv_vehicles.py): [dict(kind, pos=Vec, side
+    "att" / "def" / None, phase)], [] without the file."""
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps",
+                        (map_name or "").split("/")[0].split("@")[0], "inv_vehicles.json")
+    if not os.path.exists(path):
+        return []
+    return [dict(v, pos=_v(v["pos"])) for v in json.load(open(path, encoding="utf-8")).get("vehicles", [])]
+
+
+def waiting_rides(inv_veh, side, phase, vehicles, errands, near, r=FOR_VEHICLE_R):
+    """Live vehicles (snap.vehicles) free for side this phase: at one of its Invasion vehicles' spots (within RIDE_AT;
+    spawned by now: its phase at most this one), drivable, empty, not another bot's errand, within r of a point in
+    near ([(x, y, z)] or [Vec])."""
+    spots = [v["pos"] for v in inv_veh if v.get("side") in (side, None) and v.get("phase", 1) <= phase]
+    if not spots or not near:
+        return []
+    from .vehicles import spec
+    near = [(q.x, q.y) if hasattr(q, "x") else (q[0], q[1]) for q in near]
+    return [v for v in vehicles if not v.get("occupied") and v["handle"] not in errands
+            and (spec(v["kind"]) or {}).get("move", "none") != "none"
+            and any(math.hypot(v["pos"][0] - q.x, v["pos"][1] - q.y) <= RIDE_AT for q in spots)
+            and min(math.hypot(v["pos"][0] - x, v["pos"][1] - y) for x, y in near) <= r]
+
+
+def label_pick(inv, phase, attacking, goal, rng, me=None, players=(), T=None, lanes=(), vehicles=(), errands=()):
+    """A dead bot's zone on a map with labelled zones and no named spawns (label_spawns), the smart way: a job first (a
+    free vehicle of its side waiting by one of its zones this phase or an earlier one: that zone, the earliest spawn
+    for it), else one of its side's zones serving this phase (a phase with none: the nearest phase before) by weight:
+    NEAR_BIAS for the one nearest the phase's objective `goal`, times lane_factor, 0 with a
+    seen enemy within DANGER_R (every weight 0: all alike). -> dict(pos=Vec, ride=handle or None), or None."""
+    team = inv["attackers"] if attacking else inv["defenders"]
+    zones = (inv.get("spawn_res") or {}).get(team) or {}
+    side = "att" if attacking else "def"
+    veh = inv.get("vehicles") or ()
+    earlier = [q for ph in range(1, phase + 1) for q in zones.get(ph, ())]
+    rides = waiting_rides(veh, side, phase, vehicles, errands, earlier) if veh and earlier else []
+    if rides:
+        v = rides[0]
+        return dict(pos=min(earlier, key=lambda q: math.hypot(q.x - v["pos"][0], q.y - v["pos"][1])), ride=v["handle"])
+    pool = next((zones[ph] for ph in range(phase, 0, -1) if zones.get(ph)), None)
+    if not pool:
+        return None
+    team_id = me.team if me is not None else None
+    counts = lane_counts(lanes, players, team_id, me)
+    near = min(pool, key=lambda q: (q - goal).flat()) if goal is not None else None
+    ws = [(NEAR_BIAS if q is near else 1.0) * lane_factor(q, lanes, counts) * (0.0 if danger(q, players, team_id, T)
+                                                                               else 1.0) for q in pool]
+    if not any(ws):
+        ws = [1.0] * len(pool)
+    return dict(pos=_weighted(list(zip(ws, pool)), rng), ride=None)

@@ -633,5 +633,96 @@ class InvasionCustomMaps(unittest.TestCase):
             mvar.map_id_of, mvar.header_map_id, mvar._cached, mvar.find = saved
 
 
+class SmartInvasionSpawns(unittest.TestCase):
+    """#46 (build 20261118-1714): bots respawn for a reason: a free vehicle of their side waiting at its spot sends one
+    bot to spawn by it (only one its tier may drive: #46b, live_bots.drivable), else a weighted pick leaning to the
+    territory short of its share of the team and away from the enemy's spawn and a seen enemy; on labelled maps the
+    same (label_pick). Our errand guards in Bot.decide (may_drive, wheel_yield) are kept."""
+
+    def spawns(self):
+        from brain import invasion
+        return invasion.honor_spawns("reach_70_boneyard")
+
+    def test_lane_factor(self):
+        from brain import invasion
+        lanes = [Vec(0, 0, 0), Vec(100, 0, 0)]
+        from brain.core import PlayerState
+        ps = [PlayerState(i, 0, str(i), Vec(1, 0, 0)) for i in range(4)]
+        counts = invasion.lane_counts(lanes, ps, 0)
+        self.assertEqual(counts, [4, 0])
+        self.assertEqual(invasion.lane_factor(Vec(99, 0, 0), lanes, counts), 1.0 + invasion.LANE_W)
+        self.assertEqual(invasion.lane_factor(Vec(2, 0, 0), lanes, counts), invasion.LANE_MIN)
+        self.assertEqual(invasion.lane_factor(Vec(2, 0, 0), lanes[:1], counts), 1.0)    # one lane: as before
+
+    def test_a_seen_enemy_rules_a_spawn_out(self):
+        from brain import invasion
+        from brain.core import PlayerState
+        me = PlayerState(1, 1, "me", Vec(0, 0, 0), alive=False)
+        foe = PlayerState(2, 0, "foe", Vec(269.0, 78.0, -5.0))              # on Middle Approach's one point
+        offers = invasion.spawn_offers(self.spawns(), 2, "att", me, [me, foe], StubT())
+        names = {o["name"]: w for w, o in offers}
+        self.assertNotIn("Middle Approach", names)
+        self.assertIn("Bulkheads", names)
+
+    def honor(self, tier, veh_at, inv_veh, kind="warthog"):
+        import live_bots
+        import random
+        from brain.core import PlayerState, Snapshot
+        from test_upstream_030_brain import make_bot
+        b = make_bot(tier=tier, mapname="reach_70_boneyard", bid=1, team=1)
+        me = PlayerState(1, 1, "me", Vec(0, 0, 0), alive=False)
+        far = PlayerState(2, 0, "foe", Vec(900, 900, 0))     # (half the lobby alive: spawn_check picks)
+        sn = Snapshot(50.0, [me, far], {}, mode="invasion",
+                      vehicles=[dict(handle=77, kind=kind, pos=veh_at, occupied=False, team=1)])
+        sn.inv_phase, sn.inv_attackers, sn.inv_zones = 2, 1, []
+        w = type("W", (), dict(sides_set=True, round_wait_until=-1.0, placed=set()))()
+        sent = []
+        live_bots.spawn_check(lambda i, *a: sent.append(a), {1: b}, sn, 50.0, {}, self.spawns(), w,
+                              random.Random(3), StubT(), inv_veh=inv_veh)
+        return b, sent
+
+    def test_a_waiting_vehicle_sends_one_bot_to_its_spawn(self):
+        at = (270.0, 80.0, -5.0)                               # by Middle Approach
+        inv_veh = [dict(kind="warthog", pos=Vec(*at), side="att", phase=2)]
+        b, sent = self.honor("strong", at, inv_veh)
+        self.assertEqual(b.errand[0], 77)
+        self.assertAlmostEqual(sent[0][0], 269.508, places=2)
+        b, sent = self.honor("strong", at, [dict(inv_veh[0], phase=3)])     # not spawned for this phase yet
+        self.assertIsNone(b.errand)
+
+    def test_46b_never_for_a_vehicle_its_tier_may_not_drive(self):
+        at = (270.0, 80.0, -5.0)
+        inv_veh = [dict(kind="warthog", pos=Vec(*at), side="att", phase=2)]
+        for tier in ("demon", "noble", "mythic"):
+            b, sent = self.honor(tier, at, inv_veh)
+            self.assertIsNone(b.errand, tier)
+            self.assertEqual(len(sent), 1, tier)                 # (still spawned, by the weighted pick)
+        b, _ = self.honor("demon", at, [dict(inv_veh[0], kind="banshee")], kind="banshee")
+        self.assertEqual(b.errand[0], 77)                         # (a Banshee it may fly)
+
+    def test_label_pick(self):
+        import random
+        from brain import invasion
+        inv = invasion.layout(custom_invasion())
+        inv["vehicles"] = [dict(kind="ghost", pos=Vec(42, 30, 0), side="att", phase=1)]
+        v = dict(handle=5, kind="ghost", pos=(42.0, 31.0, 0.0), occupied=False)
+        o = invasion.label_pick(inv, 1, True, Vec(5, 0, 0), random.Random(1), vehicles=[v])
+        self.assertEqual((o["pos"], o["ride"]), (Vec(40, 30, 0), 5))
+        o = invasion.label_pick(inv, 1, True, Vec(5, 0, 0), random.Random(1), vehicles=[])
+        self.assertIsNone(o["ride"])
+        self.assertIn(o["pos"], inv["spawn_res"][1][1])
+
+    def test_layout_reads_a_variants_vehicles(self):
+        from brain import invasion
+        objs = custom_invasion()
+        objs["netgame_flags"].append(dict(type="inv_vehicle", pos=[50, 30, 0], team=1, phase=2, object="warthog"))
+        inv = invasion.layout(objs)
+        self.assertEqual(inv["vehicles"], [dict(kind="warthog", pos=Vec(50, 30, 0), side="att", phase=2)])
+
+    def test_inv_vehicles_files_stay_local(self):
+        gi = (Path(__file__).resolve().parents[1] / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn("maps/*/inv_vehicles.json", gi.splitlines())
+
+
 if __name__ == "__main__":
     unittest.main()

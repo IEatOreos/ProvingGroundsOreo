@@ -33,7 +33,8 @@ from brain import scaling  # noqa: E402
 from brain import nade  # noqa: E402
 from brain.live import Live, LiveH2, LiveH3, LiveReach, LiveODST, LiveH4F, WEAPON_ALIAS  # noqa: E402
 from brain.invasion import layout as invasion_layout, Watch, clear_barriers, honor_spawn, honor_spawns, \
-    ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR, label_spawn  # noqa: E402
+    ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR, label_spawn, label_pick, \
+    inv_vehicles  # noqa: E402
 from brain.modes import Watch as ModeWatch, OBJECT_MODES, mode_of, stands_by_spawn, spawn_bases  # noqa: E402
 import botctl  # noqa: E402
 
@@ -861,7 +862,18 @@ def loadout_check(live, ask, bots, palette, state, snap, now, trace=None):
         st["alive"] = me.alive
 
 
-def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None):
+def drivable(b, snap):
+    """(custom, Nov 24, owner #46b) The vehicles a spawn's vehicle job may send bot b to: those its tier may drive
+    (Bot.may_drive: a Demon, Noble or Mythic never at a Warthog's or a Mongoose's wheel) and no Wheelman of ours has
+    called (Bot.wheel_yield). The errand is checked again where the bot takes it (Bot.decide), but a pick for a vehicle
+    it may not drive would spawn it by that vehicle for nothing."""
+    vs = snap.vehicles or ()
+    if b is None or not hasattr(b, "may_drive"):
+        return list(vs)
+    return [v for v in vs if b.may_drive(v, snap) and not (hasattr(b, "wheel_yield") and b.wheel_yield(v))]
+
+
+def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None, inv_veh=()):
     """Invasion respawns by the player's honor system (brain/invasion.py honor_spawn): while a bot is dead, where it will
     spawn, sent to botcore (send(index, x, y, z, yaw): botctl.spawn_at), which moves its new unit there. Picked once a
     death and again in a new phase; a spot behind a teammate is redone every half second (he moves), the pick redone if
@@ -869,7 +881,10 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
     leaves everyone dead for ~10 s with the old sides still read (match 211159, 457-467 s), and the round's opening
     spawn is the game's (it tells the new sides, invasion.Watch); a pick sent before that is called off (NaN: where the
     game puts it). watch.placed: the bots with a pick out (their spawns say nothing of the phase). A pick at a spawn
-    kept for its vehicles (River in phases 2-3) gives the bot that vehicle as its errand (b.errand: handle, until)."""
+    kept for its vehicles (River in phases 2-3), or by a free Invasion vehicle of its side (inv_veh: invasion.inv_vehicles),
+    gives the bot that vehicle as its errand (b.errand: handle, until). Phases 1-2: the picks lean to the territory
+    short of its share of the team (invasion.spawn_offers: lanes). (upstream 0.3.0, build 20261118-1714; the vehicles
+    offered are only those the bot's tier may drive: drivable, custom #46b)"""
     alive = sum(1 for p in snap.players if p.alive)
     # (not while a round's change is pending: invasion.Watch.round_wait_until, the half alive came while the rest were
     # still respawning and the picks by the old phase hid the new round, live Spire)
@@ -898,11 +913,14 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
         spot = invasion_ally_spot(mate, snap.players, T, others) \
             if mate is not None and invasion_mate_clear(mate, snap.players, T) else None
         errands = {e[0] for k, o in bots.items() if k != index and (e := getattr(o, "errand", None)) and now < e[1]}
+        lanes = list(zones) if snap.inv_phase in (1, 2) and len(zones) >= 2 else []
         new = dict(pick, pos=spot, yaw=mate.yaw) if spot is not None else \
-            honor_spawn(spawns, snap.inv_phase, side, me, snap.players, rng, T, others, goal, snap.vehicles, errands)
+            honor_spawn(spawns, snap.inv_phase, side, me, snap.players, rng, T, others, goal, drivable(b, snap), errands,
+                        lanes, inv_veh)
         if new is None:
             continue
-        # spawned at River in phases 2-3 for the free Warthog or Falcon by it: sent to it (Bot.decide errand)
+        # spawned for a free vehicle by its spawn (River's Warthog / Falcon, the High Trail Banshee): sent to it
+        # (Bot.decide errand)
         b.errand = (new["ride"], now + 30.0) if new.get("ride") is not None else None
         send(index, new["pos"].x, new["pos"].y, new["pos"].z, new["yaw"])
         if trace and (pick is None or new["name"] != pick["name"]):
@@ -915,13 +933,16 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
     watch.placed = {index for index, st in state.items() if st.get("pick")}
 
 
-def label_zone(inv, snap, index, watch=None, memo=None):
+def label_zone(inv, snap, index, watch=None, memo=None, rng=None, bots=None, now=0.0, T=None):
     """(x, y, z, yaw) of the labelled zone a dead bot respawns at on an Invasion map with labelled zones and no named
     spawns, facing the phase's objective, or None (no setup, no phase read yet, no zone for its side, or a round's change
     pending with the old sides still read: live Breakpoint Nov 14, the 15 picks of round 2's first second all went to
     round 1's sides): then the game's own zone. The phase and the sides are the Watch's (watch.phase / attackers): the
-    snapshot's are only filled by Watch.update later in the tick. The zone nearest the phase's objective
-    (invasion.label_spawn); memo["label"] marks a pick of ours (Watch.placed). (upstream 0.3.0, build 20261118-1714)"""
+    snapshot's are only filled by Watch.update later in the tick. With rng (live): invasion.label_pick, a vehicle job
+    first (only a vehicle its tier may drive: drivable), else a weighted pick, made once a death and phase and kept in
+    memo (the bot's zone_state: cleared as it spawns) so it does not jump. Without rng: the zone nearest the phase's
+    objective (invasion.label_spawn). memo["label"] marks a pick of ours (Watch.placed). (upstream 0.3.0, build
+    20261118-1714)"""
     me = snap.player(index)
     phase = getattr(watch, "phase", None) or getattr(snap, "inv_phase", None)
     attackers = getattr(watch, "attackers", getattr(snap, "inv_attackers", -1))
@@ -935,7 +956,25 @@ def label_zone(inv, snap, index, watch=None, memo=None):
     pts = inv["phases"].get(phase) or []
     if goal is None and pts:
         goal = Vec(sum(q.x for q in pts) / len(pts), sum(q.y for q in pts) / len(pts), sum(q.z for q in pts) / len(pts))
-    z = label_spawn(inv, phase, me.team == attackers, goal)
+    attacking = me.team == attackers
+    if rng is None:
+        z = label_spawn(inv, phase, attacking, goal)
+    else:
+        key = (phase, attacking)
+        kept = (memo or {}).get("label_pick")
+        if kept is not None and kept[0] == key:
+            z, ride = kept[1], kept[2]
+        else:
+            errands = {e[0] for k, o in (bots or {}).items() if k != index and (e := getattr(o, "errand", None))
+                       and now < e[1]}
+            lanes = list(pts) if phase in (1, 2) and len(pts) >= 2 else []
+            b = (bots or {}).get(index)
+            o = label_pick(inv, phase, attacking, goal, rng, me, snap.players, T, lanes, drivable(b, snap), errands)
+            z, ride = (o["pos"], o["ride"]) if o else (None, None)
+            if memo is not None:
+                memo["label_pick"] = (key, z, ride)
+            if b is not None and ride is not None:
+                b.errand = (ride, now + 30.0)     # (Bot.decide: it goes for that vehicle once in)
     if z is None:
         return None
     if memo is not None:
@@ -1406,6 +1445,10 @@ def main():
                                                                         and not o.forge_invasion) else None
     if inv_layout is not None:
         inv_layout["map"] = MAP["name"]           # (its phase rules by map: brain/invasion.py phase_link_gates)
+        if not inv_layout.get("vehicles") and not MAP["objects"].get("mvar"):
+            # a built-in map's Invasion vehicles: its scenario's (maps/<map>/inv_vehicles.json), a variant's: its labels
+            # (upstream 0.3.0, build 20261118-1714)
+            inv_layout["vehicles"] = inv_vehicles(MAP.get("base") or MAP["name"])
     inv_watch, inv_check, inv_unread, inv_file_tried = [None], [-9.0], [False], [False]
     zone_placed = set()                           # bots sent to a labelled zone of ours (Watch.placed on the zone path)
     zone_check, zone_state = [-9.0], {}           # Invasion with no setup of its own: the game's zones (zone_spawn_check)
@@ -1417,6 +1460,7 @@ def main():
         piece_watch = PieceWatch(pieces_of(MAP["variant"]), MAP["variant"].get("dynamic", ()),
                                  MAP["variant"].get("game") or o.game)
     inv_spawns, spawn_state = honor_spawns(MAP.get("base") or MAP["name"]) if inv_layout else None, {}
+    inv_veh = inv_vehicles(MAP.get("base") or MAP["name"]) if inv_spawns else []   # (its vehicles by side and phase)
     mode_watch, mode_check = [None], [-9.0]      # Territories, Assault, Stockpile, Headhunter, Infection (brain/modes.py)
     bug_check, grow_check = [-9.0, None], [-9.0]     # bug_check[1]: the last tick's mode once read (see below)
     read_gt = [None]                                  # (custom, Nov 21) botcore's tick count at the last read
@@ -1601,8 +1645,8 @@ def main():
                             # (the map's labelled zone for its side and phase where the layout has them: label_zone,
                             # else the zone the game gives it, as before; upstream 0.3.0, build 20261118-1714)
                             zone_spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap,
-                                             lambda i: label_zone(inv_layout, snap, i, w, zone_state.setdefault(i, {}))
-                                             or live.respawn_zone(i),
+                                             lambda i: label_zone(inv_layout, snap, i, w, zone_state.setdefault(i, {}),
+                                                                  rng, bots, now, T) or live.respawn_zone(i),
                                              zone_state, rng, T, now, trace)
                             # (our label picks are kept out of the Watch's reading of the phase and sides: Watch.placed,
                             # until it has seen the bot spawn; a dead bot on the game's own zone counts)
@@ -1625,7 +1669,7 @@ def main():
                     if inv_spawns:
                         try:
                             spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap, now, spawn_state, inv_spawns,
-                                        inv_watch[0], rng, T, trace)
+                                        inv_watch[0], rng, T, trace, inv_veh=inv_veh)
                         except Exception as e:           # (never the whole tick: bots then spawn where the game puts them)
                             inv_spawns = None
                             import traceback

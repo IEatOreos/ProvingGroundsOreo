@@ -38,6 +38,8 @@ maps/*/variants/
 maps/*/source/
 maps/*/roofless/
 maps/*/roofless.json
+# (custom, Nov 24) Invasion's vehicles from a map's scenario export (tools/inv_vehicles.py): game-derived, never committed
+maps/*/inv_vehicles.json
 
 # personal terms for the release privacy scan (tools/make_release.py)
 .private_terms

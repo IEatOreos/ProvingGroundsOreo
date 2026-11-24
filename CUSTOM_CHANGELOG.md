@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Reach Invasion: smarter spawns; a waiting vehicle gets a driver its tier may drive, 2026-11-24
+
+Upstream 0.3.0's note #46 (build 20261118-1714), with #46b. The owner: "the named-spawn part now, the label part with #35 (our may_drive guard kept at the errand spot)"; then both parts approved now, and #46b "vehicle job only for vehicles the bot's tier may drive: yes, filter".
+
+- `brain/invasion.py` (upstream's Invasion, never customized by us): his `honor_spawn`, `spawn_offers`, `_weighted`, `_named_point`, `danger`, `lane_counts`, `lane_factor`, `inv_vehicles`, `waiting_rides` and `label_pick` replace upstream s181's `honor_spawn`.
+  - **A job first:** a free vehicle of the bot's side waiting at its Invasion spot (spawned by this phase) sends one bot to the spawn by it.
+  - **Else a weighted pick:** the file's weight, times up to 1 + `LANE_W` (3) for the territory short of its share of the team (down to `LANE_MIN` 0.25 for one with twice its share), times `ENEMY_SPAWN_W` (0.25) by the other side's spawn, and 0 with a seen enemy within `DANGER_R` (15 u). If every weight is 0, the file's weights.
+  - Spawning on a teammate is offered once per lane.
+  - His Spire: the attackers' Conveyor Belt took 80% of their spawns, a deathmatch by the spire and nothing on the other side.
+  - `layout()` reads a map variant's own `inv_vehicle` labels.
+  - `label_pick` is the same for labelled custom maps (#35's zone path).
+- `tools/live_bots.py`:
+  - `spawn_check` passes the phase's two territories (`lanes`) and the map's Invasion vehicles (`inv_veh`, from `maps/<map>/inv_vehicles.json`).
+  - `label_zone` uses `label_pick` live, kept per death and phase, and sets the errand for a ride.
+  - Built-in maps read their vehicles from that file.
+- **#46b (custom, `drivable`)**: the vehicles offered to a spawn's vehicle job are only those the bot may drive (`Bot.may_drive`: Demon, Noble and Mythic never at a Warthog's or a Mongoose's wheel) and that no Wheelman of ours has called (`Bot.wheel_yield`). Such a bot still spawns, by the weighted pick.
+- `tools/inv_vehicles.py` (his, new): writes `maps/<map>/inv_vehicles.json` from an HREK `scenario.xml` export. Those files are game-derived: `.gitignore` gets `maps/*/inv_vehicles.json`, and none is committed (none exists here yet, so until the owner runs it on a built-in map only a variant's labels give vehicle jobs).
+- Kept of ours: `Bot.decide`'s errand consumption with our `s.may_drive(v, snap) and not s.wheel_yield(v)` guards and `close_fight`. His `in_fight` swap and `set_vplan` (which we lack) are not taken; `brain/bot.py` is unchanged.
+- **Checks:** `tools/test_upstream_030_modes.py` +7:
+  - `lane_factor` and `lane_counts`;
+  - a seen enemy rules Boneyard's Middle Approach out;
+  - through the real `spawn_check` on Boneyard's named spawns: a waiting Warthog sends a Heroic bot to spawn by it, not before its phase;
+  - #46b: Demon, Noble and Mythic are never sent for a Warthog (still spawned), but are for a Banshee;
+  - `label_pick`'s vehicle job and weighted pick;
+  - `layout` reads a variant's `inv_vehicle`;
+  - the `.gitignore` line.
+  - All OK; `test_wheel_and_one_bomb`, `test_breakpoint_sight`, `test_demon_seats` OK; `live_bots.py` imports, `inv_vehicles.py` parses. **Untested in a live match.**
+
 ### Reach Invasion on custom maps: bots respawn in the map's own labelled zones, 2026-11-24
 
 Upstream 0.3.0's note #35 (build 20261118-1714, his GitHub #26: a custom Tempest whose bots never spawned in its zones). The owner: "take it, score_attacker plus the plain label spawns (label_pick waits for #46)". `score_attacker` and the round reset came in with #75.
