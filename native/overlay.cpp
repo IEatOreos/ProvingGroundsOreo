@@ -859,7 +859,27 @@ static bool in_match() {
     return bots_title(g_session) && mcc_menu_state() == 1 && !g_playback;
 }
 
+// (upstream 0.3.0, build 20261113-1500) Is the pause menu up? On Windows the game shows the cursor there and hides it in
+// play. Under Wine / Proton (Steam Deck) the cursor reads as showing all the time, which kept the "Report bot bug" tab up
+// through the whole match; there the pause menu is what stops the game: no game tick for a third of a second (the tick
+// counter botcore counts in every game). On Windows (no wine_get_version in ntdll) nothing changes.
+static bool on_wine() {
+    static int wine = -1;
+    if (wine < 0) {
+        HMODULE nt = GetModuleHandleW(L"ntdll.dll");
+        wine = nt && GetProcAddress(nt, "wine_get_version") ? 1 : 0;
+    }
+    return wine == 1;
+}
+
 static bool cursor_up() {
+    if (on_wine() && g_shm) {
+        static uint32_t last_tick;
+        static ULONGLONG last_move;
+        ULONGLONG now = GetTickCount64();
+        if (g_shm->game_tick != last_tick || !last_move) { last_tick = g_shm->game_tick; last_move = now; }
+        return now - last_move > 330;
+    }
     CURSORINFO ci{ sizeof ci };
     return GetCursorInfo(&ci) && (ci.flags & CURSOR_SHOWING) && GetForegroundWindow() == g_hwnd;
 }

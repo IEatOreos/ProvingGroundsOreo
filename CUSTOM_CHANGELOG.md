@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Steam Deck: the Report bot bug tab shows only in the pause menu, 2026-11-24
+
+Upstream 0.3.0's note #9 (build 20261113-1500). The owner: "take it".
+
+- `native/overlay.cpp`: his `on_wine()` (ntdll's `wine_get_version`, looked up once) and his test in `cursor_up()`: under Wine / Proton the cursor reads as showing all match long, which kept the "Report bot bug" tab up; there the pause menu is taken as no game tick (`g_shm->game_tick`, our shared.h) for over 330 ms. (Ours: the test also asks for `g_shm`.)
+- **On Windows nothing changes**: `wine_get_version` is not in Windows' ntdll, so `cursor_up()` is our cursor test as before. F9 and the rest of the bug report are unchanged.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (no Steam Deck here; on Windows the path is not taken).
+
 ### BOTS panel no longer disappears in lobbies: six missed probes in a row before the lobby counts as gone, beside our title hold, 2026-11-24
 
 Upstream 0.3.0's note #8 (build 20261113-1500). The owner: "add beside our Nov 21 hold, after the open overlay.cpp edits are committed; test the Reach lobby".
