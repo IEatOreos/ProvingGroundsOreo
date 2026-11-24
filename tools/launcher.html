@@ -711,13 +711,16 @@ const laterKey = u => u.latest + " " + (u.latest_build || "");     // (Later hid
 $("updlater").onclick = () => { if (upd) sessionStorage.setItem("upd-later", laterKey(upd)); $("updbar").hidden = true; };
 // what's new: every version and in-place update since the player's copy (updater.news), from the release's docs/UPDATES.md.
 // Its little markdown: #### an update's heading, ### New / Fixed (as **New**), **bold**, - lists (two deep), [links] (out to
-// the repository only, as /open)
-const DOCS = "https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/";
+// the repository only, as /open). (custom, Nov 24) Project Noble's repository: a relative link is our docs/; the original
+// project's own links (its issue numbers in the upstream notes) stay links, as the guide's one credit link
+const REPO = "https://github.com/IEatOreos/ProvingGroundsOreo", UPSTREAM = "https://github.com/AyoItzKye/project-proving-grounds";
+const DOCS = REPO + "/blob/main/docs/";
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function inline(s) {
   return esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, url) => {
     url = /^[a-z]+:/i.test(url) ? url : DOCS + url;
-    return url.startsWith("https://github.com/AyoItzKye/") ? `<a href="${url}" data-url="${url}">${t}</a>` : t;
+    return url.startsWith(REPO + "/") || url.startsWith(UPSTREAM + "/") || url === UPSTREAM
+      ? `<a href="${url}" data-url="${url}">${t}</a>` : t;
   });
 }
 function mdHtml(md) {

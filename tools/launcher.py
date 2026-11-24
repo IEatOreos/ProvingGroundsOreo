@@ -240,6 +240,16 @@ def log_lines(task, skip=0):
                 code=None if not p or p.poll() is None else p.returncode)
 
 
+# (custom, Nov 24) the links the guide and the What's new notes may open: Project Noble's repository (its docs, issues,
+# releases), and the original project's own repository (the guide's one credit link, the upstream notes' issue numbers)
+LINKS = ("https://github.com/IEatOreos/ProvingGroundsOreo", "https://github.com/AyoItzKye/project-proving-grounds")
+
+
+def link_ok(url):
+    """A link out of the guide or the notes that the launcher opens in the browser: one of LINKS or a page under it."""
+    return any(url == base or url.startswith(base + "/") for base in LINKS)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -314,8 +324,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send({"ok": updater.install(on_start=lambda: close_for_update(self.server))})
         elif self.path == "/open":                   # a link out of the guide, in the default browser: web pages only
             url = str(body.get("url", ""))
-            # (custom: and this custom build's own repository, its releases page)
-            if not url.startswith(("https://github.com/AyoItzKye/", "https://github.com/IEatOreos/ProvingGroundsOreo")):
+            if not link_ok(url):
                 return self.send({"ok": False}, code=400)
             webbrowser.open(url)
             self.send({"ok": True})

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### The guide's and the launcher's links go to Project Noble's GitHub, with one credit link to the original, 2026-11-24
+
+The owner's own request (the side finding of upstream 0.3.0's note #44, "our links fixed afterwards, as planned"). His website links (#44) are not taken.
+
+- `tools/guide.html`: What works in each mode (`docs/BOT_STATUS.pdf`), Known bugs (`docs/KNOWN_BUGS.md`), What's new (our releases page), Report a bug (`issues/new?labels=bug`), Suggest an idea (`issues/new?labels=enhancement`) and the Linux section's Releases page now point at https://github.com/IEatOreos/ProvingGroundsOreo. Both docs exist in our repository; it has no issue templates, so the links open a plain new issue. One small credit line under the first links: "Project Noble is a customized build of Project Proving Grounds", the one link to https://github.com/AyoItzKye/project-proving-grounds.
+- `tools/launcher.html`: the What's new notes' relative links resolve to our `docs/`; links to our repository and to the original project (the upstream notes' issue numbers) stay links, others plain text.
+- `tools/launcher.py`: `/open` takes `link_ok(url)`: our repository, or the original project's repository (narrowed from any `github.com/AyoItzKye/` page).
+- Kept: the What's new dialog and the updater (our releases only) unchanged; upstream credits in NOTICE.md, CUSTOMIZATIONS.md and docs untouched.
+- **Checks:** `tools/test_launcher_noble.py` (new, 3) OK: every guide link is ours but the one credit link, every one passes `/open`, the map tools' and his website's links are refused. Not opened in the app window.
+
 ### Installation 04 and Unearthed (Reach Firefight) have their map data, 2026-11-24
 
 Upstream 0.3.0's note #81 (build 20261120-2003). The owner: "take it (JSON committed, npz/png kept local)".
