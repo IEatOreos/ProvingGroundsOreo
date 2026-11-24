@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### An object freed while the bots read it is skipped, not the whole tick (Reach and Halo 4), 2026-11-24
+
+Upstream 0.3.0's note #39 (build 20261119-0039). The owner: "take it".
+
+- `brain/live.py`: `LiveReach.loose_named` (loose flags, Headhunter's skulls), `LiveReach.objects` and `LiveH4F.objects` skip an object whose header read comes back empty (`if head is None: continue`). Before, one object freed between the table read and its own read failed the whole tick (his live Halo 4 Vortex, Nov 19); the same reads in Reach were unguarded.
+- Nothing else changes: every object read whole is handled as before.
+- **Checks:** new `tools/test_upstream_030_modes.py` +3 (a flag freed mid-read: `loose_named` and `objects` return the other one; Halo 4's guard is in place) OK; `live.py` parses. **Untested in a live match.**
+
 ### Halo 3 Elephants: the hull blocks sight; bots board by the ramp and climb the stairs to the deck, 2026-11-24
 
 Upstream 0.3.0's note #4 (build 20261112-1632). The owner: "port it carefully (his hull_blocks renamed, hull check kept outside the protected precision branches)". Halo 3 only (`bot.ELEPHANT_GAMES = ("h3",)`): nothing changes for Reach or any other game.

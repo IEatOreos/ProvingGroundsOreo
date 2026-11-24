@@ -1474,6 +1474,8 @@ class LiveReach(LiveH3):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
+            if head is None:      # (upstream 0.3.0, build 20261119-0039: freed as we read; Halo 4's same read failed a whole tick, live Nov 19)
+                continue
             tag, parent = struct.unpack_from("<I", head, 0)[0], struct.unpack_from("<I", head, s.PARENT_AT)[0]
             if tag not in cache:
                 cache[tag] = s._own_name(tag, "multiplayer") == name
@@ -1569,6 +1571,8 @@ class LiveReach(LiveH3):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
+            if head is None:      # (upstream 0.3.0, build 20261119-0039: freed as we read; Halo 4's same read failed a whole tick, live Nov 19)
+                continue
             tag, parent = struct.unpack_from("<I", head, 0)[0], struct.unpack_from("<I", head, 0x14)[0]
             pos = struct.unpack_from("<3f", head, 0x44)
             if typ == 2 and parent == NONE and tag not in s._names and not s._was_held((salt << 16) | i):
@@ -2278,6 +2282,8 @@ class LiveH4F(LiveReach):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
+            if head is None:      # (upstream 0.3.0, build 20261119-0039: freed as we read; Halo 4's same read failed a whole tick, live Nov 19)
+                continue
             tag = struct.unpack_from("<I", head, 0x8)[0]   # +0 is the same for every object here
             pos = struct.unpack_from("<3f", head, 0x40)
             h = (salt << 16) | i
