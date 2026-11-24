@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Installation 04 and Unearthed (Reach Firefight) have their map data, 2026-11-24
+
+Upstream 0.3.0's note #81 (build 20261120-2003). The owner: "take it (JSON committed, npz/png kept local)".
+
+- `maps/reach_cex_ff_halo/` (Installation 04) and `maps/reach_ff_unearthed/` (Unearthed), his folders, 9 files each. The JSON is committed: callouts, features, killzones, objects, phantoms, positions, wall_kinds. `heightmap.npz` and `topdown.png` are the map pack's: copied into the build tree, git-ignored as every map's, **not committed**.
+- `tools/view_art/names.json` (his, whole; ours was upstream's own): "Installation 04" and "Unearthed", and the three H2A Forge sky maps' names (Skyward, Nebula, Awash).
+- **Checks:** `tools/test_ff_map_data.py` (new, 2) OK: the JSON reads and the names are there; with the map pack present, the brain loads both maps (`brain.maps.get_map`, their spawns) and the LiDAR tools show their names. Our privacy check finds nothing in the files. **Untested in a live match** (bots on these Firefight maps).
+- **For the live install:** the two maps' `heightmap.npz` / `topdown.png` are not in Git, so the owner's copy needs them from his map pack (`PPG 0.3.0 (friend, unpacked)\src\maps\...`), as every map's.
+
 ### Modded maps: our mod_maps.py uses MCC Map Studio's own bot export when the mod has one, 2026-11-24
 
 Upstream 0.3.0's note #84 (build 20261120-1802). The owner: "our mod_maps.py stays the only builder, and uses Map Studio's own bot export when present".

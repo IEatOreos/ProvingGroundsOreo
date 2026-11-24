@@ -1,0 +1,190 @@
+{
+"features": [
+{
+"kind": "powerup",
+"name": "drop_shield",
+"pos": [
+-14.843,
+-69.397,
+81.32
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-55.966,
+-35.564,
+67.608
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "ammo",
+"name": "ammo_box",
+"pos": [
+-45.42,
+-54.502,
+63.876
+],
+"team": 0,
+"respawn": 0
+},
+{
+"kind": "vehicle",
+"name": "machinegun",
+"pos": [
+-59.179,
+-31.087,
+67.608
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "mongoose",
+"pos": [
+-61.138,
+0.374,
+68.277
+],
+"team": 0
+},
+{
+"kind": "vehicle",
+"name": "warthog",
+"pos": [
+-63.568,
+0.705,
+68.507
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-53.505,
+-31.3,
+67.982
+],
+"team": 0
+},
+{
+"kind": "objective",
+"role": "flag",
+"name": "ctf - flag",
+"pos": [
+-23.311,
+-59.086,
+65.584
+],
+"team": 1
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-65.322,
+-19.76,
+66.055
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-45.009,
+-34.005,
+64.905
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen",
+"pos": [
+-53.439,
+-49.227,
+68.091
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-65.322,
+-19.76,
+66.055
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-45.009,
+-34.005,
+64.905
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_cool",
+"pos": [
+-53.439,
+-49.227,
+68.091
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-65.322,
+-19.76,
+66.055
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-45.009,
+-34.005,
+64.905
+],
+"group": "controls"
+},
+{
+"kind": "control",
+"name": "invisible_switch_gen_disabled",
+"pos": [
+-53.439,
+-49.227,
+68.091
+],
+"group": "controls"
+},
+{
+"kind": "launcher",
+"name": "ff_man_cannon_forge_heavy",
+"pos": [
+-32.234,
+-53.776,
+65.314
+],
+"group": "crates"
+}
+],
+"teleporters": []
+}
