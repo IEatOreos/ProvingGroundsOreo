@@ -512,7 +512,8 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
         if d["index"] in prev and d["pos"] is None:   # tally for games whose team scores are not decoded (H2)
             TALLY[1 - d["team"] % 2] = TALLY.get(1 - d["team"] % 2, 0) + 1
     if MATCH.get("v"):
-        snap.score = MATCH["v"]["score"] or (dict(TALLY) if TEAMS and snap.mode == "slayer" else snap.score)
+        snap.score = MATCH["v"]["score"] or (dict(TALLY) if TEAMS and snap.mode == "slayer" else
+                                             dict(CAPS) if TALLIED and snap.mode == "ctf" else snap.score)
         snap.score_limit, snap.time_left = MATCH["v"]["limit"], MATCH["v"]["time_left"]
         snap.score_live = bool(MATCH["v"]["score"])         # (custom, Nov 13: Land Grab, brain/modes.py score_read)
     if FIREFIGHT:                                # the Covenant are the enemy: they join as players
@@ -656,6 +657,11 @@ TALLY = {0: 0, 1: 0}                 # deaths counted as the other team's points
 # team score of their own: Halo: CE and Halo 2 (Live, LiveH2; set in main). Halo 3, ODST, Reach, Halo 4 and H2A play
 # exactly as before, even on a tick whose score read is empty or dropped
 TALLIED = False
+# CTF captures counted from the flags where the game's score is not decoded (Halo: CE, Halo 2): a flag carried and next
+# seen home, last carried within CAP_R of the other team's stand, is a capture (live Hang 'Em High, Nov 14: a capture
+# read 0-0, so the bots never knew they led). CARRIED: each flag's last carried position (upstream 0.3.0, build
+# 20261114-0323; the score uses them only where TALLIED)
+CAPS, CARRIED, CAP_R = {0: 0, 1: 0}, {}, 4.0
 HELD = {"t": None, "pts": {}}        # King / Oddball seconds per team where the score is not decoded (held_tally)
 HELD_DZ = 2.5                        # u up or down that still counts as in the hill (brain/sim_modes.py ZONE_DZ)
 
@@ -701,6 +707,8 @@ FIREFIGHT = False                    # set in main: Reach Firefight (bots are th
 def flag_events(directors, before, snap, now):
     """The announcer: a team hears at once when its flag is taken or dropped."""
     for team, f in snap.flags.items():
+        if f.state == "carried":
+            CARRIED[team] = f.pos                 # (upstream 0.3.0, build 20261114-0323: CE / Halo 2 captures, CAPS)
         was = before.get(team)
         d = directors.get(team)
         if not d or not was or was == f.state:
@@ -710,6 +718,9 @@ def flag_events(directors, before, snap, now):
         elif f.state == "dropped" and was == "carried":
             d.report(now, -1, "flag_dropped", f.pos)
         elif f.state == "home" and was == "carried":          # carried straight home: captured
+            stand = snap.flags.get(1 - team)
+            if stand is not None and team in CARRIED and (CARRIED[team] - stand.home).length() < CAP_R:
+                CAPS[1 - team] = CAPS.get(1 - team, 0) + 1
             d.report(now, -1, "enemy_scored", f.home)
             if directors.get(1 - team):
                 directors[1 - team].report(now, -1, "scored", f.home)

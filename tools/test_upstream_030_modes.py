@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path[:0] = [str(Path(__file__).resolve().parents[1]), str(Path(__file__).resolve().parent)]
 from brain import live as livemod                                   # noqa: E402
+from brain.core import Vec                                          # noqa: E402
 from brain.live import NONE, LiveReach                              # noqa: E402
 import test_reach_stockpile_flags as stock                          # noqa: E402
 
@@ -214,6 +215,63 @@ class KingOddballCEH2(unittest.TestCase):
         import inspect
         self.assertIn("TALLIED = type(live) in (Live, LiveH2)", inspect.getsource(self.lb.main))
         self.assertFalse(self.lb.TALLIED)              # (set per match in main; off until then)
+
+
+class CEH2Captures(unittest.TestCase):
+    """#11, its live_bots part (build 20261114-0323): in CE and Halo 2 (no score read) a flag carried and next seen
+    home, last carried within CAP_R of the other team's stand, is a capture (CAPS); a flag returned is not."""
+
+    def setUp(self):
+        import live_bots
+        self.lb = live_bots
+        self.saved = dict(live_bots.CAPS), dict(live_bots.CARRIED)
+        live_bots.CAPS.clear()
+        live_bots.CAPS.update({0: 0, 1: 0})
+        live_bots.CARRIED.clear()
+
+    def tearDown(self):
+        self.lb.CAPS.clear()
+        self.lb.CAPS.update(self.saved[0])
+        self.lb.CARRIED.clear()
+        self.lb.CARRIED.update(self.saved[1])
+
+    def run_flags(self, carried_to):
+        from brain.core import FlagState, Snapshot, Vec
+
+        class D:
+            def __init__(s):
+                s.heard = []
+
+            def report(s, now, who, what, where):
+                s.heard.append(what)
+
+        homes = {0: Vec(0, 0, 0), 1: Vec(50, 0, 0)}
+        dirs = {0: D(), 1: D()}
+        before = {0: "home", 1: "home"}
+
+        def tick(state1, pos1):
+            flags = {0: FlagState(0, homes[0], homes[0]), 1: FlagState(1, homes[1], pos1, state=state1)}
+            self.lb.flag_events(dirs, before, Snapshot(0.0, [], flags, mode="ctf"), 0.0)
+            before.update({t: f.state for t, f in flags.items()})
+
+        tick("carried", Vec(30, 0, 0))
+        tick("carried", carried_to)
+        tick("home", homes[1])
+        return dict(self.lb.CAPS), dirs
+
+    def test_carried_to_the_stand_is_a_capture(self):
+        caps, dirs = self.run_flags(Vec(1, 1, 0))
+        self.assertEqual(caps, {0: 1, 1: 0})
+        self.assertIn("scored", dirs[0].heard)
+
+    def test_returned_far_from_the_stand_is_none(self):
+        caps, _ = self.run_flags(Vec(25, 0, 0))
+        self.assertEqual(caps, {0: 0, 1: 0})
+
+    def test_score_uses_caps_only_where_tallied(self):
+        import inspect
+        self.assertIn('dict(CAPS) if TALLIED and snap.mode == "ctf"', inspect.getsource(self.lb.snapshot))
+        self.assertIn("snap.score_live = bool(MATCH", inspect.getsource(self.lb.snapshot))   # (ours, Nov 13, kept)
 
 
 if __name__ == "__main__":

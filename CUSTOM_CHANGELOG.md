@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### CTF in Halo: CE and Halo 2: the bots count captures, 2026-11-24
+
+Upstream 0.3.0's note #11, its live_bots part (build 20261114-0323). The owner: "take both" (the wall-flag walk was committed earlier as its own part).
+
+- `tools/live_bots.py`: `flag_events` keeps each flag's last carried spot (`CARRIED`); a flag carried and next seen home, last carried within `CAP_R` (4 u) of the other team's stand, is a capture for the carrier's team (`CAPS`). His live CE Hang 'Em High: a capture read 0-0, so the bots never knew they led.
+- The score: where the game's read has no team score, `snap.score` is `CAPS` in CTF, **only on CE and Halo 2** (`TALLIED`, from #17; his took it in every game). Reach, Halo 3, ODST, Halo 4 and H2A keep their own score read, even on a tick whose read is empty.
+- Kept of ours: `snap.score_live` (Nov 13) beside the score line, still the game's own read only; the Slayer kill tally line as it was.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (carried to the stand = a capture and the scorers hear it; carried away and returned = none; the score takes `CAPS` only where `TALLIED`, and our `score_live` line is there) OK; `live_bots.py` imports. **Untested in a live match** (CE and Halo 2 CTF).
+
 ### King of the Hill and Oddball in Halo: CE and Halo 2: bots play the real score, 2026-11-24
 
 Upstream 0.3.0's note #17 (build 20261114-1215). The owner: "take it, without the KING_CALLS callouts line".
