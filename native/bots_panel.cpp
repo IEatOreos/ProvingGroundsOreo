@@ -5179,6 +5179,9 @@ bool bots_panel(bots_panel_env& e) {
     if (g_open_popup) { ImGui::OpenPopup(g_open_popup); g_open_popup = nullptr; }
     quick_setup(e, changed);
     confirm_clear(e, changed);
+    // (upstream 0.3.0, build 20261116-2330) a controller (or the arrows) past an edge comes round to the other side, up
+    // and down and across; the regions inside are flattened into this window
+    ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_LoopX);
     ImGui::End();
     ImGui::PopStyleColor(9);
     ImGui::PopStyleVar(7);
@@ -5282,6 +5285,8 @@ bool bug_report_ui(bug_report_env& e) {
         ImGui::SetTooltip("Type what went wrong first");
     ImGui::PopTextWrapPos();
     e.hovered = true;                                         // the window is up: every click and key is ours
+    // (upstream 0.3.0, build 20261116-2330) the pad comes round at the edges here too
+    ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_LoopX);
     ImGui::End();
     ImGui::PopStyleColor(6);
     ImGui::PopStyleVar(5);

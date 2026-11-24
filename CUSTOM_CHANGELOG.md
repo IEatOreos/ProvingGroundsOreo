@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### BOTS panel on a controller: the pad moves around the whole panel and wraps at the ends, 2026-11-24
+
+Upstream 0.3.0's note #23 (build 20261116-2330). The owner: "take it; try it on the pad".
+
+- `native/bots_panel.cpp`: his `ImGui::NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_LoopX)` before `ImGui::End()` of the main panel (after our `quick_setup` / `confirm_clear`) and of the Report bot bug window: a controller or the arrow keys past an edge come round to the other side, up and down and across. The panel's lists and inspector were already nav-flattened into the window.
+- Not taken here: his Experimental tab's child (another note's work).
+- Ours kept: the 11-choice difficulty picker, `g_goto_settings`, our popups and the roster's own arrow keys are untouched.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the pad in the BOTS panel and the bug report).
+
 ### BOTS panel sounds: short low Halo-style clicks instead of bright chimes (our Project Noble / Reach screens' sounds too), 2026-11-24
 
 Upstream 0.3.0's note #20 (build 20261114-1630). The owner: "take it; the owner listens in game, revert if disliked".
