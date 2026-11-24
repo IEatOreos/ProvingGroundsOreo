@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Gunners stay in while someone drives, 2026-11-24
+
+Upstream 0.3.0's note #32a (build 20261114-2230). The owner: "merge only that rule (AT_WHEEL) into our block; parked_ban stays (add AT_WHEEL to our threads held-back tables)". #32b ("a gunner out at the objective only with 2 or fewer aboard") was answered no and is not taken.
+
+- `AT_WHEEL` (his): the bot at a vehicle's wheel stamps it every tick in `Bot.drive`. `Bot.at_wheel` (his): a bot of ours stamped it within the last second and is still in it, or a person rides with us (`PlayerState.driver` where a game reads it; ours doesn't, so any person aboard counts, as his code does elsewhere).
+- Our rider exit block: a gunner whose vehicle reads "parked" (still 5 s, no person aboard) no longer gets out while somebody is at the wheel. His Nov 14: gunners jumped out with the driver still in.
+- Kept of ours: alone in it still means out; a passenger's exits; `parked_ban` (Nov 15) when it does get out; the "there, out" test and the home-with-the-flag exit; our CTF runners' exits (no `GUNNER_OUT_RIDERS`).
+- `brain/threads.py`: `AT_WHEEL` joins the held-back flat tables (`FLAT`) like `DEAD_SPOTS`. A bot sees another's stamp only after the pass, so a threaded pass plays the 1-thread match; `tools/test_threads.py` clears it with the others.
+- **Checks:** `tools/test_upstream_030_brain.py` +5 (`at_wheel`: fresh, stale, driver out; through the real `Bot.drive`: parked with a driver = stays, parked with nobody at the wheel = out with `parked_ban`, alone = out; the stamp held back in a `Pass`) OK; `tools/test_threads.py` (Pass(4) = Pass(1) match) OK; full suite 1,505 OK. **Untested in a live match.**
+
 ### A wedged vehicle is left; nobody gets back in for 2 minutes (not a Wheelman's), 2026-11-24
 
 Upstream 0.3.0's note #21 (build 20261114-1900). The owner: "take it, vehicles a Wheelman is keeping exempt".

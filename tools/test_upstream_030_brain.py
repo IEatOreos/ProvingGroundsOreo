@@ -281,5 +281,72 @@ class WedgedDudTests(unittest.TestCase):
         self.assertIsNone(until, notes)
 
 
+class GunnerStaysTests(unittest.TestCase):
+    """#32a (build 20261114-2230): a gunner stays in while somebody is at the wheel (AT_WHEEL), parked or not; the
+    rest of our rider exits as before."""
+
+    def setUp(self):
+        botmod.AT_WHEEL.clear()
+
+    tearDown = setUp
+
+    def ride(self, stamp=True, riders=2, now=100.0):
+        from types import SimpleNamespace
+        from brain.bot import Order
+        from brain.core import Snapshot
+        mapdata = dict(name="reach_test", flags={0: Vec(100, 0, 0), 1: Vec(200, 0, 0)}, points={})
+        b = Bot(0, 0, make_profile("strong", "rusher", random.Random(3)), mapdata, random.Random(2))
+        b.order = Order("free")
+        b.seat, b.seat_for = "gunner", 10
+        b._terrain = SimpleNamespace(height_over=lambda *a: 0.0)
+        b.notes = []
+        me = PlayerState(0, 0, "gun", Vec(), vehicle=10, gunner_seat=True)
+        driver = PlayerState(5, 0, "wheel", Vec(), vehicle=10)
+        v = dict(handle=10, kind="warthog", pos=(0, 0, 0), occupied=True, team=0, riders=riders, fwd=(1, 0, 0))
+        snap = Snapshot(100, [me, driver], vehicles=[v], mode="slayer")
+        b.still_at, b.still_since, b.seat_since = Vec(), now - 10.0, now - 10.0     # parked 10 s
+        if stamp:
+            botmod.AT_WHEEL[10] = (5, now - 0.2)
+        act = Action()
+        b.drive(now, 1 / 30, me, snap, act, lambda a, c, **k: c)
+        return act.action, b
+
+    def test_at_wheel(self):
+        from brain.core import Snapshot
+        me = PlayerState(0, 0, "gun", Vec(), vehicle=10)
+        drv = PlayerState(5, 0, "wheel", Vec(), vehicle=10)
+        snap = Snapshot(100, [me, drv])
+        self.assertFalse(Bot.at_wheel(100.0, me, snap))
+        botmod.AT_WHEEL[10] = (5, 99.5)
+        self.assertTrue(Bot.at_wheel(100.0, me, snap))
+        self.assertFalse(Bot.at_wheel(101.0, me, snap), "a stale stamp")
+        drv.vehicle = -1
+        self.assertFalse(Bot.at_wheel(100.0, me, snap), "the driver got out")
+
+    def test_parked_with_a_driver_the_gunner_stays(self):
+        out, b = self.ride(stamp=True)
+        self.assertFalse(out, b.notes)
+
+    def test_parked_with_nobody_at_the_wheel_out_as_before(self):
+        out, b = self.ride(stamp=False)
+        self.assertTrue(out, b.notes)
+        self.assertIn(10, getattr(b, "parked_ban", {}), "our parked_ban as before")
+
+    def test_alone_in_it_out_as_before(self):
+        out, b = self.ride(stamp=True, riders=1)
+        self.assertTrue(out, b.notes)
+
+    def test_the_stamp_is_held_back_in_a_threaded_pass(self):
+        from brain.threads import Pass
+        ps = Pass(1)
+        try:
+            got = ps.run([(lambda: botmod.AT_WHEEL.__setitem__(10, (5, 1.0)), ()),
+                          (lambda: 10 in botmod.AT_WHEEL, ())])
+        finally:
+            ps.close()
+        self.assertEqual(got[1], False, "another bot's stamp only after the pass")
+        self.assertEqual(botmod.AT_WHEEL.get(10), (5, 1.0))
+
+
 if __name__ == "__main__":
     unittest.main()

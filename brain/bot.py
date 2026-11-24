@@ -717,6 +717,11 @@ REGROUP_MATE = 8.0                  # a teammate this close is support (brain/tr
 HUNT_R = 12.0                       # an Invasion defender sent at the carrier / a territory being taken strays no farther
 # (upstream 0.3.0, build 20261112-2117) games whose objectives are taken on a press of Use (Bot.take taps it), s a beat
 TAKE_TAP, TAKE_TAP_S = ("h2",), 0.3
+# (upstream 0.3.0, build 20261114-2230) who drives each vehicle: handle -> (bot id, time), stamped every tick by the bot
+# at its wheel (Bot.at_wheel): a gunner stays in while someone drives. (custom, Nov 24) Only that rule: his "a gunner out
+# for the objective only with 2 or fewer aboard" is not taken (the owner: our CTF runners stay); our rider exits, the
+# "there, out" test and parked_ban are unchanged. Held back in a threaded pass (brain/threads.py FLAT)
+AT_WHEEL = {}
 # (upstream 0.3.0, build 20261112-1507) Bot.walk_fire: on foot, a gun in hand, on its way somewhere else (the objective,
 # a gun, a hunt), it shoots a man in view within WALK_FIRE_CONE of the way it walks and in its gun's reach (or hurting
 # it) and walks on, as a person runs at the flag shooting the man in front of him. His live Sandtrap 20261112-135123: on
@@ -5700,6 +5705,18 @@ class Bot:
         return not guarded or any(p.team == me.team and p.alive and p.id != me.id and dist(p.pos, me.pos) < GRAB_MATE_R
                                   for p in snap.players)
 
+    @staticmethod
+    def at_wheel(now, me, snap):
+        """(upstream 0.3.0, build 20261114-2230) Somebody drives the vehicle we ride: a bot of ours stamped its wheel
+        (AT_WHEEL) within the last second and is still in it, or a person rides with us at its wheel (where the game's
+        seat is read, PlayerState.driver; elsewhere, and in ours, any person aboard: he may be driving)."""
+        d = AT_WHEEL.get(me.vehicle)
+        if d is not None and d[0] != me.id and now - d[1] < 1.0 and any(
+                p.id == d[0] and p.alive and p.vehicle == me.vehicle for p in snap.players):
+            return True
+        return any(p.vehicle == me.vehicle and not p.is_bot and p.alive and p.id != me.id
+                   and getattr(p, "driver", None) is not False for p in snap.players)
+
     def duds(s):
         """Vehicles nobody gets into lately (handle -> until), shared by every bot on the map (vehicles.DUD_S)."""
         return s.map.setdefault("_vehicle_duds", {})
@@ -6337,6 +6354,8 @@ class Bot:
             if s.crew_ride is not None:
                 s.drive_to = s.patrol_point(me)
         s.scorpion_turn = scorpion and s.seat == "driver"
+        if s.seat == "driver":
+            AT_WHEEL[me.vehicle] = (me.id, now)  # (upstream 0.3.0, build 20261114-2230: at_wheel, its gunner stays)
         seen = s.per.visible_enemies()
         s.air_snap = snap                        # (custom, Nov 19: air_away's teammates)
         bt = getattr(s, "board_try", None)
@@ -6488,6 +6507,9 @@ class Bot:
                 s.still_at, s.still_since = me.pos, now
             parked = now - s.still_since > 5.0 and not (gunner and tid is not None) and not aloft and \
                 not any(p.vehicle == me.vehicle and not p.is_bot and p.alive for p in snap.players)   # (a hover is no park)
+            if gunner and parked and s.at_wheel(now, me, snap):
+                parked = False   # (upstream 0.3.0, build 20261114-2230) a gunner stays while somebody is at the wheel,
+                                 # parked or not (his Nov 14: gunners jumped out with the driver still in)
             if v is not None and (v.get("riders", 0) <= 1 or parked) and sp and sp["move"] != "none" and now - s.seat_since > 4.0:
                 act.action, act.fire = True, False
                 # (custom, Nov 15) not straight back in: a ride order or the vehicle run put it in again a second later,
