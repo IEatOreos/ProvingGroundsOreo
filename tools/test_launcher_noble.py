@@ -116,5 +116,116 @@ class CompactLog(unittest.TestCase):
         self.assertLess(play.index("setLog(true);"), play.index('post("/run/play"'))   # (opens as Play starts)
 
 
+def fake_studio(folder, runtime=True):
+    """A copy of MCC Map Studio as the launcher recognises it (package.json, main.js, its own Electron when runtime)."""
+    os.makedirs(folder, exist_ok=True)
+    for f in ("package.json", "main.js"):
+        open(os.path.join(folder, f), "w").close()
+    if runtime:
+        exe = os.path.join(folder, "node_modules", "electron", "dist")
+        os.makedirs(exe)
+        open(os.path.join(exe, "electron.exe"), "w").close()
+    return folder
+
+
+class MapStudio(unittest.TestCase):
+    """(upstream 0.3.0 notes #49 + #78) the Map Studio tile: located and opened only, never downloaded."""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.d = self.tmp.name
+        self.saved = os.path.join(self.d, "user", "map_studio.txt")
+        # (nothing of this PC's own copies: no home, no wide search)
+        for name, value in (("MAP_STUDIO_HOME", os.path.join(self.d, "nohome")),):
+            p = mock.patch.object(launcher, name, value)
+            p.start()
+            self.addCleanup(p.stop)
+        launcher._ELSEWHERE.update(at=0.0, found=None, busy=False)
+        self.addCleanup(launcher._ELSEWHERE.update, at=0.0, found=None, busy=False)
+
+    def test_no_download_anywhere(self):
+        src = read("launcher.py")
+        for gone in ("map_studio_install", "_studio_asset", "_studio_unzip", "STUDIO_JOB", "updater.SITE",
+                     "release.json", "/mapstudio_install"):
+            self.assertNotIn(gone, src)
+        self.assertNotIn("/mapstudio_install", read("launcher.html"))
+
+    def test_links_name_the_app_folder(self):
+        lnk = "C:\\Tools\\MCC Map Studio\\node_modules\\electron\\dist\\electron.exe".encode("utf-16-le")
+        bat = b"\x00junk D:\\Apps\\Studio\\start.bat\x00"
+        self.assertEqual(launcher.map_studio_links([lnk, bat]), ["C:\\Tools\\MCC Map Studio", "D:\\Apps\\Studio"])
+
+    def test_elsewhere_top_folders_only(self):
+        drive = os.path.join(self.d, "drive")
+        deep = fake_studio(os.path.join(drive, "a", "b", "MCC Map Studio"))       # too deep: not looked for
+        os.makedirs(os.path.join(drive, "Games"))
+        top = os.path.join(drive, "Games", "mcc-map-studio-main")
+        got = launcher.map_studio_elsewhere(appdata=self.d, links=[], homes=[], drives=[drive])
+        self.assertIn(top, got)
+        self.assertNotIn(deep, got)
+
+    def test_status_never_waits_for_the_wide_search(self):
+        calls = []
+        with mock.patch.object(launcher, "map_studio_elsewhere", side_effect=lambda: calls.append(1) or []), \
+                mock.patch.object(launcher.threading, "Thread") as thread:
+            self.assertIsNone(launcher.map_studio(env={}, saved=self.saved, root=self.d))
+            self.assertEqual(calls, [])                        # (in the background, not now)
+            thread.assert_called_once()
+            launcher._ELSEWHERE.update(at=launcher.time.time())
+            launcher.map_studio(env={}, saved=self.saved, root=self.d)
+            thread.assert_called_once()                        # (kept MAP_STUDIO_WIDE_EVERY: not again)
+
+    def test_saved_folder_found_first(self):
+        studio = fake_studio(os.path.join(self.d, "here"))
+        os.makedirs(os.path.dirname(self.saved))
+        with open(self.saved, "w", encoding="utf-8") as f:
+            f.write(studio)
+        self.assertEqual(launcher.map_studio(env={}, saved=self.saved, root=self.d, wide=False), os.path.abspath(studio))
+
+    def browse(self, picked):
+        with mock.patch.object(launcher, "pick_folder", return_value=picked) as pick, \
+                mock.patch.object(launcher, "map_studio_elsewhere", return_value=[]), \
+                mock.patch.object(launcher.subprocess, "Popen") as run:
+            got = launcher.open_map_studio({"browse": True}, saved=self.saved)
+        self.assertEqual(pick.call_args.kwargs.get("title"), "Choose the MCC Map Studio folder")
+        return got, run
+
+    def test_locate_accepts_the_unzipped_folder(self):
+        unzipped = os.path.join(self.d, "Downloads", "zip")
+        studio = fake_studio(os.path.join(unzipped, "mcc-map-studio-main"))
+        (ok, msg), run = self.browse(unzipped)
+        self.assertTrue(ok, msg)
+        with open(self.saved, encoding="utf-8") as f:
+            self.assertEqual(f.read(), studio)
+        cmd = run.call_args.args[0]
+        self.assertEqual(cmd[1], os.path.abspath(studio))
+        self.assertEqual(run.call_args.kwargs["creationflags"], 0x00000008)    # (its own program, not waited on)
+
+    def test_locate_says_when_the_runtime_is_missing(self):
+        (ok, msg), run = self.browse(fake_studio(os.path.join(self.d, "src"), runtime=False))
+        self.assertFalse(ok)
+        self.assertIn("no runtime", msg)
+        self.assertNotIn("Download", msg)
+        run.assert_not_called()
+        (ok, msg), _ = self.browse(os.path.join(self.d))
+        self.assertEqual((ok, msg), (False, "MCC Map Studio is not in that folder."))
+
+    def test_not_found_opens_nothing(self):
+        with mock.patch.object(launcher, "map_studio", return_value=None), \
+                mock.patch.object(launcher.subprocess, "Popen") as run:
+            self.assertEqual(call("POST", "/mapstudio", {})[1]["ok"], False)
+        run.assert_not_called()
+
+    def test_badge_and_tile(self):
+        code, png = call("GET", "/studio.png")
+        self.assertEqual(code, 200)
+        self.assertTrue(png.startswith(b"\x89PNG"))
+        page = read("launcher.html")
+        for bit in ('id="mapstudio"', 'src="/studio.png"', 'id="mapstudio-locate"', 'post("/mapstudio"'):
+            self.assertIn(bit, page)
+
+
 if __name__ == "__main__":
     unittest.main()

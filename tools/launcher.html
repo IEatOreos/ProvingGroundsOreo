@@ -215,7 +215,7 @@
   /* tools: a heading and four tiles (no card around them) */
   .card.tools-sec { background: none; border: 0; padding: 0; }
   .tools-sec .card-head { margin-bottom: var(--s2); }
-  .tools { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tools { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); grid-template-columns: repeat(5, minmax(0, 1fr)); }
   @media (max-width: 900px) { .tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 520px) { .tools { grid-template-columns: minmax(0, 1fr); } }
   .tools li { display: flex; }
@@ -226,6 +226,9 @@
   button.tool:active { background: var(--pressed); }
   .tool-icon { width: 32px; height: 32px; grid-column: 1; grid-row: 1; border-radius: var(--r); display: grid; place-items: center; color: var(--blue);
                background: var(--blue-bg); }
+  /* (upstream 0.3.0) Map Studio's tile: its own badge (installer/map_studio.png) as the icon */
+  .tool-icon.studio { background: none; }
+  .tool-icon.studio img { width: 32px; height: 32px; display: block; }
   .tool .ext { color: var(--text-3); justify-self: end; grid-column: 3; grid-row: 1; }
   button.tool:hover .ext { color: var(--text-2); }
   .tool-text { display: contents; }
@@ -318,6 +321,7 @@
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/></symbol>
   <symbol id="i-repair" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3"/><path d="M3.5 4v5h5"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3.5 6.5V20L9 17.5l6 2.5 5.5-2.5V4L15 6.5z"/><path d="M9 4v13.5M15 6.5V20"/></symbol>
 </svg>
 
 <header class="hero">
@@ -456,6 +460,15 @@
         <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg><span class="chip run">Open</span>
         <span class="tool-text"><span class="tool-name"><span id="n-paint">Paint the nav</span></span>
           <span class="tool-desc" id="d-paint">Advanced: mark where bots may and may not walk on a map.</span></span></button></li>
+      <!-- (upstream 0.3.0, builds 20261117-2100 and 20261120-1620) MCC Map Studio, its own app: found, it opens; not
+           found, Locate ... asks for its folder. (custom, Nov 24) never downloaded or installed from here -->
+      <li id="mapstudio-li"><button class="tool" id="mapstudio" aria-labelledby="n-mapstudio" aria-describedby="d-mapstudio">
+        <span class="tool-icon studio"><img src="/studio.png" alt="" width="32" height="32"
+          onerror="this.hidden = true; this.nextElementSibling.hidden = false"><svg class="i" aria-hidden="true" hidden><use href="#i-map"/></svg></span>
+        <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg>
+        <span class="tool-text"><span class="tool-name"><span id="n-mapstudio">Map Studio</span>
+          <span class="chip" id="mapstudio-locate" hidden>Locate ...</span></span>
+          <span class="tool-desc" id="d-mapstudio">Build your own maps in MCC Map Studio, its own app.</span></span></button></li>
     </ul>
   </section>
 </main>
@@ -540,6 +553,11 @@ function render(s) {
   $("mcc-auto").hidden = !s.mcc_choice;
   $("mcc-browse").hidden = s.wine;
   $("uninstall").hidden = !s.installed;
+  // (upstream 0.3.0) Map Studio: a Windows app (no folder picker under Wine); not found, the tile locates it
+  $("mapstudio-li").hidden = !!s.wine;
+  $("mapstudio-locate").hidden = !!s.map_studio;
+  $("d-mapstudio").textContent = s.map_studio ? "Build your own maps in MCC Map Studio, its own app."
+    : "Not found on this PC. Press to choose its folder (the one you unzipped it into is fine).";
 
   const ready = s.setup.filter(x => x[1]).length, total = s.setup.length;
   if (setupBusy) setStatus("setup", "busy", "Working ...", "The first-time setup is running.");
@@ -695,6 +713,16 @@ for (const b of document.querySelectorAll("[data-task]")) {
     setText("tool-state", r.ok ? `${name}: its window opens in a moment.` : r.message, r.ok ? "dim" : "bad");
   };
 }
+// (upstream 0.3.0) Map Studio is its own app, not part of this download: the launcher looks for it (its own record,
+// its shortcuts, its usual folders) and opens it; not found, the press asks for its folder. (custom, Nov 24) Nothing
+// is downloaded: his "not on this PC: download it" is not here
+async function mapStudioOpen(browse) {
+  setText("tool-state", browse ? "Choose the MCC Map Studio folder in the window that opens ..." : "Opening Map Studio ...", "dim");
+  const r = await post("/mapstudio", browse ? {browse: true} : {});
+  setText("tool-state", r.message || "", r.ok ? "dim" : "bad");
+  refresh();
+}
+$("mapstudio").onclick = () => mapStudioOpen(!(state && state.map_studio));
 $("folder").onclick = () => post("/folder");
 $("docs").onclick = async () => { const r = await post("/docs"); if (r.ok && r.opened === false) window.open(r.url, "_blank"); };
 function askUninstall(open) {

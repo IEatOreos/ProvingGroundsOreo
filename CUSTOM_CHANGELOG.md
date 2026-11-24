@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### A Map Studio tile in the launcher: it finds MCC Map Studio and opens it, never downloads it, 2026-11-24
+
+Upstream 0.3.0's notes #49 (build 20261117-2100) and #78 (build 20261120-1620). The owner: #49 "locate and open only, no download"; #78 "take it with #49". (#85, downloading Map Studio, skipped.)
+
+- `tools/launcher.py`, from his: `map_studio_start` (its own Electron and package.json), `map_studio_links` (folders named in its shortcuts), `map_studio_elsewhere` (the folder it records in `%APPDATA%`, its desktop and Start-menu shortcuts, an "MCC Map Studio" / repository / GitHub-zip folder at the top of each fixed drive or one level below, and in Desktop, Documents, Downloads), `map_studio` (the `PPG_MAP_STUDIO` folder, `user/map_studio.txt`, where his launcher installs it, beside this project, then the wide search), `open_map_studio` (started detached, no console, `ELECTRON_RUN_AS_NODE` dropped). #78: Locate also takes the folder it was unzipped into (the names one level down) and says when a copy has no runtime.
+- (custom) The wide search never runs inside the page's status (every 3 s): its answer is kept and searched again in the background at most every 10 minutes (`MAP_STUDIO_WIDE_EVERY`), and at once when the tile is pressed. No drive is searched through: one listing of each fixed drive's top folders (36 ms on this PC).
+- Routes: POST `/mapstudio`, GET `/studio.png` (`installer/map_studio.png`, his badge, copied). `status()` says `map_studio` (found or not). `pick_folder` got an optional `title=`.
+- `tools/launcher.html`: a fifth tile in Tools, "Map Studio", with his badge as its icon (the map icon if the picture is missing). Found: the press opens it. Not found: "Locate ..." and the press asks for its folder. Hidden under Wine. Its messages in the Tools line.
+- Left out entirely: his `map_studio_install`, `_studio_asset`, `_studio_unzip`, `STUDIO_JOB`, `/mapstudio_install`, any `updater.SITE` / `release.json`. The "no runtime" message no longer points at his Download button.
+- **Checks:** `tools/test_launcher_noble.py` +9 OK (18): nothing of the download is in the launcher or its page; shortcut paths read; only top folders listed; status never waits for the wide search and starts it only once per interval; the saved folder first; Locate takes the unzipped folder, remembers it and starts it detached; a copy without its runtime is refused with the message; not found starts nothing; the badge is served and the tile is on the page. The page's script passes `node --check`. On this PC `map_studio()` finds the copy in `%LOCALAPPDATA%\Programs\MCC Map Studio`. **Not pressed in the launcher window** (Map Studio not started).
+
 ### Compact launcher: the Play log folds to one line, 2026-11-24
 
 Upstream 0.3.0's note #50 (build 20261117-2300). The owner: "take it".
