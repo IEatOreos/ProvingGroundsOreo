@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Setup installs for the current user only, and the launcher says when its folder takes no files, 2026-11-24
+
+Upstream 0.3.0's note #18 (build 20261114-1215, his GitHub #30 "Play did nothing"). The owner: "take it; Project Noble wording".
+
+- `installer/ProjectProvingGrounds.iss`: `PrivilegesRequiredOverridesAllowed=dialog` removed (his comment kept), so Setup no longer offers an install for all users into Program Files, where the launcher without administrator rights could not write (Play hung on "Starting MCC ...", profiles did not save). Our renamed lines (AppName, DefaultDirName, shortcuts "Project Noble") unchanged; none of his other .iss changes taken here (the terms come with #70, in our own form).
+- `tools/launcher.py`: his `folder_problem()` (a write probe in `logs/launcher`, found once a launcher run); `start()` refuses every task with its message; `status()` carries it as `readonly`. The message says "Windows won't let Project Noble save files in its folder (...)".
+- `tools/launcher.html`: the red banner shows `readonly` (it was always cleared on a good status).
+- **Checks:** `tools/test_launcher_noble.py` +4 OK (8): a folder that refuses files gives the Project Noble message and Play starts nothing; a writable folder gives none and leaves no probe file; the .iss has no all-users choice and still says Project Noble; the page shows it. Setup not rebuilt or run.
+
 ### "Open the install folder" opens the folder, never a second launcher, 2026-11-24
 
 Upstream 0.3.0's note #79 (build 20261120-1620). The owner: "take it".

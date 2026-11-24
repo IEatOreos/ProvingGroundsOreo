@@ -196,6 +196,7 @@ def status():
     mcc = paths.mcc()
     shown = os.path.realpath(mcc) if mcc else mcc    # (as the folder is really spelled: Steam's file is lowercase)
     return dict(version=version(), mcc=shown, mcc_running=conflicts.mcc_running(), installed=bool(uninstaller()),
+                readonly=folder_problem(),          # (upstream 0.3.0) the page's red banner when the folder is locked
                 mcc_choice=paths.chosen(), mcc_env=bool(os.environ.get("HB_MCC")), mcc_steam=paths.is_steam_copy(mcc),
                 mcc_found=paths.installs(), wine=paths.wine(),
                 missing_games=[paths.GAME_NAMES[g] for g in paths.GAME_MAPS if g not in paths.games(mcc)] if mcc else [],
@@ -205,8 +206,32 @@ def status():
                 running={t: p.poll() is None for t, p in procs.items()})
 
 
+FOLDER = {}                                          # folder_problem's answer, found once a launcher run
+
+
+def folder_problem():
+    """(upstream 0.3.0, build 20261114-1215) Why the mod's folder takes no files, or None. Installed for all users
+    (Program Files), a launcher without administrator rights can write nothing there: Play's log did not open, so Play
+    sat on "Starting MCC ..." with no answer, and the bot editor could not save its profiles (his GitHub #30)."""
+    if "why" not in FOLDER:
+        try:
+            os.makedirs(LOGS, exist_ok=True)
+            probe = os.path.join(LOGS, ".write-test")
+            with open(probe, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(probe)
+            FOLDER["why"] = None
+        except OSError:
+            FOLDER["why"] = (f"Windows won't let Project Noble save files in its folder ({ROOT}), so Play and the bot "
+                             "editor can't work. Uninstall it, then run the newest Setup: it installs for you only, "
+                             "into a folder of yours.")
+    return FOLDER["why"]
+
+
 def start(task, clean=False):
-    """Starts a task; (ok, message)."""
+    """Starts a task; (ok, message). Not while the mod's folder takes no files (folder_problem)."""
+    if folder_problem():
+        return False, folder_problem()
     if task not in TASKS:
         return False, "unknown task"
     if task in procs and procs[task].poll() is None:

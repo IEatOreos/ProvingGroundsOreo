@@ -27,8 +27,10 @@ AppVerName=Project Noble {#AppVersion}
 AppPublisher=The Project Proving Grounds contributors
 DefaultDirName={autopf}\Project Noble
 DisableProgramGroupPage=yes
+; (upstream 0.3.0, build 20261114-1215) for the current user only: an install for all users (Program Files) left a
+; folder the launcher, without administrator rights, could not write to (Play hung, profiles did not save: his GitHub
+; #30), so Setup no longer offers it
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 OutputDir={#BuildDir}
 OutputBaseFilename=ProjectProvingGrounds-Setup-{#AppVersion}
 Compression=lzma2/ultra64

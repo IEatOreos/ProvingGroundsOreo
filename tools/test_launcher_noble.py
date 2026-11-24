@@ -17,7 +17,8 @@ OURS = "https://github.com/IEatOreos/ProvingGroundsOreo"
 
 
 def read(name):
-    return open(os.path.join(HERE, name), encoding="utf-8").read()
+    with open(os.path.join(HERE, name), encoding="utf-8") as f:
+        return f.read()
 
 
 def call(method, path, body=None):
@@ -64,6 +65,40 @@ class OpenFolder(unittest.TestCase):
         with mock.patch.object(launcher.os, "startfile", create=True) as sf:
             self.assertEqual(call("POST", "/folder", {}), (200, {"ok": True}))
         sf.assert_called_once_with(os.path.normpath(launcher.ROOT), "explore")
+
+
+
+class FolderWarning(unittest.TestCase):
+    """(upstream 0.3.0 note #18) Setup for the current user only, and the launcher says when its folder takes no files."""
+
+    def setUp(self):
+        launcher.FOLDER.clear()
+        self.addCleanup(launcher.FOLDER.clear)
+
+    def test_locked_folder_refuses_tasks_with_project_noble_words(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(launcher, "LOGS", os.path.join(d, "logs")),                 mock.patch("builtins.open", side_effect=PermissionError("denied")):
+            why = launcher.folder_problem()
+        self.assertIn("Project Noble", why)
+        self.assertNotIn("Proving Grounds", why.replace(launcher.ROOT, ""))   # (the folder's own name aside)
+        with mock.patch.object(launcher.subprocess, "Popen") as run:
+            self.assertEqual(launcher.start("play"), (False, why))
+        run.assert_not_called()
+
+    def test_writable_folder_is_fine_and_leaves_no_probe(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(launcher, "LOGS", d):
+            self.assertIsNone(launcher.folder_problem())
+            self.assertEqual(os.listdir(d), [])
+
+    def test_installer_no_all_users_choice(self):
+        iss = read(os.path.join("..", "installer", "ProjectProvingGrounds.iss"))
+        self.assertIn("PrivilegesRequired=lowest", iss)
+        self.assertNotIn("PrivilegesRequiredOverridesAllowed", iss)
+        self.assertIn("AppName=Project Noble", iss)
+
+    def test_page_shows_it(self):
+        self.assertIn('$("banner").textContent = s.readonly || ""', read("launcher.html"))
 
 
 if __name__ == "__main__":

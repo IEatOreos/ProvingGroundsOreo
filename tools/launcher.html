@@ -561,7 +561,8 @@ function render(s) {
 }
 
 async function refresh() {
-  try { render(await (await fetch("/status")).json()); $("banner").textContent = ""; }
+  // (upstream 0.3.0, build 20261114-1215) the banner also says when Windows won't let the mod save in its folder
+  try { const s = await (await fetch("/status")).json(); render(s); $("banner").textContent = s.readonly || ""; }
   catch (e) { $("banner").textContent = "The launcher stopped. Close this window and open Project Noble again."; }
 }
 
