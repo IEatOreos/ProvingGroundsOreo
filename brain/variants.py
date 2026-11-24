@@ -189,9 +189,64 @@ def save(name, data):
     _write(os.path.join(ROOT, name, "variant.json"), data)
 
 
+# (custom, Nov 23, the owner on Renegade's nav, 3.46 million points: "Remove the waste from renegade and see what you
+# can do") a layout's play area: the floor a player reaches inside its kill and safe zones (Terrain.reach less
+# Terrain.oob), PLAY_MARGIN round it, out to the PLAY_SNAP grid; its nav window is cut to it (play_limit) and never grows
+# past it. Kept in variant.json "play_window" with its kill zones' fingerprint ("play_of"): a layout whose kill zones
+# changed is the whole window again until it is worked out anew (tools/play_window.py). Renegade: 3.46 -> 1.62 million
+# nodes, its reachable 315,544 -> 155,618 (139,163 in bounds both), a full route search 28.1 -> 16.2 ms
+PLAY_MARGIN, PLAY_SNAP = 6.0, 4.0
+
+
+def killzones_print(name):
+    """A fingerprint of a variant's kill and safe zones (maps/<name>/killzones.json); None without them."""
+    path = os.path.join(ROOT, name, "killzones.json")
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha1(f.read()).hexdigest()[:12]
+    except OSError:
+        return None
+
+
+def play_window_of(xs, ys):
+    """The play window round the in-bounds floor at xs, ys (world units): PLAY_MARGIN out, to the PLAY_SNAP grid."""
+    return (math.floor((min(xs) - PLAY_MARGIN) / PLAY_SNAP) * PLAY_SNAP,
+            math.floor((min(ys) - PLAY_MARGIN) / PLAY_SNAP) * PLAY_SNAP,
+            math.ceil((max(xs) + PLAY_MARGIN) / PLAY_SNAP) * PLAY_SNAP,
+            math.ceil((max(ys) + PLAY_MARGIN) / PLAY_SNAP) * PLAY_SNAP)
+
+
+def play_limit(name, data=None):
+    """The variant's play window (play_window_of), when its kill zones are the ones it was worked out with; else None."""
+    data = data if data is not None else info(name)
+    pw = (data or {}).get("play_window")
+    if not pw or data.get("play_of") != killzones_print(name):
+        return None
+    return tuple(pw)
+
+
+def clip(window, limit):
+    """window cut to limit (both (x0, y0, x1, y1)); window itself without a limit or when they do not meet."""
+    if not window or not limit:
+        return tuple(window) if window else window
+    w = (max(window[0], limit[0]), max(window[1], limit[1]), min(window[2], limit[2]), min(window[3], limit[3]))
+    return w if w[0] < w[2] and w[1] < w[3] else tuple(window)
+
+
+def save_play_window(name, window):
+    """Keep a variant's play window with its kill zones' fingerprint (tools/play_window.py)."""
+    data = info(name)
+    if data is None:
+        return False
+    data["play_window"], data["play_of"] = [float(v) for v in window], killzones_print(name)
+    save(name, data)
+    return True
+
+
 def save_window(name, window):
-    """Keep a variant's grown window for its next match."""
+    """Keep a variant's grown window for its next match. (custom, Nov 23) Never smaller than the one kept: a window cut to
+    its play area (play_limit) grown is not the whole window, which a layout whose kill zones change needs again."""
     data = info(name)
     if data is not None:
-        data["window"] = list(window)
+        data["window"] = list(union(data.get("window"), tuple(window)))
         save(name, data)

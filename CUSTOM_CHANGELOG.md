@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### A Forge layout's nav cut to its play area (Renegade), 2026-11-23
+
+The owner, on Renegade's nav (`reach_forge_halo/variants/vf1ed8bb6`, the 8v8 CTF layout): "Remove the waste from renegade and see what you can do".
+
+- **The waste:**
+  - Its nav was 3,463,608 points: its window (130 × 277 u at 0.25 u, 6 floor levels).
+  - 315,544 of them were reachable, and 176,381 of those were out of bounds. Forge World's ground goes on past its kill zones, and kill zones are only a cost on the nav, so every full search still walked them.
+  - The window only ever grew: the union of every match's, and grown whenever a player came within 8 u of its edge.
+- **Fix (`brain/variants.py` `play_window_of`, `play_limit`, `clip`, `save_play_window`; `brain/maps.py` `load_map`, `grow`; new `tools/play_window.py`):**
+  - A layout's play area is the floor a player reaches inside its kill and safe zones, 6 u round it, on a 4 u grid. It is kept in its `variant.json` with a fingerprint of its `killzones.json`.
+  - Its nav window is cut to the play area and never grows past it.
+  - A layout whose kill zones changed is the whole window again until `tools/play_window.py` is run on it.
+  - A grown window saved never shrinks the kept one (`save_window`: the union).
+- **Renegade, worked out:** its window (−128, −256, 32, 32) became the play window (−100, −224, 0, −52), 37% of the area.
+  - It kept all 98 in-bounds spawns, both flag stands and every in-bounds post. Lost: one power position out of bounds at (6.9, −11.9).
+  - The nav went from 3.46 to 1.62 million points (6 levels still: its stacked floors are in bounds). Reachable went from 315,544 to 155,618, with 139,163 in bounds both before and after.
+  - A full route search went from 28.1 to 16.2 ms, and the build from 11 to 8 s.
+  - The 15-bot route test went from 86.5 to 65.5 ms a pass on the brain's thread alone, and from 33.7 to 24.9 ms with the helpers.
+  - (The play window is in the layout's folder, `maps/…/variants/`, which is not in Git.)
+- **Checks:** new `tools/test_play_window.py` (4: kept and used while the kill zones are the same, dropped when they change; no limit, no cut; a grown cut window never shrinks the kept one; growth stops at the play area). `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match.** Other Forge layouts are unchanged until `tools/play_window.py` is run on them.
+
 ### Route searches on helper processes; the fixed targets' routes kept all match; the brain at above-normal priority, 2026-11-23
 
 The owner, on giving the bots room in 8v8 without changing their play: "Do 1 and 4 through completion. And then 3 afterwards". Python's threads take turns: 8 route searches on 8 threads ran 1.1× faster. So:

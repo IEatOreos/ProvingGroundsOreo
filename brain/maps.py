@@ -175,6 +175,11 @@ def load_map(name):
     v = info(name)
     if v is not None:
         m["variant"], m["window"] = v, tuple(v["window"]) if v.get("window") else None
+        # (custom, Nov 23) cut to its play area inside its kill zones (variants.play_limit; Renegade: 53% fewer nodes)
+        from .variants import clip, play_limit
+        m["play_window"] = play_limit(name, v)
+        if m["window"] is not None and m["play_window"] is not None:
+            m["window"] = clip(m["window"], m["play_window"])
     # (custom, Nov 18) the base's lifts and cannons this layout lacks: left out, their rides too (_build: off_gone_pads)
     m["features"], m["lifts_gone"] = layout_lifts(m["features"], m.get("variant"),
                                                   {it["name"] for it in objs.get("placed", ())})
@@ -1081,10 +1086,11 @@ def grow(m, positions):
     T = _TERRAIN.get(m["name"])
     if m.get("window") is None or T is None or g.get("job") is not None or g.get("ready"):
         return None
-    from .variants import grown
+    from .variants import clip, grown
     win = tuple(m["window"])
+    full = clip(T.full, m.get("play_window"))    # (custom, Nov 23: never past its play area, variants.play_limit)
     for p in positions:
-        win = grown(win, p, T.full) or win
+        win = grown(win, p, full) or win
     if win == tuple(m["window"]):
         return None
     import threading
