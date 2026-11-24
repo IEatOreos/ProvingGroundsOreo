@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Export a LiDAR scan to share it, checked by our installer's privacy scan, 2026-11-24
+
+Upstream 0.3.0's note #1 (build 20261112-1342). The owner: "export, bundle and list only, plus our installer's privacy scan".
+
+- `tools/lidar_share.py` (his, export / bundle / list only): `export <map>` packs one map's `maps/<map>/lidar.json` with a manifest (map, game, build, date, minutes, counts) into `lidar-share/<map>_<date>.zip`; `bundle <game>` packs every scan of one game into `lidar-share/lidar-maps-<game>.zip`; `list` names the maps with a scan on this PC. His import and fetch (downloads) are not here.
+- `private()`: his patterns (an e-mail address, a user folder, an Xbox user id) and, in place of his `make_release.py` check (not in our install), **our installer's own privacy scan**: this PC's profile path, its user name as a whole word only, and the owner's personal terms in `.private_terms`. A scan holding any of them is not exported, and the message names what kind of thing was found, never the private words.
+- `tools/privacy.py` (new, ours): the installer's terms and check, factored out of `tools/build_installer.py privacy_scan` unchanged, so the installer and the export use one check. The installer's scan finds the same terms and prints the same lines as before.
+- `.gitignore`: `lidar-share/` (the zips stay on this PC until shared by hand).
+- **Checks:** `tools/test_lidar_share.py` (new, 8: an e-mail, a user folder, this PC's user name and a personal term are each refused without the term in the message; a longer word holding the user name is not; a clean scan exports with its manifest; a bundle with a private scan is refused; the installer's check and the export's are one) OK, on made-up terms in a temporary folder; `lidar_share.py`, `privacy.py`, `build_installer.py`, `live_bots.py` import. The installer itself was not built (no release).
+
 ### No freeze on vehicle maps when new drives come in: the car and tank grounds are rebuilt in the background, 2026-11-24
 
 Upstream 0.3.0's note #40 (build 20261119-0039), **our own version from his idea, not his code**. The owner: "our own version for car and tank grounds, measured on Boneyard and Spire". His single vehicle ground would have dropped our separate car and tank grounds and our wedge marks (Nov 13).

@@ -26,6 +26,8 @@ maps/_shapes/
 
 # each PC's own LiDAR scans and what its bots learned
 maps/*/lidar*.json
+# (custom, Nov 24) the zips tools/lidar_share.py export / bundle writes beside the mod, to share by hand
+lidar-share/
 maps/*/nav_learned.json
 maps/*/los_learned.json
 maps/*/rides.json
