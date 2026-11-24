@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Walking routes searched only as far as the walker, 2026-11-23
+
+The owner, after another 8v8 CTF on that Forge World layout (`20261123-190955`, with the profile fixes): "The bots play really bad in 8v8 and idk why, Almost unplayable", and "Bug reports also show cosmic playing slow" ("Comis toook too long to shoot back", 192.9 s). His Task Manager showed 25–31% CPU: the brain runs on one of the PC's 16 threads, so at full load it shows only about 6% of the total.
+
+- **What the profile showed:**
+  - The passes were down from 194 ms to 153 ms (median), with 37% still over 100 ms.
+  - Full route fields (`Terrain._field`, the whole layout's 3.46 million nodes, 33 ms each) were 47% of the slow passes.
+  - Cosmic, a Demon, thought slowest of the 15: 33 ms a pass on average, 86 ms at the 90th percentile. Every Demon and Mythic was in the top five.
+  - The bots think one after another each pass, so one pass is all fifteen thinks added up, and each bot's aim gets a new command once a pass.
+- **Fix (`brain/terrain.py` `field_from`, used by `Terrain.nav` and `Bot.headway`):** a walk's field is searched out from its goal only as far as the walker needs: twice the straight way plus 20 u, for trips under 50 u. When the walker lies past that, or for a longer trip, it is the whole map's, as before.
+  - The costs are exact out to the limit, so the walk is the same.
+  - On that layout, 60 of 60 next steps were the same, and a fresh one took 12.7 ms instead of 31.9 ms.
+  - A search out to 40 u takes 5 ms against 33 ms for the whole layout.
+- **Checks:** new `tools/test_field_from.py` (3: the short search, past its reach the whole map, a long trip). `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match:** the next profile shows the passes.
+
 ### The brain's slow spots from its first profile; CTF carriers and Spire's top, 2026-11-23
 
 The owner: "Check bug reports, and finish this task" (the profile). The first profile, `logs/brain_profile_reach_forge_halo_20261123-184158.txt` (8v8 CTF on Forge World), had 26% of the passes over 100 ms. In them:

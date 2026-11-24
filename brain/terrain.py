@@ -2219,6 +2219,23 @@ class Terrain:
             memo[(id(graph), tele)] = (graph, np.array(pos, dtype=np.int64))
         return memo[(id(graph), tele)][1]
 
+    # (custom, Nov 23) a walk's field searched out only as far as the walker (field_from): FIELD_NEAR_K times the
+    # straight way plus FIELD_NEAR_ADD u, and only for trips whose search would stop under FIELD_NEAR_MAX. On the
+    # owner's 8v8 Forge World layout (3.46 million nodes) a full field took 33 ms, one out to 40 u 5 ms; full fields
+    # were 47% of the brain's slow passes after the first fixes (brain_profile_reach_forge_halo_20261123-190955.txt)
+    FIELD_NEAR_K, FIELD_NEAR_ADD, FIELD_NEAR_MAX = 2.0, 20.0, 120.0
+
+    def field_from(s, a, b, jump=False, human=False, safe=False, no_tele=False, hazards=()):
+        """The cost field to b for a walker at a: searched out round b only as far as a needs (FIELD_NEAR_*), else, or
+        when a lies past that, the whole map's (_field). The same numbers at a and on the way from it either way: a
+        search's costs are exact out to its limit."""
+        lim = s.FIELD_NEAR_K * math.hypot(b.x - a.x, b.y - a.y) + s.FIELD_NEAR_ADD
+        if lim < s.FIELD_NEAR_MAX:
+            cost = s._field(b, jump, human, safe, lim, no_tele, hazards)
+            if np.isfinite(cost[s._node(a)]):
+                return cost
+        return s._field(b, jump, human, safe, None, no_tele, hazards)
+
     def _field(s, goal, jump=False, human=False, safe=False, limit=None, no_tele=False, hazards=()):
         # limit: costs out to this far only (a search round the goal, not the map: brain/bot.py man_appears)
         """Cost-to-goal over the walkable grid (Dijkstra), cached per goal node; with jump=True over the grid plus jump
@@ -2646,10 +2663,10 @@ class Terrain:
         if math.hypot(b.x - a.x, b.y - a.y) < 2.5 and s._straight_ok(a, *s._node(b)):
             return b
         human = (human or jump) and bool(getattr(s, "hjumps", None) or getattr(s, "hroutes", None))
-        cost = s._field(b, jump, human, safe, no_tele=no_tele, hazards=hazards)
+        cost = s.field_from(a, b, jump, human, safe, no_tele=no_tele, hazards=hazards)
         l, j, i = s._node(a)
         if avoid and np.isfinite(cost[l, j, i]):
-            alt = s._field(b, jump, human, safe, no_tele=no_tele, hazards=tuple(hazards) + tuple(avoid))
+            alt = s.field_from(a, b, jump, human, safe, no_tele=no_tele, hazards=tuple(hazards) + tuple(avoid))
             if alt[l, j, i] < s.BARRIER_COST and alt[l, j, i] <= cost[l, j, i] * s.AVOID_LONGER + s.AVOID_EXTRA:
                 cost = alt
         if human and np.isfinite(cost[l, j, i]):

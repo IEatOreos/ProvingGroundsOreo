@@ -8814,7 +8814,7 @@ class Bot:
             # on the walking graph: that was a second full route search per goal, 18.8% of the brain's slow passes in
             # an 8v8 Forge World CTF (logs/brain_profile_reach_forge_halo_20261123-184158.txt)
             human = bool(getattr(T, "hjumps", None) or getattr(T, "hroutes", None))
-            c = float(T._field(goal[1], s.nav_jumps(), human)[T._node(me.pos)])
+            c = float(T.field_from(me.pos, goal[1], s.nav_jumps(), human)[T._node(me.pos)])
             if math.isfinite(c):
                 d = c
         except Exception:
