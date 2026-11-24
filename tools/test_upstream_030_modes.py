@@ -46,5 +46,40 @@ class FreedMidRead(unittest.TestCase):
         self.assertIn("if head is None", inspect.getsource(livemod.LiveH4F.objects))
 
 
+class WreckStays(unittest.TestCase):
+    """#80 (build 20261120-1802): a vehicle read alive and then at 0 health or below stays a wreck for the match, in every
+    game; the game's destroyed bit is still read; a new reader (a new match) remembers no wreck."""
+
+    def reader(self, cls, healths, dead_bit=False):
+        r = object.__new__(cls)
+        seq = iter(healths)
+        r.vehicle_left = lambda h: next(seq)
+        r.object = lambda h: 0x100
+        r.g = type("G", (), {"read": lambda s, a, n: bytes([4 if dead_bit else 0])})()
+        return r
+
+    def test_burning_warthog_stays_a_wreck(self):
+        for cls in (livemod.LiveH2, LiveReach, livemod.Live):
+            r = self.reader(cls, [1.0, -0.8, 0.25, 1.0])
+            got = [r.vehicle_dead(7) for _ in range(4)]
+            self.assertEqual(got, [False, True, True, True], cls.__name__)
+
+    def test_zero_from_the_start_is_no_wreck(self):
+        r = self.reader(LiveReach, [0.0, 0.0, 0.0])
+        self.assertEqual([r.vehicle_dead(7) for _ in range(3)], [False, False, False])
+
+    def test_destroyed_bit_still_read(self):
+        r = self.reader(LiveReach, [1.0, 1.0], dead_bit=True)
+        self.assertTrue(r.vehicle_dead(7))
+
+    def test_a_new_match_remembers_no_wreck(self):
+        r = self.reader(LiveReach, [1.0, 0.0])
+        r.vehicle_dead(7)
+        self.assertTrue(r.vehicle_dead(7))
+        fresh = self.reader(LiveReach, [1.0])
+        self.assertFalse(fresh.vehicle_dead(7))
+        self.assertFalse(hasattr(LiveReach, "_veh_wrecked"))     # per reader, never on the class
+
+
 if __name__ == "__main__":
     unittest.main()

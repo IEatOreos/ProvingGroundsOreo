@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### A vehicle read at 0 health stays a wreck for the rest of the match, in every game, 2026-11-24
+
+Upstream 0.3.0's note #80 (build 20261120-1802). The owner: "take it; watch one Reach vehicle match for wrongly marked wrecks".
+
+- `brain/live.py Live.vehicle_dead` (his rewrite): a vehicle first read alive (health 0.02 to 1.5) and later at 0 or below is a wreck for the rest of the match (`_veh_wrecked`), in every game; the game's destroyed bit (`DEAD_AT`) is still read where decoded. His live Halo 2 Street Sweeper: a burning Warthog's health went to -0.8 and crept back to 0.25 with the destroyed bit clear, and bots boarded such Warthogs 11 times.
+- The wreck memory lives on the reader, and `tools/play.py` starts `live_bots.py` (a new reader) every match, so it starts empty each match; a vehicle respawned within the match is a new handle.
+- A vehicle that reads 0 from the start is never a wreck (as before, for CE's body field).
+- Kept of ours: our vehicle code reads only the snapshot's `dead` (`live_bots.vehicle_dead`), unchanged.
+- **Checks:** `tools/test_upstream_030_modes.py` +4 (a burning Warthog stays a wreck in Halo 2, Reach and CE; 0 from the start is no wreck; the destroyed bit still read; a new reader remembers no wreck) OK; `live.py` parses, `live_bots.py` imports. **Untested in a live match**: on Reach a vehicle whose health read briefly hits 0 would be off-limits all match; the owner watches one Reach vehicle match for that.
+
 ### An object freed while the bots read it is skipped, not the whole tick (Reach and Halo 4), 2026-11-24
 
 Upstream 0.3.0's note #39 (build 20261119-0039). The owner: "take it".

@@ -188,19 +188,27 @@ class Live:
 
     def vehicle_dead(s, handle):
         """A wreck: the game's destroyed bit (DEAD_AT) where decoded. Else (CE) a vehicle whose body field read 0 after it
-        was read alive this match, so a field that reads 0 from the start keeps every vehicle usable."""
+        was read alive this match, so a field that reads 0 from the start keeps every vehicle usable. In every game a
+        vehicle read alive and then at 0 or below stays a wreck for the match: Halo 2's destroyed bit stays clear on a
+        burning Warthog whose health went to -0.8 and crept back to 0.25, and bots got in it (live Street Sweeper,
+        Nov 20: 11 boardings of such Warthogs, seen in its film). (upstream 0.3.0, build 20261120-1802) Both sets live on
+        this reader, and live_bots makes a new reader every match (play.py starts it per match), so no wreck carries
+        over into the next match; a vehicle respawned in the match is a new handle (its salt)."""
+        wrecked = s.__dict__.setdefault("_veh_wrecked", set())
+        if handle in wrecked:
+            return True
+        left = s.vehicle_left(handle)
+        seen = s.__dict__.setdefault("_veh_alive", set())
+        if left is not None and math.isfinite(left):
+            if 0.02 < left <= 1.5:
+                seen.add(handle)
+            elif left <= 0.0 and handle in seen:
+                wrecked.add(handle)
+                return True
         if s.DEAD_AT is not None:
             o = s.object(handle)
             return bool(o) and bool(s.g.read(o + s.DEAD_AT, 1)[0] & 4)
-        left = s.vehicle_left(handle)
-        if left is None:
-            return False
-        seen = s.__dict__.setdefault("_veh_alive", set())
-        if not math.isfinite(left) or left > 0.02:
-            if math.isfinite(left) and left <= 1.5:
-                seen.add(handle)
-            return False
-        return handle in seen
+        return left is not None and math.isfinite(left) and left <= 0.02 and handle in seen
 
     def vehicle_left(s, handle):
         """The health left in a vehicle's body (HEALTH_BLOCK, else the VEH_VITAL field), None without its object."""
