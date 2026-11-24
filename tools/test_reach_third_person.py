@@ -120,5 +120,34 @@ class PassengerTests(unittest.TestCase):
         self.assertIn('toggle("First person passenger", &g_exp_passenger_fp)', page)
 
 
+class ReticleTests(unittest.TestCase):
+    """#65 smaller reticle (owner: "with #53, Reach only, only while third person is on")."""
+
+    def test_only_while_third_person_is_on(self):
+        reach = src("reach.cpp")
+        apply = body(reach, "static void hr_tp_apply(uint8_t* tls, const uint8_t* actions)")
+        # the only call that makes it smaller: on foot, no scope, the switch under Third person on
+        self.assertEqual(apply.count("hr_reticle(tls, bots_panel_tp_reticle() ? o : nullptr);"), 1)
+        self.assertEqual(len(re.findall(r"hr_reticle\(tls, (?!nullptr)", reach)), 1)
+        self.assertEqual(apply.count("hr_reticle(tls, nullptr);"), 3)        # off, dead or seated, scoped: put back
+        self.assertLess(apply.index("if (!dg || !gr_tp_ok) return;"), apply.index("hr_reticle("))
+        self.assertIn("hr_reticle(nullptr, nullptr);", body(reach, "static void hr_tp_film()"))
+        self.assertIn("hr_reticle_forget();", body(reach, "static void hr_tp_unhook()"))
+        self.assertIn("if (tick < last) hr_reticle(nullptr, nullptr);", body(reach, "static void hr_reticle_tick("))
+
+    def test_put_back_only_what_we_made(self):
+        tp = src("third_person.cpp")
+        self.assertIn("const float TP_CHUD_RETICLE = 0.7f;", tp)
+        back = body(tp, "void tp_chud_back()")
+        self.assertIn("if (s[0] == g_chud[i].w * TP_CHUD_RETICLE && s[1] == g_chud[i].h * TP_CHUD_RETICLE)", back)
+        self.assertNotIn("\x07", tp)
+        self.assertNotIn("\x08", tp)
+
+    def test_switch_under_third_person(self):
+        page = body(src("bots_panel.cpp"), "static void experimental_settings(")
+        tp = page.index("if (g_exp_third_person) {")
+        self.assertGreater(page.index('toggle("Smaller reticle", &g_exp_tp_reticle)'), tp)
+
+
 if __name__ == "__main__":
     unittest.main()

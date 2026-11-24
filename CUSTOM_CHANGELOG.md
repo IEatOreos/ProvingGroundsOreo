@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Halo: Reach third person: a smaller reticle, only while third person is on, 2026-11-24
+
+Upstream 0.3.0's note #65 (build 20261117-2300). The owner: "smaller reticle: with #53, Reach only, only while third person is on".
+
+- `native/third_person.cpp`: his `tp_chud_shrink` / `tp_chud_back` / `tp_chud_forget`: the weapon's chud definition's reticle pieces (a placement anchored on the crosshair, in a collection of the crosshair class) get their scale pair and offset pair times 0.7, each pair's old values kept (256 at most) and put back only while they still read what we made of them. (His file had two control characters in a comment's tag path; fixed in our copy.)
+- `native/reach.cpp` `hr_reticle` (his): the weapon in hand's tag reference of class chdt, Reach's layout from its kit (class byte +4, bitmap widgets +0x98, placement block +0x38, anchor byte +1; sizes 0xDC / 0x9C, class 2, anchor 17). Called only from `hr_tp_apply`, so only with third person on and its camera hooks made: smaller on foot with no scope up; full size again with a scope up, dead, in a seat, with third person off, in a Theater film (`hr_tp_film`) or with the new **Smaller reticle** switch off.
+- Ours, not his: a new match puts the pieces back while the tags are where they were (`hr_reticle_tick`; his dropped the list, so the same map's tags kept between matches would have been made smaller again at every match and never put back); when the tags moved (the tag base changed) or haloreach.dll reloaded, the list is dropped unwritten.
+- `native/bots_panel.cpp`: **Smaller reticle** under Third person (shown while third person is on; on by default, as his: it does nothing with third person off). Ours, his had no switch for it. `experimental.ini` `tp_reticle=`.
+- `h_hr_update`: our third person line now also calls `hr_reticle_tick`; nothing else of ours changed.
+- **Checks:** `tools/test_reach_third_person.py` (reticle tests: the one shrinking call is the on-foot, no-scope, switch-on one, every other path puts back, film / reload / new match handled, the put-back guard); built in `botcore_up030b.dll`. **Untested in game** (the reticle of several weapons on foot, the needle rifle's four arcs, scoping, a vehicle, a second match on the same map).
+
 ### Halo: Reach first person passenger: a switch on the Experimental tab, off until turned on, 2026-11-24
 
 Upstream 0.3.0's note #55 (build 20261115-0215). The owner: "first-person passenger: with #53 (Reach), off by default".

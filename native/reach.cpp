@@ -211,6 +211,10 @@ static char __fastcall hr_set_hook(uint8_t* director, int mode, float time, char
     return g_hr_set_orig(director, mode, time, force);
 }
 
+static void hr_reticle(uint8_t* tls, uint8_t* o);   // (#65: the reticle smaller on foot with no scope up; o null: put back)
+static void hr_reticle_forget();
+bool bots_panel_tp_reticle();                       // (bots_panel.cpp: the Smaller reticle switch under Third person)
+
 static void hr_tp_apply(uint8_t* tls, const uint8_t* actions) {   // the game thread, each tick (not in a film)
     if (HR_ACT_ZOOM && (*(const uint32_t*)(actions + 8) & 1)) gr_tp_asks = (int8_t)actions[0x10 + HR_ACT_ZOOM] != -1;   // (player 0's action)
     uint8_t* dg = *(uint8_t**)(tls + HR_DIRECTORS);
@@ -222,6 +226,7 @@ static void hr_tp_apply(uint8_t* tls, const uint8_t* actions) {   // the game th
         if (gr_tp_on) { *(int32_t*)(dg + HR_WANT) = 3; if (mode == 0) set(dg, 3, 0, 0); }   // off: first person (a third person seat puts its own back)
         gr_tp_on = false;
         gr_tp_body = gr_tp_scoped = nullptr;
+        hr_reticle(tls, nullptr);
         return;
     }
     gr_tp_on = true;
@@ -231,16 +236,18 @@ static void hr_tp_apply(uint8_t* tls, const uint8_t* actions) {   // the game th
     uint8_t* o = hr_object(tls, unit);
     gr_tp_unit = unit;
     gr_tp_cam = dg + 8;
-    if (!o || *(uint32_t*)(o + 0x14) != 0xFFFFFFFFu) { gr_tp_body = gr_tp_scoped = nullptr; return; }   // dead, or in a seat
+    if (!o || *(uint32_t*)(o + 0x14) != 0xFFFFFFFFu) { gr_tp_body = gr_tp_scoped = nullptr; hr_reticle(tls, nullptr); return; }   // dead, or in a seat
     gr_tp_body = o;
     // a scope up: first person (out again: hr_first_hook, that frame); kept through a drop the input did not ask for
     if ((int8_t)o[HR_UNIT_ZOOM] != -1 || (gr_tp_scoped == o && mode == 3 && !hr_scope_gone(o))) {
         *(int32_t*)(dg + HR_WANT) = 3;
         if (mode == 0) set(dg, 3, 0, 0);
         gr_tp_scoped = o;
+        hr_reticle(tls, nullptr);
         return;
     }
     gr_tp_scoped = nullptr;
+    hr_reticle(tls, bots_panel_tp_reticle() ? o : nullptr);
     *(int32_t*)(dg + HR_WANT) = 0;           // the camera the director puts back each tick: following
     gr_tp_hold = dg;
     if (mode == 3) {
@@ -254,6 +261,7 @@ static void hr_tp_apply(uint8_t* tls, const uint8_t* actions) {   // the game th
 static void hr_tp_film() {
     gr_tp_hold = nullptr;
     gr_tp_body = gr_tp_scoped = nullptr;
+    if (g_hr) hr_reticle(nullptr, nullptr);       // (#65: the full reticle back)
 }
 
 // (custom, Nov 24) the camera hooks, made from botcore's loop (reach_watch) the first time the switch is seen on for
@@ -267,7 +275,9 @@ static bool g_hr_tp_first;                      // the first person update's hoo
 static void hr_tp_unhook() {                    // (the dll reloaded: its old hooks out, our state with them)
     gr_tp_ok = false;
     gr_tp_on = false;
-    hr_tp_film();
+    gr_tp_hold = nullptr;
+    gr_tp_body = gr_tp_scoped = nullptr;
+    hr_reticle_forget();                        // (#65: the old load's tags are gone: nothing written back)
     gr_tp_cam = nullptr;
     gr_line_ok = gr_eye_ok = false;
     if (g_hr_tp_mod) {
@@ -363,6 +373,60 @@ static void hr_passenger_fp(uint8_t* tls, uint32_t tick, bool film) {
         uint8_t* d = hr_unpack(*(uint32_t*)(table + 4 + (size_t)(tag & 0xFFFF) * 8));
         fp_tag_seats(d, HR_SEATS_AT, HR_SEAT_STRIDE, 0x0800000Cu, hr_unpack, "reach", tag & 0xFFFF);
     }
+}
+
+// The aiming reticle smaller in third person (upstream 0.3.0, build 20261117-2300; third_person.cpp tp_chud_shrink):
+// the weapon in hand (unit +0x34A its slot, +0x350 the four handles) names its chud definition in a tag reference of
+// the class chdt. Reach's layout from its kit (ui\chud\assault_rifle): the scripting class a byte at +4, a collection's
+// bitmap widgets at +0x98, a widget's placement data block at +0x38, the anchor a byte at +1 of a placement entry. The
+// two sizes and the two enum values were read on the live game (his logs/tmp/tp12_chud_live.py, Nov 17). (custom, Nov
+// 24, owner: "only while third person is on") called only from hr_tp_apply: on foot with no scope up and the switch
+// under Third person on, else everything is put back
+struct tp_chud_layout { int coll, cls_at, cls_size, bitmaps_at, bitmap, state_at, place_at, anchor_at, anchor_size, cls, anchor; };
+void tp_chud_forget();
+void tp_chud_back();
+void tp_chud_shrink(uint8_t* chud, uint8_t* (*unpack)(uint32_t), const tp_chud_layout& L);
+static const int HR_CHUD_COLL = 0xDC, HR_CHUD_BITMAP = 0x9C, HR_CHUD_CLASS = 2, HR_CHUD_ANCHOR = 17;
+static const tp_chud_layout HR_CHUD = {HR_CHUD_COLL, 4, 1, 0x98, HR_CHUD_BITMAP, -1, 0x38, 1, 1, HR_CHUD_CLASS, HR_CHUD_ANCHOR};
+static uint32_t gr_ret_tags[8];
+static int gr_ret_n;
+static uint8_t* gr_ret_base;
+
+static void hr_reticle_forget() { tp_chud_forget(); gr_ret_n = 0; }   // (the tags are not where they were: unwritten)
+
+static void hr_reticle(uint8_t* tls, uint8_t* o) {
+    uint8_t* base = nullptr;
+    __try { base = *(uint8_t**)(g_hr + HR_TAG_BASES); } __except (EXCEPTION_EXECUTE_HANDLER) { return; }
+    if (base != gr_ret_base) { hr_reticle_forget(); gr_ret_base = base; }
+    if (!o) {
+        if (gr_ret_n) { tp_chud_back(); gr_ret_n = 0; }
+        return;
+    }
+    __try {
+        uint8_t* table = *(uint8_t**)(g_hr + HR_TAG_TABLE);
+        uint8_t cur = o[0x34A];
+        uint8_t* w = cur < 4 ? hr_object(tls, *(uint32_t*)(o + 0x350 + 4 * cur)) : nullptr;
+        if (!w || !table || HR_CHUD_BITMAP <= 0 || HR_CHUD_COLL <= 0) return;
+        uint32_t tag = *(uint32_t*)w;
+        for (int i = 0; i < gr_ret_n; i++) if (gr_ret_tags[i] == tag) return;
+        if (gr_ret_n == 8) { tp_chud_back(); gr_ret_n = 0; }   // (more weapons than the list holds: start over)
+        gr_ret_tags[gr_ret_n++] = tag;
+        uint8_t* def = hr_unpack(*(uint32_t*)(table + 4 + (size_t)(tag & 0xFFFF) * 8));
+        for (int k = 0; k < 0x1800; k += 4) {
+            uint32_t chud = *(uint32_t*)(def + k + 0xC);
+            if (*(uint32_t*)(def + k) != 'chdt' || chud == 0xFFFFFFFFu) continue;
+            tp_chud_shrink(hr_unpack(*(uint32_t*)(table + 4 + (size_t)(chud & 0xFFFF) * 8)), hr_unpack, HR_CHUD);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
+// (custom, Nov 24) each tick: a new match (the tick count back down) puts the pieces back while the tags are where they
+// were (the same map's tags kept would otherwise be made smaller again at every match and never put back; his dropped
+// the list), and drops the list unwritten when they moved
+static void hr_reticle_tick(uint32_t tick) {
+    static uint32_t last;
+    if (tick < last) hr_reticle(nullptr, nullptr);
+    last = tick;
 }
 
 static int hr_free_slot() {
@@ -1347,7 +1411,7 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                 // (upstream 0.3.0, build 20261115-0215) first person passenger: off, or a film, nothing patched
                 __try { hr_passenger_fp(tls, *(uint32_t*)(gg + HR_GG_TICKS), g_playback != 0); } __except (EXCEPTION_EXECUTE_HANDLER) {}
                 // (upstream 0.3.0, build 20261116-2330) third person, this tick: off, or no hooks, it does nothing
-                __try { if (!g_playback) hr_tp_apply(tls, actions); else hr_tp_film(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
+                __try { hr_reticle_tick(*(uint32_t*)(gg + HR_GG_TICKS)); if (!g_playback) hr_tp_apply(tls, actions); else hr_tp_film(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
                 if (*(uint32_t*)(actions + 8) & 1) {        // player 0's action, for decoding
                     memcpy(g_shm->dbg_action, actions + 0x10, HR_ACTION);
                     g_shm->dbg_seq++;

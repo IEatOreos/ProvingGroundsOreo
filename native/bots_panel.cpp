@@ -4590,6 +4590,11 @@ static void experimental_settings(bots_panel_env& e, bool& changed, ImVec2 body0
         muted("In a match, the shoulder key moves the view to the other shoulder and the distance key steps it nearer or "
               "farther. Click a key's button, then press the keyboard key or mouse button you want (Esc: none). No "
               "controller button.");
+        // (upstream 0.3.0, build 20261117-2300) the smaller reticle: reach.cpp hr_reticle, only while third person is on
+        ImGui::Dummy(ImVec2(0, px(10)));
+        if (toggle("Smaller reticle", &g_exp_tp_reticle)) exp_save();
+        muted("Each weapon's reticle is drawn smaller in third person, on foot. Full size again with a scope up, in a "
+              "vehicle or with third person off.");
     }
     // (upstream 0.3.0, build 20261115-0215) first person passenger: reach.cpp hr_passenger_fp and passenger_fp.cpp
     ImGui::Dummy(ImVec2(0, px(18)));
