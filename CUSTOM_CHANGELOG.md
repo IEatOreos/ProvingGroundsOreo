@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### BOTS panel: an Experimental tab, the home of Halo: Reach's third person switches, 2026-11-24
+
+Upstream 0.3.0's note #56a (build 20261114-2230). The owner: "take it (home for the #53/#55 switches; CE body block left out)"; #56b Vehicle Warfare: "skip for now".
+
+- `native/bots_panel.cpp`: a fourth tab, **Experimental**, after Advanced (his tab bar). The pad's L1/R1 now step through 4 tabs and stop at the ends as before (clamped at 3 instead of 2). Our `g_goto_settings` ("Edit look" opens Settings) is kept as it was.
+- The page (his `experimental_settings`, a scrolling child nav-flattened into the panel) says the features are still being tried, for Halo: Reach only, and off until turned on. Its controls come with their own notes (#53, #55, #65), not in this commit.
+- `native/bin/experimental.ini` (his file, his `exp_load` / `exp_save`, key=value): only `passenger_fp`, `third_person`, `tp_reticle` (ours: the smaller reticle's switch), `shoulder`, `distance`, `shoulder_vk`, `distance_vk`. Every switch reads 0 (off) with no file, except `tp_reticle`, which only acts while third person is on. The exports `bots_panel_third_person()`, `bots_panel_passenger_fp()`, `bots_panel_tp_reticle()`, the shoulder/distance getters and steppers are botcore's (read on the game thread); the brain does not read the file, so his `tools/live_bots.py` `experimental()` is not needed and not taken.
+- Not taken: Vehicle Warfare (`vehicle_warfare=`), Unfair-Bots (`unfair=`, `unfair_level=`), the Halo: CE body options (ragdolls, gravity, keep bodies) and every other game's parts. Their lines in an older file are read past and dropped at the next save.
+- **Checks:** `bots_panel.cpp` compiles clean (`cl /c /W3`); built in `botcore_up030b.dll` with the notes after it. **Untested in game** (the tab on the mouse and the pad).
+
 ### BOTS panel on a controller: the pad moves around the whole panel and wraps at the ends, 2026-11-24
 
 Upstream 0.3.0's note #23 (build 20261116-2330). The owner: "take it; try it on the pad".

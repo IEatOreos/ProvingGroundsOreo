@@ -2864,7 +2864,7 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
 // UE4 widget inside its packed UI (docs/research/08), so the tab lives in this panel., and no dev notes in the menu
 // ("all that shit needs to be back end stuff only the devs can review in the files"): which games wear their own look
 // is in docs/research/15-modern-customization.md.
-static int g_tab = 0;                                    // 0 the bots list, 1 Settings, 2 Advanced
+static int g_tab = 0;                                    // 0 the bots list, 1 Settings, 2 Advanced, 3 Experimental
 void bots_panel_debug_tab(int tab) { g_tab = tab; }      // native/panel_preview.cpp
 static int rr_experience = 0;                            // the re-roll dialog's choices
 static int rr_effects = 0;                               // 0 none, 1 rare, 2 common, 3 frequent
@@ -4466,6 +4466,74 @@ static void sp_save() {                                    // at once (the panel
 }
 static int sp_step(int v) { return v < 100 ? 5 : v < 1000 ? 10 : 100; }   // (a rating from 1% to many thousands)
 
+// ---- the Experimental tab (upstream 0.3.0, build 20261114-2230): switches for features still being tried, kept in
+// native/bin/experimental.ini (key=value). (custom, Nov 24, owner) only Halo: Reach's third person, its first person
+// passenger and its smaller reticle live here, every one off until the owner turns it on; his Vehicle Warfare,
+// Unfair-Bots and Halo: CE body options are not taken (their keys in an older file are read past and not written).
+// botcore reads the switches itself (reach.cpp, on the game thread), so the brain does not read this file
+static bool g_exp_read;
+static uint32_t g_exp_passenger_fp, g_exp_third_person, g_exp_tp_reticle = 1;
+// third person's view: the shoulder (0 right, 1 left), the distance (0 near, 1 middle, 2 far), and the keys that switch
+// them in play: virtual key codes, any keyboard key or mouse button the player presses for them in the panel; no
+// controller button (the owner, Nov 24). 0: none
+static int g_exp_shoulder, g_exp_distance = 1, g_exp_side_key = VK_XBUTTON1, g_exp_dist_key = VK_XBUTTON2;
+static void exp_load() {
+    if (g_exp_read) return;
+    g_exp_read = true;
+    wchar_t p[260]; bin_file(p, 260, L"experimental.ini");
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"r") != 0 || !f) return;
+    char line[128];
+    while (fgets(line, sizeof line, f)) {
+        unsigned v;
+        if (sscanf_s(line, "passenger_fp=%u", &v) == 1) g_exp_passenger_fp = v != 0;
+        else if (sscanf_s(line, "third_person=%u", &v) == 1) g_exp_third_person = v != 0;
+        else if (sscanf_s(line, "tp_reticle=%u", &v) == 1) g_exp_tp_reticle = v != 0;
+        else if (sscanf_s(line, "shoulder=%u", &v) == 1) g_exp_shoulder = v ? 1 : 0;
+        else if (sscanf_s(line, "distance=%u", &v) == 1) g_exp_distance = v < 3 ? (int)v : 1;
+        else if (sscanf_s(line, "shoulder_vk=%u", &v) == 1) g_exp_side_key = v < 256 ? (int)v : 0;
+        else if (sscanf_s(line, "distance_vk=%u", &v) == 1) g_exp_dist_key = v < 256 ? (int)v : 0;
+    }
+    fclose(f);
+}
+static void exp_save() {
+    wchar_t p[260]; bin_file(p, 260, L"experimental.ini");
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"w") != 0 || !f) return;
+    fprintf(f, "passenger_fp=%u\nthird_person=%u\ntp_reticle=%u\nshoulder=%d\ndistance=%d\nshoulder_vk=%d\ndistance_vk=%d\n",
+            (unsigned)g_exp_passenger_fp, (unsigned)g_exp_third_person, (unsigned)g_exp_tp_reticle, g_exp_shoulder,
+            g_exp_distance, g_exp_side_key, g_exp_dist_key);
+    fclose(f);
+}
+// (botcore, reach.cpp / third_person.cpp / passenger_fp.cpp: Halo: Reach only)
+bool bots_panel_passenger_fp() { exp_load(); return g_exp_passenger_fp != 0; }
+bool bots_panel_third_person() { exp_load(); return g_exp_third_person != 0; }
+bool bots_panel_tp_reticle() { exp_load(); return g_exp_tp_reticle != 0; }
+int bots_panel_shoulder() { exp_load(); return g_exp_shoulder ? -1 : 1; }
+void bots_panel_flip_shoulder() { exp_load(); g_exp_shoulder ^= 1; exp_save(); }
+int bots_panel_shoulder_key() { exp_load(); return g_exp_side_key; }
+int bots_panel_distance() { exp_load(); return g_exp_distance; }
+void bots_panel_cycle_distance() { exp_load(); g_exp_distance = (g_exp_distance + 1) % 3; exp_save(); }
+int bots_panel_distance_key() { exp_load(); return g_exp_dist_key; }
+
+static void experimental_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w, float h) {
+    using namespace ui;
+    (void)e; (void)changed;
+    exp_load();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(body0, ImVec2(body0.x + w, body0.y + h), SURF);
+    dl->AddRect(body0, ImVec2(body0.x + w, body0.y + h), LINE);
+    // (a scrolling page: third person's controls go past the footer)
+    ImGui::SetCursorScreenPos(ImVec2(body0.x + px(20), body0.y + px(16)));
+    ImGui::BeginChild("##experimental", ImVec2(w - px(28), h - px(24)), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoBackground);   // (the pad moves in and out freely)
+    ImGui::PushTextWrapPos(w - px(52));
+    muted("Features still being tried, for Halo: Reach only. They may not play well yet. Every one is off until you "
+          "turn it on.");
+    ImGui::Dummy(ImVec2(0, px(10)));
+    ImGui::PopTextWrapPos();
+    ImGui::EndChild();
+}
+
 static void advanced_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w, float h) {
     using namespace ui;
     sp_load();
@@ -4958,7 +5026,7 @@ bool bots_panel(bots_panel_env& e) {
     // ---- tabs: the bots list | the mod's settings
     if (!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {   // the pad's shoulders: the
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false)) g_tab = g_tab > 0 ? g_tab - 1 : 0;   // tabs
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) g_tab = g_tab < 2 ? g_tab + 1 : 2;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) g_tab = g_tab < 3 ? g_tab + 1 : 3;   // (3: upstream 0.3.0, Experimental)
     }
     if (g_goto_settings) { g_tab = 1; g_goto_settings = false; }   // (the inspector's "Edit look")
     if (tab("Bots", g_tab == 0)) g_tab = 0;
@@ -4966,13 +5034,16 @@ bool bots_panel(bots_panel_env& e) {
     if (tab("Settings", g_tab == 1)) g_tab = 1;
     ImGui::SameLine(0, px(6));
     if (tab("Advanced", g_tab == 2)) g_tab = 2;
+    ImGui::SameLine(0, px(6));
+    if (tab("Experimental", g_tab == 3)) g_tab = 3;           // (upstream 0.3.0, build 20261114-2230)
     ImGui::Dummy(ImVec2(0, px(6)));
     if (g_tab >= 1) {
         float foot1 = px(78);
         if (g_open_popup) { ImGui::OpenPopup(g_open_popup); g_open_popup = nullptr; }   // (native/panel_preview.cpp)
         ImVec2 b0 = ImGui::GetCursorScreenPos();
         if (g_tab == 1) mod_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
-        else advanced_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
+        else if (g_tab == 2) advanced_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
+        else experimental_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
         ImGui::SetCursorScreenPos(ImVec2(wp.x + W - px(28) - px(170), wp.y + H - px(22) - foot1 + px(24)));
         if (button("Done", PRIMARY, ImVec2(px(170), px(46)))) *e.open = false;
         ImGui::End();
