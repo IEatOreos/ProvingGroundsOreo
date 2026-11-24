@@ -1,5 +1,9 @@
-"""Builds the Windows installer for a GitHub release of this custom build: ProjectProvingGrounds-Setup-<CUSTOM_VERSION>.exe,
+"""Builds the Windows installer for a GitHub release of this custom build: ProjectProvingGrounds-Setup-<version>.exe,
 everything a player needs in one file, so nobody has to install Python, build tools or anything else.
+
+(custom, Nov 24) The version is Project Noble's X.Y.Z (tools/noble_version.py next_release: X one past the last
+release tag, Y.Z the commits of HEAD), stamped into the payload's NOBLE_VERSION for the installed launcher and updater;
+the release's tag is "v" + it (printed). CUSTOM_VERSION is no longer the release's version (older installs still read it).
 
 (custom, Nov 12) Adapted from upstream's tools/build_installer.py (AyoItzKye/project-proving-grounds, main), which needs
 its tools/make_release.py, not in this install. Here:
@@ -66,8 +70,19 @@ def git(*a, cwd=ROOT, out=True):
     return r.stdout if out else None
 
 
-def custom_version():
-    return open(os.path.join(ROOT, "CUSTOM_VERSION"), encoding="utf-8").read().strip()
+def release_version():
+    """(custom, Nov 24) (version, tag) of the release built from HEAD (tools/noble_version.py)."""
+    sys.path.insert(0, HERE)
+    import noble_version
+    if not git("tag", "--list", "v*").strip():
+        print("   (no release tags here: run git fetch --tags first, or the version's X is too low)", flush=True)
+    return noble_version.next_release(ROOT)
+
+
+def stamp_version(ver):
+    """The payload's NOBLE_VERSION: the installed copy's version (tools/noble_version.py stamped)."""
+    with open(os.path.join(PAYLOAD, "NOBLE_VERSION"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(ver + "\n")
 
 
 def match(rel, pats):
@@ -185,17 +200,13 @@ def stage_python():
 
 def privacy_scan():
     step("privacy scan")
-    import re
-    terms = {os.environ.get("USERPROFILE", "")}
-    try:
-        terms |= {t.strip() for t in open(os.path.join(ROOT, ".private_terms"), encoding="utf-8") if t.strip()}
-    except OSError:
-        pass
-    terms = sorted({t.lower() for t in terms if len(t) >= 4})
+    # (custom, Nov 24) the terms and the check live in tools/privacy.py (shared with lidar_share.py), unchanged:
     # this PC's user name as a whole word only ("marsh" is not Reach's "Field Marshal" armor); paths and the
     # .private_terms anywhere
-    user = os.environ.get("USERNAME", "").lower()
-    word = re.compile(r"(?<![a-z0-9])" + re.escape(user) + r"(?![a-z0-9])") if len(user) >= 4 else None
+    sys.path.insert(0, HERE)
+    import privacy
+    terms = privacy.load_terms(ROOT)
+    user, word = privacy.user_word()
     hits = []
     for dp, _, fs in os.walk(PAYLOAD):
         if os.path.relpath(dp, PAYLOAD).split(os.sep)[0] in ("python", "map_tools") or "map_tools" in dp:
@@ -204,12 +215,8 @@ def privacy_scan():
             if os.path.splitext(f)[1].lower() not in TEXT:
                 continue
             p = os.path.join(dp, f)
-            text = open(p, "rb").read().decode("utf-8", "replace").lower()
-            for t in terms:
-                if t in text:
-                    hits.append((os.path.relpath(p, PAYLOAD), t))
-            if word is not None and word.search(text):
-                hits.append((os.path.relpath(p, PAYLOAD), user))
+            text = open(p, "rb").read().decode("utf-8", "replace")
+            hits += [(os.path.relpath(p, PAYLOAD), t) for t in privacy.hits(text, terms, user, word)]
     for p, t in hits[:20]:
         print(f"   {p}: holds '{t}'", flush=True)
     if hits:
@@ -217,18 +224,45 @@ def privacy_scan():
     print(f"   {len(terms) + (word is not None)} terms, no hit", flush=True)
 
 
+TERMS_DRAFT_MARK = "OWNER TO DECIDE"           # (custom, Nov 24) the draft's notes (tools/launcher.py: the same)
+
+
+def terms_check():
+    """(custom, Nov 24) Project Noble's TERMS.md, its version (the installer records it as accepted): no release with
+    the draft (its OWNER TO DECIDE notes), none without the terms."""
+    step("the terms of use (TERMS.md)")
+    try:
+        with open(os.path.join(ROOT, "TERMS.md"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        raise SystemExit("TERMS.md is missing: not building")
+    if TERMS_DRAFT_MARK in text:
+        raise SystemExit(f"TERMS.md is still a draft (it has \"{TERMS_DRAFT_MARK}\" notes): the owner finishes it first. "
+                         "Not building")
+    import re
+    m = re.search(r"^Version (\S+?)\.", text, re.M)
+    if not m:
+        raise SystemExit("TERMS.md has no \"Version <date>.\" line: not building")
+    print(f"   version {m.group(1)}", flush=True)
+    return m.group(1)
+
+
 def stage_texts():
-    """Plain-text copies of the license and notices for the installer's license page."""
+    """Plain-text copies of the terms, the notices and the license for the installer's license page. (upstream 0.3.0)
+    The terms come first: that page's I accept is the player's agreement to them."""
+    parts = []
+    for name in ("TERMS.md", "NOTICE.md", "LICENSE.md"):
+        with open(os.path.join(ROOT, name), encoding="utf-8") as src:
+            parts.append(src.read())
     with open(os.path.join(BUILD, "license.txt"), "w", encoding="utf-8") as f:
-        f.write(open(os.path.join(ROOT, "NOTICE.md"), encoding="utf-8").read() + "\n\n")
-        f.write(open(os.path.join(ROOT, "LICENSE.md"), encoding="utf-8").read())
+        f.write("\n\n".join(parts))
 
 
-def compile_setup():
+def compile_setup(ver, terms_version):
     step("Setup.exe (Inno Setup)")
     exe = iscc() or sys.exit("Inno Setup 6 was not found (winget install JRSoftware.InnoSetup)")
-    ver = custom_version()
     r = subprocess.run([exe, f"/DAppVersion={ver}", f"/DPayload={PAYLOAD}", f"/DBuildDir={BUILD}",
+                        f"/DTermsVersion={terms_version}",
                         os.path.join(ROOT, "installer", "ProjectProvingGrounds.iss")], capture_output=True, text=True,
                        errors="replace")
     if r.returncode:
@@ -243,6 +277,9 @@ def compile_setup():
 
 
 def main():
+    terms_version = terms_check()                    # (first: a draft stops everything)
+    ver, tag = release_version()
+    step(f"Project Noble {ver} (its release's tag: {tag}; HEAD's commits must be GitHub's main once it is pushed)")
     committed_copy()
     try:
         if "--skip-tests" not in sys.argv:
@@ -251,12 +288,13 @@ def main():
             shutil.rmtree(PAYLOAD)
         os.makedirs(PAYLOAD)
         stage_project()
+        stamp_version(ver)
         stage_native()
         stage_map_tools()
         stage_python()
         privacy_scan()
         stage_texts()
-        compile_setup()
+        compile_setup(ver, terms_version)
     finally:
         git("worktree", "remove", "--force", SRC, out=False)
         git("worktree", "prune", out=False)

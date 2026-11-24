@@ -1,0 +1,1805 @@
+{
+ "netgame_flags": [
+  {
+   "type": "ctf - flag",
+   "id": 0,
+   "team": 0,
+   "pos": [
+    -53.505,
+    -31.3,
+    67.982
+   ],
+   "facing": 0.0
+  },
+  {
+   "type": "ctf - flag",
+   "id": 1,
+   "team": 1,
+   "pos": [
+    -23.311,
+    -59.086,
+    65.584
+   ],
+   "facing": 0.0
+  }
+ ],
+ "equipment": [
+  {
+   "item": "drop_shield",
+   "tag": "drop_shield",
+   "path": "drop_shield",
+   "pos": [
+    -14.843,
+    -69.397,
+    81.32
+   ],
+   "yaw": 0.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "ammo_box",
+   "tag": "ammo_box",
+   "path": "ammo_box",
+   "pos": [
+    -55.966,
+    -35.564,
+    67.608
+   ],
+   "yaw": -48.0,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "ammo_box",
+   "tag": "ammo_box",
+   "path": "ammo_box",
+   "pos": [
+    -45.42,
+    -54.502,
+    63.876
+   ],
+   "yaw": -9.057,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  }
+ ],
+ "vehicles": [
+  {
+   "item": "machinegun",
+   "tag": "machinegun",
+   "path": "machinegun",
+   "pos": [
+    -59.179,
+    -31.087,
+    67.608
+   ],
+   "yaw": 131.294,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "mongoose",
+   "tag": "mongoose",
+   "path": "mongoose",
+   "pos": [
+    -61.138,
+    0.374,
+    68.277
+   ],
+   "yaw": -125.057,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  },
+  {
+   "item": "warthog",
+   "tag": "warthog",
+   "path": "warthog",
+   "pos": [
+    -63.568,
+    0.705,
+    68.507
+   ],
+   "yaw": -81.384,
+   "team": 0,
+   "games": [
+    "all games"
+   ],
+   "spawn_time": 0,
+   "unique": false
+  }
+ ],
+ "spawns": [
+  {
+   "pos": [
+    -53.505,
+    -31.3,
+    67.982
+   ],
+   "team": 0,
+   "facing": -148.876,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -53.505,
+    -31.3,
+    67.982
+   ],
+   "team": 1,
+   "facing": -148.876,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -53.885,
+    -51.652,
+    68.324
+   ],
+   "team": 0,
+   "facing": 66.031,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -53.885,
+    -51.652,
+    68.324
+   ],
+   "team": 1,
+   "facing": 66.031,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -53.659,
+    -21.993,
+    64.507
+   ],
+   "team": 0,
+   "facing": -56.154,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -53.659,
+    -21.993,
+    64.507
+   ],
+   "team": 1,
+   "facing": -56.154,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -48.703,
+    -44.471,
+    64.35
+   ],
+   "team": 0,
+   "facing": 109.528,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -48.703,
+    -44.471,
+    64.35
+   ],
+   "team": 1,
+   "facing": 109.528,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -49.431,
+    -58.011,
+    64.33
+   ],
+   "team": 0,
+   "facing": 116.739,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -49.431,
+    -58.011,
+    64.33
+   ],
+   "team": 1,
+   "facing": 116.739,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -65.109,
+    -26.633,
+    64.623
+   ],
+   "team": 0,
+   "facing": -70.571,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -65.109,
+    -26.633,
+    64.623
+   ],
+   "team": 1,
+   "facing": -70.571,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -63.728,
+    -48.069,
+    64.587
+   ],
+   "team": 0,
+   "facing": 14.531,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -63.728,
+    -48.069,
+    64.587
+   ],
+   "team": 1,
+   "facing": 14.531,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -76.477,
+    -14.006,
+    67.321
+   ],
+   "team": 0,
+   "facing": -52.241,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -76.477,
+    -14.006,
+    67.321
+   ],
+   "team": 1,
+   "facing": -52.241,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -57.833,
+    -7.953,
+    66.338
+   ],
+   "team": 0,
+   "facing": -53.032,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -57.833,
+    -7.953,
+    66.338
+   ],
+   "team": 1,
+   "facing": -53.032,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -43.265,
+    -70.719,
+    65.669
+   ],
+   "team": 0,
+   "facing": 116.896,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -43.265,
+    -70.719,
+    65.669
+   ],
+   "team": 1,
+   "facing": 116.896,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -78.11,
+    -37.904,
+    64.93
+   ],
+   "team": 0,
+   "facing": -34.625,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -78.11,
+    -37.904,
+    64.93
+   ],
+   "team": 1,
+   "facing": -34.625,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.509,
+    -56.414,
+    66.697
+   ],
+   "team": 0,
+   "facing": 168.05,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -21.509,
+    -56.414,
+    66.697
+   ],
+   "team": 1,
+   "facing": 168.05,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  },
+  {
+   "pos": [
+    -27.852,
+    -33.836,
+    66.816
+   ],
+   "team": 0,
+   "facing": -166.088,
+   "games": [
+    "slayer"
+   ]
+  },
+  {
+   "pos": [
+    -27.852,
+    -33.836,
+    66.816
+   ],
+   "team": 1,
+   "facing": -166.088,
+   "games": [
+    "slayer",
+    "ctf"
+   ]
+  }
+ ],
+ "scenery": [],
+ "placed": [
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -47.375,
+    -0.912,
+    89.034
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -48.169,
+    -2.512,
+    88.845
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -48.492,
+    -4.219,
+    88.909
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -46.926,
+    -4.87,
+    89.603
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -47.939,
+    -5.742,
+    89.15
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -48.449,
+    -5.015,
+    88.926
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -43.171,
+    -3.653,
+    89.762
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -45.099,
+    -2.184,
+    89.707
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -49.151,
+    -3.926,
+    88.631
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -44.911,
+    -4.014,
+    89.594
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -41.8,
+    -0.911,
+    90.142
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -48.161,
+    -6.077,
+    89.05
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -43.422,
+    -5.052,
+    89.691
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -42.597,
+    0.096,
+    89.819
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -46.253,
+    -4.02,
+    89.739
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "resupply_capsule",
+   "kind": "scenery",
+   "pos": [
+    -48.026,
+    -6.766,
+    89.12
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -55.218,
+    -39.045,
+    66.462
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "cov_portable_shield",
+   "kind": "scenery",
+   "pos": [
+    -40.079,
+    -31.076,
+    64.991
+   ],
+   "rot": [
+    -65.47,
+    1.777,
+    0.793
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "cov_portable_shield",
+   "kind": "scenery",
+   "pos": [
+    -26.441,
+    -60.354,
+    65.487
+   ],
+   "rot": [
+    -110.238,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "cov_portable_shield",
+   "kind": "scenery",
+   "pos": [
+    -75.679,
+    -41.559,
+    64.379
+   ],
+   "rot": [
+    83.324,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "antennae_comm_large",
+   "kind": "scenery",
+   "pos": [
+    -23.311,
+    -59.086,
+    65.584
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "antennae_comm_large",
+   "kind": "scenery",
+   "pos": [
+    -78.637,
+    -40.158,
+    64.193
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -55.219,
+    -35.46,
+    68.092
+   ],
+   "rot": [
+    90.0,
+    180.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -69.509,
+    -21.076,
+    64.651
+   ],
+   "rot": [
+    90.0,
+    90.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_cabinet",
+   "kind": "scenery",
+   "pos": [
+    -45.121,
+    -53.913,
+    64.437
+   ],
+   "rot": [
+    90.0,
+    90.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "cannonengine2",
+   "kind": "scenery",
+   "pos": [
+    -55.179,
+    -36.758,
+    70.768
+   ],
+   "rot": [
+    90.0,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "h_grenade_crate",
+   "kind": "crates",
+   "pos": [
+    -56.342,
+    -35.898,
+    67.587
+   ],
+   "rot": [
+    -101.912,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "h_grenade_crate",
+   "kind": "crates",
+   "pos": [
+    -45.887,
+    -55.136,
+    63.876
+   ],
+   "rot": [
+    -141.241,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "antennae_mast",
+   "kind": "crates",
+   "pos": [
+    -56.732,
+    -52.214,
+    67.608
+   ],
+   "rot": [
+    24.562,
+    -0.0,
+    0.01
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "halo_ff_radio",
+   "kind": "crates",
+   "pos": [
+    -57.297,
+    -51.668,
+    68.013
+   ],
+   "rot": [
+    148.457,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "crate_packing_giant",
+   "kind": "crates",
+   "pos": [
+    -64.198,
+    -34.953,
+    64.006
+   ],
+   "rot": [
+    -175.533,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "crate_packing_giant",
+   "kind": "crates",
+   "pos": [
+    -62.358,
+    -33.16,
+    63.936
+   ],
+   "rot": [
+    79.95,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -45.428,
+    -53.896,
+    63.876
+   ],
+   "rot": [
+    -22.118,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -62.759,
+    -34.224,
+    63.944
+   ],
+   "rot": [
+    51.649,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -55.6,
+    -35.355,
+    67.608
+   ],
+   "rot": [
+    74.046,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "antennae_comm",
+   "kind": "crates",
+   "pos": [
+    -32.315,
+    -55.681,
+    65.243
+   ],
+   "rot": [
+    37.913,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "ff_man_cannon_forge_heavy",
+   "kind": "crates",
+   "pos": [
+    -32.234,
+    -53.776,
+    65.314
+   ],
+   "rot": [
+    -17.131,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 8
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -50.72,
+    -33.985,
+    66.48
+   ],
+   "rot": [
+    -112.466,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -50.152,
+    -34.512,
+    66.48
+   ],
+   "rot": [
+    142.167,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -27.841,
+    -46.913,
+    65.757
+   ],
+   "rot": [
+    65.317,
+    -0.0,
+    -37.975
+   ],
+   "label": "",
+   "flags": "not initially placed",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -53.711,
+    -16.075,
+    63.925
+   ],
+   "rot": [
+    96.84,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -53.937,
+    -16.498,
+    63.91
+   ],
+   "rot": [
+    51.448,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "unsc_glow_stick",
+   "kind": "crates",
+   "pos": [
+    -46.486,
+    -55.248,
+    63.876
+   ],
+   "rot": [
+    115.16,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "battery",
+   "kind": "crates",
+   "pos": [
+    -73.534,
+    -33.792,
+    64.169
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "battery",
+   "kind": "crates",
+   "pos": [
+    -39.116,
+    -29.945,
+    65.064
+   ],
+   "rot": [
+    49.101,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "battery",
+   "kind": "crates",
+   "pos": [
+    -45.09,
+    -55.21,
+    65.576
+   ],
+   "rot": [
+    140.81,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "crate_packing",
+   "kind": "crates",
+   "pos": [
+    -57.346,
+    -51.689,
+    67.608
+   ],
+   "rot": [
+    129.966,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "5thspartan",
+   "kind": "crates",
+   "pos": [
+    -19.961,
+    -34.212,
+    81.004
+   ],
+   "rot": [
+    99.767,
+    20.21,
+    -16.787
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -27.885,
+    -47.234,
+    65.801
+   ],
+   "rot": [
+    -157.325,
+    14.158,
+    -9.982
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -55.219,
+    -35.46,
+    68.092
+   ],
+   "rot": [
+    -90.0,
+    -0.0,
+    -90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -45.121,
+    -53.913,
+    64.437
+   ],
+   "rot": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -69.509,
+    -21.076,
+    64.651
+   ],
+   "rot": [
+    0.0,
+    90.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -55.218,
+    -39.045,
+    66.462
+   ],
+   "rot": [
+    90.0,
+    0.0,
+    90.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "health_station",
+   "kind": "controls",
+   "pos": [
+    -53.988,
+    -16.241,
+    63.906
+   ],
+   "rot": [
+    23.406,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen",
+   "kind": "controls",
+   "pos": [
+    -65.322,
+    -19.76,
+    66.055
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen",
+   "kind": "controls",
+   "pos": [
+    -45.009,
+    -34.005,
+    64.905
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen",
+   "kind": "controls",
+   "pos": [
+    -53.439,
+    -49.227,
+    68.091
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_cool",
+   "kind": "controls",
+   "pos": [
+    -65.322,
+    -19.76,
+    66.055
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_cool",
+   "kind": "controls",
+   "pos": [
+    -45.009,
+    -34.005,
+    64.905
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_cool",
+   "kind": "controls",
+   "pos": [
+    -53.439,
+    -49.227,
+    68.091
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_disabled",
+   "kind": "controls",
+   "pos": [
+    -65.322,
+    -19.76,
+    66.055
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_disabled",
+   "kind": "controls",
+   "pos": [
+    -45.009,
+    -34.005,
+    64.905
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invisible_switch_gen_disabled",
+   "kind": "controls",
+   "pos": [
+    -53.439,
+    -49.227,
+    68.091
+   ],
+   "rot": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "generator_x_large",
+   "kind": "machines",
+   "pos": [
+    -65.322,
+    -19.76,
+    66.055
+   ],
+   "rot": [
+    139.871,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "generator_x_large",
+   "kind": "machines",
+   "pos": [
+    -45.009,
+    -34.005,
+    64.905
+   ],
+   "rot": [
+    24.2,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "generator_x_large",
+   "kind": "machines",
+   "pos": [
+    -53.439,
+    -49.227,
+    68.091
+   ],
+   "rot": [
+    115.056,
+    1.481,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -38.288,
+    -50.092,
+    64.543
+   ],
+   "rot": [
+    -114.145,
+    12.204,
+    4.302
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -44.886,
+    -18.837,
+    65.344
+   ],
+   "rot": [
+    -105.579,
+    -3.135,
+    -11.098
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -58.386,
+    -14.36,
+    63.878
+   ],
+   "rot": [
+    -161.671,
+    -4.051,
+    -12.966
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -31.867,
+    -62.138,
+    65.191
+   ],
+   "rot": [
+    120.632,
+    3.534,
+    1.714
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -70.398,
+    -17.697,
+    64.297
+   ],
+   "rot": [
+    151.86,
+    -17.0,
+    -1.161
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -68.442,
+    -42.818,
+    64.206
+   ],
+   "rot": [
+    0.017,
+    -0.8,
+    -1.191
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -39.35,
+    -23.247,
+    65.294
+   ],
+   "rot": [
+    0.056,
+    1.789,
+    3.067
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -36.601,
+    -58.384,
+    64.609
+   ],
+   "rot": [
+    -0.0,
+    6.492,
+    1.033
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "longsword",
+   "kind": "machines",
+   "pos": [
+    -149.324,
+    263.938,
+    144.788
+   ],
+   "rot": [
+    -70.46,
+    -0.0,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_cov_squad_drop_pod",
+   "kind": "machines",
+   "pos": [
+    -73.656,
+    -19.604,
+    64.816
+   ],
+   "rot": [
+    -0.009,
+    -12.101,
+    1.317
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -68.903,
+    -41.552,
+    64.201
+   ],
+   "rot": [
+    -28.14,
+    0.0,
+    0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -35.802,
+    -33.778,
+    64.823
+   ],
+   "rot": [
+    -147.667,
+    -11.768,
+    -0.0
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  },
+  {
+   "name": "invis_resupply_capsule",
+   "kind": "machines",
+   "pos": [
+    -44.622,
+    -64.955,
+    64.376
+   ],
+   "rot": [
+    -155.753,
+    -7.851,
+    -9.135
+   ],
+   "label": "",
+   "flags": "",
+   "team": 0
+  }
+ ]
+}

@@ -39,11 +39,29 @@ _lock = threading.Lock()
 _job = dict(state="idle", done=0, total=0, error="")   # the download: idle, downloading, installing, failed
 
 
+_CURRENT = dict(at=-1e9, v=None)     # (custom, Nov 24) the scheme's answer, kept a minute: the page asks every 2-3 s
+CURRENT_KEEP = 60.0
+
+
 def current():
-    """This copy's version: CUSTOM_VERSION ("0.2.2-custom.11", the custom releases' tags), else upstream's VERSION."""
+    """This copy's version. (custom, Nov 24) Project Noble's X.Y.Z (tools/noble_version.py: the NOBLE_VERSION an
+    installer stamped, else a Git checkout's commits on GitHub's main and its release tags), else CUSTOM_VERSION
+    ("0.2.2-custom.14", the releases before the scheme: an older install), else upstream's VERSION."""
+    if time.time() - _CURRENT["at"] > CURRENT_KEEP:
+        try:
+            if HERE not in sys.path:                 # (python -I, or imported as tools.updater)
+                sys.path.insert(0, HERE)
+            import noble_version
+            v = noble_version.current(ROOT)
+        except Exception:
+            v = None
+        _CURRENT.update(at=time.time(), v=v)
+    if _CURRENT["v"]:
+        return _CURRENT["v"]
     for name in ("CUSTOM_VERSION", "VERSION"):
         try:
-            return open(os.path.join(ROOT, name), encoding="utf-8").read().strip()
+            with open(os.path.join(ROOT, name), encoding="utf-8") as f:
+                return f.read().strip()
         except OSError:
             continue
     return "dev"
@@ -88,11 +106,23 @@ def news(md, cur, cur_build):
 
 
 def version_key(v):
-    """(major, minor, patch, build) from "0.2.2-s165", "v0.2.2 s165", "0.2.1" (build 0); None for "dev" or junk."""
-    m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?(?:\D+s?(\d+))?", str(v or ""))
+    """(scheme, major, minor, patch, build) from "0.2.2-s165", "v0.2.2 s165", "0.2.1" (build 0); None for "dev" or junk.
+
+    (custom, Nov 24) scheme 1: Project Noble's own X.Y.Z (tools/noble_version.py), a plain three-part number with X >= 1,
+    or X = 0 and Y = 0 (a copy before the scheme's first release); scheme 0: everything before it (upstream's
+    "0.2.2-s181", its plain 0.1.0 to 0.3.0, our "0.2.2-custom.14"), so every new-scheme version is newer than every old
+    one: a dev copy at 0.0.325 is not offered the old 0.2.2-custom.14 release, and an install at 0.2.2-custom.14 is
+    offered 1.0.x. (A copy at 0.Y.Z with Y >= 1, past 1000 commits before the first release, would read as old.)"""
+    s = str(v or "").strip()
+    m = re.fullmatch(r"[vV]?(\d+)\.(\d+)\.(\d+)", s)
+    if m:
+        x, y, z = map(int, m.groups())
+        if x >= 1 or y == 0:
+            return (1, x, y, z, 0)
+    m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?(?:\D+s?(\d+))?", s)
     if not m:
         return None
-    return tuple(int(x or 0) for x in m.groups())
+    return (0, *(int(x or 0) for x in m.groups()))
 
 
 def load():
@@ -216,12 +246,16 @@ def install(on_start=None):
 
 
 def selftest():
-    assert version_key("0.2.2-s165") == (0, 2, 2, 165) and version_key("v0.2.2 s165") == (0, 2, 2, 165)
-    assert version_key("0.2.1") == (0, 2, 1, 0) and version_key("dev") is None
+    # (custom, Nov 24) every key starts with its scheme: 0 before Project Noble's X.Y.Z
+    assert version_key("0.2.2-s165") == (0, 0, 2, 2, 165) and version_key("v0.2.2 s165") == (0, 0, 2, 2, 165)
+    assert version_key("0.2.1") == (0, 0, 2, 1, 0) and version_key("dev") is None
     assert version_key("v0.2.2-s166") > version_key("0.2.2-s165") > version_key("0.2.1")
     assert version_key("v0.3.0") > version_key("0.2.9-s999")
     # (custom) the custom releases' tags
-    assert version_key("v0.2.2-custom.12") > version_key("0.2.2-custom.11") == (0, 2, 2, 11)
+    assert version_key("v0.2.2-custom.12") > version_key("0.2.2-custom.11") == (0, 0, 2, 2, 11)
+    # (custom, Nov 24) Project Noble's X.Y.Z is newer than every older version, either way round
+    assert version_key("0.0.325") > version_key("v0.2.2-custom.14") and version_key("v1.0.340") > version_key("0.0.999")
+    assert not is_newer("0.0.325", "", "v0.2.2-custom.14", "") and is_newer("0.2.2-custom.14", "", "v1.0.340", "")
     print("updater OK")
 
 

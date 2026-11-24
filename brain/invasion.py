@@ -137,8 +137,53 @@ def layout(objs, shapes=None, styles=None):
     # the phase's man cannons: an inv_mancannon spawns in its sequence's phase (Spire's three: 3, a Nov 6 playtest:
     # phase 3 only); phase_link_gates closes the people's links off them before then
     launchers = [(_v(f["pos"]), f.get("phase", f.get("seq"))) for f in flags if f.get("type") == "inv_mancannon"]
+    # a map variant's own Invasion vehicles (inv_vehicle, its team the side's label, its sequence the phase it first
+    # spawns in; the built-in maps' come from their scenario: inv_vehicles); label_pick sends a driver for each
+    # (upstream 0.3.0, build 20261118-1714)
+    vehicles = [dict(kind=f.get("object"), pos=_v(f["pos"]),
+                     side="att" if f.get("team") == att else "def" if f.get("team") == dfn else None,
+                     phase=f.get("phase", f.get("seq")) if f.get("phase", f.get("seq")) in (1, 2, 3) else 1)
+                for f in flags if f.get("type") == "inv_vehicle"]
     return dict(attackers=att, defenders=dfn, phases=phases, core=stand, res=res, barriers=bars, zone_r=zone_r,
-                bomb=bomb, bomb_phase=(bp if staged else 2) if bomb is not None else None, launchers=launchers)
+                bomb=bomb, bomb_phase=(bp if staged else 2) if bomb is not None else None, launchers=launchers,
+                spawn_res=label_spawns(flags), vehicles=vehicles)
+
+
+def label_spawns(flags):
+    """{label team: {phase: [Vec]}}: where a side respawns each phase by the map's Invasion labels (GitHub #26, a
+    custom Tempest map: the bots never spawned in its zones). inv_res_p1..p3 serve their own phase only; an inv_res_zone
+    with spawn sequence k serves phase k and every later one (sequence 1: all three; 2: phases 2 and 3; 3: phase 3; no
+    sequence: all). Team 8 (neutral) zones serve both teams. The labels' team is the map's: the side that attacks a
+    round uses the map attackers' zones (the teams swap each round, the zones do not). (upstream 0.3.0, build
+    20261118-1714)"""
+    out = {}
+    for f in flags:
+        t, team, seq = f.get("type", ""), f.get("team"), f.get("phase", f.get("seq"))
+        if t in ("inv_res_p1", "inv_res_p2", "inv_res_p3"):
+            phases = (int(t[-1]),)
+        elif t == "inv_res_zone":
+            k = seq if seq in (1, 2, 3) else 1
+            phases = tuple(range(k, 4))
+        else:
+            continue
+        for tm in ((0, 1) if team not in (0, 1) else (team,)):
+            for ph in phases:
+                out.setdefault(tm, {}).setdefault(ph, []).append(_v(f["pos"]))
+    return out
+
+
+def label_spawn(inv, phase, attacking, goal):
+    """The zone a dead bot respawns at on a map with labelled zones and no named spawns (label_spawns): its side's
+    zones this phase (the attackers': the map attackers' labels), the one nearest the phase's objective `goal` (the
+    reporter's play: later, forward spawns; a phase with none: the nearest phase before). None where the map has none.
+    (upstream 0.3.0, build 20261118-1714)"""
+    team = inv["attackers"] if attacking else inv["defenders"]
+    zones = (inv.get("spawn_res") or {}).get(team) or {}
+    for ph in range(phase, 0, -1):
+        if zones.get(ph):
+            pts = zones[ph]
+            return min(pts, key=lambda q: (q - goal).flat()) if goal is not None else pts[0]
+    return None
 
 
 # the ways up to a phase 3 core on high (a Spire playtest, Nov 6 19:11-19:38: the attackers all funnelled
@@ -188,16 +233,23 @@ def zone_radius(inv, p):
     return best[1] if best is not None and (best[0] - p).flat() < 1.0 else TERRITORY_R
 
 
-def phase_from_spawns(inv, spawns):
+def phase_from_spawns(inv, spawns, res=None):
     """The phase the attackers' respawns say: spawns [(team, Vec)] (the attacking team's recent respawn positions). Each
     votes for the phase of the attackers' zone nearest it; phases 2 and 3 share zones on most maps, so this tells 1
     from 2+. Only the attackers' zones: Boneyard's defender spawns lie nearest the attackers' phase 3 zone (live,
-    round 2 of an 8v3: the defenders' respawns read as phase 3 for four minutes)."""
+    round 2 of an 8v3: the defenders' respawns read as phase 3 for four minutes). res: the zones to read (default the
+    p labels, inv["res"]; Watch falls back to every label, inv["spawn_res"], where they say nothing): there a zone that
+    serves phase 1 and later ones (an inv_res_zone of sequence 1) says nothing of the phase. (upstream 0.3.0, build
+    20261118-1714)"""
     votes = {}
-    zones = inv["res"].get(inv["attackers"], {})
+    zones = (res or inv["res"]).get(inv["attackers"], {})
     for team, p in spawns:
-        best = min(((ph, min((q - p).flat() for q in zs)) for ph, zs in zones.items() if zs),
-                   key=lambda x: x[1], default=None)
+        near = {ph: min((q - p).flat() for q in zs) for ph, zs in zones.items() if zs}
+        best = min(near.items(), key=lambda x: x[1], default=None)
+        if best is not None and res is not None:
+            tied = {ph for ph, d in near.items() if d <= best[1] + 0.01}
+            if 1 in tied and len(tied) > 1:
+                continue
         # only a spawn in (or by) a zone says anything (live: blue respawns 20-50 u from every attackers' zone voted
         # phase 2 a minute early); phases 2 and 3 share their zones: a spawn says 2 at most
         if best is not None and best[1] < SPAWN_NEAR:
@@ -207,13 +259,16 @@ def phase_from_spawns(inv, spawns):
     return max(votes, key=lambda ph: (votes[ph], ph))
 
 
-def roles_from_spawns(inv, spawns, phase=1):
+def roles_from_spawns(inv, spawns, phase=1, res=None):
     """{player team: True if attacking} from recent respawns [(team, Vec)]: the side of the zone each team respawns in
     (the teams swap roles between rounds, so the scenario's team labels name roles, not the players' colours). Only
     that phase's zones count: the defenders' opening spawns on Boneyard lie nearer the attackers' phase 3 zone than
-    any of their own (live: both teams read as attackers)."""
+    any of their own (live: both teams read as attackers). res: the zones to read (default inv["res"], the p labels;
+    Watch retries with inv["spawn_res"], every label, when they give no one attacker side: a custom Tempest's
+    inv_res_zone spawns lie 8-25 u from its p labels and read as both teams defending). (upstream 0.3.0, build
+    20261118-1714)"""
     votes = {}
-    zones = {lb: zs.get(phase) or zs.get(1) or [] for lb, zs in inv["res"].items()}
+    zones = {lb: zs.get(phase) or zs.get(1) or [] for lb, zs in (res or inv["res"]).items()}
     for team, p in spawns:
         label = min(zones, key=lambda lb: min(((q - p).flat() for q in zones[lb]), default=1e9))
         votes.setdefault(team, []).append(label == inv["attackers"])
@@ -235,10 +290,34 @@ class Watch:
         s.phase, s.attackers, s.sides_set = 1, inv["attackers"], False
         s.score_base = "first"                    # (attacking team, its score at the round's start); "first": 0 (a brain
                                                   # started mid-round counts the phases taken so far)
+        s.score_seen, s.round_t = None, -99.0     # every team's score at the round's start (first read); when it began
+                                                  # (upstream 0.3.0, build 20261120-1620: score_attacker)
         s.core, s.carrier, s.core_t = None, None, -9.0
         s.gates_t, s.gates = -9.0, [b for b in inv["barriers"] if b["kind"] == "gate"]
         s.gates_n, s.gates_low, s.step_t, s.gate_steps = None, None, -99.0, 0   # gates at the last step; last read
         apply_barriers(T, inv)
+
+    SCORE_SETTLE = 10.0      # s into a round before its scores are taken as its zero (the round's change settles first)
+
+    def score_attacker(s, scores, now):
+        """The team whose score rises inside a round is the attackers (only they score: a phase taken). scores: {team:
+        score} (low 16 bits). One team up by 1-2 since the round's start and not the one read: the sides were misread
+        (a reported City match: the side's guess from its labels was a near tie, the score route read the other team's 0
+        and phase 1 stood for 135 s after the capture), corrected, and that capture counts. Two teams up at once, a jump
+        of 3 or more (a round's points), or within SCORE_SETTLE s of a round's start: nothing. Not while the Elites'
+        team reads (elite_ok: that read decides). (upstream 0.3.0, build 20261120-1620)"""
+        if s.score_seen is None:
+            if now - s.round_t >= s.SCORE_SETTLE:
+                s.score_seen = dict(scores)
+            return
+        for t, v in scores.items():
+            if v < s.score_seen.get(t, 0):        # (a reset: the new zero)
+                s.score_seen[t] = v
+        up = [t for t, v in scores.items() if 1 <= v - s.score_seen.get(t, 0) <= 2]
+        jumps = [t for t, v in scores.items() if v - s.score_seen.get(t, 0) > 2]
+        if len(up) == 1 and not jumps and up[0] != s.attackers and not s.__dict__.get("elite_ok"):
+            t = up[0]
+            s.attackers, s.sides_set, s.score_base = t, True, (t, s.score_seen.get(t, 0))
 
     def update(s, live, snap, now, raw=None):
         for p in snap.players:                    # spawns: alive again after a death, or first seen alive (the
@@ -267,20 +346,30 @@ class Watch:
             s.gate_steps, s.gates_n = 0, None     # (the gates stand again)
             s.score_base = None                   # the attackers' score now is the round's zero
             s.score_cap = 1 if s.__dict__.get("score_cap") is not None else None   # (the score reads: phase 1 until it says)
+            # the sides unread until this round's spawns say them (a failed read kept last round's: the teams swap, so
+            # the stale side is the wrong one; a reported City match). Until then no picks go out (spawn_check, the zone
+            # path): the game's own opening spawns stand and tell the sides (upstream 0.3.0, build 20261120-1620)
+            s.sides_set, s.score_seen, s.round_t = False, None, now
         recent = [(team, pos) for _, team, pos in s.spawns]
         # the sides: from the round's start, where everyone spawns in their side's first zone, then kept for the round
         # (live: defenders' later respawns sometimes land nearer an attackers' zone and flipped the sides every tick)
         if new_round or (not s.sides_set and len(recent) >= 4):
-            roles = roles_from_spawns(s.inv, [(t, p) for _, t, p in (burst if new_round else s.spawns)],
-                                      1 if new_round else s.phase)
-            score = {t: a for t, a in roles.items()}
-            att = [t for t, a in score.items() if a]
+            seen = [(t, p) for _, t, p in (burst if new_round else s.spawns)]
+            ph = 1 if new_round else s.phase
+            att = [t for t, a in roles_from_spawns(s.inv, seen, ph).items() if a]
+            if len(att) != 1 and s.inv.get("spawn_res"):
+                # (the p labels gave no one side: every label, a map whose spawns are inv_res_zone objects; upstream
+                # 0.3.0, build 20261118-1714)
+                att = [t for t, a in roles_from_spawns(s.inv, seen, ph, s.inv["spawn_res"]).items() if a]
             if len(att) == 1:
                 s.attackers, s.sides_set = att[0], True
         attacking = [x for x in recent if x[0] == s.attackers]
         if s.sides_set and len(attacking) >= 3:
             # respawns back the phase up only with a clear majority (they lag: a phase change shows only after deaths)
-            votes = [v for v in (phase_from_spawns(s.inv, [x]) for x in attacking[-8:]) if v is not None]
+            # (by the p labels; a spawn they say nothing of, by every label: upstream 0.3.0, build 20261118-1714)
+            sr = s.inv.get("spawn_res")
+            votes = [v for v in ((phase_from_spawns(s.inv, [x]) or (phase_from_spawns(s.inv, [x], sr) if sr else None))
+                                 for x in attacking[-8:]) if v is not None]
             best = max(set(votes), key=votes.count, default=None)
             # (never past what the attackers' score says once it reads: live Spire, round 2, the vote said phase 2 with
             # the score 0 and the attackers held phase 2's empty territories for 197 s while phase 1 ran out)
@@ -293,8 +382,17 @@ class Watch:
             # territory; the next round started 0-0). The low 16 bits: the next team's cell reads 65536 for 0 counted
             # from the round's start: the score carries over (live: red won round 1 defending, then 0 -> 3 at its
             # first territory in round 2)
+            try:                                  # the Elites attack, every round: their team is the attackers when it
+                et = live.elite_team(raw) if hasattr(live, "elite_team") else None   # reads (LiveReach.elite_team), the
+            except Exception:                     # spawn labels and the score only stand in when it does not
+                et = None                         # (upstream 0.3.0, build 20261120-1620)
+            s.elite_ok = et is not None
+            if et is not None and (et != s.attackers or not s.sides_set):
+                s.attackers, s.sides_set = et, True
             try:
-                sc = live.match_state()["score"].get(s.attackers, 0) & 0xFFFF
+                scores = {t: v & 0xFFFF for t, v in live.match_state()["score"].items()}
+                s.score_attacker(scores, now)
+                sc = scores.get(s.attackers, 0)
                 if s.score_base == "first":
                     s.score_base = (s.attackers, 0)
                 elif s.score_base is None or s.score_base[0] != s.attackers or sc < s.score_base[1]:
@@ -447,39 +545,185 @@ def free_rides(n, phase, vehicles, errands=()):
             and min(math.dist(v["pos"][:2], p[:2]) for p in pts) <= FOR_VEHICLE_R]
 
 
-def honor_spawn(spawns, phase, side, me, players, rng, T, taken=(), goal=None, vehicles=(), errands=()):
-    """Where dead bot `me` respawns: one of its side's offers this phase by weight (a named spawn's free point, or behind
-    the teammate out of the fight nearest `goal`). side "att" / "def"; taken: points other bots spawn at; a spawn kept
-    for vehicles (free_rides) is offered only with one free that no other bot is sent to (errands: their handles). ->
+# (upstream 0.3.0, build 20261118-1714) smart Invasion spawns: honor_spawn, spawn_offers, _weighted, _named_point
+# and the smart-spawn helpers below are his, replacing upstream s181's honor_spawn (never customized by us);
+# the vehicles passed in are already the ones the bot's tier may drive (tools/live_bots.py drivable, #46b)
+def honor_spawn(spawns, phase, side, me, players, rng, T, taken=(), goal=None, vehicles=(), errands=(), lanes=(),
+                inv_veh=()):
+    """Where dead bot `me` respawns: one of its side's offers this phase (a named spawn's free point, or behind a
+    teammate out of the fight). side "att" / "def"; taken: points other bots spawn at; lanes: the phase's territories
+    (snap.inv_zones, two in phases 1-2); inv_veh: the map's Invasion vehicles (inv_vehicles). A job first: a free
+    vehicle of its side waiting at its spot by one of its spawns this phase (one bot each: errands) sends it to that
+    spawn for it (Nov 18: back at the earliest spawn to take a vehicle, never for no reason); a spawn kept
+    for vehicles ("for_vehicles": River in phases 2-3) is used for that only. Else by weight (spawn_offers) ->
     dict(pos=Vec, yaw=radians, name=str, mate=player id or None, ride=vehicle handle or None), or None."""
     named, ally = spawns
-    offers = []
-    for n in named:
+    for n in named:                                   # the job: a vehicle waiting for a driver
         if n["side"] != side or str(phase) not in n["points"] or spawn_weight(n, phase) <= 0:
             continue
-        rides = free_rides(n, phase, vehicles, errands)
-        if rides == []:
-            continue
-        offers.append((spawn_weight(n, phase), dict(n, ride=rides[0]["handle"] if rides else None)))
-    mates = [p for p in players if p.team == me.team and p.id != me.id and mate_clear(p, players, T)]
-    if mates and ally.get(side):
-        mates.sort(key=lambda p: (p.pos - goal).flat() if goal is not None else rng.random())
-        for mate in mates:
-            spot = ally_spot(mate, players, T, taken)
-            if spot is not None:
-                offers.append((ally[side], dict(pos=spot, yaw=mate.yaw, name=f"ally #{mate.id}", mate=mate.id, ride=None)))
-                break
+        rides = (free_rides(n, phase, vehicles, errands) or []) + waiting_rides(inv_veh, side, phase, vehicles, errands,
+                                                                                n["points"][str(phase)])
+        if rides:
+            return dict(_named_point(n, phase, players, taken, rng, me, T), ride=rides[0]["handle"])
+    offers = spawn_offers(spawns, phase, side, me, players, T, taken, goal, lanes)
     if not offers:
         return None
+    o = _weighted(offers, rng)
+    if "mate" in o:
+        return o
+    return dict(_named_point(o, phase, players, taken, rng, me, T), ride=None)
+
+
+def spawn_offers(spawns, phase, side, me, players, T, taken=(), goal=None, lanes=()):
+    """[(weight, offer)]: a side's named spawns this phase (offer: the spawn's dict) and teammates to spawn on (offer:
+    dict(pos, yaw, name, mate, ride)), weighted (Nov 18: random but smart, split across both lanes;
+    Spire phases 2-3: the attackers' Conveyor Belt took 80% of their spawns 31 u from the defenders' High Trail, a
+    deathmatch by the spire and nothing on the other side of the map):
+      the file's weight, times lane_factor (by the territory short of its share of the team: likelier), times
+      ENEMY_SPAWN_W where the other side spawns within ENEMY_SPAWN_R this phase, 0 with a seen enemy within DANGER_R
+      of every point; a teammate spawn per lane (the ally weight shared), on the clear mate nearest that lane.
+    Every weight 0: the file's weights (never fewer spawns than before). A spawn kept for vehicles is not offered."""
+    named, ally = spawns
+    me_team = me.team if me is not None else None
+    live = [n for n in named if str(phase) in n["points"] and spawn_weight(n, phase) > 0]
+    counts = lane_counts(lanes, players, me_team, me)
+    offers = []
+    for n in live:
+        if n["side"] != side or str(phase) in n.get("for_vehicles", ()):
+            continue
+        pts = [Vec(*p) for p in n["points"][str(phase)]]
+        c = _centroid(pts)
+        w = spawn_weight(n, phase)
+        smart = w * lane_factor(c, lanes, counts)
+        if any(o["side"] != side and (_centroid([Vec(*q) for q in o["points"][str(phase)]]) - c).flat() < ENEMY_SPAWN_R
+               for o in live):
+            smart *= ENEMY_SPAWN_W
+        if all(danger(p, players, me_team, T) for p in pts):
+            smart = 0.0
+        offers.append((smart, w, n))
+    mates = [p for p in players if me is not None and p.team == me.team and p.id != me.id and mate_clear(p, players, T)]
+    if mates and ally.get(side):
+        ways = list(lanes) if len(lanes) >= 2 else [goal]
+        used = set()
+        for z in ways:
+            for mate in sorted(mates, key=lambda p: (p.pos - z).flat() if z is not None else 0.0):
+                if mate.id in used:
+                    continue
+                spot = ally_spot(mate, players, T, taken)
+                if spot is not None:
+                    used.add(mate.id)
+                    w = ally[side] / len(ways)
+                    offers.append((w * lane_factor(mate.pos, lanes, counts), w,
+                                   dict(pos=spot, yaw=mate.yaw, name=f"ally #{mate.id}", mate=mate.id, ride=None)))
+                    break
+    if offers and not any(sw > 0 for sw, _, _ in offers):
+        return [(w, o) for _, w, o in offers]
+    return [(sw, o) for sw, _, o in offers if sw > 0]
+
+
+def _weighted(offers, rng):
+    """One offer of [(weight, offer)], by weight."""
     k = rng.random() * sum(w for w, _ in offers)
     for w, o in offers:
         k -= w
         if k < 0:
-            break
-    if "mate" in o:
-        return o
-    pts = [Vec(*p) for p in o["points"][str(phase)]]
+            return o
+    return offers[-1][1]
+
+
+def _named_point(n, phase, players, taken, rng, me=None, T=None):
+    """A named spawn's point for a dead bot: free (no one on it, no other pick), out of a seen enemy's reach if one is."""
+    pts = [Vec(*p) for p in n["points"][str(phase)]]
     free = [p for p in pts if all((q.pos - p).flat() >= SPAWN_CLEAR for q in players if q.alive)
             and all((q - p).flat() >= SPAWN_CLEAR for q in taken)]
-    return dict(pos=rng.choice(free or pts), yaw=math.radians(o["at"][str(phase)][3]), name=o["name"], mate=None,
-                ride=o["ride"])
+    safe = [p for p in free if not danger(p, players, me.team if me is not None else None, T)]
+    return dict(pos=rng.choice(safe or free or pts), yaw=math.radians(n["at"][str(phase)][3]), name=n["name"], mate=None)
+
+
+# --- smart spawns (Nov 18: random but smart, split across both lanes each phase; upstream 0.3.0, build 20261118-1714)
+DANGER_R = 15.0          # u: an enemy this near a spawn point, seeing it, rules the point out
+ENEMY_SPAWN_R, ENEMY_SPAWN_W = 40.0, 0.25   # a spawn this near the other side's spawn this phase counts this much
+LANE_W = 3.0             # a spawn by a territory with none of an even share of the team there: 1 + LANE_W times as likely
+LANE_MIN = 0.25          # ... by one with twice its share or more: this much
+NEAR_BIAS = 1.5          # labelled zones (label_pick): the one nearest the phase's objective, this many times as likely
+RIDE_AT = 6.0            # u: an Invasion vehicle this near its spot is waiting there (not driven off)
+
+
+def danger(p, players, team, T=None):
+    """An enemy alive within DANGER_R of p, seeing it (no wall between; without a nav, any that near)."""
+    return any(q.alive and q.team != team and (q.pos - p).flat() < DANGER_R and (T is None or T.los(q.pos, p))
+               for q in players)
+
+
+def lane_counts(lanes, players, team, me=None):
+    """Teammates alive by their nearest lane (territory); [] with fewer than two lanes."""
+    if len(lanes) < 2:
+        return []
+    out = [0] * len(lanes)
+    for p in players:
+        if p.alive and p.team == team and (me is None or p.id != me.id):
+            out[min(range(len(lanes)), key=lambda i: (lanes[i] - p.pos).flat())] += 1
+    return out
+
+
+def lane_factor(p, lanes, counts):
+    """How much likelier a spawn at p is by its nearest lane's shortfall from an even share of the team: 1 + LANE_W
+    with nobody there, 1 at its share, down to LANE_MIN at twice it. 1 with fewer than two lanes."""
+    if len(lanes) < 2 or not counts:
+        return 1.0
+    share = max(1.0, sum(counts) / len(lanes))
+    need = (share - counts[min(range(len(lanes)), key=lambda i: (lanes[i] - p).flat())]) / share
+    return 1.0 + LANE_W * need if need >= 0 else max(LANE_MIN, 1.0 + need)
+
+
+def inv_vehicles(map_name):
+    """The map's Invasion vehicles (maps/<map>/inv_vehicles.json, tools/inv_vehicles.py): [dict(kind, pos=Vec, side
+    "att" / "def" / None, phase)], [] without the file."""
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maps",
+                        (map_name or "").split("/")[0].split("@")[0], "inv_vehicles.json")
+    if not os.path.exists(path):
+        return []
+    return [dict(v, pos=_v(v["pos"])) for v in json.load(open(path, encoding="utf-8")).get("vehicles", [])]
+
+
+def waiting_rides(inv_veh, side, phase, vehicles, errands, near, r=FOR_VEHICLE_R):
+    """Live vehicles (snap.vehicles) free for side this phase: at one of its Invasion vehicles' spots (within RIDE_AT;
+    spawned by now: its phase at most this one), drivable, empty, not another bot's errand, within r of a point in
+    near ([(x, y, z)] or [Vec])."""
+    spots = [v["pos"] for v in inv_veh if v.get("side") in (side, None) and v.get("phase", 1) <= phase]
+    if not spots or not near:
+        return []
+    from .vehicles import spec
+    near = [(q.x, q.y) if hasattr(q, "x") else (q[0], q[1]) for q in near]
+    return [v for v in vehicles if not v.get("occupied") and v["handle"] not in errands
+            and (spec(v["kind"]) or {}).get("move", "none") != "none"
+            and any(math.hypot(v["pos"][0] - q.x, v["pos"][1] - q.y) <= RIDE_AT for q in spots)
+            and min(math.hypot(v["pos"][0] - x, v["pos"][1] - y) for x, y in near) <= r]
+
+
+def label_pick(inv, phase, attacking, goal, rng, me=None, players=(), T=None, lanes=(), vehicles=(), errands=()):
+    """A dead bot's zone on a map with labelled zones and no named spawns (label_spawns), the smart way: a job first (a
+    free vehicle of its side waiting by one of its zones this phase or an earlier one: that zone, the earliest spawn
+    for it), else one of its side's zones serving this phase (a phase with none: the nearest phase before) by weight:
+    NEAR_BIAS for the one nearest the phase's objective `goal`, times lane_factor, 0 with a
+    seen enemy within DANGER_R (every weight 0: all alike). -> dict(pos=Vec, ride=handle or None), or None."""
+    team = inv["attackers"] if attacking else inv["defenders"]
+    zones = (inv.get("spawn_res") or {}).get(team) or {}
+    side = "att" if attacking else "def"
+    veh = inv.get("vehicles") or ()
+    earlier = [q for ph in range(1, phase + 1) for q in zones.get(ph, ())]
+    rides = waiting_rides(veh, side, phase, vehicles, errands, earlier) if veh and earlier else []
+    if rides:
+        v = rides[0]
+        return dict(pos=min(earlier, key=lambda q: math.hypot(q.x - v["pos"][0], q.y - v["pos"][1])), ride=v["handle"])
+    pool = next((zones[ph] for ph in range(phase, 0, -1) if zones.get(ph)), None)
+    if not pool:
+        return None
+    team_id = me.team if me is not None else None
+    counts = lane_counts(lanes, players, team_id, me)
+    near = min(pool, key=lambda q: (q - goal).flat()) if goal is not None else None
+    ws = [(NEAR_BIAS if q is near else 1.0) * lane_factor(q, lanes, counts) * (0.0 if danger(q, players, team_id, T)
+                                                                               else 1.0) for q in pool]
+    if not any(ws):
+        ws = [1.0] * len(pool)
+    return dict(pos=_weighted(list(zip(ws, pool)), rng), ride=None)

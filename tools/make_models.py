@@ -25,6 +25,7 @@ ONLY = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv
 OUT = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else os.path.join(ROOT, "native", "bin", "models")
 CE, H2, H3 = r"halo1\maps\bloodgulch.map", r"halo2\h2_maps_win64_dx11\lockout.map", r"halo3\maps\construct.map"
 H2A, REACH = r"groundhog\maps\ca_lockout.map", r"haloreach\maps\20_sword_slayer.map"
+ODST = r"halo3odst\maps\h100.map"    # (the Firefight squad: objects\characters\odst\odst, every character a variant)
 # out name, species (the pose), game (texture name prefix), map, the model's tag name end, the held weapon's tag name
 # end, model_pack2 options (an Elite holds the energy sword, one-handed: the player's picture; Halo 3 has one sword
 # model for both views, fp_energy_blade) each model's own hold ("Halo 3 rifle in body a lil bit", Reach's Elite sword
@@ -49,6 +50,22 @@ MODELS = [
     ("h3_elite", "elite", "h3", H3, r"mp_elite\mp_elite", r"fp_energy_blade\fp_energy_blade",
      ["--one-hand", "--hold", "grip=0.09,-0.21,-0.05;barrel=0.45,-0.3,-0.84;pole_r=-0.6,-0.6,-0.4;rest=0.1,0.21,-0.05;"
       "upright=-10;chin=8"]),
+    # Halo 3: ODST: the squad model, its characters by region (maps/_looks/odst.json "view"), with the silenced SMG (the
+    # game's own Firefight gun) in both hands at low ready across the body, the muzzle toward the left knee as the other
+    # games' rifles, tucked against the chest (the gun 2-3 mm off it): the left hand wrapped round the raked foregrip
+    # (gun x 0.055-0.068) high on it (at_l: its marker left the palm 0.026 u off the gun; at_l 0.045 / 0.054 sat low
+    # behind it), turned 40 degrees round it (spin_l) for a straight wrist, the elbow bent about 70-80 degrees and the
+    # forearm clear of the body. Before: the forearm through the body, the left arm locked straight, one-handed with the
+    # free arm stiff, the gun off to its right side, then held out in front (test_model_pose: arm_depth, gun_depth,
+    # ELBOW_BENT, palm_gaps)
+    ("odst_spartan", "spartan", "odst", ODST, r"characters\odst\odst", r"smg_silenced\smg_silenced",
+     ["--hold", "grip=0.12,0.04,0.10;barrel=0.4,0.8,-0.45;pole_r=0.0,-0.9,-0.4;pole_l=-0.4,0.8,-0.4;"
+      "spin_l=-40,0.05;at_l=0.062,-0.01,0.004"]),
+    # Dare (ODST character 8): her own body, the ONI operative's (helmet, head, hair, beacon by region); the squad's
+    # hold, the gun a little closer (her shorter arms)
+    ("odst_dare", "spartan", "odst", ODST, r"characters\odst_oni_op\odst_oni_op", r"smg_silenced\smg_silenced",
+     ["--hold", "grip=0.11,0.04,0.10;barrel=0.4,0.8,-0.45;pole_r=0.0,-0.9,-0.4;pole_l=-0.4,0.8,-0.4;"
+      "spin_l=-40,0.05;at_l=0.062,-0.01,0.004"]),
     # Halo 2: Anniversary's bots wear its three original sets (spartan_iv Mark VI, spartan_var2 Centurion, spartan_var3
     # Hoplite) and in Modern MCC's added pieces (Orion, Bioroid, Robot, Trooper, Breach, Panzer: its customization
     # table, maps/_looks/h2a.json, h2a_armory.json): pieces no bot wears (Halo 4's left in this model, the Flood's) out
@@ -72,6 +89,12 @@ MODELS = [
      r"rifle\storm_assault_rifle\storm_assault_rifle",
      ["--hold", "grip=0.09,0.01,0.04;barrel=0.1,0.9,-0.35;pole_r=-0.3,-0.8,-0.5;pole_l=-0.3,0.7,-0.65"]),
 ]
+
+
+def body_obj(tmp, name, species, game):
+    """A model's body export: <species>.obj for the game's own <game>_<species> model, <name>.obj for another body of
+    the same species (ODST's Dare: it overwrote the squad's spartan.obj, and test_model_pose read hers for both)."""
+    return os.path.join(tmp, (species if name == f"{game}_{species}" else name) + ".obj")
 
 
 def prune(out):
@@ -103,7 +126,7 @@ GEAR = {"h3_spartan": (r"halo3\maps\guardian.map", r"mp_masterchief\gear\gear", 
 
 def main():
     exe = paths.need(paths.map_tool("model2obj"), "model2obj.exe (the map tools: tools/map_tools)")
-    made, skipped = [], []
+    made, skipped, failed = [], [], []
     for name, species, game, mp, tag, weapon, opts in MODELS:
         if ONLY and name not in ONLY:
             continue
@@ -114,7 +137,7 @@ def main():
         tmp = os.path.join(ROOT, "maps", "_models", game)
         tex = os.path.join(tmp, "tex")
         os.makedirs(tex, exist_ok=True)
-        body, held = os.path.join(tmp, species + ".obj"), os.path.join(tmp, name + "_weapon.obj")
+        body, held = body_obj(tmp, name, species, game), os.path.join(tmp, name + "_weapon.obj")
         out = os.path.join(OUT, name + ".mdl")
         r = subprocess.run([exe, os.path.join(MCC, mp), tag, body, "--uv", "--skin", "--tex", tex], capture_output=True,
                            text=True, errors="replace")
@@ -133,8 +156,15 @@ def main():
                 print(f"{name}: its gear model was not exported ({(g.stdout + g.stderr).strip()[-200:]})")
             else:
                 extra = ["--gear", gobj + "|" + gspec]
-        subprocess.run([sys.executable, "-I", os.path.join(HERE, "model_pack2.py"), species, body, held, out,
-                        "--prefix", game] + opts + extra, check=True)
+        # one model that does not pack is left out and named with its reason, as one not exported is (GitHub #31: a
+        # handheld's setup stopped at the H2A Spartan, every other game's bots without their models, no reason shown)
+        p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "model_pack2.py"), species, body, held, out,
+                            "--prefix", game] + opts + extra, capture_output=True, text=True, errors="replace")
+        print(p.stdout.strip()[-400:], flush=True) if p.stdout.strip() else None
+        if p.returncode:
+            print(f"{name}: not packed ({(p.stdout + p.stderr).strip()[-300:]})", flush=True)
+            failed.append(name)
+            continue
         made.append(name)
     shutil.rmtree(os.path.join(ROOT, "maps", "_models", "h3", "tex"), ignore_errors=True) if "--clean" in sys.argv else None
     if "--clean-exports" in sys.argv:              # (the setup: the exports are only working space, ~2.4 GB; the packed
@@ -144,8 +174,10 @@ def main():
     if not ONLY:
         subprocess.run([sys.executable, "-I", os.path.join(HERE, "emblems.py"), "extract", MCC])   # the bots' emblem art
         with open(os.path.join(OUT, "made.txt"), "w", encoding="utf-8") as f:     # (tools/setup.py: this step ran)
-            f.write(f"made: {' '.join(made)}\nskipped, game not installed: {' '.join(skipped)}\n")
-    print(f"3D bots: {len(made)} made" + (f", {len(skipped)} skipped (games not installed)" if skipped else ""))
+            f.write(f"made: {' '.join(made)}\nskipped, game not installed: {' '.join(skipped)}\n"
+                    f"not packed: {' '.join(failed)}\n")
+    print(f"3D bots: {len(made)} made" + (f", {len(skipped)} skipped (games not installed)" if skipped else "")
+          + (f", {len(failed)} not packed: {', '.join(failed)}" if failed else ""))
 
 
 if __name__ == "__main__":

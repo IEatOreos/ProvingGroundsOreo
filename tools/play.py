@@ -308,17 +308,18 @@ def main():
     ff = firefight or o.game == "odst"
     roster = botctl.roster(o.roster) if o.roster and not o.lidar else None
     if roster is not None and ff:                    # Firefight's own list (botcore.cpp ff_seed: the first 3 till saved)
-        ff_list = botctl.roster(o.roster, firefight=True)
+        ff_list = botctl.roster(o.roster, firefight=True, game=o.game)   # (Reach's ffbot=, ODST's odbot=)
         roster = ff_list if ff_list is not None else roster[:botctl.FIREFIGHT_PLAYERS - 1]
-    # one cap on every path below, LiDAR included: Firefight holds 4 players in all (ODST crashed with more)
+    # one cap on every path below, LiDAR included: Firefight holds 8 players in Reach (upstream 0.3.0, GitHub #28), 4 in
+    # ODST (it crashed with more)
     room = botctl.player_cap(o.game, firefight) - len(players)
     if getattr(o, "max_bots", None) is not None:     # test override: leave room for Claude's probe bots
         room = min(room, int(o.max_bots))
     if room < botctl.MAX_PLAYERS - len(players):
-        print(f"Firefight: {room} bots at most ({botctl.FIREFIGHT_PLAYERS} players in all)")
+        print(f"Firefight: {room} bots at most ({botctl.player_cap(o.game, ff)} players in all)")
     if roster is not None and teams and not ff:      # (custom, Nov 13) Bot Matchmaking deals the next lobby's teams by
         save_humans(players)                         # points, the people counted on their own team
-    if roster is not None:                           # the BOTS panel's list (Firefight: its first 3, all your teammates)
+    if roster is not None:                           # the BOTS panel's list (Firefight: its own, all your teammates)
         print(f"bot list: {len(roster)} bots from {o.roster}" + (f", {max(0, room)} join (Firefight)" if ff else ""))
         for team, name in roster_plan(roster, players, teams, o.game)[:max(0, room)]:
             team = players[0]["team"] if ff else team

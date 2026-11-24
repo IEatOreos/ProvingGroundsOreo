@@ -11,6 +11,7 @@ The zip (logs/exports/match_<map>_<date>-<time>.zip) holds:
   collect.jsonl          the Data collector, when it was on: everyone every tick, people's guns, rounds, equipment
                          and zoom (no keys: those of older recordings are left out)
   carnage_report.xml     MCC's own post-game report (kills, deaths, medals per player), when it is this match's
+  brain.txt              the bots' log (logs/brain.txt: what the brain printed), when it is this match's
   objective_report.txt   objective play (tools/objective_report.py), player_stats.json the people's numbers
                          (tools/player_stats.py): the analyses the Observer shows
   README.txt             how to read it all
@@ -97,6 +98,15 @@ def match_files(trace, logs=LOGS, mcc_temp=MCC_TEMP):
         if "campaign" not in os.path.basename(rep) and -120 <= os.path.getmtime(rep) - end <= 600:
             out["carnage_report.xml"] = rep
             break
+    # the bots' log, when it is this match's (live_bots prints its recording's name; scrubbed as every part is)
+    # (upstream 0.3.0, build 20261120-1620)
+    brain = os.path.join(logs, "brain.txt")
+    try:
+        with open(brain, encoding="utf-8", errors="replace") as f:
+            if "recording: " + os.path.basename(trace) in f.read(1 << 16):
+                out["brain.txt"] = brain
+    except OSError:
+        pass
     return out
 
 
@@ -184,7 +194,7 @@ In the recordings a player is a person or a bot by the "bot" column (trace.jsonl
 
 trace.jsonl: what every player did 4 times a second and what every bot did, decided and said every tick.
 collect.jsonl: the people's movement, aim, guns and rounds (present when the Data collector was on; no keys).
-carnage_report.xml: MCC's own post-game numbers. objective_report.txt, player_stats.json: the Observer's analyses.
+carnage_report.xml: MCC's own post-game numbers. brain.txt: the bots' log. objective_report.txt, player_stats.json: the Observer's analyses.
 
 People's Xbox ids are removed and their names replaced ("Player 1" ...) unless the exporter kept them.
 Made with tools/match_export.py of the mod, version {ver}.
@@ -243,7 +253,7 @@ def export(trace, out=None, keep_names=False, logs=LOGS, mcc_temp=MCC_TEMP):
     return out
 
 
-IMPORT_PARTS = ("manifest.json", "trace.jsonl", "collect.jsonl", "carnage_report.xml", "objective_report.txt",
+IMPORT_PARTS = ("manifest.json", "trace.jsonl", "collect.jsonl", "carnage_report.xml", "brain.txt", "objective_report.txt",
                 "player_stats.json", "README.txt")
 IMPORT_MAX = 2 << 30          # bytes unpacked at most (a long recorded match is a few hundred MB)
 

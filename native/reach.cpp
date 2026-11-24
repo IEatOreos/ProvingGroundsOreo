@@ -66,6 +66,369 @@ static uint8_t* hr_object(uint8_t* tls, uint32_t handle) {
     return *(uint16_t*)e == handle >> 16 ? *(uint8_t**)(e + 0x10) : nullptr;
 }
 
+// --- Third person (upstream 0.3.0, build 20261116-2330; the BOTS panel's Experimental tab, third_person.cpp the view):
+// Reach's own following camera on the local player on foot. (custom, Nov 24, owner: "Reach only, off by default") the
+// three camera hooks are made only once the switch is first turned on (hr_tp_hook, botcore's loop), each after its
+// first bytes read as the decoded build's; with the switch off they pass straight through, and with it never on this
+// haloreach.dll is not touched for it at all.
+// His notes: decoded live Nov 16 (logs/tmp/director_dump.py, ghidra RefsTo): "director globals" [TLS + 0x188]
+// (FUN_1800C3EB4), directors 0x1AC apart (FUN_1800C4DCC), each +8 its camera object; FUN_1800C5834 (director, mode, 0,
+// 0) sets the mode: 0 following (vtable rva 0xA2DF68, target +8), 3 first person (0x9D8440); the mode now at
+// [TLS+0x188] + 0x6B8 + i * 0xC. The following update FUN_1801DCADC builds the view as Halo 3's (out +4, +0x10, +0x2C).
+// The local player's unit: FUN_1800C57D8(0). The director keeps its wanted camera at +0x190 and puts it back each tick
+// (FUN_1801DAF84: 3 and on foot = first person), so third person sets it too. A scope up (unit +0x383, -1 none: the
+// first person camera's zoom, FUN_1800C6EE8) is first person until it comes down
+bool tp_on();
+void tp_keys();
+void tp_up(const float f[3], float up[3]);
+void tp_view(const float eye[3], const float at[3], float f[3], float off[3], float* dist, float units,
+             float (*clear)(const float from[3], const float by[3]));
+static const uintptr_t HR_CAM_SET = 0xc5834, HR_CAM_FOLLOW_UPDATE = 0x1dcadc, HR_LOCAL_UNIT = 0xc57d8,
+                       HR_DIRECTORS = 0x188, HR_MODE_AT = 0x6B8, HR_WANT = 0x190, HR_UNIT_ZOOM = 0x383;
+static const uintptr_t HR_CAM_FOLLOW_VTABLE = 0xa2df68;   // the following camera's vtable (slot 2 its update)
+static const uint8_t HR_CAM_FOLLOW_PROLOGUE[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x18, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56};
+static const uint8_t HR_CAM_SET_PROLOGUE[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x08, 0x48, 0x89, 0x68, 0x10, 0x48, 0x89, 0x70, 0x18, 0x48};
+static const uintptr_t HR_CAM_FIRST_UPDATE = 0xc6ee8;   // the first person camera's update (vtable 0x9D8440 slot 2)
+static const uint8_t HR_CAM_FIRST_PROLOGUE[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x68, 0x18, 0x56, 0x57, 0x41, 0x55, 0x41};
+typedef void(__fastcall* hr_follow_fn)(uint8_t* cam, int player, float x, uint32_t* out);
+static hr_follow_fn g_hr_follow_orig, g_hr_first_orig;
+static bool gr_tp_on;
+static volatile bool gr_tp_ok;                    // (custom) the follow and mode hooks are on (set last, by hr_tp_hook)
+static uint8_t* volatile gr_tp_cam;               // local player 0's camera object (director 0 + 8)
+static uint8_t* volatile gr_tp_body;              // ... its body (on foot, alive)
+static uint8_t* volatile gr_tp_scoped;            // ... its body while a scope has it in first person
+static volatile uint32_t gr_tp_unit = 0xFFFFFFFFu;
+// the third argument is the transition's time, a float in xmm2 (h3.cpp h3_set_fn; here +0xC5834 stores it at director
+// +0x17C, +0xC5D1A)
+typedef char(__fastcall* hr_set_fn)(uint8_t* director, int mode, float time, char force);
+static hr_set_fn g_hr_set_orig;
+static uint8_t* volatile gr_tp_hold;              // director 0 while third person holds, else null
+static volatile uint64_t gr_tp_tick;              // when hr_tp_apply last ran with third person on: a stale hold (the
+                                                  // last match's, its director rebuilt for a new map) is never used
+
+// The scope the player's own input asks for this tick (the unit drops its zoom on a hit while the input still asks, and
+// the game puts it back; the camera went to the shoulder and back, live Nov 17, twice in 40 s): out of the scope only
+// with the unit's zoom down and the action's zoom level (+HR_ACT_ZOOM) no longer asking, or the zoom down for
+// HR_ZOOM_BLIP_MS. With HR_ACT_ZOOM 0 the action is not read and the unit's byte alone decides
+static const int HR_ACT_ZOOM = 0x4A;
+static const uint64_t HR_ZOOM_BLIP_MS = 150;
+static volatile bool gr_tp_asks;
+static volatile uint64_t gr_tp_down_since;
+
+static bool hr_scope_gone(const uint8_t* body) {
+    if ((int8_t)body[HR_UNIT_ZOOM] != -1) { gr_tp_down_since = 0; return false; }
+    uint64_t now = GetTickCount64();
+    if (!gr_tp_down_since) gr_tp_down_since = now;
+    return !gr_tp_asks || now - gr_tp_down_since > HR_ZOOM_BLIP_MS;
+}
+
+// out of the scope on the frame it drops: the switch back (hr_tp_apply) waits for the next tick, which showed a frame
+// of plain first person (one frame, zooming out); so the first person camera's own update puts the following camera in
+// and has it make this frame's view
+static void __fastcall hr_first_hook(uint8_t* cam, int player, float x, uint32_t* out) {
+    __try {
+        uint8_t* body = GetTickCount64() - gr_tp_tick < 250 ? gr_tp_scoped : nullptr;   // (this match's, this second)
+        if (gr_tp_on && body && cam == gr_tp_cam && hr_scope_gone(body) && g_hr_set_orig) {
+            uint8_t* dg = cam - 8;
+            gr_tp_scoped = nullptr;
+            gr_tp_body = body;
+            *(int32_t*)(dg + HR_WANT) = 0;
+            gr_tp_hold = dg;
+            g_hr_set_orig(dg, 0, 0, 0);
+            if (*(uint8_t**)cam == g_hr + HR_CAM_FOLLOW_VTABLE) {   // (now the following camera: its update, slot 2)
+                ((hr_follow_fn)(*(void***)cam)[2])(cam, player, x, out);
+                return;
+            }
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    g_hr_first_orig(cam, player, x, out);
+}
+
+// the game's line test, as its camera keeps itself out of walls (Reach's camera probe FUN_1800CA2C4 calls
+// FUN_18012AFCC(flags, 0, from, to, ignore, ignore, ignore, result), result +4 the share of the way; its flags
+// FUN_1800CB3A0: the global at +0x28B83A8 with 0x100000 low and 0x2985 high). third_person.cpp's crosshair meets the aim
+// where this line stops (bullets on the crosshair at any range). Called only when its first bytes and its body at +0x13
+// read as the decoded build's (gr_line_ok)
+static const uintptr_t HR_LINE = 0x12afcc, HR_LINE_FLAGS = 0x28b83a8;
+static const uint8_t HR_LINE_HEAD[4] = {0x48, 0x83, 0xEC, 0x68};
+static const uint8_t HR_LINE_BODY[12] = {0xF3, 0x41, 0x0F, 0x10, 0x01, 0xF3, 0x41, 0x0F, 0x5C, 0x00, 0x48, 0x8B};   // at +0x13
+typedef char(__fastcall* hr_line_fn)(uint64_t flags, uint64_t zero, const float* from, const float* to, uint32_t a,
+                                     uint32_t b, uint32_t c, void* result);
+static volatile bool gr_line_ok;
+
+static float hr_tp_clear(const float from[3], const float by[3]) {
+    if (!gr_line_ok) return 1;
+    __try {
+        uint64_t g = *(uint64_t*)(g_hr + HR_LINE_FLAGS);
+        uint64_t flags = ((g | 0x100000ull) & 0xFFFFFFFFull) | ((uint64_t)((uint32_t)(g >> 32) | 0x2985u) << 32);
+        float a[3] = {from[0], from[1], from[2]};       // (copies: the game's own camera point is never handed over)
+        float to[3] = {from[0] + by[0], from[1] + by[1], from[2] + by[2]};
+        alignas(16) uint8_t res[0x400] = {};
+        if (!((hr_line_fn)(g_hr + HR_LINE))(flags, 0, a, to, gr_tp_unit, 0xFFFFFFFFu, 0xFFFFFFFFu, res)) return 1;
+        float t = *(float*)(res + 4);
+        return t < 0 ? 0 : t > 1 ? 1 : t;
+    } __except (EXCEPTION_EXECUTE_HANDLER) { gr_line_ok = false; return 1; }
+}
+
+// where the gun's shots start: the first person camera's own eye (FUN_1800C73D4 calls FUN_18048A1C0(unit, out)); called
+// only when its first bytes read as the decoded build's (gr_eye_ok)
+static const uintptr_t HR_UNIT_EYE = 0x48a1c0;
+static const uint8_t HR_UNIT_EYE_HEAD[16] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x08, 0x48, 0x89, 0x70, 0x10, 0x48, 0x89, 0x78, 0x18, 0x55};
+static volatile bool gr_eye_ok;
+
+static void __fastcall hr_follow_hook(uint8_t* cam, int player, float x, uint32_t* out) {
+    g_hr_follow_orig(cam, player, x, out);
+    __try {
+        uint8_t* body = gr_tp_body;
+        if (!gr_tp_on || cam != gr_tp_cam || !body || !(out[0] & 1) || *(uint32_t*)(cam + 8) != gr_tp_unit) return;
+        // the game's own pivot (out +4: the body's head, as drawn each frame) is the eye: the body's tick position (+0x44)
+        // steps 30 times a second under a body drawn smoothly between, and the view shook (Nov 16)
+        float eye[3] = {((float*)out)[1], ((float*)out)[2], ((float*)out)[3]};
+        if (gr_eye_ok) {
+            __try { ((void(__fastcall*)(uint32_t, float*))(g_hr + HR_UNIT_EYE))(gr_tp_unit, eye); }
+            __except (EXCEPTION_EXECUTE_HANDLER) { gr_eye_ok = false; }
+        }
+        tp_view(eye, (const float*)(out + 1), (float*)(out + 0xB), (float*)(out + 4), (float*)(out + 9), 1.0f, hr_tp_clear);
+        tp_up((const float*)(out + 0xB), (float*)(out + 0xE));   // (third_person.cpp tp_up)
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
+// the mode setter: while third person holds (on foot, alive, no scope), the game's own first person calls for the
+// local director (respawn, the director's per-tick pick and the rest of its ~40 callers) give the following camera
+static int gr_tp_logged;
+
+static char __fastcall hr_set_hook(uint8_t* director, int mode, float time, char force) {
+    if (mode == 3 && director && director == gr_tp_hold && GetTickCount64() - gr_tp_tick < 250 &&
+        *(uint8_t**)(director + 8) == g_hr + HR_CAM_FOLLOW_VTABLE) {
+        if (gr_tp_logged < 8) {
+            gr_tp_logged++;
+            logf("reach third person: first person asked by +0x%llx: following kept",
+                 (unsigned long long)((uint8_t*)_ReturnAddress() - g_hr));
+        }
+        mode = 0;
+        time = 0;                                 // into our view at once
+    }
+    return g_hr_set_orig(director, mode, time, force);
+}
+
+static void hr_reticle(uint8_t* tls, uint8_t* o);   // (#65: the reticle smaller on foot with no scope up; o null: put back)
+static void hr_reticle_forget();
+bool bots_panel_tp_reticle();                       // (bots_panel.cpp: the Smaller reticle switch under Third person)
+
+static void hr_tp_apply(uint8_t* tls, const uint8_t* actions) {   // the game thread, each tick (not in a film)
+    if (HR_ACT_ZOOM && (*(const uint32_t*)(actions + 8) & 1)) gr_tp_asks = (int8_t)actions[0x10 + HR_ACT_ZOOM] != -1;   // (player 0's action)
+    uint8_t* dg = *(uint8_t**)(tls + HR_DIRECTORS);
+    gr_tp_hold = nullptr;
+    if (!dg || !gr_tp_ok) return;
+    int mode = *(int32_t*)(dg + HR_MODE_AT);
+    hr_set_fn set = g_hr_set_orig;
+    if (!tp_on()) {
+        if (gr_tp_on) { *(int32_t*)(dg + HR_WANT) = 3; if (mode == 0) set(dg, 3, 0, 0); }   // off: first person (a third person seat puts its own back)
+        gr_tp_on = false;
+        gr_tp_body = gr_tp_scoped = nullptr;
+        hr_reticle(tls, nullptr);
+        return;
+    }
+    gr_tp_on = true;
+    gr_tp_tick = GetTickCount64();
+    tp_keys();
+    uint32_t unit = ((uint32_t(__fastcall*)(int))(g_hr + HR_LOCAL_UNIT))(0);
+    uint8_t* o = hr_object(tls, unit);
+    gr_tp_unit = unit;
+    gr_tp_cam = dg + 8;
+    if (!o || *(uint32_t*)(o + 0x14) != 0xFFFFFFFFu) { gr_tp_body = gr_tp_scoped = nullptr; hr_reticle(tls, nullptr); return; }   // dead, or in a seat
+    gr_tp_body = o;
+    // a scope up: first person (out again: hr_first_hook, that frame); kept through a drop the input did not ask for
+    if ((int8_t)o[HR_UNIT_ZOOM] != -1 || (gr_tp_scoped == o && mode == 3 && !hr_scope_gone(o))) {
+        *(int32_t*)(dg + HR_WANT) = 3;
+        if (mode == 0) set(dg, 3, 0, 0);
+        gr_tp_scoped = o;
+        hr_reticle(tls, nullptr);
+        return;
+    }
+    gr_tp_scoped = nullptr;
+    hr_reticle(tls, bots_panel_tp_reticle() ? o : nullptr);
+    *(int32_t*)(dg + HR_WANT) = 0;           // the camera the director puts back each tick: following
+    gr_tp_hold = dg;
+    if (mode == 3) {
+        set(dg, 0, 0, 0);
+        static int sets;
+        if (sets++ < 4) logf("reach third person: following set, mode now %d", *(int32_t*)(dg + HR_MODE_AT));
+    }
+}
+
+// (custom, Nov 24) a Theater film: nothing of ours on its cameras (its follow and first person views stay the game's)
+static void hr_tp_film() {
+    gr_tp_hold = nullptr;
+    gr_tp_body = gr_tp_scoped = nullptr;
+    if (g_hr) hr_reticle(nullptr, nullptr);       // (#65: the full reticle back)
+}
+
+// (custom, Nov 24) the camera hooks, made from botcore's loop (reach_watch) the first time the switch is seen on for
+// this haloreach.dll: each target's first 16 bytes must read as the decoded build's (the follow update and the mode
+// setter both, else no third person; the first person update on its own, else out of a scope a tick late). Tried once a
+// load: another build of the game is left alone and logged once. Kept on (passing through) when the switch goes off
+static uint8_t* g_hr_tp_mod;                    // the haloreach.dll the camera hooks are on, or null
+static uint8_t* g_hr_tp_tried;                  // the one they were last tried on
+static bool g_hr_tp_first;                      // the first person update's hook is on too
+
+static void hr_tp_unhook() {                    // (the dll reloaded: its old hooks out, our state with them)
+    gr_tp_ok = false;
+    gr_tp_on = false;
+    gr_tp_hold = nullptr;
+    gr_tp_body = gr_tp_scoped = nullptr;
+    hr_reticle_forget();                        // (#65: the old load's tags are gone: nothing written back)
+    gr_tp_cam = nullptr;
+    gr_line_ok = gr_eye_ok = false;
+    if (g_hr_tp_mod) {
+        __try {
+            MH_RemoveHook(g_hr_tp_mod + HR_CAM_FOLLOW_UPDATE);
+            MH_RemoveHook(g_hr_tp_mod + HR_CAM_SET);
+            if (g_hr_tp_first) MH_RemoveHook(g_hr_tp_mod + HR_CAM_FIRST_UPDATE);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+    g_hr_tp_mod = g_hr_tp_tried = nullptr;
+    g_hr_tp_first = false;
+}
+
+static void hr_tp_hook(uint8_t* mod) {
+    if (!mod || g_hr_tp_mod == mod || g_hr_tp_tried == mod || !tp_on()) return;
+    g_hr_tp_tried = mod;
+    __try {
+        gr_line_ok = !memcmp(mod + HR_LINE, HR_LINE_HEAD, sizeof HR_LINE_HEAD) &&
+                     !memcmp(mod + HR_LINE + 0x13, HR_LINE_BODY, sizeof HR_LINE_BODY);   // (the aim's wall test)
+        gr_eye_ok = !memcmp(mod + HR_UNIT_EYE, HR_UNIT_EYE_HEAD, sizeof HR_UNIT_EYE_HEAD);
+        if (memcmp(mod + HR_CAM_SET, HR_CAM_SET_PROLOGUE, sizeof HR_CAM_SET_PROLOGUE) ||
+            memcmp(mod + HR_CAM_FOLLOW_UPDATE, HR_CAM_FOLLOW_PROLOGUE, sizeof HR_CAM_FOLLOW_PROLOGUE)) {
+            logf("reach third person: the cameras are not the decoded build: no third person");
+            return;
+        }
+        if (MH_CreateHook(mod + HR_CAM_FOLLOW_UPDATE, (void*)&hr_follow_hook, (void**)&g_hr_follow_orig) != MH_OK) {
+            logf("reach third person: the follow camera hook was not made: no third person");
+            return;
+        }
+        if (MH_CreateHook(mod + HR_CAM_SET, (void*)&hr_set_hook, (void**)&g_hr_set_orig) != MH_OK) {
+            MH_RemoveHook(mod + HR_CAM_FOLLOW_UPDATE);
+            logf("reach third person: the camera mode hook was not made: no third person");
+            return;
+        }
+        bool first = !memcmp(mod + HR_CAM_FIRST_UPDATE, HR_CAM_FIRST_PROLOGUE, sizeof HR_CAM_FIRST_PROLOGUE) &&
+                     MH_CreateHook(mod + HR_CAM_FIRST_UPDATE, (void*)&hr_first_hook, (void**)&g_hr_first_orig) == MH_OK;
+        if (MH_EnableHook(mod + HR_CAM_FOLLOW_UPDATE) != MH_OK || MH_EnableHook(mod + HR_CAM_SET) != MH_OK) {
+            MH_RemoveHook(mod + HR_CAM_FOLLOW_UPDATE);
+            MH_RemoveHook(mod + HR_CAM_SET);
+            if (first) MH_RemoveHook(mod + HR_CAM_FIRST_UPDATE);
+            logf("reach third person: the camera hooks did not go on: no third person");
+            return;
+        }
+        if (first && MH_EnableHook(mod + HR_CAM_FIRST_UPDATE) != MH_OK) { MH_RemoveHook(mod + HR_CAM_FIRST_UPDATE); first = false; }
+        if (!first) logf("reach third person: first person camera not the decoded build: out of a scope a tick late");
+        g_hr_tp_first = first;
+        g_hr_tp_mod = mod;
+        gr_tp_ok = true;
+        logf("reach third person: camera hooks on (wall test %s, eye %s)", gr_line_ok ? "on" : "off",
+             gr_eye_ok ? "on" : "off");
+    } __except (EXCEPTION_EXECUTE_HANDLER) { gr_tp_ok = false; }
+}
+
+// First person passenger (upstream 0.3.0, build 20261115-0215; passenger_fp.cpp): every vehicle's seat block, its tag's
+// data +0x444 (count) / +0x448 (packed address), 0x12C a seat (his live Boneyard Nov 15, read-only probe: Warthog
+// 04020014 00000870 08001c10 08001c10, Mongoose 00020014 00000170 ..., Scorpion, Ghost, Banshee the same layout). The
+// tag's data: the instance table at haloreach+0xC1A600 (+4 + index * 8: a packed address), unpacked as brain/live.py
+// LiveReach._unpack (bases at +0x4E39F20 by the top 4 bits, plus 4 x the value). (custom, Nov 24, owner: "off by
+// default") off, or in a Theater film, nothing is patched and what was patched is put back
+bool fp_on();
+bool fp_tag_seats(uint8_t* data, int off, int stride, uint32_t keep, uint8_t* (*unpack)(uint32_t), const char* game,
+                  uint32_t key);
+void fp_restore(const char* tag);
+void fp_forget();
+void fp_check(uint8_t* (*seat_at)(uint32_t key, int seat), const char* tag);
+static const uintptr_t HR_TAG_TABLE = 0xC1A600, HR_TAG_BASES = 0x4E39F20;
+static const int HR_SEATS_AT = 0x444, HR_SEAT_STRIDE = 0x12C;
+static uint8_t* hr_unpack(uint32_t v) { return *(uint8_t**)(g_hr + HR_TAG_BASES + 8 * (v >> 28)) + (uint64_t)v * 4; }
+static uint8_t* hr_seat_at(uint32_t tag_index, int seat) {   // (custom, Nov 24: passenger_fp.cpp fp_check) a seat by its tag
+    uint8_t* table = *(uint8_t**)(g_hr + HR_TAG_TABLE);
+    if (!table || tag_index > 0xFFFF || seat < 0) return nullptr;
+    uint8_t* d = hr_unpack(*(uint32_t*)(table + 4 + (size_t)tag_index * 8));
+    int n = *(int32_t*)(d + HR_SEATS_AT);
+    if (n < 1 || n > 16 || seat >= n) return nullptr;
+    return hr_unpack(*(uint32_t*)(d + HR_SEATS_AT + 4)) + (size_t)seat * HR_SEAT_STRIDE;
+}
+static void hr_passenger_fp(uint8_t* tls, uint32_t tick, bool film) {
+    static uint32_t last_tick = 0, next_at = 0;
+    if (tick < last_tick) { fp_check(hr_seat_at, "reach"); next_at = 0; }   // a new match: (custom) only seats still its map's
+    last_tick = tick;
+    if (!fp_on() || film) { fp_restore("reach"); return; }
+    if (tick < next_at) return;
+    next_at = tick + 30;                                      // (every half second: a vehicle that spawns later)
+    uint8_t* hdr = *(uint8_t**)(tls + 0x10);
+    uint8_t* ents = hdr ? *(uint8_t**)(hdr + 0x50) : nullptr;
+    uint8_t* table = *(uint8_t**)(g_hr + HR_TAG_TABLE);
+    if (!ents || !table) return;
+    for (int i = 0, mx = *(int32_t*)(hdr + 0x2C); i < mx; i++) {
+        uint8_t* e = ents + (size_t)i * 0x18;
+        uint8_t* o = *(uint8_t**)(e + 0x10);
+        if (!*(uint16_t*)e || e[4] != 1 || !o) continue;      // vehicles
+        uint32_t tag = *(uint32_t*)o;
+        uint8_t* d = hr_unpack(*(uint32_t*)(table + 4 + (size_t)(tag & 0xFFFF) * 8));
+        fp_tag_seats(d, HR_SEATS_AT, HR_SEAT_STRIDE, 0x0800000Cu, hr_unpack, "reach", tag & 0xFFFF);
+    }
+}
+
+// The aiming reticle smaller in third person (upstream 0.3.0, build 20261117-2300; third_person.cpp tp_chud_shrink):
+// the weapon in hand (unit +0x34A its slot, +0x350 the four handles) names its chud definition in a tag reference of
+// the class chdt. Reach's layout from its kit (ui\chud\assault_rifle): the scripting class a byte at +4, a collection's
+// bitmap widgets at +0x98, a widget's placement data block at +0x38, the anchor a byte at +1 of a placement entry. The
+// two sizes and the two enum values were read on the live game (his logs/tmp/tp12_chud_live.py, Nov 17). (custom, Nov
+// 24, owner: "only while third person is on") called only from hr_tp_apply: on foot with no scope up and the switch
+// under Third person on, else everything is put back
+struct tp_chud_layout { int coll, cls_at, cls_size, bitmaps_at, bitmap, state_at, place_at, anchor_at, anchor_size, cls, anchor; };
+void tp_chud_forget();
+void tp_chud_back();
+void tp_chud_shrink(uint8_t* chud, uint8_t* (*unpack)(uint32_t), const tp_chud_layout& L);
+static const int HR_CHUD_COLL = 0xDC, HR_CHUD_BITMAP = 0x9C, HR_CHUD_CLASS = 2, HR_CHUD_ANCHOR = 17;
+static const tp_chud_layout HR_CHUD = {HR_CHUD_COLL, 4, 1, 0x98, HR_CHUD_BITMAP, -1, 0x38, 1, 1, HR_CHUD_CLASS, HR_CHUD_ANCHOR};
+static uint32_t gr_ret_tags[8];
+static int gr_ret_n;
+static uint8_t* gr_ret_base;
+
+static void hr_reticle_forget() { tp_chud_forget(); gr_ret_n = 0; }   // (the tags are not where they were: unwritten)
+
+static void hr_reticle(uint8_t* tls, uint8_t* o) {
+    uint8_t* base = nullptr;
+    __try { base = *(uint8_t**)(g_hr + HR_TAG_BASES); } __except (EXCEPTION_EXECUTE_HANDLER) { return; }
+    if (base != gr_ret_base) { hr_reticle_forget(); gr_ret_base = base; }
+    if (!o) {
+        if (gr_ret_n) { tp_chud_back(); gr_ret_n = 0; }
+        return;
+    }
+    __try {
+        uint8_t* table = *(uint8_t**)(g_hr + HR_TAG_TABLE);
+        uint8_t cur = o[0x34A];
+        uint8_t* w = cur < 4 ? hr_object(tls, *(uint32_t*)(o + 0x350 + 4 * cur)) : nullptr;
+        if (!w || !table || HR_CHUD_BITMAP <= 0 || HR_CHUD_COLL <= 0) return;
+        uint32_t tag = *(uint32_t*)w;
+        for (int i = 0; i < gr_ret_n; i++) if (gr_ret_tags[i] == tag) return;
+        if (gr_ret_n == 8) { tp_chud_back(); gr_ret_n = 0; }   // (more weapons than the list holds: start over)
+        gr_ret_tags[gr_ret_n++] = tag;
+        uint8_t* def = hr_unpack(*(uint32_t*)(table + 4 + (size_t)(tag & 0xFFFF) * 8));
+        for (int k = 0; k < 0x1800; k += 4) {
+            uint32_t chud = *(uint32_t*)(def + k + 0xC);
+            if (*(uint32_t*)(def + k) != 'chdt' || chud == 0xFFFFFFFFu) continue;
+            tp_chud_shrink(hr_unpack(*(uint32_t*)(table + 4 + (size_t)(chud & 0xFFFF) * 8)), hr_unpack, HR_CHUD);
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
+// (custom, Nov 24) each tick: a new match (the tick count back down) puts the pieces back while the tags are where they
+// were (the same map's tags kept would otherwise be made smaller again at every match and never put back; his dropped
+// the list), and drops the list unwritten when they moved
+static void hr_reticle_tick(uint32_t tick) {
+    static uint32_t last;
+    if (tick < last) hr_reticle(nullptr, nullptr);
+    last = tick;
+}
+
 static int hr_free_slot() {
     for (int i = 0; i < HB_MAX_PLAYERS; i++) if (g_shm->bot_player_index[i] < 0) return i;
     return -1;
@@ -1045,6 +1408,10 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                 hr_run_command(tls);
                 while (film_more(*(uint32_t*)(gg + HR_GG_TICKS))) hr_run_command(tls);   // a film: this tick's others
                 hr_spawn_moves(tls, fr, *(uint32_t*)(gg + HR_GG_TICKS));
+                // (upstream 0.3.0, build 20261115-0215) first person passenger: off, or a film, nothing patched
+                __try { hr_passenger_fp(tls, *(uint32_t*)(gg + HR_GG_TICKS), g_playback != 0); } __except (EXCEPTION_EXECUTE_HANDLER) {}
+                // (upstream 0.3.0, build 20261116-2330) third person, this tick: off, or no hooks, it does nothing
+                __try { hr_reticle_tick(*(uint32_t*)(gg + HR_GG_TICKS)); if (!g_playback) hr_tp_apply(tls, actions); else hr_tp_film(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
                 if (*(uint32_t*)(actions + 8) & 1) {        // player 0's action, for decoding
                     memcpy(g_shm->dbg_action, actions + 0x10, HR_ACTION);
                     g_shm->dbg_seq++;
@@ -1312,10 +1679,13 @@ void reach_watch() {
     bool hooked = false;
     __try { hooked = h3 == g_hr && !memcmp(h3 + HR_PLAYERS_UPDATE, g_hr_patch, 5); }
     __except (EXCEPTION_EXECUTE_HANDLER) { hooked = false; }
+    if (hooked) hr_tp_hook(h3);                       // (custom, Nov 24) third person's camera hooks, once it is on
     if (hooked) return;
     Sleep(500);
     if ((uint8_t*)GetModuleHandleW(L"haloreach.dll") != h3) return;
     if (g_hr) MH_RemoveHook(g_hr + HR_PLAYERS_UPDATE);
+    hr_tp_unhook();                                   // (custom, Nov 24) third person's, if they were on
+    fp_forget();                                      // (custom, Nov 24) the old load's seats are gone with it
     g_hr = h3;
     g_hr_tls_index = tls_index_of(h3);
     for (int i = 0; i < HB_MAX_PLAYERS; i++) g_shm->bot_player_index[i] = -1;
@@ -1328,4 +1698,5 @@ void reach_watch() {
     logf("reach hooks on at haloreach %p: players update +0x%llx, tls index %lu", h3,
          (unsigned long long)HR_PLAYERS_UPDATE, g_hr_tls_index);
     hr_chk_hook(h3);                                  // (netbots=: the log-only check)
+    hr_tp_hook(h3);                                   // (custom, Nov 24) third person's camera hooks, if it is on
 }

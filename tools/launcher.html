@@ -156,6 +156,21 @@
          padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; font: var(--fs-xs)/1.5 var(--font-mono);
          white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
   .log:empty { display: none; }
+  /* (upstream 0.3.0, build 20261117-2300) the Play log folds to one slim line (its name and its last line), so the
+     tools sit right under Play; it opens on Play or on an error line, and the player's own choice is remembered */
+  .playlog { margin-top: var(--s3); display: flex; flex-direction: column; min-width: 0; }
+  button.playlog-toggle { width: calc(100% + 2 * var(--s2)); margin: 0 calc(-1 * var(--s2)); min-height: 32px; padding: 0 var(--s2);
+                          justify-content: flex-start; gap: var(--s2); min-width: 0; }
+  .playlog-toggle .chev { color: var(--text-2); transition: transform .15s; }
+  .playlog-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .playlog-name { flex: none; font: 600 var(--fs-xs)/1.5 var(--font-display); color: var(--text-2); text-transform: uppercase;
+                  letter-spacing: .08em; }
+  .playlog-last { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-xs)/1.5 var(--font-mono);
+                  color: var(--text-3); }
+  .playlog > .log { margin-top: var(--s1); }
+  .playlog > .log:empty { display: block; color: var(--text-3); }
+  .playlog > .log:empty::before { content: "Nothing running yet. PLAY starts MCC with the bots, and what it does shows here."; }
+  .playlog > .log[hidden] { display: none; }
 
   /* setup */
   .setup-intro { margin-bottom: var(--s4); }
@@ -200,7 +215,7 @@
   /* tools: a heading and four tiles (no card around them) */
   .card.tools-sec { background: none; border: 0; padding: 0; }
   .tools-sec .card-head { margin-bottom: var(--s2); }
-  .tools { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tools { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); grid-template-columns: repeat(5, minmax(0, 1fr)); }
   @media (max-width: 900px) { .tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 520px) { .tools { grid-template-columns: minmax(0, 1fr); } }
   .tools li { display: flex; }
@@ -211,6 +226,9 @@
   button.tool:active { background: var(--pressed); }
   .tool-icon { width: 32px; height: 32px; grid-column: 1; grid-row: 1; border-radius: var(--r); display: grid; place-items: center; color: var(--blue);
                background: var(--blue-bg); }
+  /* (upstream 0.3.0) Map Studio's tile: its own badge (installer/map_studio.png) as the icon */
+  .tool-icon.studio { background: none; }
+  .tool-icon.studio img { width: 32px; height: 32px; display: block; }
   .tool .ext { color: var(--text-3); justify-self: end; grid-column: 3; grid-row: 1; }
   button.tool:hover .ext { color: var(--text-2); }
   .tool-text { display: contents; }
@@ -303,6 +321,7 @@
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13"/></symbol>
   <symbol id="i-repair" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3"/><path d="M3.5 4v5h5"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3.5 6.5V20L9 17.5l6 2.5 5.5-2.5V4L15 6.5z"/><path d="M9 4v13.5M15 6.5V20"/></symbol>
 </svg>
 
 <header class="hero">
@@ -316,7 +335,7 @@
 </div>
 
 <main>
-  <section class="card" aria-labelledby="play-h">
+  <section class="card" id="play-card" aria-labelledby="play-h">
     <h2 id="play-h" class="sr-only">Play</h2>
     <ul class="status" id="play-rows" aria-label="Status">
       <li class="stat" id="st-game" data-level="wait"><svg class="i" aria-hidden="true"><use href="#i-wait"/></svg>
@@ -348,7 +367,12 @@
       <input type="checkbox" id="clean" checked>
       <span>Start without those mods this time. They are moved aside and put back when MCC closes.</span>
     </label>
-    <div class="log" id="log-play" aria-live="polite"></div>
+    <div class="playlog">   <!-- (upstream 0.3.0) the Play log, folded to its last line -->
+      <button class="quiet playlog-toggle" id="log-toggle" aria-expanded="false" aria-controls="log-play">
+        <svg class="i sm chev" aria-hidden="true"><use href="#i-chev"/></svg><span class="playlog-name">Play log</span>
+        <span class="playlog-last" id="log-last">Nothing running yet</span></button>
+      <div class="log" id="log-play" aria-live="polite" hidden></div>
+    </div>
   </section>
 
   <div class="col">
@@ -393,6 +417,22 @@
         <span id="mcc-state" class="msg" aria-live="polite"></span>
       </div>
     </details>
+
+    <!-- (upstream 0.3.0, build 20261112-1342) LiDAR scans: (custom, Nov 24) a shared zip picked by hand only, never a
+         download of the author's scans -->
+    <details class="card" id="scans-card">
+      <summary><h2 id="scans-h">LiDAR scans</h2><svg class="i chev" aria-hidden="true"><use href="#i-chev"/></svg>
+        <span class="path">Add a scan someone shared</span></summary>
+      <div class="folder-body">
+        <p class="help">Bots play a map better the more of it is scanned. An imported scan adds to your own; nothing is
+          replaced, and your scan before it is kept beside it. Not while a match is running.</p>
+        <div class="actions">
+          <button id="scan-file"><svg class="i sm" aria-hidden="true"><use href="#i-folder"/></svg>Import a shared zip ...</button>
+          <input id="scan-pick" type="file" accept=".zip" hidden>
+        </div>
+        <span id="scan-state" class="msg" aria-live="polite"></span>
+      </div>
+    </details>
   </div>
 
   <section class="card wide tools-sec" aria-labelledby="tools-h">
@@ -420,6 +460,15 @@
         <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg><span class="chip run">Open</span>
         <span class="tool-text"><span class="tool-name"><span id="n-paint">Paint the nav</span></span>
           <span class="tool-desc" id="d-paint">Advanced: mark where bots may and may not walk on a map.</span></span></button></li>
+      <!-- (upstream 0.3.0, builds 20261117-2100 and 20261120-1620) MCC Map Studio, its own app: found, it opens; not
+           found, Locate ... asks for its folder. (custom, Nov 24) never downloaded or installed from here -->
+      <li id="mapstudio-li"><button class="tool" id="mapstudio" aria-labelledby="n-mapstudio" aria-describedby="d-mapstudio">
+        <span class="tool-icon studio"><img src="/studio.png" alt="" width="32" height="32"
+          onerror="this.hidden = true; this.nextElementSibling.hidden = false"><svg class="i" aria-hidden="true" hidden><use href="#i-map"/></svg></span>
+        <svg class="i sm ext" aria-hidden="true"><use href="#i-ext"/></svg>
+        <span class="tool-text"><span class="tool-name"><span id="n-mapstudio">Map Studio</span>
+          <span class="chip" id="mapstudio-locate" hidden>Locate ...</span></span>
+          <span class="tool-desc" id="d-mapstudio">Build your own maps in MCC Map Studio, its own app.</span></span></button></li>
     </ul>
   </section>
 </main>
@@ -442,6 +491,17 @@
   <div class="actions">
     <button id="uninstall-yes" class="danger">Uninstall</button>
     <button id="uninstall-no">Cancel</button>
+  </div>
+</dialog>
+<!-- (upstream 0.3.0, build 20261119-1831) the terms of use, asked once (TERMS.md; a draft is never asked) -->
+<dialog id="terms" class="notes" aria-labelledby="terms-t" aria-describedby="terms-q">
+  <h2 id="terms-t">Terms of use and disclaimer</h2>
+  <p id="terms-q">Please read these before you use Project Noble. You need to agree once.</p>
+  <div class="notes-body" id="terms-body" tabindex="0"></div>
+  <p id="terms-state" class="msg" aria-live="polite"></p>
+  <div class="actions">
+    <button class="quiet grow" id="terms-no">I don't agree</button>
+    <button class="primary-sm" id="terms-yes">I agree</button>
   </div>
 </dialog>
 <dialog id="notes" class="notes" aria-labelledby="notes-t" aria-describedby="notes-q">
@@ -504,6 +564,11 @@ function render(s) {
   $("mcc-auto").hidden = !s.mcc_choice;
   $("mcc-browse").hidden = s.wine;
   $("uninstall").hidden = !s.installed;
+  // (upstream 0.3.0) Map Studio: a Windows app (no folder picker under Wine); not found, the tile locates it
+  $("mapstudio-li").hidden = !!s.wine;
+  $("mapstudio-locate").hidden = !!s.map_studio;
+  $("d-mapstudio").textContent = s.map_studio ? "Build your own maps in MCC Map Studio, its own app."
+    : "Not found on this PC. Press to choose its folder (the one you unzipped it into is fine).";
 
   const ready = s.setup.filter(x => x[1]).length, total = s.setup.length;
   if (setupBusy) setStatus("setup", "busy", "Working ...", "The first-time setup is running.");
@@ -545,7 +610,8 @@ function render(s) {
 }
 
 async function refresh() {
-  try { render(await (await fetch("/status")).json()); $("banner").textContent = ""; }
+  // (upstream 0.3.0, build 20261114-1215) the banner also says when Windows won't let the mod save in its folder
+  try { const s = await (await fetch("/status")).json(); render(s); $("banner").textContent = s.readonly || ""; }
   catch (e) { $("banner").textContent = "The launcher stopped. Close this window and open Project Noble again."; }
 }
 
@@ -560,11 +626,13 @@ async function follow(task, box, stateEl) {
     from = r.next;
     for (const line of r.lines) {
       $(box).textContent += line + "\n";
+      if (task === "play") playLine(line);
       const m = line.match(/^STEP \d+\/\d+ ([^:]+): (.*)$/);
       if (m) stepNote[m[1]] = m[2].startsWith("working") ? "working" : m[2].startsWith("failed") || m[2].startsWith("skipped") ? m[2] : undefined;
     }
     $(box).scrollTop = $(box).scrollHeight;
     if (!r.running) {
+      if (task === "play" && r.code !== 0) setLog(true);
       setText(stateEl, r.code === 0 ? "Done." : "Stopped with a problem: see the failed step and the log below.", r.code === 0 ? "ok" : "bad");
       break;
     }
@@ -588,11 +656,46 @@ $("mcc-browse").onclick = () => chooseMcc({browse: true});
 $("mcc-auto").onclick = () => chooseMcc({auto: true});
 $("mcc-form").onsubmit = e => { e.preventDefault(); chooseMcc({path: $("mcc-path").value}); };
 
+// (upstream 0.3.0) LiDAR scans: a zip a player shared, added to this PC's scans. (custom, Nov 24) by hand only: no
+// download of the author's scans
+$("scan-file").onclick = () => $("scan-pick").click();
+$("scan-pick").onchange = async () => {
+  const f = $("scan-pick").files[0], b = $("scan-file");
+  $("scan-pick").value = "";
+  if (!f) return;
+  b.disabled = true; b.setAttribute("aria-busy", "true");
+  setText("scan-state", `Adding ${f.name} ...`, "dim");
+  try {
+    const r = await fetch("/lidar/import", {method: "POST", headers: {"X-Launcher": "1", "Content-Type": "application/zip"}, body: f})
+      .then(x => x.json()).catch(() => ({ok: false, message: "No answer from the launcher. Close it and open it again."}));
+    setText("scan-state", r.message, r.ok ? "ok" : "bad");
+  } catch (e) { setText("scan-state", "No answer from the launcher. Close it and open it again.", "bad"); }
+  b.disabled = false; b.setAttribute("aria-busy", "false");
+  refresh();
+};
+
+// (upstream 0.3.0, build 20261117-2300) the Play log folds to one slim line (its name and its last line) so the tools
+// sit right under Play: folded while nothing runs, opened by Play or by a line with an error, and by the player at any
+// time (that choice is remembered)
+function setLog(open, chosen) {
+  $("log-toggle").setAttribute("aria-expanded", open ? "true" : "false");
+  $("log-play").hidden = !open;
+  $("play-card").classList.toggle("log-open", open);
+  if (chosen) try { localStorage.setItem("play-log-open", open ? "1" : "0"); } catch (e) {}
+}
+function playLine(line) {
+  if (line.trim()) $("log-last").textContent = line.trim();
+  if (/\b(error|failed|could not|cannot|problem|traceback)\b/i.test(line)) setLog(true);
+}
+$("log-toggle").onclick = () => setLog($("log-toggle").getAttribute("aria-expanded") !== "true", true);
+try { setLog(localStorage.getItem("play-log-open") === "1"); } catch (e) { setLog(false); }
+
 $("play").onclick = async () => {
   if (state && state.wine) { location.href = "steam://rungameid/976730"; setText("play-state", "Steam starts MCC: choose the anti-cheat off option. The bots load as it starts.", "dim"); return; }
   if (state && !state.mcc) { setText("play-state", "Choose the MCC folder in Game folder first, or install MCC through Steam.", "bad"); $("folder-card").open = true; return; }
   if (state && state.setup.some(x => !x[1])) setText("play-state", "Starting. The first-time setup is not finished, so the 3D bots or pictures may be missing ...", "warn");
   else setText("play-state", "Starting MCC ...", "dim");
+  setLog(true);
   const r = await post("/run/play", {clean: !$("clean-wrap").hidden && $("clean").checked});
   if (!r.ok) { setText("play-state", r.message, "bad"); return; }
   follow("play", "log-play", "play-state");
@@ -621,6 +724,16 @@ for (const b of document.querySelectorAll("[data-task]")) {
     setText("tool-state", r.ok ? `${name}: its window opens in a moment.` : r.message, r.ok ? "dim" : "bad");
   };
 }
+// (upstream 0.3.0) Map Studio is its own app, not part of this download: the launcher looks for it (its own record,
+// its shortcuts, its usual folders) and opens it; not found, the press asks for its folder. (custom, Nov 24) Nothing
+// is downloaded: his "not on this PC: download it" is not here
+async function mapStudioOpen(browse) {
+  setText("tool-state", browse ? "Choose the MCC Map Studio folder in the window that opens ..." : "Opening Map Studio ...", "dim");
+  const r = await post("/mapstudio", browse ? {browse: true} : {});
+  setText("tool-state", r.message || "", r.ok ? "dim" : "bad");
+  refresh();
+}
+$("mapstudio").onclick = () => mapStudioOpen(!(state && state.map_studio));
 $("folder").onclick = () => post("/folder");
 $("docs").onclick = async () => { const r = await post("/docs"); if (r.ok && r.opened === false) window.open(r.url, "_blank"); };
 function askUninstall(open) {
@@ -677,13 +790,16 @@ const laterKey = u => u.latest + " " + (u.latest_build || "");     // (Later hid
 $("updlater").onclick = () => { if (upd) sessionStorage.setItem("upd-later", laterKey(upd)); $("updbar").hidden = true; };
 // what's new: every version and in-place update since the player's copy (updater.news), from the release's docs/UPDATES.md.
 // Its little markdown: #### an update's heading, ### New / Fixed (as **New**), **bold**, - lists (two deep), [links] (out to
-// the repository only, as /open)
-const DOCS = "https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/";
+// the repository only, as /open). (custom, Nov 24) Project Noble's repository: a relative link is our docs/; the original
+// project's own links (its issue numbers in the upstream notes) stay links, as the guide's one credit link
+const REPO = "https://github.com/IEatOreos/ProvingGroundsOreo", UPSTREAM = "https://github.com/AyoItzKye/project-proving-grounds";
+const DOCS = REPO + "/blob/main/docs/";
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function inline(s) {
   return esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, url) => {
     url = /^[a-z]+:/i.test(url) ? url : DOCS + url;
-    return url.startsWith("https://github.com/AyoItzKye/") ? `<a href="${url}" data-url="${url}">${t}</a>` : t;
+    return url.startsWith(REPO + "/") || url.startsWith(UPSTREAM + "/") || url === UPSTREAM
+      ? `<a href="${url}" data-url="${url}">${t}</a>` : t;
   });
 }
 function mdHtml(md) {
@@ -738,7 +854,23 @@ $("updnow").onclick = async () => {
 };
 loadUpdate();
 setInterval(loadUpdate, 2000);
-refresh().then(() => {
+// (upstream 0.3.0, build 20261119-1831) the terms of use (TERMS.md): accepted on the installer's license page, else asked
+// here once before anything runs. (custom) the launcher says when it is a draft: never asked then
+async function askTerms() {
+  let t = { ok: true };
+  try { t = await (await fetch("/terms")).json(); } catch (e) {}
+  if (t.ok) return;
+  $("terms-body").innerHTML = mdHtml(t.text.replace(/^# .*\n/, ""));
+  const d = $("terms");
+  d.addEventListener("cancel", e => e.preventDefault());       // (Escape does not skip them)
+  d.showModal();
+  $("terms-body").focus();
+  await new Promise(done => {
+    $("terms-yes").onclick = async () => { const r = await post("/terms"); if (r.ok) { d.close(); done(); } };
+    $("terms-no").onclick = () => { $("terms-state").textContent = "Project Noble can't be used without agreeing. Close this window, or uninstall it from Windows Settings."; };
+  });
+}
+askTerms().then(refresh).then(() => {
   if (location.search.includes("setup=1") && state && state.mcc && state.setup.some(x => !x[1])) runSetup("setup");
 });
 setInterval(refresh, 3000);

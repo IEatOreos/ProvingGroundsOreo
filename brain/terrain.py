@@ -6,6 +6,7 @@ base roof and the doorway under it are separate places.
 import math
 import re
 import threading
+import weakref
 
 import numpy as np
 
@@ -211,6 +212,14 @@ def vlocked(fn):
         with VLOCK:
             return fn(*a, **k)
     return run
+
+
+# (custom, Nov 24: our own version of upstream 0.3.0's idea, note #40, build 20261119-0039) the vehicle grounds built
+# again on a thread of their own when rides, paint or out of bounds change mid-match (Terrain._vreset, _vfresh): bots
+# drive on the old ground meanwhile and the new one goes in whole. Off (the next drive builds it in the pass, as before):
+# the sims and tests, so a match plays the same every time; tools/live_bots.py turns it on.
+VNAV_LATER = False
+_VJOBS = weakref.WeakKeyDictionary()    # Terrain -> its rebuild under way or done: {"size", "done", "result", ...}
 
 
 _PASS = {"seq": 0}         # the threaded pass under way (brain/threads.Pass.run counts them)
@@ -441,10 +450,95 @@ class Terrain:
     lid_rule = True   # drops into a column whose floor goes on at our own height cost LID_COST (_build_nav; tests: off)
     corner_rule = True   # a diagonal drop between two cells shut at our height costs LID_COST (_build_nav)
 
+    # (upstream 0.3.0, build 20261114-1215) floor under spawn points and teleporter pads / exits (spawn_floor, exit_floor)
+    SPAWN_FLOOR_R, SPAWN_FLOOR_DZ = 10.0, 1.5   # u: people's walk this near a floorless spawn, this far up or down
+    SPAWN_FLOOR_FILL = 2                        # cells round each walked point filled at its height (spawn_floor)
+
+    EXIT_FLOOR_R, EXIT_FLOOR_DZ = 3.0, 1.0      # u: round a teleporter's pad and exit, people's walk is floor
+
+    # (custom, Nov 24) a layout's grid grows (__init__) only to pieces at most GROW_PIECE_R from their origin to their
+    # farthest corner and within GROW_MAX u of the level's edge
+    GROW_PIECE_R, GROW_MAX = 40.0, 300.0
+
+    def exit_floor(s, points, walked):
+        """(upstream 0.3.0, build 20261114-1215) Round each teleporter pad and exit (where the game puts players): the
+        cells people stood on within EXIT_FLOOR_R and EXIT_FLOOR_DZ, as walked floor whatever the level's wall bits say
+        there (_add_floor's cells are walkable in _build_nav). Battle Creek's blue base: the exit's floor read as walled
+        by the frame round it, its neighbours had none, and a bot out of the teleporter stood 25 s by it (live, Nov 14);
+        people walked it 245 times. (custom, Nov 24: the walk as one array, not a Python loop per exit and cell.)"""
+        out = []
+        if not points or not walked:
+            return out
+        w = np.asarray(list(walked), float).reshape(-1, 3) * (0.25, 0.25, 0.1)
+        for p in points:
+            near = ((np.abs(w[:, 0] - p.x) <= s.EXIT_FLOOR_R) & (np.abs(w[:, 1] - p.y) <= s.EXIT_FLOOR_R)
+                    & (np.abs(w[:, 2] - p.z) <= s.EXIT_FLOOR_DZ)
+                    & (np.hypot(w[:, 0] - p.x, w[:, 1] - p.y) <= s.EXIT_FLOOR_R))
+            out += [(float(x), float(y), float(z)) for x, y, z in w[near] if s.inside(x, y)]
+        return out
+
+    def spawn_floor(s, spawns, walked, split=False):
+        """(upstream 0.3.0, build 20261114-1215) Floor the level data lacks where the map spawns players: round each
+        spawn point with no floor within 1 u of its height, the cells people stood on (walked, LiDAR) within
+        SPAWN_FLOOR_R and SPAWN_FLOOR_DZ of it whose own cell has no floor within 0.6 of theirs, and the spawn point
+        itself. A spawn point is the map's own word that a floor is there (Sword Base: 29 spawns on the base's upper
+        floors over cells with no floor at all; people walked them at the spawns' heights; a bot respawned there had no
+        nav under it, the sim's fell to z 0). split (custom, Nov 24): (the walked cells and spawn points, the fill round
+        them) apart, as __init__ forces only the first walkable."""
+        out = []
+        if not spawns or not walked:
+            return (out, []) if split else out
+        by = {}
+        for k in walked:
+            by.setdefault((int(k[0] * 0.25 // 4), int(k[1] * 0.25 // 4)), []).append(k)
+
+        def free(x, y, z, tol):
+            j, i = (int(v) for v in s._ij(np.asarray(x), np.asarray(y)))
+            col = s.floors[:, j, i]
+            fin = col[np.isfinite(col)]
+            return not fin.size or float(np.min(np.abs(fin - z))) > tol
+
+        seen = set()
+        for p in spawns:
+            if not s.inside(p.x, p.y) or not free(p.x, p.y, p.z, 1.0):
+                continue
+            mine, walked_here = [], False
+            n = int(s.SPAWN_FLOOR_R // 4) + 1
+            for bx in range(int(p.x // 4) - n, int(p.x // 4) + n + 1):
+                for bj in range(int(p.y // 4) - n, int(p.y // 4) + n + 1):
+                    for k in by.get((bx, bj), ()):
+                        x, y, z = k[0] * 0.25, k[1] * 0.25, k[2] * 0.1
+                        if (math.hypot(x - p.x, y - p.y) > s.SPAWN_FLOOR_R or abs(z - p.z) > s.SPAWN_FLOOR_DZ
+                                or not s.inside(x, y) or not free(x, y, z, 0.6)):
+                            continue
+                        walked_here = True
+                        if k not in seen:
+                            seen.add(k)
+                            mine.append((x, y, z))
+            if walked_here:         # (nobody walked there: no island of floor under the spawn alone)
+                out += [(p.x, p.y, p.z)] + mine
+        # people's walk is a trail, not a floor: each point fills its cell's neighbours within SPAWN_FLOOR_FILL cells at
+        # its height (no floor near it there), so the trail becomes floor a body walks on (Sword Base's deck: a trail
+        # of single cells left two spawns with no way off)
+        fill = int(s.SPAWN_FLOOR_FILL)
+        filled = {}
+        for x, y, z in out:
+            for dx in range(-fill, fill + 1):
+                for dy in range(-fill, fill + 1):
+                    if dx * dx + dy * dy > fill * fill:
+                        continue
+                    qx, qy = x + dx * s.cell, y + dy * s.cell
+                    key = (round(qx / s.cell), round(qy / s.cell))
+                    if key not in filled and s.inside(qx, qy) and free(qx, qy, z, 0.6):
+                        filled[key] = (qx, qy, z)
+        return (out, list(filled.values())) if split else out + list(filled.values())
+
     def __init__(s, npz_path, bases, extra_floor=(), blocks=(), slit_rule=False, window=None, stair_rule=False,
-                 walked=None, lifts=()):
+                 walked=None, lifts=(), spawns=(), exits=()):
         # walked: cells people stood on (LiDAR walk keys, maps.terrain people_walked): a low ceiling over floor nobody
         # walked is no floor (_low_ceiling). lifts: gravity lifts' base markers (x, y, z): no drop into their columns
+        # spawns, exits: where the game puts players (spawn points; teleporter pads and exits): people's walk round
+        # them is floor (spawn_floor, exit_floor; upstream 0.3.0, build 20261114-1215)
         s.walked_cells = walked
         s.lift_pads = [tuple(p[:3]) for p in lifts]
         # slit_rule: no drops into slits no body fits (_build_nav). Reach only: a crack rule on Halo CE cut real drops
@@ -460,17 +554,48 @@ class Terrain:
         h, w = top.shape
         s.full = (s.x0, s.y0, s.x0 + w * s.cell, s.y0 + h * s.cell)
         cj, ci = slice(0, h), slice(0, w)
+        pad = ((0, 0), (0, 0))                         # cells added before / after the level's grid (rows, columns)
         if window is not None:
-            i0, i1 = max(0, int((window[0] - s.x0) / s.cell)), min(w, int(math.ceil((window[2] - s.x0) / s.cell)))
-            j0, j1 = max(0, int((window[1] - s.y0) / s.cell)), min(h, int(math.ceil((window[3] - s.y0) / s.cell)))
+            # (upstream 0.3.0, builds 20261115-0350 and 20261116-2330) a layout built past the level's grid (the
+            # heightmap's extent) gets the grid grown out to its pieces there (within its window), the new cells as the
+            # level's own no-data cells (as its open sea and sky inside the grid), and its pieces' floors go in them
+            # (add_faces). Before, the grid stopped at the level's edge and every piece beyond it was lost (his GitHub
+            # #33, Halo 4's Onyx layout on Forge Island, built west of the heightmap: bots stood still all match).
+            # Only out to the PIECES, never the whole window: stray objects stretch a layout's window far out
+            # (Solitary's to 5,500 u a side) and the grid grown to it took minutes to build before every match (his
+            # GitHub #34, Reach). (custom, Nov 24) The window is ours, cut to the play area (maps.load_map,
+            # variants.play_limit), so the growth stops there too. And no growth for a piece over GROW_PIECE_R (the sky's
+            # warships, placed in the layout: Condemned's corvette and frigate 170 and 95 u, Anchor 9's frigates 99 u;
+            # the biggest other piece in any of our layouts is under 17) or past GROW_MAX from the level's edge: such a piece is left off, as
+            # before, not grown to (Condemned's ships would have grown its grid from 51 u a side to 720 by 660)
+            ext = s.full
+            for b in blocks or ():
+                r = max(math.hypot(*b[2]), math.hypot(*b[3]))
+                if r > s.GROW_PIECE_R:
+                    continue
+                r += 2.0
+                bx = (b[0][0] - r, b[0][1] - r, b[0][0] + r, b[0][1] + r)
+                if (bx[0] < s.full[0] - s.GROW_MAX or bx[1] < s.full[1] - s.GROW_MAX or bx[2] > s.full[2] + s.GROW_MAX
+                        or bx[3] > s.full[3] + s.GROW_MAX):
+                    continue
+                ext = (min(ext[0], bx[0]), min(ext[1], bx[1]), max(ext[2], bx[2]), max(ext[3], bx[3]))
+            win =(max(window[0], ext[0]), max(window[1], ext[1]), min(window[2], ext[2]), min(window[3], ext[3]))
+            i0, i1 = math.floor((win[0] - s.x0) / s.cell), int(math.ceil((win[2] - s.x0) / s.cell))
+            j0, j1 = math.floor((win[1] - s.y0) / s.cell), int(math.ceil((win[3] - s.y0) / s.cell))
             if i0 < i1 and j0 < j1:
-                cj, ci = slice(j0, j1), slice(i0, i1)
+                pad = ((max(0, -j0), max(0, j1 - h)), (max(0, -i0), max(0, i1 - w)))
+                cj, ci = slice(max(0, j0), min(h, j1)), slice(max(0, i0), min(w, i1))
                 s.x0, s.y0 = s.x0 + i0 * s.cell, s.y0 + j0 * s.cell
-        cut = np.ascontiguousarray                     # (a copy only when cut down: the whole level's arrays go)
-        s.top = np.nan_to_num(top[cj, ci], nan=1e3)  # outside the level counts as a wall
-        s.low = cut(d["low"][cj, ci])
-        s.floors = cut(d["floors"][:, cj, ci])        # (L, h, w) walkable floor levels per cell, lowest first
-        s.walls = cut(d["walls"][cj, ci])             # per cell: bit k = a steep face at wall_z0 + k * wall_bin
+                s.full = (min(s.full[0], win[0]), min(s.full[1], win[1]), max(s.full[2], win[2]), max(s.full[3], win[3]))
+
+        def cut(a, fill, lead=0):                      # (a copy only when cut down or grown: the whole level's arrays go)
+            if pad == ((0, 0), (0, 0)):
+                return np.ascontiguousarray(a)
+            return np.pad(a, ((0, 0),) * lead + pad + ((0, 0),) * (a.ndim - lead - 2), constant_values=fill)
+        s.top = np.nan_to_num(cut(top[cj, ci], np.nan), nan=1e3)  # outside the level counts as a wall
+        s.low = cut(d["low"][cj, ci], np.nan)
+        s.floors = cut(d["floors"][:, cj, ci], np.nan, lead=1)   # (L, h, w) walkable floor levels per cell, lowest first
+        s.walls = cut(d["walls"][cj, ci], 0)          # per cell: bit k = a steep face at wall_z0 + k * wall_bin
         s.wall_z0, s.wall_bin = float(d["wall_z0"]), float(d["wall_bin"])
         s.h, s.w = s.top.shape
         s.window = (s.x0, s.y0, s.x0 + s.w * s.cell, s.y0 + s.h * s.cell)
@@ -483,6 +608,14 @@ class Terrain:
         s.slope = None            # (L, h, w) a ramp floor's slope, rise over run (add_faces); None: no ramps placed
         s.piece = None            # (L, h, w) the floor level is a placed piece's (add_faces); None: none placed
         s.blocks = s.add_blocks(blocks)
+        # (upstream 0.3.0, build 20261114-1215) people's walk round spawn points and teleporter pads / exits as floor.
+        # (custom, Nov 24) After the layout's pieces, not before as his: a Forge layout's pieces are its floor, and
+        # read before them every spawn on a piece had "no floor" (The Cage: 10,864 cells of people's walk forced
+        # walkable through its pieces' walls). And the fill round people's walk is floor the walls still judge; only
+        # the cells people stood on, the spawn points and the exits' cells are walkable whatever the wall bits say.
+        walk_sp, fill_sp = s.spawn_floor(spawns, walked, split=True)
+        s._add_floor(walk_sp + s.exit_floor(exits, walked), more=True)
+        s._add_floor(fill_sp, more=True, forced=False)
         s._build_nav()
         s._fields = FieldCache()     # (custom, Nov 23: its clear() counts the nav's weight changes, tools/field_pool.py)
 
@@ -630,7 +763,13 @@ class Terrain:
         start = np.r_[True, q_c[1:] != q_c[:-1]]
         cum = np.cumsum(np.r_[False, np.diff(q_z) >= LAYER_GAP] & ~start)
         level = cum - cum[np.nonzero(start)[0]][np.cumsum(start) - 1]
-        last = np.r_[(q_c[1:] != q_c[:-1]) | (level[1:] != level[:-1]), True]
+        # (upstream 0.3.0, build 20261115-0350) no surface left at all, every one buried (his GitHub #33, Halo 4's Onyx
+        # layout on Forge Island: the brain stopped here before the match and no bot moved). (custom, Nov 24: as no
+        # levels too, not his one-level stand-in, so nothing leans on numpy's empty-mask leniency)
+        if len(q_c):
+            last = np.r_[(q_c[1:] != q_c[:-1]) | (level[1:] != level[:-1]), True]
+        else:
+            level, last = np.zeros(0, int), np.zeros(0, bool)
         need = int(level.max()) + 1 if len(level) else 0
         if need > s.floors.shape[0]:
             grow = (need - s.floors.shape[0],) + s.floors.shape[1:]
@@ -733,12 +872,17 @@ class Terrain:
             return (np.zeros(0, int),) * 3 + (np.zeros(0),)
         return tuple(np.concatenate(v) for v in zip(*out))
 
-    def _add_floor(s, cells):
+    def _add_floor(s, cells, more=False, forced=True):
         """Floor people walked that the level data lacks, reviewed and approved (tools/review_moves.py,
         maps/<map>/moves_review.json: crate tops, ledges, rails): each (x, y, z) becomes a floor level of its
-        cell unless the cell has one within 0.3 already; a cell with no free level adds one for all."""
-        s.walked_ok = [tuple(c) for c in cells if s.inside(c[0], c[1])]
-        for x, y, z in s.walked_ok:
+        cell unless the cell has one within 0.3 already; a cell with no free level adds one for all.
+        (custom, Nov 24) more: added to the cells already given (spawn_floor, exit_floor), not in their place. forced:
+        the cells are walkable whatever the wall bits say (s.walked_ok, _build_nav); False: floor only. A placed piece's
+        ramp slope and piece mark (s.slope, s.piece, add_faces) stay with their own floor levels."""
+        cells = [tuple(c) for c in cells if s.inside(c[0], c[1])]
+        if forced or not more:
+            s.walked_ok = (list(s.__dict__.get("walked_ok", ())) if more else []) + (cells if forced else [])
+        for x, y, z in cells:
             j, i = (int(v) for v in s._ij(np.asarray(x), np.asarray(y)))
             col = s.floors[:, j, i]
             fin = col[np.isfinite(col)]
@@ -749,11 +893,20 @@ class Terrain:
                 if abs(float(col[l]) - z) > 0.02:
                     s.floors[l, j, i] = z
                 continue
+            lv = np.nonzero(np.isfinite(col))[0]          # (its levels, before the column is written again)
             if fin.size == s.floors.shape[0]:
                 s.floors = np.concatenate([s.floors, np.full((1,) + s.floors.shape[1:], np.nan, s.floors.dtype)])
-            vals = np.sort(np.append(fin, z))
+                if getattr(s, "slope", None) is not None:
+                    s.slope = np.concatenate([s.slope, np.zeros((1,) + s.slope.shape[1:], s.slope.dtype)])
+                    s.piece = np.concatenate([s.piece, np.zeros((1,) + s.piece.shape[1:], bool)])
+            vals = np.append(fin, z)
+            order = np.argsort(vals, kind="stable")
             s.floors[:, j, i] = np.nan
-            s.floors[:len(vals), j, i] = vals
+            s.floors[:len(vals), j, i] = vals[order]
+            if getattr(s, "slope", None) is not None:      # (custom, Nov 24: after the pieces, spawn_floor)
+                sl, pc = np.append(s.slope[lv, j, i], 0.0), np.append(s.piece[lv, j, i], False)
+                s.slope[:, j, i], s.piece[:, j, i] = 0.0, False
+                s.slope[:len(vals), j, i], s.piece[:len(vals), j, i] = sl[order], pc[order]
 
     def inside(s, x, y):
         """Is (x, y) in this terrain's window (the whole level unless a map variant's area: brain/variants.py)? Things
@@ -2501,9 +2654,87 @@ class Terrain:
 
     @vlocked
     def _vreset(s):
-        """The vehicle ground of every size to be built again (paint, rides, out of bounds changed)."""
-        s.__dict__.pop("graph_v", None)
-        s.__dict__.pop("_vstore", None)
+        """The vehicle ground of every size to be built again (paint, rides, out of bounds changed). (custom, Nov 24)
+        With VNAV_LATER on, each size that has a ground keeps it, marked stale (s._vstale): its next drive starts its
+        rebuild off the pass (_vfresh). Off, or a size not built yet: built on its next drive, in the pass."""
+        if not VNAV_LATER:
+            s.__dict__.pop("graph_v", None)
+            s.__dict__.pop("_vstore", None)
+            return
+        have = {k for k, d in s.__dict__.get("_vstore", {}).items() if d.get("graph_v") is not None}
+        if s.__dict__.get("graph_v") is not None:
+            have.add(s.__dict__.get("_vsize", "car"))
+        s.__dict__.setdefault("_vstale", set()).update(have)
+
+    def _vready(s):
+        """(custom, Nov 24) The ground in use (use_vground) ready to drive on: built now if it never was (in the pass, as
+        before), else a stale one's rebuild started or, done, swapped in (_vfresh). Under VLOCK (vnav, drive_clear)."""
+        if getattr(s, "graph_v", None) is None:
+            job = _VJOBS.get(s)
+            if job is not None and job["lz"] is not s.__dict__.get("lz"):
+                _VJOBS.pop(s, None)                       # (a grown terrain swapped in since: maps.swap)
+            s._build_vnav()
+            s.__dict__.get("_vstale", set()).discard(s.__dict__.get("_vsize", "car"))
+        else:
+            s._vfresh()
+
+    # (custom, Nov 24) a ground rebuilt off the pass, done during a threaded pass, goes in at the next pass (every bot of a
+    # pass drives on one ground, whichever thread asked first); with one thread at the next drive
+    def _vfresh(s):
+        """(custom, Nov 24; our own version of upstream 0.3.0's idea, note #40) The vehicle ground in use, stale since
+        rides, paint or out of bounds changed (_vreset): its rebuild started on a thread of its own from a shallow copy
+        of this terrain (_vbuild_job), the old ground driven on meanwhile; done, the new one swapped in whole, with the
+        wedge marks made since it started (vwedge). One rebuild at a time per terrain, so never two of one size; the
+        other size waits for its own next drive. A grown terrain swapped in meanwhile (maps.swap): the rebuild is
+        dropped. Under VLOCK."""
+        size = s.__dict__.get("_vsize", "car")
+        job = _VJOBS.get(s)
+        if job is not None and job["done"]:
+            if job["lz"] is not s.__dict__.get("lz") or job["result"] is None:
+                _VJOBS.pop(s, None)                       # (a grown terrain since, or the build failed: dropped)
+            elif not (THREADS and _PASS["seq"] <= job["seq"]):
+                res = job["result"]
+                marks = s.__dict__.get("vwedges", [])
+                s._vwedge_apply(res, marks[job["marks"]:])   # (wedged while it was built)
+                if job["size"] == size:
+                    for k in s.VGROUND_KEYS:
+                        s.__dict__.pop(k, None)
+                    s.__dict__.update(res)
+                else:                                     # (the other size's, kept for its next drive: use_vground)
+                    s.__dict__.setdefault("_vstore", {})[job["size"]] = res
+                _VJOBS.pop(s, None)
+        stale = s.__dict__.get("_vstale")
+        if stale and size in stale and _VJOBS.get(s) is None:
+            stale.discard(size)
+            s._vbuild_job(size)
+
+    def _vbuild_job(s, size):
+        """(custom, Nov 24) Size's ground built on a thread of its own (_vfresh): from a shallow copy of this terrain
+        taken now, its own lists of wedge marks, so nothing the pass reads is changed or half-built."""
+        import copy
+        sh = copy.copy(s)
+        for k in s.VGROUND_KEYS + ("_vstore", "_vstale", "_vblock_cache", "_vblock_ids", "_owner_nodes"):
+            sh.__dict__.pop(k, None)
+        sh._vsize = size
+        marks = list(s.__dict__.get("vwedges", []))
+        sh.vwedges, sh.vwedge_nodes = marks, set(s.__dict__.get("vwedge_nodes", ()))
+        job = {"size": size, "done": False, "result": None, "lz": s.__dict__.get("lz"), "marks": len(marks), "seq": 0}
+        _VJOBS[s] = job
+
+        def run():
+            import time as _t
+            t0 = _t.perf_counter()
+            try:
+                sh._build_vnav()
+                job["result"] = {k: sh.__dict__[k] for k in ("graph_v", "graph_v_to", "vroomy", "_vfields")}
+                job["ms"] = (_t.perf_counter() - t0) * 1000
+            except Exception as e:                    # (the old ground stays; built again when next stale)
+                print(f"vehicle ground ({size}) not rebuilt: {type(e).__name__}: {e}", flush=True)
+            finally:
+                job["seq"] = _PASS["seq"]
+                job["done"] = True
+        job["thread"] = threading.Thread(target=run, name=f"vehicle-ground-{size}", daemon=True)
+        job["thread"].start()
 
     @vlocked
     def vwedge(s, p, yaw):
@@ -2695,8 +2926,7 @@ class Terrain:
         vehicle's ground (painted drive cells run by walls). far when nothing is in the way or the line leaves the grid.
         big: a tank's ground (use_vground)."""
         s.use_vground(big)
-        if getattr(s, "graph_v", None) is None:
-            s._build_vnav()
+        s._vready()                              # (custom, Nov 24: built, or a stale one rebuilt off the pass)
         if not s.inside(p.x, p.y):
             return far
         start = s._node(p)
@@ -2732,8 +2962,7 @@ class Terrain:
         or the walking answer where the vehicle's ground does not reach (off it; no way on it: see below). big: a
         tank's ground (use_vground)."""
         s.use_vground(big)
-        if getattr(s, "graph_v", None) is None:
-            s._build_vnav()
+        s._vready()                              # (custom, Nov 24: built, or a stale one rebuilt off the pass)
         if math.hypot(b.x - a.x, b.y - a.y) < 4.0:
             return b
         l, j, i = s._node(a)

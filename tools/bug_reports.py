@@ -115,6 +115,7 @@ def attach_new(t0, now, snap, map_name, trace, trace_path, bots, critic_path=Non
         if trace is not None:
             catch_up(trace_path, os.path.join(folder, "trace.jsonl"))   # the one copy, up to now
         _critique(folder, critic_path)
+        _brain_log(folder)
         shutil.rmtree(single, ignore_errors=True)
         done.append(stamp)
     return done
@@ -159,6 +160,20 @@ def catch_up(src, dst):
             shutil.copyfileobj(f, g, 1 << 20)
 
 
+BRAIN_LOG = os.path.join(ROOT, "logs", "brain.txt")   # the running brain's own output (native/botcore.cpp start_brain)
+
+
+def _brain_log(folder):
+    """The bots' log (BRAIN_LOG: this match's, the brain writing it is the one filing) next to the reports, so a report
+    shows what the brain said (a slow start, a failed tick; his Discord reports Nov 20 had none). (upstream 0.3.0, build
+    20261120-1620)"""
+    if os.path.exists(BRAIN_LOG):
+        try:
+            shutil.copyfile(BRAIN_LOG, os.path.join(folder, "brain.txt"))
+        except OSError:
+            pass
+
+
 def _critique(folder, critic_path):
     """The AI director critic's notes on this match (brain/critic.py, faults named by docs/BAD_AI_BEHAVIORS.md IDs) next
     to the reports: critique.jsonl, and critique.md once the match is over."""
@@ -178,6 +193,7 @@ def finish(trace_path, critic_path=None):
     if os.path.exists(os.path.join(folder, "reports.json")):
         catch_up(trace_path, os.path.join(folder, "trace.jsonl"))
         _critique(folder, critic_path)
+        _brain_log(folder)                       # (upstream 0.3.0, build 20261120-1620)
 
 
 def migrate():

@@ -10,9 +10,9 @@ first (Pass(workers=1) runs the same held-back pass on one thread: the reference
 tools/test_threads.py):
 - the Terrain's learning (learn_stuck, learn_blocked, learn_shot_through), as upstream's;
 - the team tables bots post to and read (brain/bot.py TEAM_SIGHTINGS, TEAM_EYES, TEAM_FACING, TEAM_TARGETS,
-  TEAM_CRACKED, TEAM_ATTACKERS, TEAM_SPACE; BOT_PROFILES, DEAD_SPOTS) and the map's vehicle duds (Bot.duds): a bot reads
-  the pass's start plus its own writes (one more than upstream's: "I claimed this spot" holds within its think), the
-  others' only after the pass;
+  TEAM_CRACKED, TEAM_ATTACKERS, TEAM_SPACE; BOT_PROFILES, DEAD_SPOTS, AT_WHEEL) and the map's vehicle duds (Bot.duds): a
+  bot reads the pass's start plus its own writes (one more than upstream's: "I claimed this spot" holds within its
+  think), the others' only after the pass;
 - what the bots learn as they play: Noble's hit book (brain/noble.py Book.add), Noble's habits (brain/noble_habits.py
   add_sight, add_escape, add_dodge), the map's lore of jumps (brain/lore.py Lore.add_jump).
 Shared caches are made safe where they live: the route-field caches (brain/terrain.py cached_field / keep_field, a
@@ -27,7 +27,7 @@ from . import terrain as termod
 
 LEARNS = ("learn_stuck", "learn_blocked", "learn_shot_through")
 NESTED = ("TEAM_SIGHTINGS", "TEAM_EYES", "TEAM_FACING", "TEAM_TARGETS", "TEAM_CRACKED", "TEAM_ATTACKERS", "TEAM_SPACE")
-FLAT = ("BOT_PROFILES", "DEAD_SPOTS")
+FLAT = ("BOT_PROFILES", "DEAD_SPOTS", "AT_WHEEL")   # (AT_WHEEL: upstream 0.3.0 note #32a, Nov 24)
 _who = threading.local()          # the player's place in the pass on this thread: the order held-back writes go in
 _GONE = object()
 

@@ -21,6 +21,9 @@ from memread import Game  # noqa: E402
 PLAYERS_PTR, OBJECT_HEADERS_PTR, OBJECT_POOL_PTR, TAGS_PTR = 0x1C40480, 0x1C42248, 0x2D9CDF8, 0x2D9CE10
 TAG_BASE = 0x50000000
 NONE = 0xFFFFFFFF
+# Reach Firefight: an AI unit with the game's destroyed bit set is dead whatever its damage field reads (GitHub #29).
+# False: the damage field alone, as before (upstream 0.3.0, build 20261114-0323)
+AI_DEAD_BIT = True
 # tag file name -> the brain's weapon name (others keep their file name, spaces as underscores)
 WEAPON_ALIAS = {"sniper_rifle": "sniper", "rocket_launcher": "rockets", "plasma_cannon": "fuelrod",
                 "mp_needler": "needler", "energy_sword": "sword",
@@ -113,6 +116,16 @@ def one_flag_owner(flag, players, state):
     return state["team"] if state["team"] is not None else flag["team"]
 
 
+def inscribed(c, corners):
+    """A King hill drawn by its corner markers (CE's hill flags, Halo 2's "King Hill <n>"): the radius of the circle
+    inside it, the corners' mean distance from the middle times cos(pi / n), as for a regular n-gon. The farthest corner
+    took in the ring outside it: live Halo 2 Lockout Team King Nov 14, the HUD's 20-1 held read 14-0 at its 2.22 u
+    (both teams in it 84 of 102 s), its 1.91 u inside lies between 1.5 u's 31 and 2.0 u's 16. (upstream 0.3.0, build
+    20261114-1215; CE and Halo 2 only)"""
+    ds = [math.dist(c[:2], p[:2]) for p in corners]
+    return sum(ds) / len(ds) * math.cos(math.pi / max(3, len(ds)))
+
+
 class Live:
     # the unit's desired zoom byte (0xFF none, 0 first level, 1 second), for the trace's "uz" (tools/live_bots.py
     # unit_zoom): CE +0x301 (ghidra/ce_uc.c line 65); Halo 2 +0x255 and Halo 3 +0x299 below; None: not decoded
@@ -188,19 +201,27 @@ class Live:
 
     def vehicle_dead(s, handle):
         """A wreck: the game's destroyed bit (DEAD_AT) where decoded. Else (CE) a vehicle whose body field read 0 after it
-        was read alive this match, so a field that reads 0 from the start keeps every vehicle usable."""
+        was read alive this match, so a field that reads 0 from the start keeps every vehicle usable. In every game a
+        vehicle read alive and then at 0 or below stays a wreck for the match: Halo 2's destroyed bit stays clear on a
+        burning Warthog whose health went to -0.8 and crept back to 0.25, and bots got in it (live Street Sweeper,
+        Nov 20: 11 boardings of such Warthogs, seen in its film). (upstream 0.3.0, build 20261120-1802) Both sets live on
+        this reader, and live_bots makes a new reader every match (play.py starts it per match), so no wreck carries
+        over into the next match; a vehicle respawned in the match is a new handle (its salt)."""
+        wrecked = s.__dict__.setdefault("_veh_wrecked", set())
+        if handle in wrecked:
+            return True
+        left = s.vehicle_left(handle)
+        seen = s.__dict__.setdefault("_veh_alive", set())
+        if left is not None and math.isfinite(left):
+            if 0.02 < left <= 1.5:
+                seen.add(handle)
+            elif left <= 0.0 and handle in seen:
+                wrecked.add(handle)
+                return True
         if s.DEAD_AT is not None:
             o = s.object(handle)
             return bool(o) and bool(s.g.read(o + s.DEAD_AT, 1)[0] & 4)
-        left = s.vehicle_left(handle)
-        if left is None:
-            return False
-        seen = s.__dict__.setdefault("_veh_alive", set())
-        if not math.isfinite(left) or left > 0.02:
-            if math.isfinite(left) and left <= 1.5:
-                seen.add(handle)
-            return False
-        return handle in seen
+        return left is not None and math.isfinite(left) and left <= 0.02 and handle in seen
 
     def vehicle_left(s, handle):
         """The health left in a vehicle's body (HEALTH_BLOCK, else the VEH_VITAL field), None without its object."""
@@ -248,10 +269,21 @@ class Live:
     def engine(s):
         return struct.unpack("<i", s.g.read(s.g.base + s.VARIANT + 0x30, 4))[0]
 
+    def teams_on(s):
+        """The running variant is a team game (+0x34 nonzero); free for all: False. (upstream 0.3.0, build
+        20261114-0323)"""
+        return struct.unpack("<i", s.g.read(s.g.base + s.VARIANT + 0x34, 4))[0] != 0
+
     # an object's parent (what it rides, its holder): +0xD8, the field players() reads for the vehicle a unit rides. The
     # vehicle list's default (+0x14) is another field in CE: live Blood Gulch Race, all 8 race vehicles read 0x2CDD1E..
     # there and were left out as guns riding something, so no bot ever took one; +0xD8 read NONE on all 8 and on 5 guns
     PARENT_AT = 0xD8
+    # (upstream 0.3.0, build 20261115-0215) an object's facing and up vectors: +0x30 and +0x3C, after its position
+    # (+0x18) and velocity (+0x24), as players() reads a biped's facing (INFERRED for vehicles: unread before his Nov 14).
+    # A bot walked to a Warthog's middle, CE seated it by where it stood, seemingly often the passenger's seat, and it sat
+    # "driving" a Warthog that never moved (tools/live_bots.py vehicle_fwd checks they are unit vectors, square to each
+    # other, before it trusts them). CE only: LiveH2 sets None, so Halo 2, Halo 3, ODST and Reach read as before
+    ORIENT_AT = 0x30
 
     def race_type(s):
         """Race's type: 0 normal (in order), 1 any order, 2 flag rally; the variant's game type options at +0x7C (MCC's
@@ -278,6 +310,9 @@ class Live:
         limit, tlimit = struct.unpack_from("<i", v, 0x58)[0], struct.unpack_from("<i", v, 0x78)[0]
         ticks = struct.unpack("<i", s.g.read(s.g.base + s.GAME_TICKS, 4))[0]
         left = max(0.0, (tlimit - ticks) / 30.0) if tlimit > 0 else None
+        if engine in (3, 4):        # Oddball / King: minutes (Team King reads 2, its rules "Score to Win 2 Minutes";
+            limit *= 60             # Team Oddball's 2 ended at 2:00 of ball time, live Battle Creek Nov 14): seconds
+                                    # (upstream 0.3.0, build 20261114-1215)
         score = {}
         if engine == 2:
             sc = struct.unpack("<32i", s.g.read(s.g.base + s.SLAYER, 128))
@@ -295,8 +330,8 @@ class Live:
         if not 0 < n <= 12:
             return None
         c = struct.unpack_from("<3f", b, 0xF4)
-        r = max(math.dist(c[:2], struct.unpack_from("<2f", b, 4 + 12 * k)) for k in range(n))
-        return c, r
+        # (upstream 0.3.0, build 20261114-1215) the circle inside its corners, not round the farthest one (inscribed)
+        return c, inscribed(c, [struct.unpack_from("<2f", b, 4 + 12 * k) for k in range(n)])
 
     def balls(s, players):
         """Oddball: [{pos, carrier}] from ball weapon objects (carried = in an inventory). Halo 2 too (its tag names,
@@ -338,12 +373,18 @@ class Live:
         """[{index, name, team, unit, pos, fwd, aim, health, shield, weapon}] per player slot in use (pos None = dead)."""
         base, mx, size = s._array(PLAYERS_PTR)
         out = []
+        # free for all: every player his own side whatever team number the lobby left him (a Rocket Slayer free for all
+        # on Hang 'Em High had its bots on red and blue, each seeing only the other team's eight: same-team bots never
+        # fought, Nov 13); the person keeps index 0's side as before (upstream 0.3.0, build 20261114-0323)
+        ffa = not s.teams_on()
         for i in range(mx):
             p = base + i * size
             if not struct.unpack("<H", s.g.read(p, 2))[0]:
                 continue
             b = s.g.read(p, 0x68)
             unit, team = struct.unpack_from("<I", b, 0x64)[0], struct.unpack_from("<i", b, 0x4C)[0]
+            if ffa:
+                team = i
             name = b[0x20:0x40].decode("utf-16-le", "replace").partition(chr(0))[0]
             o = s.object(unit)
             d = dict(index=i, name=name, team=team, unit=unit, pos=None, fwd=None, aim=None, vehicle=-1, health=0.0, shield=0.0,
@@ -374,6 +415,7 @@ class LiveH2(Live):
     parent, +0x64 position, +0x70 body forward; unit +0x168 aiming vector, +0xEC health (of 45),
     +0xF0 shield (of 70), +0x226 primary weapon index, +0x22C 4 weapon handles. Tag names: [halo2+0x15E4B68] int32 offsets by
     tag index into the names buffer at [halo2+0x15E4B78]."""
+    ORIENT_AT = None       # (CE's; here the facing follows the position, POS_AT: tools/live_bots.py vehicle_fwd)
     UNIT_ZOOM = 0x255      # the unit's desired zoom byte (found live with tools/zoom_probe.py --scan)
     VEH_VITAL = (0xEC, False)   # (Live.vehicle_left: the unit health field players() reads)
     DEAD_AT = 0x10A             # (Live.vehicle_dead; ghidra/h2_object_get_health.c)
@@ -520,11 +562,15 @@ class LiveH2(Live):
     # +0xE80500 points to (live, Lockout Team King, Moving Hill 30 s: it stepped 1, 5, 4 at 9, 39 and 69 s, 30 s apart,
     # always one of Lockout's six hills; logs/tmp/h2_hill_index.py). Before: no hill, Team King played as Slayer
     KING_HILL = (0xE80500, 0x29C)
-    HILL_R = 3.0             # ponytail: Halo 2's hill boundary (its King Hill flags) not sized; Halo 3's measure
+    # Halo 2's hill: as big as its King Hill flags draw it (Lockout 1.7-2.7 u), at least this. The floor was 3 u (Halo 3's
+    # measure): on Lockout's 2.2 u hill 0 the bots held it from outside it, and a 3 u ring read the HUD's 0:37 as 0:22 held
+    # (live Team King Nov 14, trace_h2_lockout_20261114-115624: its own 2.2 u, about 0:38). (upstream 0.3.0, build
+    # 20261114-1215; Halo 3, ODST and Reach keep their own HILL_R)
+    HILL_R = 1.5
 
     def set_map(s, objs):
         """Each hill as its flags draw it (Halo 2: a hill's corners are several "King Hill <n>" flags): {n: (centre,
-        radius)}, the centre their middle, the radius the farthest corner's (HILL_R at least)."""
+        radius)}, the centre their middle, the radius the circle inside them (inscribed; HILL_R at least)."""
         pts = {}
         for f in objs.get("netgame_flags", []):
             if f["type"].startswith("King Hill") and f["type"].split()[-1].isdigit():
@@ -532,7 +578,7 @@ class LiveH2(Live):
         s._h2_hills = {}
         for k, ps in pts.items():
             c = tuple(sum(p[i] for p in ps) / len(ps) for i in range(3))
-            s._h2_hills[k] = (c, max([s.HILL_R] + [math.dist(c[:2], p[:2]) for p in ps]))
+            s._h2_hills[k] = (c, max(s.HILL_R, inscribed(c, ps)))   # (upstream 0.3.0, build 20261114-1215)
 
     def king_hill(s):
         """(centre, radius) of the active hill, or None (no King game: the number is off the map's hills)."""
@@ -1467,6 +1513,8 @@ class LiveReach(LiveH3):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
+            if head is None:      # (upstream 0.3.0, build 20261119-0039: freed as we read; Halo 4's same read failed a whole tick, live Nov 19)
+                continue
             tag, parent = struct.unpack_from("<I", head, 0)[0], struct.unpack_from("<I", head, s.PARENT_AT)[0]
             if tag not in cache:
                 cache[tag] = s._own_name(tag, "multiplayer") == name
@@ -1562,6 +1610,8 @@ class LiveReach(LiveH3):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
+            if head is None:      # (upstream 0.3.0, build 20261119-0039: freed as we read; Halo 4's same read failed a whole tick, live Nov 19)
+                continue
             tag, parent = struct.unpack_from("<I", head, 0)[0], struct.unpack_from("<I", head, 0x14)[0]
             pos = struct.unpack_from("<3f", head, 0x44)
             if typ == 2 and parent == NONE and tag not in s._names and not s._was_held((salt << 16) | i):
@@ -1611,6 +1661,25 @@ class LiveReach(LiveH3):
     # 1, 2, 7 a minute apart, and blue scored 3 while standing on hill 1 as it named hill 1)
     REACH_HILL = 0x253C8
     HILL_R = 3.0               # ponytail: the hill's boundary (a Forge shape) not decoded; players within 4 u scored
+    MEGALO_OBJECTS = 0x4F0     # TLS slot: the game type script's variables per object, 0x94 an entry
+
+    def open_drops(s):
+        """Headhunter: where the open drop points are, [(x, y, z)]. A scripted object's entry in megalo_objects holds
+        its handle at +0x38 and the script's first number for it at +0x10: 1 on a drop point while it is open.
+        OBSERVED live Nov 17 (Boardwalk, built-in Headhunter, 9 drop points, sampled twice a second): two entries at
+        1 at a time, a new pair every 30 s (drop points 7 and 3, then 4 and 2, then 7 and 1, then 5 and 3). Other
+        scripted objects may read 1 there for their own reasons: the caller keeps the ones on a drop point.
+        (upstream 0.3.0, build 20261118-1525; brain/headhunter.py Skulls takes them first)"""
+        base, mx, size = s._array(s.MEGALO_OBJECTS)
+        b = s.g.read(base, mx * size)
+        out = []
+        for i in range(mx):
+            if not struct.unpack_from("<H", b, i * size)[0] or struct.unpack_from("<h", b, i * size + 0x10)[0] != 1:
+                continue
+            o = s.object(struct.unpack_from("<I", b, i * size + 0x38)[0])
+            if o:
+                out.append(struct.unpack("<3f", s.g.read(o + s.POS_AT, 12)))
+        return out
 
     def variant_name(s):
         return s.g.read(s._vbase() + s.VARIANT_NAME, 64).decode("utf-16-le", "replace").partition(chr(0))[0]
@@ -1659,6 +1728,28 @@ class LiveReach(LiveH3):
         x, y, z = struct.unpack_from("<3f", head, s.POS_AT)
         fx, fy = struct.unpack_from("<2f", head, 0x50)
         return x, y, z, math.atan2(fy, fx)
+
+    ELITE_SIDE = 7          # UNIT_TEAM of an Elite player's unit (Spartans 1: live Beachhead, Classic and Versus)
+
+    def elite_team(s, players):
+        """Invasion: the team whose living players are Elites (their units' UNIT_TEAM byte ELITE_SIDE; the attackers,
+        every round), or None unless exactly one team's are and at least two players read. The sides came from the
+        spawn labels and were wrong on Anniversary and Defiant maps until the first capture (Discord bug report Nov 20:
+        Condemned 100 s, Headlong 37 s). UNVERIFIED in Invasion: Beachhead's Versus is where the byte was read.
+        (upstream 0.3.0, build 20261120-1620; brain/invasion.py Watch)"""
+        teams, n = {}, 0
+        for d in players:
+            if d.get("pos") is None:
+                continue
+            o = s.object(d.get("unit", NONE))
+            if not o:
+                continue
+            n += 1
+            teams.setdefault(d["team"], set()).add(s.g.read(o + s.UNIT_TEAM, 1)[0])
+        elite = [t for t, sides in teams.items() if sides == {s.ELITE_SIDE}]
+        if n < 2 or len(elite) != 1 or any(s.ELITE_SIDE in sides for t, sides in teams.items() if t != elite[0]):
+            return None
+        return elite[0]
 
     def core(s, players, stand, key="core"):
         """Invasion's core: the weapon object first seen on its stand (a Vec), found as flags are (flags_by_stand),
@@ -1843,6 +1934,11 @@ class LiveReach(LiveH3):
             shield_dmg, body_dmg = struct.unpack_from("<2f", u, 0x124)
             if struct.unpack_from("<I", u, 0x14)[0] != NONE or body_dmg >= 1.0:
                 continue
+            # the game's own destroyed bit too (DEAD_AT bit 2, what object_get_health answers 0 for): a dead body's damage
+            # field can read below full again, and bots kept shooting dead Grunts (GitHub #29; upstream 0.3.0, build
+            # 20261114-0323)
+            if AI_DEAD_BIT and u[s.DEAD_AT] & 4:
+                continue
             if struct.unpack_from("<I", u, 0x1D0)[0] != NONE:   # a player's (a bot's old body)
                 continue
             out.append(dict(index=1000 + i, name="ai", team=u[s.UNIT_TEAM], unit=(salt << 16) | i,
@@ -1984,6 +2080,7 @@ class LiveH4F(LiveReach):
     PATHS = {"halo4.dll": 0x2A30288, "groundhog.dll": 0x1457018}     # the running map's path ('levels\multi\<map>\<map>')
     TRACKER_AT = 0x758         # (LiveH3.tracker; both games: Unchanged 3, Off 1 seen live)
     GRENADE_READ = False       # (LiveReach.grenades: Reach's object and tag layout only, not checked in these games)
+    open_drops = None          # (custom, Nov 24) LiveReach.open_drops: Reach's script table only, not read in these games
     # (Live.vehicle_dead / vehicle_left: halo4.dll 0x180683124 and groundhog.dll 0x180683e80, object_get_health)
     DEAD_AT, HEALTH_BLOCK = 0x16C, 0x1D0
     # (custom, Nov 8) a Halo 4 gun's reserve +0x5AA and loaded rounds +0x5AE (int16), found live (Blood Crash, every
@@ -2271,6 +2368,8 @@ class LiveH4F(LiveReach):
                 continue
             o = struct.unpack_from("<Q", b, i * 0x18 + 0x10)[0]
             head = s.g.read(o, 0x50)
+            if head is None:      # (upstream 0.3.0, build 20261119-0039: freed as we read; Halo 4's same read failed a whole tick, live Nov 19)
+                continue
             tag = struct.unpack_from("<I", head, 0x8)[0]   # +0 is the same for every object here
             pos = struct.unpack_from("<3f", head, 0x40)
             h = (salt << 16) | i

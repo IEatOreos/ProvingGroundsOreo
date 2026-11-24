@@ -84,6 +84,7 @@
   .links { display: flex; flex-wrap: wrap; gap: var(--s2); margin: 0 0 var(--s4); }
   .links a { padding: 6px var(--s3); border: 1px solid #4b5f87; border-radius: var(--r); background: var(--blue-bg); text-decoration: none; font-size: var(--fs-sm); }
   .links a:hover { background: #243149; }
+  .credit { font-size: var(--fs-xs); color: var(--text-3); }   /* (custom, Nov 24) the upstream credit line */
   .hidden { display: none !important; }
   mark { background: rgba(227, 180, 86, .35); color: var(--heading); border-radius: 2px; }
 
@@ -151,10 +152,12 @@
   </ol>
   <p>Up to 15 bots join, because a match holds 16 players. Bots show on the scoreboard as real players: they move, aim, strafe, jump-shot, take power weapons, drive and fly vehicles, play the objective and call out to their team.</p>
   <div class="links">
-    <a href="https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/BOT_STATUS.pdf" target="_blank" rel="noopener">What works in each mode</a>
-    <a href="https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/KNOWN_BUGS.md" target="_blank" rel="noopener">Known bugs</a>
-    <a href="https://github.com/AyoItzKye/project-proving-grounds/blob/main/docs/UPDATES.md" target="_blank" rel="noopener">What's new</a>
+    <a href="https://github.com/IEatOreos/ProvingGroundsOreo/blob/main/docs/BOT_STATUS.pdf" target="_blank" rel="noopener">What works in each mode</a>
+    <a href="https://github.com/IEatOreos/ProvingGroundsOreo/blob/main/docs/KNOWN_BUGS.md" target="_blank" rel="noopener">Known bugs</a>
+    <a href="https://github.com/IEatOreos/ProvingGroundsOreo/releases" target="_blank" rel="noopener">What's new</a>
   </div>
+  <!-- (custom, Nov 24) the one credit link to the original project; every other link goes to Project Noble's repository -->
+  <p class="credit">Project Noble is a customized build of <a href="https://github.com/AyoItzKye/project-proving-grounds" target="_blank" rel="noopener">Project Proving Grounds</a>, the original mod.</p>
 </section>
 
 <section id="panel" data-title="The BOTS panel">
@@ -287,8 +290,8 @@
     <li>Attach that folder, zipped, or the Observer's export of the game, to a bug report on GitHub.</li>
   </ol>
   <div class="links">
-    <a href="https://github.com/AyoItzKye/project-proving-grounds/issues/new?template=bug_report.yml" target="_blank" rel="noopener">Report a bug</a>
-    <a href="https://github.com/AyoItzKye/project-proving-grounds/issues/new/choose" target="_blank" rel="noopener">Suggest an idea</a>
+    <a href="https://github.com/IEatOreos/ProvingGroundsOreo/issues/new?labels=bug" target="_blank" rel="noopener">Report a bug</a>
+    <a href="https://github.com/IEatOreos/ProvingGroundsOreo/issues/new?labels=enhancement" target="_blank" rel="noopener">Suggest an idea</a>
   </div>
 </section>
 
@@ -364,7 +367,7 @@
     <li>Paste the line it prints into <strong>Halo: The Master Chief Collection &gt; Properties &gt; General &gt; Launch Options</strong> in Steam.</li>
     <li>Press Play in Steam (Game Mode works) and choose the <strong>anti-cheat off</strong> option.</li>
   </ol>
-  <div class="links"><a href="https://github.com/AyoItzKye/project-proving-grounds/releases/latest" target="_blank" rel="noopener">Releases page</a></div>
+  <div class="links"><a href="https://github.com/IEatOreos/ProvingGroundsOreo/releases/latest" target="_blank" rel="noopener">Releases page</a></div>
 </section>
 </main>
 </div>

@@ -40,12 +40,18 @@ BTN = dict(fire=1, jump=2, crouch=4, grenade=8, melee=16, action=32, reload=64, 
 GAME_ID = {"ce": 1, "h2": 2, "h3": 3, "reach": 4, "odst": 5, "h2a": 6, "h4": 7}
 GAME_BIT = {"h2": 1 << 24, "h3": 1 << 25, "reach": 1 << 26, "odst": 1 << 27, "h2a": 1 << 28, "h4": 1 << 29}
 MAX_PLAYERS, FIREFIGHT_PLAYERS = 16, 4
+# (upstream 0.3.0, build 20261114-0323, GitHub #28: Classic Firefight takes up to 7 bot teammates) Reach Firefight in
+# MCC custom games (July 2023 update): 8 players in all. (custom, Nov 24) all on the person's team, as before (his
+# Spartan and Elite teams, FF_SIDE, are not taken); ODST stays at FIREFIGHT_PLAYERS 4 (his 8 not taken)
+REACH_FF_PLAYERS = 8
 
 
 def player_cap(game, firefight=False):
-    """Players a match may hold, bots and people: Firefight (ODST's only multiplayer, and Reach's Firefight) is built
-    for 4; more crashed ODST every time (-25 live: 7, 15 and 16 players, the renderer, halo3odst +0x15950b)."""
-    return FIREFIGHT_PLAYERS if firefight or game == "odst" else MAX_PLAYERS
+    """Players a match may hold, bots and people: ODST's Firefight (its only multiplayer) 4, more crashed ODST every
+    time (-25 live: 7, 15 and 16 players, the renderer, halo3odst +0x15950b); Reach's Firefight 8 (REACH_FF_PLAYERS)."""
+    if game == "odst":
+        return FIREFIGHT_PLAYERS
+    return REACH_FF_PLAYERS if firefight else MAX_PLAYERS
 
 
 OFF_SETTINGS = 752
@@ -120,15 +126,18 @@ TIER_KEYS = ("novice", "average", "strong", "top", "scaling", "demon", "blind", 
 STYLE_KEYS = ("rusher", "camper", "flanker", "objector", "spammer", "grudger", "sniper", "wheelman", "any")   # (Wheelman: Nov 13)
 
 
-def roster(path, firefight=False):
+def roster(path, firefight=False, game="reach"):
     """The BOTS panel's list from botcore.ini (native/bots_panel.cpp roster_write: "bot=<team>,<tier>,<style>,
     <name>"): [{name, team, tier, style}] in the panel's order, exactly the bots of the next match. None when
-    the file has no list (written by a build from before). firefight: Firefight's own list ("ffbot=", 3 bots)."""
+    the file has no list (written by a build from before). firefight: Firefight's own list, Reach's ("ffbot=", up to
+    7 bots) or ODST's ("odbot=", 3; Reach's list before the split: upstream 0.3.0, botcore.cpp ff_seed)."""
     try:
         lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
     except OSError:
         return None
-    pre = "ff" if firefight else ""
+    pre = ("od" if game == "odst" else "ff") if firefight else ""
+    if pre == "od" and not any(line.startswith("odroster=") for line in lines):
+        pre = "ff"                                       # (a list saved before ODST had its own)
     if not any(line.startswith(pre + "roster=") for line in lines):
         return None
     out = []

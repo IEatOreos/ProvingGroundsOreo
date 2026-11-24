@@ -78,6 +78,67 @@ def steam_commons():
     return tuple(uniq)
 
 
+WORKSHOP_GAMES = {"Halo1": ("ce", ""), "Halo2": ("h2", "h2_"), "Halo2A": ("h2a", "h2a_"), "Halo3": ("h3", "h3_"),
+                  "Halo3ODST": ("odst", "odst_"), "HaloReach": ("reach", "reach_"), "Halo4": ("h4", "h4_")}
+WORKSHOP_SKIP = {"shared", "campaign", "single_player_shared", "mainmenu", "ui"}   # (a mod's support files, no level)
+
+
+def local_mod_roots(manifest=None):
+    """The folders MCC's ModManifest.txt (%USERPROFILE%\\AppData\\LocalLow\\MCC\\Config) lists for local mods: MCC Map
+    Studio's mods folder, Vortex's ... MCC looks below each for ModInfo.json. Read only."""
+    manifest = manifest or os.path.join(os.path.expanduser("~"), "AppData", "LocalLow", "MCC", "Config", "ModManifest.txt")
+    try:
+        lines = open(manifest, encoding="utf-8-sig", errors="replace").read().splitlines()
+    except OSError:
+        return []
+    return [ln.strip() for ln in lines if ln.strip() and os.path.isdir(ln.strip())]
+
+
+def workshop_maps(manifest=None):
+    """The modded maps on this PC: downloaded from MCC's Steam Workshop (steamapps/workshop/content/976730/<item>) and
+    the local mods in MCC's ModManifest.txt (MCC Map Studio's exports: GitHub-less players' own maps, owner Nov 20 "map
+    studio maps dont appear in the lidar sim"), each mod's ModInfo.json Engine its game:
+    [{name (this mod's map name: the game's prefix and the .map's), game, title, mod, item, file, local, dir}], one per
+    map file, Workshop first. A map folder by that name with level data is one the bots can play."""
+    import json
+    out, seen = [], set()
+    mods = []                                         # (mod folder, item id, local)
+    for common in steam_commons():
+        root = os.path.join(os.path.dirname(common), "workshop", "content", "976730")
+        if os.path.isdir(root):
+            mods += [(os.path.join(root, item), item, False) for item in sorted(os.listdir(root))]
+    for root in local_mod_roots(manifest):
+        for d, dirs, files in os.walk(root):
+            if d[len(root):].count(os.sep) >= 3:
+                dirs[:] = []
+            if "ModInfo.json" in files:
+                mods.append((d, os.path.basename(d), True))
+                dirs[:] = []
+    for d, item, local in mods:
+        try:
+            info = json.load(open(os.path.join(d, "ModInfo.json"), encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        game, pre = WORKSHOP_GAMES.get(info.get("Engine"), (None, None))
+        if game is None:
+            continue
+        title = info.get("Title")
+        mod = (title.get("Neutral") or next(iter(title.values()), "")) if isinstance(title, dict) else str(title or item)
+        desc = info.get("Description")
+        desc = " ".join(desc.values()) if isinstance(desc, dict) else str(desc or "")
+        # MCC Map Studio's own (its ModInfo says so; its bot export, ppg/, beside the maps): the LiDAR tools' own tab
+        studio = local and ("MCC Map Studio" in desc or os.path.isdir(os.path.join(d, "ppg")))
+        for f in sorted(glob.glob(os.path.join(d, "**", "*.map"), recursive=True)):
+            stem = os.path.splitext(os.path.basename(f))[0].lower()
+            name = pre + stem
+            if stem in WORKSHOP_SKIP or name in seen or not re.fullmatch(r"[a-z0-9_]+", name):
+                continue
+            seen.add(name)
+            out.append(dict(name=name, game=game, title=" ".join(w[:1].upper() + w[1:] for w in stem.split("_") if w),
+                            mod=mod, item=item, file=f, local=local, dir=d, studio=studio))
+    return out
+
+
 def installed_in(common, name):
     """Whether Steam's own record of an app (steamapps/appmanifest_<id>.acf beside this common folder) puts the app
     with this install folder name here."""

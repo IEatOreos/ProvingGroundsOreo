@@ -26,6 +26,13 @@ SPLIT_CHANCE = 0.5          # a CTF attack cycle (40-70 s) split over two lanes 
 # phase 1 in 7 of 9 rounds; round 1's split for 60 s (two in, one to the other territory, escorts, overlooks) 2 of 9,
 # with the same movement and speed on both sides (logs/tmp/invasion_regress sidecmp.py / speeds.py, tools/test_round_plan)
 PUSH_AFTER = 0.0
+# Invasion phases 1-2, attacking with 4 or more: this share of the team takes the other territory at the same time,
+# standing in it (his Nov 18: split across both lanes each phase; Spire was a deathmatch by one territory with nothing
+# on the other side of the map). Either territory takes the phase, so the defence has to split too. Not the old split
+# that lost (B17-B25 round 1: one man to the other territory, the rest escorts and overlooks outside both): both squads
+# go in. (upstream 0.3.0, build 20261118-1714, his 0.35.) (custom, Nov 24, the owner: behind a switch, OFF until checked
+# in the sim: 0 = today's play, his 0.35 = his split; every tier, our assign_roles decides who goes)
+LANE_SPLIT = 0.0
 INV_STALL = 25.0            # ... and kept while one of the team was within 8 u of it in the last this many s (director)
 INV_COMMIT = 30.0           # an Invasion attack keeps its territory at least this long after picking it (director)
 # a CTF carry as the team's play: three escorts from six of us, one screen SCREEN_BACK u toward their base, the pushers
@@ -34,6 +41,11 @@ INV_COMMIT = 30.0           # an Invasion attack keeps its territory at least th
 # the play before (A/B)
 CARRY_PLAY, CUTOFF = True, True
 CTF_DEFEND_LEAD = 2         # (custom, Nov 9) CTF: one defender only this many captures ahead or more (role_slots)
+# CTF: their flag on its stand, a runner or escort of ours within PULL_FIRST_R u of it is not called into a teammate's
+# vehicle by its horn (honk_orders) nor sent to a vehicle's empty gun (vehicle_orders): the pull first, the carrier
+# rides (upstream 0.3.0, build 20261112-1632; only this one extra condition of his note #3: our role_slots and the
+# Nov 9 one-defender rule decide who runs)
+PULL_FIRST, PULL_FIRST_R = True, 15.0
 # (custom, Nov 10) CTF cut-offs (Director.intercepts): a hunter goes to the first point on the enemy carrier's way home
 # it reaches CUT_MARGIN_S s before him (both at CUT_RUN u/s, his pace CARRIER_PACE of ours: ASSUMED equal, a Halo 4
 # carrier's speed is unmeasured), points every CUT_STEP u from CUT_MIN_AHEAD u ahead of him; never one behind him. His
@@ -1191,7 +1203,8 @@ class Director:
         s.carrying = any(p.team == s.team and p.alive and p.has_flag for p in snap.players)
         foot = [b for b in alive if players[b.id] is not None and players[b.id].vehicle == -1
                 and not players[b.id].has_flag and s.roles.get(b.id) not in ("runner", "defender", "ride", "board")
-                and not (s.carrying and s.roles.get(b.id) == "escort")]
+                and not (s.carrying and s.roles.get(b.id) == "escort")
+                and b.id not in s.pulling(snap, alive, players)]   # (pulling their flag: PULL_FIRST)
         # (a power vehicle by a bot on an objective job: its pool, crew_orders)
         busy = [b for b in alive if b not in foot and players[b.id] is not None and players[b.id].alive
                 and players[b.id].vehicle == -1 and not players[b.id].has_flag and b.p.tier != "novice"
@@ -1977,6 +1990,16 @@ class Director:
                 out.append(h)
         return out
 
+    def pulling(s, snap, alive, players):
+        """PULL_FIRST: the bots of ours pulling their flag: this pass's runners and escorts within PULL_FIRST_R of it while
+        it is on its stand (no horn or crew job takes them off it; the carrier rides, honk_orders). (upstream 0.3.0,
+        build 20261112-1632)"""
+        theirs = (snap.flags or {}).get(1 - s.side) if snap.mode == "ctf" and PULL_FIRST else None
+        if theirs is None or theirs.state != "home":
+            return set()
+        return {b.id for b in alive if players.get(b.id) is not None and s.roles.get(b.id) in ("runner", "escort")
+                and dist(players[b.id].pos, theirs.pos) < PULL_FIRST_R}
+
     def honk_orders(s, now, snap, alive, players):
         """A teammate in a vehicle honks at us: the nearest bot on foot within 20 u takes the gun, then the passenger
         seats go to our objective holders first, then to the next nearest bots. A bot passenger gives its seat up
@@ -1994,6 +2017,11 @@ class Director:
         calls = [(h, picks.get(h), 20.0) for h in honks] + [
             (h, None, LAND_CALL_R_PERSON if h in person_in else LAND_CALL_R)
             for h in s.landed_aircraft(now, snap) if h not in honks]
+        # their flag on its stand: a runner or escort of ours by it pulls it first; the ride waits for the carry (the
+        # holder is called first once he has it, below). His live Sandtrap 20261112-162033: the player's Warthog stopped
+        # by their flag called the runners in, the next role pass sent them back to it, every 1-2 s for 25 s
+        # (upstream 0.3.0, build 20261112-1632)
+        pulling = s.pulling(snap, alive, players)
         for h, picked, reach in calls:
             v = next((x for x in snap.vehicles if x["handle"] == h and x.get("team") == s.team), None)
             sp = vehicles.spec(v["kind"]) if v else None
@@ -2004,7 +2032,7 @@ class Director:
             coming = [b for b in alive if b.order.target == h and b.order.role in ("ride", "board")]
             free = len(sp["seats"]) - v.get("riders", 0) - len(coming)
             foot = sorted((b for b in alive if b not in coming and players[b.id] is not None and players[b.id].alive
-                           and players[b.id].vehicle == -1
+                           and players[b.id].vehicle == -1 and b.id not in pulling
                            and dist(players[b.id].pos, vp) < (HORN_CALL_R if b.id == picked else reach) and s.gunner_available(b)),
                           key=lambda b: (b.id != picked, not players[b.id].has_flag, dist(players[b.id].pos, vp)))
             holders = [b for b in foot if players[b.id].has_flag]
@@ -2827,15 +2855,20 @@ class Director:
             # inside its boundary too (Boneyard's territories are boxes of about 1.75 x 2.5 u)
             tr = radius(target)
             slots += [("defender", s.spread(target, k, 0.6 * tr), "objective") for k in range(2)]
+            # the second squad (LANE_SPLIT, off at 0): in the other territory at the same time, right after the first
+            # two so it is always manned (slots go in order to the nearest bot: the ones that spawned by it,
+            # invasion.spawn_offers) (upstream 0.3.0, build 20261118-1714)
+            k2 = int(round(LANE_SPLIT * n)) if other and n >= 4 else 0
+            slots += [("defender", s.spread(other[0], k, 0.6 * radius(other[0])), "objective") for k in range(k2)]
             # the pile-on: a teammate already taking it, or the phase running on, and everyone goes in; once on, it
             # stays on for this territory (the one inside dying turned the team round before 60 s)
             taking = inside(target)
             if taking:
                 s.inv_push = target
             if taking or snap.inv_phase_t > PUSH_AFTER or getattr(s, "inv_push", None) is target:
-                slots += [("defender", s.spread(target, k + 2, 0.6 * tr), "objective") for k in range(max(0, n - 2))]
+                slots += [("defender", s.spread(target, k + 2, 0.6 * tr), "objective") for k in range(max(0, n - 2 - k2))]
                 return slots
-            if n >= 5 and other:
+            if n >= 5 and other and not k2:
                 slots += [("defender", other[0], "objective")]
             slots += [("escort", target, "aggression")] * 2
             slots += [("mid", q, "aggression") for q in s.overlooks(target, n)]

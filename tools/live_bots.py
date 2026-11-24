@@ -33,7 +33,8 @@ from brain import scaling  # noqa: E402
 from brain import nade  # noqa: E402
 from brain.live import Live, LiveH2, LiveH3, LiveReach, LiveODST, LiveH4F, WEAPON_ALIAS  # noqa: E402
 from brain.invasion import layout as invasion_layout, Watch, clear_barriers, honor_spawn, honor_spawns, \
-    ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR  # noqa: E402
+    ally_spot as invasion_ally_spot, mate_clear as invasion_mate_clear, SPAWN_CLEAR, label_spawn, label_pick, \
+    inv_vehicles  # noqa: E402
 from brain.modes import Watch as ModeWatch, OBJECT_MODES, mode_of, stands_by_spawn, spawn_bases  # noqa: E402
 import botctl  # noqa: E402
 
@@ -242,6 +243,37 @@ def think_dt(elapsed):
     real-time speeds on a PC that needs longer than 1/HZ for a pass; never under 1/HZ (a pass that came early or the
     first one), never over MAX_DT."""
     return min(MAX_DT, max(1 / HZ, elapsed))
+
+
+# The in-game low performance warning (upstream 0.3.0's note #47, build 20261118-2107: a see-through card with a red
+# outline, only when the bots are badly behind), by our own check (custom, Nov 24, the owner: not his
+# tools/bot_capacity.py): the median pass of the last SPEED_EVERY over HORRIBLE_SLOTS slots (66 ms: the bots thinking
+# 15 times a second or fewer) HORRIBLE_NOTES checks in a row (about 6 s), then again at most every WARN_AGAIN_S while it
+# lasts. A "!" title is the overlay's warning style; an overlay without that card shows it as a plain notice
+SLOT_MS, SPEED_EVERY = 1000.0 / HZ, 2 * HZ
+HORRIBLE_SLOTS, HORRIBLE_NOTES, WARN_AGAIN_S = 2.0, 3, 120.0
+WARN = dict(run=0, at=-1e9)
+WARN_TEXT = ("!BOT PERFORMANCE LOW", "Your PC can't keep up with this many bots. Use fewer bots or a smaller map.")
+
+
+def speed_note(pass_ms, now, warn=None):
+    """pass_ms: this match's pass times (ms) since the last check, its own list (PERF's is emptied by each world row);
+    every SPEED_EVERY of them judged and cleared. -> True when the warning went out. Reports only: the bots think the
+    same, and a failure here never fails a pass."""
+    if len(pass_ms) < SPEED_EVERY:
+        return False
+    try:
+        last = sorted(pass_ms[-SPEED_EVERY:])
+        del pass_ms[:]
+        WARN["run"] = WARN["run"] + 1 if last[len(last) // 2] > SLOT_MS * HORRIBLE_SLOTS else 0
+        if warn is not None and WARN["run"] >= HORRIBLE_NOTES and now - WARN["at"] >= WARN_AGAIN_S:
+            WARN["at"] = now
+            warn(*WARN_TEXT)
+            print(f"{now:6.1f}s warning shown: bots thinking at half speed or less for {WARN['run']} checks", flush=True)
+            return True
+    except Exception:
+        pass
+    return False
 
 
 # the games where a bot's crouch press reaches the game (CE: botcore UC_CROUCH; Halo 3: maps/_inputs/h3.json "crouch";
@@ -512,7 +544,8 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
         if d["index"] in prev and d["pos"] is None:   # tally for games whose team scores are not decoded (H2)
             TALLY[1 - d["team"] % 2] = TALLY.get(1 - d["team"] % 2, 0) + 1
     if MATCH.get("v"):
-        snap.score = MATCH["v"]["score"] or (dict(TALLY) if TEAMS and snap.mode == "slayer" else snap.score)
+        snap.score = MATCH["v"]["score"] or (dict(TALLY) if TEAMS and snap.mode == "slayer" else
+                                             dict(CAPS) if TALLIED and snap.mode == "ctf" else snap.score)
         snap.score_limit, snap.time_left = MATCH["v"]["limit"], MATCH["v"]["time_left"]
         snap.score_live = bool(MATCH["v"]["score"])         # (custom, Nov 13: Land Grab, brain/modes.py score_read)
     if FIREFIGHT:                                # the Covenant are the enemy: they join as players
@@ -537,6 +570,10 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
             snap.ball, snap.ball_carrier = Vec(*b["pos"]), b["carrier"]
             for p in players:
                 p.has_flag = p.has_flag or p.id == b["carrier"]   # carries the objective: no shooting
+    if TALLIED and snap.mode in ("king", "oddball") and not (MATCH.get("v") or {}).get("score"):
+        snap.score = held_tally(snap, now)       # (not the kill tally set above: that is Slayer's; the limit is
+                                                 # seconds: CE's reader turns its minutes into them, Halo 2 stores them)
+                                                 # (upstream 0.3.0, build 20261114-1215; score_live stays the read's)
     return snap
 
 
@@ -555,7 +592,11 @@ def vehicle_fwd(live, handle, k=0):
         if not o:
             return None
         if at is not None:
-            return struct.unpack("<3f", live.g.read(o + at + 12 * k, 12))
+            f, u = struct.unpack("<3f", live.g.read(o + at, 12)), struct.unpack("<3f", live.g.read(o + at + 12, 12))
+            unit = all(0.95 < math.sqrt(sum(c * c for c in w)) < 1.05 for w in (f, u))
+            if type(live) is Live and not (unit and abs(sum(a * b for a, b in zip(f, u))) < 0.15):
+                return None      # (upstream 0.3.0, build 20261115-0215: CE's read checked before trusted, else the
+            return u if k else f  # middle, as before; Halo 4's as before)
         f = struct.unpack("<3f", live.g.read(o + live.POS_AT + 12, 12))
         if not k:
             return f
@@ -644,6 +685,44 @@ HORN = {"down": False, "call": None}  # call: (vehicle, bot id or None, until)
 HORN_CONE, HORN_R, HORN_HOLD = 0.26, 40.0, 10.0
 RIDE_ONLY = None                     # test override (--ride-only): the empty vehicles bots may take, by kind
 TALLY = {0: 0, 1: 0}                 # deaths counted as the other team's points (no score reader)
+# (custom, Nov 24) the objective tallies below (held_tally, and CTF's captures) stand in only for the readers with no
+# team score of their own: Halo: CE and Halo 2 (Live, LiveH2; set in main). Halo 3, ODST, Reach, Halo 4 and H2A play
+# exactly as before, even on a tick whose score read is empty or dropped
+TALLIED = False
+# CTF captures counted from the flags where the game's score is not decoded (Halo: CE, Halo 2): a flag carried and next
+# seen home, last carried within CAP_R of the other team's stand, is a capture (live Hang 'Em High, Nov 14: a capture
+# read 0-0, so the bots never knew they led). CARRIED: each flag's last carried position (upstream 0.3.0, build
+# 20261114-0323; the score uses them only where TALLIED)
+CAPS, CARRIED, CAP_R = {0: 0, 1: 0}, {}, 4.0
+HELD = {"t": None, "pts": {}}        # King / Oddball seconds per team where the score is not decoded (held_tally)
+HELD_DZ = 2.5                        # u up or down that still counts as in the hill (brain/sim_modes.py ZONE_DZ)
+
+
+def held_tally(snap, now):
+    """King and Oddball points where the reader has no team score (Halo: CE, Halo 2): seconds a team was alone in the
+    hill (its flat radius, HELD_DZ up or down: the sim's rule) or carried the ball. Before, the kill tally stood in and
+    was held against the variant's limit (CE Team King: 2), so both teams played "the enemy is about to win" all match
+    (live Hang 'Em High, Nov 14). {team: whole seconds}, every team on the field listed. (upstream 0.3.0, build
+    20261114-1215)
+    ponytail: team time, not the game's own count: Halo 2's HUD ran above it (Lockout Team King: 20-1 read 16-1, 25-19
+    read 14-15) and below the players' summed time (36-2, 42-33); right leader and size of a lead, so the posture holds.
+    Read Halo 2's team score from memory to replace it."""
+    dt = 0.0 if HELD["t"] is None else max(0.0, min(1.0, now - HELD["t"]))
+    HELD["t"] = now
+    pts = HELD["pts"]
+    for p in snap.players:
+        pts.setdefault(p.team, 0.0)
+    if snap.mode == "king" and snap.hill is not None:
+        teams = {p.team for p in snap.players if p.alive and (p.pos - snap.hill).flat() <= snap.hill_r
+                 and abs(p.pos.z - snap.hill.z) < HELD_DZ}
+        if len(teams) == 1:
+            k = teams.pop()
+            pts[k] += dt
+    elif snap.mode == "oddball" and snap.ball_carrier is not None:
+        c = snap.player(snap.ball_carrier)
+        if c is not None:
+            pts[c.team] = pts.get(c.team, 0.0) + dt
+    return {k: int(v) for k, v in pts.items()}
 
 
 def unit_zoom(live, index):
@@ -660,6 +739,8 @@ FIREFIGHT = False                    # set in main: Reach Firefight (bots are th
 def flag_events(directors, before, snap, now):
     """The announcer: a team hears at once when its flag is taken or dropped."""
     for team, f in snap.flags.items():
+        if f.state == "carried":
+            CARRIED[team] = f.pos                 # (upstream 0.3.0, build 20261114-0323: CE / Halo 2 captures, CAPS)
         was = before.get(team)
         d = directors.get(team)
         if not d or not was or was == f.state:
@@ -669,6 +750,9 @@ def flag_events(directors, before, snap, now):
         elif f.state == "dropped" and was == "carried":
             d.report(now, -1, "flag_dropped", f.pos)
         elif f.state == "home" and was == "carried":          # carried straight home: captured
+            stand = snap.flags.get(1 - team)
+            if stand is not None and team in CARRIED and (CARRIED[team] - stand.home).length() < CAP_R:
+                CAPS[1 - team] = CAPS.get(1 - team, 0) + 1
             d.report(now, -1, "enemy_scored", f.home)
             if directors.get(1 - team):
                 directors[1 - team].report(now, -1, "scored", f.home)
@@ -809,7 +893,18 @@ def loadout_check(live, ask, bots, palette, state, snap, now, trace=None):
         st["alive"] = me.alive
 
 
-def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None):
+def drivable(b, snap):
+    """(custom, Nov 24, owner #46b) The vehicles a spawn's vehicle job may send bot b to: those its tier may drive
+    (Bot.may_drive: a Demon, Noble or Mythic never at a Warthog's or a Mongoose's wheel) and no Wheelman of ours has
+    called (Bot.wheel_yield). The errand is checked again where the bot takes it (Bot.decide), but a pick for a vehicle
+    it may not drive would spawn it by that vehicle for nothing."""
+    vs = snap.vehicles or ()
+    if b is None or not hasattr(b, "may_drive"):
+        return list(vs)
+    return [v for v in vs if b.may_drive(v, snap) and not (hasattr(b, "wheel_yield") and b.wheel_yield(v))]
+
+
+def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None, inv_veh=()):
     """Invasion respawns by the player's honor system (brain/invasion.py honor_spawn): while a bot is dead, where it will
     spawn, sent to botcore (send(index, x, y, z, yaw): botctl.spawn_at), which moves its new unit there. Picked once a
     death and again in a new phase; a spot behind a teammate is redone every half second (he moves), the pick redone if
@@ -817,7 +912,10 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
     leaves everyone dead for ~10 s with the old sides still read (match 211159, 457-467 s), and the round's opening
     spawn is the game's (it tells the new sides, invasion.Watch); a pick sent before that is called off (NaN: where the
     game puts it). watch.placed: the bots with a pick out (their spawns say nothing of the phase). A pick at a spawn
-    kept for its vehicles (River in phases 2-3) gives the bot that vehicle as its errand (b.errand: handle, until)."""
+    kept for its vehicles (River in phases 2-3), or by a free Invasion vehicle of its side (inv_veh: invasion.inv_vehicles),
+    gives the bot that vehicle as its errand (b.errand: handle, until). Phases 1-2: the picks lean to the territory
+    short of its share of the team (invasion.spawn_offers: lanes). (upstream 0.3.0, build 20261118-1714; the vehicles
+    offered are only those the bot's tier may drive: drivable, custom #46b)"""
     alive = sum(1 for p in snap.players if p.alive)
     # (not while a round's change is pending: invasion.Watch.round_wait_until, the half alive came while the rest were
     # still respawning and the picks by the old phase hid the new round, live Spire)
@@ -846,11 +944,14 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
         spot = invasion_ally_spot(mate, snap.players, T, others) \
             if mate is not None and invasion_mate_clear(mate, snap.players, T) else None
         errands = {e[0] for k, o in bots.items() if k != index and (e := getattr(o, "errand", None)) and now < e[1]}
+        lanes = list(zones) if snap.inv_phase in (1, 2) and len(zones) >= 2 else []
         new = dict(pick, pos=spot, yaw=mate.yaw) if spot is not None else \
-            honor_spawn(spawns, snap.inv_phase, side, me, snap.players, rng, T, others, goal, snap.vehicles, errands)
+            honor_spawn(spawns, snap.inv_phase, side, me, snap.players, rng, T, others, goal, drivable(b, snap), errands,
+                        lanes, inv_veh)
         if new is None:
             continue
-        # spawned at River in phases 2-3 for the free Warthog or Falcon by it: sent to it (Bot.decide errand)
+        # spawned for a free vehicle by its spawn (River's Warthog / Falcon, the High Trail Banshee): sent to it
+        # (Bot.decide errand)
         b.errand = (new["ride"], now + 30.0) if new.get("ride") is not None else None
         send(index, new["pos"].x, new["pos"].y, new["pos"].z, new["yaw"])
         if trace and (pick is None or new["name"] != pick["name"]):
@@ -861,6 +962,55 @@ def spawn_check(send, bots, snap, now, state, spawns, watch, rng, T, trace=None)
         taken.append(new["pos"])
         st.update(pick=new, phase=snap.inv_phase, t=now)
     watch.placed = {index for index, st in state.items() if st.get("pick")}
+
+
+def label_zone(inv, snap, index, watch=None, memo=None, rng=None, bots=None, now=0.0, T=None):
+    """(x, y, z, yaw) of the labelled zone a dead bot respawns at on an Invasion map with labelled zones and no named
+    spawns, facing the phase's objective, or None (no setup, no phase read yet, no zone for its side, or a round's change
+    pending with the old sides still read: live Breakpoint Nov 14, the 15 picks of round 2's first second all went to
+    round 1's sides): then the game's own zone. The phase and the sides are the Watch's (watch.phase / attackers): the
+    snapshot's are only filled by Watch.update later in the tick. With rng (live): invasion.label_pick, a vehicle job
+    first (only a vehicle its tier may drive: drivable), else a weighted pick, made once a death and phase and kept in
+    memo (the bot's zone_state: cleared as it spawns) so it does not jump. Without rng: the zone nearest the phase's
+    objective (invasion.label_spawn). memo["label"] marks a pick of ours (Watch.placed). (upstream 0.3.0, build
+    20261118-1714)"""
+    me = snap.player(index)
+    phase = getattr(watch, "phase", None) or getattr(snap, "inv_phase", None)
+    attackers = getattr(watch, "attackers", getattr(snap, "inv_attackers", -1))
+    if memo is not None:
+        memo.pop("label", None)
+    if not inv or not inv.get("spawn_res") or me is None or not phase:
+        return None
+    if watch is not None and (not watch.sides_set or snap.time < getattr(watch, "round_wait_until", -1.0)):
+        return None
+    goal = inv.get("core") if phase == 3 else None
+    pts = inv["phases"].get(phase) or []
+    if goal is None and pts:
+        goal = Vec(sum(q.x for q in pts) / len(pts), sum(q.y for q in pts) / len(pts), sum(q.z for q in pts) / len(pts))
+    attacking = me.team == attackers
+    if rng is None:
+        z = label_spawn(inv, phase, attacking, goal)
+    else:
+        key = (phase, attacking)
+        kept = (memo or {}).get("label_pick")
+        if kept is not None and kept[0] == key:
+            z, ride = kept[1], kept[2]
+        else:
+            errands = {e[0] for k, o in (bots or {}).items() if k != index and (e := getattr(o, "errand", None))
+                       and now < e[1]}
+            lanes = list(pts) if phase in (1, 2) and len(pts) >= 2 else []
+            b = (bots or {}).get(index)
+            o = label_pick(inv, phase, attacking, goal, rng, me, snap.players, T, lanes, drivable(b, snap), errands)
+            z, ride = (o["pos"], o["ride"]) if o else (None, None)
+            if memo is not None:
+                memo["label_pick"] = (key, z, ride)
+            if b is not None and ride is not None:
+                b.errand = (ride, now + 30.0)     # (Bot.decide: it goes for that vehicle once in)
+    if z is None:
+        return None
+    if memo is not None:
+        memo["label"] = True
+    return (z.x, z.y, z.z, math.atan2(goal.y - z.y, goal.x - z.x) if goal is not None else 0.0)
 
 
 def zone_spawn_check(send, bots, snap, zone_of, state, rng, T, now, trace=None):
@@ -1061,7 +1211,7 @@ def main():
     SCALE, SCALE_CFG = None, scaling.settings()
     panel = (botctl.roster(o.roster) or []) if o.roster else []
     if o.roster and o.ff_list:   # Firefight's own list (play.py), else the list's first 3 till it is saved (ff_seed)
-        ff_list = botctl.roster(o.roster, firefight=True)
+        ff_list = botctl.roster(o.roster, firefight=True, game=o.game)   # (Reach's or ODST's: upstream 0.3.0)
         panel = ff_list if ff_list is not None else panel[:botctl.FIREFIGHT_PLAYERS - 1]
     on_list = [b["tier"] for b in panel]
     if "scaling" in o.tier.split(",") + on_list:
@@ -1073,13 +1223,14 @@ def main():
         brain.profiles.LOOSE_AIM = o.aim_loose == "on"
     global RIDE_ONLY
     RIDE_ONLY = set(o.ride_only.split(",")) if o.ride_only else None
-    global MAP, FIREFIGHT, TEAMS
+    global MAP, FIREFIGHT, TEAMS, TALLIED
     import brain.maps
     brain.maps.PVP = True                       # simulator-only jumps wait for a real landing (maps.usable_links)
     MAP = get_map(o.map)
     TEAMS = not o.ffa
     live, m = ({"h2": LiveH2, "h3": LiveH3, "reach": LiveReach, "odst": LiveODST, "h2a": lambda: LiveH4F("groundhog.dll"),
       "h4": LiveH4F}.get(o.game, Live))(), botctl.shm()
+    TALLIED = type(live) in (Live, LiveH2)      # (custom, Nov 24) CE and Halo 2: no team score read of their own
     FIREFIGHT = hasattr(live, "firefight") and live.firefight()
     startup_mark("game attached")
     T = None
@@ -1157,6 +1308,8 @@ def main():
     import recording                         # the longest recording (the Observer's Recording settings): its last
     rec_s = recording.settings()["minutes"] * 60.0   # minutes kept, trimmed on disk as it is written
     trace = recording.RollingFile(o.trace, rec_s) if o.trace else None
+    if o.trace:                               # (names this log's match: tools/match_export.py attaches the log by it)
+        print("recording:", os.path.basename(o.trace), flush=True)   # (upstream 0.3.0, build 20261120-1620)
     if trace and SCALE is not None:          # the match ran on Scaling: brain/scaling.py counts it after (and its settings)
         trace.write(json.dumps(dict(t=0.0, scaling=round(SCALE, 5))) + chr(10))
     # (custom, Nov 15) every kill as the game itself keeps it, into the recording: who the game credits, with what,
@@ -1256,6 +1409,11 @@ def main():
     # (custom, Nov 22) the people's LiDAR merge and write in a helper process: on this process's thread its 420-445 ms
     # once a minute (Asylum's 3 MB lidar.json) froze the bots' thinking (tools/lidar_saver.py)
     lidar_saver = Saver()
+    try:                                         # (custom, Nov 24) a match runs: user/match.running (tools/match_lock.py),
+        import match_lock                        # so a LiDAR import waits for its end (tools/lidar_share.py)
+        match_lock.hold(MAP["name"])
+    except Exception as e:
+        print("match lock not written:", e, flush=True)
 
     def save_lidar():
         """Both LiDAR saves, each on its own: one failing is logged and the other still saves (a failing people's save
@@ -1299,6 +1457,7 @@ def main():
         print(f"out of bounds: {len(oob.spots)} spots, {len(oob.volumes)} kill / safe zones known here", flush=True)
     fails = 0
     seen_errors = set()
+    pass_ms = []                       # (custom, Nov 24) the passes' ms since the last speed_note (upstream 0.3.0 #47)
     last_items = 0.0
     last_think = None                  # the time of the last pass the bots thought on (think_dt)
     passes = 0                         # think passes so far (think_order: which team goes first)
@@ -1325,7 +1484,12 @@ def main():
                                                                         and not o.forge_invasion) else None
     if inv_layout is not None:
         inv_layout["map"] = MAP["name"]           # (its phase rules by map: brain/invasion.py phase_link_gates)
-    inv_watch, inv_check, inv_unread = [None], [-9.0], [False]
+        if not inv_layout.get("vehicles") and not MAP["objects"].get("mvar"):
+            # a built-in map's Invasion vehicles: its scenario's (maps/<map>/inv_vehicles.json), a variant's: its labels
+            # (upstream 0.3.0, build 20261118-1714)
+            inv_layout["vehicles"] = inv_vehicles(MAP.get("base") or MAP["name"])
+    inv_watch, inv_check, inv_unread, inv_file_tried = [None], [-9.0], [False], [False]
+    zone_placed = set()                           # bots sent to a labelled zone of ours (Watch.placed on the zone path)
     zone_check, zone_state = [-9.0], {}           # Invasion with no setup of its own: the game's zones (zone_spawn_check)
     # a map variant's pieces that come and go (brain/forge.py PieceWatch): walls while they stand
     piece_watch, piece_check = None, [-9.0, 0]
@@ -1335,6 +1499,7 @@ def main():
         piece_watch = PieceWatch(pieces_of(MAP["variant"]), MAP["variant"].get("dynamic", ()),
                                  MAP["variant"].get("game") or o.game)
     inv_spawns, spawn_state = honor_spawns(MAP.get("base") or MAP["name"]) if inv_layout else None, {}
+    inv_veh = inv_vehicles(MAP.get("base") or MAP["name"]) if inv_spawns else []   # (its vehicles by side and phase)
     mode_watch, mode_check = [None], [-9.0]      # Territories, Assault, Stockpile, Headhunter, Infection (brain/modes.py)
     bug_check, grow_check = [-9.0, None], [-9.0]     # bug_check[1]: the last tick's mode once read (see below)
     read_gt = [None]                                  # (custom, Nov 21) botcore's tick count at the last read
@@ -1357,6 +1522,10 @@ def main():
             routes = Pool()
         except Exception as e:                        # (never stops the bots: searches in the brain as before)
             print(f"route-search helpers not started: {type(e).__name__}: {e}", flush=True)
+    # (custom, Nov 24; upstream 0.3.0's idea, note #40) the vehicle grounds rebuilt off the pass when rides, paint or
+    # out of bounds change mid-match (brain/terrain.py VNAV_LATER): no pass waits on one
+    from brain import terrain as _terrain_mod
+    _terrain_mod.VNAV_LATER = True
     think_pass, pass_jobs = None, []                  # (custom, Nov 23) the bots' thinking on several threads
     workers = think_threads()
     if workers >= 2:
@@ -1463,6 +1632,28 @@ def main():
                                                  and "SLAYER" not in live.variant_name().upper())
                     except Exception:
                         on = False
+                    if on and not inv_layout and not inv_unread[0] and not inv_file_tried[0]:
+                        # a layout that only adds labels and hills to a built-in map (GitHub #26: a custom Tempest):
+                        # its Invasion setup and respawn zones from its map variant file (brain/mvar.py find_invasion)
+                        # (upstream 0.3.0, build 20261118-1714)
+                        inv_file_tried[0] = True
+                        try:
+                            from brain import mvar
+                            from brain.forge import live_pieces
+                            fv, share = mvar.find_invasion(MAP["name"], live_pieces(live))
+                            if fv is not None:
+                                fo = mvar.scenario_objects(fv)
+                                objs = dict(MAP["objects"], netgame_flags=list(MAP["objects"].get("netgame_flags", []))
+                                            + fo["netgame_flags"])
+                                inv_layout = invasion_layout(objs)
+                                if inv_layout is not None:
+                                    inv_layout["map"] = MAP["name"]
+                                print(f"{now:6.1f}s Invasion on {MAP['name']}: its labels from the map variant file "
+                                      f"{os.path.basename(fv['path'])} ({fv['title']!r}, {share:.0%} of its pieces live): "
+                                      f"{'respawn zones for ' + str(sorted((inv_layout or {}).get('spawn_res') or {})) if inv_layout else 'no Invasion setup in it'}",
+                                      flush=True)
+                        except Exception as e:
+                            print("Invasion labels from the map variant file not read:", e, flush=True)
                     if on and not inv_layout and not inv_unread[0]:
                         # its objectives and gates are the map variant's labelled Forge objects, whose labels are not
                         # read from the game yet (tools/forge_label_probe.py): played as Slayer, respawns in the zones
@@ -1483,19 +1674,45 @@ def main():
                 # (also on a map variant whose file gave the setup, brain/mvar.py, but no honor spawns are named)
                 if (inv_unread[0] or (inv_watch[0] is not None and not inv_spawns)) and now - zone_check[0] > 0.5:
                     zone_check[0] = now
+                    w = inv_watch[0]
                     try:
-                        zone_spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap, live.respawn_zone,
-                                         zone_state, rng, T, now, trace)
+                        if w is not None and (not w.sides_set or snap.time < getattr(w, "round_wait_until", -1.0)):
+                            # a round's change: the game's own opening spawns, every pick out called off (the zone the
+                            # game reports then is the old round's: live Breakpoint, round 2's first 15 picks went to
+                            # the old sides' zones) (upstream 0.3.0, build 20261118-1714)
+                            for i, st in zone_state.items():
+                                if st.get("zone") is not None:
+                                    botctl.spawn_at(m, i, math.nan, math.nan, math.nan, 0.0)
+                                    st.clear()
+                        else:
+                            # (the map's labelled zone for its side and phase where the layout has them: label_zone,
+                            # else the zone the game gives it, as before; upstream 0.3.0, build 20261118-1714)
+                            zone_spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap,
+                                             lambda i: label_zone(inv_layout, snap, i, w, zone_state.setdefault(i, {}),
+                                                                  rng, bots, now, T) or live.respawn_zone(i),
+                                             zone_state, rng, T, now, trace)
+                            # (our label picks are kept out of the Watch's reading of the phase and sides: Watch.placed,
+                            # until it has seen the bot spawn; a dead bot on the game's own zone counts)
+                            for i, st in zone_state.items():
+                                if st.get("label"):
+                                    zone_placed.add(i)
+                                elif snap.player(i) is not None and not snap.player(i).alive:
+                                    zone_placed.discard(i)
                     except Exception as e:           # (never the whole tick: bots then spawn where the game puts them)
                         inv_unread[0], zone_check[0] = False, float("inf")
                         print(f"{now:6.1f}s zone spawns off ({type(e).__name__}: {e})", flush=True)
                 if inv_watch[0] is not None:
+                    if not inv_spawns:                    # (the zone path's picks: upstream 0.3.0, build 20261118-1714)
+                        inv_watch[0].placed = set(zone_placed)
                     inv_watch[0].update(live, snap, now, getattr(live, "raw", None))
+                    if not inv_spawns:
+                        zone_placed.difference_update({i for i in zone_placed if snap.player(i) is None
+                                                       or snap.player(i).alive})
                     oob.set_phase(T, inv_watch[0].phase)   # (its gates' kill volumes stand until their phase is taken)
                     if inv_spawns:
                         try:
                             spawn_check(lambda i, *a: botctl.spawn_at(m, i, *a), bots, snap, now, spawn_state, inv_spawns,
-                                        inv_watch[0], rng, T, trace)
+                                        inv_watch[0], rng, T, trace, inv_veh=inv_veh)
                         except Exception as e:           # (never the whole tick: bots then spawn where the game puts them)
                             inv_spawns = None
                             import traceback
@@ -1536,6 +1753,14 @@ def main():
                 people.update(now, [(p.id, (p.pos.x, p.pos.y, p.pos.z) if p.alive else None, p.alive, bool(crouching) and p.id == 0,
                                      steering if p.id == 0 else None, p.vehicle != -1)
                                     for p in snap.players if p.id not in st["bots"].values() and p.name != "ai"])
+                # (upstream 0.3.0, build 20261114-1215) bots' judged jumps onto the map's non-human links
+                # (HumanWatch.bot_jump: bot_ok / bot_fail; maps.usable_links drops one with 3 shorts, none landed)
+                try:
+                    for b in bots.values():
+                        for at, land, ok in b.__dict__.pop("jump_results", None) or ():
+                            people.bot_jump(at, land, ok)
+                except Exception as e:           # never stops the bots
+                    print(f"{now:6.1f}s bot jump count skipped: {type(e).__name__}: {e}", flush=True)
                 rides.update(now, snap.vehicles, snap.players, set(st["bots"].values()))
                 if rides_new[0]:                 # saved new rides: on this match's terrain now (main thread)
                     rides_new[0] = False
@@ -1779,6 +2004,8 @@ def main():
                               f"sh {me.shield:.2f} hp {me.health:.2f}" if me and me.alive else f"{now:6.1f}s bot {index} dead",
                               flush=True)
                 PERF["pass"].append((time.time() - tick) * 1000.0)        # (custom, Nov 22: the whole pass, ms)
+                pass_ms.append(PERF["pass"][-1])
+                speed_note(pass_ms, now, lambda t, line: botctl.notice(m, t, line))   # (the low performance card, #47)
                 PERF["think_sum"].append(PERF["think_pass"])
                 PERF["think_pass"] = 0.0
                 time.sleep(max(0.0, 1 / HZ - (time.time() - tick)))
@@ -1826,6 +2053,11 @@ def main():
         save_learned(MAP)
         save_lidar()
         lidar_saver.close()                      # (custom, Nov 22: its last save written, the helper exits)
+        try:                                     # (custom, Nov 24) the LiDAR saves are done: imports may run again
+            import match_lock
+            match_lock.release()
+        except Exception as e:
+            print("match lock not removed:", e, flush=True)
         try:                                     # nodrive cells people drove over this match come out (tools/wedges.py)
             import wedges
             n = wedges.prune(MAP.get("base") or MAP["name"].partition("/")[0])

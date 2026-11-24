@@ -34,8 +34,15 @@
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_internal.h"             // (SetKeyOwner: the 3D view keeps its arrow keys)
 
-int hb_panel_firefight = 0;      // overlay.cpp: the lobby open is Firefight's (it holds 4 players: you and 3 bots)
-static int roster_cap() { return hb_panel_firefight ? 3 : HB_ROSTER_MAX; }
+// overlay.cpp: the lobby open is Firefight's; bots_panel sets which by the lobby's title: 2 Reach's, 1 ODST's.
+// (upstream 0.3.0, build 20261114-0323, GitHub #28: Classic Firefight takes up to 7 bot teammates) Reach's custom
+// Firefight holds 8 players since MCC's July 2023 update: you and up to 7 bots. (custom, Nov 24) all on your team, as
+// before: his Spartan and Elite teams (Versus) are not taken, their brain is not ported; ODST keeps 4 players (you and
+// 3 bots: more crashed ODST, Oct 25)
+int hb_panel_firefight = 0;
+static const int FF_REACH_BOTS = 7, FF_ODST_BOTS = 3;
+static int ff_bots() { return hb_panel_firefight == 2 ? FF_REACH_BOTS : FF_ODST_BOTS; }   // (Firefight: its bots at most)
+static int roster_cap() { return hb_panel_firefight ? ff_bots() : HB_ROSTER_MAX; }
 
 // ------------------------------------------------------------------ tables
 static const char* TEAM_NAME[HB_TEAMS_MAX] = { "Red", "Blue", "Green", "Orange", "Purple", "Gold", "Brown", "Pink" };
@@ -2614,8 +2621,10 @@ static void inspector(bots_panel_env& e, bool& changed) {
         if (hb_panel_firefight) {                            // (Firefight: one team, yours)
             muted("Pick a bot to change its difficulty or play style. Names, clan tags and armor are in Settings.");
             ImGui::Dummy(ImVec2(0, px(12)));
-            muted("Firefight holds 4 players: you and up to 3 bots, all on your team. "
-                  "Right-click a bot for more; Del removes the picked one.");
+            char ffl[160];                                   // (Reach: 8 players, 7 bots; ODST: 4, 3)
+            sprintf_s(ffl, "Firefight holds %d players: you and up to %d bots, all on your team. "
+                      "Right-click a bot for more; Del removes the picked one.", ff_bots() + 1, ff_bots());
+            muted(ffl);
             return;
         }
         muted("Pick a bot to change its team, difficulty or play style. Names, clan tags and armor are in Settings.");
@@ -2864,7 +2873,7 @@ static void quick_setup(bots_panel_env& e, bool& changed) {
 // UE4 widget inside its packed UI (docs/research/08), so the tab lives in this panel., and no dev notes in the menu
 // ("all that shit needs to be back end stuff only the devs can review in the files"): which games wear their own look
 // is in docs/research/15-modern-customization.md.
-static int g_tab = 0;                                    // 0 the bots list, 1 Settings, 2 Advanced
+static int g_tab = 0;                                    // 0 the bots list, 1 Settings, 2 Advanced, 3 Experimental
 void bots_panel_debug_tab(int tab) { g_tab = tab; }      // native/panel_preview.cpp
 static int rr_experience = 0;                            // the re-roll dialog's choices
 static int rr_effects = 0;                               // 0 none, 1 rare, 2 common, 3 frequent
@@ -4466,6 +4475,146 @@ static void sp_save() {                                    // at once (the panel
 }
 static int sp_step(int v) { return v < 100 ? 5 : v < 1000 ? 10 : 100; }   // (a rating from 1% to many thousands)
 
+// ---- the Experimental tab (upstream 0.3.0, build 20261114-2230): switches for features still being tried, kept in
+// native/bin/experimental.ini (key=value). (custom, Nov 24, owner) only Halo: Reach's third person, its first person
+// passenger and its smaller reticle live here, every one off until the owner turns it on; his Vehicle Warfare,
+// Unfair-Bots and Halo: CE body options are not taken (their keys in an older file are read past and not written).
+// botcore reads the switches itself (reach.cpp, on the game thread), so the brain does not read this file
+static bool g_exp_read;
+static uint32_t g_exp_passenger_fp, g_exp_third_person, g_exp_tp_reticle = 1;
+// third person's view: the shoulder (0 right, 1 left), the distance (0 near, 1 middle, 2 far), and the keys that switch
+// them in play: virtual key codes, any keyboard key or mouse button the player presses for them in the panel; no
+// controller button (the owner, Nov 24). 0: none
+static int g_exp_shoulder, g_exp_distance = 1, g_exp_side_key = VK_XBUTTON1, g_exp_dist_key = VK_XBUTTON2;
+static void vk_name(int vk, char* out, size_t cap) {          // a key's name as the keyboard prints it
+    switch (vk) {
+    case 0: strcpy_s(out, cap, "None"); return;
+    case VK_LBUTTON: strcpy_s(out, cap, "Left mouse"); return;
+    case VK_RBUTTON: strcpy_s(out, cap, "Right mouse"); return;
+    case VK_MBUTTON: strcpy_s(out, cap, "Middle mouse"); return;
+    case VK_XBUTTON1: strcpy_s(out, cap, "Mouse 4"); return;
+    case VK_XBUTTON2: strcpy_s(out, cap, "Mouse 5"); return;
+    }
+    UINT sc = MapVirtualKeyA((UINT)vk, MAPVK_VK_TO_VSC);
+    bool ext = vk == VK_LEFT || vk == VK_RIGHT || vk == VK_UP || vk == VK_DOWN || vk == VK_INSERT || vk == VK_DELETE ||
+               vk == VK_HOME || vk == VK_END || vk == VK_PRIOR || vk == VK_NEXT || vk == VK_RCONTROL || vk == VK_RMENU;
+    if (!sc || !GetKeyNameTextA((LONG)(sc << 16 | (ext ? 1 << 24 : 0)), out, (int)cap)) sprintf_s(out, cap, "Key %d", vk);
+}
+static void exp_load() {
+    if (g_exp_read) return;
+    g_exp_read = true;
+    wchar_t p[260]; bin_file(p, 260, L"experimental.ini");
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"r") != 0 || !f) return;
+    char line[128];
+    while (fgets(line, sizeof line, f)) {
+        unsigned v;
+        if (sscanf_s(line, "passenger_fp=%u", &v) == 1) g_exp_passenger_fp = v != 0;
+        else if (sscanf_s(line, "third_person=%u", &v) == 1) g_exp_third_person = v != 0;
+        else if (sscanf_s(line, "tp_reticle=%u", &v) == 1) g_exp_tp_reticle = v != 0;
+        else if (sscanf_s(line, "shoulder=%u", &v) == 1) g_exp_shoulder = v ? 1 : 0;
+        else if (sscanf_s(line, "distance=%u", &v) == 1) g_exp_distance = v < 3 ? (int)v : 1;
+        else if (sscanf_s(line, "shoulder_vk=%u", &v) == 1) g_exp_side_key = v < 256 ? (int)v : 0;
+        else if (sscanf_s(line, "distance_vk=%u", &v) == 1) g_exp_dist_key = v < 256 ? (int)v : 0;
+    }
+    fclose(f);
+}
+static void exp_save() {
+    wchar_t p[260]; bin_file(p, 260, L"experimental.ini");
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, p, L"w") != 0 || !f) return;
+    fprintf(f, "passenger_fp=%u\nthird_person=%u\ntp_reticle=%u\nshoulder=%d\ndistance=%d\nshoulder_vk=%d\ndistance_vk=%d\n",
+            (unsigned)g_exp_passenger_fp, (unsigned)g_exp_third_person, (unsigned)g_exp_tp_reticle, g_exp_shoulder,
+            g_exp_distance, g_exp_side_key, g_exp_dist_key);
+    fclose(f);
+}
+// (botcore, reach.cpp / third_person.cpp / passenger_fp.cpp: Halo: Reach only)
+bool bots_panel_passenger_fp() { exp_load(); return g_exp_passenger_fp != 0; }
+bool bots_panel_third_person() { exp_load(); return g_exp_third_person != 0; }
+bool bots_panel_tp_reticle() { exp_load(); return g_exp_tp_reticle != 0; }
+int bots_panel_shoulder() { exp_load(); return g_exp_shoulder ? -1 : 1; }
+void bots_panel_flip_shoulder() { exp_load(); g_exp_shoulder ^= 1; exp_save(); }
+int bots_panel_shoulder_key() { exp_load(); return g_exp_side_key; }
+int bots_panel_distance() { exp_load(); return g_exp_distance; }
+void bots_panel_cycle_distance() { exp_load(); g_exp_distance = (g_exp_distance + 1) % 3; exp_save(); }
+int bots_panel_distance_key() { exp_load(); return g_exp_dist_key; }
+
+static void experimental_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w, float h) {
+    using namespace ui;
+    (void)e; (void)changed;
+    exp_load();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(body0, ImVec2(body0.x + w, body0.y + h), SURF);
+    dl->AddRect(body0, ImVec2(body0.x + w, body0.y + h), LINE);
+    // (a scrolling page: third person's controls go past the footer)
+    ImGui::SetCursorScreenPos(ImVec2(body0.x + px(20), body0.y + px(16)));
+    ImGui::BeginChild("##experimental", ImVec2(w - px(28), h - px(24)), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoBackground);   // (the pad moves in and out freely)
+    ImGui::PushTextWrapPos(w - px(52));
+    muted("Features still being tried, for Halo: Reach only. They may not play well yet. Every one is off until you "
+          "turn it on.");
+    // (upstream 0.3.0, build 20261116-2330) third person: reach.cpp hr_tp_apply and third_person.cpp
+    ImGui::Dummy(ImVec2(0, px(18)));
+    if (toggle("Third person", &g_exp_third_person)) exp_save();
+    muted("Halo: Reach: play from over your Spartan's shoulder. A scope switches to first person until you lower it. "
+          "Vehicles keep their own cameras. Not in Theater films.");
+    if (g_exp_third_person) {
+        static const char* const SIDES[2] = { "Right", "Left" };
+        static const char* const DISTS[3] = { "Near", "Middle", "Far" };
+        // a key: its button shows it; pressed, it waits for the next key or mouse button (Esc: none), any of them
+        static int* waiting = nullptr;               // the key being set
+        static ULONGLONG wait_from = 0;
+        static bool held[256];                       // keys down when the wait began (a click that started it)
+        struct row { const char* cap; const char* id; const char* const* labels; int n; int* v; float w; };
+        row rows[4] = { { "SHOULDER", "tpside", SIDES, 2, &g_exp_shoulder, px(220) },
+                        { "SHOULDER KEY", "tpsidekey", nullptr, 0, &g_exp_side_key, px(260) },
+                        { "DISTANCE", "tpdist", DISTS, 3, &g_exp_distance, px(330) },
+                        { "DISTANCE KEY", "tpdistkey", nullptr, 0, &g_exp_dist_key, px(260) } };
+        for (const row& r : rows) {
+            ImGui::Dummy(ImVec2(0, px(6)));
+            push(SMALL);
+            ImGui::TextColored(v4(TEXT2), "%s", r.cap);
+            pop();
+            if (r.labels) { if (segmented(r.id, r.labels, r.n, r.v, r.w)) exp_save(); continue; }
+            char name[64], label[96];
+            vk_name(*r.v, name, sizeof name);
+            if (waiting == r.v) sprintf_s(label, "Press a key or mouse button...##%s", r.id);
+            else sprintf_s(label, "%s##%s", name, r.id);
+            if (button(label, waiting == r.v ? PRIMARY : SECONDARY, ImVec2(r.w, px(36))) && !waiting) {
+                waiting = r.v;
+                wait_from = GetTickCount64();
+                for (int k = 1; k < 256; k++) held[k] = (GetAsyncKeyState(k) & 0x8000) != 0;
+            }
+        }
+        if (waiting) {                               // the next key pressed (not one already down when it began)
+            for (int k = 1; k < 256 && waiting; k++) {
+                bool down = (GetAsyncKeyState(k) & 0x8000) != 0;
+                if (!down) { held[k] = false; continue; }
+                if (held[k] || GetTickCount64() - wait_from < 150) continue;
+                *waiting = k == VK_ESCAPE ? 0 : k;
+                waiting = nullptr;
+                exp_save();
+            }
+            if (waiting && GetTickCount64() - wait_from > 8000) waiting = nullptr;   // (nothing pressed: as it was)
+        }
+        muted("In a match, the shoulder key moves the view to the other shoulder and the distance key steps it nearer or "
+              "farther. Click a key's button, then press the keyboard key or mouse button you want (Esc: none). No "
+              "controller button.");
+        // (upstream 0.3.0, build 20261117-2300) the smaller reticle: reach.cpp hr_reticle, only while third person is on
+        ImGui::Dummy(ImVec2(0, px(10)));
+        if (toggle("Smaller reticle", &g_exp_tp_reticle)) exp_save();
+        muted("Each weapon's reticle is drawn smaller in third person, on foot. Full size again with a scope up, in a "
+              "vehicle or with third person off.");
+    }
+    // (upstream 0.3.0, build 20261115-0215) first person passenger: reach.cpp hr_passenger_fp and passenger_fp.cpp
+    ImGui::Dummy(ImVec2(0, px(18)));
+    if (toggle("First person passenger", &g_exp_passenger_fp)) exp_save();
+    muted("Halo: Reach: riding as a passenger, you see from your own eyes, as in Halo: CE. Not on a gun or at the "
+          "wheel. Off puts every seat back to the game's own third person view.");
+    ImGui::Dummy(ImVec2(0, px(10)));
+    ImGui::PopTextWrapPos();
+    ImGui::EndChild();
+}
+
 static void advanced_settings(bots_panel_env& e, bool& changed, ImVec2 body0, float w, float h) {
     using namespace ui;
     sp_load();
@@ -4819,28 +4968,40 @@ static void confirm_clear(bots_panel_env& e, bool& changed) {
 }
 
 // the panel's sounds as WAV files in memory (overlay.cpp plays them, panel_preview --wavs writes them for
-// tools/test_panel_sounds.py): short tones made here, no sound files: 16-bit mono 22.05 kHz; the bytes written, 0 when
-// kind or cap is wrong
+// tools/test_panel_sounds.py): made here, no sound files: 16-bit mono 22.05 kHz; the bytes written, 0 when kind or cap
+// is wrong. In the style of Halo's own menus: short, low, muffled digital clicks and thunks, a falling pitch and a little
+// filtered noise on the attack (Nov 14: the clean sine chimes before, up and down a step, sounded more like a fantasy
+// RPG than Halo) (upstream 0.3.0, build 20261114-1630)
 int panel_sound_wav(int kind, uint32_t volume, char* out, int cap) {
     if (kind < PS_MOVE || kind > PS_ERROR || cap < 44 + 2) return 0;
-    struct part { float s, f0, f1, a; };                 // seconds, from Hz, to Hz, loudness
+    // seconds, from Hz, to Hz (an exponential glide), tone loudness, noise loudness, noise low-pass (0..1, higher
+    // brighter), decay (higher shorter), square-ness of the tone (0 sine .. 1 buzz)
+    struct part { float s, f0, f1, a, nz, lp, dk, sq; };
     static const part P[5][2] = {
-        { { 0.014f, 1900, 1900, 0.10f }, {} },                                // move: a tick
-        { { 0.022f, 1300, 1300, 0.20f }, { 0.032f, 1950, 1950, 0.20f } },     // select: up a step
-        { { 0.022f, 1600, 1600, 0.18f }, { 0.036f, 1050, 1050, 0.18f } },     // back: down a step
-        { { 0.130f, 700, 1500, 0.16f }, {} },                                 // open: a rising swell
-        { { 0.080f, 220, 220, 0.22f }, { 0.080f, 196, 196, 0.22f } } };       // error: low, twice
+        { { 0.020f, 640, 520, 0.11f, 0.06f, 0.35f, 7.0f, 0.15f }, {} },                       // move: a soft tick
+        { { 0.060f, 360, 210, 0.22f, 0.10f, 0.30f, 5.0f, 0.25f }, {} },                       // select: a thunk
+        { { 0.064f, 300, 160, 0.20f, 0.08f, 0.22f, 5.0f, 0.20f }, {} },                       // back: a lower thunk
+        { { 0.180f, 90, 180, 0.16f, 0.12f, 0.10f, 0.0f, 0.10f }, {} },                        // open: a low swell
+        { { 0.075f, 150, 140, 0.18f, 0.03f, 0.25f, 1.5f, 0.85f },
+          { 0.085f, 150, 135, 0.18f, 0.03f, 0.25f, 1.5f, 0.85f } } };                         // error: a buzz, twice
     const int rate = 22050, most = (cap - 44) / 2;
     short* pcm = (short*)(out + 44);
     int n = 0;
+    uint32_t seed = 0x1234567u;
     for (const part& p : P[kind]) {
+        if (p.s <= 0) continue;
         int m = (int)(p.s * rate);
+        float ph = 0, lp = 0, g = p.f1 / p.f0;
         for (int i = 0; i < m && n < most; i++, n++) {
             float t = i / (float)rate, u = t / p.s;
-            float env = kind == PS_OPEN ? sinf(3.14159f * u) : expf(-5.0f * u) * (1.0f - expf(-t * 4000.0f));
-            float ph = 6.28318f * (p.f0 * t + 0.5f * (p.f1 - p.f0) * t * u);      // (a rising tone: its phase)
-            float w = sinf(ph) + (kind == PS_ERROR ? 0.35f * sinf(3.0f * ph) : 0.0f);
-            pcm[n] = (short)(32767.0f * p.a * (volume / 100.0f) * env * w);
+            float env = kind == PS_OPEN ? sinf(3.14159f * u) * sinf(3.14159f * u)       // swells in and out
+                      : expf(-p.dk * u) * (1.0f - expf(-t * 2500.0f)) * (1.0f - u * u);   // hit, fall, end clean
+            ph += 6.28318f * p.f0 * powf(g, u) / rate;
+            float s = sinf(ph), w = (1.0f - p.sq) * s + p.sq * (s > 0 ? 0.6f : -0.6f);
+            seed = seed * 1664525u + 1013904223u;                                         // noise, low-passed
+            lp += p.lp * (((seed >> 9) / 4194304.0f - 1.0f) - lp);
+            float nz = p.nz * lp * (kind == PS_OPEN ? 1.0f : expf(-t * 160.0f) * 3.0f);   // (a click on the attack)
+            pcm[n] = (short)(32767.0f * (volume / 100.0f) * env * (p.a * w + nz));
         }
     }
     char* h = out;
@@ -4883,6 +5044,9 @@ bool bots_panel(bots_panel_env& e) {
     g_make_texture = e.make_texture;
     g_env = &e;
     hb_roster& r = *e.roster;
+    if (hb_panel_firefight)                                  // (upstream 0.3.0, 20261114-0323) the lobby's title decides
+        hb_panel_firefight = e.title == 8 ? 1 : 2;           // the Firefight: ODST's (3 bots), else Reach's (7)
+    if (hb_panel_firefight && r.n > roster_cap()) r.n = roster_cap();
     if (hb_panel_firefight) { r.teams = 1; for (int i = 0; i < r.n; i++) r.bot[i].team = 0; }   // (Firefight: yours)
     else if (r.teams < 2) r.teams = 2;
     if (r.teams > HB_TEAMS_MAX) r.teams = HB_TEAMS_MAX;
@@ -4946,7 +5110,7 @@ bool bots_panel(bots_panel_env& e) {
     // ---- tabs: the bots list | the mod's settings
     if (!ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {   // the pad's shoulders: the
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false)) g_tab = g_tab > 0 ? g_tab - 1 : 0;   // tabs
-        if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) g_tab = g_tab < 2 ? g_tab + 1 : 2;
+        if (ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) g_tab = g_tab < 3 ? g_tab + 1 : 3;   // (3: upstream 0.3.0, Experimental)
     }
     if (g_goto_settings) { g_tab = 1; g_goto_settings = false; }   // (the inspector's "Edit look")
     if (tab("Bots", g_tab == 0)) g_tab = 0;
@@ -4954,13 +5118,16 @@ bool bots_panel(bots_panel_env& e) {
     if (tab("Settings", g_tab == 1)) g_tab = 1;
     ImGui::SameLine(0, px(6));
     if (tab("Advanced", g_tab == 2)) g_tab = 2;
+    ImGui::SameLine(0, px(6));
+    if (tab("Experimental", g_tab == 3)) g_tab = 3;           // (upstream 0.3.0, build 20261114-2230)
     ImGui::Dummy(ImVec2(0, px(6)));
     if (g_tab >= 1) {
         float foot1 = px(78);
         if (g_open_popup) { ImGui::OpenPopup(g_open_popup); g_open_popup = nullptr; }   // (native/panel_preview.cpp)
         ImVec2 b0 = ImGui::GetCursorScreenPos();
         if (g_tab == 1) mod_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
-        else advanced_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
+        else if (g_tab == 2) advanced_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
+        else experimental_settings(e, changed, b0, inner, wp.y + H - px(22) - foot1 - b0.y);
         ImGui::SetCursorScreenPos(ImVec2(wp.x + W - px(28) - px(170), wp.y + H - px(22) - foot1 + px(24)));
         if (button("Done", PRIMARY, ImVec2(px(170), px(46)))) *e.open = false;
         ImGui::End();
@@ -5079,8 +5246,9 @@ bool bots_panel(bots_panel_env& e) {
         dl->AddText(ImVec2(body0.x + (grid_w - ts.x) * 0.5f, body0.y + body_h * 0.36f), TEXT, t1);
         pop();
         push(BODY);
-        const char* t2 = hb_panel_firefight ? "Choose up to 3 bots for your team, and how hard they play."
-                                            : "Choose how many teams and bots, and how hard they play.";
+        char ff2[96];
+        sprintf_s(ff2, "Choose up to %d bots for your team, and how hard they play.", ff_bots());
+        const char* t2 = hb_panel_firefight ? ff2 : "Choose how many teams and bots, and how hard they play.";
         ImVec2 t2s = ImGui::CalcTextSize(t2);
         dl->AddText(ImVec2(body0.x + (grid_w - t2s.x) * 0.5f, body0.y + body_h * 0.36f + px(48)), TEXT2, t2);
         pop();
@@ -5139,7 +5307,7 @@ bool bots_panel(bots_panel_env& e) {
         scale_tooltip(e.scale_games ? (int)*e.scale_games : 5);
     ImGui::EndDisabled();
     char lim[96];
-    if (hb_panel_firefight) sprintf_s(lim, "%d of 3 bots. Firefight holds 4 players.", r.n);
+    if (hb_panel_firefight) sprintf_s(lim, "%d of %d bots. Firefight holds %d players.", r.n, ff_bots(), ff_bots() + 1);
     else sprintf_s(lim, "%d of %d bots. The game holds 16 players.", r.n, HB_ROSTER_MAX);
     push(SMALL);
     float lw2 = ImGui::CalcTextSize(lim).x;
@@ -5167,6 +5335,9 @@ bool bots_panel(bots_panel_env& e) {
     if (g_open_popup) { ImGui::OpenPopup(g_open_popup); g_open_popup = nullptr; }
     quick_setup(e, changed);
     confirm_clear(e, changed);
+    // (upstream 0.3.0, build 20261116-2330) a controller (or the arrows) past an edge comes round to the other side, up
+    // and down and across; the regions inside are flattened into this window
+    ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_LoopX);
     ImGui::End();
     ImGui::PopStyleColor(9);
     ImGui::PopStyleVar(7);
@@ -5270,6 +5441,8 @@ bool bug_report_ui(bug_report_env& e) {
         ImGui::SetTooltip("Type what went wrong first");
     ImGui::PopTextWrapPos();
     e.hovered = true;                                         // the window is up: every click and key is ours
+    // (upstream 0.3.0, build 20261116-2330) the pad comes round at the edges here too
+    ImGui::NavMoveRequestTryWrapping(ImGui::GetCurrentWindow(), ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_LoopX);
     ImGui::End();
     ImGui::PopStyleColor(6);
     ImGui::PopStyleVar(5);

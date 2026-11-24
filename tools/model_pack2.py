@@ -498,8 +498,16 @@ def pose_hold(S, species, bm, wm, two):
         origin = grip - gp @ W
         out = {"right": mount(S, "r_hand", "r_upperarm", "r_forearm", rh, grip, gr @ W, vec(hold["pole_r"]))}
         if two:
-            out["left"] = mount(S, "l_hand", "l_upperarm", "l_forearm", lh, lg[1] @ W + origin, lg[2] @ W,
-                                vec(hold["pole_l"]))
+            # spin_l=degrees,x: the left hand turned round the upright part it holds, about the gun's up axis through
+            # its own x (the silenced SMG's magazine: the hand wraps it from any side, the marker one of them)
+            # at_l=x,y,z: the left hand's place on the gun (its own axes) for the marker's, where the marker leaves
+            # the palm off the gun (the silenced SMG's: 0.026 u, the other games' 0.003-0.013)
+            sp = hold.get("spin_l", (0.0, 0.0))
+            R = rot(W[2], sp[0])
+            c = np.array([sp[1], 0.0, 0.0]) @ W + origin
+            at = np.asarray(hold["at_l"], float) if "at_l" in hold else lg[1]
+            out["left"] = mount(S, "l_hand", "l_upperarm", "l_forearm", lh, c + (at @ W + origin - c) @ R,
+                                lg[2] @ W @ R, vec(hold["pole_l"]))
         return W, origin, out
     # a roll from there where it keeps the wrists straighter, the hands on the gun: a rifle within 30 degrees (its side
     # to the viewer); a one-handed sword all the way round (turned to show its blades flat to us the hilt lay across a

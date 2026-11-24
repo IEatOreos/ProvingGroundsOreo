@@ -6,7 +6,7 @@
 <style>
   :root { --bg:#121418; --panel:#1b1e24; --line:#2c313a; --text:#e6e8eb; --mute:#9aa1ab; --accent:#4da3ff; }
   * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.35 "Segoe UI", system-ui, sans-serif; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.35 "Segoe UI", "Noto Sans", Cantarell, system-ui, sans-serif; }
   #top { height:52px; display:flex; align-items:center; gap:12px; padding:0 14px; background:var(--panel); border-bottom:1px solid var(--line); }
   #top h1 { font-size:16px; font-weight:600; margin:0 8px 0 0; }
   select, button, input[type=range] { font:inherit; }
@@ -34,14 +34,36 @@
   #empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:var(--mute); }
   #empty[hidden], #coord:empty { display:none; }
   #help { position:absolute; left:12px; bottom:10px; background:rgba(18,20,24,.85); border:1px solid var(--line); border-radius:6px; padding:6px 10px; color:var(--mute); font-size:12px; }
+  /* the maps list: organized as the LiDAR Viewer's and Simulator's (game tabs, Modded with its game drop-down) */
+  #maps { position:absolute; top:60px; left:12px; width:740px; max-height:calc(100% - 72px); display:flex; flex-direction:column;
+          background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; z-index:20; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  #maps[hidden] { display:none; }
+  #maps .head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  #maps h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); margin:0; }
+  #games { display:grid; grid-template-columns:repeat(8, minmax(0, 1fr)); gap:6px; margin-bottom:8px; }
+  #games button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; height:auto; padding:6px 3px 5px; }
+  #games button[aria-pressed=true] { border-color:var(--accent); background:#223049; }
+  #games img { height:30px; max-width:100%; object-fit:contain; }
+  #games .gname { font-size:12px; font-weight:600; line-height:1.2; text-align:center; }
+  #games .gcount { font-size:11px; color:var(--mute); }
+  #mod-game { grid-column:1 / -1; width:100%; }
+  #maplist { list-style:none; margin:0; padding:0; overflow:auto; display:flex; flex-direction:column; gap:6px; }
+  #maplist .empty { color:var(--mute); padding:10px 4px; }
+  .mopen { display:flex; align-items:center; gap:10px; width:100%; height:auto; padding:4px 10px 4px 4px; text-align:left; }
+  .mopen.cur { border-color:var(--accent); }
+  .mopen img { width:96px; height:48px; object-fit:cover; border-radius:4px; background:var(--bg); flex:none; }
+  .mopen img.modlogo { object-fit:contain; padding:6px; }
+  .mopen .mname { font-weight:600; display:block; }
+  .mopen .mstat { color:var(--mute); font-size:12px; display:block; }
+  .mopen[aria-disabled=true] { cursor:default; }
+  .mopen[aria-disabled=true] .mname { color:var(--mute); }
   #coord { position:absolute; right:12px; bottom:10px; background:rgba(18,20,24,.85); border:1px solid var(--line); border-radius:6px; padding:6px 10px; color:var(--mute); font-size:12px; font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
 <div id="top">
   <h1>Paint the nav</h1>
-  <label for="map" class="hint" style="margin:0">Map</label>
-  <select id="map" aria-label="Map"></select>
+  <button id="mapbtn" aria-haspopup="dialog" aria-controls="maps" title="Choose a map (M)">Map: <b id="mapname">…</b> <kbd>M</kbd></button>
   <label for="cut" class="hint" style="margin:0">Height</label>
   <input id="cut" type="range" min="0" max="0" value="0" aria-label="Height shown" style="width:200px">
   <span id="cutlabel" class="hint" style="margin:0;min-width:120px"></span>
@@ -75,6 +97,11 @@
     <div id="counts" class="hint"></div>
   </div>
   <div id="wrap">
+    <div id="maps" role="dialog" aria-labelledby="maps-h" hidden>
+      <div class="head"><h2 id="maps-h">Maps</h2><button id="maps-close" aria-label="Close the maps list">Close <kbd>Esc</kbd></button></div>
+      <div id="games" role="group" aria-label="Game"></div>
+      <ul id="maplist" aria-label="Maps"></ul>
+    </div>
     <canvas id="cv"></canvas>
     <div id="empty" hidden><div id="emptytext"></div><button id="build" class="primary">Make the roofless view</button></div>
     <div id="help">Left drag: paint · Right drag: move · Wheel: zoom · 1-8: layers · J: draw a jump · [ ]: brush size</div>
@@ -133,18 +160,88 @@ function pickTool(id) {
   draw();
 }
 
+// the maps list, organized as the LiDAR Viewer's and Simulator's: a tab a game (MCC's logos), and Modded: the Workshop's
+// maps, one game at a time by its drop-down, none of the game's own maps
+const GAMES = [["ce", "Halo CE"], ["h2", "Halo 2"], ["h2a", "Halo 2 Anniversary"], ["h3", "Halo 3"], ["odst", "ODST"],
+               ["reach", "Reach"], ["h4", "Halo 4"]];
+let mapsData = [], mapsGame = null, modGame = null;
+const gameName = g => (GAMES.find(x => x[0] === g) || [g, g])[1];
+function showMaps(on) {
+  $("maps").hidden = !on;
+  $("mapbtn").setAttribute("aria-expanded", on);
+  if (on) { renderMaps(); const c = $("maplist").querySelector(".cur") || $("games").querySelector("[aria-pressed=true]"); if (c) c.focus(); }
+}
+function renderMaps() {
+  const tabs = $("games"), box = $("maplist");
+  tabs.innerHTML = ""; box.innerHTML = "";
+  const cur = mapsData.find(m => m.name === mapName);
+  if (!mapsGame) mapsGame = cur ? (cur.modded ? (cur.studio ? "studio" : "mod") : cur.game) : "ce";
+  if (cur && cur.modded && !modGame) modGame = cur.game;
+  for (const [k, label] of GAMES) {
+    const all = mapsData.filter(m => m.game === k && !m.modded), painted = all.filter(m => m.painted).length;
+    const b = document.createElement("button");
+    b.innerHTML = `<img alt="" src="/art/games/${k}.png"><span class="gname">${label}</span><span class="gcount">${painted}/${all.length} painted</span>`;
+    b.title = `${label}: ${painted} of ${all.length} maps painted`;
+    b.setAttribute("aria-pressed", k === mapsGame);
+    b.onclick = () => { mapsGame = k; renderMaps(); };
+    tabs.appendChild(b);
+  }
+  // Modded: the Workshop's maps (and other mods); Map Studio: maps made with MCC Map Studio. Each one game at a time
+  const kinds = { mod: m => m.modded && !m.studio, studio: m => m.modded && m.studio };
+  for (const [key, label, what, tip] of [["mod", "Modded", "downloaded", "Maps downloaded from the Steam Workshop, and other mods, by game"],
+                                         ["studio", "Map Studio", "made", "Maps made with MCC Map Studio, by game"]]) {
+    const these = mapsData.filter(kinds[key]);
+    const mb = document.createElement("button");
+    mb.innerHTML = `<span class="gname">${label}</span><span class="gcount">${these.length} ${what}</span>`;
+    mb.title = tip;
+    mb.setAttribute("aria-pressed", mapsGame === key);
+    mb.onclick = () => { if (!these.some(m => m.game === modGame)) modGame = (these[0] || {}).game || "ce"; mapsGame = key; renderMaps(); };
+    tabs.appendChild(mb);
+  }
+  if (kinds[mapsGame]) {
+    const sel = document.createElement("select"), these = mapsData.filter(kinds[mapsGame]);
+    sel.id = "mod-game"; sel.setAttribute("aria-label", "Game of the " + (mapsGame === "studio" ? "Map Studio" : "modded") + " maps");
+    for (const [k, label] of GAMES)
+      sel.insertAdjacentHTML("beforeend", `<option value="${k}">${label} (${these.filter(m => m.game === k).length})</option>`);
+    sel.value = modGame;
+    sel.onchange = () => { modGame = sel.value; renderMaps(); };
+    tabs.appendChild(sel);
+  }
+  const shown = mapsData.filter(m => kinds[mapsGame] ? kinds[mapsGame](m) && m.game === modGame : m.game === mapsGame && !m.modded)
+    .sort((a, b) => a.title.localeCompare(b.title));
+  if (!shown.length)
+    box.innerHTML = `<li class="empty">${mapsGame === "studio" ? "No " + gameName(modGame) + " maps made with MCC Map Studio yet. Export one from Map Studio and it shows here."
+      : mapsGame === "mod" ? "No modded " + gameName(modGame) + " maps downloaded. Subscribe to one on the Steam Workshop and it shows here." : "No " + gameName(mapsGame) + " maps here."}</li>`;
+  for (const m of shown) {
+    const li = document.createElement("li"), b = document.createElement("button");
+    const waiting = m.modded && !m.ready;
+    b.className = "mopen" + (m.name === mapName ? " cur" : "");
+    const pic = m.modded ? `/art/games/${m.game}.png" class="modlogo` : `/art/maps/${m.name}.jpg`;
+    b.innerHTML = `<img alt="" loading="lazy" onerror="this.style.visibility='hidden'" src="${pic}"><span><span class="mname"></span><span class="mstat"></span></span>`;
+    b.querySelector(".mname").textContent = m.title;
+    b.querySelector(".mstat").textContent = (m.modded ? "From " + m.mod + " · " : "") +
+      (waiting ? "not read yet: read its level in the LiDAR Simulator or Viewer first" : m.painted ? "Painted" : "Not painted yet");
+    if (m.name === mapName) b.setAttribute("aria-current", "true");
+    if (waiting) b.setAttribute("aria-disabled", "true");
+    b.onclick = () => { if (waiting) return; showMaps(false); if (m.name !== mapName) openMap(m.name); };
+    li.appendChild(b); box.appendChild(li);
+  }
+}
+$("mapbtn").onclick = () => showMaps($("maps").hidden);
+$("maps-close").onclick = () => showMaps(false);
+
 async function loadMaps() {
-  const list = await (await fetch("/api/maps")).json();
-  const sel = $("map");
-  sel.innerHTML = list.map(m => `<option value="${m.name}">${m.name}${m.painted ? " (painted)" : ""}</option>`).join("");
+  mapsData = await (await fetch("/api/maps")).json();
+  const ok = mapsData.filter(m => !m.modded || m.ready);
   const want = new URLSearchParams(location.search).get("map");
-  if (want && list.some(m => m.name === want)) sel.value = want;
-  await openMap(sel.value);
+  await openMap(want && ok.some(m => m.name === want) ? want : (ok[0] || {}).name);
 }
 
 async function openMap(name) {
-  if (dirty && !confirm("You have unsaved paint on this map. Leave it without saving?")) { $("map").value = mapName; return; }
+  if (dirty && !confirm("You have unsaved paint on this map. Leave it without saving?")) return;
   mapName = name;
+  const m = mapsData.find(x => x.name === name);
+  $("mapname").textContent = m ? m.title : name;
   setStatus("Loading…");
   const d = await (await fetch("/api/map?name=" + encodeURIComponent(name))).json();
   view = d.view; paint = {}; undo = []; redo = []; pending = null;
@@ -155,7 +252,7 @@ async function openMap(name) {
     if (paint[layer]) for (const [x, y, z] of cells) { const c = {x, y, z}; paint[layer].set(keyOf(x, y, c), c); }
   $("empty").hidden = !!view;
   if (!view) {
-    // made on its own the first time a map is opened (Nov 6: no button to press first); the button stays only
+    // made on its own the first time a map is opened (the owner, Nov 6: no button to press first); the button stays only
     // to try again if it failed
     $("emptytext").textContent = "Making this map's top-down view… (a few seconds, once per map)";
     $("build").hidden = true; img = null; draw(); markDirty(false);
@@ -346,7 +443,9 @@ window.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); doRedo(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); return; }
+  if (e.key === "Escape" && !$("maps").hidden) { showMaps(false); $("mapbtn").focus(); return; }
   if (e.key === "Escape" && pending) { pending = null; setStatus(""); draw(); return; }
+  if ((e.key === "m" || e.key === "M") && !e.ctrlKey && !e.metaKey) { showMaps($("maps").hidden); return; }
   if (e.key === "j" || e.key === "J") { pickTool("jump"); return; }
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= LAYERS.length) pickTool(LAYERS[n - 1][0]);
@@ -356,7 +455,6 @@ window.addEventListener("keydown", e => {
   }
 });
 window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
-$("map").onchange = e => openMap(e.target.value);
 $("cut").oninput = async e => { level = +e.target.value; await loadLevel(); };
 $("size").oninput = e => { $("sizelabel").textContent = e.target.value + " u"; draw(); };
 $("allh").onchange = draw; $("hidepaint").onchange = draw;

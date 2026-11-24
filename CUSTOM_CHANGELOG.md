@@ -2,6 +2,740 @@
 
 ## Unreleased
 
+### Halo: Reach Classic Firefight: up to 7 bot teammates join the match, 2026-11-24
+
+Upstream 0.3.0's note #13 (build 20261114-0323, his GitHub #28), the brain's half; the panel's is the entry below. The owner: "Reach Firefight, 7 bot teammates: port his 0.2.2 Firefight-bots system too (bigger job; it needs its own overlap check before building, reported to the owner)".
+
+- `tools/botctl.py`: `REACH_FF_PLAYERS` 8 (his); `player_cap` gives Reach's Firefight 8 players, ODST 4 as before (`FIREFIGHT_PLAYERS`; his `ODST_FF_PLAYERS` 8, note 20261108-1120, is not taken: ODST crashed with more). His `FF_SIDE` (players a side, for his Spartan and Elite teams) is not taken. `roster(path, firefight, game)` (his): Reach's `ffbot=` list or ODST's `odbot=`, an ini from before the split read as ODST's from `ffbot=`.
+- `tools/play.py`: the Firefight list read for the match's game, the "N bots at most (M players in all)" line from `player_cap`; the cap (`room`) was already `player_cap`. Ours kept: every bot on the person's team (`team = players[0]["team"] if ff`), our `add_bot` (waits out a paused game), the no-list fallback of 3, `save_humans` and the rest. His `ff_plan` (4 a side, Spartans and Elites) is not taken.
+- `tools/live_bots.py`: the brain reads the same game's Firefight list for the bots' tiers. Nothing of the brain's Firefight play changes: the escorts, the safe spots while you are down, the dead-Covenant rule (#12) are as before, now for up to 7.
+- `tools/service_record.py` (ours): the site's lobby tiers and a bot's difficulty set on the site also read and write ODST's `odbot=` lines.
+- **Checks:** `tools/test_firefight_bots.py` (new, 5): caps (Reach 8, ODST 4, other modes 16), each game's list, an old ini for ODST, the native caps agreeing with botctl, the site reading `odbot=` tiers; `tools/test_bot_difficulty.py` OK; full suite (see the report). **Untested in a live match:** Reach Classic Firefight with 4-7 bots (joining, respawning on the shared lives, escorting), Versus with more than 3 bots on your side, ODST after the split.
+
+### Halo: Reach Classic Firefight: the BOTS panel takes up to 7 bot teammates; ODST keeps its 3 on a list of its own, 2026-11-24
+
+Upstream 0.3.0's note #13 (build 20261114-0323, his GitHub #28), with the list split of his 0.2.2 Firefight-bots system (build 20261108-0230). The owner: "Reach Firefight, 7 bot teammates: port his 0.2.2 Firefight-bots system too (bigger job; it needs its own overlap check before building, reported to the owner)". This is the panel and list half; the brain's half (botctl, play.py) is the next entry. His Spartan/Elite teams, Generator Defense and Covenant ranks are not taken here (overlap report to the owner).
+
+- `native/bots_panel.cpp`: `roster_cap()` in a Firefight lobby is `ff_bots()`: 7 in Reach's (8 players with you, MCC's custom Firefight since July 2023), 3 in ODST's (4 players, as before: more crashed ODST, Oct 25). The panel tells them apart by the lobby's title (`e.title == 8` ODST, else Reach; his rule was `title == 5`, ours sends any non-ODST Firefight lobby to Reach's list so the list and its cap always agree). The "Firefight holds N players", "Choose up to N bots" and "N of M bots" lines follow the cap; a list longer than the cap is cut on open (it never is: botcore reads at most the cap).
+- Ours kept: every bot on your team in both Firefights (his Reach panel has a Spartan team and an Elite team, `FF_SIDE`, `side_name`; not taken, their Elite brain is not ported); Bot Matchmaking, the bot card, the difficulty picker, the pool and team points still skip Firefight as before.
+- `native/botcore.cpp` (his split): Reach's list `g_ff_roster` (`ffbot=`, up to 7) and ODST's own `g_od_roster` (`odroster=` / `odbot=`, up to 3). A botcore.ini from before the split seeds ODST's from the first 3 of the one Firefight list, so nobody's ODST bots change; both lists stay one team (yours).
+- `native/overlay.cpp`: `hb_ff_list()` gives the Firefight lobby's list (ODST's in an ODST lobby, else Reach's) to the BOTS tile's summary, the panel and our lobby rows; our lobby rows' count reads /8 in Reach Firefight, /4 in ODST (was /4). `native/session_watch.cpp` (our MCC session list test, `sessionbots=`) takes the same list.
+- **Checks:** built `botcore_up030c.dll` (no new warnings); the next entry's `tools/test_firefight_bots.py` checks the native caps agree with botctl and that the ODST list is written. **Untested in game:** Reach Classic Firefight with 4-7 bots joining and respawning, the panel in an ODST lobby, an old botcore.ini's lists after the split.
+
+### Halo: Reach third person: a smaller reticle, only while third person is on, 2026-11-24
+
+Upstream 0.3.0's note #65 (build 20261117-2300). The owner: "smaller reticle: with #53, Reach only, only while third person is on".
+
+- `native/third_person.cpp`: his `tp_chud_shrink` / `tp_chud_back` / `tp_chud_forget`: the weapon's chud definition's reticle pieces (a placement anchored on the crosshair, in a collection of the crosshair class) get their scale pair and offset pair times 0.7, each pair's old values kept (256 at most) and put back only while they still read what we made of them. (His file had two control characters in a comment's tag path; fixed in our copy.)
+- `native/reach.cpp` `hr_reticle` (his): the weapon in hand's tag reference of class chdt, Reach's layout from its kit (class byte +4, bitmap widgets +0x98, placement block +0x38, anchor byte +1; sizes 0xDC / 0x9C, class 2, anchor 17). Called only from `hr_tp_apply`, so only with third person on and its camera hooks made: smaller on foot with no scope up; full size again with a scope up, dead, in a seat, with third person off, in a Theater film (`hr_tp_film`) or with the new **Smaller reticle** switch off.
+- Ours, not his: a new match puts the pieces back while the tags are where they were (`hr_reticle_tick`; his dropped the list, so the same map's tags kept between matches would have been made smaller again at every match and never put back); when the tags moved (the tag base changed) or haloreach.dll reloaded, the list is dropped unwritten.
+- `native/bots_panel.cpp`: **Smaller reticle** under Third person (shown while third person is on; on by default, as his: it does nothing with third person off). Ours, his had no switch for it. `experimental.ini` `tp_reticle=`.
+- `h_hr_update`: our third person line now also calls `hr_reticle_tick`; nothing else of ours changed.
+- **Checks:** `tools/test_reach_third_person.py` (reticle tests: the one shrinking call is the on-foot, no-scope, switch-on one, every other path puts back, film / reload / new match handled, the put-back guard); built in `botcore_up030b.dll`. **Untested in game** (the reticle of several weapons on foot, the needle rifle's four arcs, scoping, a vehicle, a second match on the same map).
+
+### Halo: Reach first person passenger: a switch on the Experimental tab, off until turned on, 2026-11-24
+
+Upstream 0.3.0's note #55 (build 20261115-0215). The owner: "first-person passenger: with #53 (Reach), off by default".
+
+- `native/passenger_fp.cpp` (new, his file, Reach's caller only): a seat definition's first dword is its flags; a passenger seat (none of the driver 0x4, gunner 0x8 or boarding 0x08000000 bits) loses the third person bits 0x50 while the switch is on, each seat's old flags remembered once (512 at most: a seat that could not be remembered is never patched).
+- `native/reach.cpp` `hr_passenger_fp` (his): every half second, every vehicle object's tag data (the tag table at haloreach +0xC1A600, `hr_unpack` by the bases at +0x4E39F20, as `brain/live.py` `LiveReach._unpack`), its seat block at +0x444 (count 1 to 16, the first seat a driver's), 0x12C a seat. Called each tick after `hr_spawn_moves`, one line; our lines kept.
+- Off (and in a Theater film, ours: his patched in films too): nothing is patched, and every patched seat is put back. Ours: a seat is written back only while it still reads what we made of it.
+- Ours, not his: at a new match his list was dropped, so a seat left patched in tags the game kept (the same map again) could never be put back. Now each seat is remembered with its vehicle's tag index and seat number, and a new match keeps it only while the tag table still leads to the same address and it still reads patched (`fp_check`, `hr_seat_at`); any other is dropped and never written. On a haloreach.dll reload the list is dropped (`fp_forget` in `reach_watch`, one line).
+- `native/bots_panel.cpp`: the First person passenger switch on the Experimental tab. `native/build.bat` builds `passenger_fp.cpp`.
+- **Checks:** `tools/test_reach_third_person.py` (passenger tests: off restores before any patch, the restore guard, the 512 limit before a patch, the new-match check, Reach only); built in `botcore_up030b.dll`. **Untested in game** (a Warthog / Mongoose / Falcon passenger seat on and off, a restart of the same map, a friend's session, a film).
+
+### Halo: Reach in third person: a switch on the Experimental tab, off until turned on, 2026-11-24
+
+Upstream 0.3.0's note #53 (build 20261116-2330). The owner: "third person: Reach only, off by default, hand-merged at our Reach hook spots"; #53b controller button: "no, keyboard keys are fine".
+
+- `native/third_person.cpp` (new, his file cut to Reach's part): `tp_view` (the shoulder view: near / middle / far behind the eye, aside by the shoulder, the forward turned to where the aim meets the world so the crosshair is on the shot, shoulder and distance changes eased over about a quarter second), `tp_up`, `tp_keys` (a key or mouse button, read only with MCC in front) and `tp_on`. Left out: his `tp_gate` (Halo 3 / ODST's zoom check) and every other game's callers. `native/build.bat` builds it.
+- `native/reach.cpp`: his Reach block hand-merged after `hr_object`: hooks on the following camera's update (haloreach +0x1DCADC), the camera mode setter (+0xC5834) and the first person camera's update (+0xC6EE8, out of a scope on the frame it drops); calls, without a hook, to the game's line test (+0x12AFCC, the aim's wall test) and the unit's eye (+0x48A1C0). `hr_tp_apply` puts the local player's director on the following camera on foot, alive and with no scope up; dead, in a seat or scoped it leaves the game's own camera.
+- Ours, not his: the camera hooks are made only once the switch is first seen on (`hr_tp_hook`, from `reach_watch` in botcore's loop), each after its first 16 bytes read as the decoded build's (the line test's first 4 and 12 bytes at +0x13, the eye's first 16); his made them at every load. Never turned on, the game is not touched for third person. Turned off, the hooks stay and pass straight through, and the view goes back to first person. On a haloreach.dll reload they come out with ours (`hr_tp_unhook`) and are made again only if the switch is on. A failed check is logged once a load and nothing is hooked.
+- Ours, not his: in a Theater film nothing of third person runs (`hr_tp_film` clears the hold and the body; his only skipped `hr_tp_apply`, so a film of the same match could still have taken the player's unit for ours).
+- `h_hr_update`: one line after `hr_spawn_moves`; our armory, netwatch, net pump and net relay lines are untouched. `reach_watch`: our `if (g_hr) MH_RemoveHook` line and `hr_chk_hook` kept; two lines added (`hr_tp_unhook`, `hr_tp_hook`) and one before the hooked return.
+- `native/bots_panel.cpp`, the Experimental tab: the Third person switch and, under it while on, his Shoulder (Right / Left), Shoulder key, Distance (Near / Middle / Far) and Distance key (any keyboard key or mouse button pressed after clicking; Esc: none). Defaults as his: right shoulder, middle, Mouse 4 / Mouse 5. No controller button.
+- No clashes: none of the five addresses is hooked or called anywhere else in our native code (reach.cpp's netbots hooks are +0x3C4004, +0x418FF8, +0x394D48), and the new names (`HR_CAM_*`, `gr_tp_*`, `tp_*`) are new.
+- **Checks:** `tools/test_reach_third_person.py` (new: the tab, the switches' defaults and keys, Reach only, every hook made after its bytes are checked and only with the switch on, our `h_hr_update` / `reach_watch` lines kept); built in `botcore_up030b.dll`. **Untested in game** (Reach on foot, scoping, vehicles, respawn, the keys, a Theater film, a friend's session).
+
+### BOTS panel: an Experimental tab, the home of Halo: Reach's third person switches, 2026-11-24
+
+Upstream 0.3.0's note #56a (build 20261114-2230). The owner: "take it (home for the #53/#55 switches; CE body block left out)"; #56b Vehicle Warfare: "skip for now".
+
+- `native/bots_panel.cpp`: a fourth tab, **Experimental**, after Advanced (his tab bar). The pad's L1/R1 now step through 4 tabs and stop at the ends as before (clamped at 3 instead of 2). Our `g_goto_settings` ("Edit look" opens Settings) is kept as it was.
+- The page (his `experimental_settings`, a scrolling child nav-flattened into the panel) says the features are still being tried, for Halo: Reach only, and off until turned on. Its controls come with their own notes (#53, #55, #65), not in this commit.
+- `native/bin/experimental.ini` (his file, his `exp_load` / `exp_save`, key=value): only `passenger_fp`, `third_person`, `tp_reticle` (ours: the smaller reticle's switch), `shoulder`, `distance`, `shoulder_vk`, `distance_vk`. Every switch reads 0 (off) with no file, except `tp_reticle`, which only acts while third person is on. The exports `bots_panel_third_person()`, `bots_panel_passenger_fp()`, `bots_panel_tp_reticle()`, the shoulder/distance getters and steppers are botcore's (read on the game thread); the brain does not read the file, so his `tools/live_bots.py` `experimental()` is not needed and not taken.
+- Not taken: Vehicle Warfare (`vehicle_warfare=`), Unfair-Bots (`unfair=`, `unfair_level=`), the Halo: CE body options (ragdolls, gravity, keep bodies) and every other game's parts. Their lines in an older file are read past and dropped at the next save.
+- **Checks:** `bots_panel.cpp` compiles clean (`cl /c /W3`); built in `botcore_up030b.dll` with the notes after it. **Untested in game** (the tab on the mouse and the pad).
+
+### BOTS panel on a controller: the pad moves around the whole panel and wraps at the ends, 2026-11-24
+
+Upstream 0.3.0's note #23 (build 20261116-2330). The owner: "take it; try it on the pad".
+
+- `native/bots_panel.cpp`: his `ImGui::NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY | ImGuiNavMoveFlags_LoopX)` before `ImGui::End()` of the main panel (after our `quick_setup` / `confirm_clear`) and of the Report bot bug window: a controller or the arrow keys past an edge come round to the other side, up and down and across. The panel's lists and inspector were already nav-flattened into the window.
+- Not taken here: his Experimental tab's child (another note's work).
+- Ours kept: the 11-choice difficulty picker, `g_goto_settings`, our popups and the roster's own arrow keys are untouched.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the pad in the BOTS panel and the bug report).
+
+### BOTS panel sounds: short low Halo-style clicks instead of bright chimes (our Project Noble / Reach screens' sounds too), 2026-11-24
+
+Upstream 0.3.0's note #20 (build 20261114-1630). The owner: "take it; the owner listens in game, revert if disliked".
+
+- `native/bots_panel.cpp` `panel_sound_wav()`: his rewrite. Each sound is a falling-pitch tone (an exponential glide, a little square-ness) with low-passed noise on the attack: move a soft tick (640 to 520 Hz, 20 ms), select a thunk (360 to 210 Hz, 60 ms), back a lower thunk (300 to 160 Hz, 64 ms), open a low swell (90 to 180 Hz, 180 ms), error a buzz twice (150 Hz, 75 + 85 ms). Before: clean sine chimes, 1050-1950 Hz, up or down a step. Still 16-bit mono 22.05 kHz from memory; the longest (open, about 7.9 KB) fits `play_sound`'s 12000-byte buffers; at volume 100 the peak stays under full scale.
+- `panel_sounds()` (when each sound plays) unchanged, and `play_sound` / the Settings volume unchanged.
+- **Also changes** our Project Noble / Reach screens' sounds, the BOTS tile's and the bot card's: they play through the same `play_sound` (the owner knows and listens in game).
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). Not listened to here. **Untested in game.**
+
+### The low performance card, its overlay side: a "!" notice is a small red-outlined card in the upper right for 7 s, 2026-11-24
+
+Upstream 0.3.0's note #47 (build 20261118-2107), the native part. The owner: "take it, with our own ~20-line check instead of bot_capacity.py" (the brain's check, `tools/live_bots.py` `speed_note` sending `"!BOT PERFORMANCE LOW"`, is already on this branch).
+
+- `native/overlay.cpp` `draw_notice` (ours as base): his warning card for a notice whose title starts with "!": see-through dark red, a red outline, a red warning triangle with a white "!" mark, the title in red on one line beside it and the line under it wrapped at a narrow width, in the upper right corner of MCC's page (`mcc_content`). The "!" itself is not drawn in the title (the title starts after it).
+- 7 s on screen: ours sets it in `notice_active()` when the notice arrives (his set it inside `draw_notice`, after the first frame had already been timed by the length rule).
+- Every other notice (BUG REPORT SAVED, the brain's notices) is drawn as before: the centred card with the gold edge, timed by its length.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the card over a match).
+
+### Steam Deck: the Report bot bug tab shows only in the pause menu, 2026-11-24
+
+Upstream 0.3.0's note #9 (build 20261113-1500). The owner: "take it".
+
+- `native/overlay.cpp`: his `on_wine()` (ntdll's `wine_get_version`, looked up once) and his test in `cursor_up()`: under Wine / Proton the cursor reads as showing all match long, which kept the "Report bot bug" tab up; there the pause menu is taken as no game tick (`g_shm->game_tick`, our shared.h) for over 330 ms. (Ours: the test also asks for `g_shm`.)
+- **On Windows nothing changes**: `wine_get_version` is not in Windows' ntdll, so `cursor_up()` is our cursor test as before. F9 and the rest of the bug report are unchanged.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (no Steam Deck here; on Windows the path is not taken).
+
+### BOTS panel no longer disappears in lobbies: six missed probes in a row before the lobby counts as gone, beside our title hold, 2026-11-24
+
+Upstream 0.3.0's note #8 (build 20261113-1500). The owner: "add beside our Nov 21 hold, after the open overlay.cpp edits are committed; test the Reach lobby".
+
+- `native/overlay.cpp` `probe_lobby`, his two pieces hand-merged into ours:
+  - the strip test: START's strip no longer has to be non-solid (`ok = rows > h * 7 / 10 && (e == 1 || solid < h * 6 / 10)`); OPTIONS' strip still must not be filled, which keeps the carnage report out. His evidence: START's strip read 95-192 solid rows now and then from the lobby's video and focus while the player cycled game types and edited options.
+  - the miss tolerance: `PROBE_MISSES = 6`; the lobby shows at the first hit and counts as gone only after 6 misses in a row (a probe every 8 frames, about 0.8 s at 60 fps). His `lobby shown / hidden` log line added; the `lobby probe:` evidence line now logs when the probe's own answer changes.
+- Ours kept: the Nov 21 title hold (MCC's lobby screen still running, `pg_lobby_screen_live()`, and its title's letter pixels within a quarter of what they were when the frames were last seen) runs first and unchanged; the miss count is of its answer, so a held lobby is a hit. The hold still asks `g_lobby_visible`, which the tolerance keeps up through a short miss. `in_ce_menus` (MCC's menu byte 0) still hides the tile at once when a match starts.
+- Side effect: what waits for the lobby to be not seen (our Nov 23 `pg_post`, Project Noble's carnage report over MCC's post-game report) starts up to 6 probes later; a screen over the lobby (carnage report, Options) takes the tile away up to about 0.8 s later.
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the Reach lobby: cycling game types and maps, the session list, the carnage report).
+
+### BOTS panel on a controller: pressing both sticks no longer reaches MCC (no stuck chat box or save menu), 2026-11-24
+
+Upstream 0.3.0's note #36 (build 20261118-2107). The owner: "take it, hand-inserted; DLL rebuild, test in the Reach lobby".
+
+- `native/overlay.cpp` `h_xinput_get` (ours): his two lines hand-inserted inside our `!t_ours` block, as an `else` of our `g_pad_held` blanking: while the BOTS tile is up (`g_show_tile`), MCC's own pad reads never see L3 / R3. Before the change, the first stick pressed reached MCC and opened its chat or its save menu, then the panel took the pad and that menu could not be left.
+- Ours kept: the LB + RB chord read (`g_mcc_chord`, read before the mask, shoulders only), `g_pad_held`, the `g_back_until` B-back and `menu_route_pad` (it runs after the mask, so the menu route's presses go through untouched). Our own frame's reads (`t_ours`, ImGui's XInput 1.4) still see both sticks, so `pad_frame`'s both-sticks panel toggle works as before; no other code of ours uses the stick buttons (grep of THUMB / GamepadL3 / R3 in native).
+- **Checks:** built in `botcore_up030a.dll` (`build.bat up030a`). **Untested in game** (the Reach lobby on a pad).
+
+### Project Noble's terms of use: a draft for the owner, agreed once when final, no release while it is a draft, 2026-11-24
+
+Upstream 0.3.0's note #70 (build 20261119-1831). The owner: "our own Project Noble terms, drafted for the owner to edit (he decides the friend-join wording); upstream credit stays".
+
+- `TERMS.md` (new, **a draft**): his ten sections' structure in our words for Project Noble: own risk, no warranty, no liability (the authors of Project Noble and of the original Project Proving Grounds), where you may use it, not affiliated with Microsoft, your responsibility, things others share, your data (the update check asks our GitHub releases), license and credit (Project Proving Grounds, its link, PolyForm Noncommercial 1.0.0, NOTICE.md), changes. No website is named. Three notes marked **"OWNER TO DECIDE"**: the draft notice at the top, section 4 (where players may use it: online play and friend-join; his terms said offline custom games only), and section 8 (whether friend-join or party chat sends anything to friends' games). Version line: "Version 2026-11-24."
+- `tools/launcher.py`: his `terms()` / `accept_terms()` and routes (GET `/terms`, POST `/terms` writes `user/terms.ini` `[terms] accepted=<version>`). Ours: while TERMS.md has an "OWNER TO DECIDE" note it is a draft and nobody is asked (`terms()` says ok, draft); files closed.
+- `tools/launcher.html`: his dialog ("Please read these before you use Project Noble. You need to agree once."), shown before the page's first status; Escape does not skip it; "I don't agree" says Project Noble can't be used without agreeing.
+- `installer/ProjectProvingGrounds.iss`: `TermsVersion` (default "0"), `[Dirs] {app}\user`, `[INI]` writing `user\terms.ini` accepted = TermsVersion unless silent (a silent update records nothing, so the launcher asks if the terms changed). Our renamed lines unchanged.
+- `tools/build_installer.py`: **`terms_check()` refuses to build a release while TERMS.md has an "OWNER TO DECIDE" note** (and when TERMS.md or its Version line is missing), as the very first step; the installer's license page is TERMS.md, then NOTICE.md and LICENSE.md, and ISCC gets `/DTermsVersion=<its version>`. (His build script is not in his source, so this is our own.)
+- **Checks:** `tools/test_launcher_noble.py` +7 OK (29): our draft says Project Noble, credits the original, names our releases, no website, and is not asked; final terms are asked, agreed once, asked again for a new version; the installer's record counts; no TERMS.md asks nothing; the page's dialog comes first; the .iss records it; the build refuses the draft and a missing file, takes final terms and puts them first on the license page. In a preview of the page on a spare port (the worktree's launcher Handler only, with a final copy of the terms in the scratch folder) the dialog showed, I agree closed it and wrote its terms.ini there. Setup not built.
+
+### Version numbers: Project Noble's own X.Y.Z (0.0.325 today), the update check ranks it above the old releases, 2026-11-24
+
+Upstream 0.3.0's note #67 (build 20261119-0733, his "build numbers are back", 0.2.3 s-191 from BUILD_NO). The owner: "the owner's own scheme, X.Y.Z. Z = commits on GitHub (wraps to 0 past 1000, and Y goes up one); X counts releases from the next one (next release = 1, then 2...), and the old 4 don't count; at a release Y.Z keep the all-time GitHub commit count (e.g. 1.0.340). Today = 0.0.325". His BUILD_NO and build_name are not used.
+
+- `tools/noble_version.py` (new): `from_counts(commits, releases)` gives `X.Y.Z` (Y = commits // 1000, Z = commits % 1000). In a Git checkout: commits = `git rev-list --count origin/main` (GitHub's main as last fetched; else the branch's `@{upstream}`), X = the highest X of the `vX.Y.Z` tags with X >= 1 (`v0.2.2-custom.*` and the checkpoint tag do not count). In an installed copy: the `NOBLE_VERSION` file. `next_release()`: X one past the last release tag, Y.Z HEAD's commit count, tag `v<version>`. `python -I tools/noble_version.py` prints both.
+- `tools/updater.py`: `current()` is the scheme's version (kept a minute: the page asks every 2-3 s), else CUSTOM_VERSION (an older install still reads its own), else VERSION. `version_key()` now starts with the scheme: a plain X.Y.Z with X >= 1 (or 0.0.Z before the first release) is scheme 1, everything before (upstream's 0.2.2-s181 and plain 0.1.0 to 0.3.0, our 0.2.2-custom.N) scheme 0, so every new version is newer than every old one. A dev copy at 0.0.325 is not offered the old 0.2.2-custom.14 release; an install at 0.2.2-custom.14 is offered 1.0.x (its own older updater reads 1.0.x as newer too). Limit: a copy reaching 1000 commits before the first release (0.1.Z) would read as old again. The update check still reads only our GitHub releases (`RELEASES` unchanged). `current()` closes its file now.
+- `tools/build_installer.py`: the release version is `next_release()` (printed with its tag at the start; a note when no release tags are fetched), stamped into the payload's `NOBLE_VERSION`, and it names the Setup (`ProjectProvingGrounds-Setup-<version>.exe`) and its AppVersion. CUSTOM_VERSION is no longer the release's version.
+- The launcher shows it where it showed CUSTOM_VERSION ("Version 0.0.325"), through `version()` / `updater.current()`.
+- `docs/CUSTOM_RELEASE_WORKFLOW.md`: a Version numbers section; releases titled `Project Noble <version>`, tagged `v<version>`. `CUSTOMIZATIONS.md`: the version sentence.
+- **The next release's tag:** `v1.0.<commits of the released commit>`, e.g. `v1.0.340`. Today this branch's HEAD would build as 1.0.409 (325 on GitHub plus this branch's commits), and that grows with every commit until the release. No tag or release was made.
+- **Checks:** `tools/test_noble_version.py` (new, 15) OK: the wrap at 1000 and the owner's example; only new-scheme tags count; a stamped copy; this checkout's own count (0.0.325); a dev copy not offered v0.2.2-custom.14, older installs offered v1.0.340, comparisons between new versions, the old comparisons and `updater.selftest()`, upstream plain versions stay old, old notes are no news; the updater's API is our repository; current() prefers the stamp, an older install reads CUSTOM_VERSION, the answer is kept; the build stamps the payload. `tools/test_launcher_noble.py` OK. Setup not built.
+
+### A "PROJECT NOBLE" loading banner on MCC while the bots load (the launcher's Play), 2026-11-24
+
+Upstream 0.3.0's note #73 (build 20261119-1940). The owner: "take it with "PROJECT NOBLE" text on the in-repo Play (it shares loading_tag.py/launch.py with the skipped #60: bring only what the banner needs, no "Open Multiplayer" message)".
+
+- `tools/loading_banner.py` (his, Pillow): the see-through panel, ember corner marks, the badge, a sliding bar and a light streak. Ours: "PROJECT NOBLE" for his name; the badge is `installer/linux/icon.png`, which in ours is the Project Noble logo (kept); his hint line "Open Multiplayer once this banner closes." is gone and the name and "Loading the bots ..." sit lower in its space.
+- `tools/loading_tag.py` (his): the topmost, click-through banner window over MCC, closed when the overlay is ready (or after 120 s). Ours: windows named "Project Noble"; the plain fallback tag (if the banner cannot draw) says "Project Noble is loading the bots ...", not #60's "Open Multiplayer once this message closes".
+- `tools/launch.py` (ours, his two hooks): the banner starts once MCC is being started and closes after the injection with `wait_ready(120)`, before "Bots are ready". Only on the launcher's Play: not under Steam's Linux launch option (`--exe`). A banner that cannot start never stops the launch. The standalone Project Noble launcher (Play.bat, its own repo) is not touched and does not use launch.py.
+- `native/overlay.cpp`: beside our `g_ready = true`, the named event `Local\PPG_overlay_ready` is created once (the handle kept, none again after a fault restart). **The DLL is not rebuilt here** (overlay.cpp compiled alone with cl /c: no error; the one C4996 warning is an existing `_wfopen`); until a DLL with it is built and loaded, the banner closes after its 120 s timeout instead of when the overlay is up.
+- Pillow: the bundled Python has it (12.3.0).
+- **Checks:** `tools/test_launcher_noble.py` +4 OK (22): frames at three scales, our badge loads, no hint; no "Open Multiplayer once" text and no "Project Proving Grounds" window name in the three files; Play starts it before waiting for MCC and closes it after the injection, not under `--exe`; overlay.cpp sets the event after `g_ready`. Frames looked at as PNGs (`loading_banner.py <dir>`). **Untested on MCC** (the banner over the game, and its close on the overlay's event).
+
+### A Map Studio tile in the launcher: it finds MCC Map Studio and opens it, never downloads it, 2026-11-24
+
+Upstream 0.3.0's notes #49 (build 20261117-2100) and #78 (build 20261120-1620). The owner: #49 "locate and open only, no download"; #78 "take it with #49". (#85, downloading Map Studio, skipped.)
+
+- `tools/launcher.py`, from his: `map_studio_start` (its own Electron and package.json), `map_studio_links` (folders named in its shortcuts), `map_studio_elsewhere` (the folder it records in `%APPDATA%`, its desktop and Start-menu shortcuts, an "MCC Map Studio" / repository / GitHub-zip folder at the top of each fixed drive or one level below, and in Desktop, Documents, Downloads), `map_studio` (the `PPG_MAP_STUDIO` folder, `user/map_studio.txt`, where his launcher installs it, beside this project, then the wide search), `open_map_studio` (started detached, no console, `ELECTRON_RUN_AS_NODE` dropped). #78: Locate also takes the folder it was unzipped into (the names one level down) and says when a copy has no runtime.
+- (custom) The wide search never runs inside the page's status (every 3 s): its answer is kept and searched again in the background at most every 10 minutes (`MAP_STUDIO_WIDE_EVERY`), and at once when the tile is pressed. No drive is searched through: one listing of each fixed drive's top folders (36 ms on this PC).
+- Routes: POST `/mapstudio`, GET `/studio.png` (`installer/map_studio.png`, his badge, copied). `status()` says `map_studio` (found or not). `pick_folder` got an optional `title=`.
+- `tools/launcher.html`: a fifth tile in Tools, "Map Studio", with his badge as its icon (the map icon if the picture is missing). Found: the press opens it. Not found: "Locate ..." and the press asks for its folder. Hidden under Wine. Its messages in the Tools line.
+- Left out entirely: his `map_studio_install`, `_studio_asset`, `_studio_unzip`, `STUDIO_JOB`, `/mapstudio_install`, any `updater.SITE` / `release.json`. The "no runtime" message no longer points at his Download button.
+- **Checks:** `tools/test_launcher_noble.py` +9 OK (18): nothing of the download is in the launcher or its page; shortcut paths read; only top folders listed; status never waits for the wide search and starts it only once per interval; the saved folder first; Locate takes the unzipped folder, remembers it and starts it detached; a copy without its runtime is refused with the message; not found starts nothing; the badge is served and the tile is on the page. The page's script passes `node --check`. On this PC `map_studio()` finds the copy in `%LOCALAPPDATA%\Programs\MCC Map Studio`. **Not pressed in the launcher window** (Map Studio not started).
+
+### Compact launcher: the Play log folds to one line, 2026-11-24
+
+Upstream 0.3.0's note #50 (build 20261117-2300). The owner: "take it".
+
+- `tools/launcher.html`, hand-ported into our page: under Play, a "Play log" button with the log's last line (his `log-toggle` / `log-last` markup and CSS); the log box opens under it. It is folded while nothing runs, opens by itself on Play, on a line with error / failed / could not / cannot / problem / traceback, and when Play stops with a problem; the player's own open/fold choice is remembered (`localStorage` "play-log-open", in a try: the page works without it). His `setLog` / `playLine`; our `follow()` stays and feeds `playLine` for the play task only. The Play card got `id="play-card"`.
+- Not taken: his Play card's flex-height layout (his new launcher look, #71, skipped); the setup log is unchanged.
+- **Checks:** `tools/test_launcher_noble.py` +1 OK (9): the page has the toggle, its last line, the folded log, `setLog` / `playLine`, `follow()` feeding it, and Play opening it before it starts. The page's script passes `node --check`. Not looked at in the launcher window.
+- (Also: `tools/test_launcher_noble.py`'s #18 test line, joined into one long line when it was written, split again.)
+
+### Setup installs for the current user only, and the launcher says when its folder takes no files, 2026-11-24
+
+Upstream 0.3.0's note #18 (build 20261114-1215, his GitHub #30 "Play did nothing"). The owner: "take it; Project Noble wording".
+
+- `installer/ProjectProvingGrounds.iss`: `PrivilegesRequiredOverridesAllowed=dialog` removed (his comment kept), so Setup no longer offers an install for all users into Program Files, where the launcher without administrator rights could not write (Play hung on "Starting MCC ...", profiles did not save). Our renamed lines (AppName, DefaultDirName, shortcuts "Project Noble") unchanged; none of his other .iss changes taken here (the terms come with #70, in our own form).
+- `tools/launcher.py`: his `folder_problem()` (a write probe in `logs/launcher`, found once a launcher run); `start()` refuses every task with its message; `status()` carries it as `readonly`. The message says "Windows won't let Project Noble save files in its folder (...)".
+- `tools/launcher.html`: the red banner shows `readonly` (it was always cleared on a good status).
+- **Checks:** `tools/test_launcher_noble.py` +4 OK (8): a folder that refuses files gives the Project Noble message and Play starts nothing; a writable folder gives none and leaves no probe file; the .iss has no all-users choice and still says Project Noble; the page shows it. Setup not rebuilt or run.
+
+### "Open the install folder" opens the folder, never a second launcher, 2026-11-24
+
+Upstream 0.3.0's note #79 (build 20261120-1620). The owner: "take it".
+
+- `tools/launcher.py` `/folder`: `os.startfile(os.path.normpath(ROOT), "explore")` (his line, with his comment) in place of a plain `os.startfile(ROOT)`, which let Windows pick what to run and on a custom install folder started a second launcher.
+- **Checks:** `tools/test_launcher_noble.py` +1 OK (4): `/folder` calls the explore verb on the normalized folder (startfile mocked). Not pressed in the real launcher window.
+
+### The guide's and the launcher's links go to Project Noble's GitHub, with one credit link to the original, 2026-11-24
+
+The owner's own request (the side finding of upstream 0.3.0's note #44, "our links fixed afterwards, as planned"). His website links (#44) are not taken.
+
+- `tools/guide.html`: What works in each mode (`docs/BOT_STATUS.pdf`), Known bugs (`docs/KNOWN_BUGS.md`), What's new (our releases page), Report a bug (`issues/new?labels=bug`), Suggest an idea (`issues/new?labels=enhancement`) and the Linux section's Releases page now point at https://github.com/IEatOreos/ProvingGroundsOreo. Both docs exist in our repository; it has no issue templates, so the links open a plain new issue. One small credit line under the first links: "Project Noble is a customized build of Project Proving Grounds", the one link to https://github.com/AyoItzKye/project-proving-grounds.
+- `tools/launcher.html`: the What's new notes' relative links resolve to our `docs/`; links to our repository and to the original project (the upstream notes' issue numbers) stay links, others plain text.
+- `tools/launcher.py`: `/open` takes `link_ok(url)`: our repository, or the original project's repository (narrowed from any `github.com/AyoItzKye/` page).
+- Kept: the What's new dialog and the updater (our releases only) unchanged; upstream credits in NOTICE.md, CUSTOMIZATIONS.md and docs untouched.
+- **Checks:** `tools/test_launcher_noble.py` (new, 3) OK: every guide link is ours but the one credit link, every one passes `/open`, the map tools' and his website's links are refused. Not opened in the app window.
+
+### Installation 04 and Unearthed (Reach Firefight) have their map data, 2026-11-24
+
+Upstream 0.3.0's note #81 (build 20261120-2003). The owner: "take it (JSON committed, npz/png kept local)".
+
+- `maps/reach_cex_ff_halo/` (Installation 04) and `maps/reach_ff_unearthed/` (Unearthed), his folders, 9 files each. The JSON is committed: callouts, features, killzones, objects, phantoms, positions, wall_kinds. `heightmap.npz` and `topdown.png` are the map pack's: copied into the build tree, git-ignored as every map's, **not committed**.
+- `tools/view_art/names.json` (his, whole; ours was upstream's own): "Installation 04" and "Unearthed", and the three H2A Forge sky maps' names (Skyward, Nebula, Awash).
+- **Checks:** `tools/test_ff_map_data.py` (new, 2) OK: the JSON reads and the names are there; with the map pack present, the brain loads both maps (`brain.maps.get_map`, their spawns) and the LiDAR tools show their names. Our privacy check finds nothing in the files. **Untested in a live match** (bots on these Firefight maps).
+- **For the live install:** the two maps' `heightmap.npz` / `topdown.png` are not in Git, so the owner's copy needs them from his map pack (`PPG 0.3.0 (friend, unpacked)\src\maps\...`), as every map's.
+
+### Modded maps: our mod_maps.py uses MCC Map Studio's own bot export when the mod has one, 2026-11-24
+
+Upstream 0.3.0's note #84 (build 20261120-1802). The owner: "our mod_maps.py stays the only builder, and uses Map Studio's own bot export when present".
+
+- `tools/mod_maps.py build` (ours): when the mod has MCC Map Studio's bot export (`studio_export`), the map is built from it and the .map is not read (no bsp2obj). The export is `ppg/<our folder>`, or `ppg/<game>_<the .map's name>` as Map Studio and upstream name it, holding a `heightmap.npz`.
+  - The height map always comes in.
+  - `objects.json` replaces only a stand-in, and `callouts.json` only a generated one.
+  - Its `features.json`, `killzones.json` and `paint.json` come in only where there are none: the owner's paint is never replaced.
+  - Each file is swapped in whole. `.gitignore` "*" and `mod.json` (with `studio_export`) are written as always.
+  - An export without spawns or callouts falls back to reading the .map as well, as upstream's does.
+- Borrowed from his `tools/modded_export.py`: only that idea and its file list (`STUDIO_FILES`). His builder itself is not here. Our ModManifest/Workshop discovery, bsp2obj + height map, stand-in spawns, callouts and mod.json are unchanged.
+- **Checks:**
+  - `tools/test_mod_maps.py` +3 OK (13): no export gives None; built from the export by the .map's name, with no bsp2obj called; ours made by hand kept (objects, paint) and a generated callouts file replaced.
+  - `tools/test_modded_tab.py` OK.
+  - No Map Studio export is on this PC (no mod has a `ppg` folder), so **untested on a real Map Studio export**.
+
+### Modded and Map Studio tabs in the LiDAR Viewer, Simulator and Paint the nav; "Read its level" runs our mod_maps.py, 2026-11-24
+
+Upstream 0.3.0's notes #58 (build 20261114-2230) and #83 (build 20261120-1802). The owner: #58 "tab UI and his mod listing only; our mod_maps.py stays the only builder, our titles first"; #83 "take it with #58".
+
+- `brain/paths.py` (his, whole; ours was upstream's own): `workshop_maps`, `local_mod_roots` and `WORKSHOP_GAMES` list the modded maps on this PC. These are the Steam Workshop's and the local mods in MCC's ModManifest.txt, each with its game and mod. A local mod is "studio" when its ModInfo says MCC Map Studio or it has a `ppg` folder.
+- `tools/lidar.py`:
+  - `modded(listed)` (his, hand-merged): marks the maps with level data as modded, with their mod, and lists the others as not ready. `map_list` adds them, and so does Paint the nav's list (#57).
+  - His `workshop_title` is used last only. His `PREPARING` and the `/prepare` POST route stay behind the `X-LiDAR: prepare` header.
+  - Discovery is read at most every 20 s, since the list is asked every few seconds.
+- **Ours wins:**
+  - The name is our builder's folder for that map file (`tools/mod_maps.py`, as `play.py` names the running map), and a map only our builder finds is listed too.
+  - Titles are ours first: `map_title` (mod.json's, FP_GUARDIAN), then the mod's multiplayer title, his `workshop_title` last.
+  - A mod on a stock map's scenario (The Great Forge's Sword Base) stays that map, not a modded one.
+  - A modded map's layouts go to its tab with it.
+- **"Read its level"** (`prepare_modded`): runs **our** `tools/mod_maps.py <folder>` in the background (bsp2obj + heightmap, stand-in spawns, callouts, mod.json, `.gitignore` "*"). It is offered only where our builder has a row with a .map file, and otherwise the row says why not (Halo CE / Halo 2 levels are not read by the map tools; a mod with no multiplayer map). His `tools/modded_export.py` is **not** ported.
+- `tools/lidar_view.html` (ours, hand-merged, the map list only):
+  - Modded and Map Studio tabs after the seven games, each with a game drop-down. The games' own tabs count only their own maps.
+  - A modded map shows its game's logo and "From <mod>". One not read yet cannot be opened or simulated; it has a **Read its level** / **Try again** button and shows its progress, polled every 3 s.
+  - Our Edit spots, scan switch, drives, Open a map, Simulate all and Who maps are unchanged.
+- `tools/lidar_sim.py`: a pick of a map not in the simulator's list reads the list again (a modded map whose level was read since).
+- **Checks:**
+  - `tools/test_modded_tab.py` (new, 7) OK: our folder and title win; a stock-scenario mod stays the stock map; a map only our builder knows is listed; Map Studio is flagged; CE is not readable, with why; Read its level runs `mod_maps.py <folder>` and nothing else; a failed read shows our builder's reason; `modded_export.py` is not here; the page has the tabs; `workshop_maps` finds a local Map Studio mod and skips `shared.map`; the simulator takes a map read since.
+  - All LiDAR, paint and mod_maps tests OK.
+  - **Seen in the browser** (the worktree's viewer on another port): the Modded tab lists 27 Reach mods, with FP_GUARDIAN and the FP ports under our titles. FP_PROOF's Read its level ran our builder and showed its reason: "bsp2obj exported no geometry", the same as `mod_maps.py reach_fp_proof` by hand.
+  - **Not tried in the Simulator window or Paint the nav's window.**
+
+### Paint the nav: a map list (M key), organized as the LiDAR tools', 2026-11-24
+
+Upstream 0.3.0's note #57 (build 20261114-2230). The owner: "take it (both files whole)".
+
+- `tools/paint_view.html` (his, whole; ours was upstream's own apart from one comment, kept: "the owner, Nov 6"): the map drop-down is now a **Map** button (and **M**) opening a list.
+  - A tab per game with MCC's logo and how many of its maps are painted, plus **Modded** and **Map Studio** tabs, each with a game drop-down.
+  - Each map shows its picture, real name and whether it is painted. A modded map not read yet is listed but cannot be opened. Esc closes the list.
+- `tools/paint.py` (his, whole but one line): `maps_list` gives each map its real name (`lidar.map_title`, so our own titles), its game and whether MCC has it, then `lidar.modded` (the modded maps). `/art/games|maps/<file>.png|jpg` serves the logos and pictures from `tools/view_art` only.
+- **Kept of ours:** the window opens with our `appwindow.open_window` as before. His `appwindow.when_closed` (the tool ending with its window) is not in our `appwindow.py`, so that one line stays ours.
+- `tools/lidar.py modded()`: an empty stub here; the next entry (#58) fills it.
+- **Checks:** `tools/test_paint_maps.py` (new, 3) OK: maps carry their game, title and painted flag, with the modded ones after; the art route takes only view_art's logos and pictures; the page has the list, the M key and our comment. `paint.py` imports and lists this tree's 149 maps. **Not opened in its window.**
+
+### Setup: one bot model that fails to build no longer stops the rest; ODST's squad and Dare models in the list, 2026-11-24
+
+Upstream 0.3.0's note #29 (build 20261114-2230). The owner: "take it, his ODST models included (check at build what else the ODST models need)".
+
+- `tools/make_models.py` (his, whole: ours was upstream's own apart from line endings): a model whose `model_pack2.py` run fails is named with its reason ("not packed: ...") and left out; the others are still made. Before, one failure (`check=True`) stopped the 3D bots step at that model (his GitHub #31: a handheld's setup stopped at the H2A Spartan). `made.txt` gains a "not packed" line.
+- **His ODST models:** `odst_spartan` (the Firefight squad) and `odst_dare` (her own body), from `halo3odst\maps\h100.map`, holding the silenced SMG. `body_obj` gives a second body of one species its own export file, so Dare's no longer overwrites the squad's. An install without ODST skips them as before.
+- `tools/model_pack2.py` (his, whole: ours was upstream's own): the ODST holds' `spin_l` (the left hand turned round the foregrip) and `at_l` (its place on the gun). The other games' holds use neither, so their models are unchanged.
+- **What the ODST models need that we do not have** (not ported, for the owner to decide):
+  - Nothing of ours shows them yet. His profile view for ODST is his `brain/looks.py` ODST "view" (`VIEW_GAMES` with "odst", odst helmet settings), `maps/_looks/odst.json` (missing here), and his native `bots_panel.cpp` ODST profile (Dare's own model).
+  - His `tools/setup.py` has its own "ODST 3D bot" step with a marker file, for installs whose 3D bots step was done before.
+  - Ours makes them only when the 3D bots step runs (a fresh setup or Repair), about two more models' worth of space.
+- **Checks:** `tools/test_make_models.py` (new, 2) OK: with every tool run faked, the middle of three models fails to pack and the other two are made and listed, with "not packed: two"; the ODST entries, `body_obj` and model_pack2's `spin_l` are there. `make_models.py` and `model_pack2.py` import. **Not run against MCC** (no model was built).
+
+### Map layouts in the LiDAR Simulator: a Layouts choice in our panel; Halo 3, Halo 4 and H2A layouts filed at its start (never Reach), 2026-11-24
+
+Upstream 0.3.0's notes #19 and #19b (build 20261114-1330). The owner: "only a Layouts option hand-merged into OUR panel"; #19b "H3/H4/H2A only; not on Reach until a diff of Renegade's variant.json on a copy".
+
+- **Our panel** (`tools/lidar_view.html`): a Maps / Layouts (Forge and built-in) select above our "Simulate every map of" game select. With Layouts the label reads "Simulate every layout of", the count and question say layouts, and `{action: "all", layouts: true}` is sent. Our ids, Open a map, Who maps, Edit spots, scan switch and drives are unchanged.
+- `tools/lidar_sim.py`:
+  - His `mass_run(names, game, layouts)`: that game's maps alone, or its layouts alone (`maps/<map>/variants`), each a run of its own.
+  - Our Nov 13 `Control.command("all")` uses it with `layouts`; "no layouts for that game" when there are none, and the queue is kept as it was.
+  - His Every-map resume record, "unscanned", Skip, the view-closed rule and `play=` for the director are not taken (other notes; not needed for the choice).
+- `tools/h3_forge_import.py` (his, new): at each simulator start, before the map list is read, files every .mvar MCC lists for custom games (the player's LocalFiles saves and `<game>\map_variants`, not playlists) as `maps/<base>/variants/<id>/variant.json` with its pieces.
+- **The owner's rule, in code:** Halo 3, Halo 4 and Halo 2 Anniversary only (`GAMES`). His Reach reader is not here, and `file_one` refuses a Reach file (by game, or in a HaloReach / haloreach folder) or a `reach_*` base before reading anything. Reach's filed layouts are not even loaded. Reach layouts stay as our own code files them.
+- `brain/mvar.py`: his `parse_h4`, `read_h4` and what they need (`expand`, `_idx`, `H4_TYPES`, `H4_PHYSICS`, `_pos_bits(cap=)` with its default unchanged). Our `find`, `candidates`, `layout_name`, `name_layouts`, `read_h3` and the rest are untouched.
+- **Map data (not in Git):** `read_h4` names pieces from `maps/_shapes/h4_palettes.json` and `h2a_palettes.json`. These are game-derived exports from his copy, put in the build worktree only. Without them a Halo 4 / H2A layout has no base map and is skipped (Halo 3 uses our `h3_palettes.json`).
+- **Checks:**
+  - `tools/test_lidar_layouts.py` (new, 8) OK: Layouts of one game and of all; maps unchanged, with refusals; the panel has the choice; no Reach reader; a Reach file is skipped unread (by game and by folder); a Reach base is never filed; `main` never lists Reach.
+  - `tools/test_lidar_mappers.py` (our Every map tests) and every test touching `brain/mvar.py` OK.
+  - On this PC's real files (read only, nothing written): `read_h4` read all 43 Halo 4 and 7 H2A layouts and `read_h3` all 13 Halo 3, all ok. A dry run of `main` would file 63 layouts, 0 of Reach, with no Reach file read.
+  - **Untested in the Simulator window** (the choice not clicked; no layout run made).
+
+### Import a LiDAR scan someone shared, by hand from a zip you pick, never during a match, 2026-11-24
+
+Upstream 0.3.0's note #63 (build 20261112-1342). The owner: "by hand from a zip the owner picks, no fetch; bots' crouch-jumps and found_by "map" links filtered like our saver; blocked while a match runs (this extends #1's lidar_share.py)".
+
+- `tools/lidar_share.py` (his `_key`, `_join`, `merge`, `_ok_name`, `_import_one`, `import_any`, `import_zip`, `summary`, and `import <file.zip>`): a shared zip (one map's, or a game's bundle) is merged into `maps/<map>/lidar.json`, never replacing it. Floor counts are added, deaths and jump heights appended to the save's own limits (3000 / 2000), and links, teleporters, cover, weapons, objectives and holds joined with exact duplicates dropped. The scan before is kept as `lidar.json.before-import-<date>`, and `lidar_imported.json` remembers each imported scan, so a second import adds nothing. A map this version lacks, or a name with a folder in it, is skipped.
+- **Ours on his:**
+  - Their links are filtered by our own save's rule: never the map's rides (`found_by` "map") and never a crouch-jump no person made. The rule is now one function, `tools/lidar.py saved_link`, used by `Recorder.save_payload` (unchanged behaviour) and by the import.
+  - An import is refused while a match runs, before anything is read or written.
+  - A scan member over 64 MB is skipped, and the seen-list is written atomically.
+- **The match signal (new):** nothing in the mod knew reliably that a match was running (MCC open is not a match). `tools/match_lock.py` (new): `tools/live_bots.py` writes `user/match.running` (its process id and map) as the match's LiDAR saver starts, and removes it after the last LiDAR save at the match's end (and at exit). A file left by a crash counts only while that process still runs (checked with OpenProcess, never a kill).
+- **Not taken:** his `fetch`, `fetch_all`, `summary_all`, `BUNDLE_URLS` and `urllib`. Nothing in `lidar_share.py` or the launcher downloads anything.
+- **In-repo launcher:**
+  - `tools/launcher.py`: his `lidar_import` and `LIDAR_ZIP_MAX`, with our match check first. The `/lidar/import` POST route sits behind our `X-Launcher` check; a body over 64 MB is never read. No `/lidar/fetch`.
+  - `tools/launcher.html`: a "LiDAR scans" card under Game folder with only **Import a shared zip ...** (his game select, author Import button and the Simulator tile's download are left out).
+  - Kept of ours: the Project Noble text, our What's-new dialog and our updater.
+- **Checks:**
+  - `tools/test_lidar_share.py` +9 OK: floor counts added, duplicate, ride and bot crouch-jump links dropped, a person's crouch-jump kept; another grid refused; an import keeps its backup and a second one changes nothing; a missing map or a folder name is skipped; a bundle imports; refused while a match runs, by the tool and by the launcher, then allowed once it ends; a crashed match's lock does not block; a bad zip is refused; no download code.
+  - `tools/test_lidar_saver.py` OK. `lidar_share.py`, `lidar.py`, `match_lock.py`, `launcher.py` and `live_bots.py` import.
+  - **Untested in a live match** (the lock written and removed by a real match) and in the launcher window (the card was not clicked).
+
+### Export a LiDAR scan to share it, checked by our installer's privacy scan, 2026-11-24
+
+Upstream 0.3.0's note #1 (build 20261112-1342). The owner: "export, bundle and list only, plus our installer's privacy scan".
+
+- `tools/lidar_share.py` (his, export / bundle / list only): `export <map>` packs one map's `maps/<map>/lidar.json` with a manifest (map, game, build, date, minutes, counts) into `lidar-share/<map>_<date>.zip`; `bundle <game>` packs every scan of one game into `lidar-share/lidar-maps-<game>.zip`; `list` names the maps with a scan on this PC. His import and fetch (downloads) are not here.
+- `private()`: his patterns (an e-mail address, a user folder, an Xbox user id) and, in place of his `make_release.py` check (not in our install), **our installer's own privacy scan**: this PC's profile path, its user name as a whole word only, and the owner's personal terms in `.private_terms`. A scan holding any of them is not exported, and the message names what kind of thing was found, never the private words.
+- `tools/privacy.py` (new, ours): the installer's terms and check, factored out of `tools/build_installer.py privacy_scan` unchanged, so the installer and the export use one check. The installer's scan finds the same terms and prints the same lines as before.
+- `.gitignore`: `lidar-share/` (the zips stay on this PC until shared by hand).
+- **Checks:** `tools/test_lidar_share.py` (new, 8: an e-mail, a user folder, this PC's user name and a personal term are each refused without the term in the message; a longer word holding the user name is not; a clean scan exports with its manifest; a bundle with a private scan is refused; the installer's check and the export's are one) OK, on made-up terms in a temporary folder; `lidar_share.py`, `privacy.py`, `build_installer.py`, `live_bots.py` import. The installer itself was not built (no release).
+
+### No freeze on vehicle maps when new drives come in: the car and tank grounds are rebuilt in the background, 2026-11-24
+
+Upstream 0.3.0's note #40 (build 20261119-0039), **our own version from his idea, not his code**. The owner: "our own version for car and tank grounds, measured on Boneyard and Spire". His single vehicle ground would have dropped our separate car and tank grounds and our wedge marks (Nov 13).
+
+- `brain/terrain.py` (ours):
+  - `_vreset` (new rides, paint, out of bounds): with `VNAV_LATER` on, each size that has a ground keeps it, marked stale (`_vstale`), instead of dropping it for a rebuild in the pass.
+  - `_vready` (`vnav`, `drive_clear`): a size never built is still built in the pass, as before. A stale one starts its rebuild (`_vfresh`, `_vbuild_job`) on a thread of its own, from a shallow copy of the terrain taken then, and bots drive on the old ground meanwhile.
+  - The new ground goes in whole under `VLOCK`. The other size's result goes to its store for its next drive (`use_vground`).
+- **Both sizes:** each keeps its own graph, room rule (`VEH_ROOM` / `VEH_ROOM_TANK`) and caches.
+  - One rebuild at a time per terrain, so never two of one size; the other size waits for its own next drive.
+  - Rides that come in again during a rebuild mark it stale again, so it is rebuilt once more after.
+- **Wedge marks:** the copy gets its own lists. A mark made while the ground was built (`vwedge`) goes onto the new ground before it goes in (and onto the old one at once, as before). Per-size marks and `vwedge_nodes` are unchanged.
+- **Think threads:**
+  - On: a rebuild done during a threaded pass goes in at the next pass (`_PASS["seq"]`), so every bot of a pass drives on one ground whichever thread asked first.
+  - Off (one thread, the live brain on our bundled Python): at the next drive.
+  - A grown nav swapped in meanwhile (`maps.swap`): the rebuild is dropped.
+  - No thread or job is kept on the terrain itself (`_VJOBS`, weak), so the terrain cache still pickles.
+- `VNAV_LATER` is off by default, so the sims and tests play as before (a drive after a change builds in the pass, the same every run); `tools/live_bots.py` turns it on. `tools/test_threads.py` (4 threads play the 1-thread match) still passes.
+- Not taken of his: `_VNAV`, `_vnav_stale`, `_rebuild_vnav_later` and his `vnav` / `add_rides` / `oob` lines (one ground, no wedge marks).
+- **Measured** (`reach_70_boneyard/variants/v8d2f4510` and Spire `reach_35_island/variants/v704f87f3`). Their own `rides.json` came in again through `add_rides`, 3 times each, with 240 passes of 6 car and 4 tank drives and their guards' looks, at 30 a second:
+
+  | | In the pass (before) | Off the pass (now) |
+  | --- | --- | --- |
+  | Boneyard, worst pass after new rides | 674, 676, 679 ms | 72, 99, 95 ms |
+  | Spire, worst pass after new rides | 525, 529, 529 ms | 79, 80, 67 ms |
+  | Calm pass (median) | 15 / 12 ms | 15 / 12 ms |
+
+  - New grounds in use after about 0.5 s (car) and 1.1 s (tank) on Boneyard, 0.3 s and 0.6 s on Spire.
+  - The worst passes left are the fresh route fields on the new ground and the build sharing Python's lock.
+  - `add_rides` itself is unchanged (56-74 ms on Boneyard, 14-19 ms on Spire).
+- **Checks:** new `tools/test_vnav_later.py` (7) OK, 6 runs in a row:
+  - off, the next drive builds in the pass as before;
+  - the old ground is driven on until the new one goes in whole, once;
+  - both sizes, one rebuild at a time, each into its own place;
+  - a wedge marked while it is built is on the new ground;
+  - threaded passes take it at the next pass;
+  - a grown terrain swapped in meanwhile drops it;
+  - a terrain with a rebuild under way pickles.
+
+  `test_tank_drive.py`, `test_threads.py` and the full suite OK; `live_bots.py` imports. **Untested in a live match.**
+
+### Forge layouts built past the map's edge: the grid grows to their pieces (never to sky warships), 2026-11-24
+
+Upstream 0.3.0's notes #26 (his GitHub #33, build 20261115-0350) and #24 (his GitHub #34, build 20261116-2330), together. The owner: "take both; check Renegade's navigation and route times".
+
+- `brain/terrain.py Terrain.__init__` (his): a layout whose pieces stand past the level's grid (the heightmap's extent) gets the grid grown out to them, within its window. The new cells are the level's own no-data cells (no floor, no walls, `top` a wall), and the pieces' floors and walls go in them (`add_faces`).
+  - `cut()` is now the padding helper for `top`, `low`, `floors` and `walls`.
+  - `s.full` takes in the grown cells.
+  - Before, every piece beyond the level's edge was lost: his Halo 4 Onyx on Forge Island, bots standing still all match.
+- #24 (his): only out to the pieces' extent (from the blocks), never the whole layout window, which stray objects stretch far out. His fix for the minutes-long build #26 first caused.
+- `add_faces` (his #33 guard): a piece with no surface left at all (every one buried, or only undersides over grown cells) no longer stops the build. (custom, Nov 24) Written as no levels rather than his one-level stand-in: his works only because numpy lets an empty mask through.
+- Ours on his (custom, Nov 24):
+  - **The window is ours**, cut to the play area inside the kill zones (`maps.load_map`, `variants.play_limit`, Nov 23), so the growth stops there too.
+  - **No growth to a piece bigger than `GROW_PIECE_R` (40 u, origin to farthest corner) or past `GROW_MAX` (300 u) from the level's edge.** Such a piece is left off, as before. Our Reach data has the sky's warships placed in two built-in layouts: Condemned's corvette (170 u) and frigate (95 u), 470-610 u out, and Anchor 9's two frigates (99 u). The biggest other piece in any layout is 16 u (Ridgeline's tree). His rule would have grown Condemned's grid from 51 u a side to about 720 by 660 u (7.6 million cells), his #34 slow start again.
+- **Renegade** (`reach_forge_halo/variants/vf1ed8bb6`, no piece past the level), old -> new:
+  - grid 689 x 393 -> the same; nav 260,087 walk nodes and 1,918,190 edges -> the same;
+  - build 8.48 s -> 8.47 s; a route field 16.3 ms -> 16.1 ms (20 seeded routes, 10 of 20 found either way).
+  - Forge World 8v8 (`v8e4a8930`) and Boneyard: identical too.
+- **Layouts that grow** (pieces just past the level's edge, `brain/forge.py nav_pieces`). Walk nodes and edges are the same or a few more; builds within 0.15 s:
+
+  | Layout | Grid, old -> new |
+  | --- | --- |
+  | Condemned | 204 x 206 -> 276 x 209 (its walls north of the level) |
+  | Anchor 9 | 128 x 146 -> 150 x 178 |
+  | Highlands | 287 x 446 -> 325 x 459 |
+  | Rasu (Forge World) | 1025 x 521 -> 1025 x 561, +55 walk nodes |
+  | Boardwalk | 142 x 232 -> 148 x 255, +2 nodes |
+
+  Battle Canyon and Powerhouse SWAT also grow by a few cells.
+- Kept of ours: the window cut by `play_limit` and `clip`, `grow()` clipped to the play window, the reviewed-floor / spawn-floor order (#16), `_face_walls`' level walls and piece tops (Nov 22), `piece_wz`.
+- **Checks:** new `tools/test_grid_growth.py` (6) OK:
+  - no piece past the level, the same grid; a window inside the level still cuts;
+  - the grid grows east to a piece (not to the window) and bots walk it;
+  - growth west and south moves the origin and keeps the level's cells;
+  - never past the window;
+  - no growth to a warship-sized piece or one 380 u out;
+  - a piece with no surface left builds (without the guard: `IndexError`).
+
+  `tools/test_play_window.py` (5), `test_route_cap.py`, `test_terrain_cache.py` and the full suite OK. **Untested in a live match** (no layout past its level in our Reach data besides the ones above).
+
+### Bots walk off spawn points and teleporter exits: people's walk there is floor, 2026-11-24
+
+Upstream 0.3.0's note #16 (build 20261114-1215). The owner: "take it; check Sword Base spawns in the sim".
+
+- `brain/terrain.py` (his): `Terrain.spawn_floor` and `Terrain.exit_floor`, from two new `Terrain.__init__` arguments, `spawns=()` and `exits=()`, into `_add_floor`.
+  - Round a spawn point with no floor within 1 u of its height: the cells people walked (LiDAR, standing or crouched) within 10 u and 1.5 u up or down whose own cell has no floor near them, the spawn point itself, and 2 cells round each, become floor. Nobody walked there: nothing (no floor island under a spawn alone).
+  - Round each teleporter pad and exit: the cells people walked within 3 u and 1 u up or down are walked floor, walkable whatever the level's wall bits say.
+- Ours on his (custom, Nov 24):
+  - **After the layout's pieces, not before as his.** A Forge layout's floor is its pieces, and read before them every spawn on a piece had "no floor": The Cage got 10,864 cells of people's walk forced walkable through its pieces' walls (and a second, wrong man-cannon launch). `_add_floor` takes `more` (added to the reviewed floor, not in its place) and keeps a piece's ramp slope and piece mark (`s.slope`, `s.piece`) with their own floor levels.
+  - **The fill round the walk is floor the walls still judge.** Only the cells people stood on, the spawn points and the exits' cells are forced walkable (`walked_ok`); `spawn_floor(split=True)` gives the fill apart.
+  - `exit_floor`: the walk as one array instead of his Python loop over every walked cell per exit (same cells).
+  - **The spawns:** a layout's own spawn points (`initial_spawn_point`, `respawn_point`) when it has them, as its bots respawn there; the map's scenario spawns otherwise, as his. Never a layout's respawn zones: `spawn_points` counts them as spawns, but a zone's centre hangs over the floor. Breakpoint's layout (`reach_dlc_invasion`) got floor islands in the air at three of them, which no bot could route to.
+- `brain/maps.py _build` passes them; the exits are the map's teleporter pairs, as his.
+- Kept of ours: `_add_floor`'s reviewed floor (first, as before), `walked_under`, the window cut, our `T.vblocks` line right after the build, `spawn_points` unchanged.
+- **The check** (27 layouts built old and new: the 22 Reach layouts and maps with people's walks, both Sword Base layouts, The Cage, Renegade and Forge World's 8v8; spawn points with floor within 1 u under them, and routes between every pair):
+  - **Sword Base** (`reach_20_sword_slayer`, both layouts, 18 and 14 spawns): no change. Every spawn already had floor and a route to every other one in our data (our Sword Base level and LiDAR are not his), so nothing was added there.
+  - **Gained floor under spawns, routes the same or more:** Battle Canyon 34 -> 35 and Beaver Creek Anniversary 46 -> 48 (`reach_cex_beaver_creek`), Hang 'Em High 39 -> 40, Forge World's `v8e4a8930` 115 -> 120 (pairs with a route 14,162 -> 14,400, every one).
+  - **Unchanged or a few cells:** the other 20, The Cage and Renegade among them (Renegade's nav +4 nodes of 260,083).
+  - **Mixed: Condemned's built-in layout** (`reach_condemned`, floor under 20 -> 24). Four initial spawns at z 1.5 sit under a floor at 3.8. Two of them had no nav node at all, and two read as up on that floor. All four now stand on their own floor at 1.5, but it is a small island: people's walk ends about 1 u short of it, so three of them have no route off. Pairs with a route: 468 -> 446.
+  - Build times are unchanged (0.2-8 s a layout).
+- **Checks:** new `tools/test_spawn_floor.py` (7) OK:
+  - a floorless spawn with people's walk through it gets floor and a way off and back;
+  - nobody walked there, no floor;
+  - a spawn on the level's floor adds nothing;
+  - the fill is floor but not forced walkable;
+  - a spawn on a layout's piece adds nothing;
+  - floor added after the pieces keeps their slopes and piece marks with their levels;
+  - an exit's walked cells within 3 u and 1 u up or down are walked floor.
+
+  Full suite OK. **Untested in a live match.**
+
+### Bug reports and match exports include the bots' log, 2026-11-24
+
+Upstream 0.3.0's note #74 (build 20261120-1620). The owner: "take it".
+
+- `tools/bug_reports.py _brain_log` (his): `logs/brain.txt` (the running brain's output, this match's) is copied next to the reports: when a report is filed (`attach_new`) and at the match's end (`finish`). A missing log or folder is skipped quietly.
+- `tools/match_export.py`: an export adds `brain.txt` only when the log names this match's recording (`recording: <trace file>` in its first 64 KB). It goes through the same privacy scrub as every part (the Windows user folder -> `<home>`, people's names -> Player N), and an import takes it back (`IMPORT_PARTS`).
+- `tools/live_bots.py` prints `recording: <trace file>` at the start, so the log names its match.
+- Kept of ours: `match_export`'s tier names (Demon, Noble, Mythic, Blind, Tactician) and the Project Noble README text.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (the report folder gets the log, none without one; the export takes this match's log only, `brain.txt` is an import part, our README kept; `live_bots` names its recording) OK; `match_export.py`'s own selftest OK; `live_bots.py`, `bug_reports.py`, `match_export.py` import. **Untested in a live match** (a bug report filed in a match).
+
+### A low performance warning when the bots fall far behind (the brain's check), 2026-11-24
+
+Upstream 0.3.0's note #47, its live_bots part (build 20261118-2107). The owner: "take it, with our own ~20-line check instead of bot_capacity.py".
+
+- `tools/live_bots.py speed_note` (ours, on his rule): every 60 passes (`SPEED_EVERY`, 2 s), the median pass is judged against 2 slots (`SLOT_MS * HORRIBLE_SLOTS`, 66 ms: the bots thinking 15 times a second or fewer). After 3 such checks in a row (about 6 s) the warning goes to the overlay with `botctl.notice`: "!BOT PERFORMANCE LOW | Your PC can't keep up with this many bots. Use fewer bots or a smaller map." It shows again at most every 120 s while it lasts, and the brain's log says when.
+- It keeps its own `pass_ms` list (judged and cleared every 60 passes), because our `PERF` lists are emptied by each world row. Our Nov 22 `PERF["pass"]` / `think_sum` lines are unchanged.
+- Reports only: the bots think the same, and a failure in it (no overlay, a bad write) never fails a pass.
+- Not taken: his `tools/bot_capacity.py` (speed tests, `logs/bot_speed.json`, the "Your PC" card's history: #51, later).
+- The card: the "!" title is the overlay card's warning style, which comes with the native area later. Until then the current overlay shows it as an ordinary notice, title and line, with the "!" in front; nothing else changes.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (three slow checks in a row show it, not again within 120 s, again after; the text fits `botctl.notice`'s 127 bytes; a fast check starts the count over; a card that throws never fails the pass) OK; `live_bots.py` imports. **Untested in a live match** (needs a PC badly behind).
+
+### Reach Invasion: a second squad on the other territory, behind a switch (off), 2026-11-24
+
+Upstream 0.3.0's note #45 (build 20261118-1714). The owner: "behind a switch (LANE_SPLIT, 0 = today's play), checked in the sim before shipping"; #45b: "no exclusion, our role assignment decides".
+
+- `brain/director.py`: `LANE_SPLIT` (his 0.35, **ours 0.0: off**). With it on, in phases 1-2 with 4 or more attackers, `invasion_slots` gives `round(LANE_SPLIT * n)` attacker slots in the other territory, right after the first two in the target. The pile-on fills the rest, and the old single other-territory slot (5 or more, before the push) is skipped while the squad is set. His Spire: a deathmatch by one territory and nothing on the other side.
+- At 0 nothing changes: the second squad's count is 0, the pile-on and the old one-man split are exactly as before.
+- Every tier may fill the squad's slots; our `assign_roles` decides who (no Demon/Noble exclusion, the owner's #45b).
+- **The sim:** neither `tools/real_sim.py` (Reach Slayer by the real rules) nor `tools/bot_sim.py` (the matchmaking simulation) plays Invasion, so there are no switch-on/switch-off numbers. The owner's "checked in the sim before shipping" needs an Invasion sim first, or a live check with `LANE_SPLIT = 0.35`.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (off by default: all eight on one territory; on at 0.35: 5 and 3, none with fewer than 4; before the push, off keeps the old one man, on puts a squad of 2) OK. **Untested in a live match** (off, so live play is unchanged).
+
+### Reach Invasion: smarter spawns; a waiting vehicle gets a driver its tier may drive, 2026-11-24
+
+Upstream 0.3.0's note #46 (build 20261118-1714), with #46b. The owner: "the named-spawn part now, the label part with #35 (our may_drive guard kept at the errand spot)"; then both parts approved now, and #46b "vehicle job only for vehicles the bot's tier may drive: yes, filter".
+
+- `brain/invasion.py` (upstream's Invasion, never customized by us): his `honor_spawn`, `spawn_offers`, `_weighted`, `_named_point`, `danger`, `lane_counts`, `lane_factor`, `inv_vehicles`, `waiting_rides` and `label_pick` replace upstream s181's `honor_spawn`.
+  - **A job first:** a free vehicle of the bot's side waiting at its Invasion spot (spawned by this phase) sends one bot to the spawn by it.
+  - **Else a weighted pick:** the file's weight, times up to 1 + `LANE_W` (3) for the territory short of its share of the team (down to `LANE_MIN` 0.25 for one with twice its share), times `ENEMY_SPAWN_W` (0.25) by the other side's spawn, and 0 with a seen enemy within `DANGER_R` (15 u). If every weight is 0, the file's weights.
+  - Spawning on a teammate is offered once per lane.
+  - His Spire: the attackers' Conveyor Belt took 80% of their spawns, a deathmatch by the spire and nothing on the other side.
+  - `layout()` reads a map variant's own `inv_vehicle` labels.
+  - `label_pick` is the same for labelled custom maps (#35's zone path).
+- `tools/live_bots.py`:
+  - `spawn_check` passes the phase's two territories (`lanes`) and the map's Invasion vehicles (`inv_veh`, from `maps/<map>/inv_vehicles.json`).
+  - `label_zone` uses `label_pick` live, kept per death and phase, and sets the errand for a ride.
+  - Built-in maps read their vehicles from that file.
+- **#46b (custom, `drivable`)**: the vehicles offered to a spawn's vehicle job are only those the bot may drive (`Bot.may_drive`: Demon, Noble and Mythic never at a Warthog's or a Mongoose's wheel) and that no Wheelman of ours has called (`Bot.wheel_yield`). Such a bot still spawns, by the weighted pick.
+- `tools/inv_vehicles.py` (his, new): writes `maps/<map>/inv_vehicles.json` from an HREK `scenario.xml` export. Those files are game-derived: `.gitignore` gets `maps/*/inv_vehicles.json`, and none is committed (none exists here yet, so until the owner runs it on a built-in map only a variant's labels give vehicle jobs).
+- Kept of ours: `Bot.decide`'s errand consumption with our `s.may_drive(v, snap) and not s.wheel_yield(v)` guards and `close_fight`. His `in_fight` swap and `set_vplan` (which we lack) are not taken; `brain/bot.py` is unchanged.
+- **Checks:** `tools/test_upstream_030_modes.py` +7:
+  - `lane_factor` and `lane_counts`;
+  - a seen enemy rules Boneyard's Middle Approach out;
+  - through the real `spawn_check` on Boneyard's named spawns: a waiting Warthog sends a Heroic bot to spawn by it, not before its phase;
+  - #46b: Demon, Noble and Mythic are never sent for a Warthog (still spawned), but are for a Banshee;
+  - `label_pick`'s vehicle job and weighted pick;
+  - `layout` reads a variant's `inv_vehicle`;
+  - the `.gitignore` line.
+  - All OK; `test_wheel_and_one_bomb`, `test_breakpoint_sight`, `test_demon_seats` OK; `live_bots.py` imports, `inv_vehicles.py` parses. **Untested in a live match.**
+
+### Reach Invasion on custom maps: bots respawn in the map's own labelled zones, 2026-11-24
+
+Upstream 0.3.0's note #35 (build 20261118-1714, his GitHub #26: a custom Tempest whose bots never spawned in its zones). The owner: "take it, score_attacker plus the plain label spawns (label_pick waits for #46)". `score_attacker` and the round reset came in with #75.
+
+- `brain/invasion.py` (upstream's Invasion, never customized by us):
+  - `label_spawns` (his): `layout()` gives `spawn_res` = {label team: {phase: [zones]}}. `inv_res_p1..p3` serve their own phase; an `inv_res_zone` of sequence k serves phase k and later; team 8 serves both.
+  - `label_spawn` (his): a dead bot's zone, its side's this phase (earlier phases if none), the one nearest the phase's objective.
+  - `roles_from_spawns` / `phase_from_spawns` take `res`. `Watch` retries the sides by every label (`spawn_res`) when the p labels give no single attacking side. The phase vote reads a spawn the p labels say nothing of by every label; a zone that also serves phase 1 says nothing of the phase.
+- `tools/live_bots.py`:
+  - `label_zone` (his, plain: `label_spawn` only; his `label_pick` branch is #46's): the zone path (maps with no named spawns) sends a dead bot to its side's labelled zone, facing the objective, else the zone the game gives it (`live.respawn_zone`), as before.
+  - During a round's change (sides unread) every zone pick is called off, and our label picks are kept out of the Watch's reading of the sides and phase (`zone_placed` -> `Watch.placed`).
+  - A layout that only adds labels to a built-in map is read from its `.mvar` file (`mvar.find_invasion`, once a match, when Invasion is on and no setup was found).
+- `brain/mvar.py find_invasion` (his): of the map's files with Invasion labels, the one placing the most live pieces (calling our `find`), else the only one. Our `find`, `candidates`, `layout_name` and `name_layouts` are untouched, and `find`'s signature is the same.
+- Built-in Invasion maps (Boneyard, Spire, Breakpoint) all have named spawns (`inv_spawns.json`), so they keep `spawn_check`; the zone path is only for maps without them.
+- **Checks:** `tools/test_upstream_030_modes.py` +6:
+  - `label_spawns` by label, sequence and team 8;
+  - `label_spawn` nearest the goal, none without zones;
+  - the Watch reads the sides by every label when the p labels read both teams defending;
+  - a zone serving phase 1 says nothing of the phase;
+  - `label_zone`'s zone and memo, none during a round's change;
+  - `find_invasion` takes the only labelled file; `find`'s signature is unchanged.
+  - All OK; Invasion tests (`test_wheel_and_one_bomb`, `test_breakpoint_sight`) OK; `live_bots.py` imports. **Untested in a live match** (a custom Invasion map).
+
+### Reach Invasion: the attackers are read from the team playing Elites, 2026-11-24
+
+Upstream 0.3.0's note #75 (build 20261120-1620). The owner: "take all 3 (elite_team, score_attacker, round reset); test Invasion on Breakpoint and Spire". His bug report: on Noble, Anniversary and Defiant maps (Condemned 100 s, Headlong 37 s) the bots played the wrong side until the first capture.
+
+- `brain/live.py LiveReach.elite_team` (his, `ELITE_SIDE = 7`): the team whose living players' units read `UNIT_TEAM` 7 (Elites; Spartans read 1). It answers only when exactly one team is all Elites and at least 2 players read; else None.
+- `brain/invasion.py Watch.update` (upstream's 20261107 Invasion, never customized by us):
+  - Twice a second, the Elites' team becomes the attackers whenever it reads (`elite_ok`). The spawn labels and the score stand in only when it doesn't (no read, or a failed read).
+  - `score_attacker` (his): inside a round, the one team whose score rises by 1-2 is the attackers. It is gated by `elite_ok`, waits `SCORE_SETTLE` (10 s) into a round, and ignores a round's jump of 3 or more or both teams rising.
+  - The round reset (his): at a new round the sides are unread again (`sides_set` False, the score's zero re-taken), so a failed read can't keep last round's side; `spawn_check` holds its picks until the round's own spawns, the Elites or the score say the sides.
+- His own note: the Elite byte is **unverified in Invasion** (read in Beachhead's Versus). A misread would flip the sides every half second; none in tests.
+- **Checks:** `tools/test_upstream_030_modes.py` +8:
+  - `elite_team`: the Elites' team; none with one player read, both or neither, or a mixed team; the dead not read;
+  - `score_attacker`: the scoring team attacks; held while the Elites read; a round's jump and both up ignored;
+  - on Boneyard's real Invasion layout: the Elites' team attacks; no read (or a failed one) plays as before; a new round resets the sides.
+  - All OK; `test_wheel_and_one_bomb`, `test_breakpoint_sight` OK. **Untested in a live match**: the owner tests Invasion on Breakpoint and Spire.
+
+### Reach Headhunter: bots bank only at the drop points the game has open; a failed skull read is kept 2 s, 2026-11-24
+
+Upstream 0.3.0's note #34, the rest (build 20261118-1525). The owner: "our brain kept; take only open_drops, skull_point and the 2 s keep". `skull_point` was committed earlier; this is `open_drops` and the 2 s keep, wired into our own Headhunter brain.
+
+- `brain/live.py LiveReach.open_drops` (his): the open drop points, read from the game type script's table (`MEGALO_OBJECTS`, +0x10 = 1 on an open drop point; his live Boardwalk: two open at a time, a new pair every 30 s). Halo 4 and H2A's reader (`LiveH4F`, which inherits Reach's) sets `open_drops = None`: Reach's script table is not read there.
+- `brain/modes.py`: read twice a second in Headhunter; a failed read keeps the last answer. Only reads within 1 u of one of the map's drop points count (other scripted objects can read 1 there). `snap.obj_zones` still lists every drop point, as before.
+- `brain/headhunter.py Skulls` (ours, Nov 12) takes them as its **preferred source**, our score inference the fallback:
+  - `bank_zone`: the nearest open drop point while the read works (so `director.hh_bankers` and the drop-point cover in `mode_slots` go there). No read: the seen-banking drop point, else the nearest not found dead, as before.
+  - A drop point the game reads closed banks nothing on a no-score guess (a score rise still banks: the score shows it).
+  - One it reads open is never judged "dead" by our 3 s no-score rule.
+- The 2 s keep (his, `brain/modes.py`): a failed skull read keeps the last list for 2 s. Before, an empty list read as every skull picked up at once, by whoever stood nearest. Past 2 s the list empties, and `Skulls.update` is told the read failed (`loose=None`): nobody is credited and the next read starts fresh.
+- Not taken (the owner): his `hh_track`, `hh_bank`, `assign_roles` and `mode_slots` Headhunter blocks. Our `director.hh_bankers`, hunters and drop-point cover are unchanged.
+- **Checks:** `tools/test_upstream_030_modes.py` +7:
+  - bankers go to the open drop point (none read: as before);
+  - a closed drop point banks nothing without a score;
+  - an open one is never judged dead, and the score's rise banks;
+  - a failed read credits nobody;
+  - the watch keeps the last skulls 2 s and credits no pickup after;
+  - the watch reads the open drop points (one off every drop point dropped);
+  - Halo 4 reads none.
+  - All OK; `tools/test_headhunter.py`, `test_upstream_030_brain.py` OK. **Untested in a live match** (Reach Headhunter).
+
+### CTF: a bot pulling the enemy flag finishes the pull before a horn or a gun calls it, 2026-11-24
+
+Upstream 0.3.0's note #3b (build 20261112-1632). The owner: "take it (one extra condition in our horn and vehicle-order code)". #3a (his 25% defence split) and #3c (carrier fixes after boarding) were answered skip and are not taken.
+
+- `brain/director.py`: `PULL_FIRST, PULL_FIRST_R = True, 15.0` and `Director.pulling` (his): their flag on its stand, our runners and escorts within 15 u of it.
+  - `honk_orders`: one extra condition in our foot filter (`b.id not in pulling`). His live Sandtrap: a Warthog stopped by their flag called the runners in, the next role pass sent them back to it, every 1-2 s for 25 s.
+  - `vehicle_orders`: the same condition in our foot list for an empty gun's call.
+  - Once the flag is off its stand the carrier rides as before (the holder is called first).
+- Kept of ours: `gunner_available`, `Bot.seat_ok` (Demon, Noble and Mythic seats), `LAND_CALL_R_PERSON`, the horn's pick, `role_slots` and our Nov 9 one-defender rule (`CTF_DEFEND_LEAD`) untouched. Not taken: his `LEAD_KEEPS_SPLIT`, `OWNER_SPLITS`, `DEFEND_SHARE`, `THIEF_HUNT`, `KEEP_RUNNERS`, and his `b.order.said` foot test.
+- **Checks:** `tools/test_upstream_030_modes.py` +5 (the horn skips the runner by their flag on its stand and calls him once it is off it; as before outside CTF; an empty gun skips the escort by their flag; `PULL_FIRST = False` plays as before) OK; `test_demon_seats`, `test_resource_calls`, `test_ctf_defender`, `test_ctf_cutoff`, `test_demon_vehicles` OK. **Untested in a live match.**
+
+### CTF in Halo: CE and Halo 2: the bots count captures, 2026-11-24
+
+Upstream 0.3.0's note #11, its live_bots part (build 20261114-0323). The owner: "take both" (the wall-flag walk was committed earlier as its own part).
+
+- `tools/live_bots.py`: `flag_events` keeps each flag's last carried spot (`CARRIED`); a flag carried and next seen home, last carried within `CAP_R` (4 u) of the other team's stand, is a capture for the carrier's team (`CAPS`). His live CE Hang 'Em High: a capture read 0-0, so the bots never knew they led.
+- The score: where the game's read has no team score, `snap.score` is `CAPS` in CTF, **only on CE and Halo 2** (`TALLIED`, from #17; his took it in every game). Reach, Halo 3, ODST, Halo 4 and H2A keep their own score read, even on a tick whose read is empty.
+- Kept of ours: `snap.score_live` (Nov 13) beside the score line, still the game's own read only; the Slayer kill tally line as it was.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (carried to the stand = a capture and the scorers hear it; carried away and returned = none; the score takes `CAPS` only where `TALLIED`, and our `score_live` line is there) OK; `live_bots.py` imports. **Untested in a live match** (CE and Halo 2 CTF).
+
+### King of the Hill and Oddball in Halo: CE and Halo 2: bots play the real score, 2026-11-24
+
+Upstream 0.3.0's note #17 (build 20261114-1215). The owner: "take it, without the KING_CALLS callouts line".
+
+- `brain/live.py`:
+  - `inscribed()` (his): a King hill drawn by its corner markers is the circle inside them, not the ring round the farthest corner. CE's `king_hill` and Halo 2's `set_map` use it. His live Halo 2 Lockout Team King: the bots held the hill from outside it.
+  - Halo 2's `HILL_R` floor 3.0 -> 1.5 u (Lockout's hills are 1.7-2.7 u). Halo 3, ODST and Reach keep their own `HILL_R` (3.0) and their own hill reads.
+  - CE's `match_state`: Oddball and King limits are minutes in the variant; read as seconds (Team King's 2 = 120).
+- `tools/live_bots.py`: `held_tally` (his, `HELD`, `HELD_DZ` 2.5 u): where the reader has no team score, a team's seconds alone in the hill or carrying the ball stand in for the score. Before, the Slayer kill tally stood in and was held against CE Team King's limit of 2, so both teams played "the enemy is about to win" all match.
+- Ours, narrower than his: the tally stands in only on CE and Halo 2 (`TALLIED = type(live) in (Live, LiveH2)`, set in `main`). Halo 3, ODST, Reach, Halo 4 and H2A play exactly as before, even on a tick whose score read is empty or dropped. Our `score_live` (Nov 13) stays the game's own read only, so Land Grab's `score_read` never takes a tally for a score.
+- Left out: his `bot.py` `KING_CALLS` line (the owner: without the callouts line; we have no callouts feature).
+- **Checks:** `tools/test_upstream_030_modes.py` +7 (inscribed square; Halo 2 hill radii with the 1.5 u floor; Halo 3 and Reach keep 3.0; CE's limit in seconds for King and Oddball only; held_tally for King (alone scores, contested doesn't) and Oddball; only CE and Halo 2 tally) OK; `live.py` parses, `live_bots.py` imports. **Untested in a live match** (CE and Halo 2 King and Oddball).
+
+### Halo: CE free for all: every bot plays for itself, 2026-11-24
+
+Upstream 0.3.0's note #14 (build 20261114-0323). The owner: "take it".
+
+- `brain/live.py`: CE's reader gets `Live.teams_on()` (the running variant's teams flag, +0x34). In a free for all `Live.players()` gives every player his own side (`team` = his player slot), whatever red or blue team number the lobby left him. His live Rocket Slayer free for all on Hang 'Em High: the bots sat on red and blue and same-team bots never fought. The person keeps slot 0's side; CE's free-for-all score read (`match_state`) already scores each player by his `team`.
+- CE only: Halo 2, Halo 3, ODST, Reach and Halo 4 have their own `players()` and are untouched.
+- **Checks:** `tools/test_upstream_030_modes.py` +2 (free for all: teams 0-3 by slot; a team game keeps the lobby's teams) OK; `live.py` parses. **Untested in a live match** (CE).
+
+### Reach Firefight: bots stop shooting Covenant that are already dead, 2026-11-24
+
+Upstream 0.3.0's note #12 (build 20261114-0323, his GitHub #29). The owner: "take it".
+
+- `brain/live.py LiveReach.ai_units`: an AI unit with the game's own destroyed bit set (`DEAD_AT` bit 2, what `object_get_health` answers 0 for) is left out, whatever its damage field reads. A dead body's damage field can read below full again, and bots kept shooting dead Grunts. `AI_DEAD_BIT = True` (False = the damage field alone, as before).
+- Only the Firefight AI read changes; players, Spartans' own units and other games' readers are untouched (Halo 4's reader inherits it, and plays no Firefight). His `ai_rank` field in the same read is not part of this note and is not taken.
+- **Checks:** `tools/test_upstream_030_modes.py` +2 (a Covenant unit dead by the bit is left out; with the switch off the damage field alone decides) OK; `live.py` parses. **Untested in a live match** (Reach Firefight).
+
+### A vehicle read at 0 health stays a wreck for the rest of the match, in every game, 2026-11-24
+
+Upstream 0.3.0's note #80 (build 20261120-1802). The owner: "take it; watch one Reach vehicle match for wrongly marked wrecks".
+
+- `brain/live.py Live.vehicle_dead` (his rewrite): a vehicle first read alive (health 0.02 to 1.5) and later at 0 or below is a wreck for the rest of the match (`_veh_wrecked`), in every game; the game's destroyed bit (`DEAD_AT`) is still read where decoded. His live Halo 2 Street Sweeper: a burning Warthog's health went to -0.8 and crept back to 0.25 with the destroyed bit clear, and bots boarded such Warthogs 11 times.
+- The wreck memory lives on the reader, and `tools/play.py` starts `live_bots.py` (a new reader) every match, so it starts empty each match; a vehicle respawned within the match is a new handle.
+- A vehicle that reads 0 from the start is never a wreck (as before, for CE's body field).
+- Kept of ours: our vehicle code reads only the snapshot's `dead` (`live_bots.vehicle_dead`), unchanged.
+- **Checks:** `tools/test_upstream_030_modes.py` +4 (a burning Warthog stays a wreck in Halo 2, Reach and CE; 0 from the start is no wreck; the destroyed bit still read; a new reader remembers no wreck) OK; `live.py` parses, `live_bots.py` imports. **Untested in a live match**: on Reach a vehicle whose health read briefly hits 0 would be off-limits all match; the owner watches one Reach vehicle match for that.
+
+### An object freed while the bots read it is skipped, not the whole tick (Reach and Halo 4), 2026-11-24
+
+Upstream 0.3.0's note #39 (build 20261119-0039). The owner: "take it".
+
+- `brain/live.py`: `LiveReach.loose_named` (loose flags, Headhunter's skulls), `LiveReach.objects` and `LiveH4F.objects` skip an object whose header read comes back empty (`if head is None: continue`). Before, one object freed between the table read and its own read failed the whole tick (his live Halo 4 Vortex, Nov 19); the same reads in Reach were unguarded.
+- Nothing else changes: every object read whole is handled as before.
+- **Checks:** new `tools/test_upstream_030_modes.py` +3 (a flag freed mid-read: `loose_named` and `objects` return the other one; Halo 4's guard is in place) OK; `live.py` parses. **Untested in a live match.**
+
+### Halo 3 Elephants: the hull blocks sight; bots board by the ramp and climb the stairs to the deck, 2026-11-24
+
+Upstream 0.3.0's note #4 (build 20261112-1632). The owner: "port it carefully (his hull_blocks renamed, hull check kept outside the protected precision branches)". Halo 3 only (`bot.ELEPHANT_GAMES = ("h3",)`): nothing changes for Reach or any other game.
+
+- `brain/vehicles.py`:
+  - `ELEPHANT` takes his Sandtrap model from a player's walks: the hull box, the second floor (`deck`), its `stair`, the bay floor's `deck_jump`, the ways in from outside (`entries`), and `flag_return` moved up to the deck. A carrier on the old bay-floor marker never scored (5 minutes there, his live match). Our `live.py` reads `flag_return` for Sandtrap's capture point, so it moves to the deck too.
+  - His `hull_blocks` (the Elephant as a solid for sight) is ported as **`elephant_blocks`**. Our own `vehicles.hull_blocks(v, a, b, spare)` (rider-head occlusion) is untouched.
+- `bot.hull_between` (his, now taking the game): his chest and head both behind an Elephant's hull. **Called only in `Perception.update`, after our line is worked out** (after the `target_parts` / Noble sight / Halo 4 rider branches, not in them): no line means no `clear_at`. Our `line_clear` is unchanged: it reads only this tick's line (`LINE_FRESH = 0`), so no shot goes through the hull either, and `fire_gate` checks every press. His live Sandtrap: 47% of the bots' trigger ticks at a man went through an Elephant.
+- `Bot.way_in` (his, replacing the upstream s181 one we had unchanged), with his `elephant_entry`, `well_step`, `entry_try` and `round_hull`:
+  - round the hull's nearest corner for a goal past it (no running into its side);
+  - into the bay by the rear ramp, or by the front and rear-left jumps (each left 30 s after 3 failed tries);
+  - up the stairs to the deck, then straight at the goal.
+  - His tire-well climbs stay off (`ELEPHANT_WELLS = False`, as his).
+  - `move_to` presses jump for a way in with a jump.
+  - `blocked_way` no longer turns a bot "round" the Halo 3 Elephant it stands on.
+- Left out: his bay-floor jump onto the deck is a crouch-jump (his `Bot.crouch_jump`, which our brain doesn't have), so `DECK_JUMP = False` and bots take the stairs. That was his own fallback after 3 missed jumps.
+- **Checks:** `tools/test_upstream_030_brain.py` +8:
+  - the hull blocks, the bay lane and over it don't, nor a Warthog, nor the one we ride;
+  - our `hull_blocks` signature is unchanged;
+  - Halo 3: no line through the hull, a line with no Elephant;
+  - Reach, Halo 4 and Halo 2 see as before;
+  - Reach never takes an Elephant way;
+  - Halo 3: to the ramp's foot, up the ramp, to the stairs' foot, up them, on the deck straight at the capture; round the hull for a goal past it.
+  - All OK; full suite 1,519 OK. **Untested in a live match** (Halo 3 Sandtrap).
+
+### Reach Headhunter: bots pick up skulls lying near them (the bot part), 2026-11-24
+
+Upstream 0.3.0's note #34, its bot part (build 20261118-1525). The owner: "our brain kept; take only open_drops, skull_point and the 2 s keep". This commit is `skull_point`; `open_drops` and the 2 s keep (`brain/modes.py`) are a separate later port.
+
+- `Bot.skull_point` (his): in Headhunter the bot's `grab_point` is the skull lying nearest (from our `modes.py` skull reads, `obj_items`). Within `STAY_R` (2 u) on its floor it is stood on (`stay_on`, `walk_onto`: walked onto all the way), never taken with Use (`on_loose_objective` reads `loose_point`, which has nothing in Headhunter). The game hands a skull over within about 0.5 u. His live Boardwalk: bots stopped 0.6-1.0 u off skulls and 30-40 skulls lay about by the fourth minute; his test match went from 56 skulls left on the ground to 12.
+- A skull the bot stood within 0.8 u of for 4 s (`SKULL_BY`, `SKULL_TRY`), or within 2 u for 15 s (`SKULL_PIN`), without getting it is left alone for 30 s (`SKULL_LEAVE`).
+- Kept of ours: our Headhunter brain (`brain/headhunter.py`: who carries how many, which drop point banks; `director.hh_bankers`) is untouched. A banker within 2 u of a loose skull now steps onto it first, as `stay_on` does for every loose objective.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (the nearest skull; one it can't take is left alone and comes back after `SKULL_LEAVE`; outside Headhunter `loose_point` as before) OK; `tools/test_headhunter.py` OK; full suite 1,512 OK. **Untested in a live match.**
+
+### Halo: CE bots drive Warthogs again, 2026-11-24
+
+Upstream 0.3.0's note #33 (build 20261115-0215). The owner: "take it, hand-merged; front-right passenger door in CE only".
+
+- `brain/live.py`: CE's reader (`Live`) reads a vehicle's facing and up vectors at object +0x30 / +0x3C (`ORIENT_AT = 0x30`, INFERRED in his notes). `LiveH2` sets `ORIENT_AT = None`, so Halo 2, Halo 3, ODST and Reach read exactly as before; Halo 4 keeps its own 0x70.
+- `tools/live_bots.py vehicle_fwd`: CE's read is trusted only when both vectors are unit length and square to each other; otherwise the vehicle's middle, as before. Before, a CE bot walked to a Warthog's middle, CE seated it by where it stood (often the passenger seat), and it sat "driving" a Warthog that never moved.
+- `Bot.seat_point(..., close=False)`: `close` (CE with its facing read) is the door right by the hull, 0.8 u to the side and 1.0 u behind for the gun. **The Warthog's passenger door is front right in CE only**; every other game keeps the passenger at the front left.
+- Hand-merged into our vehicle-entry block in `plan`: in CE (facing read) the bot walks to that close door and presses Use only within 1.8 u of the middle and nearer the wanted seat's door than any other seat's (CE seats a player by the nearest seat). Every other game keeps the 1.6 u / 2.2 u test. Kept of ours: `wheel_open`, `wheel_yield`, the Wheelman's pick, `vehicle_way_target` (fighting on the way to the seat), `dud_check`, `reach_seat`.
+- **Checks:** `tools/test_upstream_030_brain.py` +4 (other games' seat points unchanged; CE's close points with the passenger front right; only CE has `ORIENT_AT`; CE's facing trusted only unit and square) OK; full suite 1,509 OK; `live.py`, `live_bots.py` parse and import. **Untested in a live match** (CE).
+
+### Gunners stay in while someone drives, 2026-11-24
+
+Upstream 0.3.0's note #32a (build 20261114-2230). The owner: "merge only that rule (AT_WHEEL) into our block; parked_ban stays (add AT_WHEEL to our threads held-back tables)". #32b ("a gunner out at the objective only with 2 or fewer aboard") was answered no and is not taken.
+
+- `AT_WHEEL` (his): the bot at a vehicle's wheel stamps it every tick in `Bot.drive`. `Bot.at_wheel` (his): a bot of ours stamped it within the last second and is still in it, or a person rides with us (`PlayerState.driver` where a game reads it; ours doesn't, so any person aboard counts, as his code does elsewhere).
+- Our rider exit block: a gunner whose vehicle reads "parked" (still 5 s, no person aboard) no longer gets out while somebody is at the wheel. His Nov 14: gunners jumped out with the driver still in.
+- Kept of ours: alone in it still means out; a passenger's exits; `parked_ban` (Nov 15) when it does get out; the "there, out" test and the home-with-the-flag exit; our CTF runners' exits (no `GUNNER_OUT_RIDERS`).
+- `brain/threads.py`: `AT_WHEEL` joins the held-back flat tables (`FLAT`) like `DEAD_SPOTS`. A bot sees another's stamp only after the pass, so a threaded pass plays the 1-thread match; `tools/test_threads.py` clears it with the others.
+- **Checks:** `tools/test_upstream_030_brain.py` +5 (`at_wheel`: fresh, stale, driver out; through the real `Bot.drive`: parked with a driver = stays, parked with nobody at the wheel = out with `parked_ban`, alone = out; the stamp held back in a `Pass`) OK; `tools/test_threads.py` (Pass(4) = Pass(1) match) OK; full suite 1,505 OK. **Untested in a live match.**
+
+### A wedged vehicle is left; nobody gets back in for 2 minutes (not a Wheelman's), 2026-11-24
+
+Upstream 0.3.0's note #21 (build 20261114-1900). The owner: "take it, vehicles a Wheelman is keeping exempt".
+
+- `Bot.drive` remembers where the driver got in (`seat_at`) and whether the vehicle has moved 1.5 u since (`seat_moved`).
+- A driver still wedged after its back-offs, getting out, marks the vehicle a dud for everyone for `vehicles.DUD_FOR` (120 s, the existing dud table), so no teammate gets back in to wedge it again. His live Street Sweeper Oddball: three of a team took turns at the wheel of a Warthog stuck in one spot for 45 s. A vehicle that never moved since the bot got in is not marked (most likely a seat that doesn't steer).
+- Kept of ours, all before this rule as before: the two back-offs, the tank's `TANK_BACK_S` back-off and "the tank is kept" other way, the Wheelman's `WHEEL_WEDGED_MAX` other ways, our Mongoose trip end and the 30 s exit block.
+- **The owner's exemption:** a vehicle a Wheelman keeps (`keep`: a Wheelman, not a runner or ferry, not a Mongoose) is never marked. Once its other ways run out it still gets out as before, and the vehicle stays anyone's.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (through the real `Bot.drive`: wedged past its back-offs = dud for 120 s; a seat that never moved = no dud; a Wheelman's = no dud) OK; full suite 1,500 OK. **Untested in a live match.**
+
+### Jumps bots keep missing drop out after 3 misses; landings judged by the nearest approach, 2026-11-24
+
+Upstream 0.3.0's note #15 (build 20261114-1215). The owner: "merge, our jump memory and lore call kept, his landing judging used".
+
+- `Bot.judge_jump` judges a planned jump by how near the bot came to its landing while down on the landing's level (not rising past it), not by where it stood 1.5 s on. A bot that landed and ran on had been counted short 3 u off (his live Lockout: a 0.8 u hop "landed" 0 of 3).
+- Each result goes to both:
+  - our layout memory, `lore.add_jump` (Nov 19, Legendary and up, `jump_learned_bad`), as before, now with the new judging;
+  - a queue `jump_results` (last 20) that `tools/live_bots.py` empties each tick into `HumanWatch.bot_jump` (`tools/lidar.py`, new). It counts `bot_ok` / `bot_fail` on the map's LiDAR link with that take-off (0.3 u) and landing (1 u), only links no person made. `maps.usable_links`'s existing rule then drops a link with 3 shorts and none landed from every bot's routes from the next match. His live Hang 'Em High: a simulator jump needing 2.3 u/s at take-off that bots (1.8-2.0) fell under every try.
+- Kept of ours: the bot's own two-shorts 60 s ban (`jump_fails`, `jump_blocked`), `jump_learned_bad`, our saver's filters (links found by the map, and bots' crouch-jumps, are still never saved), the threads' held-back lore writes. The count in `live_bots` is wrapped so it never stops the bots.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (landed and ran on = made; fell under it = short, both fed to lore and the queue; the LiDAR link counts and drops out after 3 shorts, a person's link is never counted); `test_map_memory` still OK; full suite 1,497 OK; `bot.py`, `lidar.py`, `live_bots.py` parse and import. **Untested in a live match.**
+
+### Bots shoot the man in front of them on their way, Easy to Legendary only, 2026-11-24
+
+Upstream 0.3.0's note #2 (build 20261112-1507). The owner: "Easy to Legendary only; Demon, Noble and Mythic keep only our rule".
+
+- `Bot.walk_target` / `Bot.walk_fire` (his, `WALK_FIRE`, 60° cone `WALK_FIRE_CONE`): on foot, a gun in hand, on its way to the objective, a gun, a hunt or a post, a bot shoots the nearest man in view within 60° of the way it walks and in its gun's reach (or the man hurting it now), and walks on along the same line over the ground (no crouch, no sprint while firing). The aim and trigger are `fight`'s, unchanged. His live Sandtrap count: bots on those goals had a man within 6 u in front 62 s with no aim on anyone.
+- Called from `plan`'s general walk branch only: the look's aim step is skipped on a tick it shoots, the 60°-off-the-view slow-down too, and the hold crouch.
+- Kept of ours:
+  - `walk_target` returns nothing for `profiles.demon_rules` (Demon, Noble, Mythic), so `on_way_target` (Nov 7/13, no fighting in the last 3 u onto a point or gun) stays their only rule.
+  - The walk to a vehicle seat keeps our `vehicle_way_target` (Nov 15, every tier); his call there was left out, so nothing fires twice.
+  - A pre-nade's throw keeps its view (no walk fire over it); with every gun dry nothing is fired (as `vehicle_way_target`).
+- Who counts as "Easy to Legendary": Easy, Normal, Heroic, Legendary, Blind, Tactician and Scaling (all of tier `top` but Mythic) get it; every personality (Wheelman, Rusher, ...) by its tier.
+- **Checks:** `tools/test_upstream_030_brain.py` +4 (every tier Easy to Legendary plus Blind/Tactician/Scaling target the man in front; Demon/Noble/Mythic never; behind it, carrying or seated never; the walk's ground line is kept while `fight` turns the view) OK; full suite 1,494 OK. **Untested in a live match.**
+
+### CTF: bots step onto a flag or gun standing against a wall, 2026-11-24
+
+Upstream 0.3.0's note #11, the walking part (build 20261114-0323). The owner: "take both; test a Reach CTF map with a flag against a wall". The CE/H2 capture counting (`tools/live_bots.py`) is a separate later port.
+
+- `Bot.redirect` (the "wall ahead: stepping around" turn, upstream code): when the bot's objective or gun is within `OBJ_REACH` (3 u), on its floor (under 1 u up or down) and the line to it is clear, the bot walks straight at it instead of being turned off by the wall behind it. His live Battle Creek CTF: runners came within 4 u of a flag standing against the base wall 10 times and took it once.
+- Every tier, every game, on foot only (fights, routes people walked and vehicles still skip `redirect`, as before). Nothing of ours touched.
+- **Checks:** `tools/test_upstream_030_brain.py` +2 (a flag/gun 2 u off is walked at straight; one 5 u off, one a floor up, or a hunt still steps round) OK; `bot.py` parses, `live_bots` imports. **Untested in a live match** (the owner's check: a Reach CTF map with a flag against a wall).
+
+### A bot's weapon patience restarts each life, 2026-11-24
+
+Upstream 0.3.0's note #41 (build 20261118-2355). The owner: "take it, hand-inserted into our headway".
+
+- `Bot.headway` keeps the time of its last call (`way_seen`). After more than a second with no call (dead, riding, fighting), the no-progress clock starts again. Before, a bot that reached a gun, died and went for it again could be banned from it at once on the old clock and wander off.
+- Hand-inserted into our customized `headway`: our `field_from` path distance (Nov 23), Easy's shorter patience (`EASY_HEADWAY_S`, Nov 13) and the runner's reroute instead of a ban (`runner_objective`/`reroute`, Nov 23) are unchanged.
+- **Checks:** `tools/test_upstream_030_brain.py` +3 (6 s with no headway still bans; a 5 s gap restarts the clock; Easy keeps its shorter patience) OK; `bot.py` parses, `live_bots` imports. `tools/test_runner_reroute.py` stalled a runner with two `headway` calls 7 s apart, which now reads as a gap: its stall now calls every 0.1 s, as `plan` does every tick (fixed in the commit after this note's; it passes). **Untested in a live match.**
+
+### Halo 2: bots standing on the ball pick it up, 2026-11-24
+
+Upstream 0.3.0's note #6 (build 20261112-2117). The owner: "take it".
+
+- `Bot.take` is a method now (it was a static method) and reads the game: in Halo 2 (`TAKE_TAP = ("h2",)`) Use is tapped, down half of a 0.3 s beat and up the other half (`TAKE_TAP_S`), as Halo 2 takes the ball only on a fresh press. His live Triplicate Oddball count: all 26 pickups came on a fresh press; 9 spells of 2.8-8.9 s on the loose ball with Use held throughout took nothing.
+- Every other game (Reach, Halo 3, Halo 4, H2A, CE) still holds Use, as before. All callers already used `s.take(...)`; no static `Bot.take` call is left.
+- **Checks:** `tools/test_upstream_030_brain.py` (new, 3 tests: H2 taps, every other game holds, no static call left) OK; `bot.py` parses and `live_bots` imports. **Untested in a live match.**
+
 ### Stale spots pull harder; the map-use simulation re-measured by building, 2026-11-24
 
 The owner, on the first simulation: the Boneyard hot spots I'd called "mid" are upper floors, not mid ("Two are by west upper level. hot spot 4 is 3rd story by their sniper and two are in banshee building. None of them are (mid)"), and every spot is reachable on foot. Both were right. My "mid strip" was an x/y box that ignored height. The one "unreachable" spot, (297, 90.8, -4), is reached by bots, which walk with people's routes (`human=True`); my check had left them out. Then: "Stronger and re test."

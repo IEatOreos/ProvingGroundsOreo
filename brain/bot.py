@@ -268,6 +268,26 @@ def crouched(p):
     return bool(p is not None and getattr(p, "crouching", False))
 
 
+ELEPHANT_GAMES = ("h3",)   # (custom, Nov 24) the Elephant's hull and ways in (Sandtrap's model): Halo 3 only
+
+
+def hull_between(snap, me, e, game=None):
+    """(upstream 0.3.0, build 20261112-1632) An Elephant's hull between me's eye and man e: his chest and his head both
+    behind it (vehicles.elephant_blocks, his hull_blocks renamed; the Elephant either of them rides left out). (custom,
+    Nov 24) Only in ELEPHANT_GAMES, and only Perception.update calls it, after its line is worked out (outside the
+    protected precision branches): every other game, and every line with no Elephant across it, as before."""
+    if game not in ELEPHANT_GAMES:
+        return False
+    vs = getattr(snap, "vehicles", None)
+    if not vs:
+        return False
+    skip = tuple(h for h in (getattr(me, "vehicle", -1), getattr(e, "vehicle", -1)) if h not in (None, -1))
+    low, high = (CROUCH_CHEST, CROUCH_HEAD) if crouched(e) else (CHEST, EYE)
+    a = eye(me)
+    return (vehicles.elephant_blocks(vs, a, e.pos + Vec(0, 0, low), skip)
+            and vehicles.elephant_blocks(vs, a, e.pos + Vec(0, 0, high), skip))
+
+
 TREMOR = 0.0025                       # rad: the hand's wobble per tick while tracking a man (Aim.step)
 COMMIT_S, COMMIT_WEAK_S = 6.0, 10.0   # a fight lasts until the target dies or is unseen this long (shield down: longer)
 # Demon's corner discipline (Bot.corner_plan) and read of where a man went (Bot.guess, brain/anticipate.py)
@@ -707,6 +727,11 @@ ZONE_STEP_IN = 3.0   # u: a zone holder fighting this near its zone (on its floo
 STAY_R, STAY_HOLD_R = 2.0, 0.6   # u: this near a loose objective it works by standing on it, a bot stays on it (stay_on),
                                  # its fights kept within STAY_HOLD_R of it (the pickups came 0.07-0.59 u off; at 0.9 a fight drifted 1.3 u off)
 STAY_SCORE = 1.4     # staying on it: over all but a fight (a man in sight 1.5 +; it shoots from on it)
+# (upstream 0.3.0, build 20261118-1525) Headhunter: a skull the bot has been within SKULL_BY u of for SKULL_TRY s without
+# taking, or within STAY_R (where it is held on it, stay_on) for SKULL_PIN s, is left alone SKULL_LEAVE s (Bot.skull_point).
+# His simulated 4v4 180 s, skull piles lying on average (Settlement seeds 1 and 2, Boardwalk seed 1): 0.8 u / 4 s 3.1,
+# 1.8, 3.3; 2 u / 8 s 3.6, 1.9, 3.9; 2 u / 15 s 3.6, 2.5, 2.9
+SKULL_BY, SKULL_TRY, SKULL_PIN, SKULL_LEAVE = 0.8, 4.0, 15.0, 30.0
 DEFEND_R, ESCORT_R = 15.0, 12.0     # how far a defender strays from its post, an escort from our flag carrier (keep_role)
 DEFEND_HOLD = 6.0                   # a CTF defender closes on a man only this near its post (fight): from cover otherwise
 CLOSE_FIGHT_R = 8.0                 # a man in sight this close is fought whatever the role (decide)
@@ -715,6 +740,31 @@ PRESS_NEAR = 3.0                    # u: a press (press_on) walks in to here; cl
 POWER_NEAR = 15.0                   # u: a power weapon up this near is not held back by a post (keep_role)
 REGROUP_MATE = 8.0                  # a teammate this close is support (brain/tracefmt.py FORM_R): no pull-back (regroup_point)
 HUNT_R = 12.0                       # an Invasion defender sent at the carrier / a territory being taken strays no farther
+# (upstream 0.3.0, build 20261112-2117) games whose objectives are taken on a press of Use (Bot.take taps it), s a beat
+TAKE_TAP, TAKE_TAP_S = ("h2",), 0.3
+# (upstream 0.3.0, build 20261114-2230) who drives each vehicle: handle -> (bot id, time), stamped every tick by the bot
+# at its wheel (Bot.at_wheel): a gunner stays in while someone drives. (custom, Nov 24) Only that rule: his "a gunner out
+# for the objective only with 2 or fewer aboard" is not taken (the owner: our CTF runners stay); our rider exits, the
+# "there, out" test and parked_ban are unchanged. Held back in a threaded pass (brain/threads.py FLAT)
+AT_WHEEL = {}
+# (upstream 0.3.0, build 20261112-1632) Halo 3's Elephant (Bot.way_in, elephant_entry; ELEPHANT_GAMES)
+ELEPHANT_WELLS = False              # Bot.elephant_entry: the tire wells' climbs onto the deck as ways in (they failed; the open ways)
+ENTRY_JUMP_COST = 3.0               # u: an Elephant way in with a jump costs this much more walk than the rear ramp
+DECK_RUNUP = 0.9                    # u behind the Elephant deck jump's take-off a bot starts its run at it (Bot.way_in)
+STAIR_FOOT_Z = 0.6                  # the Elephant's bay floor at its stairs' foot (over its origin; on them: over this line - 0.15)
+TAKEOFF_Z = (-0.3, 0.5)             # the Elephant's jump ways in: the ground at a take-off over its origin (a player's: -0.04 to 0.24)
+# (custom, Nov 24) his jump from the bay floor onto the deck is a crouch-jump (its lips at the apex's height or over:
+# his Bot.crouch_jump, which ours does not have): off, the deck is reached by its stairs (his own way after three missed
+# jumps)
+DECK_JUMP = False
+# (upstream 0.3.0, build 20261112-1507) Bot.walk_fire: on foot, a gun in hand, on its way somewhere else (the objective,
+# a gun, a hunt), it shoots a man in view within WALK_FIRE_CONE of the way it walks and in its gun's reach (or hurting
+# it) and walks on, as a person runs at the flag shooting the man in front of him. His live Sandtrap 20261112-135123: on
+# those goals bots had a man within 6 u in front with no aim on anyone 62 s, 26 first hits on foot with a gun never
+# answered (only watched). (custom, Nov 24, the owner: "Easy to Legendary only; Demon, Noble and Mythic keep only our
+# rule") never for profiles.demon_rules (Demon, Noble, Mythic): on_way_target stays theirs. The walk to a vehicle seat
+# keeps ours, vehicle_way_target (every tier)
+WALK_FIRE, WALK_FIRE_CONE = True, math.radians(60)
 # (custom, Nov 10) CTF: the emblem over the man carrying our flag (Halo 4 shows it to everyone): every bot knows where
 # he is, as an exact "marker" belief, never a sighting (no shot or recognition through walls), when he is within
 # MARKER_R u or its job is him (hunter, cutoff; Perception.update). A cut-off (director.intercepts) keeps within CUT_R
@@ -1667,6 +1717,11 @@ class Perception:
                 line = head or los(me.pos, e.pos)
             else:
                 line = in_view and los(me.pos, e.pos)
+            if line and hull_between(snap, me, e, game):
+                # (upstream 0.3.0, build 20261112-1632; custom, Nov 24: after the branches above, not in them) an
+                # Elephant's hull between: no line, so no clear_at and no shot (line_clear, LINE_FRESH 0). His live
+                # Sandtrap: 47% of the bots' trigger ticks at a man went through an Elephant
+                line = False
             if line:
                 s.clear_at[e.id] = now
             visible = in_view and (shooting or line)
@@ -3826,7 +3881,8 @@ class Bot:
         if prev is not None and (me.pos - prev).flat() > 4.0:
             s.came_through(now, me, prev)                  # out of a teleporter: watch its exit
         # an objective lying loose for us to take, or ours lying dropped to return by standing on it (move_to's last steps)
-        s.grab_point = s.loose_point(me, snap)
+        # (upstream 0.3.0, build 20261118-1525: Headhunter's, the skull lying nearest, skull_point)
+        s.grab_point = s.skull_point(now, me, snap) if snap.mode == "headhunter" else s.loose_point(me, snap)
         ret = s.return_point(me, snap) if s.grab_point is None else None
         if ret is not None:
             s.grab_point = ret
@@ -3900,7 +3956,9 @@ class Bot:
                                                       or (want != "driver" and v.get("team") == me.team)) \
                     and not (want == "driver" and s.wheel_yield(v)):
                 # (the other side's door every 3 s it does not get in: a Falcon's second gun)
-                vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1)
+                # (upstream 0.3.0, build 20261115-0215: Halo CE, its facing read, the door right by the hull, close)
+                ce = s.game == "ce" and bool(v.get("fwd"))
+                vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1, close=ce)
                 foe = s.vehicle_way_target(now, me, snap, vp)
                 if foe is not None:
                     # (custom, Nov 15, the owner: "make bots fight on the way to a vehicle") the fight's aim and trigger
@@ -3932,7 +3990,17 @@ class Bot:
                         act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
                 s.enter_riders = v.get("riders", 0)     # who was in it: tells our seat once in (drive)
                 s.enter_want = want                     # the seat it asks for (drive: where that is the one it gets)
-                if dist(me.pos, vp) < 1.6 or dist(me.pos, Vec(*v["pos"])) < 2.2:
+                if ce:
+                    # (upstream 0.3.0, build 20261115-0215) Halo: CE seats a player by the seat nearest him: Use only by
+                    # the hull and nearer the wanted seat's door than any other's (2.2 u from the middle, his bot coming
+                    # from behind sat at the gun of an empty Warthog; Nov 15)
+                    pts = [s.seat_point(v, k, close=True) for k in ("driver", "passenger", "gunner")
+                           if k in ((vehicles.spec(v["kind"]) or {}).get("seats") or ())]
+                    near_door = dist(me.pos, Vec(*v["pos"])) < 1.8 and all(
+                        dist(me.pos, vp) <= dist(me.pos, q) + 0.05 for q in pts)
+                else:
+                    near_door = dist(me.pos, vp) < 1.6 or dist(me.pos, Vec(*v["pos"])) < 2.2
+                if near_door:
                     act.action = int(now * 6) % 2 == 0   # tap action until in: only presses count
                     # which seat (Reach: native fills the enter-seat interaction; a bot's own is empty, so Use alone
                     # entered nothing)
@@ -4126,7 +4194,12 @@ class Bot:
                 look = s.walk_cone(me, look, act.yaw + math.atan2(act.strafe, act.forward))
             # (the quick turn also when it is told to walk but slowed by the turn rule below: under 1 u/s it never came)
             s.aim.quick_ok = (me.vel.flat() > 1.0 or walking) and not s.per.pending
-            act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
+            # (upstream 0.3.0, build 20261112-1507) a man to shoot on the way (walk_fire; Easy to Legendary, never
+            # profiles.demon_rules): its aim is the fight's, one aim step a tick (a second one, the look's first,
+            # spoilt the swing's timing: his test_fluidity_fixes 9)
+            shoot = gate is None and s.walk_target(now, me, act) is not None
+            if not shoot:
+                act.yaw, act.pitch = s.aim.step(now, dt, me, None, look, Vec(), False)
             pre = kind != "retreat" and s.prenade(now, dt, me, snap, act)   # (custom, Nov 13: Legendary, Blind,
                                                                              # Demon; its view and feet while on)
             arr = getattr(s, "arrive", None)       # Heroic and up: a grenade onto a landing he is 0.8-2.5 s from (a lift
@@ -4144,10 +4217,13 @@ class Bot:
             # (75 degrees before: walking 60+ degrees off the view 16% of the time to the player's 9%, live Spire)
             if (off > math.radians(60) and not s.notes and now >= getattr(s, "exact_until", 0.0) and gate is None
                     and glance is None   # (a Demon's glance at a dot: it runs on at full speed, dot_glance)
-                    and not (s.att and s.att[0] == "radar")):   # (and its watch on a radar threat: on its way at full
-                                                                 # speed, its aim held on his corner: radar_threat)
+                    and not (s.att and s.att[0] == "radar")   # (and its watch on a radar threat: on its way at full
+                                                               # speed, its aim held on his corner: radar_threat)
+                    and not shoot):                            # (shooting on the way: walks on at full speed)
                 act.forward, act.strafe = act.forward * 0.3, act.strafe * 0.3
-            if kind == "hold":
+            # a man in front: shot on the way (upstream 0.3.0; not over a pre-nade's throw, which keeps its view)
+            fired = shoot and not pre and s.walk_fire(now, dt, me, snap, act, nav)
+            if kind == "hold" and not fired:
                 act.crouch = s.p.crouchy > 0.5 and dist(me.pos, point) < 1.5
             if (kind == "objective" and snap.mode != "slayer" and s.p.tactics > 0.15 and now >= s.grenade_ready_at
                     and not pre and not me.has_flag and me.weapon not in LUNGE   # (a Flood: 15 throws into its run, live Adrift)
@@ -5686,6 +5762,18 @@ class Bot:
         return not guarded or any(p.team == me.team and p.alive and p.id != me.id and dist(p.pos, me.pos) < GRAB_MATE_R
                                   for p in snap.players)
 
+    @staticmethod
+    def at_wheel(now, me, snap):
+        """(upstream 0.3.0, build 20261114-2230) Somebody drives the vehicle we ride: a bot of ours stamped its wheel
+        (AT_WHEEL) within the last second and is still in it, or a person rides with us at its wheel (where the game's
+        seat is read, PlayerState.driver; elsewhere, and in ours, any person aboard: he may be driving)."""
+        d = AT_WHEEL.get(me.vehicle)
+        if d is not None and d[0] != me.id and now - d[1] < 1.0 and any(
+                p.id == d[0] and p.alive and p.vehicle == me.vehicle for p in snap.players):
+            return True
+        return any(p.vehicle == me.vehicle and not p.is_bot and p.alive and p.id != me.id
+                   and getattr(p, "driver", None) is not False for p in snap.players)
+
     def duds(s):
         """Vehicles nobody gets into lately (handle -> until), shared by every bot on the map (vehicles.DUD_S)."""
         return s.map.setdefault("_vehicle_duds", {})
@@ -5854,6 +5942,31 @@ class Bot:
             del scores[k]
         scores[("objective", q)] = job
 
+    def skull_point(s, now, me, snap):
+        """(upstream 0.3.0, build 20261118-1525) Headhunter: the skull lying nearest, the bot's loose objective: walked
+        onto all the way (move_to's last steps) and stood on from STAY_R off (stay_on), never taken with Use
+        (on_loose_objective reads loose_point, None in Headhunter). The game hands a skull over within about 0.5 u. His
+        live Boardwalk Nov 17: bots ordered onto skulls stopped 0.6-1.0 u off them, 30 to 40 skulls lay about by the
+        fourth minute, some for three minutes with bots beside them. One the bot has been by (within SKULL_BY) SKULL_TRY
+        s without taking lies where feet do not reach, as one it is held by (within STAY_R) SKULL_PIN s and cannot get
+        to: left alone SKULL_LEAVE s. (custom, Nov 24) Who banks and where stays our brain's (brain/headhunter.py,
+        director.hh_bankers)."""
+        left = s.__dict__.setdefault("skull_left", {})
+        key = lambda q: (round(q.x, 1), round(q.y, 1), round(q.z, 1))   # noqa: E731
+        best = min((it["pos"] for it in (getattr(snap, "obj_items", None) or [])
+                    if it.get("carrier") is None and left.get(key(it["pos"]), 0.0) <= now),
+                   key=lambda q: dist(q, me.pos), default=None)
+        k = key(best) if best is not None and abs(best.z - me.pos.z) < 2.0 else None
+        flat = (best - me.pos).flat() if k is not None else 99.0
+        since = s.__dict__.setdefault("skull_since", {})     # reach -> (the skull, since when the bot is within it)
+        for reach, limit in ((SKULL_BY, SKULL_TRY), (STAY_R, SKULL_PIN)):
+            if flat >= reach or since.get(reach, (None, 0.0))[0] != k:
+                since[reach] = (k if flat < reach else None, now)
+            elif now - since[reach][1] > limit:
+                left[k] = now + SKULL_LEAVE
+                return None
+        return best
+
     @staticmethod
     def on_loose_objective(me, snap, reach=0.9):
         # (0.9: the pickups came 0.07-0.59 u off the objective, Breakpoint's bomb and Spire's core; from 1.6, kept since
@@ -5875,22 +5988,31 @@ class Bot:
         f = (snap.flags or {}).get(1 - me.team % 2)
         return f.pos if f is not None and f.state != "carried" and dist(me.pos, f.pos) < reach else None
 
-    @staticmethod
-    def take(me, act, pos):
+    def take(s, me, act, pos):
         """Pick up the objective at pos: Use held with the view on it. Reach's Use takes what the view is on: with a gun
         lying on the CTF stand it swapped guns instead (Boardwalk, live: a runner 50 s on the flag), and a Spire runner
         0.6 u off the core held Use 45 s looking past it (live; the pickups came as a view swept over it). The walk
-        keeps its way under the turned view."""
+        keeps its way under the turned view. Halo 2 takes on a press, not a hold (TAKE_TAP): Use tapped there. Live
+        Triplicate Oddball 20261112-204733: all 26 bot pickups came on a fresh press; in all 9 spells of a bot on the loose
+        ball 2.8-8.9 s with no pickup Use was held throughout (upstream 0.3.0, build 20261112-2117; a method now, it reads
+        the game). Every other game holds Use as before."""
         move, sp = act.yaw + math.atan2(act.strafe, act.forward), math.hypot(act.forward, act.strafe)
         act.yaw, act.pitch = angles_to(eye(me), pos)
         act.forward, act.strafe = sp * math.cos(move - act.yaw), sp * math.sin(move - act.yaw)
-        act.action = True
+        if getattr(s, "game", None) in TAKE_TAP:
+            act.action = (getattr(s, "now", 0.0) % TAKE_TAP_S) < TAKE_TAP_S / 2   # down half the beat, up half
+        else:
+            act.action = True
 
     @staticmethod
-    def seat_point(v, seat, side=1):
+    def seat_point(v, seat, side=1, close=False):
         """Where to stand to get into a vehicle's seat: the driver's door is front left, a gun at the back (a Warthog's
-        turret, an Elephant's guns), by the vehicle's facing; its middle when the facing is not read (CE). A Falcon's guns
-        are at its side doors, one each side (side +1 left, -1 right)."""
+        turret, an Elephant's guns), by the vehicle's facing; its middle when the facing is not read. A Falcon's guns
+        are at its side doors, one each side (side +1 left, -1 right). (upstream 0.3.0, build 20261115-0215) close
+        (Halo: CE, which seats a player by the seat nearest him): right by the hull, 1.0 u behind and 0.8 u to the side
+        (2 u behind, his bots pressed Use where CE seats nobody: they stood at a person's Warthog until he reversed into
+        them, Nov 15), and a Warthog's passenger door front right. (custom, Nov 24, the owner: "front-right passenger
+        door in CE only") every other game keeps the passenger at the front left, as before."""
         c = Vec(*v["pos"])
         f = v.get("fwd")
         sp = vehicles.spec(v["kind"])
@@ -5903,9 +6025,12 @@ class Bot:
             # gun nearest the bot)
             return Vec(c.x - fy * 1.6 * side, c.y + fx * 1.6 * side, c.z)
         if seat == "gunner" and "gunner" in sp["seats"]:
-            back = 2.0 if sp["move"] != "air" else 1.0
+            back = 1.0 if close or sp["move"] == "air" else 2.0
             return Vec(c.x - fx * back, c.y - fy * back, c.z)
-        return Vec(c.x + fx * 0.3 - fy * 1.3, c.y + fy * 0.3 + fx * 1.3, c.z)   # front left
+        out = 0.8 if close else 1.3
+        if close and seat == "passenger" and vehicles.kind_of(v["kind"]) in ("warthog", "rwarthog", "gauss", "thog"):
+            out = -out                                                        # front right (CE only)
+        return Vec(c.x + fx * 0.3 - fy * out, c.y + fy * 0.3 + fx * out, c.z)   # front left
 
     def weak_point(s, me, k, b, snap, gun):
         """Where an explosive or gauss shot goes on a tank (guide 17 §4.4; Reach's materials: its back hatch takes 3x a
@@ -6318,6 +6443,8 @@ class Bot:
             if s.crew_ride is not None:
                 s.drive_to = s.patrol_point(me)
         s.scorpion_turn = scorpion and s.seat == "driver"
+        if s.seat == "driver":
+            AT_WHEEL[me.vehicle] = (me.id, now)  # (upstream 0.3.0, build 20261114-2230: at_wheel, its gunner stays)
         seen = s.per.visible_enemies()
         s.air_snap = snap                        # (custom, Nov 19: air_away's teammates)
         bt = getattr(s, "board_try", None)
@@ -6469,6 +6596,9 @@ class Bot:
                 s.still_at, s.still_since = me.pos, now
             parked = now - s.still_since > 5.0 and not (gunner and tid is not None) and not aloft and \
                 not any(p.vehicle == me.vehicle and not p.is_bot and p.alive for p in snap.players)   # (a hover is no park)
+            if gunner and parked and s.at_wheel(now, me, snap):
+                parked = False   # (upstream 0.3.0, build 20261114-2230) a gunner stays while somebody is at the wheel,
+                                 # parked or not (his Nov 14: gunners jumped out with the driver still in)
             if v is not None and (v.get("riders", 0) <= 1 or parked) and sp and sp["move"] != "none" and now - s.seat_since > 4.0:
                 act.action, act.fire = True, False
                 # (custom, Nov 15) not straight back in: a ride order or the vehicle run put it in again a second later,
@@ -6872,6 +7002,10 @@ class Bot:
         moving = getattr(s, "drive_pos", None)
         if moving is None or dist(me.pos, moving) > 1.5:
             s.drive_pos, s.drive_since = me.pos, now
+        if getattr(s, "seat_at", None) is None or s.seat_at[0] != me.vehicle:
+            s.seat_at, s.seat_moved = (me.vehicle, me.pos), False     # where it got in (the dud rule below; upstream
+        elif not s.seat_moved and dist(me.pos, s.seat_at[1]) > 1.5:  # 0.3.0, build 20261114-1900)
+            s.seat_moved = True
         spot = getattr(s, "wedge_spot", None)
         if spot is not None and dist(me.pos, spot) > 4.0:
             s.wedge_spot, s.reversed_n = None, 0       # got away from where it was wedged
@@ -6996,6 +7130,18 @@ class Bot:
             if s.exit_tries >= 3:                # (the third try still in the seat: 30 s of driving before the next)
                 s.exit_tries, s.exit_block_until = 0, now + 30.0
             act.action, act.forward, act.fire = True, 0.0, False
+            if stuck and not arrived and v is not None and not air and getattr(s, "seat_moved", True) and not keep:
+                # (upstream 0.3.0, build 20261114-1900) wedged past its back-offs: a dud for everyone vehicles.DUD_FOR
+                # s, so neither this bot nor a teammate gets back in to wedge it again (his live Street Sweeper Oddball
+                # 20261114-172658: three of a team took turns at the wheel of a Warthog stuck at one spot, 45 s). Not
+                # one that never moved since we got in (most likely a seat that does not steer: his live Blood Gulch,
+                # Warthogs held at full throttle by their spawn spots, then left as duds nobody drove). (custom, Nov 24,
+                # the owner: "vehicles a Wheelman is keeping exempt") never a vehicle a Wheelman keeps (keep): its
+                # WHEEL_WEDGED_MAX other ways done, it gets out as before and the vehicle stays anyone's
+                s.duds()[v["handle"]] = now + vehicles.DUD_FOR
+                s.note("vehicle: wedged, left for everyone")
+            elif stuck and not arrived and v is not None and not air and not keep:
+                s.note("vehicle: never moved, not at the wheel: out")
             # held in Reach (a one-tick press did not get out) and, untested, the games after Halo 2; CE and Halo 2: a press
             s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
             if mongoose:
@@ -8044,6 +8190,53 @@ class Bot:
                 best = (it["pos"], score)
         return best
 
+    def walk_target(s, now, me, act):
+        """(upstream 0.3.0, build 20261112-1507) WALK_FIRE: the man to shoot on the way (the nearest in view within
+        WALK_FIRE_CONE of the walk and in the gun's reach, max(its band's far end, CLOSE_FIGHT_R), or the man hurting it
+        now at any range), None for none. Not carrying (no gun), not in a seat, not with a sword or hammer (that is a run
+        at him), not a man last seen over 0.3 s ago or behind glass (fight goes round for those, and that walk is not
+        this one). (custom, Nov 24) Never Demon, Noble or Mythic (profiles.demon_rules: on_way_target is theirs), nor
+        with every gun dry (as vehicle_way_target)."""
+        if (not WALK_FIRE or profiles.demon_rules(s.p) or me.has_flag or me.vehicle not in (None, -1)
+                or me.weapon in LUNGE or me.weapon in (None, "", "none") or s.dry(me)):
+            return None
+        heading = act.yaw + math.atan2(act.strafe, act.forward) if math.hypot(act.forward, act.strafe) > 0.3 else act.yaw
+        reach = max(WEAPON_RANGE.get(me.weapon, (5.0, 25.0))[1], CLOSE_FIGHT_R)
+        hurt = getattr(s.per, "attacker_id", None) if now - getattr(s.per, "attacker_t", -9.0) < 1.5 else None
+        glass = getattr(s, "glassed", {})
+        best = None
+        for k in s.per.visible_enemies():
+            b = s.per.beliefs.get(k)
+            if b is None:
+                continue
+            d = dist(me.pos, b.pos)
+            if (now - s.per.last_seen.get(k, -9.0) > 0.3 or k in glass
+                    or abs(wrap(angles_to(me.pos, b.pos)[0] - heading)) > WALK_FIRE_CONE or (d > reach and k != hurt)):
+                continue
+            if best is None or d < best[0]:
+                best = (d, k)
+        return best[1] if best else None
+
+    def walk_fire(s, now, dt, me, snap, act, nav):
+        """(upstream 0.3.0, build 20261112-1507) WALK_FIRE: aim and fire at walk_target as a fight does (fight: its aim,
+        trigger, grenade and melee) and keep the walk it was on (the same way over the ground, whatever way it now faces;
+        no crouch, no sprint while firing). The fight's own state (engaged_since: its strafe, grenade and press draws)
+        carries over while it stays on one man."""
+        tid = s.walk_target(now, me, act)
+        if tid is None:
+            s.walk_fire_on = None
+            return False
+        c, sn = math.cos(act.yaw), math.sin(act.yaw)
+        mx, my = c * act.forward - sn * act.strafe, sn * act.forward + c * act.strafe      # (strafe + = left)
+        on = getattr(s, "walk_fire_on", None)
+        s.engaged_since = on[1] if on is not None and on[0] == tid and now - on[2] < 0.5 else None
+        s.fight(now, dt, me, snap, tid, act, nav)
+        s.walk_fire_on = (tid, s.engaged_since, now)
+        c, sn = math.cos(act.yaw), math.sin(act.yaw)
+        act.forward, act.strafe = c * mx + sn * my, -sn * mx + c * my
+        act.crouch = act.sprint = False
+        return True
+
     def fight(s, now, dt, me, snap, tid, act, nav):
         b = s.per.beliefs.get(tid)
         if not b:
@@ -8970,7 +9163,11 @@ class Bot:
                 d = c
         except Exception:
             pass
-        if getattr(s, "way_key", None) != key or d < s.way_best - 0.5:
+        gap, s.way_seen = now - getattr(s, "way_seen", now), now
+        if getattr(s, "way_key", None) != key or d < s.way_best - 0.5 or gap > 1.0:
+            # (upstream 0.3.0, build 20261118-2355) gap: no headway call for over a second (dead or riding), the clock
+            # starts again. A bot that reached a gun, died and respawned going for it again was banned from it at once
+            # on the old clock (his sim, Lockout)
             s.way_key, s.way_best, s.way_t = key, d, now
         elif now - s.way_t > (EASY_HEADWAY_S if s.easy_mover() else 6.0) and d > (1.5 if goal[0] == "item" else 4.0):
             # (posts: loitering is near. custom, Nov 13: Easy gives a goal up sooner, EASY_HEADWAY_S)
@@ -9210,6 +9407,8 @@ class Bot:
     LEARN_IN_FIGHT = False          # stuck pushes during a fight teach spots (A/B: tools/sim_variant.py)
 
     REDIRECT_D = 0.55                   # a wall closer than this along the way we walk: step around it
+    OBJ_REACH = 3.0                     # u: an objective this near with a clear line is walked at straight (redirect;
+                                        # upstream 0.3.0, build 20261114-0323)
     RUNUP_GIVE_UP = 5.0                 # s: a person's run-up not reached by then, the take-off within 2.5 u: from there
 
     def redirect(s, now, me, act):
@@ -9226,6 +9425,19 @@ class Bot:
         ahead = T.clearance(s.feet(me), walk, 1.5)
         if ahead >= s.REDIRECT_D:
             return
+        # (upstream 0.3.0, build 20261114-0323) the objective or gun within OBJ_REACH and nothing between: straight onto
+        # it, not turned off by the wall behind it (his live Battle Creek CTF, Nov 14: red's runners came within 4 u of
+        # blue's flag 10 times and took it once, "wall ahead: stepping around" 1.3-2.6 u from the flag, the stand being
+        # against the base's wall)
+        g = s.goal[1] if s.goal[0] in ("objective", "item") else None
+        if isinstance(g, Vec) and abs(g.z - me.pos.z) < 1.0:
+            dg = math.hypot(g.x - me.pos.x, g.y - me.pos.y)
+            to_g = math.atan2(g.y - me.pos.y, g.x - me.pos.x)
+            if 0.2 < dg < s.OBJ_REACH and T.clearance(s.feet(me), to_g, 1.5) >= min(dg, 1.5) - 0.1:
+                rel = to_g - act.yaw
+                act.forward, act.strafe = math.cos(rel), math.sin(rel)
+                s.note("objective in reach: straight at it")
+                return
         att = getattr(s, "att", None)                               # the nav's next point is short of the wall: a
         if att and att[0] == "path" and math.hypot(att[2] - me.pos.x, att[3] - me.pos.y) < ahead + 0.2:
             return                                                  # corner it turns at, not a wall in the way
@@ -9238,11 +9450,16 @@ class Bot:
 
     def blocked_way(s, T, me, snap, yaw):
         """What stops a step along yaw: "wall" (a wall or placed object nearer than REDIRECT_D, Terrain.clearance),
-        "vehicle" (one within 1.5 u ahead and 0.9 u to the side: the level data has none), else None."""
+        "vehicle" (one within 1.5 u ahead and 0.9 u to the side: the level data has none), else None. (upstream 0.3.0,
+        build 20261112-1632) Not a Halo 3 Elephant: its middle is beside its own bay and deck, where the flags are (way_in
+        and round_hull walk its hull). His live Sandtrap 20261112-135123: a bot on the deck 1 u from the capture was
+        turned "round" the Elephant it stood on, off the deck, three times in 26 s."""
         if T.clearance(s.feet(me), yaw, 1.0) < s.REDIRECT_D:
             return "wall"
         c, sn = math.cos(yaw), math.sin(yaw)
         for v in getattr(snap, "vehicles", ()) or ():
+            if s.game in ELEPHANT_GAMES and vehicles.kind_of(v.get("kind", "")) == "elephant":
+                continue
             q = vpos(v)
             dx, dy = q.x - me.pos.x, q.y - me.pos.y
             if 0.0 < dx * c + dy * sn < 1.5 and abs(dy * c - dx * sn) < 0.9 and abs(q.z - me.pos.z) < 1.5:
@@ -11485,7 +11702,12 @@ class Bot:
         vehicles.ELEPHANT). The level's nav has no vehicle in it: bots pushed against the hull (about 1,000 unstuck
         wiggles beside one flag) and a carrier stood under his stand 80 s. (where to head, straight): round the hull to
         the rear ramp's foot by the nav, then straight up the ramp and along the bay floor. None: no Elephant's bay in
-        it."""
+        it. (upstream 0.3.0, build 20261112-1632) The deck (Sandtrap's capture spot, vehicles.ELEPHANT flag_return) up the
+        stairs from the bay floor, the ways in from outside (elephant_entry), round the hull for a goal past it
+        (round_hull). Also (where to head, straight, True): a jump there. (custom, Nov 24) Halo 3 only (ELEPHANT_GAMES);
+        his deck jump off (DECK_JUMP: ours has no crouch-jump), the stairs instead."""
+        if getattr(s, "game", None) not in ELEPHANT_GAMES:
+            return None
         E = vehicles.ELEPHANT
         for v in getattr(s, "vehicles_now", ()):
             fr = vehicles.frame_of(v) if vehicles.kind_of(v["kind"]) == "elephant" else None
@@ -11494,24 +11716,157 @@ class Bot:
             local, world = fr
             gf, gl, gz = local(point)
             f0, f1, w = E["bay"]
-            if not (f0 <= gf <= f1 and abs(gl) <= w and 0.2 < gz < 2.0):
+            if not (f0 <= gf <= f1 and abs(gl) <= w and 0.2 < gz < 2.6):
+                # a goal past it: the level's nav has no Elephant in it, and bots ran into its side. Within 6 u of it on
+                # the sand, the next 10 u of the way cutting through the hull: round its nearest corner
+                bf, bl, bz = local(me.pos)
+                h0, h1, hw = E["hull"]
+                if bz < 0.4 and h0 - 6.0 < bf < h1 + 6.0 and abs(bl) < hw + 6.0:
+                    n = math.hypot(gf - bf, gl - bl)
+                    k = min(1.0, 10.0 / max(n, 1e-6))
+                    c = s.round_hull((bf, bl), (bf + (gf - bf) * k, bl + (gl - bl) * k))
+                    if c is not None:
+                        return world(*c), False
                 continue
             bf, bl, bz = local(me.pos)
             (af, al), (tf, tl) = E["ramp"]
-            if f0 - 0.3 <= bf <= f1 + 0.3 and abs(bl) <= w + 0.3 and 0.35 < bz < 1.3:
-                return point, True                                  # on the bay floor (not its roof): along it
-            if af - 0.8 <= bf <= tf + 0.3 and abs(bl - al) <= 0.8:
+            well = s.well_step(world, (bf, bl, bz))
+            if well is not None:          # (first: the front left well's top lies inside the bay's box, over the deck's z)
+                return well
+            if f0 - 0.3 <= bf <= f1 + 0.3 and abs(bl) <= w + 0.3 and 0.35 < bz < 2.6:
+                # inside (not on its roof): a goal on the second floor from the bay floor is up its stairs, from their
+                # foot at the rear (a player's flags, vehicles.ELEPHANT); on the deck or for a goal down here, along
+                (sf, sl), (uf, ul, uz) = E["stair"]
+                # on the deck: at its height (live: at 1.32 up the stairs, over E["deck"]'s 1.25, a carrier turned for
+                # the goal and walked off their side)
+                if gz <= E["deck"] or bz > uz - 0.2:
+                    return point, True
+                # a player's jump onto the deck from the bay floor, as a player did it 7 times (vehicles.ELEPHANT deck_jump);
+                # the stairs once three jumps in 12 s did not get it up
+                (jf, jl), (lf, ll, lz) = E["deck_jump"]
+                now = getattr(s, "now", 0.0)
+                tries = [t for t in getattr(s, "deck_jumps", ()) if now - t < 12.0]
+                if DECK_JUMP and len(tries) < 3 and bz < 0.85:
+                    # a run-up from behind it (live, Nov 11: a carrier walked back onto the take-off from the front and
+                    # jumped with his momentum rearward, straight up and down again, 20 times in 90 s)
+                    if bf <= jf - DECK_RUNUP + 0.3:
+                        s.deck_runup = now
+                    if now - getattr(s, "deck_runup", -99.0) < 3.0:
+                        # at the take-off line, not 0.45 u short of it (live: jumped at -2.08 for a -1.8 take-off)
+                        if jf - 0.1 <= bf <= jf + 0.5 and abs(bl - jl) < 0.45:
+                            if not tries or now - tries[-1] > 1.5:
+                                s.deck_jumps = tries + [now]
+                            return world(lf, ll, lz), True, True    # at the take-off: jump forward onto the deck
+                        return world(jf, jl, 0.6), True             # from the run-up on to the take-off
+                    return world(jf - DECK_RUNUP, jl, 0.6), True    # along the bay floor to the run-up behind it
+                k = (bf - sf) / (uf - sf)                           # (along the stairs' line, 0 foot .. 1 top)
+                # on them: on the line and at their height there (live: the bay floor beside them read as on them, so a
+                # carrier walked under them to their top's place again and again)
+                on = (0.0 <= k <= 1.0 and abs(bl - sl - (ul - sl) * k) < 0.45
+                      and bz > STAIR_FOOT_Z + (uz - STAIR_FOOT_Z) * k - 0.15)
+                if on or math.hypot(bf - sf, bl - sl) < 0.35:
+                    return world(uf, ul, uz), True                  # at the stairs' foot or on them: up
+                return world(sf, sl, 0.6), True                     # along the bay floor to the stairs' foot
+            if af - 0.8 <= bf <= tf + 0.3 and abs(bl - al) <= 0.8 and bz < 0.9:
                 return world(tf, tl, 0.5), True                     # in the ramp's lane: up it
-            h0, h1, hw = E["hull"]
-            side = 1.0 if bl >= 0 else -1.0
-            if bf < h0 - 0.2:
-                return world(af, al), False                         # behind it: to the ramp's foot
-            if abs(bl) >= hw + 0.2:
-                return world(h0 - 0.8, side * (hw + 0.8)), False    # beside it: its rear corner on this side
-            if bf > h1 + 0.2:
-                return world(h1 + 0.8, side * (hw + 0.8)), False    # in front of it: round its front corner
-            return world(af, al), False                             # on or under it: off, to the foot
+            return s.elephant_entry(me, world, (bf, bl, bz), (gf, gl, gz))
         return None
+
+    ENTRY_TRIES, ENTRY_BAN = 3, 30.0    # jumps at one way in within 15 s with no progress, then it is left this long
+
+    def elephant_entry(s, me, world, b, g):
+        """Outside an Elephant (or on a tire well's top) with a goal inside: its way in (vehicles.ELEPHANT entries, the
+        a player's climbs, and the rear ramp), the one with the least walk to its take-off plus from its last landing to the
+        goal (a goal on the deck: a way onto the deck, else the bay's plus the climb up), round the hull to the take-off
+        (people do not run into its side: "the bots need to stop running into the side of the elephant"), then its jumps.
+        (where to head, straight[, jump])."""
+        E = vehicles.ELEPHANT
+        bf, bl, bz = b
+        gf, gl, gz = g
+        now = getattr(s, "now", 0.0)
+        (af, al), (tf, tl) = E["ramp"]
+        bans = getattr(s, "entry_ban", {})
+        up = gz > E["deck"]
+        climb = math.hypot(E["deck_jump"][1][0] - E["deck_jump"][0][0], E["deck_jump"][1][1] - E["deck_jump"][0][1])
+        cands = [("ramp", (af, al), (tf, tl, 0.55), "bay", None)]
+        # the open ways only: the rear ramp, the front entrance and the ramp's side, into the bay; up from its floor by the
+        # deck jump or the stairs (way_in). Not the tire wells' two-jump climbs onto the deck (ELEPHANT_WELLS): live
+        # Sandtrap Nov 12, 20 tries at an Elephant, 6 in; a bot at the ramp's foot took a well's climb for the deck,
+        # fell off its top twice, and never walked up the ramp (the player: "they'll completely ignore the wide open
+        # front and back")
+        cands += [(name, steps[0][0], steps[-1][1], to, steps[0][1]) for name, to, steps in E["entries"]
+                  if ELEPHANT_WELLS or to == "bay"]
+        best = None
+        for name, (xf, xl), (lf, ll, lz), to, first in cands:
+            if bans.get(name, 0.0) > now:
+                continue
+            cost = math.hypot(bf - xf, bl - xl) + math.hypot(lf - gf, ll - gl) + (climb + 2.0 if up and to == "bay" else 0.0) \
+                + (ENTRY_JUMP_COST if first is not None else 0.0)    # (a jump in can miss; the ramp is walked)
+            if best is None or cost < best[0]:
+                best = (cost, name, (xf, xl), first)
+        if best is None:
+            return world(af, al), False
+        _, name, (xf, xl), first = best
+        if math.hypot(bf - xf, bl - xl) < 0.45 and first is not None:
+            if not TAKEOFF_Z[0] < bz < TAKEOFF_Z[1]:
+                # the sand here is not where a player jumped from (live Nov 11: an Elephant driven onto a dune, its
+                # tire wells jumped at from 1 to 2 u up for 56 s): that way is left, the next one taken
+                s.__dict__.setdefault("entry_ban", {})[name] = now + s.ENTRY_BAN
+                return s.elephant_entry(me, world, b, g)
+            s.entry_try(now, name)
+            return world(*first), True, True                       # at its take-off: the jump
+        if name == "ramp" and math.hypot(bf - xf, bl - xl) < 0.45:
+            return world(tf, tl, 0.5), True
+        c = s.round_hull((bf, bl), (xf, xl))
+        return world(*(c or (xf, xl))), False                      # to the take-off by the nav, round the hull
+
+    def well_step(s, world, b):
+        """On a tire well's top (an entry's landing that is not its last): on to its next jump ((where, straight[,
+        jump])), else None."""
+        bf, bl, bz = b
+        for name, to, steps in vehicles.ELEPHANT["entries"]:
+            for k, (_, (lf, ll, lz)) in enumerate(steps[:-1]):
+                if math.hypot(bf - lf, bl - ll) < 1.2 and abs(bz - lz) < 0.4:
+                    (nf, nl), (mf, ml, mz) = steps[k + 1]
+                    if math.hypot(bf - nf, bl - nl) < 0.45:
+                        s.entry_try(getattr(s, "now", 0.0), name)
+                        return world(mf, ml, mz), True, True
+                    return world(nf, nl, lz), True
+        return None
+
+    def entry_try(s, now, name):
+        """A jump at a way into an Elephant: ENTRY_TRIES within 15 s (a second apart) and that way is left ENTRY_BAN s."""
+        tries = s.__dict__.setdefault("entry_tries", {})
+        t = [x for x in tries.get(name, ()) if now - x < 15.0]
+        if t and now - t[-1] < 1.0:
+            return
+        t.append(now)
+        tries[name] = t
+        if len(t) >= s.ENTRY_TRIES:
+            s.__dict__.setdefault("entry_ban", {})[name] = now + s.ENTRY_BAN
+            tries[name] = []
+
+    @staticmethod
+    def round_hull(a, b):
+        """A corner of the Elephant's hull (frame f, l; 0.8 u off it) to walk by when the straight way from a to b
+        crosses it; None when it does not."""
+        h0, h1, hw = vehicles.ELEPHANT["hull"]
+
+        def crosses(p, q):
+            for k in range(1, 20):
+                f, l = p[0] + (q[0] - p[0]) * k / 20, p[1] + (q[1] - p[1]) * k / 20
+                if h0 < f < h1 and abs(l) < hw:
+                    return True
+            return False
+        if not crosses(a, b):
+            return None
+        corners = [(f, l) for f in (h0 - 0.8, h1 + 0.8) for l in (-(hw + 0.8), hw + 0.8)]
+        # (at one: on to the next; never back to one farther from b than we are, it was oscillating there)
+        here = math.hypot(a[0] - b[0], a[1] - b[1])
+        corners = [c for c in corners if math.hypot(a[0] - c[0], a[1] - c[1]) > 0.5
+                   and math.hypot(c[0] - b[0], c[1] - b[1]) < here] or corners
+        ok = [c for c in corners if not crosses(a, c)]
+        return min(ok or corners, key=lambda c: math.hypot(a[0] - c[0], a[1] - c[1]) + math.hypot(c[0] - b[0], c[1] - b[1]))
 
     def came_through(s, now, me, prev):
         """Map brain INTER-TELE-03: out of a teleporter (from 3 u of a pad to 2 u of its exit between two ticks) with a
@@ -11730,14 +12085,28 @@ class Bot:
     def judge_jump(s, me):
         """A planned jump's outcome once it is down (1.5 s on, or the long fall's window): more than 1 u from its landing
         on the flat or 0.4 u under it is short. Short twice: this bot leaves that jump (by its take-off) for 60 s and
-        goes another way (jump_blocked); jumps were judged only in LiDAR mode, so a carrier tried one for good."""
+        goes another way (jump_blocked); jumps were judged only in LiDAR mode, so a carrier tried one for good.
+        (upstream 0.3.0, build 20261114-1215) Judged by its nearest approach to the landing while down on the landing's
+        level (not rising past it), not where it stood 1.5 s on: a bot that landed and ran on was 3 u off and "short"
+        (his live Lockout, Nov 14: a 0.8 u hop 0 landed of 3). Each result is also queued (jump_results) for live_bots
+        to count on the map's LiDAR link (HumanWatch.bot_jump: bot_ok / bot_fail; maps.usable_links drops a link with 3
+        shorts and none landed). (custom, Nov 24) Our layout memory (lore.add_jump) gets the same result."""
         t = getattr(s, "jump_try", None)
         now = getattr(s, "now", 0.0)
-        if t is None or now < max(t[2] + 1.5, getattr(s, "jump_until", 0.0) + 0.3):
+        if t is None:
             return
         key, land, _ = t
+        if getattr(s, "jump_near_of", None) is not t:
+            s.jump_near_of, s.jump_near = t, 1e9
+        if land.z - 0.4 < me.pos.z < land.z + 0.6 and me.vel.z <= 0.5:
+            s.jump_near = min(s.jump_near, (me.pos - land).flat())
+        if now < max(t[2] + 1.5, getattr(s, "jump_until", 0.0) + 0.3):
+            return
         s.jump_try = None
-        made = (me.pos - land).flat() <= 1.0 and me.pos.z > land.z - 0.4
+        made = s.jump_near <= 1.0
+        res = s.__dict__.setdefault("jump_results", [])      # (live_bots: counted on the map's link, bot_ok / bot_fail)
+        res.append((key, (land.x, land.y, land.z), made))
+        del res[:-20]
         lb = s.lore()
         if lb is not None:                  # (custom, Nov 19) the layout's memory of it: jump_learned_bad
             lb.add_jump(key, made)
@@ -11886,13 +12255,19 @@ class Bot:
             point = lp
         way = s.way_in(me, point)
         if way is not None:                      # a goal in an Elephant's bay (Sandtrap's flags): its own way in
-            point, straight = way
+            point, straight = way[:2]
             if straight:
                 s.final_step_until = s.exact_until = getattr(s, "now", 0.0) + 0.3   # (the level's floor is not the bay's)
                 s.wp = point
                 s.steer(me, point, act, True, arrive=0.02)
                 s.nav_cmd = (act.forward, act.strafe)
-                s.note("elephant: up the ramp, along the bay")
+                if len(way) > 2 and way[2]:
+                    # (upstream 0.3.0, build 20261112-1632) a jump at a way in: the edge guard lets it go (follow_route's)
+                    act.jump = True
+                    s.planned_jump, s.jump_land = True, point
+                    s.note("elephant: jumping in")
+                else:
+                    s.note("elephant: up the ramp, along the bay")
                 return
         route = getattr(s, "route", None)
         lu = getattr(s, "route_lineup", None)

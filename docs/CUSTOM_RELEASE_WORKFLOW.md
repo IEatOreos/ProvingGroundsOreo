@@ -17,20 +17,28 @@ Use a private GitHub repository, as requested by the user. The account/organizat
 After approximately three meaningful updates, or when the user asks, prepare a candidate release. This count is a reminder, not permission to publish.
 
 1. Fetch the latest remote history and review the owner's collaborator's incoming commits before preparing the candidate. Integrate those commits while preserving their identities and intended behavior, then review the full diff since the last approved version and inspect files for private data and oversized artifacts.
-2. Set CUSTOM_VERSION and finalize the matching changelog entry. Preserve VERSION for the upstream version unless the upstream integration explicitly requires otherwise.
+2. Finalize the changelog entry under the release's version (Version numbers, below). Preserve VERSION for the upstream version unless the upstream integration explicitly requires otherwise; CUSTOM_VERSION stays as it is (older installs read it).
 3. Run relevant checks and prepare a concrete summary with the target repository, version, changes, files/artifacts to upload, and remaining gameplay checks.
 4. Ask for explicit approval to push that exact candidate and, separately if applicable, publish its GitHub release. Do not push, upload, publish tags, or create public releases before approval.
 5. After approval, push only the approved candidate to the confirmed private repository using a normal push. The candidate must descend from the current remote head. If the remote has advanced, fetch, integrate, and revalidate before retrying; obtain approval again if the candidate changes materially. Publish a release/tag only when included in that approval. Verify the remote commit and links, then record the result.
 
 Initial publication follows the same approval gate. No automation should push on a timer or after a commit count.
 
+## Version numbers
+
+The owner, 2026-11-24 (his own scheme, in place of upstream 0.3.0's build numbers): **X.Y.Z**. Y.Z is the number of commits on GitHub's main, wrapping at 1000 (Y = commits // 1000, Z = commits % 1000: 325 commits is 0.0.325, 1000 is 0.1.0). X counts the releases made under this scheme: 0 until the next release, which is 1, then 2; the four releases before it (0.2.2-custom.11 to .14) do not count. At a release, Y.Z keep the all-time commit count of the released commit (e.g. 1.0.340).
+
+- `tools/noble_version.py` computes it: in a Git checkout from `git rev-list --count origin/main` and the highest X of the `vX.Y.Z` release tags (`git fetch --tags` first); in an installed copy from `NOBLE_VERSION`, which `tools/build_installer.py` stamps. `python -I tools/noble_version.py` prints this copy's version and the next release's (and its tag).
+- `tools/build_installer.py` builds the release as the next X and HEAD's commit count; HEAD must be what GitHub's main will be once pushed (a normal push of the reviewed commit).
+- The update check (`tools/updater.py` version_key) ranks every X.Y.Z above every older version (0.2.2-custom.N, upstream's): a dev copy at 0.0.x is never offered 0.2.2-custom.14, and an install at 0.2.2-custom.14 is offered the next release (its own older updater reads 1.0.x as newer too).
+
 ## Release names
 
 The owner, 2026-11-21: "change the names of our releases also to project noble and all further releases".
 
-- Title every GitHub release `Project Noble <CUSTOM_VERSION>` (for example `Project Noble 0.2.2-custom.14`); the tag stays `v<CUSTOM_VERSION>`. The three earlier releases (0.2.2-custom.11 to .13) were retitled the same way on 2026-11-21; their notes still describe each build as it was released.
+- Title every GitHub release `Project Noble <version>` (for example `Project Noble 1.0.340`; before the version scheme, `Project Noble 0.2.2-custom.14`); the tag is `v<version>` (`v1.0.340`). The three earlier releases (0.2.2-custom.11 to .13) were retitled the same way on 2026-11-21; their notes still describe each build as it was released.
 - In the notes, call the build Project Noble and keep the upstream credit: a customized build of [Project Proving Grounds](https://github.com/AyoItzKye/project-proving-grounds).
-- The download keeps its file name, `ProjectProvingGrounds-Setup-<CUSTOM_VERSION>.exe` (the owner kept file names on the rename; the launcher's updater takes any `.exe` of the latest release, so a later rename would not break updates).
+- The download keeps its file name, `ProjectProvingGrounds-Setup-<version>.exe` (the owner kept file names on the rename; the launcher's updater takes any `.exe` of the latest release, so a later rename would not break updates).
 
 ## Preserve collaborator work
 

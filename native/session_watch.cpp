@@ -37,7 +37,8 @@
 
 void logf(const char* fmt, ...);
 extern hb_shared* g_shm;
-extern hb_roster g_roster, g_ff_roster;          // botcore.cpp
+extern hb_roster g_roster;                       // botcore.cpp
+hb_roster& hb_ff_list();                          // overlay.cpp: the Firefight lobby's own list (Reach's or ODST's)
 extern int hb_panel_firefight;                   // bots_panel.cpp
 extern uint32_t g_sessionbots;                   // botcore.cpp (botcore.ini sessionbots=)
 int mcc_menu_state();                            // overlay.cpp: 0 menus
@@ -136,7 +137,7 @@ static uint64_t wanted_bots(sw_want& w) {
     if (!g_add_ok || g_sessionbots < 1 || g_sessionbots > 2 || mcc_menu_state() != 0 || !g_shm || !g_shm->bots_enabled ||
         g_shm->lidar_mode)
         return 0;
-    const hb_roster& R = hb_panel_firefight ? g_ff_roster : g_roster;
+    const hb_roster& R = hb_panel_firefight ? hb_ff_list() : g_roster;   // (Nov 24: ODST's own list too)
     uint64_t h = 1469598103934665603ull;
     for (int k = 0; k < R.n && k < HB_ROSTER_MAX && w.n < SW_LOBBY_ROWS; k++) {
         strncpy_s(w.name[w.n], R.bot[k].name, _TRUNCATE);

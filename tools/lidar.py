@@ -654,7 +654,7 @@ class Recorder:
             # (a copy of each weapon record: dict() of the list failed every save on a map with weapons, since 7f95635)
             # (not the map's rides, tools/lidar_rides.py, rebuilt each run; not crouch-jumps bots found: the fighting
             # brain does not crouch in the air yet, and a plain try of one falls short)
-            keep = [l for l in s.links if l.get("found_by") != "map" and not (l.get("crouch") and not l.get("human"))]
+            keep = [l for l in s.links if saved_link(l)]
             links, weapons, cover = json.loads(json.dumps(keep)), [dict(w) for w in s.weapons], sorted(s.cover_spots.values())
             s.count_run, s.saved_deaths, s.jumps = False, len(s.deaths), []
         has_obj = getattr(s, "objectives", None) is not None    # (its places; none: the file's own are kept)
@@ -665,6 +665,13 @@ class Recorder:
                     has_objectives=has_obj, objectives=s.objectives.saved() if has_obj else None,
                     coverage=s.director.report() if getattr(s, "director", None) is not None and s.director.history
                     else None)
+
+
+def saved_link(l):
+    """(custom, Nov 24: factored out of Recorder.save_payload, the same rule) Whether a jump link goes into lidar.json:
+    never the map's rides (found_by "map", tools/lidar_rides.py, rebuilt each run), never a crouch-jump no person made
+    (the bots': the fighting brain does not crouch in the air yet). tools/lidar_share.py filters imports with it."""
+    return l.get("found_by") != "map" and not (l.get("crouch") and not l.get("human"))
 
 
 _SCAN_INFO = {}
@@ -803,7 +810,112 @@ def map_list():
                     game=jumpphys.game_of(name.partition("/")[0]))
         item.update(scans_of(name))
         out.append(item)
+    return out + modded(out)           # (upstream 0.3.0) the modded maps: the Modded and Map Studio tabs
+
+
+def workshop_title(w):
+    """(upstream 0.3.0, build 20261114-2230) A Workshop map's name: MCC's own for the map it remakes (the ODST pack's
+    ff20_courtyard: Courtyard), else its file's. (custom, Nov 24) Used only when ours has none (modded())."""
+    stem = os.path.splitext(os.path.basename(w["file"]))[0].lower()
+    hit = next((t for k, t in map_titles().items() if k == stem or k.endswith("_" + stem)), None)
+    return hit or w["title"]
+
+
+PREPARING = {}       # modded map name -> dict(state=running / failed, error): its level being read (prepare_modded)
+_MODDED = [0.0, None]    # (custom) the discovery's last answer and when: the list is asked every few seconds
+MODDED_KEEP_S = 20.0
+
+
+def _modded_found():
+    """(his paths.workshop_maps rows, our mod_maps rows by folder), read at most every MODDED_KEEP_S."""
+    if _MODDED[1] is not None and time.time() - _MODDED[0] < MODDED_KEEP_S:
+        return _MODDED[1]
+    try:
+        from brain import paths as bpaths
+        work = bpaths.workshop_maps()
+    except Exception:                                # (no Steam found: no modded maps)
+        work = []
+    try:
+        import mod_maps
+        ours = {r["folder"]: r for r in mod_maps.mod_maps() if not r["stock"]}
+    except Exception:
+        ours = {}
+    _MODDED[:] = [time.time(), (work, ours)]
+    return work, ours
+
+
+def modded(listed):
+    """(upstream 0.3.0, build 20261114-2230; Map Studio, 20261120-1802) The modded maps on this PC (his listing:
+    brain/paths.workshop_maps, the Workshop's and the local mods'), for the view's Modded and Map Studio tabs: each
+    marked modded, with its mod's name, and ready once it has level data (then listed above with its scans; here not
+    again). (custom, Nov 24) Ours wins:
+      - the name is our builder's folder for that map file (tools/mod_maps.py, as play.py names the running map), and
+        a map only our builder finds is listed too;
+      - the title is ours (map_title: mod.json's, FP_GUARDIAN), then the mod's multiplayer title, his workshop_title last;
+      - a mod on a stock map's scenario is that map, not a modded one;
+      - "readable": our mod_maps.py can read its level ("Read its level"), else "why" not."""
+    work, ours = _modded_found()
+    by_file = {os.path.normcase(os.path.abspath(r["map"])): f for f, r in ours.items() if r.get("map")}
+    have = {m["name"]: m for m in listed}
+    rows, seen = [], set()
+    for w in work:
+        name = by_file.get(os.path.normcase(os.path.abspath(w["file"])), w["name"])
+        if name not in seen and name not in map_titles():
+            seen.add(name)
+            rows.append((name, w["game"], w["mod"], bool(w.get("studio")), w))
+    for name, r in ours.items():
+        if name not in seen and name not in map_titles():
+            seen.add(name)
+            studio = bool(r.get("mod_dir")) and os.path.isdir(os.path.join(r["mod_dir"], "ppg"))
+            rows.append((name, r["game"], r["mod"], studio, None))
+    out = []
+    for name, game, mod, studio, w in rows:
+        r = ours.get(name)
+        readable = bool(r and r.get("map"))
+        why = "" if readable else ("its mod has no .map file for it" if r else
+                                   "the map tools read Reach, Halo 3, ODST, Halo 4 and H2A levels only" if game in ("ce", "h2")
+                                   else "its mod lists no multiplayer map for it")
+        if name in have:
+            have[name].update(modded=True, mod=mod, ready=True, studio=studio)
+            continue
+        title = _mod_title(name) or (r or {}).get("title") or (workshop_title(w) if w else name)
+        out.append(dict(name=name, title=title, game=game, mcc=False, modded=True, mod=mod, ready=False, studio=studio,
+                        readable=readable, why=why, **({"preparing": PREPARING[name]} if name in PREPARING else {})))
+    for m in listed:                                 # (custom) a modded map's layouts go to its tab with it
+        base = have.get(m["name"].partition("/")[0])
+        if base is not None and base is not m and base.get("modded"):
+            m.update(modded=True, mod=base["mod"], ready=True, studio=base["studio"])
     return out
+
+
+def prepare_modded(name):
+    """(upstream 0.3.0's "Read its level", build 20261120-1802; custom, Nov 24: with OUR builder, tools/mod_maps.py,
+    never his modded_export.py) Reads a modded map's level from its .map file in the background, so it can be scanned
+    and simulated. False when it is not one our builder reads, or runs already."""
+    if PREPARING.get(name, {}).get("state") == "running":
+        return False
+    _MODDED[1] = None                                # (read the mods afresh)
+    r = _modded_found()[1].get(name)
+    if not r or not r.get("map"):
+        return False
+    PREPARING[name] = dict(state="running", error="")
+
+    def run():
+        import subprocess
+        try:
+            p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "mod_maps.py"), name], capture_output=True,
+                               text=True, timeout=3600)
+            said = next((ln.split(": ", 1)[1] for ln in reversed((p.stdout or "").splitlines())
+                         if ln.startswith(name + ": ")), "")
+        except (OSError, subprocess.SubprocessError) as e:
+            said = f"{type(e).__name__}: {e}"
+        if said == "built" or said.startswith("has level data"):
+            PREPARING.pop(name, None)
+        else:
+            PREPARING[name] = dict(state="failed", error=said or "its level could not be read")
+        _MODDED[1] = None
+    threading.Thread(target=run, daemon=True).start()
+    return True
 
 
 def scans_of(name):
@@ -2321,6 +2433,23 @@ class HumanWatch:
             s.skipped += 1
         return ok
 
+    def bot_jump(s, at, land, ok):
+        """(upstream 0.3.0, build 20261114-1215) A bot's planned jump, judged (brain/bot.py judge_jump: its take-off's x,
+        y and where it meant to land), counted on the map's link as LiDAR bots count theirs (bot_ok / bot_fail), so a
+        jump bots keep falling short of leaves their routes (brain/maps.py usable_links: 3 short, none landed). Only
+        links no person made (the simulator's, a bot's): people's jumps stay. His live Hang 'Em High, Nov 14: the
+        simulator's 3.8 u jump onto the middle hill needs 2.3 u/s at take-off, bots made 1.8-2.0 and fell under it each
+        try. The link counted, or None."""
+        with s.rec.lock:
+            for l in s.rec.links:
+                if (not l.get("human") and l.get("take_off") and l.get("land")
+                        and math.hypot(l["take_off"][0] - at[0], l["take_off"][1] - at[1]) < 0.3
+                        and math.dist(l["land"][:3], land) < 1.0):
+                    k = "bot_ok" if ok else "bot_fail"
+                    l[k] = l.get(k, 0) + 1
+                    return l
+        return None
+
     def save(s, saver=None):
         sec, s.seconds = s.seconds, 0.0
         return s.rec.save(human_seconds=sec, saver=saver)    # (saver: lidar_saver.Saver, live_bots)
@@ -2695,6 +2824,10 @@ def serve(hub, port=PORT):
                 s.wfile.write(body)
                 return
             name, src = (q.get("name") or [""])[0], (q.get("src") or ["scan"])[0]
+            if u.path == "/prepare":                 # (upstream 0.3.0) the Modded tab's "Read its level" (ours builds)
+                if s.headers.get("X-LiDAR") != "prepare":
+                    return s.send_error(403)
+                return s.send(json.dumps(dict(started=prepare_modded(name))).encode(), "application/json")
             if u.path != "/remove":
                 return s.send_error(404)
             refused = remove_refused(h, name, src, s.headers.get("X-LiDAR"))

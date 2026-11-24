@@ -12,7 +12,9 @@ builds its level data from its own .map file:
            (reach_fp_guardian; tools/play.py). A mod's map on a stock map's scenario (The Great Forge's 20_sword_slayer)
            is that map: it already has level data and is left alone.
   level    bsp2obj.exe (the map tools, brain/paths.map_tool) exports its level geometry to source/bsp.obj, and
-           tools/heightmap.py rasterises it as for every other map.
+           tools/heightmap.py rasterises it as for every other map. (custom, Nov 24, upstream 0.3.0's idea) A mod with
+           MCC Map Studio's own bot export (ppg/<name>: height map, spawns, objectives, callouts) is built from that
+           instead (studio_export), ours kept where ours is made by hand.
   objects  a modded map's scenario is not read (only its geometry is), so objects.json is a stand-in ("stand_in": true):
            STAND_INS spawn points spread over the level's floor and two flags (the farthest pair), which is all the
            brain needs to load a map (brain/maps.py load_map), and which set the height map's play area. Its floor
@@ -233,9 +235,54 @@ def _write(path, data):
     os.replace(tmp, path)
 
 
+# (upstream 0.3.0, build 20261120-1802, his tools/modded_export.py: this part only) MCC Map Studio's own bot export beside
+# its mod, ppg/<name> (its height map, spawns, objectives, callouts, paint: Map Studio's lib/ppgnav.js), is used as Map
+# Studio's "install" would copy it, in place of reading the .map's bare level
+STUDIO_FILES = ("heightmap.npz", "objects.json", "callouts.json", "features.json", "killzones.json", "paint.json")
+
+
+def studio_export(m):
+    """(custom, Nov 24) The mod's MCC Map Studio bot export for map m (mod_maps row): ppg/<our folder>, or ppg/<the game's
+    prefix and the .map's name> (as Map Studio and upstream name it), holding a heightmap.npz; None when there is none."""
+    if not m.get("mod_dir"):
+        return None
+    names = [m["folder"]]
+    if m.get("map"):
+        names.append(f"{m['game']}_" + os.path.splitext(os.path.basename(m["map"]))[0].lower())
+    for n in names:
+        made = os.path.join(m["mod_dir"], "ppg", n)
+        if os.path.isfile(os.path.join(made, "heightmap.npz")):
+            return made
+    return None
+
+
+def _from_studio(m, made, d, log=print):
+    """(custom, Nov 24) Map Studio's export copied in, ours kept where ours is made by hand: the height map always (made
+    from the level either way); objects.json only over a stand-in, callouts.json only over a generated one; its features,
+    kill zones and paint only where there are none. -> what came in."""
+    import shutil
+    took = []
+    for fn in STUDIO_FILES:
+        src, dst = os.path.join(made, fn), os.path.join(d, fn)
+        if not os.path.isfile(src):
+            continue
+        old = _json(dst) if fn.endswith(".json") else None
+        keep = os.path.exists(dst) and fn != "heightmap.npz" and not (
+            (fn == "objects.json" and isinstance(old, dict) and old.get("stand_in"))
+            or (fn == "callouts.json" and isinstance(old, dict) and old.get("generated")))
+        if keep:
+            continue
+        shutil.copyfile(src, dst + ".tmp")           # (swapped in whole: a match may be reading the old one)
+        os.replace(dst + ".tmp", dst)
+        took.append(fn)
+    log(f"  from MCC Map Studio's bot export ({made}): {', '.join(took) or 'nothing new'}")
+    return took
+
+
 def build(m, force=False, log=print):
     """Level data for modded map m (mod_maps row): source/bsp.obj, stand-in objects.json, heightmap.npz, topdown.png,
-    callouts.json, mod.json. Returns what it did ("built", or why not)."""
+    callouts.json, mod.json. Returns what it did ("built", or why not). (custom, Nov 24) A mod with MCC Map Studio's
+    own bot export (studio_export) is built from that instead of the .map's level (upstream 0.3.0's idea)."""
     if m["stock"]:
         return "a stock map's scenario: it has level data"
     if not m["map"]:
@@ -243,6 +290,19 @@ def build(m, force=False, log=print):
     d = os.path.join(MAPS, m["folder"])
     if m["built"] and not m.get("stale") and not force:
         return "has level data (--force builds it again)"
+    made = studio_export(m)
+    if made:
+        os.makedirs(d, exist_ok=True)
+        ign = os.path.join(d, ".gitignore")           # (made on this PC from a mod: never committed or shipped)
+        if not os.path.exists(ign):
+            with open(ign, "w", encoding="utf-8") as fh:
+                fh.write("# made by tools/mod_maps.py from a mod's .map on this PC\n*\n")
+        _from_studio(m, made, d, log)
+        if all(os.path.exists(os.path.join(d, fn)) for fn in ("heightmap.npz", "objects.json", "callouts.json")):
+            _write(os.path.join(d, "mod.json"), dict(title=m["title"], mod=m["mod"], game=m["game"], scenario=m["stem"],
+                                                     map_file=m["map"], studio_export=made))
+            return "built"
+        log("  the export lacks spawns or callouts: the level is read from the .map as well")   # (as upstream's)
     tool = paths.map_tool("bsp2obj")
     if not tool:
         return "bsp2obj.exe not found (tools/map_tools)"

@@ -22,7 +22,7 @@
 
 extern hb_shared* g_shm;
 extern hb_roster g_roster;           // botcore.cpp: the BOTS panel's list
-extern hb_roster g_ff_roster;        // botcore.cpp: Firefight's list (3 bots, your team)
+extern hb_roster g_ff_roster, g_od_roster;   // botcore.cpp: Firefight's lists (Reach: up to 7 bots; ODST: 3), yours
 extern uint32_t g_collector;         // botcore.cpp: the brain records the player (Data collector)
 extern uint32_t g_scale_games;       // botcore.cpp: Scaling difficulty's games averaged
 extern uint32_t g_sounds;            // botcore.cpp: the BOTS panel's sound volume, 0-100 (0 off)
@@ -76,9 +76,9 @@ static createfile_fn o_createfile;
 static volatile LONG g_session;      // title of the last custom game lobby opened: 1 CE, 2 Halo 2
                                      // Classic, 3 Halo 3, 5 Reach, 6 H2A, 7 H4, 8 ODST (the titles with bots), 4 any other, 0 none
 static volatile DWORD g_lobby_gfx_at;
-static volatile LONG g_ff_lobby;     // the lobby last opened is Firefight's (FirefightCustomGame.gfx): it holds 4 players
+static volatile LONG g_ff_lobby;     // the lobby last opened is Firefight's (FirefightCustomGame.gfx): Reach's 8 players, ODST's 4
 static bool bots_title(LONG t) { return t >= 1 && t <= 8 && t != 4; }
-extern int hb_panel_firefight;   // (bots_panel.cpp: the roster's cap, 3 bots in Firefight)
+extern int hb_panel_firefight;   // (bots_panel.cpp: the roster's cap, Firefight's 7 bots in Reach, 3 in ODST)
 static const wchar_t* wcsistr(const wchar_t* s, const wchar_t* f) {   // (MCC opens some screens in lower case)
     for (; *s; s++) {
         const wchar_t *a = s, *b = f;
@@ -125,6 +125,10 @@ static HANDLE WINAPI h_createfile(LPCWSTR name, DWORD a, DWORD s, LPSECURITY_ATT
 }
 
 int mcc_lobby_title() { return (int)g_session; }   // (custom, Nov 16) the last lobby's title (lobby_test.cpp)
+// (upstream 0.3.0, build 20261114-0323) the Firefight lobby's own list: ODST's (title 8), else Reach's (bots_panel.cpp
+// decides its cap the same way); session_watch.cpp reads it too
+hb_roster& hb_ff_list() { return g_session == 8 ? g_od_roster : g_ff_roster; }
+static int ff_players() { return g_session == 8 ? 4 : 8; }   // (you included)
 
 int mcc_menu_state() {               // 0 menus, 1 in a game, -1 unknown (used by botcore.cpp)
     __try { return g_exe ? g_exe[0x4000B8C + 0x11] : -1; }
@@ -139,6 +143,7 @@ static ID3D11Texture2D* g_probe;
 static UINT g_probe_h;
 static DXGI_FORMAT g_probe_fmt;
 static bool g_lobby_visible;
+static const int PROBE_MISSES = 6;       // (upstream 0.3.0) misses in a row before the lobby counts as gone (probe_lobby)
 
 static bool frame_pixel(const uint8_t* p, DXGI_FORMAT f) {
     int r, g, b;
@@ -235,7 +240,11 @@ static void probe_lobby(IDXGISwapChain* sc) {
         // a line down the tile height, not a blue band: the carnage report's blue team rows are blue straight across
         // (the tile showed over the scoreboard, live H2A Nov 6); in the lobby the strip is solid in 37% of rows at most
         // (its video behind the tiles; "a line only" made the tile blink there, s175-s176)
-        ok = rows > h * 7 / 10 && solid < h * 6 / 10;
+        // (upstream 0.3.0, build 20261113-1500) OPTIONS' strip is never filled in a lobby (0-11 solid rows of 192 in every
+        // probe logged Nov 12-13), the carnage report's is; START's strip is filled now and then (95-192 solid) by the
+        // lobby's video and focus, which took the panel away while the player cycled game types and edited options: only
+        // its line is asked of it
+        ok = rows > h * 7 / 10 && (e == 1 || solid < h * 6 / 10);
     }
     // Firefight's post-game report has the lobby's tile row (map, time, waves, difficulty, skull combo, and a 6th, TIME
     // MULTIPLIER, under the BOTS tile till s179) and opens no file on Back: its title tells them apart (ui_layout.h)
@@ -289,13 +298,26 @@ static void probe_lobby(IDXGISwapChain* sc) {
         }
     }
     back->Release();
-    if (ok != g_lobby_visible || g_ff_lobby != g_probe_ff_logged) {      // (evidence: which row was read, what it found)
+    // (upstream 0.3.0, build 20261113-1500) the lobby's own video behind the strips (and a focused tile) made START's
+    // strip "solid" in 100-190 of 192 rows now and then while the player cycled game types and maps, and the panel
+    // vanished for a probe or two (live Nov 12-13: 0 to 192 solid on neighbouring probes, no screen change). A lobby is
+    // only taken as gone after PROBE_MISSES misses in a row (a probe every 8 frames); it shows at the first hit.
+    // (custom, Nov 24) the miss count is of the answer after our Nov 21 title hold above: a held lobby is a hit
+    static bool raw_seen;
+    static int misses;
+    if (ok) misses = 0; else misses++;
+    bool shown = ok || (g_lobby_visible && misses < PROBE_MISSES);
+    if (ok != raw_seen || g_ff_lobby != g_probe_ff_logged) {      // (evidence: which row was read, what it found)
+        raw_seen = ok;
         logf("lobby probe: %s lobby, %ux%u, OPTIONS %u (%u solid) START %u (%u solid) of %u rows, title %u -> %s",
              g_ff_lobby ? "Firefight" : "custom game", bd.Width, bd.Height, g_probe_rows0, g_probe_solid0, g_probe_rows1,
              g_probe_solid1, h, title, ok ? "on screen" : "not seen");
         g_probe_ff_logged = g_ff_lobby;
     }
-    g_lobby_visible = ok;
+    if (shown != g_lobby_visible)                      // (the panel's own state, with the numbers behind it)
+        logf("lobby %s (OPTIONS %u rows %u solid, START %u rows %u solid, of %u)", shown ? "shown" : "hidden", g_probe_rows0,
+             g_probe_solid0, g_probe_rows1, g_probe_solid1, h);
+    g_lobby_visible = shown;
 }
 
 // (custom, Nov 11) Where MCC's MY GAME SESSION list stands: in the lobby's corner, the slide-out panel at the right edge
@@ -444,7 +466,7 @@ static void draw_tile(float t) {
     else if (g_shm->bots_enabled)
     {
         // the list in a few words: 7v8 Legendary, 12 bots Mixed (more than two teams), No bots
-        const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;   // (Firefight: its own list of 3)
+        const hb_roster& R = g_ff_lobby ? hb_ff_list() : g_roster;   // (Firefight: its own list)
         int teams = 0, tier = -1, n = R.n;
         for (int t = 0; t < HB_TEAMS_MAX; t++) teams += roster_on_team(R, t) > 0;
         for (int i = 0; i < n; i++) tier = tier < 0 || tier == R.bot[i].tier ? R.bot[i].tier : HB_TIERS;
@@ -576,7 +598,7 @@ static int g_menu_frame = -1;          // the frame it opened on: that click is 
 static bool bot_ui() { return g_bot_menu >= 0 || g_bot_card; }
 static void draw_session(float t) {
     if (!g_shm || !g_shm->bots_enabled || g_shm->lidar_mode || g_sess_x1 <= 0) return;
-    const hb_roster& R = g_ff_lobby ? g_ff_roster : g_roster;
+    const hb_roster& R = g_ff_lobby ? hb_ff_list() : g_roster;
     if (!R.n) return;
     g_sess_hover = -1;
     ImVec2 mouse = ImGui::GetIO().MousePos;
@@ -594,7 +616,7 @@ static void draw_session(float t) {
     ImVec4 hr = to_ui(mcc_session_header(bb.y, x1));
     float s = (hr.w - hr.y) / 36.0f;                           // px per 1080 unit (the header bar: 36 units)
     char cnt[16];
-    sprintf_s(cnt, "%d/%d", R.n + 1, g_ff_lobby ? 4 : 16);
+    sprintf_s(cnt, "%d/%d", R.n + 1, g_ff_lobby ? ff_players() : 16);   // (Nov 24: Reach Firefight /8, ODST /4)
     float cs = 19.0f * s;
     ImVec2 ct = g_font_label->CalcTextSizeA(cs, 1e9f, 0, cnt);
     dl->AddText(g_font_label, cs, ImVec2(hr.z - ct.x - 12 * s, (hr.y + hr.w - ct.y) * 0.5f), IM_COL32(205, 222, 235, 235), cnt);
@@ -763,7 +785,7 @@ static void play_sound(int kind, uint32_t volume) {
 static void panel_env(bots_panel_env& e) {
     e.make_texture = make_texture;
     e.render_model = render_model; e.model_has = model_has; e.model_zoom = mv_set_zoom; e.model_head = mv_head; e.model_headroom = mv_set_headroom;
-    e.roster = g_ff_lobby ? &g_ff_roster : &g_roster;     // (Firefight: its own list of 3; the 16-player list is kept)
+    e.roster = g_ff_lobby ? &hb_ff_list() : &g_roster;    // (Firefight: its own list; the 16-player list is kept)
     e.enabled = &g_shm->bots_enabled; e.difficulty = &g_shm->difficulty;
     e.lidar_mode = &g_shm->lidar_mode; e.lidar_players = &g_shm->lidar_players;
     e.collector = &g_collector;
@@ -845,7 +867,27 @@ static bool in_match() {
     return bots_title(g_session) && mcc_menu_state() == 1 && !g_playback;
 }
 
+// (upstream 0.3.0, build 20261113-1500) Is the pause menu up? On Windows the game shows the cursor there and hides it in
+// play. Under Wine / Proton (Steam Deck) the cursor reads as showing all the time, which kept the "Report bot bug" tab up
+// through the whole match; there the pause menu is what stops the game: no game tick for a third of a second (the tick
+// counter botcore counts in every game). On Windows (no wine_get_version in ntdll) nothing changes.
+static bool on_wine() {
+    static int wine = -1;
+    if (wine < 0) {
+        HMODULE nt = GetModuleHandleW(L"ntdll.dll");
+        wine = nt && GetProcAddress(nt, "wine_get_version") ? 1 : 0;
+    }
+    return wine == 1;
+}
+
 static bool cursor_up() {
+    if (on_wine() && g_shm) {
+        static uint32_t last_tick;
+        static ULONGLONG last_move;
+        ULONGLONG now = GetTickCount64();
+        if (g_shm->game_tick != last_tick || !last_move) { last_tick = g_shm->game_tick; last_move = now; }
+        return now - last_move > 330;
+    }
     CURSORINFO ci{ sizeof ci };
     return GetCursorInfo(&ci) && (ci.flags & CURSOR_SHOWING) && GetForegroundWindow() == g_hwnd;
 }
@@ -937,6 +979,10 @@ static DWORD WINAPI h_xinput_get(DWORD user, XINPUT_STATE* st) {
         }
         g_pad_ok_at = GetTickCount64();
         if (g_pad_held) memset(&st->Gamepad, 0, sizeof st->Gamepad);
+        // (upstream 0.3.0, build 20261118-2107) the lobby with the BOTS tile up: MCC never sees the stick presses, both
+        // of which open the panel (a Steam Deck: the first stick down reached MCC and opened its chat or its save menu,
+        // then the panel took the pad and that menu could not be left: the game looked frozen)
+        else if (g_show_tile) st->Gamepad.wButtons &= (WORD)~(XINPUT_GAMEPAD_LEFT_THUMB | XINPUT_GAMEPAD_RIGHT_THUMB);
         if (GetTickCount64() < g_back_until) {
             memset(&st->Gamepad, 0, sizeof st->Gamepad);
             st->Gamepad.wButtons = XINPUT_GAMEPAD_B;
@@ -1126,6 +1172,7 @@ static bool notice_active() {
         size_t n = strnlen(g_shm->notice, 128);
         g_notice_ms = 3500 + (n > 50 ? (DWORD)(n - 50) * 45 : 0);
         if (g_notice_ms > 7000) g_notice_ms = 7000;
+        if (g_shm->notice[0] == '!') g_notice_ms = 7000;   // (upstream 0.3.0, build 20261118-2107) a warning card: 7 s
     }
     return g_notice_at && GetTickCount() - g_notice_at < g_notice_ms;
 }
@@ -1136,6 +1183,11 @@ static void draw_notice() {
     text[128] = 0;
     char* line = strchr(text, '|');
     if (line) *line++ = 0;
+    // (upstream 0.3.0, build 20261118-2107) a title starting "!" is a warning (tools/live_bots.py speed_note: "BOT
+    // PERFORMANCE LOW"): see-through, a red outline and a warning triangle, 7 s (notice_active); the "!" itself is not
+    // drawn in the title
+    bool warn = text[0] == '!';
+    const char* title = warn ? text + 1 : text;
     float t = (GetTickCount() - g_notice_at) / 1000.0f, end = g_notice_ms / 1000.0f;
     float a = t < 0.15f ? t / 0.15f : (t > end - 0.6f ? (end - t) / 0.6f : 1.0f);   // fade in, hold, fade out
     if (a <= 0) return;
@@ -1143,11 +1195,34 @@ static void draw_notice() {
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     ui_page pg = mcc_content(io.DisplaySize.x, io.DisplaySize.y);    // (MCC's page: 16:10 and 32:9 alike)
     float h = pg.h, ts = h * 0.036f, ls = h * 0.022f;
+    int A = (int)(a * 255);
+    if (warn) {
+        // a small card in the page's upper right corner (it spread across the whole top of a Steam Deck's screen): the
+        // title on one line beside the triangle, the line wrapped under it at a fixed narrow width
+        float wt = h * 0.022f, wl = h * 0.016f, pad = h * 0.012f, maxw = h * 0.34f;
+        ImVec2 tz = g_font_label->CalcTextSizeA(wt, 1e9f, 0, title);
+        float tri = tz.y * 1.05f, gap = pad * 0.7f;
+        float cw = ui_max(tz.x + tri + gap, ui_min(maxw, line ? g_font_small->CalcTextSizeA(wl, 1e9f, 0, line).x : 0.0f));
+        ImVec2 lz = line ? g_font_small->CalcTextSizeA(wl, 1e9f, cw, line) : ImVec2(0, 0);
+        float bw = cw + pad * 2, bh2 = tz.y + (line ? lz.y + pad * 0.5f : 0.0f) + pad * 2;
+        ImVec2 q1(pg.x0 + pg.w - h * 0.02f, pg.y0 + h * 0.02f + bh2), q0(q1.x - bw, q1.y - bh2);
+        dl->AddRectFilled(q0, q1, IM_COL32(40, 6, 6, (int)(a * 110)), h * 0.006f);       // see-through
+        dl->AddRect(q0, q1, IM_COL32(235, 45, 45, (int)(a * 240)), h * 0.006f, 0, 2.0f);
+        float tx = q0.x + pad, ty = q0.y + pad;
+        ImVec2 a0(tx + tri * 0.5f, ty), a1(tx + tri, ty + tri * 0.9f), a2(tx, ty + tri * 0.9f);
+        dl->AddTriangleFilled(a0, a1, a2, IM_COL32(235, 45, 45, A));
+        ImVec2 bsz = g_font_label->CalcTextSizeA(wt * 0.8f, 1e9f, 0, "!");               // (the triangle's own mark)
+        dl->AddText(g_font_label, wt * 0.8f, ImVec2(tx + (tri - bsz.x) * 0.5f, ty + tri * 0.5f - bsz.y * 0.45f),
+                    IM_COL32(255, 255, 255, A), "!");
+        dl->AddText(g_font_label, wt, ImVec2(tx + tri + gap, ty), IM_COL32(255, 90, 90, A), title);
+        if (line)
+            dl->AddText(g_font_small, wl, ImVec2(tx, ty + tz.y + pad * 0.5f), IM_COL32(240, 236, 236, A), line, nullptr, cw);
+        return;
+    }
     ImVec2 tsz = g_font_label->CalcTextSizeA(ts, 1e9f, 0, text);
     ImVec2 lsz = line ? g_font_small->CalcTextSizeA(ls, 1e9f, 0, line) : ImVec2(0, 0);
     float w = (tsz.x > lsz.x ? tsz.x : lsz.x) + h * 0.06f, bh = tsz.y + lsz.y + h * 0.035f;
     ImVec2 p0(io.DisplaySize.x * 0.5f - w * 0.5f, pg.y0 + h * 0.17f), p1(p0.x + w, p0.y + bh);
-    int A = (int)(a * 255);
     dl->AddRectFilled(p0, p1, IM_COL32(6, 18, 28, (int)(a * 215)));
     dl->AddRect(p0, p1, IM_COL32(110, 200, 255, (int)(a * 230)), 0, 0, 2.0f);
     dl->AddRectFilled(p0, ImVec2(p0.x + h * 0.006f, p1.y), IM_COL32(255, 201, 77, A));          // gold edge
@@ -1194,6 +1269,11 @@ static HRESULT __stdcall h_present(IDXGISwapChain* sc, UINT sync, UINT flags) {
                 // message called itself without end
                 if (!o_wndproc) o_wndproc = (WNDPROC)SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC, (LONG_PTR)wndproc);
                 g_ready = true;
+                // (upstream 0.3.0, build 20261119-1940) tools/loading_tag.py: the loading banner closes. (custom) once:
+                // the handle is kept, so the named event lives while the mod is loaded (ready again after a fault: no
+                // second handle)
+                static HANDLE ready_event;
+                if (!ready_event) ready_event = CreateEventW(nullptr, TRUE, TRUE, L"Local\\PPG_overlay_ready");
                 logf("overlay ready (window %p)", g_hwnd);
                 logf("overlay: drawing on thread %lu", GetCurrentThreadId());
             }

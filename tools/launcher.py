@@ -13,6 +13,7 @@ usage: python -I launcher.py [--port 8793] [--no-window] [--setup]   (--setup: r
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -53,7 +54,7 @@ last_ping = [time.time()]
 
 
 def version():
-    return updater.current()      # (custom: CUSTOM_VERSION, the custom releases' version, else upstream's VERSION)
+    return updater.current()      # (custom, Nov 24: Project Noble's X.Y.Z, tools/noble_version.py; else CUSTOM_VERSION)
 
 
 def lidar_counts():
@@ -61,6 +62,29 @@ def lidar_counts():
     maps = os.path.join(ROOT, "maps")
     known = [d for d in os.listdir(maps) if not d.startswith("_") and os.path.isdir(os.path.join(maps, d))]
     return sum(os.path.exists(os.path.join(maps, d, "lidar.json")) for d in known), len(known)
+
+
+# (upstream 0.3.0, build 20261112-1342) LiDAR scans: a zip the player chose, its bytes posted by the page. (custom,
+# Nov 24) By hand only: no download of the author's scans (his /lidar/fetch is not here), and none while a match runs
+LIDAR_ZIP_MAX = 64 << 20      # bytes: a shared LiDAR zip larger than this is refused (a game's whole bundle is ~3 MB)
+
+
+def lidar_import(data):
+    """Import LiDAR scans: a zip the player chose (a map's or a game's bundle). {ok, message}."""
+    import lidar_share
+    import zipfile
+    if lidar_share.match_running():
+        return {"ok": False, "message": "A match is running. Import the scan after it ends."}
+    if not data:
+        return {"ok": False, "message": "That file is empty or too big."}
+    path = os.path.join(ROOT, "user", "downloads", "lidar-import.zip")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+    try:
+        return {"ok": True, "message": lidar_share.summary(lidar_share.import_any(path)) + "."}
+    except (SystemExit, zipfile.BadZipFile, ValueError, KeyError, TypeError, AttributeError) as e:
+        return {"ok": False, "message": f"Not a LiDAR scan zip ({e})." if str(e) else "Not a LiDAR scan zip."}
 
 
 def uninstaller():
@@ -98,9 +122,9 @@ def auto_update(srv):
         pass                                         # (offline: the page says when it last checked)
 
 
-def pick_folder(start=None):
+def pick_folder(start=None, title="Choose the Halo: The Master Chief Collection folder"):
     """Windows' own folder picker (IFileOpenDialog, folders only) over the launcher's window; the folder picked, or
-    None (cancelled, or no picker: the page also takes a pasted path)."""
+    None (cancelled, or no picker: the page also takes a pasted path). (upstream 0.3.0) title: Map Studio's asks too."""
     import ctypes
     from ctypes import wintypes as wt
     ole = ctypes.oledll.ole32
@@ -126,7 +150,7 @@ def pick_folder(start=None):
         opts = wt.DWORD()
         call(dlg, 10, ctypes.byref(opts))                                                   # GetOptions
         call(dlg, 9, wt.DWORD(opts.value | 0x20 | 0x40 | 0x800))     # SetOptions: PICKFOLDERS FORCEFILESYSTEM PATHMUSTEXIST
-        call(dlg, 17, wt.LPCWSTR("Choose the Halo: The Master Chief Collection folder"))      # SetTitle
+        call(dlg, 17, wt.LPCWSTR(title))                                                    # SetTitle
         if start and os.path.isdir(start):
             folder = ctypes.c_void_p()
             try:
@@ -167,23 +191,210 @@ def choose_mcc(body):
     return ok, said
 
 
+# (upstream 0.3.0, builds 20261117-2100 and 20261120-1620) MCC Map Studio: its own app, not part of this download. The
+# launcher only looks for it and opens it. (custom, Nov 24) Never downloaded or installed from here (his launcher
+# fetches it from his website): the owner's answer, "locate and open only"
+MAP_STUDIO_SAVED = os.path.join(ROOT, "user", "map_studio.txt")     # the folder located from the launcher
+# where upstream's own launcher installs it (a copy got that way is found; this launcher installs nothing)
+MAP_STUDIO_HOME = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.join(ROOT, "user"), "Programs", "MCC Map Studio")
+MAP_STUDIO_NAMES = ("MCC Map Studio", "mcc-map-studio", "mcc-map-studio-main")   # (its folder, its repository, GitHub's zip)
+MAP_STUDIO_SKIP = {"windows", "program files", "program files (x86)", "programdata", "$recycle.bin", "system volume information",
+                   "recovery", "perflogs", "msocache", "$windows.~bt", "$windows.~ws"}
+# (custom, Nov 24) the wide search (map_studio_elsewhere: every fixed drive's top folders, the shortcuts) runs in the
+# background at most this often for the page's status (every 3 s), and at once when the tile is pressed
+MAP_STUDIO_WIDE_EVERY = 600.0
+_ELSEWHERE = dict(at=0.0, found=None, busy=False)        # when the wide search last ran, its answer, whether it runs now
+_ELSEWHERE_LOCK = threading.Lock()
+
+
+def map_studio_start(folder):
+    """What starts MCC Map Studio from this folder (its own Electron, then the folder), or None when it is not there."""
+    exe = os.path.join(folder or "", "node_modules", "electron", "dist", "electron.exe")
+    if folder and os.path.exists(exe) and os.path.exists(os.path.join(folder, "package.json")):
+        return [exe, os.path.abspath(folder)]
+    return None
+
+
+def map_studio_links(text_of_files):
+    """Folders named in Windows shortcuts (.lnk bytes): every drive path in them, as plain text and as UTF-16 text,
+    an Electron or .bat target turned into its app folder. [folder]."""
+    out = []
+    for data in text_of_files:
+        for text in (data.decode("latin-1"), data.decode("utf-16-le", errors="ignore")):
+            for m in re.finditer(r'[A-Za-z]:\\[^\x00"<>|*?\r\n]{1,259}', text):
+                p = m.group(0).strip()
+                low = p.lower()
+                if low.endswith("\\electron.exe") and "\\node_modules\\electron\\" in low:
+                    p = p[:low.index("\\node_modules\\electron\\")]
+                elif low.endswith((".bat", ".cmd", ".exe")):
+                    p = os.path.dirname(p)
+                out.append(p)
+    return out
+
+
+def map_studio_elsewhere(appdata=None, links=None, homes=None, drives=None):
+    """Where else MCC Map Studio may be, in order: the folder it records each time it starts (%APPDATA%\\mcc-map-studio\\
+    location.txt), the folders its desktop and Start menu shortcuts name, and an "MCC Map Studio" folder at the top of
+    any fixed drive, one level below it, or in the user's Desktop, Documents and Downloads. [folder] (not checked).
+    Only the top folders of each drive are listed: no drive is searched through."""
+    out, env = [], os.environ
+    appdata = env.get("APPDATA", "") if appdata is None else appdata
+    for n in ("mcc-map-studio", "MCC Map Studio"):
+        try:
+            with open(os.path.join(appdata, n, "location.txt"), encoding="utf-8") as f:
+                out.append(f.read().strip())
+        except OSError:
+            pass
+    if links is None:
+        places = [os.path.join(env.get("USERPROFILE", ""), "Desktop"), os.path.join(env.get("PUBLIC", ""), "Desktop"),
+                  os.path.join(appdata, "Microsoft", "Windows", "Start Menu", "Programs"),
+                  os.path.join(env.get("PROGRAMDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs")]
+        links = [f for p in places for f in glob.glob(os.path.join(p, "**", "*.lnk"), recursive=True)
+                 if "map studio" in os.path.basename(f).lower()]
+    datas = []
+    for f in links:
+        try:
+            with open(f, "rb") as fh:
+                datas.append(fh.read(65536))
+        except OSError:
+            pass
+    out += map_studio_links(datas)
+    if homes is None:
+        home = env.get("USERPROFILE", "")
+        homes = [os.path.join(home, d) for d in ("Desktop", "Documents", "Downloads")] + [home] if home else []
+    out += [os.path.join(h, n) for h in homes for n in MAP_STUDIO_NAMES]
+    if drives is None:
+        drives = []
+        try:
+            import ctypes
+            mask, kind = ctypes.windll.kernel32.GetLogicalDrives(), ctypes.windll.kernel32.GetDriveTypeW
+            drives = [f"{c}:\\" for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ") if mask >> i & 1 and kind(f"{c}:\\") == 3]
+        except Exception:                                # (not Windows: the tile is hidden there)
+            pass
+    for d in drives:
+        out += [os.path.join(d, n) for n in MAP_STUDIO_NAMES]
+        try:
+            subs = [e.path for e in os.scandir(d) if e.is_dir() and e.name.lower() not in MAP_STUDIO_SKIP]
+        except OSError:
+            continue
+        out += [os.path.join(s, n) for s in subs for n in MAP_STUDIO_NAMES]
+    return out
+
+
+def _search_elsewhere():
+    """The wide search, its answer kept in _ELSEWHERE."""
+    try:
+        found = next((os.path.abspath(d) for d in map_studio_elsewhere() if map_studio_start(d)), None)
+    except Exception:
+        found = None
+    with _ELSEWHERE_LOCK:
+        _ELSEWHERE.update(at=time.time(), found=found, busy=False)
+    return found
+
+
+def map_studio(env=None, saved=None, root=None, wide=True, fresh=False):
+    """MCC Map Studio's folder, or None. Looked for: the PPG_MAP_STUDIO folder, the folder located from the launcher
+    (user/map_studio.txt), where upstream's launcher installs it, an "MCC Map Studio" folder beside this project or
+    beside its parent, then (wide) map_studio_elsewhere. fresh: that wide search now, waited for (the tile's press);
+    else its kept answer, searched again in the background when older than MAP_STUDIO_WIDE_EVERY (status: never waits)."""
+    env, saved, root = os.environ if env is None else env, saved or MAP_STUDIO_SAVED, root or ROOT
+    try:
+        with open(saved, encoding="utf-8") as f:
+            chosen = f.read().strip()
+    except OSError:
+        chosen = None
+    up = os.path.dirname(root)
+    for d in (env.get("PPG_MAP_STUDIO"), chosen, MAP_STUDIO_HOME, os.path.join(up, "MCC Map Studio"),
+              os.path.join(os.path.dirname(up), "MCC Map Studio")):
+        if map_studio_start(d):
+            return os.path.abspath(d)
+    if not wide:
+        return None
+    if fresh:
+        return _search_elsewhere()
+    with _ELSEWHERE_LOCK:
+        stale = not _ELSEWHERE["busy"] and time.time() - _ELSEWHERE["at"] > MAP_STUDIO_WIDE_EVERY
+        if stale:
+            _ELSEWHERE["busy"] = True
+    if stale:
+        threading.Thread(target=_search_elsewhere, daemon=True).start()
+    found = _ELSEWHERE["found"]
+    return found if map_studio_start(found) else None
+
+
+def open_map_studio(body, saved=None):
+    """The Map Studio tile: starts it as its own program (no console, not waited on, not closed with the launcher);
+    {"browse": true} asks for its folder first and remembers it (the folder it was unzipped into, one level up, is
+    fine too). Running already: a second window. (ok, message)."""
+    if body.get("browse"):
+        folder = pick_folder(title="Choose the MCC Map Studio folder")
+        if not folder:
+            return False, ""
+        inner = next((os.path.join(folder, n) for n in MAP_STUDIO_NAMES if map_studio_start(os.path.join(folder, n))), None)
+        folder = inner or folder
+        if not map_studio_start(folder):
+            if os.path.exists(os.path.join(folder, "package.json")) and os.path.exists(os.path.join(folder, "main.js")):
+                # (custom: his message pointed at his launcher's Download, which is not here)
+                return False, ("That copy of MCC Map Studio has no runtime (a source download). Run npm install in it, "
+                               "or use a release of MCC Map Studio that includes it.")
+            return False, "MCC Map Studio is not in that folder."
+        saved = saved or MAP_STUDIO_SAVED
+        os.makedirs(os.path.dirname(saved), exist_ok=True)
+        with open(saved, "w", encoding="utf-8") as f:
+            f.write(folder)
+    cmd = map_studio_start(map_studio(saved=saved, fresh=True))
+    if not cmd:
+        return False, "MCC Map Studio was not found on this PC. Press Locate ... to choose its folder."
+    # (ELECTRON_RUN_AS_NODE, left set by some shells, would start it as a script runner with no window)
+    env = {k: v for k, v in os.environ.items() if k != "ELECTRON_RUN_AS_NODE"}
+    subprocess.Popen(cmd, cwd=cmd[1], env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, creationflags=0x00000008)   # DETACHED_PROCESS
+    return True, "Map Studio: its window opens in a moment."
+
+
 def status():
     found = conflicts.scan()
     mapped, total = lidar_counts()
     mcc = paths.mcc()
     shown = os.path.realpath(mcc) if mcc else mcc    # (as the folder is really spelled: Steam's file is lowercase)
     return dict(version=version(), mcc=shown, mcc_running=conflicts.mcc_running(), installed=bool(uninstaller()),
+                readonly=folder_problem(),          # (upstream 0.3.0) the page's red banner when the folder is locked
                 mcc_choice=paths.chosen(), mcc_env=bool(os.environ.get("HB_MCC")), mcc_steam=paths.is_steam_copy(mcc),
                 mcc_found=paths.installs(), wine=paths.wine(),
                 missing_games=[paths.GAME_NAMES[g] for g in paths.GAME_MAPS if g not in paths.games(mcc)] if mcc else [],
                 setup=setup.status()[1:], map_tools=bool(paths.map_tool("model2obj")),
+                map_studio=bool(map_studio()),       # (upstream 0.3.0) found: the tile opens it; not: Locate ...
                 lidar=dict(mapped=mapped, total=total), workshop=conflicts.workshop_count(),
                 conflicts=[dict(file=os.path.relpath(p, paths.mcc()), why=w) for p, w in found],
                 running={t: p.poll() is None for t, p in procs.items()})
 
 
+FOLDER = {}                                          # folder_problem's answer, found once a launcher run
+
+
+def folder_problem():
+    """(upstream 0.3.0, build 20261114-1215) Why the mod's folder takes no files, or None. Installed for all users
+    (Program Files), a launcher without administrator rights can write nothing there: Play's log did not open, so Play
+    sat on "Starting MCC ..." with no answer, and the bot editor could not save its profiles (his GitHub #30)."""
+    if "why" not in FOLDER:
+        try:
+            os.makedirs(LOGS, exist_ok=True)
+            probe = os.path.join(LOGS, ".write-test")
+            with open(probe, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(probe)
+            FOLDER["why"] = None
+        except OSError:
+            FOLDER["why"] = (f"Windows won't let Project Noble save files in its folder ({ROOT}), so Play and the bot "
+                             "editor can't work. Uninstall it, then run the newest Setup: it installs for you only, "
+                             "into a folder of yours.")
+    return FOLDER["why"]
+
+
 def start(task, clean=False):
-    """Starts a task; (ok, message)."""
+    """Starts a task; (ok, message). Not while the mod's folder takes no files (folder_problem)."""
+    if folder_problem():
+        return False, folder_problem()
     if task not in TASKS:
         return False, "unknown task"
     if task in procs and procs[task].poll() is None:
@@ -217,6 +428,60 @@ def log_lines(task, skip=0):
                 code=None if not p or p.poll() is None else p.returncode)
 
 
+# (custom, Nov 24) the links the guide and the What's new notes may open: Project Noble's repository (its docs, issues,
+# releases), and the original project's own repository (the guide's one credit link, the upstream notes' issue numbers)
+LINKS = ("https://github.com/IEatOreos/ProvingGroundsOreo", "https://github.com/AyoItzKye/project-proving-grounds")
+
+
+def link_ok(url):
+    """A link out of the guide or the notes that the launcher opens in the browser: one of LINKS or a page under it."""
+    return any(url == base or url.startswith(base + "/") for base in LINKS)
+
+
+# (upstream 0.3.0, build 20261119-1831) the terms of use: agreed once, on the installer's license page or in the
+# launcher. (custom, Nov 24) Project Noble's own TERMS.md, a draft the owner writes: while it holds a TERMS_DRAFT_MARK
+# note it is not in force, so nobody is asked to agree (and tools/build_installer.py builds no release with it)
+TERMS = os.path.join(ROOT, "TERMS.md")
+TERMS_OK = os.path.join(ROOT, "user", "terms.ini")      # [terms] accepted=<version>: the installer's I accept, or the launcher's
+TERMS_DRAFT_MARK = "OWNER TO DECIDE"                     # (the same in tools/build_installer.py)
+
+
+def _terms_text():
+    try:
+        with open(TERMS, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def terms_version(text=None):
+    """TERMS.md's version ("Version 2026-11-24."), or "" with no TERMS.md (a copy without it: nothing to ask)."""
+    m = re.search(r"^Version (\S+?)\.", _terms_text() if text is None else text, re.M)
+    return m.group(1) if m else ""
+
+
+def terms():
+    """The terms of use and disclaimer: whether this version was accepted, and their text for the launcher to show.
+    (custom) A draft (TERMS_DRAFT_MARK in it) is never asked: ok, draft."""
+    text = _terms_text()
+    v = terms_version(text)
+    draft = TERMS_DRAFT_MARK in text
+    try:
+        with open(TERMS_OK, encoding="utf-8") as f:
+            have = re.search(r"^accepted\s*=\s*(\S+)", f.read(), re.M)
+    except OSError:
+        have = None
+    ok = not v or draft or bool(have and have.group(1) == v)
+    return {"ok": ok, "version": v, "draft": draft, "text": "" if ok else text}
+
+
+def accept_terms():
+    os.makedirs(os.path.dirname(TERMS_OK), exist_ok=True)
+    with open(TERMS_OK, "w", encoding="utf-8") as f:
+        f.write(f"[terms]\naccepted={terms_version()}\n")
+    return terms()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -234,6 +499,12 @@ class Handler(BaseHTTPRequestHandler):
         path, _, query = self.path.partition("?")
         if path == "/":
             self.send(open(os.path.join(HERE, "launcher.html"), "rb").read(), "text/html; charset=utf-8")
+        elif path == "/studio.png":                  # (upstream 0.3.0) Map Studio's badge, on its tile
+            try:
+                with open(os.path.join(ROOT, "installer", "map_studio.png"), "rb") as f:
+                    self.send(f.read(), "image/png")
+            except OSError:
+                self.send({"error": "not found"}, code=404)
         elif path == "/art.jpg":                     # the page's hero: the README's banner (docs/banner.jpg ships)
             try:
                 self.send(open(os.path.join(ROOT, "docs", "banner.jpg"), "rb").read(), "image/jpeg")
@@ -245,6 +516,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send(dict(updater.info(), wine=paths.wine()))
         elif path == "/status":
             self.send(status())
+        elif path == "/terms":                       # (upstream 0.3.0) the terms: accepted, or their text to show first
+            self.send(terms())
         elif path.startswith("/log/"):
             skip = int(query.split("=")[1]) if query.startswith("from=") and query[5:].isdigit() else 0
             self.send(log_lines(path[5:], skip))
@@ -255,6 +528,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("X-Launcher") != "1":    # only the launcher's own page (a plain form post cannot set it)
             return self.send({"error": "refused"}, code=403)
         n = int(self.headers.get("Content-Length") or 0)
+        if self.path == "/lidar/import":             # (upstream 0.3.0) a shared LiDAR zip the player chose: its bytes
+            if not 0 < n <= LIDAR_ZIP_MAX:           # (custom: too big is never read)
+                return self.send(lidar_import(None))
+            return self.send(lidar_import(self.rfile.read(n)))
         body = json.loads(self.rfile.read(n) or b"{}") if n else {}
         if self.path == "/ping":
             last_ping[0] = time.time()
@@ -263,11 +540,19 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = start(self.path[5:], bool(body.get("clean")))
             port = TASKS.get(self.path[5:], (0, 0, None))[2]
             self.send({"ok": ok, "message": msg, "port": port}, code=200 if ok else 400)
+        elif self.path == "/terms":                  # (upstream 0.3.0) the player pressed I agree
+            self.send(accept_terms())
         elif self.path == "/mcc":
             ok, msg = choose_mcc(body)
             self.send({"ok": ok, "message": msg})
+        elif self.path == "/mapstudio":              # (upstream 0.3.0) the Map Studio tile: opened, or located first
+            ok, msg = open_map_studio(body)
+            self.send({"ok": ok, "message": msg})
         elif self.path == "/folder":
-            os.startfile(ROOT)
+            # (upstream 0.3.0, build 20261120-1620) the folder's "explore" verb: plain open let Windows pick what to
+            # run, and on a custom install it started a second launcher (his Discord bug report, Nov 20). (explorer.exe
+            # with the path as an argument opened Documents: it misreads a quoted path ending in a backslash)
+            os.startfile(os.path.normpath(ROOT), "explore")
             self.send({"ok": True})
         elif self.path == "/docs":                   # the guide in the mod's own window (it opened README.md as raw text)
             url = f"http://127.0.0.1:{self.server.server_address[1]}/guide"
@@ -287,8 +572,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send({"ok": updater.install(on_start=lambda: close_for_update(self.server))})
         elif self.path == "/open":                   # a link out of the guide, in the default browser: web pages only
             url = str(body.get("url", ""))
-            # (custom: and this custom build's own repository, its releases page)
-            if not url.startswith(("https://github.com/AyoItzKye/", "https://github.com/IEatOreos/ProvingGroundsOreo")):
+            if not link_ok(url):
                 return self.send({"ok": False}, code=400)
             webbrowser.open(url)
             self.send({"ok": True})
