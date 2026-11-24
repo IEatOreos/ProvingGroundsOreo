@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+### No freeze on vehicle maps when new drives come in: the car and tank grounds are rebuilt in the background, 2026-11-24
+
+Upstream 0.3.0's note #40 (build 20261119-0039), **our own version from his idea, not his code**. The owner: "our own version for car and tank grounds, measured on Boneyard and Spire". His single vehicle ground would have dropped our separate car and tank grounds and our wedge marks (Nov 13).
+
+- `brain/terrain.py` (ours):
+  - `_vreset` (new rides, paint, out of bounds): with `VNAV_LATER` on, each size that has a ground keeps it, marked stale (`_vstale`), instead of dropping it for a rebuild in the pass.
+  - `_vready` (`vnav`, `drive_clear`): a size never built is still built in the pass, as before. A stale one starts its rebuild (`_vfresh`, `_vbuild_job`) on a thread of its own, from a shallow copy of the terrain taken then, and bots drive on the old ground meanwhile.
+  - The new ground goes in whole under `VLOCK`. The other size's result goes to its store for its next drive (`use_vground`).
+- **Both sizes:** each keeps its own graph, room rule (`VEH_ROOM` / `VEH_ROOM_TANK`) and caches.
+  - One rebuild at a time per terrain, so never two of one size; the other size waits for its own next drive.
+  - Rides that come in again during a rebuild mark it stale again, so it is rebuilt once more after.
+- **Wedge marks:** the copy gets its own lists. A mark made while the ground was built (`vwedge`) goes onto the new ground before it goes in (and onto the old one at once, as before). Per-size marks and `vwedge_nodes` are unchanged.
+- **Think threads:**
+  - On: a rebuild done during a threaded pass goes in at the next pass (`_PASS["seq"]`), so every bot of a pass drives on one ground whichever thread asked first.
+  - Off (one thread, the live brain on our bundled Python): at the next drive.
+  - A grown nav swapped in meanwhile (`maps.swap`): the rebuild is dropped.
+  - No thread or job is kept on the terrain itself (`_VJOBS`, weak), so the terrain cache still pickles.
+- `VNAV_LATER` is off by default, so the sims and tests play as before (a drive after a change builds in the pass, the same every run); `tools/live_bots.py` turns it on. `tools/test_threads.py` (4 threads play the 1-thread match) still passes.
+- Not taken of his: `_VNAV`, `_vnav_stale`, `_rebuild_vnav_later` and his `vnav` / `add_rides` / `oob` lines (one ground, no wedge marks).
+- **Measured** (`reach_70_boneyard/variants/v8d2f4510` and Spire `reach_35_island/variants/v704f87f3`). Their own `rides.json` came in again through `add_rides`, 3 times each, with 240 passes of 6 car and 4 tank drives and their guards' looks, at 30 a second:
+
+  | | In the pass (before) | Off the pass (now) |
+  | --- | --- | --- |
+  | Boneyard, worst pass after new rides | 674, 676, 679 ms | 72, 99, 95 ms |
+  | Spire, worst pass after new rides | 525, 529, 529 ms | 79, 80, 67 ms |
+  | Calm pass (median) | 15 / 12 ms | 15 / 12 ms |
+
+  - New grounds in use after about 0.5 s (car) and 1.1 s (tank) on Boneyard, 0.3 s and 0.6 s on Spire.
+  - The worst passes left are the fresh route fields on the new ground and the build sharing Python's lock.
+  - `add_rides` itself is unchanged (56-74 ms on Boneyard, 14-19 ms on Spire).
+- **Checks:** new `tools/test_vnav_later.py` (7) OK, 6 runs in a row:
+  - off, the next drive builds in the pass as before;
+  - the old ground is driven on until the new one goes in whole, once;
+  - both sizes, one rebuild at a time, each into its own place;
+  - a wedge marked while it is built is on the new ground;
+  - threaded passes take it at the next pass;
+  - a grown terrain swapped in meanwhile drops it;
+  - a terrain with a rebuild under way pickles.
+
+  `test_tank_drive.py`, `test_threads.py` and the full suite OK; `live_bots.py` imports. **Untested in a live match.**
+
 ### Forge layouts built past the map's edge: the grid grows to their pieces (never to sky warships), 2026-11-24
 
 Upstream 0.3.0's notes #26 (his GitHub #33, build 20261115-0350) and #24 (his GitHub #34, build 20261116-2330), together. The owner: "take both; check Renegade's navigation and route times".

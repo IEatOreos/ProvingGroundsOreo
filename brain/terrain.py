@@ -6,6 +6,7 @@ base roof and the doorway under it are separate places.
 import math
 import re
 import threading
+import weakref
 
 import numpy as np
 
@@ -210,6 +211,14 @@ def vlocked(fn):
         with VLOCK:
             return fn(*a, **k)
     return run
+
+
+# (custom, Nov 24: our own version of upstream 0.3.0's idea, note #40, build 20261119-0039) the vehicle grounds built
+# again on a thread of their own when rides, paint or out of bounds change mid-match (Terrain._vreset, _vfresh): bots
+# drive on the old ground meanwhile and the new one goes in whole. Off (the next drive builds it in the pass, as before):
+# the sims and tests, so a match plays the same every time; tools/live_bots.py turns it on.
+VNAV_LATER = False
+_VJOBS = weakref.WeakKeyDictionary()    # Terrain -> its rebuild under way or done: {"size", "done", "result", ...}
 
 
 _PASS = {"seq": 0}         # the threaded pass under way (brain/threads.Pass.run counts them)
@@ -2639,9 +2648,87 @@ class Terrain:
 
     @vlocked
     def _vreset(s):
-        """The vehicle ground of every size to be built again (paint, rides, out of bounds changed)."""
-        s.__dict__.pop("graph_v", None)
-        s.__dict__.pop("_vstore", None)
+        """The vehicle ground of every size to be built again (paint, rides, out of bounds changed). (custom, Nov 24)
+        With VNAV_LATER on, each size that has a ground keeps it, marked stale (s._vstale): its next drive starts its
+        rebuild off the pass (_vfresh). Off, or a size not built yet: built on its next drive, in the pass."""
+        if not VNAV_LATER:
+            s.__dict__.pop("graph_v", None)
+            s.__dict__.pop("_vstore", None)
+            return
+        have = {k for k, d in s.__dict__.get("_vstore", {}).items() if d.get("graph_v") is not None}
+        if s.__dict__.get("graph_v") is not None:
+            have.add(s.__dict__.get("_vsize", "car"))
+        s.__dict__.setdefault("_vstale", set()).update(have)
+
+    def _vready(s):
+        """(custom, Nov 24) The ground in use (use_vground) ready to drive on: built now if it never was (in the pass, as
+        before), else a stale one's rebuild started or, done, swapped in (_vfresh). Under VLOCK (vnav, drive_clear)."""
+        if getattr(s, "graph_v", None) is None:
+            job = _VJOBS.get(s)
+            if job is not None and job["lz"] is not s.__dict__.get("lz"):
+                _VJOBS.pop(s, None)                       # (a grown terrain swapped in since: maps.swap)
+            s._build_vnav()
+            s.__dict__.get("_vstale", set()).discard(s.__dict__.get("_vsize", "car"))
+        else:
+            s._vfresh()
+
+    # (custom, Nov 24) a ground rebuilt off the pass, done during a threaded pass, goes in at the next pass (every bot of a
+    # pass drives on one ground, whichever thread asked first); with one thread at the next drive
+    def _vfresh(s):
+        """(custom, Nov 24; our own version of upstream 0.3.0's idea, note #40) The vehicle ground in use, stale since
+        rides, paint or out of bounds changed (_vreset): its rebuild started on a thread of its own from a shallow copy
+        of this terrain (_vbuild_job), the old ground driven on meanwhile; done, the new one swapped in whole, with the
+        wedge marks made since it started (vwedge). One rebuild at a time per terrain, so never two of one size; the
+        other size waits for its own next drive. A grown terrain swapped in meanwhile (maps.swap): the rebuild is
+        dropped. Under VLOCK."""
+        size = s.__dict__.get("_vsize", "car")
+        job = _VJOBS.get(s)
+        if job is not None and job["done"]:
+            if job["lz"] is not s.__dict__.get("lz") or job["result"] is None:
+                _VJOBS.pop(s, None)                       # (a grown terrain since, or the build failed: dropped)
+            elif not (THREADS and _PASS["seq"] <= job["seq"]):
+                res = job["result"]
+                marks = s.__dict__.get("vwedges", [])
+                s._vwedge_apply(res, marks[job["marks"]:])   # (wedged while it was built)
+                if job["size"] == size:
+                    for k in s.VGROUND_KEYS:
+                        s.__dict__.pop(k, None)
+                    s.__dict__.update(res)
+                else:                                     # (the other size's, kept for its next drive: use_vground)
+                    s.__dict__.setdefault("_vstore", {})[job["size"]] = res
+                _VJOBS.pop(s, None)
+        stale = s.__dict__.get("_vstale")
+        if stale and size in stale and _VJOBS.get(s) is None:
+            stale.discard(size)
+            s._vbuild_job(size)
+
+    def _vbuild_job(s, size):
+        """(custom, Nov 24) Size's ground built on a thread of its own (_vfresh): from a shallow copy of this terrain
+        taken now, its own lists of wedge marks, so nothing the pass reads is changed or half-built."""
+        import copy
+        sh = copy.copy(s)
+        for k in s.VGROUND_KEYS + ("_vstore", "_vstale", "_vblock_cache", "_vblock_ids", "_owner_nodes"):
+            sh.__dict__.pop(k, None)
+        sh._vsize = size
+        marks = list(s.__dict__.get("vwedges", []))
+        sh.vwedges, sh.vwedge_nodes = marks, set(s.__dict__.get("vwedge_nodes", ()))
+        job = {"size": size, "done": False, "result": None, "lz": s.__dict__.get("lz"), "marks": len(marks), "seq": 0}
+        _VJOBS[s] = job
+
+        def run():
+            import time as _t
+            t0 = _t.perf_counter()
+            try:
+                sh._build_vnav()
+                job["result"] = {k: sh.__dict__[k] for k in ("graph_v", "graph_v_to", "vroomy", "_vfields")}
+                job["ms"] = (_t.perf_counter() - t0) * 1000
+            except Exception as e:                    # (the old ground stays; built again when next stale)
+                print(f"vehicle ground ({size}) not rebuilt: {type(e).__name__}: {e}", flush=True)
+            finally:
+                job["seq"] = _PASS["seq"]
+                job["done"] = True
+        job["thread"] = threading.Thread(target=run, name=f"vehicle-ground-{size}", daemon=True)
+        job["thread"].start()
 
     @vlocked
     def vwedge(s, p, yaw):
@@ -2833,8 +2920,7 @@ class Terrain:
         vehicle's ground (painted drive cells run by walls). far when nothing is in the way or the line leaves the grid.
         big: a tank's ground (use_vground)."""
         s.use_vground(big)
-        if getattr(s, "graph_v", None) is None:
-            s._build_vnav()
+        s._vready()                              # (custom, Nov 24: built, or a stale one rebuilt off the pass)
         if not s.inside(p.x, p.y):
             return far
         start = s._node(p)
@@ -2870,8 +2956,7 @@ class Terrain:
         or the walking answer where the vehicle's ground does not reach (off it; no way on it: see below). big: a
         tank's ground (use_vground)."""
         s.use_vground(big)
-        if getattr(s, "graph_v", None) is None:
-            s._build_vnav()
+        s._vready()                              # (custom, Nov 24: built, or a stale one rebuilt off the pass)
         if math.hypot(b.x - a.x, b.y - a.y) < 4.0:
             return b
         l, j, i = s._node(a)

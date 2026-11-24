@@ -1517,6 +1517,10 @@ def main():
             routes = Pool()
         except Exception as e:                        # (never stops the bots: searches in the brain as before)
             print(f"route-search helpers not started: {type(e).__name__}: {e}", flush=True)
+    # (custom, Nov 24; upstream 0.3.0's idea, note #40) the vehicle grounds rebuilt off the pass when rides, paint or
+    # out of bounds change mid-match (brain/terrain.py VNAV_LATER): no pass waits on one
+    from brain import terrain as _terrain_mod
+    _terrain_mod.VNAV_LATER = True
     think_pass, pass_jobs = None, []                  # (custom, Nov 23) the bots' thinking on several threads
     workers = think_threads()
     if workers >= 2:
