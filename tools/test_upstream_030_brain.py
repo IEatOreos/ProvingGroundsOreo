@@ -432,5 +432,79 @@ class SkullPointTests(unittest.TestCase):
         self.assertIsNone(Bot.loose_point(me, snap))
 
 
+class ElephantTests(unittest.TestCase):
+    """#4 (build 20261112-1632): Halo 3's Elephant: the hull blocks sight (Perception only, outside the protected
+    precision branches), bots board by the ramp and climb the stairs to the deck. Halo 3 only."""
+
+    # an Elephant at the origin facing +x: hull f -3.85..3.0, l -2.5..2.5; the bay lane l -1.5..1.5 from z 0.5 up
+    ELE = dict(handle=50, kind="elephant", pos=(0.0, 0.0, 0.0), fwd=(1.0, 0.0, 0.0), up=(0.0, 0.0, 1.0))
+
+    def test_its_hull_blocks_its_bay_lane_does_not(self):
+        from brain import vehicles
+        blocks = vehicles.elephant_blocks
+        self.assertTrue(blocks([self.ELE], Vec(0, -10, 1.0), Vec(0, 10, 1.0)), "across its side walls")
+        self.assertFalse(blocks([self.ELE], Vec(-10, 0, 1.0), Vec(10, 0, 1.0)), "along the open bay")
+        self.assertFalse(blocks([self.ELE], Vec(0, -10, 3.0), Vec(0, 10, 3.0)), "over it")
+        self.assertFalse(blocks([dict(self.ELE, kind="warthog")], Vec(0, -10, 1.0), Vec(0, 10, 1.0)))
+        self.assertFalse(blocks([self.ELE], Vec(0, -10, 1.0), Vec(0, 10, 1.0), skip=(50,)))
+
+    def test_our_rider_head_hull_blocks_is_untouched(self):
+        import inspect
+        from brain import vehicles
+        self.assertEqual(list(inspect.signature(vehicles.hull_blocks).parameters), ["v", "a", "b", "spare"])
+
+    def sight(self, game, mapname, ele=True):
+        from brain.core import Snapshot
+        b = make_bot(tier="top", mapname=mapname)
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(0, -8, 0), yaw=botmod.math.pi / 2)
+        e = PlayerState(id=1, team=1, name="e", pos=Vec(0, 8, 0))
+        snap = Snapshot(100, [me, e], vehicles=[dict(self.ELE)] if ele else [], mode="slayer")
+        b.per.update(10.0, me, snap, lambda a, c: True, [], game=game)
+        return 1 in b.per.clear_at
+
+    def test_halo_3_no_line_through_its_hull(self):
+        self.assertFalse(self.sight("h3", "h3_t"))
+        self.assertTrue(self.sight("h3", "h3_t", ele=False))
+
+    def test_every_other_game_as_before(self):
+        for g, m in (("reach", "reach_t"), ("h4", "h4_t"), ("h2", "h2_t")):
+            self.assertTrue(self.sight(g, m), g)
+            self.assertFalse(botmod.hull_between(None, None, None, g), g)
+
+    def way(self, mapname, me_pos, goal):
+        b = make_bot(mapname=mapname)
+        b.vehicles_now = [dict(self.ELE)]
+        b.now = 10.0
+        me = PlayerState(id=0, team=0, name="b", pos=me_pos)
+        return b.way_in(me, goal)
+
+    def test_reach_never_takes_an_elephant_way(self):
+        self.assertIsNone(self.way("reach_t", Vec(-8, 0, 0), Vec(0.3, -0.3, 1.7)))
+
+    def test_halo_3_to_the_deck_by_the_ramp_and_the_stairs(self):
+        deck = Vec(0.3, -0.3, 1.7)                                   # (the capture spot, ELEPHANT flag_return)
+        w = self.way("h3_t", Vec(-8.0, -0.5, 0.0), deck)              # behind it: to the ramp's foot by the nav
+        self.assertFalse(w[1])
+        self.assertAlmostEqual(w[0].x, -4.7, 3)
+        w = self.way("h3_t", Vec(-5.0, -0.5, 0.0), deck)              # in the ramp's lane: straight up it
+        self.assertEqual(len(w), 2)
+        self.assertTrue(w[1])
+        self.assertAlmostEqual(w[0].x, -2.4, 3)
+        w = self.way("h3_t", Vec(-2.0, 0.0, 0.6), deck)               # on the bay floor: to the stairs' foot (no deck jump)
+        self.assertTrue(w[1])
+        self.assertAlmostEqual(w[0].x, -3.0, 3)
+        self.assertAlmostEqual(w[0].y, 1.2, 3)
+        w = self.way("h3_t", Vec(-3.0, 1.2, 0.7), deck)               # at the stairs' foot: up them
+        self.assertAlmostEqual(w[0].z, 1.74, 3)
+        w = self.way("h3_t", Vec(-1.0, 1.2, 1.74), deck)              # on the deck: straight at it
+        self.assertEqual(w, (deck, True))
+
+    def test_halo_3_round_its_hull_not_into_its_side(self):
+        w = self.way("h3_t", Vec(0.0, -5.0, 0.0), Vec(0.0, 20.0, 0.0))   # beside it, the goal past it
+        self.assertIsNotNone(w)
+        self.assertFalse(w[1])
+        self.assertGreater(abs(w[0].x), 3.0)                          # (one of its corners, 0.8 u off the hull)
+
+
 if __name__ == "__main__":
     unittest.main()

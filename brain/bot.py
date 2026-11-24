@@ -268,6 +268,26 @@ def crouched(p):
     return bool(p is not None and getattr(p, "crouching", False))
 
 
+ELEPHANT_GAMES = ("h3",)   # (custom, Nov 24) the Elephant's hull and ways in (Sandtrap's model): Halo 3 only
+
+
+def hull_between(snap, me, e, game=None):
+    """(upstream 0.3.0, build 20261112-1632) An Elephant's hull between me's eye and man e: his chest and his head both
+    behind it (vehicles.elephant_blocks, his hull_blocks renamed; the Elephant either of them rides left out). (custom,
+    Nov 24) Only in ELEPHANT_GAMES, and only Perception.update calls it, after its line is worked out (outside the
+    protected precision branches): every other game, and every line with no Elephant across it, as before."""
+    if game not in ELEPHANT_GAMES:
+        return False
+    vs = getattr(snap, "vehicles", None)
+    if not vs:
+        return False
+    skip = tuple(h for h in (getattr(me, "vehicle", -1), getattr(e, "vehicle", -1)) if h not in (None, -1))
+    low, high = (CROUCH_CHEST, CROUCH_HEAD) if crouched(e) else (CHEST, EYE)
+    a = eye(me)
+    return (vehicles.elephant_blocks(vs, a, e.pos + Vec(0, 0, low), skip)
+            and vehicles.elephant_blocks(vs, a, e.pos + Vec(0, 0, high), skip))
+
+
 TREMOR = 0.0025                       # rad: the hand's wobble per tick while tracking a man (Aim.step)
 COMMIT_S, COMMIT_WEAK_S = 6.0, 10.0   # a fight lasts until the target dies or is unseen this long (shield down: longer)
 # Demon's corner discipline (Bot.corner_plan) and read of where a man went (Bot.guess, brain/anticipate.py)
@@ -727,6 +747,16 @@ TAKE_TAP, TAKE_TAP_S = ("h2",), 0.3
 # for the objective only with 2 or fewer aboard" is not taken (the owner: our CTF runners stay); our rider exits, the
 # "there, out" test and parked_ban are unchanged. Held back in a threaded pass (brain/threads.py FLAT)
 AT_WHEEL = {}
+# (upstream 0.3.0, build 20261112-1632) Halo 3's Elephant (Bot.way_in, elephant_entry; ELEPHANT_GAMES)
+ELEPHANT_WELLS = False              # Bot.elephant_entry: the tire wells' climbs onto the deck as ways in (they failed; the open ways)
+ENTRY_JUMP_COST = 3.0               # u: an Elephant way in with a jump costs this much more walk than the rear ramp
+DECK_RUNUP = 0.9                    # u behind the Elephant deck jump's take-off a bot starts its run at it (Bot.way_in)
+STAIR_FOOT_Z = 0.6                  # the Elephant's bay floor at its stairs' foot (over its origin; on them: over this line - 0.15)
+TAKEOFF_Z = (-0.3, 0.5)             # the Elephant's jump ways in: the ground at a take-off over its origin (a player's: -0.04 to 0.24)
+# (custom, Nov 24) his jump from the bay floor onto the deck is a crouch-jump (its lips at the apex's height or over:
+# his Bot.crouch_jump, which ours does not have): off, the deck is reached by its stairs (his own way after three missed
+# jumps)
+DECK_JUMP = False
 # (upstream 0.3.0, build 20261112-1507) Bot.walk_fire: on foot, a gun in hand, on its way somewhere else (the objective,
 # a gun, a hunt), it shoots a man in view within WALK_FIRE_CONE of the way it walks and in its gun's reach (or hurting
 # it) and walks on, as a person runs at the flag shooting the man in front of him. His live Sandtrap 20261112-135123: on
@@ -1687,6 +1717,11 @@ class Perception:
                 line = head or los(me.pos, e.pos)
             else:
                 line = in_view and los(me.pos, e.pos)
+            if line and hull_between(snap, me, e, game):
+                # (upstream 0.3.0, build 20261112-1632; custom, Nov 24: after the branches above, not in them) an
+                # Elephant's hull between: no line, so no clear_at and no shot (line_clear, LINE_FRESH 0). His live
+                # Sandtrap: 47% of the bots' trigger ticks at a man went through an Elephant
+                line = False
             if line:
                 s.clear_at[e.id] = now
             visible = in_view and (shooting or line)
@@ -9411,11 +9446,16 @@ class Bot:
 
     def blocked_way(s, T, me, snap, yaw):
         """What stops a step along yaw: "wall" (a wall or placed object nearer than REDIRECT_D, Terrain.clearance),
-        "vehicle" (one within 1.5 u ahead and 0.9 u to the side: the level data has none), else None."""
+        "vehicle" (one within 1.5 u ahead and 0.9 u to the side: the level data has none), else None. (upstream 0.3.0,
+        build 20261112-1632) Not a Halo 3 Elephant: its middle is beside its own bay and deck, where the flags are (way_in
+        and round_hull walk its hull). His live Sandtrap 20261112-135123: a bot on the deck 1 u from the capture was
+        turned "round" the Elephant it stood on, off the deck, three times in 26 s."""
         if T.clearance(s.feet(me), yaw, 1.0) < s.REDIRECT_D:
             return "wall"
         c, sn = math.cos(yaw), math.sin(yaw)
         for v in getattr(snap, "vehicles", ()) or ():
+            if s.game in ELEPHANT_GAMES and vehicles.kind_of(v.get("kind", "")) == "elephant":
+                continue
             q = vpos(v)
             dx, dy = q.x - me.pos.x, q.y - me.pos.y
             if 0.0 < dx * c + dy * sn < 1.5 and abs(dy * c - dx * sn) < 0.9 and abs(q.z - me.pos.z) < 1.5:
@@ -11658,7 +11698,12 @@ class Bot:
         vehicles.ELEPHANT). The level's nav has no vehicle in it: bots pushed against the hull (about 1,000 unstuck
         wiggles beside one flag) and a carrier stood under his stand 80 s. (where to head, straight): round the hull to
         the rear ramp's foot by the nav, then straight up the ramp and along the bay floor. None: no Elephant's bay in
-        it."""
+        it. (upstream 0.3.0, build 20261112-1632) The deck (Sandtrap's capture spot, vehicles.ELEPHANT flag_return) up the
+        stairs from the bay floor, the ways in from outside (elephant_entry), round the hull for a goal past it
+        (round_hull). Also (where to head, straight, True): a jump there. (custom, Nov 24) Halo 3 only (ELEPHANT_GAMES);
+        his deck jump off (DECK_JUMP: ours has no crouch-jump), the stairs instead."""
+        if getattr(s, "game", None) not in ELEPHANT_GAMES:
+            return None
         E = vehicles.ELEPHANT
         for v in getattr(s, "vehicles_now", ()):
             fr = vehicles.frame_of(v) if vehicles.kind_of(v["kind"]) == "elephant" else None
@@ -11667,24 +11712,157 @@ class Bot:
             local, world = fr
             gf, gl, gz = local(point)
             f0, f1, w = E["bay"]
-            if not (f0 <= gf <= f1 and abs(gl) <= w and 0.2 < gz < 2.0):
+            if not (f0 <= gf <= f1 and abs(gl) <= w and 0.2 < gz < 2.6):
+                # a goal past it: the level's nav has no Elephant in it, and bots ran into its side. Within 6 u of it on
+                # the sand, the next 10 u of the way cutting through the hull: round its nearest corner
+                bf, bl, bz = local(me.pos)
+                h0, h1, hw = E["hull"]
+                if bz < 0.4 and h0 - 6.0 < bf < h1 + 6.0 and abs(bl) < hw + 6.0:
+                    n = math.hypot(gf - bf, gl - bl)
+                    k = min(1.0, 10.0 / max(n, 1e-6))
+                    c = s.round_hull((bf, bl), (bf + (gf - bf) * k, bl + (gl - bl) * k))
+                    if c is not None:
+                        return world(*c), False
                 continue
             bf, bl, bz = local(me.pos)
             (af, al), (tf, tl) = E["ramp"]
-            if f0 - 0.3 <= bf <= f1 + 0.3 and abs(bl) <= w + 0.3 and 0.35 < bz < 1.3:
-                return point, True                                  # on the bay floor (not its roof): along it
-            if af - 0.8 <= bf <= tf + 0.3 and abs(bl - al) <= 0.8:
+            well = s.well_step(world, (bf, bl, bz))
+            if well is not None:          # (first: the front left well's top lies inside the bay's box, over the deck's z)
+                return well
+            if f0 - 0.3 <= bf <= f1 + 0.3 and abs(bl) <= w + 0.3 and 0.35 < bz < 2.6:
+                # inside (not on its roof): a goal on the second floor from the bay floor is up its stairs, from their
+                # foot at the rear (a player's flags, vehicles.ELEPHANT); on the deck or for a goal down here, along
+                (sf, sl), (uf, ul, uz) = E["stair"]
+                # on the deck: at its height (live: at 1.32 up the stairs, over E["deck"]'s 1.25, a carrier turned for
+                # the goal and walked off their side)
+                if gz <= E["deck"] or bz > uz - 0.2:
+                    return point, True
+                # a player's jump onto the deck from the bay floor, as a player did it 7 times (vehicles.ELEPHANT deck_jump);
+                # the stairs once three jumps in 12 s did not get it up
+                (jf, jl), (lf, ll, lz) = E["deck_jump"]
+                now = getattr(s, "now", 0.0)
+                tries = [t for t in getattr(s, "deck_jumps", ()) if now - t < 12.0]
+                if DECK_JUMP and len(tries) < 3 and bz < 0.85:
+                    # a run-up from behind it (live, Nov 11: a carrier walked back onto the take-off from the front and
+                    # jumped with his momentum rearward, straight up and down again, 20 times in 90 s)
+                    if bf <= jf - DECK_RUNUP + 0.3:
+                        s.deck_runup = now
+                    if now - getattr(s, "deck_runup", -99.0) < 3.0:
+                        # at the take-off line, not 0.45 u short of it (live: jumped at -2.08 for a -1.8 take-off)
+                        if jf - 0.1 <= bf <= jf + 0.5 and abs(bl - jl) < 0.45:
+                            if not tries or now - tries[-1] > 1.5:
+                                s.deck_jumps = tries + [now]
+                            return world(lf, ll, lz), True, True    # at the take-off: jump forward onto the deck
+                        return world(jf, jl, 0.6), True             # from the run-up on to the take-off
+                    return world(jf - DECK_RUNUP, jl, 0.6), True    # along the bay floor to the run-up behind it
+                k = (bf - sf) / (uf - sf)                           # (along the stairs' line, 0 foot .. 1 top)
+                # on them: on the line and at their height there (live: the bay floor beside them read as on them, so a
+                # carrier walked under them to their top's place again and again)
+                on = (0.0 <= k <= 1.0 and abs(bl - sl - (ul - sl) * k) < 0.45
+                      and bz > STAIR_FOOT_Z + (uz - STAIR_FOOT_Z) * k - 0.15)
+                if on or math.hypot(bf - sf, bl - sl) < 0.35:
+                    return world(uf, ul, uz), True                  # at the stairs' foot or on them: up
+                return world(sf, sl, 0.6), True                     # along the bay floor to the stairs' foot
+            if af - 0.8 <= bf <= tf + 0.3 and abs(bl - al) <= 0.8 and bz < 0.9:
                 return world(tf, tl, 0.5), True                     # in the ramp's lane: up it
-            h0, h1, hw = E["hull"]
-            side = 1.0 if bl >= 0 else -1.0
-            if bf < h0 - 0.2:
-                return world(af, al), False                         # behind it: to the ramp's foot
-            if abs(bl) >= hw + 0.2:
-                return world(h0 - 0.8, side * (hw + 0.8)), False    # beside it: its rear corner on this side
-            if bf > h1 + 0.2:
-                return world(h1 + 0.8, side * (hw + 0.8)), False    # in front of it: round its front corner
-            return world(af, al), False                             # on or under it: off, to the foot
+            return s.elephant_entry(me, world, (bf, bl, bz), (gf, gl, gz))
         return None
+
+    ENTRY_TRIES, ENTRY_BAN = 3, 30.0    # jumps at one way in within 15 s with no progress, then it is left this long
+
+    def elephant_entry(s, me, world, b, g):
+        """Outside an Elephant (or on a tire well's top) with a goal inside: its way in (vehicles.ELEPHANT entries, the
+        a player's climbs, and the rear ramp), the one with the least walk to its take-off plus from its last landing to the
+        goal (a goal on the deck: a way onto the deck, else the bay's plus the climb up), round the hull to the take-off
+        (people do not run into its side: "the bots need to stop running into the side of the elephant"), then its jumps.
+        (where to head, straight[, jump])."""
+        E = vehicles.ELEPHANT
+        bf, bl, bz = b
+        gf, gl, gz = g
+        now = getattr(s, "now", 0.0)
+        (af, al), (tf, tl) = E["ramp"]
+        bans = getattr(s, "entry_ban", {})
+        up = gz > E["deck"]
+        climb = math.hypot(E["deck_jump"][1][0] - E["deck_jump"][0][0], E["deck_jump"][1][1] - E["deck_jump"][0][1])
+        cands = [("ramp", (af, al), (tf, tl, 0.55), "bay", None)]
+        # the open ways only: the rear ramp, the front entrance and the ramp's side, into the bay; up from its floor by the
+        # deck jump or the stairs (way_in). Not the tire wells' two-jump climbs onto the deck (ELEPHANT_WELLS): live
+        # Sandtrap Nov 12, 20 tries at an Elephant, 6 in; a bot at the ramp's foot took a well's climb for the deck,
+        # fell off its top twice, and never walked up the ramp (the player: "they'll completely ignore the wide open
+        # front and back")
+        cands += [(name, steps[0][0], steps[-1][1], to, steps[0][1]) for name, to, steps in E["entries"]
+                  if ELEPHANT_WELLS or to == "bay"]
+        best = None
+        for name, (xf, xl), (lf, ll, lz), to, first in cands:
+            if bans.get(name, 0.0) > now:
+                continue
+            cost = math.hypot(bf - xf, bl - xl) + math.hypot(lf - gf, ll - gl) + (climb + 2.0 if up and to == "bay" else 0.0) \
+                + (ENTRY_JUMP_COST if first is not None else 0.0)    # (a jump in can miss; the ramp is walked)
+            if best is None or cost < best[0]:
+                best = (cost, name, (xf, xl), first)
+        if best is None:
+            return world(af, al), False
+        _, name, (xf, xl), first = best
+        if math.hypot(bf - xf, bl - xl) < 0.45 and first is not None:
+            if not TAKEOFF_Z[0] < bz < TAKEOFF_Z[1]:
+                # the sand here is not where a player jumped from (live Nov 11: an Elephant driven onto a dune, its
+                # tire wells jumped at from 1 to 2 u up for 56 s): that way is left, the next one taken
+                s.__dict__.setdefault("entry_ban", {})[name] = now + s.ENTRY_BAN
+                return s.elephant_entry(me, world, b, g)
+            s.entry_try(now, name)
+            return world(*first), True, True                       # at its take-off: the jump
+        if name == "ramp" and math.hypot(bf - xf, bl - xl) < 0.45:
+            return world(tf, tl, 0.5), True
+        c = s.round_hull((bf, bl), (xf, xl))
+        return world(*(c or (xf, xl))), False                      # to the take-off by the nav, round the hull
+
+    def well_step(s, world, b):
+        """On a tire well's top (an entry's landing that is not its last): on to its next jump ((where, straight[,
+        jump])), else None."""
+        bf, bl, bz = b
+        for name, to, steps in vehicles.ELEPHANT["entries"]:
+            for k, (_, (lf, ll, lz)) in enumerate(steps[:-1]):
+                if math.hypot(bf - lf, bl - ll) < 1.2 and abs(bz - lz) < 0.4:
+                    (nf, nl), (mf, ml, mz) = steps[k + 1]
+                    if math.hypot(bf - nf, bl - nl) < 0.45:
+                        s.entry_try(getattr(s, "now", 0.0), name)
+                        return world(mf, ml, mz), True, True
+                    return world(nf, nl, lz), True
+        return None
+
+    def entry_try(s, now, name):
+        """A jump at a way into an Elephant: ENTRY_TRIES within 15 s (a second apart) and that way is left ENTRY_BAN s."""
+        tries = s.__dict__.setdefault("entry_tries", {})
+        t = [x for x in tries.get(name, ()) if now - x < 15.0]
+        if t and now - t[-1] < 1.0:
+            return
+        t.append(now)
+        tries[name] = t
+        if len(t) >= s.ENTRY_TRIES:
+            s.__dict__.setdefault("entry_ban", {})[name] = now + s.ENTRY_BAN
+            tries[name] = []
+
+    @staticmethod
+    def round_hull(a, b):
+        """A corner of the Elephant's hull (frame f, l; 0.8 u off it) to walk by when the straight way from a to b
+        crosses it; None when it does not."""
+        h0, h1, hw = vehicles.ELEPHANT["hull"]
+
+        def crosses(p, q):
+            for k in range(1, 20):
+                f, l = p[0] + (q[0] - p[0]) * k / 20, p[1] + (q[1] - p[1]) * k / 20
+                if h0 < f < h1 and abs(l) < hw:
+                    return True
+            return False
+        if not crosses(a, b):
+            return None
+        corners = [(f, l) for f in (h0 - 0.8, h1 + 0.8) for l in (-(hw + 0.8), hw + 0.8)]
+        # (at one: on to the next; never back to one farther from b than we are, it was oscillating there)
+        here = math.hypot(a[0] - b[0], a[1] - b[1])
+        corners = [c for c in corners if math.hypot(a[0] - c[0], a[1] - c[1]) > 0.5
+                   and math.hypot(c[0] - b[0], c[1] - b[1]) < here] or corners
+        ok = [c for c in corners if not crosses(a, c)]
+        return min(ok or corners, key=lambda c: math.hypot(a[0] - c[0], a[1] - c[1]) + math.hypot(c[0] - b[0], c[1] - b[1]))
 
     def came_through(s, now, me, prev):
         """Map brain INTER-TELE-03: out of a teleporter (from 3 u of a pad to 2 u of its exit between two ticks) with a
@@ -12073,13 +12251,19 @@ class Bot:
             point = lp
         way = s.way_in(me, point)
         if way is not None:                      # a goal in an Elephant's bay (Sandtrap's flags): its own way in
-            point, straight = way
+            point, straight = way[:2]
             if straight:
                 s.final_step_until = s.exact_until = getattr(s, "now", 0.0) + 0.3   # (the level's floor is not the bay's)
                 s.wp = point
                 s.steer(me, point, act, True, arrive=0.02)
                 s.nav_cmd = (act.forward, act.strafe)
-                s.note("elephant: up the ramp, along the bay")
+                if len(way) > 2 and way[2]:
+                    # (upstream 0.3.0, build 20261112-1632) a jump at a way in: the edge guard lets it go (follow_route's)
+                    act.jump = True
+                    s.planned_jump, s.jump_land = True, point
+                    s.note("elephant: jumping in")
+                else:
+                    s.note("elephant: up the ramp, along the bay")
                 return
         route = getattr(s, "route", None)
         lu = getattr(s, "route_lineup", None)

@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Halo 3 Elephants: the hull blocks sight; bots board by the ramp and climb the stairs to the deck, 2026-11-24
+
+Upstream 0.3.0's note #4 (build 20261112-1632). The owner: "port it carefully (his hull_blocks renamed, hull check kept outside the protected precision branches)". Halo 3 only (`bot.ELEPHANT_GAMES = ("h3",)`): nothing changes for Reach or any other game.
+
+- `brain/vehicles.py`:
+  - `ELEPHANT` takes his Sandtrap model from a player's walks: the hull box, the second floor (`deck`), its `stair`, the bay floor's `deck_jump`, the ways in from outside (`entries`), and `flag_return` moved up to the deck. A carrier on the old bay-floor marker never scored (5 minutes there, his live match). Our `live.py` reads `flag_return` for Sandtrap's capture point, so it moves to the deck too.
+  - His `hull_blocks` (the Elephant as a solid for sight) is ported as **`elephant_blocks`**. Our own `vehicles.hull_blocks(v, a, b, spare)` (rider-head occlusion) is untouched.
+- `bot.hull_between` (his, now taking the game): his chest and head both behind an Elephant's hull. **Called only in `Perception.update`, after our line is worked out** (after the `target_parts` / Noble sight / Halo 4 rider branches, not in them): no line means no `clear_at`. Our `line_clear` is unchanged: it reads only this tick's line (`LINE_FRESH = 0`), so no shot goes through the hull either, and `fire_gate` checks every press. His live Sandtrap: 47% of the bots' trigger ticks at a man went through an Elephant.
+- `Bot.way_in` (his, replacing the upstream s181 one we had unchanged), with his `elephant_entry`, `well_step`, `entry_try` and `round_hull`:
+  - round the hull's nearest corner for a goal past it (no running into its side);
+  - into the bay by the rear ramp, or by the front and rear-left jumps (each left 30 s after 3 failed tries);
+  - up the stairs to the deck, then straight at the goal.
+  - His tire-well climbs stay off (`ELEPHANT_WELLS = False`, as his).
+  - `move_to` presses jump for a way in with a jump.
+  - `blocked_way` no longer turns a bot "round" the Halo 3 Elephant it stands on.
+- Left out: his bay-floor jump onto the deck is a crouch-jump (his `Bot.crouch_jump`, which our brain doesn't have), so `DECK_JUMP = False` and bots take the stairs. That was his own fallback after 3 missed jumps.
+- **Checks:** `tools/test_upstream_030_brain.py` +8:
+  - the hull blocks, the bay lane and over it don't, nor a Warthog, nor the one we ride;
+  - our `hull_blocks` signature is unchanged;
+  - Halo 3: no line through the hull, a line with no Elephant;
+  - Reach, Halo 4 and Halo 2 see as before;
+  - Reach never takes an Elephant way;
+  - Halo 3: to the ramp's foot, up the ramp, to the stairs' foot, up them, on the deck straight at the capture; round the hull for a goal past it.
+  - All OK; full suite 1,519 OK. **Untested in a live match** (Halo 3 Sandtrap).
+
 ### Reach Headhunter: bots pick up skulls lying near them (the bot part), 2026-11-24
 
 Upstream 0.3.0's note #34, its bot part (build 20261118-1525). The owner: "our brain kept; take only open_drops, skull_point and the 2 s keep". This commit is `skull_point`; `open_drops` and the 2 s keep (`brain/modes.py`) are a separate later port.
