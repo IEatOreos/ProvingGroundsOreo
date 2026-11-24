@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Halo: Reach first person passenger: a switch on the Experimental tab, off until turned on, 2026-11-24
+
+Upstream 0.3.0's note #55 (build 20261115-0215). The owner: "first-person passenger: with #53 (Reach), off by default".
+
+- `native/passenger_fp.cpp` (new, his file, Reach's caller only): a seat definition's first dword is its flags; a passenger seat (none of the driver 0x4, gunner 0x8 or boarding 0x08000000 bits) loses the third person bits 0x50 while the switch is on, each seat's old flags remembered once (512 at most: a seat that could not be remembered is never patched).
+- `native/reach.cpp` `hr_passenger_fp` (his): every half second, every vehicle object's tag data (the tag table at haloreach +0xC1A600, `hr_unpack` by the bases at +0x4E39F20, as `brain/live.py` `LiveReach._unpack`), its seat block at +0x444 (count 1 to 16, the first seat a driver's), 0x12C a seat. Called each tick after `hr_spawn_moves`, one line; our lines kept.
+- Off (and in a Theater film, ours: his patched in films too): nothing is patched, and every patched seat is put back. Ours: a seat is written back only while it still reads what we made of it.
+- Ours, not his: at a new match his list was dropped, so a seat left patched in tags the game kept (the same map again) could never be put back. Now each seat is remembered with its vehicle's tag index and seat number, and a new match keeps it only while the tag table still leads to the same address and it still reads patched (`fp_check`, `hr_seat_at`); any other is dropped and never written. On a haloreach.dll reload the list is dropped (`fp_forget` in `reach_watch`, one line).
+- `native/bots_panel.cpp`: the First person passenger switch on the Experimental tab. `native/build.bat` builds `passenger_fp.cpp`.
+- **Checks:** `tools/test_reach_third_person.py` (passenger tests: off restores before any patch, the restore guard, the 512 limit before a patch, the new-match check, Reach only); built in `botcore_up030b.dll`. **Untested in game** (a Warthog / Mongoose / Falcon passenger seat on and off, a restart of the same map, a friend's session, a film).
+
 ### Halo: Reach in third person: a switch on the Experimental tab, off until turned on, 2026-11-24
 
 Upstream 0.3.0's note #53 (build 20261116-2330). The owner: "third person: Reach only, off by default, hand-merged at our Reach hook spots"; #53b controller button: "no, keyboard keys are fine".

@@ -4591,6 +4591,11 @@ static void experimental_settings(bots_panel_env& e, bool& changed, ImVec2 body0
               "farther. Click a key's button, then press the keyboard key or mouse button you want (Esc: none). No "
               "controller button.");
     }
+    // (upstream 0.3.0, build 20261115-0215) first person passenger: reach.cpp hr_passenger_fp and passenger_fp.cpp
+    ImGui::Dummy(ImVec2(0, px(18)));
+    if (toggle("First person passenger", &g_exp_passenger_fp)) exp_save();
+    muted("Halo: Reach: riding as a passenger, you see from your own eyes, as in Halo: CE. Not on a gun or at the "
+          "wheel. Off puts every seat back to the game's own third person view.");
     ImGui::Dummy(ImVec2(0, px(10)));
     ImGui::PopTextWrapPos();
     ImGui::EndChild();

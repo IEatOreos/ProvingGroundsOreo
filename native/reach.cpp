@@ -321,6 +321,50 @@ static void hr_tp_hook(uint8_t* mod) {
     } __except (EXCEPTION_EXECUTE_HANDLER) { gr_tp_ok = false; }
 }
 
+// First person passenger (upstream 0.3.0, build 20261115-0215; passenger_fp.cpp): every vehicle's seat block, its tag's
+// data +0x444 (count) / +0x448 (packed address), 0x12C a seat (his live Boneyard Nov 15, read-only probe: Warthog
+// 04020014 00000870 08001c10 08001c10, Mongoose 00020014 00000170 ..., Scorpion, Ghost, Banshee the same layout). The
+// tag's data: the instance table at haloreach+0xC1A600 (+4 + index * 8: a packed address), unpacked as brain/live.py
+// LiveReach._unpack (bases at +0x4E39F20 by the top 4 bits, plus 4 x the value). (custom, Nov 24, owner: "off by
+// default") off, or in a Theater film, nothing is patched and what was patched is put back
+bool fp_on();
+bool fp_tag_seats(uint8_t* data, int off, int stride, uint32_t keep, uint8_t* (*unpack)(uint32_t), const char* game,
+                  uint32_t key);
+void fp_restore(const char* tag);
+void fp_forget();
+void fp_check(uint8_t* (*seat_at)(uint32_t key, int seat), const char* tag);
+static const uintptr_t HR_TAG_TABLE = 0xC1A600, HR_TAG_BASES = 0x4E39F20;
+static const int HR_SEATS_AT = 0x444, HR_SEAT_STRIDE = 0x12C;
+static uint8_t* hr_unpack(uint32_t v) { return *(uint8_t**)(g_hr + HR_TAG_BASES + 8 * (v >> 28)) + (uint64_t)v * 4; }
+static uint8_t* hr_seat_at(uint32_t tag_index, int seat) {   // (custom, Nov 24: passenger_fp.cpp fp_check) a seat by its tag
+    uint8_t* table = *(uint8_t**)(g_hr + HR_TAG_TABLE);
+    if (!table || tag_index > 0xFFFF || seat < 0) return nullptr;
+    uint8_t* d = hr_unpack(*(uint32_t*)(table + 4 + (size_t)tag_index * 8));
+    int n = *(int32_t*)(d + HR_SEATS_AT);
+    if (n < 1 || n > 16 || seat >= n) return nullptr;
+    return hr_unpack(*(uint32_t*)(d + HR_SEATS_AT + 4)) + (size_t)seat * HR_SEAT_STRIDE;
+}
+static void hr_passenger_fp(uint8_t* tls, uint32_t tick, bool film) {
+    static uint32_t last_tick = 0, next_at = 0;
+    if (tick < last_tick) { fp_check(hr_seat_at, "reach"); next_at = 0; }   // a new match: (custom) only seats still its map's
+    last_tick = tick;
+    if (!fp_on() || film) { fp_restore("reach"); return; }
+    if (tick < next_at) return;
+    next_at = tick + 30;                                      // (every half second: a vehicle that spawns later)
+    uint8_t* hdr = *(uint8_t**)(tls + 0x10);
+    uint8_t* ents = hdr ? *(uint8_t**)(hdr + 0x50) : nullptr;
+    uint8_t* table = *(uint8_t**)(g_hr + HR_TAG_TABLE);
+    if (!ents || !table) return;
+    for (int i = 0, mx = *(int32_t*)(hdr + 0x2C); i < mx; i++) {
+        uint8_t* e = ents + (size_t)i * 0x18;
+        uint8_t* o = *(uint8_t**)(e + 0x10);
+        if (!*(uint16_t*)e || e[4] != 1 || !o) continue;      // vehicles
+        uint32_t tag = *(uint32_t*)o;
+        uint8_t* d = hr_unpack(*(uint32_t*)(table + 4 + (size_t)(tag & 0xFFFF) * 8));
+        fp_tag_seats(d, HR_SEATS_AT, HR_SEAT_STRIDE, 0x0800000Cu, hr_unpack, "reach", tag & 0xFFFF);
+    }
+}
+
 static int hr_free_slot() {
     for (int i = 0; i < HB_MAX_PLAYERS; i++) if (g_shm->bot_player_index[i] < 0) return i;
     return -1;
@@ -1300,6 +1344,8 @@ static void __fastcall h_hr_update(uint8_t* actions) {
                 hr_run_command(tls);
                 while (film_more(*(uint32_t*)(gg + HR_GG_TICKS))) hr_run_command(tls);   // a film: this tick's others
                 hr_spawn_moves(tls, fr, *(uint32_t*)(gg + HR_GG_TICKS));
+                // (upstream 0.3.0, build 20261115-0215) first person passenger: off, or a film, nothing patched
+                __try { hr_passenger_fp(tls, *(uint32_t*)(gg + HR_GG_TICKS), g_playback != 0); } __except (EXCEPTION_EXECUTE_HANDLER) {}
                 // (upstream 0.3.0, build 20261116-2330) third person, this tick: off, or no hooks, it does nothing
                 __try { if (!g_playback) hr_tp_apply(tls, actions); else hr_tp_film(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
                 if (*(uint32_t*)(actions + 8) & 1) {        // player 0's action, for decoding
@@ -1575,6 +1621,7 @@ void reach_watch() {
     if ((uint8_t*)GetModuleHandleW(L"haloreach.dll") != h3) return;
     if (g_hr) MH_RemoveHook(g_hr + HR_PLAYERS_UPDATE);
     hr_tp_unhook();                                   // (custom, Nov 24) third person's, if they were on
+    fp_forget();                                      // (custom, Nov 24) the old load's seats are gone with it
     g_hr = h3;
     g_hr_tls_index = tls_index_of(h3);
     for (int i = 0; i < HB_MAX_PLAYERS; i++) g_shm->bot_player_index[i] = -1;

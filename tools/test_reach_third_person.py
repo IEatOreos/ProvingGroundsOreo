@@ -90,5 +90,35 @@ class ThirdPersonTests(unittest.TestCase):
         self.assertNotIn("Gamepad", tp)
 
 
+class PassengerTests(unittest.TestCase):
+    """#55 first person passenger (owner: "with #53 (Reach), off by default")."""
+
+    def test_built_reach_only(self):
+        self.assertRegex(src("build.bat"), r" third_person\.cpp passenger_fp\.cpp ")
+        for name in ("h2.cpp", "h3.cpp", "odst.cpp", "h4f.cpp"):
+            self.assertNotIn("fp_tag_seats(", src(name), name)
+
+    def test_off_restores_and_patches_nothing(self):
+        reach = src("reach.cpp")
+        fp = body(reach, "static void hr_passenger_fp(uint8_t* tls, uint32_t tick, bool film)")
+        off = fp.index('if (!fp_on() || film) { fp_restore("reach"); return; }')
+        self.assertLess(off, fp.index("fp_tag_seats("))                   # off or a film: put back, before any patch
+        update = body(reach, "static void __fastcall h_hr_update(uint8_t* actions)")
+        self.assertIn("hr_passenger_fp(tls, *(uint32_t*)(gg + HR_GG_TICKS), g_playback != 0);", update)
+        self.assertIn("fp_forget();", body(reach, "void reach_watch()"))
+        pfp = src("passenger_fp.cpp")
+        self.assertIn("const uint32_t FP_CLEAR = 0x50u;", pfp)
+        restore = body(pfp, "void fp_restore(const char* tag)")
+        self.assertIn("if (*(uint32_t*)g_defs[i] == (g_was[i] & ~FP_CLEAR)) { *(uint32_t*)g_defs[i] = g_was[i];", restore)
+        seat = body(pfp, "void fp_seat(")
+        self.assertLess(seat.index("if (g_n >= 512) return;"), seat.index("*(uint32_t*)def = fl & ~FP_CLEAR;"))
+        # a new match keeps only the seats still found at the same place by their tag (never dropped while patched)
+        self.assertIn('fp_check(hr_seat_at, "reach")', fp)
+
+    def test_switch_on_the_tab(self):
+        page = body(src("bots_panel.cpp"), "static void experimental_settings(")
+        self.assertIn('toggle("First person passenger", &g_exp_passenger_fp)', page)
+
+
 if __name__ == "__main__":
     unittest.main()
