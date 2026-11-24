@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### The threads test skips without the map pack (the release build's test gate), 2026-11-24
+
+- `tools/test_threads.py` (Nov 23) skipped only when Hang 'Em High's folder was missing. The release build tests a `git archive` copy, which has the folder but not its git-ignored `heightmap.npz`, so the 1.0 build stopped there. It now skips unless the heightmap is there, like the other map tests.
+- **Checks:** `test_threads` OK where the map pack is installed; the release gate's copy skips it.
+
 ### The release ships without terms while TERMS.md is a draft, 2026-11-24
 
 The owner, asked how the first 1.0 release treats the draft terms (sections 4 and 8 still to decide): "No terms this release".
