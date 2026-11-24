@@ -77,7 +77,8 @@ class FolderWarning(unittest.TestCase):
 
     def test_locked_folder_refuses_tasks_with_project_noble_words(self):
         import tempfile
-        with tempfile.TemporaryDirectory() as d, mock.patch.object(launcher, "LOGS", os.path.join(d, "logs")),                 mock.patch("builtins.open", side_effect=PermissionError("denied")):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(launcher, "LOGS", os.path.join(d, "logs")), \
+                mock.patch("builtins.open", side_effect=PermissionError("denied")):
             why = launcher.folder_problem()
         self.assertIn("Project Noble", why)
         self.assertNotIn("Proving Grounds", why.replace(launcher.ROOT, ""))   # (the folder's own name aside)
@@ -99,6 +100,20 @@ class FolderWarning(unittest.TestCase):
 
     def test_page_shows_it(self):
         self.assertIn('$("banner").textContent = s.readonly || ""', read("launcher.html"))
+
+
+class CompactLog(unittest.TestCase):
+    """(upstream 0.3.0 note #50) the Play log folds to one line; our follow() stays and feeds it."""
+
+    def test_page(self):
+        page = read("launcher.html")
+        for bit in ('id="log-toggle"', 'id="log-last"', 'id="log-play" aria-live="polite" hidden', 'id="play-card"',
+                    "function setLog(open, chosen)", "function playLine(line)",
+                    'if (task === "play") playLine(line);', 'if (task === "play" && r.code !== 0) setLog(true);',
+                    'localStorage.setItem("play-log-open"', "async function follow(task, box, stateEl)"):
+            self.assertIn(bit, page)
+        play = page[page.index('$("play").onclick'):]
+        self.assertLess(play.index("setLog(true);"), play.index('post("/run/play"'))   # (opens as Play starts)
 
 
 if __name__ == "__main__":

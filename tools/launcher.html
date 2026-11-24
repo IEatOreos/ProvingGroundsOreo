@@ -156,6 +156,21 @@
          padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; font: var(--fs-xs)/1.5 var(--font-mono);
          white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
   .log:empty { display: none; }
+  /* (upstream 0.3.0, build 20261117-2300) the Play log folds to one slim line (its name and its last line), so the
+     tools sit right under Play; it opens on Play or on an error line, and the player's own choice is remembered */
+  .playlog { margin-top: var(--s3); display: flex; flex-direction: column; min-width: 0; }
+  button.playlog-toggle { width: calc(100% + 2 * var(--s2)); margin: 0 calc(-1 * var(--s2)); min-height: 32px; padding: 0 var(--s2);
+                          justify-content: flex-start; gap: var(--s2); min-width: 0; }
+  .playlog-toggle .chev { color: var(--text-2); transition: transform .15s; }
+  .playlog-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .playlog-name { flex: none; font: 600 var(--fs-xs)/1.5 var(--font-display); color: var(--text-2); text-transform: uppercase;
+                  letter-spacing: .08em; }
+  .playlog-last { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-xs)/1.5 var(--font-mono);
+                  color: var(--text-3); }
+  .playlog > .log { margin-top: var(--s1); }
+  .playlog > .log:empty { display: block; color: var(--text-3); }
+  .playlog > .log:empty::before { content: "Nothing running yet. PLAY starts MCC with the bots, and what it does shows here."; }
+  .playlog > .log[hidden] { display: none; }
 
   /* setup */
   .setup-intro { margin-bottom: var(--s4); }
@@ -316,7 +331,7 @@
 </div>
 
 <main>
-  <section class="card" aria-labelledby="play-h">
+  <section class="card" id="play-card" aria-labelledby="play-h">
     <h2 id="play-h" class="sr-only">Play</h2>
     <ul class="status" id="play-rows" aria-label="Status">
       <li class="stat" id="st-game" data-level="wait"><svg class="i" aria-hidden="true"><use href="#i-wait"/></svg>
@@ -348,7 +363,12 @@
       <input type="checkbox" id="clean" checked>
       <span>Start without those mods this time. They are moved aside and put back when MCC closes.</span>
     </label>
-    <div class="log" id="log-play" aria-live="polite"></div>
+    <div class="playlog">   <!-- (upstream 0.3.0) the Play log, folded to its last line -->
+      <button class="quiet playlog-toggle" id="log-toggle" aria-expanded="false" aria-controls="log-play">
+        <svg class="i sm chev" aria-hidden="true"><use href="#i-chev"/></svg><span class="playlog-name">Play log</span>
+        <span class="playlog-last" id="log-last">Nothing running yet</span></button>
+      <div class="log" id="log-play" aria-live="polite" hidden></div>
+    </div>
   </section>
 
   <div class="col">
@@ -577,11 +597,13 @@ async function follow(task, box, stateEl) {
     from = r.next;
     for (const line of r.lines) {
       $(box).textContent += line + "\n";
+      if (task === "play") playLine(line);
       const m = line.match(/^STEP \d+\/\d+ ([^:]+): (.*)$/);
       if (m) stepNote[m[1]] = m[2].startsWith("working") ? "working" : m[2].startsWith("failed") || m[2].startsWith("skipped") ? m[2] : undefined;
     }
     $(box).scrollTop = $(box).scrollHeight;
     if (!r.running) {
+      if (task === "play" && r.code !== 0) setLog(true);
       setText(stateEl, r.code === 0 ? "Done." : "Stopped with a problem: see the failed step and the log below.", r.code === 0 ? "ok" : "bad");
       break;
     }
@@ -623,11 +645,28 @@ $("scan-pick").onchange = async () => {
   refresh();
 };
 
+// (upstream 0.3.0, build 20261117-2300) the Play log folds to one slim line (its name and its last line) so the tools
+// sit right under Play: folded while nothing runs, opened by Play or by a line with an error, and by the player at any
+// time (that choice is remembered)
+function setLog(open, chosen) {
+  $("log-toggle").setAttribute("aria-expanded", open ? "true" : "false");
+  $("log-play").hidden = !open;
+  $("play-card").classList.toggle("log-open", open);
+  if (chosen) try { localStorage.setItem("play-log-open", open ? "1" : "0"); } catch (e) {}
+}
+function playLine(line) {
+  if (line.trim()) $("log-last").textContent = line.trim();
+  if (/\b(error|failed|could not|cannot|problem|traceback)\b/i.test(line)) setLog(true);
+}
+$("log-toggle").onclick = () => setLog($("log-toggle").getAttribute("aria-expanded") !== "true", true);
+try { setLog(localStorage.getItem("play-log-open") === "1"); } catch (e) { setLog(false); }
+
 $("play").onclick = async () => {
   if (state && state.wine) { location.href = "steam://rungameid/976730"; setText("play-state", "Steam starts MCC: choose the anti-cheat off option. The bots load as it starts.", "dim"); return; }
   if (state && !state.mcc) { setText("play-state", "Choose the MCC folder in Game folder first, or install MCC through Steam.", "bad"); $("folder-card").open = true; return; }
   if (state && state.setup.some(x => !x[1])) setText("play-state", "Starting. The first-time setup is not finished, so the 3D bots or pictures may be missing ...", "warn");
   else setText("play-state", "Starting MCC ...", "dim");
+  setLog(true);
   const r = await post("/run/play", {clean: !$("clean-wrap").hidden && $("clean").checked});
   if (!r.ok) { setText("play-state", r.message, "bad"); return; }
   follow("play", "log-play", "play-state");

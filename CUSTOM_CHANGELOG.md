@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Compact launcher: the Play log folds to one line, 2026-11-24
+
+Upstream 0.3.0's note #50 (build 20261117-2300). The owner: "take it".
+
+- `tools/launcher.html`, hand-ported into our page: under Play, a "Play log" button with the log's last line (his `log-toggle` / `log-last` markup and CSS); the log box opens under it. It is folded while nothing runs, opens by itself on Play, on a line with error / failed / could not / cannot / problem / traceback, and when Play stops with a problem; the player's own open/fold choice is remembered (`localStorage` "play-log-open", in a try: the page works without it). His `setLog` / `playLine`; our `follow()` stays and feeds `playLine` for the play task only. The Play card got `id="play-card"`.
+- Not taken: his Play card's flex-height layout (his new launcher look, #71, skipped); the setup log is unchanged.
+- **Checks:** `tools/test_launcher_noble.py` +1 OK (9): the page has the toggle, its last line, the folded log, `setLog` / `playLine`, `follow()` feeding it, and Play opening it before it starts. The page's script passes `node --check`. Not looked at in the launcher window.
+- (Also: `tools/test_launcher_noble.py`'s #18 test line, joined into one long line when it was written, split again.)
+
 ### Setup installs for the current user only, and the launcher says when its folder takes no files, 2026-11-24
 
 Upstream 0.3.0's note #18 (build 20261114-1215, his GitHub #30 "Play did nothing"). The owner: "take it; Project Noble wording".
