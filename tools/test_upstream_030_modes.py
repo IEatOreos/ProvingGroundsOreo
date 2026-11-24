@@ -772,5 +772,55 @@ class InvasionSecondSquad(unittest.TestCase):
             D.PUSH_AFTER = old
 
 
+class LowPerformanceWarning(unittest.TestCase):
+    """#47, its live_bots part (build 20261118-2107), by our own check (not his bot_capacity.py): the median pass over
+    2 slots (66 ms) 3 checks in a row shows the "!" card, at most every 120 s; the bots think the same."""
+
+    def setUp(self):
+        import live_bots
+        self.lb = live_bots
+        self.saved = dict(live_bots.WARN)
+        live_bots.WARN.update(run=0, at=-1e9)
+
+    def tearDown(self):
+        self.lb.WARN.update(self.saved)
+
+    def feed(self, ms, now, shown):
+        lb = self.lb
+        buf = []
+        out = False
+        for _ in range(lb.SPEED_EVERY):
+            buf.append(ms)
+            out = lb.speed_note(buf, now, lambda t, line: shown.append((t, line))) or out
+        self.assertEqual(buf, [])                         # (judged and cleared: its own list stays short)
+        return out
+
+    def test_three_slow_checks_in_a_row(self):
+        shown = []
+        self.assertFalse(self.feed(80.0, 10.0, shown))
+        self.assertFalse(self.feed(80.0, 12.0, shown))
+        self.assertTrue(self.feed(80.0, 14.0, shown))
+        self.assertEqual(shown[0][0], "!BOT PERFORMANCE LOW")
+        self.assertLessEqual(len("|".join(shown[0])), 127)     # (botctl.notice's room)
+        self.assertFalse(self.feed(80.0, 16.0, shown))     # at most every 120 s
+        self.assertTrue(self.feed(80.0, 140.0, shown))
+
+    def test_a_fast_check_starts_over(self):
+        shown = []
+        self.feed(80.0, 10.0, shown)
+        self.feed(80.0, 12.0, shown)
+        self.feed(30.0, 14.0, shown)                       # (under 66 ms)
+        self.assertFalse(self.feed(80.0, 16.0, shown))
+        self.assertEqual(shown, [])
+        self.assertAlmostEqual(self.lb.SLOT_MS * self.lb.HORRIBLE_SLOTS, 66.67, places=1)
+
+    def test_a_failing_card_never_fails_the_pass(self):
+        def boom(t, line):
+            raise OSError("no overlay")
+        buf = [99.0] * self.lb.SPEED_EVERY
+        self.lb.WARN.update(run=5)
+        self.assertFalse(self.lb.speed_note(buf, 500.0, boom))
+
+
 if __name__ == "__main__":
     unittest.main()

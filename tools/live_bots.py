@@ -245,6 +245,37 @@ def think_dt(elapsed):
     return min(MAX_DT, max(1 / HZ, elapsed))
 
 
+# The in-game low performance warning (upstream 0.3.0's note #47, build 20261118-2107: a see-through card with a red
+# outline, only when the bots are badly behind), by our own check (custom, Nov 24, the owner: not his
+# tools/bot_capacity.py): the median pass of the last SPEED_EVERY over HORRIBLE_SLOTS slots (66 ms: the bots thinking
+# 15 times a second or fewer) HORRIBLE_NOTES checks in a row (about 6 s), then again at most every WARN_AGAIN_S while it
+# lasts. A "!" title is the overlay's warning style; an overlay without that card shows it as a plain notice
+SLOT_MS, SPEED_EVERY = 1000.0 / HZ, 2 * HZ
+HORRIBLE_SLOTS, HORRIBLE_NOTES, WARN_AGAIN_S = 2.0, 3, 120.0
+WARN = dict(run=0, at=-1e9)
+WARN_TEXT = ("!BOT PERFORMANCE LOW", "Your PC can't keep up with this many bots. Use fewer bots or a smaller map.")
+
+
+def speed_note(pass_ms, now, warn=None):
+    """pass_ms: this match's pass times (ms) since the last check, its own list (PERF's is emptied by each world row);
+    every SPEED_EVERY of them judged and cleared. -> True when the warning went out. Reports only: the bots think the
+    same, and a failure here never fails a pass."""
+    if len(pass_ms) < SPEED_EVERY:
+        return False
+    try:
+        last = sorted(pass_ms[-SPEED_EVERY:])
+        del pass_ms[:]
+        WARN["run"] = WARN["run"] + 1 if last[len(last) // 2] > SLOT_MS * HORRIBLE_SLOTS else 0
+        if warn is not None and WARN["run"] >= HORRIBLE_NOTES and now - WARN["at"] >= WARN_AGAIN_S:
+            WARN["at"] = now
+            warn(*WARN_TEXT)
+            print(f"{now:6.1f}s warning shown: bots thinking at half speed or less for {WARN['run']} checks", flush=True)
+            return True
+    except Exception:
+        pass
+    return False
+
+
 # the games where a bot's crouch press reaches the game (CE: botcore UC_CROUCH; Halo 3: maps/_inputs/h3.json "crouch";
 # Halo 4: h4f.cpp action +0x08 bit 0); in Reach, Halo 2 and H2A it is not decoded, so their bots always stand
 BOT_CROUCH = ("ce", "h3", "h4")
@@ -1419,6 +1450,7 @@ def main():
         print(f"out of bounds: {len(oob.spots)} spots, {len(oob.volumes)} kill / safe zones known here", flush=True)
     fails = 0
     seen_errors = set()
+    pass_ms = []                       # (custom, Nov 24) the passes' ms since the last speed_note (upstream 0.3.0 #47)
     last_items = 0.0
     last_think = None                  # the time of the last pass the bots thought on (think_dt)
     passes = 0                         # think passes so far (think_order: which team goes first)
@@ -1961,6 +1993,8 @@ def main():
                               f"sh {me.shield:.2f} hp {me.health:.2f}" if me and me.alive else f"{now:6.1f}s bot {index} dead",
                               flush=True)
                 PERF["pass"].append((time.time() - tick) * 1000.0)        # (custom, Nov 22: the whole pass, ms)
+                pass_ms.append(PERF["pass"][-1])
+                speed_note(pass_ms, now, lambda t, line: botctl.notice(m, t, line))   # (the low performance card, #47)
                 PERF["think_sum"].append(PERF["think_pass"])
                 PERF["think_pass"] = 0.0
                 time.sleep(max(0.0, 1 / HZ - (time.time() - tick)))

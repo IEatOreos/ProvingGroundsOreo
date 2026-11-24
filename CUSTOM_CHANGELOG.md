@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### A low performance warning when the bots fall far behind (the brain's check), 2026-11-24
+
+Upstream 0.3.0's note #47, its live_bots part (build 20261118-2107). The owner: "take it, with our own ~20-line check instead of bot_capacity.py".
+
+- `tools/live_bots.py speed_note` (ours, on his rule): every 60 passes (`SPEED_EVERY`, 2 s), the median pass is judged against 2 slots (`SLOT_MS * HORRIBLE_SLOTS`, 66 ms: the bots thinking 15 times a second or fewer). After 3 such checks in a row (about 6 s) the warning goes to the overlay with `botctl.notice`: "!BOT PERFORMANCE LOW | Your PC can't keep up with this many bots. Use fewer bots or a smaller map." It shows again at most every 120 s while it lasts, and the brain's log says when.
+- It keeps its own `pass_ms` list (judged and cleared every 60 passes), because our `PERF` lists are emptied by each world row. Our Nov 22 `PERF["pass"]` / `think_sum` lines are unchanged.
+- Reports only: the bots think the same, and a failure in it (no overlay, a bad write) never fails a pass.
+- Not taken: his `tools/bot_capacity.py` (speed tests, `logs/bot_speed.json`, the "Your PC" card's history: #51, later).
+- The card: the "!" title is the overlay card's warning style, which comes with the native area later. Until then the current overlay shows it as an ordinary notice, title and line, with the "!" in front; nothing else changes.
+- **Checks:** `tools/test_upstream_030_modes.py` +3 (three slow checks in a row show it, not again within 120 s, again after; the text fits `botctl.notice`'s 127 bytes; a fast check starts the count over; a card that throws never fails the pass) OK; `live_bots.py` imports. **Untested in a live match** (needs a PC badly behind).
+
 ### Reach Invasion: a second squad on the other territory, behind a switch (off), 2026-11-24
 
 Upstream 0.3.0's note #45 (build 20261118-1714). The owner: "behind a switch (LANE_SPLIT, 0 = today's play), checked in the sim before shipping"; #45b: "no exclusion, our role assignment decides".
