@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Project Noble's terms of use: a draft for the owner, agreed once when final, no release while it is a draft, 2026-11-24
+
+Upstream 0.3.0's note #70 (build 20261119-1831). The owner: "our own Project Noble terms, drafted for the owner to edit (he decides the friend-join wording); upstream credit stays".
+
+- `TERMS.md` (new, **a draft**): his ten sections' structure in our words for Project Noble: own risk, no warranty, no liability (the authors of Project Noble and of the original Project Proving Grounds), where you may use it, not affiliated with Microsoft, your responsibility, things others share, your data (the update check asks our GitHub releases), license and credit (Project Proving Grounds, its link, PolyForm Noncommercial 1.0.0, NOTICE.md), changes. No website is named. Three notes marked **"OWNER TO DECIDE"**: the draft notice at the top, section 4 (where players may use it: online play and friend-join; his terms said offline custom games only), and section 8 (whether friend-join or party chat sends anything to friends' games). Version line: "Version 2026-11-24."
+- `tools/launcher.py`: his `terms()` / `accept_terms()` and routes (GET `/terms`, POST `/terms` writes `user/terms.ini` `[terms] accepted=<version>`). Ours: while TERMS.md has an "OWNER TO DECIDE" note it is a draft and nobody is asked (`terms()` says ok, draft); files closed.
+- `tools/launcher.html`: his dialog ("Please read these before you use Project Noble. You need to agree once."), shown before the page's first status; Escape does not skip it; "I don't agree" says Project Noble can't be used without agreeing.
+- `installer/ProjectProvingGrounds.iss`: `TermsVersion` (default "0"), `[Dirs] {app}\user`, `[INI]` writing `user\terms.ini` accepted = TermsVersion unless silent (a silent update records nothing, so the launcher asks if the terms changed). Our renamed lines unchanged.
+- `tools/build_installer.py`: **`terms_check()` refuses to build a release while TERMS.md has an "OWNER TO DECIDE" note** (and when TERMS.md or its Version line is missing), as the very first step; the installer's license page is TERMS.md, then NOTICE.md and LICENSE.md, and ISCC gets `/DTermsVersion=<its version>`. (His build script is not in his source, so this is our own.)
+- **Checks:** `tools/test_launcher_noble.py` +7 OK (29): our draft says Project Noble, credits the original, names our releases, no website, and is not asked; final terms are asked, agreed once, asked again for a new version; the installer's record counts; no TERMS.md asks nothing; the page's dialog comes first; the .iss records it; the build refuses the draft and a missing file, takes final terms and puts them first on the license page. In a preview of the page on a spare port (the worktree's launcher Handler only, with a final copy of the terms in the scratch folder) the dialog showed, I agree closed it and wrote its terms.ini there. Setup not built.
+
 ### Version numbers: Project Noble's own X.Y.Z (0.0.325 today), the update check ranks it above the old releases, 2026-11-24
 
 Upstream 0.3.0's note #67 (build 20261119-0733, his "build numbers are back", 0.2.3 s-191 from BUILD_NO). The owner: "the owner's own scheme, X.Y.Z. Z = commits on GitHub (wraps to 0 past 1000, and Y goes up one); X counts releases from the next one (next release = 1, then 2...), and the old 4 don't count; at a release Y.Z keep the all-time GitHub commit count (e.g. 1.0.340). Today = 0.0.325". His BUILD_NO and build_name are not used.

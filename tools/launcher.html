@@ -493,6 +493,17 @@
     <button id="uninstall-no">Cancel</button>
   </div>
 </dialog>
+<!-- (upstream 0.3.0, build 20261119-1831) the terms of use, asked once (TERMS.md; a draft is never asked) -->
+<dialog id="terms" class="notes" aria-labelledby="terms-t" aria-describedby="terms-q">
+  <h2 id="terms-t">Terms of use and disclaimer</h2>
+  <p id="terms-q">Please read these before you use Project Noble. You need to agree once.</p>
+  <div class="notes-body" id="terms-body" tabindex="0"></div>
+  <p id="terms-state" class="msg" aria-live="polite"></p>
+  <div class="actions">
+    <button class="quiet grow" id="terms-no">I don't agree</button>
+    <button class="primary-sm" id="terms-yes">I agree</button>
+  </div>
+</dialog>
 <dialog id="notes" class="notes" aria-labelledby="notes-t" aria-describedby="notes-q">
   <h2 id="notes-t">What's new</h2>
   <p id="notes-q"></p>
@@ -843,7 +854,23 @@ $("updnow").onclick = async () => {
 };
 loadUpdate();
 setInterval(loadUpdate, 2000);
-refresh().then(() => {
+// (upstream 0.3.0, build 20261119-1831) the terms of use (TERMS.md): accepted on the installer's license page, else asked
+// here once before anything runs. (custom) the launcher says when it is a draft: never asked then
+async function askTerms() {
+  let t = { ok: true };
+  try { t = await (await fetch("/terms")).json(); } catch (e) {}
+  if (t.ok) return;
+  $("terms-body").innerHTML = mdHtml(t.text.replace(/^# .*\n/, ""));
+  const d = $("terms");
+  d.addEventListener("cancel", e => e.preventDefault());       // (Escape does not skip them)
+  d.showModal();
+  $("terms-body").focus();
+  await new Promise(done => {
+    $("terms-yes").onclick = async () => { const r = await post("/terms"); if (r.ok) { d.close(); done(); } };
+    $("terms-no").onclick = () => { $("terms-state").textContent = "Project Noble can't be used without agreeing. Close this window, or uninstall it from Windows Settings."; };
+  });
+}
+askTerms().then(refresh).then(() => {
   if (location.search.includes("setup=1") && state && state.mcc && state.setup.some(x => !x[1])) runSetup("setup");
 });
 setInterval(refresh, 3000);

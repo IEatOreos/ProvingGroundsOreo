@@ -263,5 +263,96 @@ class LoadingBanner(unittest.TestCase):
         self.assertLess(cpp.rindex("g_ready = true;", 0, at), at)
 
 
+FINAL_TERMS = "# Terms of Use and Disclaimer\n\nVersion 2026-12-01. Please read this.\n\n## 1. Risk\n\nAt your own risk.\n"
+
+
+class Terms(unittest.TestCase):
+    """(upstream 0.3.0 note #70, our own form) Project Noble's terms, agreed once; the draft is never asked or built."""
+
+    def setUp(self):
+        import tempfile
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.terms, self.ok = os.path.join(tmp.name, "TERMS.md"), os.path.join(tmp.name, "user", "terms.ini")
+        for name, value in (("TERMS", self.terms), ("TERMS_OK", self.ok)):
+            p = mock.patch.object(launcher, name, value)
+            p.start()
+            self.addCleanup(p.stop)
+
+    def write(self, text):
+        with open(self.terms, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    def test_our_draft_is_project_nobles_and_never_asked(self):
+        text = read(os.path.join("..", "TERMS.md"))
+        self.assertIn(launcher.TERMS_DRAFT_MARK, text)
+        self.assertIn("Project Noble", text)
+        self.assertIn("https://github.com/AyoItzKye/project-proving-grounds", text)      # (the credit)
+        self.assertIn("https://github.com/IEatOreos/ProvingGroundsOreo", text)          # (the update check)
+        self.assertNotIn("projectprovinggrounds.com", text.lower())
+        self.assertNotIn("website", text.lower())
+        self.assertEqual(launcher.terms_version(text), "2026-11-24")
+        self.write(text)
+        t = launcher.terms()
+        self.assertEqual((t["ok"], t["draft"], t["text"]), (True, True, ""))
+
+    def test_final_terms_asked_once(self):
+        self.write(FINAL_TERMS)
+        code, t = call("GET", "/terms")
+        self.assertEqual((code, t["ok"], t["version"], t["draft"]), (200, False, "2026-12-01", False))
+        self.assertIn("At your own risk.", t["text"])
+        code, t = call("POST", "/terms", {})
+        self.assertTrue(t["ok"])
+        with open(self.ok, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "[terms]\naccepted=2026-12-01\n")
+        self.write(FINAL_TERMS.replace("2026-12-01", "2027-01-05"))      # (new terms: asked again)
+        self.assertFalse(launcher.terms()["ok"])
+
+    def test_installer_agreement_counts(self):
+        self.write(FINAL_TERMS)
+        os.makedirs(os.path.dirname(self.ok))
+        with open(self.ok, "w", encoding="utf-8") as f:                 # (as Inno Setup's [INI] writes it)
+            f.write("[terms]\naccepted=2026-12-01\n")
+        self.assertTrue(launcher.terms()["ok"])
+
+    def test_no_terms_nothing_asked(self):
+        self.assertEqual(launcher.terms()["ok"], True)
+
+    def test_page_asks_before_anything(self):
+        page = read("launcher.html")
+        self.assertIn('<dialog id="terms"', page)
+        self.assertIn("askTerms().then(refresh)", page)
+        self.assertIn("Please read these before you use Project Noble.", page)
+
+    def test_installer_records_the_agreement(self):
+        iss = read(os.path.join("..", "installer", "ProjectProvingGrounds.iss"))
+        self.assertIn('Filename: "{app}\\user\\terms.ini"; Section: "terms"; Key: "accepted"; '
+                      'String: "{#TermsVersion}"; Check: not WizardSilent', iss)
+
+    def test_release_build_refuses_the_draft(self):
+        import build_installer
+        self.assertEqual(build_installer.TERMS_DRAFT_MARK, launcher.TERMS_DRAFT_MARK)
+        root = os.path.dirname(self.terms)
+        with mock.patch.object(build_installer, "ROOT", root), mock.patch("builtins.print"):
+            self.write(read(os.path.join("..", "TERMS.md")))
+            with self.assertRaises(SystemExit) as stop:
+                build_installer.terms_check()
+            self.assertIn("draft", str(stop.exception))
+            os.remove(self.terms)
+            self.assertRaises(SystemExit, build_installer.terms_check)
+            self.write(FINAL_TERMS)
+            self.assertEqual(build_installer.terms_check(), "2026-12-01")
+            with open(os.path.join(root, "NOTICE.md"), "w", encoding="utf-8") as f:
+                f.write("NOTICE")
+            with open(os.path.join(root, "LICENSE.md"), "w", encoding="utf-8") as f:
+                f.write("LICENSE")
+            with mock.patch.object(build_installer, "BUILD", root):
+                build_installer.stage_texts()
+            with open(os.path.join(root, "license.txt"), encoding="utf-8") as f:
+                page = f.read()
+        self.assertTrue(page.startswith(FINAL_TERMS))                   # (the terms first on the license page)
+        self.assertLess(page.index("NOTICE"), page.index("LICENSE"))
+
+
 if __name__ == "__main__":
     unittest.main()

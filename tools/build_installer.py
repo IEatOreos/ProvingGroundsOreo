@@ -224,17 +224,45 @@ def privacy_scan():
     print(f"   {len(terms) + (word is not None)} terms, no hit", flush=True)
 
 
+TERMS_DRAFT_MARK = "OWNER TO DECIDE"           # (custom, Nov 24) the draft's notes (tools/launcher.py: the same)
+
+
+def terms_check():
+    """(custom, Nov 24) Project Noble's TERMS.md, its version (the installer records it as accepted): no release with
+    the draft (its OWNER TO DECIDE notes), none without the terms."""
+    step("the terms of use (TERMS.md)")
+    try:
+        with open(os.path.join(ROOT, "TERMS.md"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        raise SystemExit("TERMS.md is missing: not building")
+    if TERMS_DRAFT_MARK in text:
+        raise SystemExit(f"TERMS.md is still a draft (it has \"{TERMS_DRAFT_MARK}\" notes): the owner finishes it first. "
+                         "Not building")
+    import re
+    m = re.search(r"^Version (\S+?)\.", text, re.M)
+    if not m:
+        raise SystemExit("TERMS.md has no \"Version <date>.\" line: not building")
+    print(f"   version {m.group(1)}", flush=True)
+    return m.group(1)
+
+
 def stage_texts():
-    """Plain-text copies of the license and notices for the installer's license page."""
+    """Plain-text copies of the terms, the notices and the license for the installer's license page. (upstream 0.3.0)
+    The terms come first: that page's I accept is the player's agreement to them."""
+    parts = []
+    for name in ("TERMS.md", "NOTICE.md", "LICENSE.md"):
+        with open(os.path.join(ROOT, name), encoding="utf-8") as src:
+            parts.append(src.read())
     with open(os.path.join(BUILD, "license.txt"), "w", encoding="utf-8") as f:
-        f.write(open(os.path.join(ROOT, "NOTICE.md"), encoding="utf-8").read() + "\n\n")
-        f.write(open(os.path.join(ROOT, "LICENSE.md"), encoding="utf-8").read())
+        f.write("\n\n".join(parts))
 
 
-def compile_setup(ver):
+def compile_setup(ver, terms_version):
     step("Setup.exe (Inno Setup)")
     exe = iscc() or sys.exit("Inno Setup 6 was not found (winget install JRSoftware.InnoSetup)")
     r = subprocess.run([exe, f"/DAppVersion={ver}", f"/DPayload={PAYLOAD}", f"/DBuildDir={BUILD}",
+                        f"/DTermsVersion={terms_version}",
                         os.path.join(ROOT, "installer", "ProjectProvingGrounds.iss")], capture_output=True, text=True,
                        errors="replace")
     if r.returncode:
@@ -249,6 +277,7 @@ def compile_setup(ver):
 
 
 def main():
+    terms_version = terms_check()                    # (first: a draft stops everything)
     ver, tag = release_version()
     step(f"Project Noble {ver} (its release's tag: {tag}; HEAD's commits must be GitHub's main once it is pushed)")
     committed_copy()
@@ -265,7 +294,7 @@ def main():
         stage_python()
         privacy_scan()
         stage_texts()
-        compile_setup(ver)
+        compile_setup(ver, terms_version)
     finally:
         git("worktree", "remove", "--force", SRC, out=False)
         git("worktree", "prune", out=False)

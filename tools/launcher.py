@@ -438,6 +438,50 @@ def link_ok(url):
     return any(url == base or url.startswith(base + "/") for base in LINKS)
 
 
+# (upstream 0.3.0, build 20261119-1831) the terms of use: agreed once, on the installer's license page or in the
+# launcher. (custom, Nov 24) Project Noble's own TERMS.md, a draft the owner writes: while it holds a TERMS_DRAFT_MARK
+# note it is not in force, so nobody is asked to agree (and tools/build_installer.py builds no release with it)
+TERMS = os.path.join(ROOT, "TERMS.md")
+TERMS_OK = os.path.join(ROOT, "user", "terms.ini")      # [terms] accepted=<version>: the installer's I accept, or the launcher's
+TERMS_DRAFT_MARK = "OWNER TO DECIDE"                     # (the same in tools/build_installer.py)
+
+
+def _terms_text():
+    try:
+        with open(TERMS, encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def terms_version(text=None):
+    """TERMS.md's version ("Version 2026-11-24."), or "" with no TERMS.md (a copy without it: nothing to ask)."""
+    m = re.search(r"^Version (\S+?)\.", _terms_text() if text is None else text, re.M)
+    return m.group(1) if m else ""
+
+
+def terms():
+    """The terms of use and disclaimer: whether this version was accepted, and their text for the launcher to show.
+    (custom) A draft (TERMS_DRAFT_MARK in it) is never asked: ok, draft."""
+    text = _terms_text()
+    v = terms_version(text)
+    draft = TERMS_DRAFT_MARK in text
+    try:
+        with open(TERMS_OK, encoding="utf-8") as f:
+            have = re.search(r"^accepted\s*=\s*(\S+)", f.read(), re.M)
+    except OSError:
+        have = None
+    ok = not v or draft or bool(have and have.group(1) == v)
+    return {"ok": ok, "version": v, "draft": draft, "text": "" if ok else text}
+
+
+def accept_terms():
+    os.makedirs(os.path.dirname(TERMS_OK), exist_ok=True)
+    with open(TERMS_OK, "w", encoding="utf-8") as f:
+        f.write(f"[terms]\naccepted={terms_version()}\n")
+    return terms()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -472,6 +516,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send(dict(updater.info(), wine=paths.wine()))
         elif path == "/status":
             self.send(status())
+        elif path == "/terms":                       # (upstream 0.3.0) the terms: accepted, or their text to show first
+            self.send(terms())
         elif path.startswith("/log/"):
             skip = int(query.split("=")[1]) if query.startswith("from=") and query[5:].isdigit() else 0
             self.send(log_lines(path[5:], skip))
@@ -494,6 +540,8 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = start(self.path[5:], bool(body.get("clean")))
             port = TASKS.get(self.path[5:], (0, 0, None))[2]
             self.send({"ok": ok, "message": msg, "port": port}, code=200 if ok else 400)
+        elif self.path == "/terms":                  # (upstream 0.3.0) the player pressed I agree
+            self.send(accept_terms())
         elif self.path == "/mcc":
             ok, msg = choose_mcc(body)
             self.send({"ok": ok, "message": msg})

@@ -15,6 +15,9 @@
 #ifndef Payload
   #error Payload (the staged files) must be given: ISCC /DPayload=<folder>
 #endif
+#ifndef TermsVersion
+  #define TermsVersion "0"
+#endif
 #ifndef BuildDir
   #define BuildDir "."
 #endif
@@ -72,6 +75,16 @@ Type: files; Name: "{app}\CODE_OF_CONDUCT.md"
 Type: files; Name: "{app}\CONTRIBUTING.md"
 Type: files; Name: "{app}\SECURITY.md"
 Type: files; Name: "{app}\requirements*.txt"
+
+[Dirs]
+Name: "{app}\user"
+
+[INI]
+; (upstream 0.3.0, build 20261119-1831) the player accepted the terms on the license page (TERMS.md first, then the
+; notices and the license: tools/build_installer.py, which passes TermsVersion): the launcher does not ask again for
+; this version of them. A silent update shows no license page, so it records nothing and the launcher asks if the
+; terms changed
+Filename: "{app}\user\terms.ini"; Section: "terms"; Key: "accepted"; String: "{#TermsVersion}"; Check: not WizardSilent
 
 [Files]
 Source: "{#Payload}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
