@@ -3,6 +3,8 @@
 This is a customized installation based on upstream Project Proving Grounds 0.2.2-s181.
 Read CUSTOMIZATIONS.md and docs/CUSTOM_RELEASE_WORKFLOW.md before making changes.
 
+- The owner's rule for every request: "Before you answer, list what youre assuming and ask me about anything thats missing. List what youd need to know that I havent told you". So, before answering or starting work, list your assumptions, ask about anything missing, and list what you would need to know that he hasn't said.
+
 - Make small targeted changes. Preserve upstream logic and license notices.
 - Fixed Legendary means `tier == "top" and extra is None`; Demon now has its own `tier == "demon"` with extra None. Use profiles.fixed_high for their shared rules and profiles.fixed_demon for Demon's precision/timing overrides. Scaling still uses top with extra populated and must remain excluded from fixed-tier overrides.
 - Preserve Legendary/Demon DMR and sniper live animated head corrections and the protected head/turret precision contexts unless explicitly asked to change them. Legendary base attributes are restored to upstream defaults; Demon retains the prior tuned numeric profile.
