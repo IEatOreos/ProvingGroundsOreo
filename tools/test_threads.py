@@ -48,7 +48,8 @@ def play(workers):
     return out
 
 
-@unittest.skipUnless(os.path.isdir(ROOT / "maps" / MAP), "no map data")
+@unittest.skipUnless((ROOT / "maps" / MAP / "heightmap.npz").exists(),      # (a git-archive copy has the folder, not the map pack)
+                     "no map data")
 class SameMatch(unittest.TestCase):
     def test_four_threads_play_the_one_threads_match(self):
         one = play(1)
