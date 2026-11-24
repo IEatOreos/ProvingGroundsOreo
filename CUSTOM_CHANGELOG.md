@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Warthog drivers stay on their way in a fight, 2026-11-24
+
+The owner: "What causes a warthog driver to veer off their driving path? It only seems to happen when they get shot at or their gunner starts to shoot", then "I would like it if Warthogs almost always stayed their driving paths". His picks: still flee boarders, still ram what is straight ahead.
+
+- **No dodging aimed guns (`Bot.evade`):** a Warthog of any kind (chaingun, Gauss, rocket, troop) answers only a man on foot close enough to board it (within 2 u: away, 1.2 s). A rocket, Spartan Laser, Plasma Launcher or Fuel Rod pointed its way, a tank's barrel, a plasma pistol close in and Armor Lock no longer turn it 90 degrees off its way. A pointed launcher, fired or not, had turned it every 1.2 s while he watched. Every other vehicle dodges as before.
+- **Rams only off the nose (`Bot.ram_ok`):** a Warthog runs a man or a light vehicle down only while he is within its nose's 20 degrees (`vehicles.RAM_THETA`), checked on every tick of the run. Unarmed at the wheel, it had turned onto any Ghost or Mongoose its gunner shot at within 18 u, beside or behind it.
+- **Kept:** the next stop after a trip mid-fight (the last enemy seen), wall avoidance, backing out when wedged, getting out.
+- **Checks:** new `tools/test_warthog_path.py` (3 tests: a Warthog and a Gauss ignore an aimed rocket, a Mongoose still dodges it; a Warthog flees a boarder; rams only off the nose, a run already on him too). Full suite: 1455 tests OK. Untested in game.
+
 ### The bots think on several cores (upstream 0.3.0's threads, ported), 2026-11-23
 
 The owner, after reading the upstream author's 0.3.0 release ("the bots split their thinking over several cores"), unpacked from its installer without installing it: "Yes, download it", then "Yes, start the port".

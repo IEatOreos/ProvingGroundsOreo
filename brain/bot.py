@@ -6026,7 +6026,11 @@ class Bot:
             fv = next((x for x in snap.vehicles if x["handle"] == foe.vehicle), None)
             if s.game == "ce" or fv is None or vehicles.kind_of(fv["kind"]) not in vehicles.RAM_VEHICLES.get(kind, ()):
                 return False
-        if v is None or not vehicles.driver_armed(v) or (getattr(s, "ram", None) or (None,))[0] == foe.id:
+        # (custom, Nov 24, the owner: "I would like it if Warthogs almost always stayed their driving paths") a Warthog
+        # rams only what is within its nose's RAM_THETA, every tick of the run: it swung off its way at a Ghost beside or
+        # behind it the moment its gunner opened up on it (unarmed: any angle)
+        hog = v is not None and vehicles.is_warthog(v["kind"])
+        if not hog and (v is None or not vehicles.driver_armed(v) or (getattr(s, "ram", None) or (None,))[0] == foe.id):
             return True
         off = abs(wrap(math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x) - s.heading(me, v)))
         return off < math.radians(vehicles.RAM_THETA.get(kind, 15.0))
@@ -6046,6 +6050,7 @@ class Bot:
             return None
         air, vtol, hover = sp["move"] == "air", bool(sp.get("vtol")) or kind == "hornet", sp["move"] == "hover"
         head = s.heading(me, v)
+        hog = vehicles.is_warthog(v["kind"])
         first, roll = s.__dict__.setdefault("threat_first", {}), s.__dict__.setdefault("threat_roll", {})
         live, best = set(), None
         for p in snap.players:
@@ -6084,7 +6089,9 @@ class Bot:
                      else (2, f"out of a {pk}'s line", *out, None, None))
             elif pk == "banshee" and vtol and d < 40.0:
                 m = (1, "breaking off from a Banshee", away, 1.0, 0.0, -1.0, None)
-            if m is None:
+            if m is None or (hog and not board):
+                # (custom, Nov 24, the owner: Warthogs "almost always stayed their driving paths") a Warthog breaks off its
+                # way only from a boarder: a rocket or laser pointed its way (not fired) turned it 90 degrees every 1.2 s
                 continue
             key = (p.id, m[1])
             live.add(key)
