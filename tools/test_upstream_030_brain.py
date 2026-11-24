@@ -44,5 +44,40 @@ class TakeTapTests(unittest.TestCase):
         self.assertNotIn("Bot.take(", src)
 
 
+class _NoField:
+    hjumps = hroutes = None
+
+    def field_from(self, *a):
+        raise RuntimeError("no level data in this test")
+
+
+class HeadwayTests(unittest.TestCase):
+    """#41 (build 20261118-2355): a bot's weapon patience restarts each life (no headway call for over a second)."""
+
+    def walk(self, times, tier="strong"):
+        b = make_bot(tier=tier)
+        b._terrain = _NoField()
+        me = PlayerState(id=0, team=0, name="b", pos=Vec(0, 0, 0))
+        goal = ("item", Vec(20, 0, 0))
+        for t in times:
+            b.headway(t, me, goal)
+        return b, b._goal_key(goal)
+
+    def test_six_seconds_with_no_headway_still_bans(self):
+        b, key = self.walk([i * 0.1 for i in range(80)])
+        self.assertIn(key, getattr(b, "goal_ban", {}))
+
+    def test_a_gap_starts_the_clock_again(self):
+        # 5 s walking, dead 5 s (no call), then 3 s more: 8 s of calls, never 6 s since the respawn
+        times = [i * 0.1 for i in range(50)] + [10.0 + i * 0.1 for i in range(30)]
+        b, key = self.walk(times)
+        self.assertNotIn(key, getattr(b, "goal_ban", {}))
+
+    def test_easy_keeps_its_shorter_patience(self):
+        times = [i * 0.1 for i in range(int(botmod.EASY_HEADWAY_S * 10) + 6)]
+        b, key = self.walk(times, tier="novice")
+        self.assertIn(key, getattr(b, "goal_ban", {}))
+
+
 if __name__ == "__main__":
     unittest.main()

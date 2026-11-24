@@ -8973,7 +8973,11 @@ class Bot:
                 d = c
         except Exception:
             pass
-        if getattr(s, "way_key", None) != key or d < s.way_best - 0.5:
+        gap, s.way_seen = now - getattr(s, "way_seen", now), now
+        if getattr(s, "way_key", None) != key or d < s.way_best - 0.5 or gap > 1.0:
+            # (upstream 0.3.0, build 20261118-2355) gap: no headway call for over a second (dead or riding), the clock
+            # starts again. A bot that reached a gun, died and respawned going for it again was banned from it at once
+            # on the old clock (his sim, Lockout)
             s.way_key, s.way_best, s.way_t = key, d, now
         elif now - s.way_t > (EASY_HEADWAY_S if s.easy_mover() else 6.0) and d > (1.5 if goal[0] == "item" else 4.0):
             # (posts: loitering is near. custom, Nov 13: Easy gives a goal up sooner, EASY_HEADWAY_S)
