@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Setup: one bot model that fails to build no longer stops the rest; ODST's squad and Dare models in the list, 2026-11-24
+
+Upstream 0.3.0's note #29 (build 20261114-2230). The owner: "take it, his ODST models included (check at build what else the ODST models need)".
+
+- `tools/make_models.py` (his, whole: ours was upstream's own apart from line endings): a model whose `model_pack2.py` run fails is named with its reason ("not packed: ...") and left out; the others are still made. Before, one failure (`check=True`) stopped the 3D bots step at that model (his GitHub #31: a handheld's setup stopped at the H2A Spartan). `made.txt` gains a "not packed" line.
+- **His ODST models:** `odst_spartan` (the Firefight squad) and `odst_dare` (her own body), from `halo3odst\maps\h100.map`, holding the silenced SMG. `body_obj` gives a second body of one species its own export file, so Dare's no longer overwrites the squad's. An install without ODST skips them as before.
+- `tools/model_pack2.py` (his, whole: ours was upstream's own): the ODST holds' `spin_l` (the left hand turned round the foregrip) and `at_l` (its place on the gun). The other games' holds use neither, so their models are unchanged.
+- **What the ODST models need that we do not have** (not ported, for the owner to decide):
+  - Nothing of ours shows them yet. His profile view for ODST is his `brain/looks.py` ODST "view" (`VIEW_GAMES` with "odst", odst helmet settings), `maps/_looks/odst.json` (missing here), and his native `bots_panel.cpp` ODST profile (Dare's own model).
+  - His `tools/setup.py` has its own "ODST 3D bot" step with a marker file, for installs whose 3D bots step was done before.
+  - Ours makes them only when the 3D bots step runs (a fresh setup or Repair), about two more models' worth of space.
+- **Checks:** `tools/test_make_models.py` (new, 2) OK: with every tool run faked, the middle of three models fails to pack and the other two are made and listed, with "not packed: two"; the ODST entries, `body_obj` and model_pack2's `spin_l` are there. `make_models.py` and `model_pack2.py` import. **Not run against MCC** (no model was built).
+
 ### Map layouts in the LiDAR Simulator: a Layouts choice in our panel; Halo 3, Halo 4 and H2A layouts filed at its start (never Reach), 2026-11-24
 
 Upstream 0.3.0's notes #19 and #19b (build 20261114-1330). The owner: "only a Layouts option hand-merged into OUR panel"; #19b "H3/H4/H2A only; not on Reach until a diff of Renegade's variant.json on a copy".
