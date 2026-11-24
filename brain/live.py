@@ -21,6 +21,9 @@ from memread import Game  # noqa: E402
 PLAYERS_PTR, OBJECT_HEADERS_PTR, OBJECT_POOL_PTR, TAGS_PTR = 0x1C40480, 0x1C42248, 0x2D9CDF8, 0x2D9CE10
 TAG_BASE = 0x50000000
 NONE = 0xFFFFFFFF
+# Reach Firefight: an AI unit with the game's destroyed bit set is dead whatever its damage field reads (GitHub #29).
+# False: the damage field alone, as before (upstream 0.3.0, build 20261114-0323)
+AI_DEAD_BIT = True
 # tag file name -> the brain's weapon name (others keep their file name, spaces as underscores)
 WEAPON_ALIAS = {"sniper_rifle": "sniper", "rocket_launcher": "rockets", "plasma_cannon": "fuelrod",
                 "mp_needler": "needler", "energy_sword": "sword",
@@ -1861,6 +1864,11 @@ class LiveReach(LiveH3):
                 continue
             shield_dmg, body_dmg = struct.unpack_from("<2f", u, 0x124)
             if struct.unpack_from("<I", u, 0x14)[0] != NONE or body_dmg >= 1.0:
+                continue
+            # the game's own destroyed bit too (DEAD_AT bit 2, what object_get_health answers 0 for): a dead body's damage
+            # field can read below full again, and bots kept shooting dead Grunts (GitHub #29; upstream 0.3.0, build
+            # 20261114-0323)
+            if AI_DEAD_BIT and u[s.DEAD_AT] & 4:
                 continue
             if struct.unpack_from("<I", u, 0x1D0)[0] != NONE:   # a player's (a bot's old body)
                 continue

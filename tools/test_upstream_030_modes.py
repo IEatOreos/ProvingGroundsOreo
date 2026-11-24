@@ -81,5 +81,39 @@ class WreckStays(unittest.TestCase):
         self.assertFalse(hasattr(LiveReach, "_veh_wrecked"))     # per reader, never on the class
 
 
+class FirefightDeadCovenant(unittest.TestCase):
+    """#12 (build 20261114-0323, GitHub #29): a Covenant unit with the game's destroyed bit set is dead, whatever its
+    damage field reads; bots kept shooting dead Grunts."""
+
+    def units(self, bit=True):
+        r = object.__new__(LiveReach)
+        r.g = stock.Memory()
+        rows = [(0.4, 0), (0.4, 4), (0.0, 0)]            # (body damage, damage flags): alive, dead by the bit, alive
+        for k, (dmg, flags) in enumerate(rows):
+            e, o = stock.ENTS + k * 0x18, stock.OBJ + k * stock.OBJ_SIZE
+            struct.pack_into("<H", r.g.buf, e, 0x100 + k)
+            r.g.buf[e + 4] = 0                            # a biped
+            struct.pack_into("<Q", r.g.buf, e + 0x10, o)
+            struct.pack_into("<2f", r.g.buf, o + 0x124, 0.0, dmg)
+            struct.pack_into("<I", r.g.buf, o + 0x14, NONE)
+            struct.pack_into("<I", r.g.buf, o + 0x1D0, NONE)
+            r.g.buf[o + LiveReach.UNIT_TEAM] = 3          # Covenant
+            r.g.buf[o + LiveReach.DEAD_AT] = flags
+        r._array = lambda off: (stock.ENTS, len(rows), 0x18)
+        r._vitals = lambda h, sd, bd, player=False: (1.0 - sd, 1.0 - bd)
+        old = livemod.AI_DEAD_BIT
+        livemod.AI_DEAD_BIT = bit
+        try:
+            return [d["index"] for d in r.ai_units([])]
+        finally:
+            livemod.AI_DEAD_BIT = old
+
+    def test_dead_by_the_bit_is_left_out(self):
+        self.assertEqual(self.units(), [1000, 1002])
+
+    def test_switch_off_reads_the_damage_alone(self):
+        self.assertEqual(self.units(bit=False), [1000, 1001, 1002])
+
+
 if __name__ == "__main__":
     unittest.main()

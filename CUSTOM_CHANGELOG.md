@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Reach Firefight: bots stop shooting Covenant that are already dead, 2026-11-24
+
+Upstream 0.3.0's note #12 (build 20261114-0323, his GitHub #29). The owner: "take it".
+
+- `brain/live.py LiveReach.ai_units`: an AI unit with the game's own destroyed bit set (`DEAD_AT` bit 2, what `object_get_health` answers 0 for) is left out, whatever its damage field reads. A dead body's damage field can read below full again, and bots kept shooting dead Grunts. `AI_DEAD_BIT = True` (False = the damage field alone, as before).
+- Only the Firefight AI read changes; players, Spartans' own units and other games' readers are untouched (Halo 4's reader inherits it, and plays no Firefight). His `ai_rank` field in the same read is not part of this note and is not taken.
+- **Checks:** `tools/test_upstream_030_modes.py` +2 (a Covenant unit dead by the bit is left out; with the switch off the damage field alone decides) OK; `live.py` parses. **Untested in a live match** (Reach Firefight).
+
 ### A vehicle read at 0 health stays a wreck for the rest of the match, in every game, 2026-11-24
 
 Upstream 0.3.0's note #80 (build 20261120-1802). The owner: "take it; watch one Reach vehicle match for wrongly marked wrecks".
