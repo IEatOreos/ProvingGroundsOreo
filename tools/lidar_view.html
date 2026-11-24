@@ -109,7 +109,8 @@
   #sim-speeds button:last-child, #sim-mappers button:last-child { border-radius: 0 4px 4px 0; }
   #sim-speeds button[aria-pressed="true"], #sim-mappers button[aria-pressed="true"] { position: relative; z-index: 1; }
   #sim .pair { display: flex; gap: 6px; }
-  #sim-all-game { flex: 1; min-width: 0; background: #0e1824; color: var(--text); border: 1px solid var(--line); border-radius: 4px;
+  #sim-all-kinds { margin-bottom: 6px; }
+  #sim-all-game, #sim-all-kind { flex: 1; min-width: 0; background: #0e1824; color: var(--text); border: 1px solid var(--line); border-radius: 4px;
                   padding: 4px 6px; min-height: 28px; font: inherit; font-size: 13px; }
   #sim-cover { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center; }
   #sim .dim { color: var(--dim); }
@@ -360,7 +361,15 @@
       <button id="sim-pick" class="primary" title="Open a map (or a Forge layout) to look at it and edit its spots; simulate it from here or from the list">Open a map</button>
     </div>
     <div class="field">
-      <label class="flabel" for="sim-all-game">Simulate every map of</label>
+      <label class="flabel" for="sim-all-game" id="sim-all-l">Simulate every map of</label>
+      <!-- (upstream 0.3.0, build 20261114-1330) maps or their layouts, each its own run (custom, Nov 24: in our panel) -->
+      <div class="pair" id="sim-all-kinds">
+        <select id="sim-all-kind" aria-label="Maps or layouts"
+                title="Maps: each base map. Layouts: each map's other versions (Forge saves and MCC's built-in ones, such as MLG), each its own scan">
+          <option value="">Maps</option>
+          <option value="layouts">Layouts (Forge and built-in)</option>
+        </select>
+      </div>
       <div class="pair">
         <select id="sim-all-game">
           <option value="">Every game</option>
@@ -730,14 +739,27 @@ function setCover(on) {
 }
 $("sim-pick").onclick = () => { pickMode = false; showMaps(true); };   // (custom) open first, simulate by choice
 $("sim-this").onclick = () => simulate({ name: browseName, title: browseTitle });
-$("sim-all").onclick = async () => {   // (custom, Nov 13) every map, or every map of one game
-  const sel = $("sim-all-game"), game = sel.value, label = sel.options[sel.selectedIndex].text;
+function layoutsRun() { return $("sim-all-kind").value === "layouts"; }   // (upstream 0.3.0) maps or their layouts
+function allLabel() {
+  const lay = layoutsRun();
+  $("sim-all-l").textContent = lay ? "Simulate every layout of" : "Simulate every map of";
+  $("sim-all").title = lay ? "Every layout of that game in turn (Forge saves and MCC's built-in versions such as MLG), each its own scan, saved as it finishes"
+    : "Every map of that game in turn (Forge layouts not included); each is saved as it finishes";
+}
+$("sim-all-kind").onchange = allLabel;
+allLabel();
+$("sim-all").onclick = async () => {   // (custom, Nov 13) every map, or every map of one game; (upstream 0.3.0) or its layouts
+  const sel = $("sim-all-game"), game = sel.value, label = sel.options[sel.selectedIndex].text, lay = layoutsRun();
   if (!mapsData) await loadMaps();
-  const n = mapsData ? mapsData.maps.filter(m => !m.name.includes("/variants/") && (!game || m.game === game)).length : null;
-  const what = game ? "every " + label + " map" : "every map";
-  if (!confirm("Simulate " + what + (n ? " (" + n + " maps)" : "") + " in turn? It takes a few minutes a map; each map is saved when it finishes." +
+  const n = mapsData ? mapsData.maps.filter(m => m.name.includes("/variants/") === lay && (!game || m.game === game)).length : null;
+  const unit = lay ? "layout" : "map";
+  const what = game ? "every " + label + " " + unit : "every " + unit;
+  if (lay && n === 0) { $("sim-state").textContent = "No layouts for " + (game ? label : "any game") + " on this PC."; return; }
+  if (!confirm("Simulate " + what + (n ? " (" + n + " " + unit + "s)" : "") + " in turn? It takes a few minutes a " + unit + "; each is saved when it finishes." +
                (simState && simState.current ? "\n\n" + simState.title + " stops now (what it mapped so far is saved)." : ""))) return;
-  const r = await simPost(game ? { action: "all", game } : { action: "all" });
+  const body = game ? { action: "all", game } : { action: "all" };
+  if (lay) body.layouts = true;
+  const r = await simPost(body);
   if (!r.ok) $("sim-state").textContent = r.data.error || "Could not start.";
   else if (browsing) location.search = "";   // (from a map opened in the view: watch the simulation)
 };

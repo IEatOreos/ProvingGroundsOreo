@@ -508,6 +508,14 @@ def run_map(name, o, switch, k, n, log, ctl=None):
     return rec
 
 
+def mass_run(names, game=None, layouts=False):
+    """(upstream 0.3.0, build 20261114-1330) The maps a "Simulate all" run takes in turn: all of them, or one game's.
+    The maps alone; with layouts, their layouts alone (maps/<map>/variants: Forge saves and MCC's built-in versions
+    such as MLG, each its own scan, a run of its own: his player, Nov 14, "those should be their own secondary scan")."""
+    return [m for m in names if (game is None or J.game_of(m.partition("/")[0]) == game)
+            and ("/variants/" in m) == bool(layouts)]
+
+
 class Switch:
     current = None
     control = None
@@ -539,14 +547,15 @@ class Control:
                 s.queue = [name]
                 s.stop_now, s.paused = s.current is not None, False   # (the map running now ends, this one starts)
             elif act == "all":
-                # (custom, Nov 13: "simulate all the maps in a per game basis") game: that game's maps only
+                # (custom, Nov 13: "simulate all the maps in a per game basis") game: that game's maps only;
+                # (upstream 0.3.0, note #19) "layouts": that game's layouts instead, a run of their own
                 game = d.get("game")
                 if game is not None and game not in GAMES:
                     return 400, dict(error="game must be one of " + ", ".join(GAMES))
-                queue = [m for m in s.names if "/variants/" not in m
-                         and (game is None or J.game_of(m.partition("/")[0]) == game)]
-                if not queue:
-                    return 404, dict(error="no maps with level data for that game")   # (the queue as it was)
+                lay = bool(d.get("layouts"))
+                queue = mass_run(s.names, game, lay)
+                if not queue:                         # (the queue as it was)
+                    return 404, dict(error="no layouts for that game" if lay else "no maps with level data for that game")
                 s.queue = queue
                 s.stop_now, s.paused = s.current is not None, False
                 return 200, dict(ok=True, queued=len(s.queue))
@@ -654,6 +663,14 @@ def main():
     ap.add_argument("--hold", type=float, default=0.0)
     ap.add_argument("--no-director", action="store_true", help="bots pick their own goals (no LiDAR director): A/B runs")
     o = ap.parse_args()
+    # (upstream 0.3.0, build 20261114-1330) the layouts MCC lists for custom games (Forge saves, built-in ones such as
+    # MLG) filed under their maps first, so the list has them (tools/h3_forge_import.py). (custom, Nov 24) Halo 3, Halo 4
+    # and H2A only: never Reach (its own guard), whose variant.json pieces the bots' nav reads
+    try:
+        import h3_forge_import
+        h3_forge_import.main()
+    except Exception as e:
+        print(f"Map layouts not filed: {type(e).__name__}: {e}", flush=True)
     every = sorted(lidar.map_list_names(), key=lambda d: (GAMES.index(J.game_of(d.partition("/")[0])), d))
     names = o.maps or ([m for m in every if "/variants/" not in m] if o.all else [])
     if o.game:

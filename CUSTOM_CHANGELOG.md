@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Map layouts in the LiDAR Simulator: a Layouts choice in our panel; Halo 3, Halo 4 and H2A layouts filed at its start (never Reach), 2026-11-24
+
+Upstream 0.3.0's notes #19 and #19b (build 20261114-1330). The owner: "only a Layouts option hand-merged into OUR panel"; #19b "H3/H4/H2A only; not on Reach until a diff of Renegade's variant.json on a copy".
+
+- **Our panel** (`tools/lidar_view.html`): a Maps / Layouts (Forge and built-in) select above our "Simulate every map of" game select. With Layouts the label reads "Simulate every layout of", the count and question say layouts, and `{action: "all", layouts: true}` is sent. Our ids, Open a map, Who maps, Edit spots, scan switch and drives are unchanged.
+- `tools/lidar_sim.py`:
+  - His `mass_run(names, game, layouts)`: that game's maps alone, or its layouts alone (`maps/<map>/variants`), each a run of its own.
+  - Our Nov 13 `Control.command("all")` uses it with `layouts`; "no layouts for that game" when there are none, and the queue is kept as it was.
+  - His Every-map resume record, "unscanned", Skip, the view-closed rule and `play=` for the director are not taken (other notes; not needed for the choice).
+- `tools/h3_forge_import.py` (his, new): at each simulator start, before the map list is read, files every .mvar MCC lists for custom games (the player's LocalFiles saves and `<game>\map_variants`, not playlists) as `maps/<base>/variants/<id>/variant.json` with its pieces.
+- **The owner's rule, in code:** Halo 3, Halo 4 and Halo 2 Anniversary only (`GAMES`). His Reach reader is not here, and `file_one` refuses a Reach file (by game, or in a HaloReach / haloreach folder) or a `reach_*` base before reading anything. Reach's filed layouts are not even loaded. Reach layouts stay as our own code files them.
+- `brain/mvar.py`: his `parse_h4`, `read_h4` and what they need (`expand`, `_idx`, `H4_TYPES`, `H4_PHYSICS`, `_pos_bits(cap=)` with its default unchanged). Our `find`, `candidates`, `layout_name`, `name_layouts`, `read_h3` and the rest are untouched.
+- **Map data (not in Git):** `read_h4` names pieces from `maps/_shapes/h4_palettes.json` and `h2a_palettes.json`. These are game-derived exports from his copy, put in the build worktree only. Without them a Halo 4 / H2A layout has no base map and is skipped (Halo 3 uses our `h3_palettes.json`).
+- **Checks:**
+  - `tools/test_lidar_layouts.py` (new, 8) OK: Layouts of one game and of all; maps unchanged, with refusals; the panel has the choice; no Reach reader; a Reach file is skipped unread (by game and by folder); a Reach base is never filed; `main` never lists Reach.
+  - `tools/test_lidar_mappers.py` (our Every map tests) and every test touching `brain/mvar.py` OK.
+  - On this PC's real files (read only, nothing written): `read_h4` read all 43 Halo 4 and 7 H2A layouts and `read_h3` all 13 Halo 3, all ok. A dry run of `main` would file 63 layouts, 0 of Reach, with no Reach file read.
+  - **Untested in the Simulator window** (the choice not clicked; no layout run made).
+
 ### Import a LiDAR scan someone shared, by hand from a zip you pick, never during a match, 2026-11-24
 
 Upstream 0.3.0's note #63 (build 20261112-1342). The owner: "by hand from a zip the owner picks, no fetch; bots' crouch-jumps and found_by "map" links filtered like our saver; blocked while a match runs (this extends #1's lidar_share.py)".
