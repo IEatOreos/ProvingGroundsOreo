@@ -118,7 +118,10 @@ class CapTests(unittest.TestCase):
             b.think(1.0, 0.03, snap, None, None, None)
         except Exception:
             pass                                                 # (only the reset at its start matters here)
-        self.assertEqual(self.T.opt_left, OPT_FIELDS)
+        # (custom, Nov 23) its tier's count (brain/bot.py tier_budget: this Noble's TOP_OPT_FIELDS, everyone else's
+        # OPT_FIELDS on time)
+        self.assertEqual(self.T.opt_left, B.tier_budget(b.p, False)[0])
+        self.assertEqual(B.tier_budget(make_profile("top", "rusher", random.Random(3)), False)[0], OPT_FIELDS)
 
     def test_cover_not_kept_as_none_when_cut(self):
         b = bot(self.T)

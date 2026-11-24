@@ -89,6 +89,35 @@ BANDS_GAME = {"reach": {"magnum": (0.8, 0.8, 0.4, 0.1), "assault_rifle": (0.8, 0
               "h4": {"magnum": (0.8, 0.8, 0.4, 0.1)}}
 
 
+# (custom, Nov 23, the owner on making the bots run "as fast and efficiently as possible according to their own
+# attributes": "Yes both" (a speed benchmark and per-tier budgets); his tiers' order assumed Demon and Noble first,
+# Mythic next) each tier's thinking budget (tier_budget): the fresh route fields its optional tactics may build in a think
+# (optional_search), and once the brain's pass is PASS_LATE_MS in (PASS_CLOCK, set by tools/live_bots.py each pass),
+# fewer: Demon and Noble never lose theirs, Mythic keeps one, the rest skip their optional tactics for that think (the
+# tactic's default). Aiming, shooting and walking are never cut. A pass on time is as before for every tier but Demon
+# and Noble, who get one field more
+PASS_CLOCK = [None]          # time.perf_counter() at the current pass's start; None: not timed (sims, tests)
+PASS_LATE_MS = 60.0
+TOP_OPT_FIELDS = 4           # Demon's and Noble's fields a think (OPT_FIELDS: everyone else's)
+
+
+def pass_late(now_perf=None):
+    """Is the brain's current pass PASS_LATE_MS in already (PASS_CLOCK)?"""
+    t0 = PASS_CLOCK[0]
+    if t0 is None:
+        return False
+    return ((now_perf if now_perf is not None else time.perf_counter()) - t0) * 1000.0 > PASS_LATE_MS
+
+
+def tier_budget(prof, late):
+    """(fresh route fields its optional tactics may build this think, skip them this think) for a bot of prof."""
+    if profiles.fixed_demon(prof):                     # (Noble is a Demon under its own label: fixed_noble)
+        return TOP_OPT_FIELDS, False
+    if profiles.fixed_mythic(prof):
+        return (1 if late else OPT_FIELDS), False
+    return (0, True) if late else (OPT_FIELDS, False)
+
+
 def optional_search(default):
     """(custom, Nov 22) A tactic whose route searches may wait: inside it Terrain._field builds at most OPT_FIELDS fresh
     fields a think (Bot.think resets the count); past that the tactic stops (FieldBudget) and returns default (a value,
@@ -102,6 +131,10 @@ def optional_search(default):
                 d = s.T().__dict__
             except Exception:
                 return fn(s, *a, **k)
+            if getattr(s, "skip_optional", False) and not d.get("opt_depth", 0):
+                # (custom, Nov 23) its tier's budget says not this think (tier_budget): the tactic's default
+                s.note(f"{fn.__name__}: skipped, the update is late (its tier's budget)")
+                return default(s, *a, **k) if callable(default) else default
             d["opt_depth"] = d.get("opt_depth", 0) + 1
             try:
                 return fn(s, *a, **k)
@@ -3364,8 +3397,9 @@ class Bot:
     # --- per tick
     def think(s, now, dt, snap, los, nav, callouts, items=None):
         T0 = s.__dict__.get("_terrain")
+        fields, s.skip_optional = tier_budget(s.p, pass_late())   # (custom, Nov 23: its tier's budget, tier_budget)
         if T0 is not None:
-            T0.opt_left = OPT_FIELDS          # (custom, Nov 22: this think's fresh route fields for tactics, optional_search)
+            T0.opt_left = fields              # (custom, Nov 22: this think's fresh route fields for tactics, optional_search)
         me0 = snap.player(s.id)
         haz = s.kit.hazards(me0, snap) if me0 is not None and getattr(snap, "deployed", None) else ()
         if haz:

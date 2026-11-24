@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### The brain's speed benchmark; each tier's thinking budget, 2026-11-23
+
+The owner, on keeping the bots fast according to their own tiers: "Yes both". His tiers' order wasn't given; assumed Demon and Noble first, then Mythic. A tier simplifying its plan when the pass runs late was assumed acceptable, with aiming and shooting never cut.
+
+- **New `tools/bench_brain.py`:** an 8v8 Slayer in `tools/real_sim.py` (the real brain, every player a bot), with the owner's 8v8 roster (3 Demon, 3 Mythic, 5 Legendary, 3 Heroic, Tactician, Blind) on Renegade and Utopie (also Paradiso and Spire), timed.
+  - It runs with the live helpers (route searches asked ahead, fixed targets kept) and the pass clock.
+  - It reports the passes' median and slowest tenth, and each tier's mean think.
+  - `--save` keeps this PC's baseline (`logs/bench/baseline.json`, not in Git); `--check` exits 1 when a layout is 1.25× its baseline or more.
+- **`brain/bot.py` `tier_budget`, `pass_late`, `PASS_CLOCK`; `optional_search`:**
+  - The fresh route fields a think's optional tactics may build (guesses, pre-nades, cover, break-offs): Demon and Noble 4 (was 3), everyone else 3, as before.
+  - Once the brain's pass is 60 ms in (`tools/live_bots.py` sets `PASS_CLOCK` each pass): Demon and Noble keep theirs, Mythic keeps 1, and the rest skip their optional tactics for that think (their default).
+  - Aiming, shooting and walking are never cut. Sims and tests aren't timed (`PASS_CLOCK` None), so they play as before but for Demon's and Noble's extra field.
+- **Measured** (60 simulated seconds each, passes in ms, median / slowest tenth):
+  - The helpers on Utopie: 27.1 / 123.9 without them against 23.1 / 98.0 with them (seed 1).
+  - The budgets, three seeds each:
+    - Renegade 27.1 / 70.1 on, 28.2 / 71.0 off;
+    - Utopie 20.9 / 88.5 on, 20.3 / 89.3 off.
+
+    That's within the noise: the sim's passes are mostly under the 60 ms mark (live 8v8 passes ran 150 ms and more, where the budgets act far more often).
+  - This PC's baseline (seed 1, all on): Renegade 24.1 / 67.0, Utopie 23.1 / 98.0.
+- **Checks:**
+  - New `tools/test_tier_budget.py` (5: on time, late, the pass clock, a skipped tactic's default, the benchmark's check).
+  - `tools/test_route_cap.py` `test_think_resets_the_count` now expects each tier's count (its Noble: 4).
+  - `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match.**
+
 ### More maps' navigation kept ready; the background build cuts to the play area, 2026-11-23
 
 The owner: "Can we have them preloaded so the bots can then only worry about playing?"

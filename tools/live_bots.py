@@ -24,6 +24,7 @@ from brain.tracefmt import (Everyone, blitz_rows, call_lines, crosshair, meta_li
                             think_line)
 from brain.maps import get_map, terrain as map_terrain, save_learned, grow as map_grow, swap as map_swap, set_mode  # noqa: E402
 from brain.bot import Bot  # noqa: E402
+from brain import bot as botmod  # noqa: E402
 from brain import vehicles as V  # noqa: E402
 from brain.director import Director  # noqa: E402
 from brain.loadouts import Palette, liked_guns, record_death, want_slot  # noqa: E402
@@ -1278,6 +1279,7 @@ def main():
                 tick = time.time()
                 if sampler is not None:
                     sampler.tick = tick
+                botmod.PASS_CLOCK[0] = time.perf_counter()   # (custom, Nov 23: the pass's start, brain/bot.py tier_budget)
                 now = (still[2] if still[2] is not None else tick) - t0 - paused[0]
                 st = botctl.status(m)
                 oc = botctl.owner_crouch(m)             # H2A / Halo 4: his own action's crouch bit; elsewhere his key
