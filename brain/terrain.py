@@ -2665,8 +2665,9 @@ class Terrain:
     # (custom, Nov 13) a tank's ground (use_vground "tank": Scorpion, Wraith, Mantis): VEH_ROOM_TANK cells clear of
     # walls, half a Scorpion's length so it can turn there (VEH_ROOM's 0.75 u is about half its width). On the one
     # ground a Forge World layout's Scorpions pushed into their own base's way in 2.5 minutes, wedged, backing off and
-    # in again ("Bots dont advance the map with a scorpion", 20261112-213825)
-    VEH_ROOM_TANK = 5
+    # in again ("Bots dont advance the map with a scorpion", 20261112-213825). (custom, Nov 24, the owner: Bungie plans a
+    # Scorpion with its ai pathfinding radius 1.8 u, generic.character: "Widen to 1.75 u") 7 cells, was 5 (1.25 u)
+    VEH_ROOM_TANK = 7
     # (custom, Nov 13) where a vehicle wedged (vwedge): the floor VWEDGE_AHEAD u ahead of it, VWEDGE_R round, costs
     # VWEDGE_COST times more on every size's ground for the rest of the match. Its way on after backing off went in
     # at the same spot: the trip's next place was routed through it again

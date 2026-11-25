@@ -250,9 +250,63 @@ BOARDABLE = {"warthog", "gauss", "rwarthog", "thog", "mongoose", "gungoose", "gh
 DRIVER_VIEW = {"scorpion": (2.0, 0.0, 0.0), "wraith": (2.0, 0.33, 15.0), "revenant": (2.0, 0.6, 9.0)}
 
 
-def driver_view(kind, flat):
-    """(camera height, lob in radians) a driver of this kind aims with at a man flat u away; (0, 0) for the rest."""
+# (custom, Nov 24, the owner: "Work the arc out from the shot's real numbers", past 20 u only) Reach's Revenant shot
+# (HREK objects\vehicles\covenant\revenant\turrets\revenant_plasma_turret\weapon\revenant_plasma_turret.projectile:
+# initial velocity 16, final 8, acceleration range 0-20; INFERRED: it slows from the one to the other over its first
+# 20 u of flight). Its gravity is fitted, not the tag's (air gravity scale 0.33 of our GRAVITY 4.1 gave 4.7 deg at 20 u):
+# REVENANT_G makes the computed lob at 20 u, 2 u under the camera, the measured 9 deg (DRIVER_VIEW's cap there), so the
+# two meet where the computed one takes over (scratchpad rev_arc.py: 13.1 deg at 25 u, 18.0 at 30)
+REVENANT_SHOT = (16.0, 8.0, 20.0)      # u/s at the muzzle, u/s after, u of flight between
+REVENANT_G = 2.56                      # u/s^2
+REVENANT_ARC_FROM = 20.0               # u: the measured lob (DRIVER_VIEW) to here, the computed one past it
+
+
+def _revenant_drop_z(theta, flat, g, dt=0.02):
+    """Where a Revenant shot launched theta over level is when it has flown flat u along the ground (relative to its
+    start); -inf if it never gets there in 6 s."""
+    v0, v1, ramp = REVENANT_SHOT
+    vx, vz, x, z, s, t = v0 * math.cos(theta), v0 * math.sin(theta), 0.0, 0.0, 0.0, 0.0
+    while x < flat:
+        t += dt
+        if t > 6.0 or vx <= 1e-6:
+            return -math.inf
+        sp = v0 - (v0 - v1) * min(s, ramp) / ramp
+        n = math.hypot(vx, vz)
+        vx, vz = vx / n * sp, vz / n * sp - g * dt
+        x, z, s = x + vx * dt, z + vz * dt, s + math.hypot(vx, vz) * dt
+    return z
+
+
+_REV_LOB = {}
+
+
+def revenant_lob(flat, dz):
+    """Radians over the line to the man (flat u away, dz u above the shot's start) a Reach Revenant aims to land its shot
+    on him (REVENANT_SHOT, REVENANT_G), by bisection; 0.25 u steps cached."""
+    key = (round(flat * 4), round(dz * 4))
+    if key in _REV_LOB:
+        return _REV_LOB[key]
+    f, h = max(key[0] / 4, 0.5), key[1] / 4
+    line = math.atan2(h, f)
+    lo, hi = line, math.radians(60.0)
+    for _ in range(22):
+        m = (lo + hi) / 2
+        if _revenant_drop_z(m, f, REVENANT_G) > h:
+            hi = m
+        else:
+            lo = m
+    out = (lo + hi) / 2 - line
+    if len(_REV_LOB) < 20000:
+        _REV_LOB[key] = out
+    return out
+
+
+def driver_view(kind, flat, dz=None, game=None):
+    """(camera height, lob in radians) a driver of this kind aims with at a man flat u away; (0, 0) for the rest. A Reach
+    Revenant past REVENANT_ARC_FROM with dz (the man's height over its camera) known: the computed lob (revenant_lob)."""
     cam, per_u, cap = DRIVER_VIEW.get(kind, (0.0, 0.0, 0.0))
+    if kind == "revenant" and game == "reach" and dz is not None and flat > REVENANT_ARC_FROM:
+        return cam, revenant_lob(flat, dz)
     return cam, math.radians(min(cap, per_u * flat))
 
 
@@ -511,6 +565,10 @@ def variant(name, turrets=()):
 # pivot or muzzle (their models, tools/model2obj on 35_island.map). Aimed from the eye's 0.62 the chaingun shot 0.3 u
 # over its aim point: 4.8 s at 6 u into a man who lost nothing
 GUN_HEIGHT = {"warthog_chaingun": 0.92, "falcon_side_gun": 0.38}
+# (custom, Nov 24, the owner: "Fly above the target") a Falcon side gun's pitch, degrees down / up (HREK
+# objects\vehicles\human\falcon\turrets\falcon_side_gun_left\falcon_side_gun_left.vehicle, its gunner seat's pitch range
+# -60..25), and the margin inside it its pilot keeps the man in (Bot.falcon_gun_height)
+FALCON_GUN_PITCH, FALCON_GUN_MARGIN = (-60.0, 25.0), 5.0
 # ... and along the vehicle's forward axis (u, + ahead): Reach's Warthog carries its chaingun on its "turret" marker,
 # 0.536 u behind its origin, on its centre line (logs/tmp/reach_guns/warthog.obj.markers.json, model2obj on
 # 35_island.map). Aimed from the origin, a man 10 u off to its side was missed by 3 deg, 6 at 5 u: to the right of one

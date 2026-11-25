@@ -1017,6 +1017,15 @@ WRAITH_TIGHT_D, WRAITH_TIGHT_ANGLE = 3.0, 0.25
 WRAITH_CHARGE_MAX_S = 6.0       # (ours: a charge's longest, as Bot.drive's run at a man)
 WRAITH_TURTLE_HURT, WRAITH_HURT_S, WRAITH_TURTLE_MIN, WRAITH_TURTLE_MAX = 0.2, 3.0, 5.0, 10.0
 WRAITH_MIN_FIRE = 4.0
+# (custom, Nov 24, the owner's picks from the campaign comparison; Reach, every tier but Easy: Easy never fights at the
+# wheel) The Revenant's gun (generic.character weapons properties revenant_plasma_turret: normal combat range 7-15 u,
+# minimum firing range 4 u, maximum 25 u): it holds REVENANT_RANGE, no shot inside REVENANT_MIN_FIRE (its own splash) nor
+# past REVENANT_MAX_FIRE
+REVENANT_RANGE, REVENANT_MIN_FIRE, REVENANT_MAX_FIRE = (7.0, 15.0), 4.0, 25.0
+# The Scorpion's turns (generic.character vehicle properties scorpion: turn / goal / direction min throttle scale 0.6,
+# oversteering scale 2): its throttle never under SCORPION_TURN_THROTTLE on its way; its view leads a turn by as much
+# again as it is off (SCORPION_OVERSTEER), the extra at most SCORPION_OVERSTEER_MAX rad
+SCORPION_TURN_THROTTLE, SCORPION_OVERSTEER, SCORPION_OVERSTEER_MAX = 0.6, 2.0, 0.5
 
 
 def tank_ground(v, T=None):
@@ -6275,6 +6284,12 @@ class Bot:
             # (custom, Nov 13, the owner) a Scorpion's or Wraith's driver: a man on foot within TANK_FOOT_R first (he
             # boards it or sticks it), else a vehicle or a man with a vehicle killer within TANK_VEHICLE_R, else the best
             # of the rest; the score (target_score) within each. (custom, Nov 15) A Warthog's gun the same way (hog above)
+            if tank and kind == "scorpion" and s.game == "reach":
+                # (custom, Nov 24, the owner: boarders "first and foremost over anything else within a range") a Reach
+                # Scorpion's men on foot within TANK_FOOT_R: the nearest of them first, whatever their scores
+                near = [k for k in bands if bands[k][1] == 0]
+                if near:
+                    return min(near, key=lambda k: dist(me.pos, s.per.beliefs[k].pos))
             return min(bands, key=lambda k: (bands[k][1], -bands[k][0]))
         return best
 
@@ -6331,6 +6346,36 @@ class Bot:
             hist[:] = [hist[-1]]                          # (the next turtle takes a fresh WRAITH_TURTLE_HURT)
             return True
         return False
+
+    def scorpion_sees_feet(s, me, foe, cam):
+        """(custom, Nov 24) A shell's line from a Scorpion's camera (cam u over it) to a man's feet (Bot.feet, 0.05 u up:
+        Aim.step's explosive aim) is open on the level data (Terrain.point_los "shot"); open where there is none to ask."""
+        try:
+            T = s.T()
+            f = s.feet(foe)
+            return bool(T.point_los(me.pos + Vec(0.0, 0.0, cam), Vec(f.x, f.y, f.z + 0.05), "shot"))
+        except Exception:      # (no level data, a stand-in terrain: his feet, as before)
+            return True
+
+    def falcon_gun_height(s, me, at, h, goal):
+        """(custom, Nov 24, the owner: "Fly above the target ... add this in along side our code") A Reach Falcon pilot's
+        fighting height over its floor (goal, from air_heights; h: its height now) moved, only as far as it must, so the
+        man at `at` (his chest, 0.35 u up) is inside its side guns' pitch (vehicles.FALCON_GUN_PITCH less
+        FALCON_GUN_MARGIN) from the gun (vehicles.GUN_HEIGHT falcon_side_gun over the Falcon): up when he is too high
+        over the gun, down when he is too steeply under it. Right under it (within 1 u flat): left as it was."""
+        flat = math.hypot(at.x - me.pos.x, at.y - me.pos.y)
+        if flat < 1.0:
+            return goal
+        down, up = vehicles.FALCON_GUN_PITCH
+        m = vehicles.FALCON_GUN_MARGIN
+        chest = at.z + 0.35
+        lo = chest - flat * math.tan(math.radians(up - m))       # the gun this high at least: him no more than up - m over
+        hi = chest + flat * math.tan(math.radians(-down - m))    # at most: him no more than -down - m under
+        gun = me.pos.z - h + goal + vehicles.GUN_HEIGHT["falcon_side_gun"]
+        want = min(max(gun, lo), hi) if lo <= hi else lo
+        if want != gun:
+            s.note("air: holding him inside the side guns' pitch")
+        return goal + (want - gun)
 
     def reach_wraith_fight(s, now, me, v, tid, b, d, act):
         """(custom, Nov 24, the owner: "Yes, match Bungie") Reach's Wraith driver as the campaign's (HREK
@@ -6926,10 +6971,18 @@ class Bot:
             # a tank's view from its camera over the hull, a mortar lobbed (vehicles.DRIVER_VIEW: a skilled player's
             # shots)
             kind = vehicles.kind_of(v["kind"]) if v is not None else None
-            cam, arc = vehicles.driver_view(kind, (b.pos - me.pos).flat())
+            cam0 = vehicles.DRIVER_VIEW.get(kind, (0.0,))[0]
+            # (custom, Nov 24: a Reach Revenant past 20 u lobs by its shot's own flight, vehicles.revenant_lob; the
+            # height is to where Aim.step puts an explosive's aim, his feet, from the camera)
+            cam, arc = vehicles.driver_view(kind, (b.pos - me.pos).flat(), aim_at.z + 0.05 - (me.pos.z + cam0), s.game)
             aim_at = aim_at + Vec(0.0, 0.0, (b.pos - me.pos).flat() * math.tan(arc))
             foe = snap.player(tid)
             chest_shot = scorpion and foe is not None and foe.vehicle in (None, -1)
+            if kind == "scorpion" and s.game == "reach" and foe is not None and foe.vehicle in (None, -1):
+                # (custom, Nov 24, the owner: "Shoot at feet in all scenarios it can see their feet. Other wise shoot at
+                # the chest", every tier at the wheel; Bungie's scorpion_cannon "aim at feet") his feet when the shell's
+                # line from the camera reaches them, else his chest
+                chest_shot = not s.scorpion_sees_feet(me, foe, cam)
             origin, tp = (me.pos + Vec(0.0, 0.0, cam) if cam else None), None
             # (custom, Nov 17, the owner: "It should try to shoot it similarly like a rocket or fuel rod. At their legs or
             # ground below them?") a Banshee's bomb, while it is selected (Bot.fuel_rod), goes at his feet like any
@@ -6963,7 +7016,7 @@ class Bot:
                                                 PROJECTILE_SPEED.get(st.get("gun"), 360.0) if bombing else None))
             s.att = ["aim", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             d = dist(me.pos, b.pos)
-            lo, hi = st["rng"]
+            lo, hi = REVENANT_RANGE if kind == "revenant" and s.game == "reach" else st["rng"]
             passes = air and st["role"] == "air"
             if st["role"] == "charge" and not air:
                 # a Chopper's guns point where it does: straight at him, the boost into him close in (the player's
@@ -6974,8 +7027,16 @@ class Bot:
                 s.att = ["charge", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             elif passes:
                 s.air_pass(now, me, tid, b, aim_at, act, v)    # a Banshee's attack runs: a skilled player's (air_pass)
+            elif (st["role"] == "artillery" and kind == "scorpion" and s.game == "reach" and d <= TANK_FOOT_R
+                  and foe is not None and foe.vehicle == -1 and s.p.tier != "novice"
+                  and not (foe.equipment == "armor_lock" and foe.ability_on)):
+                # (custom, Nov 24, the owner: "Change running down boarders to just prioritizing them first and foremost
+                # over anything else within a range", 10 u, holding still) a man on foot within TANK_FOOT_R is its target
+                # first (vehicle_pick, the nearest) and it stops to shell him (Bungie's stationary fight), no run at him
+                act.forward = act.strafe = 0.0
+                s.note("vehicle: a man on foot close in, holding still to shell him")
             elif (st["role"] == "artillery" and not air and d < vehicles.BOARD_D and foe is not None
-                  and foe.vehicle == -1 and s.p.tier != "novice"
+                  and foe.vehicle == -1 and s.p.tier != "novice" and not (kind == "scorpion" and s.game == "reach")
                   and not (foe.equipment == "armor_lock" and foe.ability_on)):
                 # (custom, Nov 20, the owner: Ascension "didnt shoot at the bot closest to him when in the scorpion and
                 # got jacked") a man on foot close enough to board it: run him down (a tank is slower backing off than
@@ -7042,6 +7103,8 @@ class Bot:
                     act.fire = False        # (custom, Nov 20: running a boarder down, no shell at point blank)
                 if kind == "wraith" and s.game == "reach" and d < WRAITH_MIN_FIRE:
                     act.fire = False        # (custom, Nov 24: the campaign mortar's minimum firing range)
+                if kind == "revenant" and s.game == "reach" and not REVENANT_MIN_FIRE <= d <= REVENANT_MAX_FIRE:
+                    act.fire = False        # (custom, Nov 24: the campaign Revenant gun's minimum and maximum range)
             if kind == "mantis":
                 s.mantis_weapons(now, me, v, snap, tid, b, aim_at, act)
         elif seen and not (v is not None and vehicles.is_warthog(v["kind"])):
@@ -7071,6 +7134,8 @@ class Bot:
                 toward = 1.0 if act.yaw == left else -1.0                # (strafe is to the left)
                 act.strafe = toward * (0.6 if d > hi else -0.6 if d < lo else 0.0)
                 act.forward = 0.35 * s.strafe_dir
+                if s.game == "reach" and vehicles.kind_of(v["kind"]) == "falcon":
+                    s.falcon_mark = (now, b.pos)     # (custom, Nov 24: its height keeps him in the guns' pitch, below)
             if now >= s.next_strafe_flip:
                 s.strafe_dir, s.next_strafe_flip = -s.strafe_dir, now + s.rng.uniform(3.0, 6.0)
             s.att = ["circle", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
@@ -7098,8 +7163,17 @@ class Bot:
             act.pitch, act.forward = 0.0, 1.0
             f = v.get("fwd") if v else None      # a sharp turn ahead: ease off so it turns instead of sliding wide
             if f and math.hypot(f[0], f[1]) > 0.1:
-                off = abs(wrap(act.yaw - math.atan2(f[1], f[0])))
+                hull = math.atan2(f[1], f[0])
+                err = wrap(act.yaw - hull)
+                off = abs(err)
                 act.forward = 1.0 if off < 0.6 else 0.6 if off < 1.6 else 0.35
+                if v is not None and vehicles.kind_of(v["kind"]) == "scorpion" and s.game == "reach" and not easy:
+                    # (custom, Nov 24, the owner: Bungie's Scorpion turns) never under SCORPION_TURN_THROTTLE, and the
+                    # view leads the turn (SCORPION_OVERSTEER times the error, the extra capped; never led past 1 rad
+                    # off the hull, inside its forward arc, unless it is already)
+                    act.forward = max(act.forward, SCORPION_TURN_THROTTLE)
+                    led = min(off * SCORPION_OVERSTEER, off + SCORPION_OVERSTEER_MAX, max(off, 1.0))
+                    act.yaw = hull + math.copysign(led, err)
             if v is not None and act.forward >= 1.0 and dist(me.pos, target) > TRAVEL_BOOST_FROM:
                 s.travel_boost(now, me, v, act, air)
             s.att = ["path", None, round(w.x, 1), round(w.y, 1)]
@@ -7143,6 +7217,9 @@ class Bot:
                 # tools/falcon_probe.py; +1 climbed it, 0 sank it, +0.5 held it). Travelling at the learned height, in a
                 # fight at the strafing one, down to land by where it goes
                 goal = want if not seen else s.air_heights(T)[0]
+                mark = getattr(s, "falcon_mark", None)
+                if seen and mark is not None and mark[0] == now:
+                    goal = max(0.5, s.falcon_gun_height(me, mark[1], h, goal))   # (0 is a landing's)
                 act.vertical = ((-1.0 if h > 0.3 else 0.0) if goal <= 0.0 else 1.0 if goal - h > 1.0 else
                                 -1.0 if goal - h < -1.5 else 0.5)
         # get out at the destination or when stuck (rocks, walls the foot path squeezes past); a pilot only low down

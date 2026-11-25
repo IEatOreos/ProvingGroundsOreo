@@ -82,12 +82,12 @@ def tank(tier="demon", foe_at=Vec(3.0, 0.5, 0.0), lock=False):
 
 
 class TankBoarder(unittest.TestCase):
-    def test_runs_a_close_man_down_without_a_shell(self):
+    def test_shells_a_close_man_from_a_stop(self):
+        # (custom, Nov 24, the owner: Reach's Scorpion no longer runs a boarder down; he is its target first within
+        # TANK_FOOT_R and it holds still to shell him: tools/test_campaign_vehicles.py)
         b, act = tank()
-        self.assertEqual((b.att or [None])[0], "splatter")
-        self.assertEqual(act.forward, 1.0)
-        self.assertAlmostEqual(act.yaw, math.atan2(0.5, 3.0), places=3)
-        self.assertFalse(act.fire)
+        self.assertNotEqual((b.att or [None])[0], "splatter")
+        self.assertEqual((act.forward, act.strafe), (0.0, 0.0))
 
     def test_easy_and_armor_lock_back_off_as_before(self):
         for kw in (dict(tier="novice"), dict(lock=True)):

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Revenant, Scorpion and Falcon: the owner's picks from the campaign AI, 2026-11-24
+
+The owner, after a comparison of the campaign's Falcon, Scorpion and Revenant with ours (HREK `tags\ai\generic.character` and the vehicles' own tags, read only): the Revenant's minimum range, shorter range and its arc worked out from its shot; the Scorpion's feet aim "in all scenarios it can see their feet. Other wise shoot at the chest", its turn throttle, "Change running down boarders to just prioritizing them first and foremost over anything else within a range", its pathfinding footprint; the Falcon flying where its side guns can reach the man, "along side our code". His picks: every tier but Easy, Reach only; boarders within 10 u, the tank holding still; the tank ground widened to 1.75 u; the computed arc past 20 u only.
+
+- **Revenant** (Reach, at the wheel; `Bot.drive`, `vehicles.driver_view`):
+  - **Holds 7-15 u** (`REVENANT_RANGE`, the campaign gun's normal combat range); it held 10-30 u. Other games keep 10-30 u.
+  - **No shot inside 4 u or past 25 u** (`REVENANT_MIN_FIRE`, `REVENANT_MAX_FIRE`: the gun's minimum and maximum firing range). Its own splash inside 4 u.
+  - **Its lob past 20 u is worked out from its shot** (`vehicles.revenant_lob`): 16 u/s slowing to 8 over the first 20 u of flight (the projectile tag; the reading of its "acceleration range" is inferred), and a gravity fitted so the lob at 20 u is the measured 9 deg, where the owner's measured lob (0.6 deg a unit, capped at 9, 75 shots at 10-20 u) still applies. 13 deg at 25 u. The tag's own gravity (0.33 of ours) gave only 4.7 deg at 20 u, so it is not used.
+- **Scorpion** (Reach, at the wheel, every tier but Easy):
+  - **His feet when the shell's line from the camera reaches them, else his chest** (`Bot.scorpion_sees_feet`, the level data's shot line). This replaces fixed Legendary and Demon's chest aim at every man on foot (Nov 8), on the owner's word; their turn cap and settled shots are unchanged. Where there is no level data: his feet.
+  - **A man on foot within 10 u (`TANK_FOOT_R`) is its target first, the nearest of them, whatever their scores** (`Bot.vehicle_pick`), **and it holds still to shell him**. It no longer runs a boarder down (Nov 20). A man in Armor Lock is backed away from as before. The Wraith keeps its run-down and scores.
+  - **Its turns:** throttle never under 0.6 on its way (it dropped to 0.35 on sharp turns), and its view leads a turn by as much again as it is off, the extra capped at 0.5 rad and never past 1 rad off its hull (Bungie's oversteering scale 2). Other games, Easy and the other tanks as before.
+  - **Its ground is 1.75 u clear of walls** (`Terrain.VEH_ROOM_TANK` 5 -> 7 cells; Bungie's pathfinding radius 1.8 u). The Wraith and Mantis share this ground. As `brain/terrain.py` is part of the terrain cache's key, each map's next match builds its terrain once again.
+- **Falcon** (Reach pilot in a fight, `Bot.falcon_gun_height`): its fighting height is moved only as far as needed so the man is inside its side guns' pitch, 60 deg down to 25 deg up (the side gun's seat in `falcon_side_gun_left.vehicle`), 5 deg inside it: up when he is above, down when he is too steeply under. Its other height rules (`air_guard`, the floor clearance) still apply afterwards.
+- **Not ported:** Bungie's slowed AI shots, damage cuts, burst gaps and 4-6 s between Scorpion shells (they make its AI fair to lose to), its engine pathfinding (we have no equivalent of driving over obstacles).
+- **Checks:** new `tools/test_campaign_vehicles.py` (13 tests); `tools/test_vehicle_gun_reach.py`'s run-down test changed to the hold. Full suite: 1766 tests, 2 failures in `test_layout_lifts.py` (the cage), which fail with the old tank width too: they read this machine's level data. **Untested in game.**
+
 ### Infection survivors pick any haven marker or hot spot, not the markers first, 2026-11-24
 The owner: "Just have them pick any of the hot spots or havens on the map? Not directly always pick havens first."
 - **`brain/director.py` mode_slots:** the haven markers and the hot spots are one pool, shuffled once a match (`surv_pool`, the director's own random), so a group's spot is any of them; the spots stay put for the match. Rooms with few ways in still come after the pool, and the last 3 still take a room with one way in.
