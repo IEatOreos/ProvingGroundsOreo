@@ -1035,6 +1035,16 @@ def _build(m, window):
     # (custom, Nov 18) none inside a Forge piece (Terrain.piece_solid: its collision model is exact; Pinnacle's 40 were
     # all in its dish, rocks, bridges and tower). Kept in the file, only not used
     used = [c for c in learned if not T.piece_solid(c[0] / 4, c[1] / 4, c[2], c[3], deck=bool(c[4]))]
+    # (custom, Nov 24, the owner: "As long as it only blocks small holes and not the larger holes in railing and stuff")
+    # none in a solid wall of the level's own (Terrain.solid_slot): dropped from the file too (the level does not
+    # change), so they free their places under SHOT_MAX. Railings, grates and sills keep theirs
+    holes = [c for c in learned if not c[4] and T.solid_slot(c[0] / 4, c[1] / 4, c[2], c[3])]
+    if holes:
+        print(f"learned shoot-through: {len(holes)} of {len(learned)} spots were holes in solid walls, dropped",
+              flush=True)
+        drop = {tuple(c) for c in holes}
+        learned = [c for c in learned if tuple(c) not in drop]
+        used = [c for c in used if tuple(c) not in drop]
     pk["fence"] += [c[:4] for c in used if not c[4]]
     pk["fence_floor"] += [c[:4] for c in used if c[4]]
     if any(pk.values()):

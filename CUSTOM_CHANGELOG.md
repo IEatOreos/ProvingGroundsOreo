@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### No learned shoot-through holes in solid walls (Boneyard), 2026-11-24
+
+The owner's bug report `20261124-194946` (Boneyard, t 157): "Bots are trying to shoot through boneyards walls"; asked, "Fired rounds into it"; then "As long as it only blocks small holes and not the larger holes in railing and stuff".
+
+- **What it was:**
+  - He stood behind a solid wall at about (273-275, 109.5-110.25). Camper25, 40 u off, fired 10 rounds in a row at PacMan behind the same wall (148.5-152.6 s); none landed.
+  - The variant's `walls_learned.json` (spots the bots learned rounds pass, `Terrain.learn_shot_through`) had 7 cells at the foot of that wall. With them the bots' line read clear on 135 of 141 ticks; without them, on 3.
+  - The file was full (300 of `SHOT_MAX` 300), so nothing new could be learned there.
+  - Nov 9's rule (no learning where the wall runs from 0.6 u under the line to 1.2 u over it) missed the foot of a wall, where the floor is nearer than 0.6 u. It also read the walls with earlier learned cells already opened.
+- **`brain/terrain.py` `Terrain.solid_run` / `solid_slot`:** a height is inside a solid wall when the level's own wall (`level_walls`) runs unbroken from 1.2 u over it down to 0.6 u under it, or down to the floor it stands on. `learn_shot_through` learns none there.
+  - A railing, grate or sill stops short of 1.2 u over the line, and a gap in a wall breaks the run, so their holes are learned and kept as before.
+- **`brain/maps.py` `_build`:** learned cells that are such holes are dropped when the map loads, from use and from the file at its next save, freeing their places under the 300. Each load prints how many it dropped.
+  - Of the files with a terrain cache here: Boneyard 30 of 300, Settlement 89 of 403, Aftship 44 of 172, Launch Station 36 of 139, Condemned 7 of 23, Ivory Tower 5 of 35, Prisoner 4 of 15, Panopticon 3 of 102, Beaver Creek 2 of 21, Park 1 of 30, an Asylum variant 1 of 47, the rest 0.
+  - On his Boneyard line, 4 of the 7 go and the line reads clear on 12 of 141 ticks. The other 3 sit where the level's data has a gap in the wall over the line, so they stay.
+  - Every learned file is backed up first, in `logs/backup_walls_learned_20261124` (not in Git).
+- **Checks:** new `tools/test_learn_solid_wall.py` (5 tests: a floor-standing wall learns nothing, and learned it without the rule; a railing and a wall with a gap still learn; the file rule). `unittest discover` over `tools` is OK on both Pythons (1723 tests), and so is the `live_bots` import. **Untested in game.**
+
 ### Reach's Wraith driven like the campaign's, 2026-11-24
 
 The owner: "Can you delve into the campaign files and see how the ai drive wraiths?", then "Yes, match Bungie". His picks: every tier but Easy, Reach only, turtling = stop and keep firing, our mortar's rate of fire kept.

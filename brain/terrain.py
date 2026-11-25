@@ -826,6 +826,38 @@ class Terrain:
         np.fmin.at(s.piece_wz[..., 0], (j, i), z)
         np.fmax.at(s.piece_wz[..., 1], (j, i), z + np.float32(s.wall_bin))
 
+    def solid_run(s, j, i, zs):
+        """(custom, Nov 24) Is each height zs at cells (j, i) inside a solid wall: the level's own wall (level_walls, not
+        the copy learned spots opened) unbroken from LEARN_SOLID_ABOVE over it down to LEARN_SOLID_BELOW under it, or
+        down to the floor it stands on when that is nearer? A small hole there is a hit put down to the wrong man; a
+        railing, a grate, a sill or a gap stops short of the line's 1.2 u over it, so their holes are not this. The
+        owner's report 20261124-194946 (Boneyard, "Bots are trying to shoot through boneyards walls"): 7 learned cells
+        at the foot of the wall he stood behind gave Camper25 a line to PacMan on 135 of 141 ticks (3 without them), 10
+        rounds, none landed; Nov 9's rule (a wall LEARN_SOLID_BELOW under) missed them, the floor being nearer."""
+        lv = getattr(s, "level_walls", None)
+        W = (lv if lv is not None else s.walls)[j, i]
+        fl = s.floors[:, j, i]
+        with np.errstate(invalid="ignore"):
+            on = np.isfinite(fl) & (fl <= zs + 0.05) & (fl >= zs - LEARN_SOLID_BELOW)
+            under = np.where(on, fl, -np.inf).max(axis=0)
+        lo = np.maximum(zs - LEARN_SOLID_BELOW, under + s.wall_bin)   # (a face may start in the bin over its floor)
+        ok = np.ones(np.shape(zs), bool)
+        for off in np.arange(-LEARN_SOLID_BELOW, LEARN_SOLID_ABOVE + 1e-6, s.wall_bin):
+            z = zs + off
+            ok &= ((off < 0) & (z < lo - 1e-6)) | s._wall_bit(W, z)
+        return ok
+
+    def solid_slot(s, x, y, lo, hi):
+        """(custom, Nov 24) A learned wall cell (walls_learned.json: quarter-unit cell x, y, heights lo..hi) that is a
+        small hole in a solid wall (solid_run at every height of it the level has a wall at, one at least)."""
+        if not s.inside(x, y):
+            return False
+        zs = np.arange(lo + 0.05, hi, 0.1)
+        j, i = s._ij(np.full(len(zs), x), np.full(len(zs), y))
+        lv = getattr(s, "level_walls", None)
+        walled = s._wall_bit((lv if lv is not None else s.walls)[j, i], zs)
+        return bool(walled.any() and s.solid_run(j[walled], i[walled], zs[walled]).all())
+
     def piece_solid(s, x, y, lo, hi, deck=False):
         """(custom, Nov 18) Is a quarter-unit learned cell at (x, y), heights lo..hi, inside a placed piece: one of its
         cells (the four _clear_cells clears) has a piece's wall bins in that height range (a deck cell: a piece's floor
@@ -1303,6 +1335,8 @@ class Terrain:
         # (wall_kinds.json "window"), had 88 learned shoot-through cells from hits that were not through it, and the
         # Demons shot into it: the owner's report 20261109-192854 "Bots try to shoot through this massive pillar")
         hit &= ~(s._wall_bit(W, zs - LEARN_SOLID_BELOW) & s._wall_bit(W, zs + LEARN_SOLID_ABOVE))
+        if hit.any():
+            hit[hit] &= ~s.solid_run(j[hit], i[hit], zs[hit])   # (custom, Nov 24: standing on its floor too)
         fl = s.floors[:, j, i]
         with np.errstate(invalid="ignore"):
             crossed = ((np.r_[za, zs[:-1]] - fl) * (zs - fl) < 0) & np.isfinite(fl)
