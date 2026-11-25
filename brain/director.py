@@ -2708,16 +2708,30 @@ class Director:
                 for p in sorted((p for p in foes), key=lambda p: dist(p.pos, centre()))[:n]:
                     slots.append(("hunter", p.pos, "aggression"))
                 return slots + [("hunter", mid, "aggression")] * n
-            if havens:                      # Reach's Safe Haven: the game's own haven
-                haven = min(havens, key=lambda z: dist(z, centre()))
-                return [("defender", s.spread(haven, k, 2.5), "camping") for k in range(n)]
-            # survivors: in groups of 2-3, each in its own hold (a room with the fewest ways in, modes.find_holds),
-            # far apart ("for better fun ... separate groups in their own respective areas of the map")
-            picked = pick_holds(holds(s.terrain(), s.map["name"]), max(1, round(n / 2.5)))
-            if not picked:                  # (still being found: the first seconds of the match)
+            # (custom, Nov 24, the owner) plain Infection: groups of SURV_GROUP at most, people counted, each at its own
+            # spot (modes.survivor_spots: the haven markers, the hot spots, the rooms); SURV_LAST or fewer left, one room
+            # with a single way in (modes.last_stand_hold). Before, every survivor took the haven nearest the team: live
+            # Anchor 9, 18 players, all 15 bots in one spot
+            from .modes import SURV_GROUP, SURV_LAST, SURV_AT_R, survivor_spots, last_stand_hold
+            hs = holds(s.terrain(), s.map["name"])
+            if len(mine) <= SURV_LAST:
+                last = last_stand_hold(hs, centre())
+                if last is not None:
+                    return [("defender", s.spread(last["pos"], k, 1.0), "camping") for k in range(n)]
+            cands = list(havens) + list(s.map.get("positions") or []) + [h["pos"] for h in hs]
+            if not cands:                   # (no markers, no hot spots, the rooms still being found: the first seconds)
                 return [("defender", s.spread(mid, k, 2.5), "camping") for k in range(n)]
-            return [("defender", s.spread(picked[k % len(picked)]["pos"], k // len(picked), 1.0), "camping")
-                    for k in range(n)]
+            people = [p for p in mine if p.id not in s.bots]
+            groups = max(1, -(-len(mine) // SURV_GROUP))
+            for extra in range(len(cands)):
+                picked = survivor_spots(cands, groups + extra)
+                for q in picked:
+                    room = SURV_GROUP - sum(1 for p in people if dist(p.pos, q) < SURV_AT_R)
+                    slots += [("defender", s.spread(q, j, 1.0), "camping") for j in range(max(0, room))]
+                if len(slots) >= n or len(picked) < groups + extra:
+                    break
+                slots = []
+            return slots or [("defender", s.spread(mid, k, 2.5), "camping") for k in range(n)]
         if snap.mode == "regicide":
             # the King (modes.Watch.mark_king, in snap.vips; the game shows him to everyone): hunted by the rest
             # (SLAY-REG-01: his bounty is the best kill on the map); the King himself plays his own game (assign_roles:

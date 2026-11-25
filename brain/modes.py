@@ -724,6 +724,40 @@ def pick_holds(hs, k, apart=HOLD_APART):
     return out
 
 
+# (custom, Nov 24, the owner, Anchor 9 Infection, 18 players: "all the bots are standing in one hold. I think it should
+# do a check of how many people are there and if its like 4 or more survivors find a new spot. Or even use the hot spots
+# on the map"; "if there is only 2-3 survivors left they try to find an area with only 1 entrance") Plain Infection:
+# SURV_GROUP survivors a spot at most, people counted, each group's spot SURV_APART from the others'; the spots the
+# map's haven markers first (its maker's places to hold; live, all 15 bots took the one nearest them), then its hot
+# spots (maps/<map>/positions.json), then rooms with few ways in (find_holds). SURV_LAST or fewer left: one room with
+# a single way in, the nearest to them
+SURV_GROUP, SURV_LAST, SURV_AT_R, SURV_APART = 3, 3, 4.0, HOLD_APART
+
+
+def survivor_spots(candidates, k, apart=SURV_APART):
+    """k spots for k survivor groups from candidates (Vec, best first): the best, then each next best at least apart
+    from those taken (closer ones if the map has too few)."""
+    out = []
+    for gap in (apart, apart / 2, 0.0):
+        for c in candidates:
+            if len(out) >= k:
+                return out
+            if all(dist(c, o) >= gap for o in out):
+                if c not in out:
+                    out.append(c)
+    return out
+
+
+def last_stand_hold(hs, centre):
+    """The room the last survivors hold: the nearest to them of those with a single way in, else of those with the fewest
+    ways in; None with no rooms found."""
+    if not hs:
+        return None
+    fewest = min(h["entrances"] for h in hs)
+    pool = [h for h in hs if h["entrances"] == 1] or [h for h in hs if h["entrances"] == fewest]
+    return min(pool, key=lambda h: dist(h["pos"], centre))
+
+
 def survivor_clusters(players, r=6.0):
     """Survivors standing together: [(centre, [player])] of 2 or more within r of the first of them, biggest first."""
     left, out = [p for p in players if p.alive], []

@@ -4205,8 +4205,10 @@ class Bot:
                                   and not onto):
                 on_hill = snap.hill is not None and dist(point, snap.hill) < 0.5      # (the hill holder stays inside it)
                 wander = 0.6 * snap.hill_r if on_hill else (4.0 if snap.mode == "slayer" else 2.5)
-                if snap.mode == "infection" and not snap.obj_zones:
-                    wander = 1.0       # in the hold's room (director: a few entrances), not out of its door
+                if snap.mode == "infection":
+                    # in the hold's room (director: a few entrances), not out of its door; (custom, Nov 24) at a haven
+                    # marker or a hot spot too (director: groups of 3), a haven's own size below
+                    wander = 1.0
                 # a zone to stand in (Invasion territories, Territories, havens): inside its own size. Boneyard's are
                 # boxes about 0.9 u from the centre to the edge; 2.5 u of loitering kept attackers outside (live)
                 zr = s.zone_at(snap, point)
