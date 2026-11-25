@@ -1000,6 +1000,17 @@ AIR_JINK, AIR_JINK_S = 0.4, 1.0   # rad, s: shot at in a run's way in (out of gu
 # dropped for the trip to its objective, and the way out and the turn back into the next run never happened
 AIR_KEEP_S, AIR_KEEP_R = 6.0, 60.0
 TANK_BACK_S = 2.5     # (custom, Nov 13) s: a wedged tank backs off this long, its view on its way on (Bot.drive)
+# (custom, Nov 24, the owner: "Yes, match Bungie") Reach's campaign Wraith driver (Bot.reach_wraith_fight), from HREK's
+# tags: ai\generic.character "vehicle properties" wraith (stationary fight (tanks); charge consider 8 u, abort 10 u,
+# look-ahead 1.25 s, repeat timeout 10 s, tight angle 0.25 within 3 u; turtling recent damage 0.2, min time 5 s, timeout
+# 10 s) and its wraith_mortar weapon (normal combat range 8-16 u, minimum firing range 4 u). The window its damage is
+# "recent" over is not in the tags: WRAITH_HURT_S is ours
+WRAITH_RANGE = (8.0, 16.0)
+WRAITH_CHARGE_D, WRAITH_CHARGE_ABORT, WRAITH_CHARGE_LEAD, WRAITH_CHARGE_EVERY = 8.0, 10.0, 1.25, 10.0
+WRAITH_TIGHT_D, WRAITH_TIGHT_ANGLE = 3.0, 0.25
+WRAITH_CHARGE_MAX_S = 6.0       # (ours: a charge's longest, as Bot.drive's run at a man)
+WRAITH_TURTLE_HURT, WRAITH_HURT_S, WRAITH_TURTLE_MIN, WRAITH_TURTLE_MAX = 0.2, 3.0, 5.0, 10.0
+WRAITH_MIN_FIRE = 4.0
 
 
 def tank_ground(v, T=None):
@@ -6257,6 +6268,62 @@ class Bot:
         f = v.get("fwd") if v is not None else None
         return math.atan2(f[1], f[0]) if f and math.hypot(f[0], f[1]) > 0.1 else me.yaw
 
+    def reach_wraith_turtle(s, now, v):
+        """(custom, Nov 24) Reach's campaign Wraith turtles (generic.character: vehicle_turtle): its body down
+        WRAITH_TURTLE_HURT within WRAITH_HURT_S, it holds still WRAITH_TURTLE_MIN s, a fresh hit meanwhile keeping it on up
+        to WRAITH_TURTLE_MAX s from its start (the owner's pick of what turtling is: "Stop, keep firing"). The snapshot's
+        "left" (its body's health, 1.0 whole) or no turtle. True while turtling."""
+        until = getattr(s, "wraith_turtle", (0.0, 0.0))
+        left = v.get("left")
+        if not isinstance(left, (int, float)) or isinstance(left, bool) or not math.isfinite(left):
+            return now < until[1]
+        hist = s.__dict__.setdefault("wraith_hp", [])
+        if hist and hist[-1][2] != v["handle"]:
+            hist.clear()                                  # (another Wraith: its own health)
+        prev = hist[-1][1] if hist else left
+        hist.append((now, left, v["handle"]))
+        while now - hist[0][0] > WRAITH_HURT_S:
+            hist.pop(0)
+        if now < until[1]:
+            if left < prev - 0.005:                       # hit again while turtling
+                s.wraith_turtle = (until[0], max(until[1], min(until[0] + WRAITH_TURTLE_MAX, now + WRAITH_TURTLE_MIN)))
+            return True
+        if max(h[1] for h in hist) - left >= WRAITH_TURTLE_HURT:
+            s.wraith_turtle = (now, now + WRAITH_TURTLE_MIN)
+            hist[:] = [hist[-1]]                          # (the next turtle takes a fresh WRAITH_TURTLE_HURT)
+            return True
+        return False
+
+    def reach_wraith_fight(s, now, me, v, tid, b, d, act):
+        """(custom, Nov 24, the owner: "Yes, match Bungie") Reach's Wraith driver as the campaign's (HREK
+        ai\\generic.character, wraith): it fights from a stop (stationary fight) in the mortar's normal combat range
+        WRAITH_RANGE, drives at him from farther, charges a man or vehicle inside WRAITH_CHARGE_D at where he will be in
+        WRAITH_CHARGE_LEAD s (given up past WRAITH_CHARGE_ABORT, on a miss inside WRAITH_TIGHT_D, or after
+        WRAITH_CHARGE_MAX_S; no new one for WRAITH_CHARGE_EVERY s), and turtles when hurt (reach_wraith_turtle). Its view
+        stays the mortar's aim (drive) but on a charge."""
+        hi = WRAITH_RANGE[1]      # (its low end: the charge's, WRAITH_CHARGE_D)
+        turtle = s.reach_wraith_turtle(now, v)
+        c = getattr(s, "wraith_charge", None)
+        to = math.atan2(b.pos.y - me.pos.y, b.pos.x - me.pos.x)
+        if c is not None:
+            missed = d < WRAITH_TIGHT_D and abs(wrap(to - s.heading(me, v))) > WRAITH_TIGHT_ANGLE
+            if c[0] != tid or d > WRAITH_CHARGE_ABORT or now - c[1] > WRAITH_CHARGE_MAX_S or turtle or missed:
+                s.wraith_charge, c = None, None
+                s.wraith_charge_next = now + WRAITH_CHARGE_EVERY
+        if c is None and not turtle and d < WRAITH_CHARGE_D and now >= getattr(s, "wraith_charge_next", 0.0):
+            s.wraith_charge = c = (tid, now)
+        if c is not None:
+            lead = b.pos + b.vel * WRAITH_CHARGE_LEAD
+            act.yaw = math.atan2(lead.y - me.pos.y, lead.x - me.pos.x)
+            act.forward, act.strafe = 1.0, 0.0
+            s.att = ["charge", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
+            s.note("vehicle: Wraith charging him")
+        elif turtle:
+            act.forward = act.strafe = 0.0
+            s.note("vehicle: Wraith hurt, turtling")
+        else:
+            act.forward, act.strafe = (1.0 if d > hi else 0.0), 0.0   # (stationary fight: in range, or closer, it stops)
+
     def ram_ok(s, me, v, st, snap, foe, b):
         """Run this target down (guide 17 §4.3)? A ground vehicle that rams (STRATEGY splatter), the target within 18 u: a
         man on foot with nothing that kills vehicles or, from Halo 2 on, a light vehicle ours kills head on
@@ -6881,6 +6948,8 @@ class Bot:
                 act.forward, act.strafe = 1.0, 0.0
                 s.att = ["splatter", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
                 s.note("vehicle: a boarder close in, running him down")
+            elif st["role"] == "artillery" and kind == "wraith" and s.game == "reach":
+                s.reach_wraith_fight(now, me, v, tid, b, d, act)   # (custom, Nov 24: Bungie's campaign Wraith)
             elif st["role"] == "artillery":
                 # holds its range and keeps moving side on between shots; a man close enough to board it is backed
                 # away from (research: Wraith and Scorpion are boarded from the flanks; the mortar faces its target)
@@ -6933,6 +7002,8 @@ class Bot:
                     act.fire = aligned or (armed and dist(me.pos, b.pos) < 15)
                 if st["role"] == "artillery" and s.att and s.att[0] == "splatter":
                     act.fire = False        # (custom, Nov 20: running a boarder down, no shell at point blank)
+                if kind == "wraith" and s.game == "reach" and d < WRAITH_MIN_FIRE:
+                    act.fire = False        # (custom, Nov 24: the campaign mortar's minimum firing range)
             if kind == "mantis":
                 s.mantis_weapons(now, me, v, snap, tid, b, aim_at, act)
         elif seen and not (v is not None and vehicles.is_warthog(v["kind"])):

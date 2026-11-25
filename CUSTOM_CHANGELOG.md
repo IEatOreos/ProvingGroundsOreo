@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Reach's Wraith driven like the campaign's, 2026-11-24
+
+The owner: "Can you delve into the campaign files and see how the ai drive wraiths?", then "Yes, match Bungie". His picks: every tier but Easy, Reach only, turtling = stop and keep firing, our mortar's rate of fire kept.
+
+- **Where Bungie's numbers are (read only):** HREK's `tags\ai\generic.character` ("vehicle properties", wraith: stationary fight (tanks), the charge, turtling), its `wraith_mortar` weapon row (normal combat range 8-16 u, 4-50 u), `objects\vehicles\covenant\wraith\ai\wraith.style` (the behaviours it may run) and `wraith.vehicle`, exported with `tool.exe export-tag-to-xml`. The campaign scripts (`data\levels\solo\*\scripts`) only point its mortar (`cs_shoot_point`) and send it to places; the engine's AI drives.
+- **`Bot.reach_wraith_fight` (Reach's Wraith at the wheel, Normal and up):**
+  - **Fights from a stop** from 8 to 16 u, and closer between charges; drives in from farther. It had held 15-40 u, strafing all the while, and backed off anyone within 6 u.
+  - **Charges** a man or vehicle inside 8 u at where he will be in 1.25 s; given up past 10 u, on a miss (him more than 0.25 rad off its nose inside 3 u) or after 6 s (ours); the next one 10 s after.
+  - **Turtles** (`reach_wraith_turtle`): its body down 20% within 3 s (the window is ours; the tag gives none), it holds still and keeps firing for 5 s, a fresh hit keeping it on up to 10 s. Read from the snapshot's `left`.
+  - **No mortar inside 4 u**, the campaign mortar's minimum firing range.
+  - Kept: the run down of a boarder on foot within 6 u (Nov 20), our aim and rate of fire.
+- **Not ported:** Bungie's steering numbers (max steering angle 9, delta 1.8), its sidestep and its cover: they drive the engine's own controller (our bots steer by the view), and its cover's damage thresholds are 9999 (off).
+- **Unchanged:** other games' Wraiths and the Scorpion keep the artillery driving; Easy drives its trip.
+- **Checks:** new `tools/test_reach_wraith.py` (6 tests). Full suite: 1718 tests OK. **Untested in game.**
+
 ### Each gun's own ready time after a drop (the rocket launcher's), 2026-11-24
 
 The owner: "I also did it once with the rocket im not sure if you grabbed it but I wasnt sure if all weapons had a different ready time".
