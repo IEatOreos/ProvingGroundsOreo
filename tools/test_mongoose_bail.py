@@ -90,5 +90,51 @@ class MongooseBailTests(unittest.TestCase):
         self.assertNotIn(NOTE.format("shot"), b.notes)
 
 
+class MongooseBoardTests(unittest.TestCase):
+    """(custom, Nov 25, the owner: "Also stop bots boarding a Mongoose while an enemy is on radar?" "Yes, add that")
+    Bot.goose_off_limits, set each decide; veh_banned honours it for that tick; the walk to one is given up."""
+
+    def on_foot(self, enemy_x, kind="mongoose", **kw):
+        b, me, snap, enemy = ride(kind=kind, **kw)
+        me.vehicle = -1
+        snap.vehicles[0]["occupied"], snap.vehicles[0]["riders"] = False, 0
+        spot(b, enemy, enemy_x)
+        return b, me, snap
+
+    def test_no_mongoose_with_an_enemy_on_radar(self):
+        b, me, snap = self.on_foot(4.0)
+        self.assertTrue(b.goose_off_limits(100.0, me, snap))
+        self.assertTrue(b.veh_banned(snap.vehicles[0], 100.0))
+        self.assertFalse(b.veh_banned(snap.vehicles[0], 100.5))          # (only the tick it was read)
+
+    def test_free_when_he_is_far_or_it_is_another_kind_or_exempt(self):
+        b, me, snap = self.on_foot(MONGOOSE_RADAR_R + 1.0)
+        self.assertFalse(b.goose_off_limits(100.0, me, snap))
+        b, me, snap = self.on_foot(4.0, kind="warthog")
+        b.goose_off_limits(100.0, me, snap)
+        self.assertFalse(b.veh_banned(snap.vehicles[0], 100.0))
+        b, me, snap = self.on_foot(4.0, mode="race")
+        self.assertFalse(b.goose_off_limits(100.0, me, snap))
+        b, me, snap = self.on_foot(4.0)
+        me.has_flag = True
+        self.assertFalse(b.goose_off_limits(100.0, me, snap))
+
+    def test_the_walk_to_one_is_given_up(self):
+        b, me, snap = self.on_foot(9.0)
+        me.pos = Vec(5, 0, 0)                     # (him 4 u off)
+        b.goal, b.next_decide, b.vehicle_until = ("vehicle", 10), 999.0, 110.0
+        b.plan(100.0, 1 / 30, snap, lambda a, c: True, lambda a, c: c, [])
+        self.assertIn("mongoose: an enemy on radar, not getting on", b.notes)
+        self.assertEqual((b.next_decide, b.vehicle_until), (100.0, 100.0))
+
+    def test_a_wheelman_does_not_pick_one(self):
+        from brain import profiles
+        for x, picked in ((4.0, False), (MONGOOSE_RADAR_R + 1.0, True)):
+            b, me, snap = self.on_foot(x)
+            b.p = profiles.make_profile("average", "wheelman", __import__("random").Random(1))
+            b.goose_off_limits(100.0, me, snap)
+            self.assertEqual(b.wheel_pick(100.0, me, snap) is not None, picked, x)
+
+
 if __name__ == "__main__":
     unittest.main()

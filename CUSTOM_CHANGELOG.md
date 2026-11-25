@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### No getting onto a Mongoose with an enemy on radar, 2026-11-25
+
+The owner, to "Also stop bots boarding a Mongoose while an enemy is on radar?": "Yes, add that".
+
+- **`Bot.goose_off_limits`**, read at the start of every `decide`: an enemy it knows of within 25 m (8.2 u: `mongoose_radar`, the same test the dismount uses) and not exempt (`mongoose_exempt`: the objective in hand, a race). That tick `veh_banned` bans every Mongoose, so no path picks one: the director's ride / board / drive orders, a committed walk, a River errand, a Wheelman's pick, a trip's pick.
+- **On its way to one** (`Bot.plan`, the vehicle walk): with an enemy on radar it stops, thinks again ("mongoose: an enemy on radar, not getting on"), and walks for 20 s before choosing a vehicle again (the walk given up, as before).
+- **Checks:** `tools/test_mongoose_bail.py` 7 -> 11 tests. Full suite: 1777 tests, the 2 `test_layout_lifts.py` failures as before. **Untested in game.**
+
 ### Off a Mongoose when shot or with an enemy on radar, 2026-11-25
 
 The owner: "We need a good rule for mongoose drivers dismounting while getting shot. Too many bots die while driving or riding on them. They dont do much. Maybe a rule like THey drive until an enemy is on radar, or as soon as they get shot and dismount?" His picks: hit or radar, driver and passenger, every tier and game; a flag or objective carrier and racers ride on.

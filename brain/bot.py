@@ -4047,6 +4047,11 @@ class Bot:
                      and (s.order.target == arg or (profiles.wheelman(s.p) and s.p.tier != "novice"))
                      and vehicles.wheel_open(v, snap))
             # (custom, Nov 13: not the wheel of a Warthog a Wheelman of ours is on his way to: wheel_yield)
+            if v and vehicles.kind_of(v["kind"]) == "mongoose" and s.goose_off_limits(now, me, snap):
+                # (custom, Nov 25, the owner) on its way to a Mongoose, an enemy on radar: not getting on, think again
+                s.vehicle_until = now
+                s.note("mongoose: an enemy on radar, not getting on")
+                v = None
             if v and s.dud_check(now, dt, me, v) and (not v["occupied"] or wheel
                                                       or (want != "driver" and v.get("team") == me.team)) \
                     and not (want == "driver" and s.wheel_yield(v)):
@@ -5330,6 +5335,7 @@ class Bot:
     def decide(s, now, me, snap):
         seen = s.per.visible_enemies()
         scores = {}
+        s.goose_off_limits(now, me, snap)     # (custom, Nov 25: no Mongoose with an enemy on radar, veh_banned)
         if s.goal[0] == "fight" and isinstance(s.goal[1], int):
             s.commit_carry = s.goal[1]          # the man it fights, carried through a hunt or a retreat (carried_target)
         post = getattr(s, "posture", 0.5)     # the team's score posture (director, brain/match.py)
@@ -6359,11 +6365,22 @@ class Bot:
         got on: Perception.hurt_by's hurt_at), "an enemy on radar" (an enemy it knows of within MONGOOSE_RADAR_R flat, in
         view or a tracker dot no older than MONGOOSE_BAIL_FRESH); None: ride on. Never with the objective (a flag, the
         ball, Invasion's core) or in a race."""
-        if snap.mode == "race" or me.has_flag or getattr(snap, "inv_core_carrier", None) == me.id:
+        if s.mongoose_exempt(me, snap):
             return None
         hurt = getattr(s.per, "hurt_at", None)
         if hurt is not None and hurt >= getattr(s, "seat_since", now) and now - hurt <= MONGOOSE_BAIL_FRESH:
             return "shot"
+        return "an enemy on radar" if s.mongoose_radar(now, me, snap) else None
+
+    @staticmethod
+    def mongoose_exempt(me, snap):
+        """(custom, Nov 25) Rides a Mongoose whatever is near: the objective in hand (a flag, the ball, Invasion's core) or
+        a race."""
+        return snap.mode == "race" or me.has_flag or getattr(snap, "inv_core_carrier", None) == me.id
+
+    def mongoose_radar(s, now, me, snap):
+        """(custom, Nov 25) An enemy this bot knows of, in view or a tracker dot no older than MONGOOSE_BAIL_FRESH, within
+        MONGOOSE_RADAR_R (flat) of it."""
         for k, b in s.per.beliefs.items():
             if not isinstance(k, int) or b.source not in ("eyes", "radar") or now - b.t > MONGOOSE_BAIL_FRESH:
                 continue
@@ -6371,8 +6388,15 @@ class Bot:
             if p is None or not p.alive or p.team == me.team:
                 continue
             if (b.pos - me.pos).flat() < MONGOOSE_RADAR_R:
-                return "an enemy on radar"
-        return None
+                return True
+        return False
+
+    def goose_off_limits(s, now, me, snap):
+        """(custom, Nov 25, the owner: "Also stop bots boarding a Mongoose while an enemy is on radar?" "Yes, add that")
+        No Mongoose to get onto now (mongoose_radar, not mongoose_exempt); kept for veh_banned this tick (goose_radar)."""
+        off = not s.mongoose_exempt(me, snap) and s.mongoose_radar(now, me, snap)
+        s.goose_radar = (now, off)
+        return off
 
     def scorpion_sees_feet(s, me, foe, cam):
         """(custom, Nov 24) A shell's line from a Scorpion's camera (cam u over it) to a man's feet (Bot.feet, 0.05 u up:
@@ -9143,6 +9167,9 @@ class Bot:
         Nov 12) Once it has moved (a person drove or flew it off) the ban is gone: live Forge World 20261112-200003, a
         Blind bot gave up on a parked Falcon at 576 s, the owner took off in it at 583 s, and the bot ignored the call
         onto its gun 584-604 s, the Falcon set down 11 u away."""
+        goose = getattr(s, "goose_radar", None)
+        if goose is not None and goose[0] == now and goose[1] and vehicles.kind_of(v["kind"]) == "mongoose":
+            return True       # (custom, Nov 25) an enemy on radar: no Mongoose now (goose_off_limits, set in decide)
         park = getattr(s, "parked_ban", {}).get(v["handle"])
         if (park is not None and park[0] > now and dist(Vec(*v["pos"]), park[1]) < s.VEH_BAN_MOVED
                 and v.get("riders", 0) <= park[2]):
