@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### A bot's first round after dropping the bomb comes when the gun is ready, 2026-11-24
+
+The owner: "So in the last match around the 5-minute mark, I previewed how fast you can shoot after you drop the bomb. I did it 3 different times. Record it and apply it to the bots."
+
+- **His measure** (Condemned Neutral Bomb, `20261124-185819`, his data collector): three drops at 418, 422 and 428 s on the brain's clock, about seven minutes in. His DMR was in hand the tick each drop was read, and its first round left (the magazine read one less) **0.57, 0.71 and 0.57 s** after the drop.
+- **The bots in that match:** of their drops to fight that fired, the first round came 0.67–2.69 s after, about 1.05 s typically.
+  - Some pressed 0.07–0.1 s after the drop: the press was lost to the gun not being ready, its fire gap charged, and the first round still came about 1 s in.
+  - Others pressed only 0.9–2.7 s after.
+- **Fix (`brain/bot.py` `drop_ready_wait`, `DROP_READY_S` 0.57, `DROP_RETRY_S` 0.5; `flag_fight_phase` notes the drop):**
+  - Until 0.57 s after a drop to fight, the trigger stays up and the bot's aim stays on the man.
+  - At 0.57 s, the press on that very tick, then the press-and-release retry the grenade throws use (`retry_after_grenade`) until the magazine shows the round, without a lost press charging the fire gap.
+  - This covers every drop to fight: One Bomb and Neutral Bomb, and CTF and Stockpile flags. A flag's drop is the same game action; only the bomb's was measured.
+- **Checks:** new `tools/test_drop_ready.py` (4: no press before the gun is ready; the press at the ready tick, then a release and a fresh press; dead or carrying again, no wait; his measure). `unittest discover` over `tools` is OK on both Pythons, and so is the `live_bots` import. **Untested in a match.**
+
 ### The privacy scan's own notes no longer name this PC's user, 2026-11-24
 
 - The 1.0 build's privacy scan stopped on `tools/privacy.py`: its explanation of the whole-word rule used this PC's user name as the example (copied from `tools/build_installer.py`, where the same example was already public). Both now say it in general terms, so no shipped file and no new commit carries the name.

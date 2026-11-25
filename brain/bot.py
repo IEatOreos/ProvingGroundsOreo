@@ -360,6 +360,11 @@ FLAG_FIGHT_KNOWN_S = 1.5           # s: a man known this lately (seen, a dot, a 
 FLAG_FIGHT_TAP = 0.3               # s: the weapon switch held (a press); again at FLAG_FIGHT_RETAP if still carrying
 FLAG_FIGHT_RETAP = 0.8
 FLAG_FIGHT_DROP_S = 1.5            # s: still carrying after this, the drop failed: it carries on
+# (custom, Nov 24) the owner's own drops of the bomb to fight, Condemned Neutral Bomb 20261124-185819 at 418, 422 and
+# 428 s: his DMR's first round 0.57, 0.71 and 0.57 s after the drop (the magazine read, the drop read, both each tick).
+# The bots' first press waits for it (Bot.drop_ready_wait), then presses and releases until the round shows for at most
+# DROP_RETRY_S
+DROP_READY_S, DROP_RETRY_S = 0.57, 0.5
 FLAG_FIGHT_HOLD = 8.0              # s: the longest fight before it goes back for the flag
 FLAG_FIGHT_LOST = 1.5              # s: the man unknown this long: back for the flag
 FLAG_FIGHT_SCORE = 3.3             # the fight on him: over carrying (3.0), regroup (3.0), a committed fight (2.6-2.9)
@@ -3630,6 +3635,29 @@ class Bot:
         i = me.weapons.index(me.weapon)
         return me.mag[i] if i < len(me.mag) else -1
 
+    def drop_ready_wait(s, now, me, act):
+        """(custom, Nov 24, the owner: "I previewed how fast you can shoot after you drop the bomb. I did it 3 different
+        times. Record it and apply it to the bots") After a drop to fight (flag_fight_phase), the gun's first round:
+        until DROP_READY_S after the drop the trigger stays up (a press then is lost, and its fire gap charged: the bots'
+        first round came 0.67-2.69 s after their drops, about 1.05 s typically, live Condemned Neutral Bomb
+        20261124-185819) and the aim stays on the man; at it, the press on that very tick, then the press-and-release
+        retry (retry_after_grenade) until the magazine shows the round gone. True while it waits."""
+        ready = getattr(s, "drop_ready", None)
+        if ready is None:
+            return False
+        if not me.alive or me.has_flag or me.vehicle not in (None, -1) or me.weapon in CHARGE or me.weapon in LUNGE:
+            s.drop_ready = None
+            return False
+        if now < ready:
+            act.fire = s.shot_now = False
+            s.next_fire = ready
+            s.note(f"bomb dropped: first round in {ready - now:.2f} s")
+            return True
+        s.drop_ready = None
+        s.nade_retry = dict(until=now + DROP_RETRY_S, weapon=me.weapon, mag=s.current_mag(me), pressed=False,
+                            attempted=False)
+        return False
+
     def retry_after_grenade(s, now, me, on, act, distance):
         """True while this function handles an ordinary weapon after a grenade request.
         Known magazines acknowledge a shot; unknown magazines use bounded retries.
@@ -4577,6 +4605,7 @@ class Bot:
         elif ff["dropped"] is None:
             if not me.has_flag:
                 ff["dropped"] = now
+                s.drop_ready = now + DROP_READY_S   # (custom, Nov 24: the gun's first round, drop_ready_wait)
             elif now - ff["t0"] <= FLAG_FIGHT_DROP_S:
                 return "drop"
         if me.alive and ff["dropped"] is not None and not me.has_flag:
@@ -8576,7 +8605,9 @@ class Bot:
         if getattr(s, "charge_w", None) != w:
             s.charge_since = None      # a charge belongs to the gun that started it (a switch drops it)
         retry_on = on and seen_fire and clear and not blocked
-        if s.retry_after_grenade(now, me, retry_on, act, d):
+        if s.drop_ready_wait(now, me, act):
+            pass                       # (custom, Nov 24: the bomb just dropped, the gun not ready: the press waits)
+        elif s.retry_after_grenade(now, me, retry_on, act, d):
             hold = bool(act.fire and w in AUTO)
         elif w in CHARGE:
             how = ("release", 0.05) if trade else CHARGE[w]      # a trade is a tap: one bomb now
