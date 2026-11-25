@@ -228,6 +228,21 @@ def fixed_demon(prof):
     return prof.tier == DEMON and prof.extra is None
 
 
+# (custom, Nov 24, the owner: Banshees "dont get mutilated at once, but also theyre not flying freely") the kills an enemy
+# Banshee or Falcon makes on a bot's team before that bot, on foot, shoots at its crew (Bot.air_held). Demon, Mythic and
+# Noble at once; Blind and Tactician as Heroic ("Blind can be heroic level for this"). Scaling: at once, as before
+AIR_HOLD_KILLS = {"top": 1, "strong": 2, "average": 3, "novice": 5}
+AIR_HOLD_HEROIC = 2
+
+
+def air_hold_kills(prof):
+    if prof.extra is not None or fixed_demon(prof) or fixed_mythic(prof):
+        return 0
+    if fixed_blind(prof) or fixed_tactician(prof):
+        return AIR_HOLD_HEROIC
+    return AIR_HOLD_KILLS.get(prof.tier, 0)
+
+
 def high_ground(prof):
     """(custom, Nov 10, owner) Team Slayer's high-ground play (Bot.slayer_post, Director.slayer_slots): Legendary, Blind
     and Scaling (all tier "top") and Demon. Heroic and below keep the upstream play."""

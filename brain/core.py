@@ -102,6 +102,8 @@ class Snapshot:
     time_left: object = None   # seconds left in the match, None = no limit or not known
     vehicles: list = field(default_factory=list)   # [{handle, kind, pos, occupied}] (live game)
     honks: list = field(default_factory=list)      # vehicle handles a teammate honked from (director.honk_orders)
+    # (custom, Nov 24) live only: {aircraft handle: {victim's team: kills}} (tools/air_kills.py); None: no hold (Bot.air_held)
+    air_kills: object = None
     honk_at: dict = field(default_factory=dict)    # vehicle handle -> the bot the person's horn picked (None: nearest)
     ground_weapons: list = field(default_factory=list)   # [(name, Vec)] lying on the map (live game)
     hill: object = None        # King of the Hill: the active hill's centre (Vec) and its radius

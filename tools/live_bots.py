@@ -24,6 +24,7 @@ from brain.tracefmt import (Everyone, blitz_rows, call_lines, crosshair, meta_li
                             think_line)
 from brain.maps import get_map, terrain as map_terrain, save_learned, grow as map_grow, swap as map_swap, set_mode  # noqa: E402
 from brain.bot import Bot  # noqa: E402
+import air_kills  # noqa: E402  (custom, Nov 24: the aircraft hold fire's kill count)
 from brain import bot as botmod  # noqa: E402
 from brain import vehicles as V  # noqa: E402
 from brain.director import Director  # noqa: E402
@@ -760,9 +761,18 @@ def flag_events(directors, before, snap, now):
             d.report(now, -1, "flag_returned", f.home)
 
 
-def events(bots, directors, before, snap, now):
+def air_table(air, snap, teams):
+    """(custom, Nov 24, the owner) The aircraft kills the bots get (snap.air_kills, Bot.air_held): air's table after the
+    destroyed and gone aircraft are dropped; None in free for all (each man his own team: no team's count to wait on)."""
+    air.prune(snap)
+    return air.table() if teams else None
+
+
+def events(bots, directors, before, snap, now, air=None, record=False):
     """Game events the sim reports itself: who cracked whom, who died and where the killer is.
-    Live we do not see the shooter, so we credit the bot that was fighting that player."""
+    Live we do not see the shooter, so we credit the bot that was fighting that player.
+    (custom, Nov 24) air: the aircraft kill count (tools/air_kills.py), fed from these guesses only while the game's kill
+    record is not (record False)."""
     for index, b in bots.items():
         me, was = snap.player(index), before.get(index)
         if not me or not was:
@@ -776,6 +786,8 @@ def events(bots, directors, before, snap, now):
             k = snap.player(killer) if isinstance(killer, int) else None
             if d and k:
                 d.report(now, index, "died", k.pos, enemy=killer, killer_weak=k.shield <= 0, died_at=was.pos)
+            if air is not None and not record and k:
+                air.add(killer, me.team, snap, before)      # (custom, Nov 24: no kill record: the guess counts)
             b.on_death(killer)
         elif me.alive and b.goal[0] == "fight" and d:
             e, e_was = snap.player(b.goal[1]), before.get(b.goal[1])
@@ -1315,11 +1327,15 @@ def main():
     # (custom, Nov 15) every kill as the game itself keeps it, into the recording: who the game credits, with what,
     # where both stood (tools/kill_record.py; Reach's fields: brain/live.py LiveReach.kill_watch). For the Service
     # Record's Weapons, Enemies and Heatmaps pages; the first line says this recording has them
+    # (custom, Nov 24, the owner) every Reach match, recorded or not: the aircraft hold fire counts its kills from it
+    # (tools/air_kills.py); the recording gets its rows only when there is one
     kills, kill_fails = None, 0
-    if trace and type(live).__name__ == "LiveReach":
+    air = air_kills.AirKills()
+    if type(live).__name__ == "LiveReach":
         import kill_record
         kills = kill_record.Watch(live)
-        trace.write(json.dumps(dict(t=0.0, kill_record=kill_record.VERSION)) + chr(10))
+        if trace:
+            trace.write(json.dumps(dict(t=0.0, kill_record=kill_record.VERSION)) + chr(10))
     # (custom, Nov 19) the layout's map memory (brain/lore.py, read by Legendary and up): this match's kills and
     # respawns go in, once per match stamp (tools/lore_seed.py files old recordings by the same stamps)
     from brain import lore as map_lore
@@ -1563,6 +1579,7 @@ def main():
                 # (custom, Nov 21) when the game was read (the read's middle): Noble leads a man by the snapshot's real
                 # age when its action goes out (Bot.noble_lead_s)
                 snap.read_wall = (read_t0 + time.time()) / 2
+                snap.air_kills = air_table(air, snap, TEAMS)   # (custom, Nov 24: the bots' aircraft hold fire)
                 # the game paused (the pause menu: the player's bug notes held matches still 15-35 s): botcore's tick
                 # count (its per-tick game hook) stands still. The brain's clock stops with it, so nothing reads as
                 # stuck or waited out (the critic flagged bots "pushed into something" all through his pauses)
@@ -1788,10 +1805,13 @@ def main():
                 if kills is not None:                # (custom, Nov 15) who died this pass, and to whom
                     try:
                         for row in kills.tick(snap):
-                            trace.write(json.dumps(dict(t=round(now, 3), kill=row)) + chr(10))
+                            if trace:
+                                trace.write(json.dumps(dict(t=round(now, 3), kill=row)) + chr(10))
+                            air.row(row, snap, TEAMS, before)   # (custom, Nov 24: aircraft kills, people's too)
                             # (custom, Nov 19: was named "said", the callout counter's name; a kill made it a
                             # tuple, the callout slice threw and the bots froze ~9 s into every match)
-                            rec = kill_record.read(row, TEAMS) if book_on else None
+                            # (custom, Nov 24: recorded matches only, as before the record ran in every match)
+                            rec = kill_record.read(row, TEAMS) if book_on and trace else None
                             if rec is not None and rec[0] == "kill" and row.get("kp") is not None:
                                 book.add_kill(row["vp"], row["kp"])     # (map memory: where each stood)
                         kill_fails = 0
@@ -1812,7 +1832,7 @@ def main():
                         elif p.id in respawned and now - respawned[p.id] >= 0.25:
                             del respawned[p.id]
                             book.add_spawn(snap.mode, (p.pos.x, p.pos.y, p.pos.z), p.team, now)
-                events(bots, directors, before, snap, now)
+                events(bots, directors, before, snap, now, air=air, record=kills is not None)
                 flag_events(directors, flag_before, snap, now)
                 flag_before = {t: f.state for t, f in snap.flags.items()}
                 before = {p.id: p for p in snap.players}

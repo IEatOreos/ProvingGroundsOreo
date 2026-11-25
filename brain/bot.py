@@ -986,6 +986,12 @@ TRAVEL_BOOST_HELD = {"ghost", "banshee"}
 # capture_20261115-184247; p10-p90 29.2-29.5), not the plasma rifle's 37 its lead was figured with
 REACH_GHOST_BOLT = 29.3
 AIR_GUN_R = 1.5       # u: an aircraft's guns fire with its nose this near his middle (Bot.air_pass)
+# (custom, Nov 24, the owner: Banshees "dont get mutilated at once, but also theyre not flying freely") a bot on foot holds
+# fire on the crew of an enemy aircraft of these kinds until it has killed profiles.air_hold_kills of the bot's team
+# (Bot.air_held; the kills: tools/air_kills.py, live only, snap.air_kills), or one of its crew hit the bot in the last
+# AIR_SELF_DEFENCE_S s ("Yes, in self-defence")
+AIR_HOLD_KINDS = {"banshee", "falcon"}
+AIR_SELF_DEFENCE_S = 3.0
 # (custom) Bot.air_pass under a low roof: a run's start height at most the room under it (air_ceiling) less AIR_ROOM_SPARE,
 # never under AIR_ROOM_MIN over the floor
 AIR_ROOM_SPARE, AIR_ROOM_MIN = 1.0, 4.0
@@ -2399,12 +2405,37 @@ class Bot:
             if not isinstance(k, int) or now - b.t > s.p.memory:
                 continue
             e = snap.player(k)
-            if e is None or not e.alive or e.vehicle == -1 or e.team == me.team:
+            if e is None or not e.alive or e.vehicle == -1 or e.team == me.team or s.air_held(now, me, snap, k):
                 continue
             d = dist(me.pos, b.pos)
             if best is None or d < best[0]:
                 best = (d, b.pos, k)
         return (best[1], best[2]) if best else None
+
+    def air_held(s, now, me, snap, k):
+        """(custom, Nov 24, the owner) Enemy k rides an enemy Banshee or Falcon (AIR_HOLD_KINDS) this bot, on foot, holds
+        fire on: it has killed fewer of our team than profiles.air_hold_kills (snap.air_kills, tools/air_kills.py; None in
+        the sims and tests: no hold), and none of its crew hit us in the last AIR_SELF_DEFENCE_S s."""
+        table = getattr(snap, "air_kills", None)
+        if not isinstance(table, dict) or me.vehicle not in (None, -1):
+            return False
+        need = profiles.air_hold_kills(s.p)
+        e = snap.player(k) if isinstance(k, int) else None
+        if need <= 0 or e is None or e.vehicle in (None, -1) or e.team == me.team:
+            return False
+        v = next((x for x in snap.vehicles if x.get("handle") == e.vehicle), None)
+        if v is None or vehicles.kind_of(v.get("kind")) not in AIR_HOLD_KINDS:
+            return False
+        a = snap.player(getattr(s.per, "attacker_id", None))
+        if (a is not None and a.vehicle == e.vehicle
+                and now - getattr(s.per, "attacker_t", -99.0) < AIR_SELF_DEFENCE_S):
+            return False                                   # (it is hitting us: we shoot back)
+        return table.get(e.vehicle, {}).get(me.team, 0) < need
+
+    def air_hold_scores(s, now, me, snap, scores):
+        """(custom, Nov 24) decide's last word: no fight goal on an aircraft's crew this bot holds fire on (air_held)."""
+        for key in [k for k in scores if k[0] == "fight" and s.air_held(now, me, snap, k[1])]:
+            del scores[key]
 
     def anti_vehicle_gun(s, me):
         """Does it hold a loaded gun that kills vehicles (ANTI_VEHICLE; unknown ammo counts as loaded)?"""
@@ -4096,7 +4127,8 @@ class Bot:
             s.unstuck(now, me, act, snap)
             return act
         patrol_target = None
-        patrol_seen = s.per.visible_enemies() if kind == "patrol" else []
+        patrol_seen = [k for k in s.per.visible_enemies() if not s.air_held(now, me, snap, k)] \
+            if kind == "patrol" else []                      # (custom, Nov 24: an aircraft's held crew left out)
         on_way = s.on_way_target(now, me, snap, kind, arg)   # (custom: a Demon's errand with a man in view, below)
         carry_shot = s.carrier_shot(now, me, snap, kind, arg) if on_way is None and kind != "fight" else None
         if kind == "fight" and s.easy_mover() and EASY_FIGHT_MOVING:
@@ -4961,6 +4993,9 @@ class Bot:
         4.5 and 4.8: a switch costs a re-acquire). the player's Settlement game: the threat bonuses
         swung past 25% every second in a 13-player lobby; Legendary bots switched twice as often as
         Easy ones, won 11% of their fights to Easy's 26% and their team finished last."""
+        seen = [k for k in seen if not s.air_held(now, me, snap, k)]   # (custom, Nov 24: an aircraft's crew held)
+        if not seen:
+            return None
         scored = {k: s.threat(now, me, snap, k) for k in seen}
         if profiles.fixed_noble(s.p):
             s.noble_focus_scores(now, me, snap, scored)   # (custom, Nov 22: joining or spreading, as it has learned)
@@ -5288,8 +5323,8 @@ class Bot:
         # walked to a hammer and a Warthog while the owner broke their shields)
         hit_recent = now - max(getattr(s, "hit_at", -9.0), getattr(s.per, "hurt_at", -9.0)) < 2.0
         avoid = False
-        if seen and not me.has_flag:
-            t = s.pick_target(now, me, snap, seen)
+        t = s.pick_target(now, me, snap, seen) if seen and not me.has_flag else None
+        if t is not None:                     # (custom, Nov 24: None when all in view are an aircraft's held crew)
             # an enemy in view outranks the director's orders (objective tops out at 1.4): a
             # human shoots the man in front of him. Before this fights lost to orders and lasted
             # 0.84 s median, 956 of 965 ending with the target alive (H2A Zenith)
@@ -5329,7 +5364,7 @@ class Bot:
                 # the commitment is to fighting, not to one man: when the threat ranking (pick_target,
                 # 25% stickiness built in) picked someone else in view, the commitment goes with it
                 # (the committed score pinned bots on their target while the player killed them)
-                keep = s.goal if not seen or me.has_flag or t == s.goal[1] else ("fight", t)
+                keep = s.goal if not seen or me.has_flag or t is None or t == s.goal[1] else ("fight", t)
                 scores[keep] = max(scores.get(keep, 0.0), 2.6 + 0.3 * s.p.aggression)
         # (custom, Nov 8: not at an aircraft's controls: from the air the men under it are tracker dots all the time, and
         # the hunt this rule scores, 3.2 for Demon, beat the fight, 1.78, mid-dive: live Blood Crash 20261108-152614, a
@@ -5618,6 +5653,7 @@ class Bot:
                 del scores[k]
         s.dry_fights(scores, me)
         s.plant_hold(now, me, snap, scores)     # (custom, Nov 18: the bomb within PLANT_HOLD_R of its goal: the plant only)
+        s.air_hold_scores(now, me, snap, scores)   # (custom, Nov 24: no fight on an aircraft's held crew)
         s.last_scores = scores
         s.last_flags = dict(post=round(post, 2), seen=len(seen), friends=friends, avoid=avoid, cracked=cracked,
                             recharge=now < getattr(s, "recharge_until", 0.0), hit=hit_recent)

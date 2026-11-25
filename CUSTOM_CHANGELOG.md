@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Bots hold fire on an enemy Banshee or Falcon until it has killed enough of their team, 2026-11-24
+
+The owner: "banshees dont get mutilated at once, but also theyre not flying freely". Demon, Mythic and Noble shoot its crew at once. The rest wait for the aircraft to kill their team: Legendary 1, Heroic 2, Normal 3, Easy 5. His answers: "Yes, in self-defence"; "Blind can be heroic level for this"; "Noble will be counted the same as a demon"; the count resets "When the banshee is destroyed"; "Add the Falcon"; "Only on foot"; people's deaths count ("Yes"); "Leave the sim alone", "That means no switch"; built "live only (B)". Design: `docs/AIRCRAFT_HOLD_FIRE_DESIGN.md`, plan: `docs/AIRCRAFT_HOLD_FIRE_PLAN.md`.
+
+- **Each difficulty's number (`brain/profiles.py` `air_hold_kills`):** Demon, Mythic, Noble 0; Legendary 1; Heroic, Tactician, Blind 2; Normal 3; Easy 5. Scaling 0: it plays as before (Scaling stays out of fixed-tier rules).
+- **The hold (`brain/bot.py` `Bot.air_held`, `air_hold_scores`; `AIR_HOLD_KINDS`, `AIR_SELF_DEFENCE_S` 3.0):** a bot on foot leaves everyone aboard an enemy Banshee or Falcon (its pilot, a Falcon's gunners) out of `pick_target`, patrol targets, its fight scores and the Grenadier's vehicle hunt (`enemy_vehicle`) while that aircraft has killed fewer of its team than its number. It keeps fighting everyone else. Within 3 s of a hit from anyone aboard, it shoots back. Bots in any seat keep today's anti-air rules. With no count (`Snapshot.air_kills` None: every sim and test), nothing changes.
+  - `decide`: `t` is None when everyone in view is held crew. The fight-commitment block then keeps its goal (and `air_hold_scores` drops it if held), never `("fight", None)`.
+- **The count (new `tools/air_kills.py` `AirKills`; `tools/live_bots.py`):** `{aircraft handle: {victim's team: kills}}`, handed to the bots each pass as `snap.air_kills` (`air_table`). None in free for all, where there is no team count to wait on.
+  - Reach: the game's own kill record (`kill_record.Watch`) now runs in every Reach match, recorded or not. It writes its rows to the recording only when there is one. Each row that reads as a kill (not a betrayal, suicide or after the match) by a man aboard a Banshee or Falcon counts, people's deaths too. The killer's seat comes from this pass, else the last one (a trade). A Falcon gunner already reads as riding the Falcon.
+  - With no kill record (other games, or the record switched off after read failures): a bot's death as `events()` credits it (bots only, a guess). Never both at once.
+  - An aircraft that reads destroyed or leaves the vehicle list is dropped: its count starts again at 0.
+  - The map memory (`book.add_kill`) still takes kills from recorded matches only, as before.
+- **Not changed:** `tools/real_sim.py`, `tools/banshee_sim.py` and their goals; pilots' flying; bots in vehicles.
+- **Checks:** new `tools/test_air_hold.py` (25 tests: each difficulty, Scaling, the counter, people's deaths, betrayals, trades, the reset, the hold, self-defence, in-vehicle bots, `pick_target`, `decide` with only held crew in view, the fallback, free for all). `unittest discover` over `tools`: 1748 OK. Import check of `brain/` and `tools/live_bots.py`; `kill_record.py` self-check OK. **Untested in game.**
+
 ### No learned shoot-through holes in solid walls (Boneyard), 2026-11-24
 
 The owner's bug report `20261124-194946` (Boneyard, t 157): "Bots are trying to shoot through boneyards walls"; asked, "Fired rounds into it"; then "As long as it only blocks small holes and not the larger holes in railing and stuff".
