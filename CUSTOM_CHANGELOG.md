@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### FFA: no more "never start a fight", 2026-11-25
+The owner, after Sweeepin (a Noble) went 4-10 in his Launch Station FFA (trace_reach_45_launch_station_20261124-221103: the trigger pressed on 108 of about 7,000 ticks, 13% of its time in fights): "Dont start a fight is a mechanic? Remove that entirely".
+- **`brain/bot.py`:** with three teams or more (FFA), every tier: no hunt caution (a hunt was cut by up to 60% with no teammate or in a crowd, guide 07's "never by a solo chase" and "the third party wins it"); Demon, Mythic and Noble: no "odds: not taking him on" (a fight in view dropped under ODDS_ENGAGE) and no "a hunt into a group: dropped" (1,368 times in that 5-minute match). Team games keep all three as they were, the solo-chase caution too. Their other odds rules (breaking off a losing fight, recharging) are unchanged.
+- **Validation:** full suite 1777, the same 2 `test_layout_lifts.py` failures as before (they fail without it). No new unit test. **Untested in game.**
+
 ### No getting onto a Mongoose with an enemy on radar, 2026-11-25
 
 The owner, to "Also stop bots boarding a Mongoose while an enemy is on radar?": "Yes, add that".

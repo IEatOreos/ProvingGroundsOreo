@@ -5521,7 +5521,10 @@ class Bot:
             # man, or with a mate against one team; otherwise it holds and lets them come (the player's
             # Settlement game, four teams: 82% of Legendary deaths came mid-hunt, Easy's 16%)
             crowd = len({p.team for p in snap.players if p.team != me.team}) >= 2
-            cautious = 1.0 - 0.6 * s.p.tactics if (friends == 0 or crowd) and not b.weak else 1.0
+            # (custom, Nov 25, the owner on FFA's "never start a fight": "Remove that entirely") three teams or more,
+            # no caution: it hunts as in a team game with a mate (Sweeepin, a Noble, live Launch Station FFA
+            # 20261124-221103: 13% of its time in fights, 4 kills in 237 s alive)
+            cautious = 1.0 - 0.6 * s.p.tactics if friends == 0 and not crowd and not b.weak else 1.0
             want = (0.3 + 0.6 * s.p.aggression + (0.35 if b.weak else 0.0)) * (0.4 + 1.2 * post) * cautious
             if me.weapon in SNIPERS and s.p.tactics > 0.15 and dist(me.pos, b.pos) < 25.0:
                 # gun sense: a sniper holds its lane and lets him show, it does not walk round the corner into him
@@ -10826,6 +10829,10 @@ class Bot:
                     s.note(f"odds {o:.2f}: losing this one, break off")
                     return
         s.repeek_rule(now, me, snap, scores)
+        # (custom, Nov 25, the owner: "Remove that entirely") three teams or more (FFA): no "not taking him on" and no
+        # "a hunt into a group: dropped", the two odds rules that kept it from starting a fight (Sweeepin, live Launch
+        # Station FFA: hunts dropped 1,368 times in a 5-minute match)
+        ffa = len({p.team for p in snap.players if p.team != me.team}) >= 2
         for key in [k for k in scores if k[0] == "fight" and k[1] in seen]:
             k = key[1]
             e = snap.player(k)
@@ -10834,7 +10841,7 @@ class Bot:
                 continue
             if s.goal == ("fight", k) and now - getattr(s, "target_at", -9.0) > 0.0 and o >= ODDS_BREAK:
                 continue                              # (in this fight already, not losing: finish it)
-            if o < ODDS_ENGAGE and not (slayer and s.trades([t for _, t in th])):
+            if o < ODDS_ENGAGE and not (slayer and s.trades([t for _, t in th])) and not ffa:
                 del scores[key]
                 cover = s.cover_from(me, threats) if threats else None
                 if cover is not None and dist(me.pos, cover) <= ODDS_HIDE_R:
@@ -10846,7 +10853,7 @@ class Bot:
             if len(group) >= 2:
                 there = dataclasses.replace(me, pos=key[1])     # (the fight is where the hunt goes)
                 th2 = [t for j in group for _, t in s.odds_threats(now, there, snap, [], only=j, all_aware=True)]
-                if odds_model.simulate(th2) < ODDS_BREAK and not (slayer and s.trades(th2)):
+                if odds_model.simulate(th2) < ODDS_BREAK and not (slayer and s.trades(th2)) and not ffa:
                     del scores[key]
                     s.note("a hunt into a group: dropped")
         s.team_play(now, me, snap, scores, seen)          # (custom, Nov 8: trades, callouts, third party)
