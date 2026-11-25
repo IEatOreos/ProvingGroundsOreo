@@ -569,6 +569,34 @@ GUN_HEIGHT = {"warthog_chaingun": 0.92, "falcon_side_gun": 0.38}
 # objects\vehicles\human\falcon\turrets\falcon_side_gun_left\falcon_side_gun_left.vehicle, its gunner seat's pitch range
 # -60..25), and the margin inside it its pilot keeps the man in (Bot.falcon_gun_height)
 FALCON_GUN_PITCH, FALCON_GUN_MARGIN = (-60.0, 25.0), 5.0
+# (custom, Nov 25, the owner: "The falcon gunner never hits a shot") where a Reach Falcon side gun sits on it (forward,
+# left; u, the left one's: HREK falcon.render_model marker falcon_side_gun_left on b_hull, -0.34 0.50 over its origin):
+# the game reads its gunner at the Falcon's middle, so he aimed from there and the stream went by the man about 0.3 u
+# to his side (Breakpoint 20261123 / 20261125: hurt after 9% of 3,509 firing ticks). The gun's camera rides on the gun
+# (its seat's unit camera, marker "camera")
+FALCON_GUN_MOUNT = (-0.34, 0.50)
+# its round, falcon_machinegun_bullet.projectile: 100 u/s, no drop (it was led as the assault rifle's 324 u/s); the
+# farthest it is fired (u: its 0.5-1 deg spread is wider than a man past this, 0.28 deg at 30 u; a third of its firing
+# ticks were past 30 u), and the pilot's range for it (the campaign AI's "normal combat range" 4-12 u; was 8-18)
+FALCON_GUN_SPEED, FALCON_GUN_MAX_FIRE, FALCON_GUN_RANGE = 100.0, 30.0, (8.0, 12.0)
+# its bursts, as the campaign AI fires it (generic.character firing pattern falcon_machinegun: 1.5-2 s on, 0.75-1.25 s
+# off; s): never long enough to overheat it (0.03665 heat a round at 12 a second)
+FALCON_GUN_BURST, FALCON_GUN_REST = (1.5, 2.0), (0.75, 1.25)
+
+
+def falcon_gun_origin(v, turret, mount=None):
+    """(custom, Nov 25) Where a Reach Falcon side gun's shot leaves, in the world: its mount on the Falcon (the gun
+    object's own parent-relative place, read live like the Warthog's chaingun, else FALCON_GUN_MOUNT on its side) at the
+    gun's height (GUN_HEIGHT falcon_side_gun). None without the Falcon's facing."""
+    frame = frame_of(v)
+    if frame is None or "falcon_side_gun" not in (turret or ""):
+        return None
+    side = -1.0 if "right" in turret else 1.0
+    fw, lf = FALCON_GUN_MOUNT[0], FALCON_GUN_MOUNT[1] * side
+    if (mount is not None and len(mount) == 3 and all(math.isfinite(c) for c in mount)
+            and math.hypot(*mount[:2]) <= 1.5 and abs(mount[2]) <= 1.5 and mount[1] * side > 0.1):
+        fw, lf = mount[0], mount[1]            # (a world position or the other side's read: the model's)
+    return frame[1](fw, lf, GUN_HEIGHT["falcon_side_gun"])
 # ... and along the vehicle's forward axis (u, + ahead): Reach's Warthog carries its chaingun on its "turret" marker,
 # 0.536 u behind its origin, on its centre line (logs/tmp/reach_guns/warthog.obj.markers.json, model2obj on
 # 35_island.map). Aimed from the origin, a man 10 u off to its side was missed by 3 deg, 6 at 5 u: to the right of one

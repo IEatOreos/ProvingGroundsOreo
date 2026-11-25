@@ -2039,14 +2039,14 @@ class Aim:
         k = min(1.0 - math.exp(-max(dt, 1e-3) / NOBLE_EASE_S), s.p.turn * max(dt, 1e-3) / off)
         return me.yaw + dy * k, me.pitch + dp * k
 
-    def lock(s, me, target_id, point, tvel, origin=None, gun=None):
+    def lock(s, me, target_id, point, tvel, origin=None, gun=None, shot_speed=None):
         """(custom, Nov 18, owner: "I would like Mythic and Demon chain gunners to have aimbot with the warthog gunner
         seat") The exact angles from origin (else the eye) to point led by the shot's flight and the 0.05 s read delay
         (step's own lead, unerring), this tick: no error, no tremor, no turn limit, no flick. on_target reads it as the
-        goal."""
+        goal. shot_speed: (custom, Nov 25) its shot's own speed where it is not the gun's (a Reach Falcon side gun's)."""
         gun = gun or me.weapon
         o = origin or eye(me)
-        lead_t = dist(o, point) / PROJECTILE_SPEED.get(gun, 360.0)
+        lead_t = dist(o, point) / (shot_speed or PROJECTILE_SPEED.get(gun, 360.0))
         s.target, s.flick, s.focus = target_id, None, 1.0
         s.goal = angles_to(o, point + tvel * (lead_t + 0.05))
         s.goal_rate, s.goal_prev = 0.0, (s.goal[0], getattr(s, "now", 0.0))
@@ -6790,16 +6790,23 @@ class Bot:
                         tp = None
                     if tp is not None:
                         aim_at = tp
-                locked = gunner and s.hog_gun_lock(v, me)
+                # (custom, Nov 25) a Reach Falcon side gun's round is led at its own 100 u/s (vehicles.FALCON_GUN_SPEED).
+                # Legendary's and Demon's protected aim leads nothing (lead 0, right for a hitscan gun): on this gun only
+                # they are locked on, led, as the Demon chaingun (the owner, asked: "Yes, this gun only")
+                side_gun = gunner and s.game == "reach" and "falcon_side_gun" in (getattr(me, "turret", "") or "")
+                side_lock = side_gun and (profiles.protected_aim(s.p) or profiles.fixed_demon(s.p))
+                locked = gunner and (s.hog_gun_lock(v, me) or side_lock)
                 if locked:
                     # (custom, Nov 18) Demon and Mythic on a Warthog's chaingun or Gauss: dead on his chest (aim_at, Halo 4's
                     # real point tp) every tick, led (Aim.lock)
                     chest = tp if tp is not None else aim_at + Vec(0, 0, aim_height(False, crouched(snap.player(tid))))
-                    act.yaw, act.pitch = s.aim.lock(me, tid, chest, b.vel, origin=origin, gun=gun)
+                    act.yaw, act.pitch = s.aim.lock(me, tid, chest, b.vel, origin=origin, gun=gun,
+                                                    shot_speed=vehicles.FALCON_GUN_SPEED if side_gun else None)
                 else:
                     act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False, gun=gun,
                                                     origin=origin, target_point=tp,
-                                                    crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p))
+                                                    crouched=crouched(snap.player(tid)), protected=profiles.fixed_high(s.p),
+                                                    shot_speed=vehicles.FALCON_GUN_SPEED if side_gun else None)
                 # a mounted gun is held down while it tracks, as people spray a turret: 2.5 times the hand gun's window,
                 # 4 times once firing (live: a Falcon gunner 0.4 deg off a man 16 u away fired on 34% of its ticks by
                 # the hand gun's window). Locked: the angles it sends are the goal
@@ -6825,6 +6832,8 @@ class Bot:
                 act.yaw = s.rider_look(now, dt, me, v)     # nobody in sight: look for him (a carrier rides it out)
             if gunner and s.game == "reach" and "chaingun" in (getattr(me, "turret", "") or ""):
                 fire = s.chaingun_heat(dt, fire)
+            if gunner and s.game == "reach" and "falcon_side_gun" in (getattr(me, "turret", "") or ""):
+                fire = s.falcon_gun_fire(now, me, tid, fire)
             act.fire = s.seat_fire = fire
             act.forward = act.strafe = 0.0
             # taken there (a taxi, director.vehicle_jobs): a runner out by their flag, a passenger by his objective, as
@@ -7201,7 +7210,9 @@ class Bot:
                 head = math.atan2(f[1], f[0]) if f and math.hypot(f[0], f[1]) > 0.1 else me.yaw
                 act.yaw = left if sides == {"left"} else right if sides == {"right"} else \
                     min((left, right), key=lambda y: abs(wrap(y - head)))
-                lo, hi = st["rng"]
+                # (custom, Nov 25) a Reach Falcon holds its side guns' range, vehicles.FALCON_GUN_RANGE
+                lo, hi = vehicles.FALCON_GUN_RANGE if s.game == "reach" and vehicles.kind_of(v["kind"]) == "falcon" \
+                    else st["rng"]
                 toward = 1.0 if act.yaw == left else -1.0                # (strafe is to the left)
                 act.strafe = toward * (0.6 if d > hi else -0.6 if d < lo else 0.0)
                 act.forward = 0.35 * s.strafe_dir
@@ -8118,6 +8129,33 @@ class Bot:
         if p is None or not p.alive or b is None or now - b.t >= SPIN_KEEP or dist(me.pos, b.pos) >= SPIN_R:
             return None
         return on[0]
+
+    def falcon_gun_fire(s, now, me, tid, fire):
+        """(custom, Nov 25, the owner: "The falcon gunner never hits a shot" ... "Do all of them just no extra error per
+        round") A Reach Falcon side gun's trigger: never on a man past vehicles.FALCON_GUN_MAX_FIRE from the gun, and in
+        the campaign AI's bursts (FALCON_GUN_BURST on, then FALCON_GUN_REST off; let go that long and the next press is
+        a new burst). Every tier."""
+        if fire and tid is not None:
+            b = s.per.beliefs.get(tid)
+            o = getattr(me, "turret_origin", None) or me.pos
+            if b is not None and dist(o, b.pos) > vehicles.FALCON_GUN_MAX_FIRE:
+                fire = False
+        st = getattr(s, "fburst", None)        # [burst began (None: none), burst ends, rest until, last round]
+        if st is None:
+            st = s.fburst = [None, 0.0, 0.0, -9.0]
+        if now < st[2]:
+            return False
+        if not fire:
+            if st[0] is not None and now - st[3] >= vehicles.FALCON_GUN_REST[0]:
+                st[0] = None
+            return False
+        if st[0] is None:
+            st[0], st[1] = now, now + s.rng.uniform(*vehicles.FALCON_GUN_BURST)
+        if now >= st[1]:
+            st[0], st[2] = None, now + s.rng.uniform(*vehicles.FALCON_GUN_REST)
+            return False
+        st[3] = now
+        return True
 
     def chaingun_heat(s, dt, fire):
         """Reach's Warthog chaingun overheats: heat climbs over CHAINGUN_HEAT[0] s of fire and falls over CHAINGUN_HEAT[1]

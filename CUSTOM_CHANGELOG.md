@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### The Falcon's side guns hit: aimed from the gun, led for its round, 2026-11-25
+
+The owner: "The falcon gunner never hits a shot. Dig and see if campaign aiming for ai is better than ours." Then: "DO all of them just no extra error per round", and, asked about Legendary's and Demon's protected aim: "Yes, this gun only".
+
+- **What his matches showed** (Breakpoint 20261123-172845 and 20261125-175509; scratchpad `falcon/gun_shots.py`, `gun_hits.py`): 4,221 firing ticks on the side guns, with the man hurt after only about 9% of them. The gun was on him from the Falcon's middle (a median 0.2-0.45 deg off). The game reads every rider at the Falcon's origin, but each gun hangs on its door (HREK `falcon.render_model` marker `falcon_side_gun_left` on `b_hull`: 0.34 u back, 0.50 u out). The rounds a model aimed "dead on" hurt him less often (6-8%) than those it put 0.5-1 u off (11-20%): a steady offset. Its round (`falcon_machinegun_bullet.projectile`) flies at 100 u/s with no drop; it was led as the assault rifle's 324 u/s, and Legendary's and Demon's protected aim leads nothing. 56% of its firing ticks were at 20 u or more and a third past 30 u, where its 0.5-1 deg spread is wider than a man.
+- **The campaign AI** on this gun (`generic.character`): combat range 4-12 u, 1.5 deg error a round, half the lead, 1.5-2 s bursts 0.75-1.25 s apart. Not more accurate: it fires from the real barrel and up close.
+- **Aimed from the gun** (`vehicles.falcon_gun_origin`, `tools/live_bots.py`): each side gun's own mount (its object's parent-relative place, read like the Warthog chaingun's; else the model's -0.34, +/-0.50) at its height (0.38 u), as `turret_origin`.
+- **Led at 100 u/s** (`vehicles.FALCON_GUN_SPEED`, `Aim.step`'s `shot_speed`), every tier. Legendary and Demon (the protected aim, lead 0) are locked on and led on this gun only (`Aim.lock`, as the Demon / Mythic chaingun, now with `shot_speed`). No extra error a round.
+- **Trigger** (`Bot.falcon_gun_fire`): never on a man more than 30 u from the gun (`FALCON_GUN_MAX_FIRE`); the campaign's bursts, 1.5-2 s on, 0.75-1.25 s off (let go 0.75 s and the next press starts a new one).
+- **Its pilot** holds 8-12 u (`FALCON_GUN_RANGE`; was 8-18), Reach only.
+- **Checks:** new `tools/test_falcon_side_gun.py` (11 tests). Full suite: 1793 tests, the 2 `test_layout_lifts.py` failures as before. **Untested in game:** that the live mount reads as expected, and whether its rounds carry the Falcon's own speed (the data leaned no).
+
 ### The brain no longer stops the first time a bot flies (air_hold), 2026-11-25
 
 The owner's live Boneyard 20261125-170018: "Why is the game frozen?" The bots stood still from 92 s on. The brain stopped after 91 failed ticks ("TypeError: '>' not supported between instances of 'method' and 'float'", the first at 34.1 s).

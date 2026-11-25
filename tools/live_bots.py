@@ -462,6 +462,14 @@ def snapshot(live, now, prev, bot_ids, crouch=(), person_crouch=False, person_ho
         for p in players:
             if p.turret == "warthog_chaingun":
                 p.turret_origin = origins.get(p.vehicle)
+        # (custom, Nov 25) a Falcon side gun's too, by its own mount (vehicles.falcon_gun_origin): its gunner aimed from
+        # the Falcon's middle and never hit
+        side_guns = {(parent_of[h], name[h]): pos for h, _, _, pos in objs
+                     if h in parent_of and name[h].startswith("falcon_side_gun")}
+        by_handle = {v["handle"]: v for v in vehicles}
+        for p in players:
+            if p.turret.startswith("falcon_side_gun") and p.vehicle in by_handle:
+                p.turret_origin = V.falcon_gun_origin(by_handle[p.vehicle], p.turret, side_guns.get((p.vehicle, p.turret)))
     elif getattr(live, "TAG_GAME", None) == "h4":
         origins = {v["handle"]: V.h4_warthog_gun_origin(v) for v in vehicles
                    if V.kind_of(v["kind"]) == "warthog" and "warthog_chaingun" in v["manned"]}
