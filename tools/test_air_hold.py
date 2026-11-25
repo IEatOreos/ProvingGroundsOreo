@@ -113,7 +113,7 @@ class Counter(unittest.TestCase):
 
 
 class Hold(unittest.TestCase):
-    """Bot.air_held and where it leaves the aircraft's crew out: pick_target, the fight scores."""
+    """Bot.air_hold and where it leaves the aircraft's crew out: pick_target, the fight scores."""
 
     def setUp(self):
         from brain.core import PlayerState, Snapshot, Vec
@@ -138,47 +138,47 @@ class Hold(unittest.TestCase):
 
     def test_no_table_no_hold(self):
         b = self.bot("top")
-        self.assertFalse(b.air_held(50.0, self.me, self.snap(None), 1))
+        self.assertFalse(b.air_hold(50.0, self.me, self.snap(None), 1))
 
     def test_legendary_waits_for_one_kill(self):
         b = self.bot("top")
-        self.assertTrue(b.air_held(50.0, self.me, self.snap({}), 1))
-        self.assertTrue(b.air_held(50.0, self.me, self.snap({7: {1: 3}}), 1))    # (kills on the other team only)
-        self.assertFalse(b.air_held(50.0, self.me, self.snap({7: {0: 1}}), 1))
+        self.assertTrue(b.air_hold(50.0, self.me, self.snap({}), 1))
+        self.assertTrue(b.air_hold(50.0, self.me, self.snap({7: {1: 3}}), 1))    # (kills on the other team only)
+        self.assertFalse(b.air_hold(50.0, self.me, self.snap({7: {0: 1}}), 1))
 
     def test_normal_waits_for_three(self):
         b = self.bot("average")
-        self.assertTrue(b.air_held(50.0, self.me, self.snap({7: {0: 2}}), 1))
-        self.assertFalse(b.air_held(50.0, self.me, self.snap({7: {0: 3}}), 1))
+        self.assertTrue(b.air_hold(50.0, self.me, self.snap({7: {0: 2}}), 1))
+        self.assertFalse(b.air_hold(50.0, self.me, self.snap({7: {0: 3}}), 1))
 
     def test_falcon_gunner_held_by_his_falcon(self):
         b = self.bot("strong")
-        self.assertTrue(b.air_held(50.0, self.me, self.snap({7: {0: 5}, 9: {0: 1}}), 3))
-        self.assertFalse(b.air_held(50.0, self.me, self.snap({9: {0: 2}}), 3))
+        self.assertTrue(b.air_hold(50.0, self.me, self.snap({7: {0: 5}, 9: {0: 1}}), 3))
+        self.assertFalse(b.air_hold(50.0, self.me, self.snap({9: {0: 2}}), 3))
 
     def test_man_on_foot_never_held(self):
-        self.assertFalse(self.bot("novice").air_held(50.0, self.me, self.snap({}), 2))
+        self.assertFalse(self.bot("novice").air_hold(50.0, self.me, self.snap({}), 2))
 
     def test_demon_noble_mythic_never_held(self):
         for t in ("demon", "noble", "mythic"):
-            self.assertFalse(self.bot(t).air_held(50.0, self.me, self.snap({}), 1), t)
+            self.assertFalse(self.bot(t).air_hold(50.0, self.me, self.snap({}), 1), t)
 
     def test_scaling_never_held(self):
         b = self.bot("top", prof_=replace(prof("top"), extra={"head_aim": 0.5}))
-        self.assertFalse(b.air_held(50.0, self.me, self.snap({}), 1))
+        self.assertFalse(b.air_hold(50.0, self.me, self.snap({}), 1))
 
     def test_in_vehicle_never_held(self):
         from brain.core import PlayerState
         me = PlayerState(0, 0, "bot", self.Vec(), vehicle=11)
-        self.assertFalse(self.bot("novice").air_held(50.0, me, self.snap({}), 1))
+        self.assertFalse(self.bot("novice").air_hold(50.0, me, self.snap({}), 1))
 
     def test_self_defence(self):
         b = self.bot("average")
         b.per.attacker_id, b.per.attacker_t = 3, 49.0         # the Falcon's gunner hit us 1 s ago
-        self.assertFalse(b.air_held(50.0, self.me, self.snap({}), 3))
-        self.assertTrue(b.air_held(50.0, self.me, self.snap({}), 1))   # (the Banshee's pilot: another aircraft)
+        self.assertFalse(b.air_hold(50.0, self.me, self.snap({}), 3))
+        self.assertTrue(b.air_hold(50.0, self.me, self.snap({}), 1))   # (the Banshee's pilot: another aircraft)
         b.per.attacker_t = 46.5                                 # 3.5 s ago: held again
-        self.assertTrue(b.air_held(50.0, self.me, self.snap({}), 3))
+        self.assertTrue(b.air_hold(50.0, self.me, self.snap({}), 3))
 
     def test_pick_target_skips_held(self):
         b = self.bot("top")
@@ -202,6 +202,18 @@ class Hold(unittest.TestCase):
         scores = {("fight", 1): 2.0, ("fight", 2): 1.0, ("hunt", self.Vec(1, 1, 0)): 0.5}
         b.air_hold_scores(50.0, self.me, self.snap({}), scores)
         self.assertEqual(set(scores), {("fight", 2), ("hunt", self.Vec(1, 1, 0))})
+
+
+class PilotClock(unittest.TestCase):
+    """(custom, Nov 25) The owner's live Boneyard 20261125-170018: the brain stopped 92 s in ("'>' not supported between
+    instances of 'method' and 'float'", 91 failed ticks). The hold's method had taken the name of the pilot's take-off
+    clock s.air_held (hold_for_crew sets it, air_guard reads it with a -1e9 default): renamed air_hold."""
+
+    def test_a_new_bot_has_no_take_off_clock(self):
+        from brain.bot import Bot
+        b = Bot(0, 0, prof("top"), {"name": "reach_test"}, random.Random(5))
+        self.assertEqual(getattr(b, "air_held", -1e9), -1e9)
+        self.assertTrue(callable(b.air_hold))
 
 
 class Live(unittest.TestCase):

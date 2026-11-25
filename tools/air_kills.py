@@ -1,5 +1,5 @@
 """(custom, Nov 24, the owner) The kills each enemy Banshee and Falcon has made, by the team of the man who died, for the
-bots' hold fire on aircraft (brain/bot.py Bot.air_held, brain/profiles.py air_hold_kills; docs/AIRCRAFT_HOLD_FIRE_DESIGN.md).
+bots' hold fire on aircraft (brain/bot.py Bot.air_hold, brain/profiles.py air_hold_kills; docs/AIRCRAFT_HOLD_FIRE_DESIGN.md).
 
 Live matches only: tools/live_bots.py keeps one AirKills and hands its table to the bots as snap.air_kills each pass.
 Reach's kills come from the game's own record (tools/kill_record.py: the credited killer, people's deaths too); where

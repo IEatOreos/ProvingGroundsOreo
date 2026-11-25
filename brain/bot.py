@@ -995,7 +995,7 @@ REACH_GHOST_BOLT = 29.3
 AIR_GUN_R = 1.5       # u: an aircraft's guns fire with its nose this near his middle (Bot.air_pass)
 # (custom, Nov 24, the owner: Banshees "dont get mutilated at once, but also theyre not flying freely") a bot on foot holds
 # fire on the crew of an enemy aircraft of these kinds until it has killed profiles.air_hold_kills of the bot's team
-# (Bot.air_held; the kills: tools/air_kills.py, live only, snap.air_kills), or one of its crew hit the bot in the last
+# (Bot.air_hold; the kills: tools/air_kills.py, live only, snap.air_kills), or one of its crew hit the bot in the last
 # AIR_SELF_DEFENCE_S s ("Yes, in self-defence")
 AIR_HOLD_KINDS = {"banshee", "falcon"}
 AIR_SELF_DEFENCE_S = 3.0
@@ -2421,14 +2421,14 @@ class Bot:
             if not isinstance(k, int) or now - b.t > s.p.memory:
                 continue
             e = snap.player(k)
-            if e is None or not e.alive or e.vehicle == -1 or e.team == me.team or s.air_held(now, me, snap, k):
+            if e is None or not e.alive or e.vehicle == -1 or e.team == me.team or s.air_hold(now, me, snap, k):
                 continue
             d = dist(me.pos, b.pos)
             if best is None or d < best[0]:
                 best = (d, b.pos, k)
         return (best[1], best[2]) if best else None
 
-    def air_held(s, now, me, snap, k):
+    def air_hold(s, now, me, snap, k):
         """(custom, Nov 24, the owner) Enemy k rides an enemy Banshee or Falcon (AIR_HOLD_KINDS) this bot, on foot, holds
         fire on: it has killed fewer of our team than profiles.air_hold_kills (snap.air_kills, tools/air_kills.py; None in
         the sims and tests: no hold), and none of its crew hit us in the last AIR_SELF_DEFENCE_S s."""
@@ -2449,8 +2449,8 @@ class Bot:
         return table.get(e.vehicle, {}).get(me.team, 0) < need
 
     def air_hold_scores(s, now, me, snap, scores):
-        """(custom, Nov 24) decide's last word: no fight goal on an aircraft's crew this bot holds fire on (air_held)."""
-        for key in [k for k in scores if k[0] == "fight" and s.air_held(now, me, snap, k[1])]:
+        """(custom, Nov 24) decide's last word: no fight goal on an aircraft's crew this bot holds fire on (air_hold)."""
+        for key in [k for k in scores if k[0] == "fight" and s.air_hold(now, me, snap, k[1])]:
             del scores[key]
 
     def anti_vehicle_gun(s, me):
@@ -4148,7 +4148,7 @@ class Bot:
             s.unstuck(now, me, act, snap)
             return act
         patrol_target = None
-        patrol_seen = [k for k in s.per.visible_enemies() if not s.air_held(now, me, snap, k)] \
+        patrol_seen = [k for k in s.per.visible_enemies() if not s.air_hold(now, me, snap, k)] \
             if kind == "patrol" else []                      # (custom, Nov 24: an aircraft's held crew left out)
         on_way = s.on_way_target(now, me, snap, kind, arg)   # (custom: a Demon's errand with a man in view, below)
         carry_shot = s.carrier_shot(now, me, snap, kind, arg) if on_way is None and kind != "fight" else None
@@ -5016,7 +5016,7 @@ class Bot:
         4.5 and 4.8: a switch costs a re-acquire). the player's Settlement game: the threat bonuses
         swung past 25% every second in a 13-player lobby; Legendary bots switched twice as often as
         Easy ones, won 11% of their fights to Easy's 26% and their team finished last."""
-        seen = [k for k in seen if not s.air_held(now, me, snap, k)]   # (custom, Nov 24: an aircraft's crew held)
+        seen = [k for k in seen if not s.air_hold(now, me, snap, k)]   # (custom, Nov 24: an aircraft's crew held)
         if not seen:
             return None
         scored = {k: s.threat(now, me, snap, k) for k in seen}

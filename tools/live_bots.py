@@ -762,7 +762,7 @@ def flag_events(directors, before, snap, now):
 
 
 def air_table(air, snap, teams):
-    """(custom, Nov 24, the owner) The aircraft kills the bots get (snap.air_kills, Bot.air_held): air's table after the
+    """(custom, Nov 24, the owner) The aircraft kills the bots get (snap.air_kills, Bot.air_hold): air's table after the
     destroyed and gone aircraft are dropped; None in free for all (each man his own team: no team's count to wait on)."""
     air.prune(snap)
     return air.table() if teams else None

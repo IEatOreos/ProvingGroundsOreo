@@ -229,7 +229,7 @@ def fixed_demon(prof):
 
 
 # (custom, Nov 24, the owner: Banshees "dont get mutilated at once, but also theyre not flying freely") the kills an enemy
-# Banshee or Falcon makes on a bot's team before that bot, on foot, shoots at its crew (Bot.air_held). Demon, Mythic and
+# Banshee or Falcon makes on a bot's team before that bot, on foot, shoots at its crew (Bot.air_hold). Demon, Mythic and
 # Noble at once; Blind and Tactician as Heroic ("Blind can be heroic level for this"). Scaling: at once, as before
 AIR_HOLD_KILLS = {"top": 1, "strong": 2, "average": 3, "novice": 5}
 AIR_HOLD_HEROIC = 2

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### The brain no longer stops the first time a bot flies (air_hold), 2026-11-25
+
+The owner's live Boneyard 20261125-170018: "Why is the game frozen?" The bots stood still from 92 s on. The brain stopped after 91 failed ticks ("TypeError: '>' not supported between instances of 'method' and 'float'", the first at 34.1 s).
+
+- **Cause:** Nov 24's aircraft hold fire (ba18dd1) named its method `Bot.air_held`. That is already the name of the pilot's take-off clock `s.air_held`: `hold_for_crew` sets it, and `air_guard` reads it as `max(seat_since, getattr(s, "air_held", -1e9))`. A bot flying before it ever waited for crew got the method in that `max`, and every think pass failed. After a wait, the clock would also have replaced the method ("'float' object is not callable").
+- **Fix:** the method is renamed `Bot.air_hold` (`brain/bot.py`: its def and its 4 callers; the comments in `brain/core.py`, `brain/profiles.py`, `tools/air_kills.py`, `tools/live_bots.py`). The take-off clock and the hold's behaviour are unchanged. `docs/AIRCRAFT_HOLD_FIRE_PLAN.md`, a plan of record, still says `air_held`.
+- **Checks:** `tools/test_air_hold.py` 25 -> 26 tests (`PilotClock`: a new bot has no take-off clock, and `air_hold` can be called). Full suite: 1778 tests, with the same 2 `test_layout_lifts.py` failures as before. Import check of `brain/` and `tools/live_bots.py`. **Untested in game.**
+
 ### FFA: no more "never start a fight", 2026-11-25
 The owner, after Sweeepin (a Noble) went 4-10 in his Launch Station FFA (trace_reach_45_launch_station_20261124-221103: the trigger pressed on 108 of about 7,000 ticks, 13% of its time in fights): "Dont start a fight is a mechanic? Remove that entirely".
 - **`brain/bot.py`:** with three teams or more (FFA), every tier: no hunt caution (a hunt was cut by up to 60% with no teammate or in a crowd, guide 07's "never by a solo chase" and "the third party wins it"); Demon, Mythic and Noble: no "odds: not taking him on" (a fight in view dropped under ODDS_ENGAGE) and no "a hunt into a group: dropped" (1,368 times in that 5-minute match). Team games keep all three as they were, the solo-chase caution too. Their other odds rules (breaking off a losing fight, recharging) are unchanged.
