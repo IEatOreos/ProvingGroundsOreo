@@ -3,6 +3,7 @@ brain/modes.py survivor_spots), at the map's haven markers, then its hot spots, 
 with a single way in (last_stand_hold). The owner, live Anchor 9 with 18 players: "all the bots are standing in one
 hold", "if its like 4 or more survivors find a new spot. Or even use the hot spots", "if there is only 2-3 survivors
 left they try to find and area with only 1 entrance"."""
+import random
 import sys
 import types
 import unittest
@@ -25,6 +26,7 @@ def director(n_bots, people_at=()):
     d.map = {"points": {"mid": Vec()}, "name": "test_infection", "positions": [Vec(20, 0, 0), Vec(-20, 0, 0)]}
     d.bots = {i: None for i in range(1, n_bots + 1)}
     d.terrain = lambda: None
+    d.rng = random.Random(0)
     d.spread = lambda point, k, ring=4.0: point          # (each slot's own spot: the point itself here)
     players = [PlayerState(i, 0, f"b{i}", Vec(0, 16, 0), weapon="shotgun") for i in d.bots]
     players += [PlayerState(100 + k, 0, f"p{k}", q, weapon="shotgun") for k, q in enumerate(people_at)]
@@ -52,18 +54,26 @@ class SurvivorTests(unittest.TestCase):
         spots = [Vec(x, y, 0) for x, y in per]
         self.assertTrue(all(dist(a, b) >= 6.0 for a in spots for b in spots if a != b))   # (each group its own area)
 
-    def test_haven_markers_first_then_hot_spots(self):
-        d, snap = director(6)
-        spots = {(round(q.x), round(q.y)) for _, q, _ in d.mode_slots(10.0, snap, 6)}
-        self.assertTrue(spots <= {(round(z.x), round(z.y)) for z in HAVENS})
-        d, snap = director(15)
-        spots = {(round(q.x), round(q.y)) for _, q, _ in d.mode_slots(10.0, snap, 15)}
-        self.assertIn((20, 0), spots)                       # (five markers' 15 places: one more group to a hot spot)
+    def test_any_haven_or_hot_spot_not_havens_first(self):
+        # (the owner: "pick any of the hot spots or havens on the map? Not directly always pick havens first")
+        pool = {(round(z.x), round(z.y)) for z in HAVENS} | {(20, 0), (-20, 0)}
+        hot_used = 0
+        for seed in range(12):
+            d, snap = director(6)
+            d.rng = random.Random(seed)
+            first = {(round(q.x), round(q.y)) for _, q, _ in d.mode_slots(10.0, snap, 6)}
+            again = {(round(q.x), round(q.y)) for _, q, _ in d.mode_slots(12.0, snap, 6)}
+            self.assertTrue(first <= pool)
+            self.assertEqual(first, again)                  # (a match keeps its spots)
+            hot_used += bool(first & {(20, 0), (-20, 0)})
+        self.assertGreater(hot_used, 0)                     # (hot spots are picked too, not only after the markers)
 
     def test_people_count_toward_a_spot(self):
-        d, snap = director(5, people_at=[Vec(0, 17, 0), Vec(0.5, 17, 0)])    # (two people at the first marker)
+        d, snap = director(5, people_at=[Vec(99, 99, 0), Vec(99, 98, 0)])    # (the people far off: the spots)
+        q0 = d.mode_slots(10.0, snap, 5)[0][1]
+        d, snap = director(5, people_at=[q0, q0 + Vec(0.5, 0, 0)])          # (now both at the first spot)
         per = Counter((round(q.x), round(q.y)) for _, q, _ in d.mode_slots(10.0, snap, 5))
-        self.assertEqual(per[(0, 17)], 1)                   # (3 there with them)
+        self.assertEqual(per[(round(q0.x), round(q0.y))], 1)               # (3 there with them)
 
     def test_the_last_ones_take_a_single_way_in(self):
         d, snap = director(2)

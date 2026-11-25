@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Infection survivors pick any haven marker or hot spot, not the markers first, 2026-11-24
+The owner: "Just have them pick any of the hot spots or havens on the map? Not directly always pick havens first."
+- **`brain/director.py` mode_slots:** the haven markers and the hot spots are one pool, shuffled once a match (`surv_pool`, the director's own random), so a group's spot is any of them; the spots stay put for the match. Rooms with few ways in still come after the pool, and the last 3 still take a room with one way in.
+- **Validation:** `tools/test_infection_spots.py` (5: spots from either kind, hot spots picked without the markers running out first, a match keeps its spots); full suite 1753, the same 2 `test_layout_lifts.py` failures as before. **Untested in game.**
+
 ### Infection survivors in groups of 3 at most, each at its own spot; the last 2-3 in a room with one way in, 2026-11-24
 The owner, live Anchor 9 Infection with 18 players (trace_reach_dlc_slayer_20261124-215447): "all the bots are standing in one hold. I think it should do a check of how many people are there and if its like 4 or more survivors find a new spot. Or even use the hot spots on the map in the survivors logic"; "Plain. And make it to where if there is only 2-3 survivors left they try to find and area with only 1 entrance".
 - **Cause:** Anchor 9 has 9 Infection haven markers. With any markers on a map, every survivor went to the one nearest the team as if it were Safe Havens' active haven (all 15 bots' orders at about (0, 17) all match); the rooms logic only ran on maps without markers.

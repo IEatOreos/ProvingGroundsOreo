@@ -2718,7 +2718,15 @@ class Director:
                 last = last_stand_hold(hs, centre())
                 if last is not None:
                     return [("defender", s.spread(last["pos"], k, 1.0), "camping") for k in range(n)]
-            cands = list(havens) + list(s.map.get("positions") or []) + [h["pos"] for h in hs]
+            # (the owner: "pick any of the hot spots or havens on the map? Not directly always pick havens first") the
+            # haven markers and the hot spots one pool, shuffled once a match (kept: the spots stay put all match), then
+            # the rooms
+            pool = getattr(s, "surv_pool", None)
+            if pool is None:
+                pool = list(havens) + list(s.map.get("positions") or [])
+                s.rng.shuffle(pool)
+                s.surv_pool = pool
+            cands = pool + [h["pos"] for h in hs]
             if not cands:                   # (no markers, no hot spots, the rooms still being found: the first seconds)
                 return [("defender", s.spread(mid, k, 2.5), "camping") for k in range(n)]
             people = [p for p in mine if p.id not in s.bots]
