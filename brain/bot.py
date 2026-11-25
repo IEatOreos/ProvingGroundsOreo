@@ -365,6 +365,15 @@ FLAG_FIGHT_DROP_S = 1.5            # s: still carrying after this, the drop fail
 # The bots' first press waits for it (Bot.drop_ready_wait), then presses and releases until the round shows for at most
 # DROP_RETRY_S
 DROP_READY_S, DROP_RETRY_S = 0.57, 0.5
+# ... and each gun's own (the owner: "I wasnt sure if all weapons had a different ready time"): his rocket launcher's
+# first rocket 0.89 s after his drop at 512.5 s (the next a second on, its rate). A gun not measured: the DMR's
+DROP_READY_BY = {"rockets": 0.89}
+
+
+def drop_ready_s(weapon):
+    """(custom, Nov 24) How long after a drop of the bomb or flag this gun's first round can go (DROP_READY_BY, else
+    DROP_READY_S)."""
+    return DROP_READY_BY.get(weapon, DROP_READY_S)
 FLAG_FIGHT_HOLD = 8.0              # s: the longest fight before it goes back for the flag
 FLAG_FIGHT_LOST = 1.5              # s: the man unknown this long: back for the flag
 FLAG_FIGHT_SCORE = 3.3             # the fight on him: over carrying (3.0), regroup (3.0), a committed fight (2.6-2.9)
@@ -4605,7 +4614,7 @@ class Bot:
         elif ff["dropped"] is None:
             if not me.has_flag:
                 ff["dropped"] = now
-                s.drop_ready = now + DROP_READY_S   # (custom, Nov 24: the gun's first round, drop_ready_wait)
+                s.drop_ready = now + drop_ready_s(me.weapon)   # (custom, Nov 24: the gun's first round, drop_ready_wait)
             elif now - ff["t0"] <= FLAG_FIGHT_DROP_S:
                 return "drop"
         if me.alive and ff["dropped"] is not None and not me.has_flag:

@@ -53,6 +53,21 @@ class DropReady(unittest.TestCase):
 
     def test_the_owners_measure(self):
         self.assertEqual(botmod.DROP_READY_S, 0.57)
+        self.assertEqual(botmod.drop_ready_s("dmr"), 0.57)
+        self.assertEqual(botmod.drop_ready_s("rockets"), 0.89)
+        self.assertEqual(botmod.drop_ready_s("sniper"), 0.57)          # (not measured yet: the DMR's)
+
+    def test_rockets_wait_longer(self):
+        b, me, man, snap = scene()
+        assert b.flag_fight_check(NOW, me, snap)
+        drop(me, snap, Vec(12.0, 0, 0))
+        me.weapon, me.weapons = "rockets", ["rockets", "dmr"]
+        b.flag_fight_phase(NOW, me, snap)
+        b.notes = []
+        act = Action(fire=True)
+        self.assertTrue(b.drop_ready_wait(NOW + 0.7, me, act))          # (a DMR would be firing by now)
+        self.assertFalse(act.fire)
+        self.assertFalse(b.drop_ready_wait(NOW + 0.89, me, Action(fire=True)))
 
 
 if __name__ == "__main__":

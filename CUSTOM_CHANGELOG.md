@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Each gun's own ready time after a drop (the rocket launcher's), 2026-11-24
+
+The owner: "I also did it once with the rocket im not sure if you grabbed it but I wasnt sure if all weapons had a different ready time".
+
+- **His rocket try** (Condemned Neutral Bomb, `20261124-185819`): he carried the bomb with his rocket launcher (2 rockets) behind it until 512.47 s, and the launcher was in hand the tick the drop was read. Its first rocket left at 513.39 s, **0.89 s after the drop**; the next a second on, its own rate. The DMR's was 0.57 s.
+- **`brain/bot.py` `DROP_READY_BY` {"rockets": 0.89}, `drop_ready_s`:** a drop to fight waits for the gun in hand's own time. A gun not measured yet waits the DMR's 0.57 s.
+- **Checks:** `tools/test_drop_ready.py` +1 (the rocket launcher waits longer; the times by gun). `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match.**
+
 ### A bot's first round after dropping the bomb comes when the gun is ready, 2026-11-24
 
 The owner: "So in the last match around the 5-minute mark, I previewed how fast you can shoot after you drop the bomb. I did it 3 different times. Record it and apply it to the bots."
