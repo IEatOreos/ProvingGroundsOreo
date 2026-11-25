@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Off a Mongoose when shot or with an enemy on radar, 2026-11-25
+
+The owner: "We need a good rule for mongoose drivers dismounting while getting shot. Too many bots die while driving or riding on them. They dont do much. Maybe a rule like THey drive until an enemy is on radar, or as soon as they get shot and dismount?" His picks: hit or radar, driver and passenger, every tier and game; a flag or objective carrier and racers ride on.
+
+- **What his matches showed** (Forge World, 20261125-002025 and -003335; scratchpad `goose_deaths.py`): 39 of 259 bot deaths on a Mongoose (33 + 6) for 20 kills from one; drivers 20 deaths for 7 kills, passengers 9 for 7. Killed by DMRs 14, melee from a man beside them 8, frags 3, the Warthog chaingun 3, falls 3, Warthog splatters 2. In the fatal rides an enemy came within 25 m a median 5 s, and the first hit a median 4.5 s, before the death.
+- **`Bot.mongoose_bail`, every tick on a Mongoose (`Bot.drive`), driver or passenger:** off (Use held, as every get-out) the moment it is hit since it got on (the perception's `hurt_at`), or an enemy it knows of, in view or a tracker dot no more than 1 s old, is within `MONGOOSE_RADAR_R` (Reach's motion tracker, 25 m = 8.2 u, flat). Its trip ends as a finished one does: on foot, no vehicle for `MONGOOSE_RETRY` (30 s), a drive / ferry / ride order freed. Note: "mongoose: shot, off and on foot" / "an enemy on radar".
+- **Not:** with the flag, the ball or Invasion's core; in a race; any other vehicle (the Gungoose included).
+- **Replaces** a Mongoose driver's drive away from a man close by (`evade`) whenever he is within 8.2 u: it gets off instead.
+- **How often it fires** (the same traces, true positions, scratchpad `goose_cut.py`): on 52 of 73 rides in the first match (27 of those ended in death), a median 10 s in; on 9 of 34 in the second. Trips will often end short of where they were going.
+- **Checks:** new `tools/test_mongoose_bail.py` (7 tests); `tools/test_mongoose_transport.py`'s evade check changed to the dismount. Full suite: 1773 tests, the 2 `test_layout_lifts.py` failures as before (this machine's level data). **Untested in game.**
+
 ### Revenant, Scorpion and Falcon: the owner's picks from the campaign AI, 2026-11-24
 
 The owner, after a comparison of the campaign's Falcon, Scorpion and Revenant with ours (HREK `tags\ai\generic.character` and the vehicles' own tags, read only): the Revenant's minimum range, shorter range and its arc worked out from its shot; the Scorpion's feet aim "in all scenarios it can see their feet. Other wise shoot at the chest", its turn throttle, "Change running down boarders to just prioritizing them first and foremost over anything else within a range", its pathfinding footprint; the Falcon flying where its side guns can reach the man, "along side our code". His picks: every tier but Easy, Reach only; boarders within 10 u, the tank holding still; the tank ground widened to 1.75 u; the computed arc past 20 u only.

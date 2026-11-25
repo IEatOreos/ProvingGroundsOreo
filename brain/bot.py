@@ -202,6 +202,13 @@ PRESS_ITEM, PRESS_ITEM_R = 0.5, 1.5   # an Invasion core runner's gun on its way
 NADE_TEAM_R, NADE_LOOK = 4.0, 1.0   # u, s: no grenade with a teammate this near where it goes, now or this soon (nade_clear)
 CALLED_WAIT_R = 15.0         # a driver waits (8 s at most) for a teammate called aboard while he is this near (crew_coming)
 MONGOOSE_RETRY = 30.0        # finish the objective on foot before choosing another transport trip
+# (custom, Nov 25, the owner: "a good rule for mongoose drivers dismounting while getting shot. Too many bots die while
+# driving or riding on them") off a Mongoose, driver or passenger, every tier and game, the moment it is hit (the
+# perception's hurt_at since it got on) or an enemy it knows of (in view or a tracker dot, MONGOOSE_BAIL_FRESH s old at
+# most) is within MONGOOSE_RADAR_R: Reach's motion tracker, 25 m. Not with the objective, nor in a race. Forge World
+# 20261125-002025: 33 of 174 bot deaths on one (16 kills from one), an enemy that near 5 s and the first hit 4.5 s
+# (medians) before the death
+MONGOOSE_RADAR_R, MONGOOSE_BAIL_FRESH = 25.0 / 3.048, 1.0
 # (custom, Nov 13) the Wheelman play style (profiles.wheelman): how far it walks for a vehicle of its own pick (Bot.wheel_pick),
 # and how often a wedged vehicle of its own is turned another way before it gets out (Bot.drive)
 WHEEL_SEEK_R = 60.0
@@ -6347,6 +6354,26 @@ class Bot:
             return True
         return False
 
+    def mongoose_bail(s, now, me, snap):
+        """(custom, Nov 25, the owner) Why this bot, on a Mongoose, gets off now (MONGOOSE_RADAR_R): "shot" (hit since it
+        got on: Perception.hurt_by's hurt_at), "an enemy on radar" (an enemy it knows of within MONGOOSE_RADAR_R flat, in
+        view or a tracker dot no older than MONGOOSE_BAIL_FRESH); None: ride on. Never with the objective (a flag, the
+        ball, Invasion's core) or in a race."""
+        if snap.mode == "race" or me.has_flag or getattr(snap, "inv_core_carrier", None) == me.id:
+            return None
+        hurt = getattr(s.per, "hurt_at", None)
+        if hurt is not None and hurt >= getattr(s, "seat_since", now) and now - hurt <= MONGOOSE_BAIL_FRESH:
+            return "shot"
+        for k, b in s.per.beliefs.items():
+            if not isinstance(k, int) or b.source not in ("eyes", "radar") or now - b.t > MONGOOSE_BAIL_FRESH:
+                continue
+            p = snap.player(k)
+            if p is None or not p.alive or p.team == me.team:
+                continue
+            if (b.pos - me.pos).flat() < MONGOOSE_RADAR_R:
+                return "an enemy on radar"
+        return None
+
     def scorpion_sees_feet(s, me, foe, cam):
         """(custom, Nov 24) A shell's line from a Scorpion's camera (cam u over it) to a man's feet (Bot.feet, 0.05 u up:
         Aim.step's explosive aim) is open on the level data (Terrain.point_los "shot"); open where there is none to ask."""
@@ -6646,6 +6673,23 @@ class Bot:
             if now - s.seat_since > 1.0 and getattr(s, "board_nade", None) != me.vehicle and s.game != "reach":
                 act.grenade, s.board_nade = True, me.vehicle
             s.note("vehicle: aboard theirs, beating it")
+            return
+        why = s.mongoose_bail(now, me, snap) if v is not None and vehicles.kind_of(v["kind"]) == "mongoose" else None
+        if why is not None:
+            # (custom, Nov 25, the owner: "They drive until an enemy is on radar, or as soon as they get shot and
+            # dismount") off, Use held as every get-out, and on foot: no Mongoose (nor any vehicle) for MONGOOSE_RETRY s
+            act.action, act.fire = True, False
+            act.forward = act.strafe = 0.0
+            s.exit_until = now + (0.8 if s.map["name"].startswith(("reach_", "h3_", "odst_", "h4_", "h2a_")) else 0.1)
+            s.vehicle_retry_at = max(getattr(s, "vehicle_retry_at", 0.0), now + MONGOOSE_RETRY)
+            trip = getattr(s, "mongoose_trip", None)
+            if trip is not None:
+                trip["done"] = trip["done"] or why
+            s.vjob, s.crew_ride = "dismount", None
+            if s.order.role in ("drive", "ferry", "ride"):
+                s.order = Order("free")
+            s.goal, s.next_decide, s.vehicle_until = ("roam", None), now, now
+            s.note(f"mongoose: {why}, off and on foot")
             return
         if s.seat == "driver" and v is not None and not s.may_drive(v, snap):
             # (custom: a Demon at a Warthog's or a Mongoose's wheel, a hijack's or a seat it was put in: out, it rides
