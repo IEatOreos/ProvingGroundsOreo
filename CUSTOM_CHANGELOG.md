@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Banshee misses: Mythic, Demon and Noble 50% while it flips, 2026-11-26
+The owner: "Mythic demon noble to 50% when flipping".
+- **`brain/banshee_miss.py` MISS:** Mythic, Demon and Noble 50% while the Banshee flips (none level); Legendary, Blind, Tactician 15% / 50%, Heroic 25% / 65%, Normal 35% / 70% and Easy 50% / 100% unchanged.
+- **Validation:** `tools/test_banshee_miss.py` (5) OK. **Untested in game.**
+
 ### Banshee misses: Legendary, Blind, Tactician 50% and Heroic 65% while it flips, 2026-11-26
 The owner: "Legendary blind and tactician up to a 50% when flipping. heroic to a 65% when flipping".
 - **`brain/banshee_miss.py` MISS:** Legendary, Blind and Tactician 50% while the Banshee flips (15% level), Heroic 65% (25% level); Mythic, Demon, Noble 0 / 25%, Normal 35% / 70% and Easy 50% / 100% unchanged.
