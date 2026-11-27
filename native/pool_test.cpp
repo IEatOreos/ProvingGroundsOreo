@@ -817,6 +817,96 @@ int main(int argc, char** argv) {
         CHECK(abs(roster_team_points(b, 0) - roster_team_points(b, 1)) <= 200, "4v4 by rating: %d vs %d",
               roster_team_points(b, 0), roster_team_points(b, 1));
         printf("ratings: red %d, blue %d; your rating 1600 counted on red\n", roster_team_points(b, 0), roster_team_points(b, 1));
+
+        // 28. (Nov 24, the owner's Multi Team and Infection) 4 teams of 3: only the first team wins (you +35-40), the
+        // other three lose; a loser's gap is to the winners (Legendaries losing to Legendaries: -19, though two Noble
+        // teams lost too); Infection is not rated but counted (its file " TU Infection")
+        {
+            sr_set_person("Me", 1600, false);
+            sr_set_gains("Me", SR_WIN_TOP, SR_LOSS);
+            auto four = [](int my_place) {
+                std::vector<sr_player> pl;
+                sr_player me; me.name = "Me"; me.team = 0; me.place = my_place; pl.push_back(me);
+                for (int i = 0; i < 11; i++) {
+                    sr_player q; q.bot = true; q.team = (i + 1) / 3; q.name = "MT" + std::to_string(i);
+                    q.tier = q.team >= 2 ? HB_TIER_NOBLE : 3;        // (red and blue Legendary, green and orange Noble)
+                    q.place = q.team == 0 ? my_place : q.team == 1 ? (my_place == 1 ? 2 : 1) : q.team + 1;
+                    pl.push_back(q);
+                }
+                return pl;
+            };
+            std::vector<sr_player> m = four(1);
+            CHECK(sr_rate("mt1", true, "TU TEAM SLAYER DMR", m), "Multi Team rated");
+            CHECK(m[0].after - m[0].before >= 35 && m[0].after - m[0].before <= 40, "Multi Team first: %+d", m[0].after - m[0].before);
+            int lost = 0;
+            for (size_t i = 1; i < m.size(); i++) if (m[i].team != 0) lost += m[i].after < m[i].before || m[i].after == sr_tier_range(m[i].tier).lo;
+            CHECK(lost == 9, "Multi Team: the other three teams lose (%d of 9)", lost);
+            m = four(2);                                    // (blue's Legendaries win; red's lose to them: no gap, -19)
+            sr_rate("mt2", true, "TU TEAM SLAYER DMR", m);
+            CHECK(m[0].after - m[0].before == -15, "Multi Team second: %+d", m[0].after - m[0].before);
+            sr_range lg = sr_tier_range(3);
+            int want = m[1].before - 19 < lg.lo ? lg.lo : m[1].before - 19;
+            CHECK(m[1].after == want, "Multi Team loser's gap to the winners: %d -> %d (want %d)", m[1].before, m[1].after, want);
+            // Infection: nothing changes, the match counted, no rating to show
+            int me_was = sr_person("Me"), me_ffa = sr_person("Me", true), bot_was = sr_bot("MT0", 3);
+            m = four(1);
+            CHECK(!sr_rate("inf1", false, " TU Infection", m), "Infection not rated");
+            CHECK(sr_person("Me") == me_was && sr_person("Me", true) == me_ffa && sr_bot("MT0", 3) == bot_was &&
+                  !strcmp(sr_counted(), "inf1") && sr_shown("me") < 0, "Infection: nothing changed, counted");
+
+            // the lobby: 4 teams of 3, you on red with a party of 2 pinned there (red's 2 seats), 3 bots on each other
+            // team, the clan of 3 whole on one team (not red), no name twice
+            write(prof, "experience=original\neffects=none\nbot=Q1,1,QQ\nbot=Q2,2,QQ\nbot=Q3,3,QQ\n");
+            bots_panel_profiles(prof);
+            std::string pool_txt = "Q1\nQ2\nQ3\n";
+            for (int i = 1; i <= 40; i++) { char l[16]; sprintf_s(l, "M%d\n", i); pool_txt += l; }
+            write(pool, pool_txt.c_str());
+            bot_pool_set_format(4);
+            const char mparty[2][16] = { "M5", "M6" };
+            int bad_size = 0, bad_party = 0, bad_clan = 0, dup = 0, clan_seen = 0;
+            for (int run = 0; run < 150; run++) {
+                bot_pool_seed(5151u + 13u * run);
+                hb_roster r = seats(0);
+                uint8_t pin[HB_ROSTER_MAX];
+                bot_pool_matchmake(r, 3, mparty, 2, 0, run % 2 ? 0 : 70, 2, pin, nullptr, 0, 4);
+                if (r.n != 11 || r.teams != 4 || roster_on_team(r, 0) != 2 || roster_on_team(r, 1) != 3 ||
+                    roster_on_team(r, 2) != 3 || roster_on_team(r, 3) != 3) bad_size++;
+                int pr = 0, qn = 0, qt = -1; bool one = true;
+                for (int i = 0; i < r.n; i++) {
+                    if (pin[i]) { pr++; if (r.bot[i].team != 0) bad_party++; }
+                    if (r.bot[i].name[0] == 'Q') { qn++; if (qt < 0) qt = r.bot[i].team; else one &= r.bot[i].team == qt; }
+                    for (int k = i + 1; k < r.n; k++) dup += !_stricmp(r.bot[i].name, r.bot[k].name);
+                }
+                if (pr != 2) bad_party++;
+                if (qn >= 2) { clan_seen++; if (!one || qt == 0) bad_clan++; }
+            }
+            CHECK(!bad_size, "Multi Team sizes wrong in %d runs", bad_size);
+            CHECK(!bad_party, "Multi Team party off red or missing in %d", bad_party);
+            CHECK(!bad_clan, "Multi Team clan split or on red in %d of %d", bad_clan, clan_seen);
+            CHECK(!dup, "Multi Team a name twice %d", dup);
+            // a friend whose team MCC has not given yet: the team with the fewest people (blue), a seat of bots fewer
+            bot_pool_seed(77);
+            hb_roster f = seats(0);
+            uint8_t fp[HB_ROSTER_MAX];
+            int people[1] = { -1 };
+            bot_pool_matchmake(f, 3, mparty, 0, 0, 0, 2, fp, people, 1, 4);
+            CHECK(f.n == 10 && people[0] == 1 && roster_on_team(f, 1) == 2 && roster_on_team(f, 0) == 2,
+                  "Multi Team friend: %d bots, on %d", f.n, people[0]);
+            printf("proving grounds multi team: 150 lobbies of 4 teams of 3, the clan in %d\n", clan_seen);
+            // (Nov 24) Double Team: 2v2, a party of one on red; the clan of 3 never seated (it fits no team whole)
+            int bad2 = 0;
+            for (int run = 0; run < 60; run++) {
+                bot_pool_seed(6161u + 11u * run);
+                hb_roster r2 = seats(0);
+                uint8_t pin2[HB_ROSTER_MAX];
+                bot_pool_matchmake(r2, 2, mparty, 1, 0, run % 2 ? 0 : 70, 2, pin2);
+                int q = 0;
+                for (int i = 0; i < r2.n; i++) q += r2.bot[i].name[0] == 'Q';
+                bad2 += r2.n != 3 || roster_on_team(r2, 0) != 1 || roster_on_team(r2, 1) != 2 || !pin2[0] ||
+                        r2.bot[0].team != 0 || q > 2;
+            }
+            CHECK(!bad2, "Double Team lobbies wrong in %d of 60", bad2);
+        }
         DeleteFileW(rf);
         sr_open(dir);
     }

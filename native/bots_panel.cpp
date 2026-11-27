@@ -1855,13 +1855,15 @@ bool bot_pool_swap(hb_roster& r, int i, uint32_t difficulty) {
 // lobby's other bots each clan (or bot alone) stays keep_pct% of the time; the seats left take the pool's next bots as
 // bot_pool_rotate takes them (a clan's first bot pulls its clanmates 85% of the time, a lobby never more of a clan than
 // fit whole on one team). Teams dealt by points with the person counted, the party kept on their team. pinned[i]: seat
-// i is the party's. Returns the bots new to the lobby
+// i is the party's. Returns the bots new to the lobby. (Nov 24, the owner's Multi Team: "4 teams of 3") nteams teams
+// of `size` (Arena 4, Big Team Battle 8, Double Team 2)
 int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int nparty, int party_team, int keep_pct,
-                       uint32_t difficulty, uint8_t pinned[HB_ROSTER_MAX], int* people, int npeople) {
+                       uint32_t difficulty, uint8_t pinned[HB_ROSTER_MAX], int* people, int npeople, int nteams) {
     bot_pool_load(g_pool_dir);
-    size = size >= 8 ? 8 : 4;
-    party_team = party_team == 1 ? 1 : 0;
-    int other = 1 - party_team, want[2], have[2] = {0, 0};
+    nteams = nteams < 2 ? 2 : nteams > HB_TEAMS_MAX ? HB_TEAMS_MAX : nteams;
+    size = size < 1 ? 1 : size * nteams > HB_ROSTER_MAX + 1 ? (HB_ROSTER_MAX + 1) / nteams : size;   // (Double Team: 2)
+    party_team = party_team >= 0 && party_team < nteams ? party_team : 0;
+    int other = party_team == 0 ? 1 : 0, want[HB_TEAMS_MAX] = {}, have[HB_TEAMS_MAX] = {};
     memset(g_humans, 0, sizeof g_humans);
     g_humans[party_team] = 1;                            // (the person: the clans line up on the other team)
     g_me_points_team = party_team;                       // (Nov 23: counted at their own points)
@@ -1869,17 +1871,20 @@ int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int npar
     // not known yet on the team with fewer people
     for (int p = 0; people && p < npeople; p++) {
         int t = people[p];
-        if (t != 0 && t != 1) t = g_humans[1] < g_humans[0] ? 1 : 0;
+        if (t < 0 || t >= nteams) {                      // (the team with the fewest people; a tie: the first)
+            t = 0;
+            for (int u = 1; u < nteams; u++) if (g_humans[u] < g_humans[t]) t = u;
+        }
         people[p] = t;
         g_humans[t]++;
         if (p < g_nfriends) g_friend_team[p] = t;        // (Nov 23: each friend's rating counted on their team)
     }
-    for (int t = 0; t < 2; t++) want[t] = size - g_humans[t] > 0 ? size - g_humans[t] : 0;
+    for (int t = 0; t < nteams; t++) want[t] = size - g_humans[t] > 0 ? size - g_humans[t] : 0;
     hb_roster old = r;
     uint32_t& rng = pool_rng();
     g_balance_note[0] = 0;
     memset(pinned, 0, HB_ROSTER_MAX);
-    r.n = 0; r.teams = 2;
+    r.n = 0; r.teams = nteams;
     auto seat = [&](const char* name, int team, const hb_bot* was) {
         hb_bot& b = r.bot[r.n];
         memset(&b, 0, sizeof b);
@@ -1916,15 +1921,17 @@ int bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int npar
         for (int k : group) {
             const hb_bot& b = old.bot[k];
             if (name_taken(r, b.name, -1)) continue;
-            int t = b.team == party_team || b.team == other ? b.team : other;
-            if (have[t] >= want[t]) t = 1 - t;
+            int t = b.team < nteams ? b.team : other;
+            for (int u = 0; u < nteams && have[t] >= want[t]; u++) if (u != t && have[u] < want[u]) t = u;   // (full: another)
             if (have[t] >= want[t]) break;
             seat(b.name, t, &b);
         }
     }
     int kept = r.n;
-    for (int t : { party_team, other })                  // the seats left, empty, each team's
+    for (int k = 0; k < nteams; k++) {                  // the seats left, empty, each team's (the person's first)
+        int t = k == 0 ? party_team : k <= party_team ? k - 1 : k;
         while (have[t] < want[t] && r.n < HB_ROSTER_MAX) seat("", t, nullptr);
+    }
     char clan[16] = "";
     int pull = 0, filled = 0;
     std::unordered_set<std::string> rolled;

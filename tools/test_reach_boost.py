@@ -119,9 +119,11 @@ class RunTests(unittest.TestCase):
         self.assertGreater(act.vertical, 0.5)                   # (Bot.boost's +0x3C, as the person's)
 
     def test_in_the_dive_too(self):
-        # (custom, Nov 20: a Reach Banshee boosts in on its man inside gun range too, full throttle, no governor)
+        # (custom, Nov 20: a Reach Banshee dives in on its man inside gun range at full throttle, no governor.
+        # Nov 25: unboosted inside AIR_BOMB_NO_BOOST_R, the owner's "boosting too long in the dive and then they cant
+        # bomb": live Spire 20261125-193322, 0 kills of the 9 bombs pressed off 1-1.9 s of boost)
         _, act = self.run_at(Vec(CANNON_R - 8.0, 0, 9.0))
-        self.assertTrue(act.fire2)
+        self.assertFalse(act.fire2)
         self.assertEqual(act.forward, 1.0)
 
     def test_turning_back_on_a_near_man_it_rolls_round(self):

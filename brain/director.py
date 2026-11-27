@@ -2032,12 +2032,17 @@ class Director:
         # 9 s filled the Wraith's only role, and in Slayer no bot is on an objective job for the power vehicles' pass
         # below: both Wraiths stood empty until 65 and 91 s, every other vehicle driven within 12 s
         for h, v in list(empty.items()):
-            if vehicles.kind_of(v["kind"]) not in vehicles.TANKS:
-                continue
+            if vehicles.kind_of(v["kind"]) not in vehicles.TANKS and not (
+                    (vehicles.spec(v["kind"]) or {}).get("move") == "air" and not vehicles.taxi_ok(v["kind"])):
+                continue       # (custom, Nov 25: and a Banshee or Hornet: our Falcon flying fills anti-air; live
+                               # Spire 20261125-193322 52-132 s, the Banshee empty 62 s, no bot of ours sent)
             vp = Vec(*v["pos"])
             pairs = [(dist(players[bid].pos, vp), b) for bid, b in pool_for(v).items()
                      if skip.get((bid, h), 0.0) <= now and may_drive(b, v)
-                     and dist(players[bid].pos, vp) <= reach_of(bid, v)]
+                     and dist(players[bid].pos, vp) <= reach_of(bid, v)
+                     and not (vehicles.kind_of(v["kind"]) not in vehicles.TANKS and any(
+                         x["handle"] == players[bid].vehicle and (vehicles.spec(x["kind"]) or {}).get("move") == "air"
+                         for x in snap.vehicles))]   # (custom, Nov 25: nobody out of an aircraft for one)
             if not pairs:
                 continue
             d, b = min(pairs, key=lambda x: (profiles.resource_priority(x[1].p), x[0]))

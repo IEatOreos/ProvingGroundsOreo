@@ -1384,6 +1384,14 @@ def main():
                         cmd=[round(a.forward, 2), round(a.strafe, 2), round(a.yaw, 3), buttons(a), round(a.pitch, 3)])
             if me.vehicle not in (None, -1):
                 line["seat"] = getattr(b, "seat", None)   # (tools/live_qc.py: who drove, who took a gun)
+                # (custom, Nov 26) an aircraft pilot: its craft's own nose (vehicles' "fwd", as read this pass) and its
+                # speed, to tell whether a Banshee bomb leaves along the nose or the reticle and how fast it was let go
+                # (docs/BANSHEE_PILOT_STATUS.md: live bombs killed 0.21 a press against the sim's 0.3-0.8)
+                if line["seat"] == "driver":
+                    vv = next((x for x in snap.vehicles if x.get("handle") == me.vehicle), None)
+                    if vv is not None and vv.get("fwd") is not None:
+                        line["vfwd"] = [round(c, 3) for c in vv["fwd"]]
+                        line["vspd"] = round(me.vel.length(), 2)
                 if me.turret:
                     line["turret"] = me.turret
             if b.fx:

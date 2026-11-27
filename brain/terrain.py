@@ -17,6 +17,11 @@ from .core import Vec
 EYE = 0.62       # standing eye height above the feet (world units, CE)
 CHEST = 0.40
 FEET_SLAB = 0.6  # a ray crossing the plane of a man's feet this close to him goes through the floor he stands on (_ray)
+def air_safes(safes):
+    """(custom, Nov 25) {kind: safe volumes} for Terrain.kill_hit: a kind's spheres left out where it has another shape."""
+    return {k: [v for v in vs if v.get("shape") != "sphere"] or vs for k, vs in safes.items()}
+
+
 NO_FLOOR_H = 1.5  # u: (custom, Nov 23) a shooter this far over the floor under it stands on none (_ray: a pilot's line down)
 RAY_MAX = 1000.0  # u: no line of sight longer than this (_ray: its samples grow with its length)
 LIP_R = 3.0           # u: from the eye, a wall's top step's upper half is rounding, not its cover's lip (_ray)
@@ -1148,10 +1153,24 @@ class Terrain:
         """Height of (x, y, z) over the floor right under it: the highest of the nav's floors there at or below z (a
         roof, a bridge, the spire top), else the ground (aircraft, tools/lidar.py RideWatch; ground() is the lowest)."""
         if not s.inside(x, y):
-            return z - s.ground(x, y)
+            return z - s._ground_known(x, y)
         j, i = s._cell(Vec(x, y, z))
         zs = [float(v) for v in s.lz[:, j, i] if math.isfinite(v) and v <= z + 0.3]
-        return z - (max(zs) if zs else s.ground(x, y))
+        return z - (max(zs) if zs else s._ground_known(x, y))
+
+    def _ground_known(s, x, y):
+        """(custom, Nov 25) ground(), but where the level data holds no surface (past its edge) the map's lowest known
+        one, not ground()'s 0.0. Spire's floors are at -60: a Banshee past its east edge (-117, -367, -43.6) read 43.6 u
+        under the ground, climbed at full pitch 11 s ("the ground on the run, pulling out" every tick) and died to the
+        return-to-battlefield countdown, live 20261125-183258 at 226 s."""
+        j, i = s._ij(np.asarray(x), np.asarray(y))
+        z = s.low[j, i]
+        if np.isfinite(z):
+            return float(z)
+        lo = getattr(s, "_low_min", None)
+        if lo is None:
+            lo = s._low_min = float(np.nanmin(s.low)) if np.isfinite(s.low).any() else 0.0
+        return lo
 
     def add_rides(s, drive, air, heights=None, marks=None):
         """What people and bots drove and flew (maps/<map>/rides.json, tools/lidar.py RideWatch; maps.rides_layers):
@@ -2293,6 +2312,11 @@ class Terrain:
             s._oob_kills = [(v, *O.bounds(v)) for v in volumes or () if v["kind"] in O.KILLS]   # (kill_hit)
             s._oob_safes = {k: [v for v in volumes or () if v["kind"] == k] for k in O.SAFES}   # (kill_hit)
             s._oob_safes = {k: vs for k, vs in s._oob_safes.items() if vs}
+            # (custom, Nov 25) a kind's sphere is left out where it has a box too, as air_roof leaves it out: Spire's
+            # 150 u soft_safe sphere, read as a radius, covers the air past its soft_safe box's east side, where a
+            # Banshee's countdown ran out (live 20261125-183258: out of the box's side at 216 s, inside the sphere
+            # throughout, dead at 226.3 s; kill_hit read it in bounds and oob_escape never turned it back)
+            s._oob_safes = air_safes(s._oob_safes)
             s._oob_version = None
         if version is not None and getattr(s, "_oob_version", None) == version:
             return

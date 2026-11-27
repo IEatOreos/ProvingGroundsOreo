@@ -189,7 +189,8 @@ const char* roster_balance_note();                      // the last balance's sp
 // (0 / 1) or -1 not known: each takes a bot's seat on their team, counted in the points; a -1 is counted on the team
 // with fewer people (as matchmaking would put them) and written back
 int  bot_pool_matchmake(hb_roster& r, int size, const char (*party)[16], int nparty, int party_team, int keep_pct,
-                        uint32_t difficulty, uint8_t pinned[HB_ROSTER_MAX], int* people = nullptr, int npeople = 0);
+                        uint32_t difficulty, uint8_t pinned[HB_ROSTER_MAX], int* people = nullptr, int npeople = 0,
+                        int nteams = 2);         // (Nov 24: Multi Team's 4 teams of `size`)
 int  bot_pool_names(char (*out)[16], int cap);          // the pool's bots, each once, in its order
 unsigned char* hb_image_rgba(const wchar_t* path, int* w, int* h);   // PNG / JPEG as RGBA, malloc'd; nullptr: unreadable
 

@@ -214,6 +214,13 @@ bool sr_rate(const char* id, bool teams, const char* gametype, std::vector<sr_pl
     if (!id || !id[0] || pl.empty() || g_counted == id) return false;
     std::string gt = key(gametype);
     if (gt.find("firefight") != std::string::npos) return false;
+    if (gt.find("infection") != std::string::npos) {     // (Nov 24, the owner: Infection "Not rated"; counted, no change)
+        g_shown.clear();
+        g_shown_match = id;
+        g_counted = id;
+        save();
+        return false;
+    }
     for (sr_player& p : pl) {
         if (p.bot && p.tier < 0) p.tier = sr_tier_of(p.name.c_str());
         if (p.bot && p.tier < 0) p.tier = 3;                 // (a bot never seated here: Legendary)
@@ -228,12 +235,17 @@ bool sr_rate(const char* id, bool teams, const char* gametype, std::vector<sr_pl
         for (const sr_player& p : pl) { best = p.place < best ? p.place : best; worst = p.place > worst ? p.place : worst; }
         bool draw_game = best == worst;
         for (sr_player& p : pl) {
+            bool won = p.place == best && !draw_game;
+            // the gap: a winner's team against all it beat; (Nov 24, Multi Team's four) a loser's against the winners
+            // (two teams: the same, the other team either way)
             double own = 0, opp = 0;
             int no = 0, nop = 0;
-            for (const sr_player& q : pl) (q.team == p.team ? (own += q.before, no++) : (opp += q.before, nop++));
+            for (const sr_player& q : pl) {
+                if (q.team == p.team) { own += q.before; no++; }
+                else if (won || q.place == best) { opp += q.before; nop++; }
+            }
             own = no ? own / no : 0;
             opp = nop ? opp / nop : own;
-            bool won = p.place == best && !draw_game;
             if (!p.bot && !p.completed) { p.after = p.before + 15; continue; }   // (a person who quit: tougher teams)
             if (draw_game && p.completed) continue;
             if (p.bot) {

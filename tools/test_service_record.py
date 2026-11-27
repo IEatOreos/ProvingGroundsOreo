@@ -672,7 +672,7 @@ def test_carnage_of_the_last_match():
         w.career()
         data = w.build()
         got = lines(w)
-        assert got[0] == ["match", "pg-9"] and got[1] == ["game", "TU TEAM SLAYER DMR", "1", "reach_forge_halo"], got[:2]
+        assert got[0] == ["match", "pg-9"] and got[1] == ["game", "TU TEAM SLAYER DMR", "1", "reach_forge_halo", "Forge World"], got[:2]
         assert [l for l in got if l[0] == "team"] == [["team", "0", "1", "50"], ["team", "1", "2", "20"]], got
         players = [l for l in got if l[0] == "player"]
         assert [p[2] for p in players] == ["Me", "Wheezy"], players

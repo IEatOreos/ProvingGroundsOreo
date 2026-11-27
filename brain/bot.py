@@ -1135,6 +1135,36 @@ AIR_BOMBER_TIGHT_R = 25.0   # (custom, Nov 20) u flat: a Reach bomber's pulled-b
 # (custom, Nov 20) a Reach bomber's dive: air_guard's look for the ground stops this short of its man, but never under
 # AIR_PULL_MIN_S of flight (a hill or a deck between still pulls it out)
 AIR_BOMBER_PULL_SPARE, AIR_PULL_MIN_S = 5.0, 0.4
+AIR_BOMB_NO_BOOST_R = 30.0  # (custom, Nov 25) u: a Reach bomber's dive is not boosted this near its man (air_pass)
+AIR_REL_NEAR_R = 15.0       # u 3D: a kept bomb on a man still closing goes from here in, not at the first 18 u
+AIR_REL_MAX_SPD = 12.0      # u/s: no bomb faster (live Spire, Nov 25: 1 kill in 14 bombs at 12 u/s or more)
+AIR_REL_VIEW_S = 0.4        # s: the view on him this long, the nose swinging onto him: the bomb goes
+AIR_REL_NOSE_LOOSE = 0.3    # rad: ... with the nose no further off him than this (Nov 26: no longer used, AIR_REL_NOSE_R)
+AIR_REL_NOSE_R = math.radians(5.0)  # rad: (Nov 26) the craft's nose this near him left/right, or the bomb is held
+AIR_REL_AIM_S = 0.5         # s: (Nov 26) the view on his feet this long before the bomb goes (bomb_release)
+AIR_BOMB_LEAD_CAP = 3.0     # u: (Nov 26) a Reach bomber's lead on a walking man at most (Bot.bomb_lead)
+AIR_REL_WAIT_MAX = 0.6      # s: 15 u further off than this at the closing speed: no waiting for it
+AIR_REL_CLOSING_MIN = 1.0   # u/s: closing slower than this, he is at his nearest: the bomb goes
+AIR_REL_HOLD_MAX = 1.0      # s: the view on him this long, the range wait is over
+AIR_REL_GAP = 0.25          # s: the view off him longer than this starts its clock again
+AIR_REL_STEEP = 1.2         # rad: he is under the nose steeper than this when 15 u comes: he leaves the line
+AIR_BOMB_MAN_R = 22.0        # u 3D: a bombable man this near is the bomber's man (Bot.air_bomb_man)
+AIR_BOMB_MAN_KEEP_R = 25.0   # u 3D: once on him, kept to this far
+AIR_BOMB_MAN_MIN = 4.0       # u 3D: nearer than this he is under it, past the bomb's use
+AIR_BOMB_MAN_EARLY = 1.0     # s: from this long before the bomb is ready
+AIR_BOMB_MAN_LINE_S = 0.3    # s: once on him, a line this recent still counts
+AIR_BOMB_MAN_STEEP = math.radians(55.0)       # rad under the level from its eye to his feet: steeper, not picked
+AIR_BOMB_MAN_STEEP_KEEP = math.radians(62.0)  # ... and once on him, let go past this
+AIR_BOMB_MAN_AHEAD = math.radians(100.0)      # rad off the craft's heading: a new pick within this
+AIR_LOOK_R = 25.0            # u: a pilot's 3D view cone reaches this far (Perception.update)
+AIR_LOOK_HALF = math.radians(75.0)
+AIR_DUD_PROVEN = 60.0   # s: (custom, Nov 25) an aircraft somebody was in this lately is no dud (Bot.dud_check)
+AIR_BOARD_R = 1.5       # u: (custom, Nov 25) where a bot stands to get into an aircraft from its open side
+                          # (live Reach Banshee boardings, four Spire matches Nov 25: the press took at 1.3-2.66 u)
+AIR_BOMB_STEEP_UP = 8.0  # (custom, Nov 25) u over its man: a ready bomb's dive goes on down at him from over this (air_pass)
+AIR_BOMB_HOLD_H = 4.0  # (custom, Nov 25) u over the floor: a selected bomb keeps the dive on its man down to this (air_pass)
+AIR_BOMB_LEAD_S, AIR_BOMB_LEAD_MAX = 0.3, 6.0   # (custom, Nov 25) s, u: the bomb selected this early on the way in (air_snap_bomb)
+AIR_BOMB_NEAR = 3.0   # (custom, Nov 25) u: a selected bomb still goes on a man this near under its aim (bomb_lined)
 AIR_BOMB_HOLD = 0.4   # (custom, Nov 20) s: a Reach bomber's selected bomb waits this long for a man under its aim (fuel_rod)
 # (custom, Nov 20) u: the farthest a Reach bomber lets its bomb go (air_pass). Opening bombs from 13-16 u flat killed
 # 0-1; the 2-3 kill ones came from 8-9 u flat over a bunch
@@ -1745,6 +1775,17 @@ class Perception:
             sure = getattr(s, "attacker_sure", (None, -9.0))
             shooting = sure[0] == e.id and now - sure[1] < 1.5 and d < 30.0
             in_view = (off < peripheral_half and d < SIGHT_RANGE or d < 2.5) and not getattr(s, "blind", False)
+            look3d = False
+            if not in_view and getattr(s, "air_view", False) and d < AIR_LOOK_R and not getattr(s, "blind", False):
+                # (custom, Nov 25) an aircraft's pilot looking down sees the men under and beside its craft: within
+                # AIR_LOOK_HALF of its view's own direction (yaw and pitch), not only the flat yaw cone
+                to3 = e.pos - eye(me)
+                cp3 = math.cos(me.pitch)
+                c3 = (to3.x * cp3 * math.cos(me.yaw) + to3.y * cp3 * math.sin(me.yaw)
+                      + to3.z * math.sin(me.pitch)) / max(to3.length(), 1e-6)
+                if c3 > math.cos(AIR_LOOK_HALF):
+                    in_view = look3d = True
+                    s.look3d_n = getattr(s, "look3d_n", 0) + 1
             if (in_view and part_los is not None and me.vehicle == -1 and e.vehicle == -1
                     and me.weapon not in SPLASH and me.weapon not in CHARGE and me.weapon not in LUNGE):
                 stance = crouched(e)
@@ -1805,7 +1846,7 @@ class Perception:
                     quick = 1.0
                     if now - s.dropped.get(e.id, -9.0) < 3.0:
                         quick = min(quick, 0.35)   # the man we just lost behind a pillar: no new double take
-                    side = off > center_half
+                    side = off > center_half and not look3d   # (custom, Nov 25: a pilot's 3D cone: its middle)
                     if (side and profiles.arc_spot(s.p) and e.id == getattr(s, "attacker_id", None)
                             and now - getattr(s, "attacker_t", -9.0) < 1.5):
                         side = False   # (custom, Nov 12) the man hurting us: found by the damage arc (profiles.arc_spot)
@@ -3771,6 +3812,7 @@ class Bot:
         if lanes:       # (custom, Nov 19) Legendary and up: round the lanes the most people died in, when about as short
             nav = (lambda nav0: lambda a, b, **kw: nav0(a, b, avoid=lanes, **kw))(nav)
         s.kill_check(now, snap)
+        s.air_crewed_note(now, snap)          # (custom, Nov 25: who was in which vehicle lately, dud_check)
         noble_on = profiles.fixed_noble(s.p)
         if noble_on:
             s.noble_learn(now, snap)          # (custom, Nov 20: Noble's shots resolved, brain/noble.py)
@@ -4150,6 +4192,9 @@ class Bot:
             s.goal, s.next_decide = ("roam", None), now
         busy = s.goal[0] in ("fight", "retreat")
         s.per.marker_far = s.order.role in ("hunter", "cutoff")     # (custom: the carrier's emblem, MARKER_R)
+        # (custom, Nov 25: a Reach Banshee pilot's 3D view, Perception.update; review Nov 26: Reach's Banshee only, every
+        # other game's and aircraft's view as before)
+        s.per.air_view = s.reach_bomber() and s.piloting(me, snap)
         for e in s.per.update(now, me, snap, los, callouts, game=s.game):
             s.reports.append(("seen", e.id, e.pos, now, busy))
             s.noble_sighted(now, me, e)          # (custom, Nov 22: Noble's pre-aim learning, brain/noble_habits.py)
@@ -4179,6 +4224,13 @@ class Bot:
             s.air_guard(me, act, snap)
             s.spire_approach(me, act, snap)
             s.air_roof_guard(me, act, snap)
+            aim, rec = getattr(s, "bomb_aim", None), getattr(s, "air_rec", None)
+            if aim is not None and aim[0] == now and (rec is None or now >= rec[1]):
+                # (custom, Nov 25) the bomb selected, its shot 0.25 s off: the nose stays where the run aimed it (his
+                # feet), whatever the guards turned it to ("wall ahead, turning to open air" swung it 15-28 deg off him
+                # at 414.9 and 476.1 s, live Spire 20261125-183823: the rock he stood by)
+                act.yaw, act.pitch = aim[1], aim[2]
+                s.note("air: bomb up, the nose held on him")
             s.air_snap_bomb(now, me, act, snap)    # (custom, Nov 19: Reach, the bomb on whoever is under the nose)
             s.air_snap_fire(now, me, act, snap)
             if act.fire and getattr(s, "rod", None) is None and s.piloting(me, snap) and s.reach_bomber():
@@ -4213,6 +4265,7 @@ class Bot:
                 # (upstream 0.3.0, build 20261115-0215: Halo CE, its facing read, the door right by the hull, close)
                 ce = s.game == "ce" and bool(v.get("fwd"))
                 vp = s.seat_point(v, want, side=1 if getattr(s, "enter_tries", 0) // 90 % 2 == 0 else -1, close=ce)
+                vp = s.air_board_point(now, me, v, vp, want)   # (custom, Nov 25: an aircraft from its open side)
                 foe = s.vehicle_way_target(now, me, snap, vp)
                 if foe is not None:
                     # (custom, Nov 15, the owner: "make bots fight on the way to a vehicle") the fight's aim and trigger
@@ -6052,6 +6105,198 @@ class Bot:
         """Vehicles nobody gets into lately (handle -> until), shared by every bot on the map (vehicles.DUD_S)."""
         return s.map.setdefault("_vehicle_duds", {})
 
+    def air_crewed_note(s, now, snap):
+        """(custom, Nov 25) When and where this bot last saw each vehicle with somebody in it (handle -> (time, place)):
+        one somebody was in lately is no dud (dud_check). The bot's own record, read and written in its own think."""
+        seen = s.__dict__.setdefault("veh_crewed", {})
+        for v in snap.vehicles or ():
+            if v.get("occupied"):
+                seen[v["handle"]] = (now, Vec(*v["pos"]))
+
+    def air_board_point(s, now, me, v, vp, want):
+        """(custom, Nov 25) Where to stand to get into aircraft v as its pilot: its seat point vp, unless a wall stands
+        between vp and the craft's middle (live Spire 20261125-193322: the Banshee set down beside a low wall, its door
+        behind it), or this bot's try from that side did not take (air_board_away, set by dud_check): then the nearest point
+        AIR_BOARD_R from the middle with an open line to it, not within 60 degrees of the failed side. vp when there is
+        none, or not an aircraft's pilot seat."""
+        sp = vehicles.spec(v["kind"]) or {}
+        if want != "driver" or sp.get("move") != "air" or not (s.game == "reach" or tuple(sp.get("seats", ())) == ("driver",)):
+            return vp
+        try:
+            T = s.T()
+        except Exception:
+            return vp
+        c = Vec(*v["pos"])
+        z = c.z + (s.feet(me).z - me.pos.z)          # (the level's probes measure from the feet)
+        away = getattr(s, "air_board_away", None)
+        away = away[1] if away is not None and away[0] == v["handle"] and now < away[2] else None
+
+        def open_line(p):
+            r = math.hypot(c.x - p.x, c.y - p.y)
+            return r < 0.3 or T.clearance(Vec(p.x, p.y, z), math.atan2(c.y - p.y, c.x - p.x), r) >= r - 0.1
+
+        if away is None and open_line(vp):
+            return vp
+        best = None
+        for k in range(12):
+            a = k * math.pi / 6
+            if away is not None and abs(wrap(a - away)) < math.radians(60):
+                continue
+            p = Vec(c.x + AIR_BOARD_R * math.cos(a), c.y + AIR_BOARD_R * math.sin(a), c.z)
+            if not open_line(p):
+                continue
+            d = math.hypot(p.x - me.pos.x, p.y - me.pos.y)
+            if best is None or d < best[0]:
+                best = (d, p)
+        if best is None:
+            return vp
+        s.note("air: boarding from its open side")
+        return best[1]
+
+    def air_bomb_man(s, now, me, snap):
+        """(custom, Nov 25) A Reach bomber's man while its bomb is ready or nearly (rod_next less AIR_BOMB_MAN_EARLY): the
+        nearest enemy in sight (visible_enemies) within AIR_BOMB_MAN_R u 3D (not under AIR_BOMB_MAN_MIN) with a clear line
+        (line_clear) and, on foot, his feet open to it (air_feet_open); a rider needs only the line. The man it is on
+        (air_bomb_on) is kept while he stays so, to AIR_BOMB_MAN_KEEP_R and a line within AIR_BOMB_MAN_LINE_S. None
+        otherwise. tools/banshee_sim.py, Boneyard e1: a man 6-18 u off with a line and the bomb ready for 307 s of 1440 s
+        flying, the view on his feet 6.1 s; 45 of 138 such windows unbombed had the view on another man, 39 farther."""
+        r = getattr(s, "rod", None)
+        if (not s.reach_bomber() or (r is not None and r[0] != "to")
+                or now < getattr(s, "rod_next", 0.0) - AIR_BOMB_MAN_EARLY):
+            s.air_bomb_on = None
+            return None
+        seen = set(s.per.visible_enemies())
+        cur = getattr(s, "air_bomb_on", None)
+        v = next((x for x in getattr(snap, "vehicles", ()) or () if x.get("handle") == me.vehicle), None)
+        fwd = v.get("fwd") if v is not None else None
+        head = (math.atan2(fwd[1], fwd[0]) if fwd is not None and len(fwd) == 3 and math.hypot(fwd[0], fwd[1]) > 1e-3
+                else me.yaw)   # (the craft's heading; review Nov 26: its view's where the nose has none flat)
+        best = None
+        for e in snap.players:
+            if (e.team == me.team or not e.alive or e.id == me.id or e.id not in seen
+                    or e.id not in s.per.beliefs):
+                continue
+            keep = e.id == cur
+            d = dist(me.pos, e.pos)
+            if d < AIR_BOMB_MAN_MIN or d > (AIR_BOMB_MAN_KEEP_R if keep else AIR_BOMB_MAN_R):
+                continue
+            # (its bomb leaves along the craft's nose: not a man so steep under it that the nose can't come onto him, nor,
+            # for a new pick, one behind its heading. Tried without: smoke seed 1, 4 of 7 bombs at men 67-84 deg under it,
+            # 1-4 u flat, no kill)
+            dep = math.atan2(eye(me).z - e.pos.z, max((e.pos - me.pos).flat(), 1e-6))
+            if dep > (AIR_BOMB_MAN_STEEP_KEEP if keep else AIR_BOMB_MAN_STEEP):
+                continue
+            if not keep and abs(wrap(math.atan2(e.pos.y - me.pos.y, e.pos.x - me.pos.x) - head)) > AIR_BOMB_MAN_AHEAD:
+                continue
+            if keep:
+                if now - s.per.clear_at.get(e.id, -9.0) > AIR_BOMB_MAN_LINE_S:
+                    continue
+            elif not s.line_clear(now, me, e.id, snap):
+                continue
+            if e.vehicle in (None, -1) and not s.air_feet_open(now, me, e):
+                continue
+            if keep:
+                best = (-1.0, e.id)
+                break
+            if best is None or d < best[0]:
+                best = (d, e.id)
+        s.air_bomb_on = best[1] if best is not None else None
+        return s.air_bomb_on
+
+    def air_feet_open(s, now, me, e):
+        """(custom, Nov 25) A round's line from a pilot's middle to man e's feet (Terrain.aim_hit, as air_line_clear's to
+        his chest): the bomb can reach him. Rechecked every 0.15 s or once either moved 1 u."""
+        c = s.__dict__.setdefault("air_feet", {})
+        k = c.get(e.id)
+        if k is not None and now - k[0] < 0.15 and (k[1] - e.pos).flat() < 1.0 and (k[2] - me.pos).length() < 1.0:
+            return k[3]
+        T = s.air_terrain()
+        if not hasattr(T, "aim_hit"):
+            return True
+        tgt = e.pos + Vec(0.0, 0.0, 0.2)
+        d = dist(me.pos, tgt)
+        hit = T.aim_hit(me.pos, math.atan2(tgt.y - me.pos.y, tgt.x - me.pos.x),
+                        math.atan2(tgt.z - me.pos.z, max((tgt - me.pos).flat(), 1e-6)), reach=d)
+        ok = hit is None or dist(hit, tgt) < 1.0
+        c[e.id] = (now, e.pos, me.pos, ok)
+        return ok
+
+    def bomb_release(s, now, me, v, e, d, ya, pa, r, act):
+        """(custom, Nov 25) The kept bomb's shot on e, the view on his feet within r and inside REACH_BOMB_R (air_snap_bomb):
+        True to let go now. (c) the boost let off this tick, and never past AIR_REL_MAX_SPD; (a) the craft's own nose
+        (v["fwd"]) within AIR_REL_NOSE_R of him left/right and not climbing (Nov 26; was within r, or swinging onto him
+        within AIR_REL_NOSE_LOOSE); (b) past AIR_REL_NEAR_R only when he leaves the line first
+        (bomb_leaving) or the craft is at its nearest (closing under AIR_REL_CLOSING_MIN, or 15 u more than AIR_REL_WAIT_MAX
+        off), or after AIR_REL_HOLD_MAX on him. Each man's clock apart (s.rel_on: id -> [first, last, nose off]), dropped
+        AIR_REL_GAP s after the view leaves him. Live Spire 20261125-193322: all 15 kept bombs went at 17-19 u, the tick he
+        came into reach; 3 of the 4 under 9 u/s killed, none of the 9 at 12-27 u/s. tools/banshee_sim.py (15 Boneyard
+        games, Nov 25): bombs with the flight path within 30 deg of him killed 62%, past 45 deg 9%"""
+        ons = getattr(s, "rel_on", None)
+        if not isinstance(ons, dict):
+            ons = s.rel_on = {}
+        for k in [k for k, x in ons.items() if now - x[1] > AIR_REL_GAP]:
+            del ons[k]
+        st = ons.get(e.id)
+        if st is None:
+            st = ons[e.id] = [now, now, None]
+        st[1] = now
+        held = now - st[0]
+        # (c) not boosted, not too fast
+        if act.fire2:
+            act.fire2, act.vertical = False, 0.0              # (Bot.boost: a Reach Banshee's boost is the vertical input)
+        if me.vel.length() > AIR_REL_MAX_SPD:
+            s.note("air: bomb held, too fast")
+            return False
+        # (a) the craft's nose on him too: left and right only. (Nov 26, live Island + 2 Boneyard traces: a Reach Banshee's
+        # body sits 15-25 deg above the view at all times, the 23 bombs that went too (10 kills), so its pitch said "not
+        # on him" on 1500+ ticks with a man in the bomb's reach. The bomb goes along the view; a nose climbing holds it)
+        fwd = v.get("fwd") if v is not None else None
+        if fwd is not None and len(fwd) == 3:
+            ny, np_ = math.atan2(fwd[1], fwd[0]), math.atan2(fwd[2], math.hypot(fwd[0], fwd[1]))
+            if np_ > 0.0:
+                s.note("air: bomb held, the nose climbing")
+                return False
+            # (Nov 26, live Boneyard 20:03: 18 bombs; the nose under 5 deg off him left/right killed 5 of 6, 5-15 deg 0 of
+            # 5, past 15 deg 1 of 8 - the view on his feet within 1 deg on nearly all. The owner: "they still dont wait
+            # long enough to line up the shot". So no early release on a nose swinging onto him, nor a wider window
+            # further off: held until the nose is within AIR_REL_NOSE_R)
+            off = abs(wrap(ya - ny))
+            st[2] = off
+            if off >= AIR_REL_NOSE_R:
+                s.note("air: bomb held, the nose not on him yet")
+                return False
+        # (a2, Nov 26) the view on his feet AIR_REL_AIM_S first. Live Boneyard 20:03 + 20:29: bombs let go under 0.5 s on
+        # him killed 2 of 18, 0.5 s or more 7 of 11 (the view on his feet within 1 deg and the nose on him on most of both).
+        # The owner's own Banshee run (20:41, 5 kills in 39 s): his crosshair on the man 1-1.5 s before every kill
+        if held < AIR_REL_AIM_S:
+            s.note("air: bomb held, the aim settling on him")
+            return False
+        # (b) nearer than the first tick at 18 u while still closing on him
+        if d > AIR_REL_NEAR_R and held < AIR_REL_HOLD_MAX:
+            to, rel = e.pos - me.pos, me.vel - e.vel
+            closing = (rel.x * to.x + rel.y * to.y + rel.z * to.z) / max(d, 1e-6)
+            if closing > AIR_REL_CLOSING_MIN:
+                t = (d - AIR_REL_NEAR_R) / closing
+                if t <= AIR_REL_WAIT_MAX and not s.bomb_leaving(me, e, t):
+                    s.note("air: bomb held for 15 u")
+                    return False
+            s.note("air: bomb at 15-18 u, he leaves the line or it is at its nearest")
+        return True
+
+    def bomb_leaving(s, me, e, t):
+        """(custom, Nov 25) A man under the view will be out of the bomb's line t s on (bomb_release): the run is not
+        diving on him (its view moves on), or at both on their way he is under the nose steeper than AIR_REL_STEEP, or the
+        level is between (Terrain.shot_los)."""
+        run = getattr(s, "air_run", None)
+        if run is None or run[0] != "in" or run[1] != e.id:
+            return True
+        mf, ef = me.pos + me.vel * t, e.pos + e.vel * t
+        if math.atan2(mf.z - ef.z, max(math.hypot(ef.x - mf.x, ef.y - mf.y), 1e-6)) > AIR_REL_STEEP:
+            return True
+        T = s.T() if s.map is not None else None
+        los = getattr(T, "shot_los", None)
+        return los is not None and not los(mf, ef)
+
     def dud_check(s, now, dt, me, v):
         """Whether v may still be gone for: vehicles.usable, and the time this bot has stood within DUD_NEAR of it on the
         way in without getting in under DUD_S (then it is a dud for everyone DUD_FOR s)."""
@@ -6064,6 +6309,20 @@ class Bot:
             t = s.veh_try = [v["handle"], 0.0] if t is None or t[0] != v["handle"] else t
             t[1] += dt
             if t[1] > vehicles.DUD_S:
+                # (custom, Nov 25) an aircraft somebody was in lately and still where it was left is no dud: a seat
+                # that did not take from one side is tried from another (air_board_point), the clock again. Live
+                # Spire 20261125-193322: the owner's Banshee, left by a low wall, banned for everyone 120 s after
+                # bot 8's 10 s by it (21 Use presses from behind the wall); it stood empty 92 s of those 120
+                seen = getattr(s, "veh_crewed", {}).get(v["handle"])
+                if (seen is not None and now - seen[0] < AIR_DUD_PROVEN
+                        and dist(Vec(*v["pos"]), seen[1]) < s.VEH_BAN_MOVED
+                        and (vehicles.spec(v["kind"]) or {}).get("move") == "air"):
+                    c = Vec(*v["pos"])
+                    s.air_board_away = (v["handle"], math.atan2(me.pos.y - c.y, me.pos.x - c.x), now + 20.0)
+                    s.veh_try = [v["handle"], 0.0]
+                    s.vehicle_until = max(getattr(s, "vehicle_until", 0.0), now + 4.0)
+                    s.note(f"air: the {v['kind']} was flown lately, no dud: another side")
+                    return True
                 duds[v["handle"]], s.veh_try = now + vehicles.DUD_FOR, None
                 s.note(f"vehicle: cannot get into the {v['kind']}, leaving it")
                 return False
@@ -6870,6 +7129,7 @@ class Bot:
             s.seat_for, s.seat_since, s.exit_tries, s.still_at = me.vehicle, now, 0, None
             s.veh_try = None                             # (dud_check: it got in)
             s.rod = None                                 # (a Banshee is got into on its cannons)
+            s.bomb_sel = None                            # (custom, Nov 25: so its bomb is selected again, fuel_rod)
             s.seat_vitals = me.shield + me.health        # (crew_coming: shot since getting in)
             inside = getattr(s, "enter_riders", 0)
             # where botcore seats a bot by the seat it asks for (Halo 4 / H2A by the seat's own flags, native/h4f.cpp
@@ -7223,6 +7483,16 @@ class Bot:
             # (custom, Nov 20) a man on foot under a roof is no bomber's (air_open_sky)
             seen = [k for k in seen if (snap.player(k) is not None and snap.player(k).vehicle not in (None, -1))
                     or s.air_open_sky(now, k)]
+        # (custom, Nov 25) a Reach bomber's bomb ready: the nearest man in sight it can bomb now is its man, whoever
+        # its run was on, and kept while he stays bombable (air_bomb_man; the filters above are for men it can't)
+        bm = s.air_bomb_man(now, me, snap) if (air and st.get("role") == "air" and not easy and not transit) else None
+        if bm is not None:
+            run0 = getattr(s, "air_run", None)
+            if run0 is not None and isinstance(run0[1], int) and run0[1] != bm:
+                s.note("air: bomb ready, off his man onto the bombable one")
+            s.note("air: on the bombable man")
+            seen = [bm]
+        s.air_bomb_on = bm      # (review, Nov 26: not computed this tick: no man for air_pass's bombable-man rules)
         if not seen and air and st.get("role") == "air" and not easy and not transit:
             keep = s.air_keep(now, me, snap)     # (custom, Nov 13) the run's man out of sight: the attack goes on
             if keep is not None:
@@ -7247,7 +7517,7 @@ class Bot:
             # (custom, Nov 13) a pilot keeps its run's man while he is in sight (each tick's pick flipped between men:
             # 108 of Valhalla's 174 runs ended on a new target)
             held = s.run_target(seen) if air and st.get("role") == "air" else None
-            if held is None and air and st.get("role") == "air" and not easy and not transit:
+            if held is None and air and st.get("role") == "air" and not easy and not transit and bm is None:
                 held = s.run_hold(now, me, snap)     # (custom, Nov 17) its run's man just out of sight, another in it
                 if held is not None:
                     s.note("air: on the run's man, another in sight")
@@ -7285,7 +7555,17 @@ class Bot:
             # (custom, Nov 17, the owner: "It should try to shoot it similarly like a rocket or fuel rod. At their legs or
             # ground below them?") a Banshee's bomb, while it is selected (Bot.fuel_rod), goes at his feet like any
             # explosive (Aim.step SPLASH): the cannons' chest aim let a near miss fly on past him
-            bombing = kind == "banshee" and getattr(s, "rod", None) is not None
+            # (custom, Nov 25, the owner: "the reticle isnt aiming for their feet") a Reach Banshee's pilot, whose only
+            # shot is its bomb, aims at his feet all the run, not from the bomb's selection on: live Spire
+            # 20261125-183823, its view sat 0.3-0.5 u over his feet (his chest) down to the cycle press, 0.25 s
+            # before the shot
+            bombing = kind == "banshee" and (getattr(s, "rod", None) is not None or s.reach_bomber())
+            # (custom, Nov 26, the owner: "I know how to lead can you show a bot that") a Reach bomber's aim goes where he
+            # will be when the bomb lands (bomb_lead), its own lead; Aim.step's (a tier's lead, none for Legendary and
+            # Demon) is not added on top
+            led = s.game == "reach" and bombing and s.reach_bomber()
+            if led:
+                aim_at = s.bomb_lead(origin or eye(me), aim_at, b.vel)
             if s.game == "h4" and not cam and v is not None:
                 # (custom: Halo 4, every tier at the wheel of a gun (a Ghost): from the seat's view, the vehicle's camera
                 # point, to the real point on him (h4_aim_point); a tank keeps its camera view (vehicles.DRIVER_VIEW))
@@ -7305,7 +7585,7 @@ class Bot:
                     aim_at = tp
             # (bombing: "fuelrod" for its feet aim only; its lead stays the bomb's own speed, Reach's REACH_BOMB_SPEED,
             # else the cannons' as before)
-            act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, b.vel, False,
+            act.yaw, act.pitch = s.aim.step(now, dt, me, tid, aim_at, Vec() if led else b.vel, False,
                                             gun="fuelrod" if bombing else st.get("gun"),
                                             origin=origin, target_point=tp,
                                             crouched=crouched(foe), protected=profiles.fixed_high(s.p),
@@ -8134,12 +8414,42 @@ class Bot:
             # out, PASS_OUT_S with the guns off: live Blood Crash 20261108-151434, 9 of a Demon pilot's 16 runs ended on
             # a target switch, median run 0.13 s ("The banshee doesnt do its strafe run long enough", the owner)
             dive = flat >= PASS_START or (not behind and flat >= AIR_RUN_FROM)
-            run = s.air_run = ["in" if dive else "out", tid, run[2] if dive and run is not None and run[0] == "in" else now,
-                               me.yaw]
+            # (custom, Nov 25) the bombable man (air_bomb_man) ahead: dived on at once; behind: the way out already
+            # under way goes on, not restarted
+            bomb_man = isinstance(tid, int) and getattr(s, "air_bomb_on", None) == tid
+            if bomb_man and not dive and not behind:
+                dive = True
+                s.note("air: the bombable man ahead, dived on at once")
+            if bomb_man and not dive and run is not None and run[0] == "out":
+                run = s.air_run = ["out", tid, run[2], run[3]]
+            else:
+                run = s.air_run = ["in" if dive else "out", tid,
+                                   run[2] if dive and run is not None and run[0] == "in" else now, me.yaw]
         # (custom, Nov 8: the low end AIR_RUN_LOW, was 5 u: the owner's Halo 4 dives fired from 2.6 u up, 7 of his 63
         # shooting rows under 5 u within 12 u of the man; air_guard's look along the dive still pulls out of the ground)
-        if run[0] == "in" and (flat < PASS_OVER or (behind and flat < PASS_START) or (h < AIR_RUN_LOW and flat < 12.0)):
+        # (custom, Nov 25) a Reach bomber with its bomb selected and not yet let go (rod "to", 0.25 s to its shot) stays
+        # on its run, the nose on him, while it has AIR_BOMB_HOLD_H u under it. Live Spire 20261125-183823, one pilot on
+        # one man at 406.0, 414.6 and 476.3 s: the bomb selected 14-18 u out, the run over ("pass", the nose up) 0.3 s
+        # later 4-6 u flat from him, "off him before the shot, the bomb kept"; its two bombs that went were selected
+        # 10-11 u flat out
+        rod = getattr(s, "rod", None)
+        bomb_up = s.reach_bomber() and rod is not None and rod[0] == "to" and h >= AIR_BOMB_HOLD_H
+        over_run = flat < PASS_OVER or (behind and flat < PASS_START) or (h < AIR_RUN_LOW and flat < 12.0)
+        if (s.reach_bomber() and isinstance(tid, int) and now >= getattr(s, "rod_next", 0.0)
+                and me.pos.z - b.pos.z > AIR_BOMB_STEEP_UP and (not behind or flat < PASS_OVER)):
+            # (custom, Nov 25) a Reach bomber high over its man with its bomb ready dives on down at him: the run is
+            # over only inside PASS_OVER of him (all three axes) or AIR_BOMB_HOLD_H over the floor, not PASS_OVER flat
+            # of him from any height. Live Spire 20261125-193322: its runs came in 12-24 u over their man and ended
+            # ("pass") 6 u flat from him, 19-24 u off by height, past the bomb's 18 u: 427.1 s (6 u flat, 19 u up, a
+            # line all the run, the view on him 73% of it, no bomb), 354.9, 704.6; 15 of 62 dives had a shot
+            over_run = dist(me.pos, b.pos) < PASS_OVER or h < AIR_BOMB_HOLD_H
+        if run[0] == "in" and not bomb_up and over_run:
             run[:] = ["out", tid, now, me.yaw]                 # past him: on, straight, climbing
+        elif (run[0] == "out" and not over_run and not behind and isinstance(tid, int)
+              and getattr(s, "air_bomb_on", None) == tid and now >= getattr(s, "air_hot_until", 0.0)):
+            # (custom, Nov 25) on the way out with the bombable man ahead of it and not past him: back in on him
+            run[:] = ["in", tid, now, me.yaw]
+            s.note("air: the bombable man ahead, back in")
         # (the next run starts from the player's run height: 10-35 u up; flown in a harness the old 0.3 climb to 22 u
         # off left it 3-8 u over the floor, his median was 26)
         start_h = max(PASS_START_MIN, min(travel, PASS_START_H))   # (a map with no flying learned: travel 9 u)
@@ -8208,6 +8518,8 @@ class Bot:
             s.boost(act)
             s.att = ["pass", tid, round(b.pos.x, 1), round(b.pos.y, 1)]
             return
+        if bomb_up:
+            s.bomb_aim = (now, act.yaw, act.pitch)   # (custom, Nov 25: kept through the guards, Bot.think)
         # (custom, Nov 20) Reach's Banshee, whose bomb is its kill (every Banshee kill in tools/banshee_sim.py): in at
         # full throttle, no half-throttle first second and no AIR_RUN_SPEED governor (the owner's Halo 4 cannon dives).
         # The sim's Normal men hit a Banshee at 0-6 u/s about twice as hard per man as at 9+ u/s, and with the owner's
@@ -8293,7 +8605,13 @@ class Bot:
                 act.forward, act.fire2 = (AIR_BOMBER_TURN if reach_bomber else AIR_TIGHT_THROTTLE), False
                 act.fire = False
                 s.note("air: pulled back, turning tight")
-            elif ((d > CANNON_R or (reach_bomber and s.boost_open(me, v, act.yaw))) and off_nose < TRAVEL_BOOST_CONE
+            # (custom, Nov 25, the owner: "Are they boosting too long in the dive and then they cant bomb?") a Reach
+            # bomber boosts in only past AIR_BOMB_NO_BOOST_R of its man: it was let off one tick (0.03 s) before the
+            # bomb's press. Live Spire 20261125-193322, 15 bombs: 3 kills, all with 0.8 s or less of boost in the 2 s
+            # before the press (7-9 u/s); 0 kills of the 9 with 1.0-1.9 s of it (11-17 u/s). Whether the game lets a
+            # bomb go that soon after a boost is not read back
+            elif ((d > CANNON_R or (reach_bomber and s.boost_open(me, v, act.yaw)))
+                  and (not reach_bomber or d > AIR_BOMB_NO_BOOST_R) and off_nose < TRAVEL_BOOST_CONE
                   and getattr(s, "rod", None) is None):
                 act.fire2 = True                     # (not while the bomb is up: its shot goes first)
         rb = math.atan2(BOMB_GUN_R, max(d, 1.0))     # (custom, Nov 13: the bomb's wider window, its blast)
@@ -8482,7 +8800,7 @@ class Bot:
             return None
         if kind == "ghost":
             return REACH_GHOST_BOLT
-        if kind == "banshee" and getattr(s, "rod", None) is not None:
+        if kind == "banshee" and (getattr(s, "rod", None) is not None or s.reach_bomber()):
             return REACH_BOMB_SPEED
         return None
 
@@ -8494,31 +8812,55 @@ class Bot:
         every tick from drive until it is back on the cannons, whatever the run is doing (a fight lost mid-way still
         cycles back)."""
         r = getattr(s, "rod", None)
+        # (custom, Nov 25, the owner: "Make it to where the bomb is always selected? And just calculate the recharge
+        # rate as normal so its always ready?") a Reach Banshee's pilot, who never fires its cannons, selects the bomb
+        # once (bomb_sel: when; cleared at each boarding, Bot.drive) and leaves it selected: its shot goes the tick a man
+        # is under its aim with the recharge done (rod_next), no cycle press and 0.25 s before it, none back after
+        kept = s.bomb_kept()
+        sel = getattr(s, "bomb_sel", None) if kept else None
+        if kept and sel is None and (r is None or r[0] == "to") and now - getattr(s, "seat_since", now) > 1.0:
+            act.cycle, s.bomb_sel = True, now
+            s.note("air: the bomb selected, kept")
+            if r is not None:
+                r[1] = now                               # (its shot's clock from the press, as before)
+            return
         if r is None:
             return
         k = now - r[1]
         act.fire = False
         _, fire_at, shot, back = fuelrod_times(s.game)     # (custom, Nov 15: Reach's controller rhythm)
         if r[0] == "to":
-            act.cycle = k < 1e-6                     # (the press, on the tick it started)
+            if kept and sel is None:
+                return                               # (just boarded: its press comes above)
+            act.cycle = k < 1e-6 and not kept        # (the press, on the tick it started)
+            ready = now - sel >= fire_at if kept else k >= fire_at
             on_man = isinstance((getattr(s, "air_run", None) or [None, None])[1], int)   # (not a room bomb)
-            if k >= fire_at and on_man and s.reach_bomber() and not s.bomb_lined(act):
+            if ready and on_man and s.reach_bomber() and not s.bomb_lined(act):
                 # (custom, Nov 20) a Reach bomber's shot waits for a man under its aim again (bomb_lined), up to
                 # AIR_BOMB_HOLD s; none by then: back on the cannons unfired, the bomb kept. The owner, live Boneyard:
                 # "the third shot was a miss because he shot right as he flicked his aim away"
-                if k >= fire_at + AIR_BOMB_HOLD:
-                    act.cycle, s.rod, s.rod_next = True, None, now
+                if k >= (0.0 if kept else fire_at) + AIR_BOMB_HOLD:
+                    act.cycle, s.rod, s.rod_next = not kept, None, now
                     s.note("air: off him before the shot, the bomb kept")
                 return
-            if k >= fire_at:
+            if ready:
                 r[:] = ["shot", now]
                 act.fire = True
         elif r[0] == "shot":
             act.fire = k < shot
             if k >= shot:
-                r[:] = ["back", now]
+                if kept:
+                    s.rod = None                     # (it stays selected)
+                else:
+                    r[:] = ["back", now]
+        elif kept:
+            s.rod = None
         elif k >= back:
             act.cycle, s.rod = True, None            # back on the cannons
+
+    def bomb_kept(s):
+        """(custom, Nov 25) A Reach Banshee's pilot that keeps its bomb selected (fuel_rod): the cycle decoded."""
+        return s.reach_bomber() and bool(getattr(s, "can_cycle", False))
 
     def bomb_lined(s, act):
         """(custom, Nov 20) An enemy on foot within REACH_BOMB_R under the view (act's yaw / pitch) within BOMB_GUN_R
@@ -8527,19 +8869,37 @@ class Bot:
         me = snap.player(s.id) if snap is not None else None
         if me is None:
             return True
-        lo, hi = REACH_BOMB_R
+        # (custom, Nov 25) a man in a vehicle too (the run's own man was one on 12 of live Spire 20261125-175509's 18
+        # runs: never "lined", the bomb never let go), and from AIR_BOMB_NEAR on: selected at 6 u in a dive it is
+        # 0.25 s and 3-4 u nearer when its shot comes
+        hi = REACH_BOMB_R[1]
         o = eye(me)
         for e in snap.players:
-            if e.team == me.team or not e.alive or e.vehicle not in (None, -1):
+            if e.team == me.team or not e.alive:
                 continue
             d = dist(me.pos, e.pos)
-            if not lo <= d <= hi:
+            if not AIR_BOMB_NEAR <= d <= hi:
                 continue
-            ya, pa = angles_to(o, e.pos)
+            ya, pa = angles_to(o, s.bomb_lead(o, e.pos, e.vel))
             r = math.atan2(BOMB_GUN_R, max(d, 1.0))
             if abs(wrap(ya - act.yaw)) < r and abs(pa - act.pitch) < r:
                 return True
         return False
+
+    def bomb_lead(s, origin, pos, vel):
+        """(custom, Nov 26) Where a Reach Banshee pilot's bomb goes for a man at pos walking at vel: his feet plus his
+        walk over the bomb's flight (REACH_BOMB_SPEED) and the ~0.05 s to the shot, at most AIR_BOMB_LEAD_CAP u. The
+        owner's 12 bomb kills (live Boneyard 20:45): his crosshair a median 0.59 s of the man's walk ahead (the bomb's
+        flight 0.36-0.77 s). Vexloo's 11 bombs at 21:12 went at the feet (Legendary/Demon aim has no lead, profiles):
+        he walked 1.1-1.7 u in the flight, the bomb 1.2-2.4 u behind him, 1 kill. pos as given off a Reach bomber."""
+        if s.game != "reach" or not s.reach_bomber() or vel is None:
+            return pos
+        t = dist(origin, pos) / REACH_BOMB_SPEED + 0.05
+        lx, ly = vel.x * t, vel.y * t
+        n = math.hypot(lx, ly)
+        if n > AIR_BOMB_LEAD_CAP:
+            lx, ly = lx * AIR_BOMB_LEAD_CAP / n, ly * AIR_BOMB_LEAD_CAP / n
+        return pos + Vec(lx, ly, 0.0)
 
     def patrol_point(s, me):
         """Where a vehicle goes when its trip is over and it cannot get out: the latest enemy it knows of, else the
@@ -10693,7 +11053,12 @@ class Bot:
                 p = Vec(me.pos.x + math.cos(act.yaw) * cp * f, me.pos.y + math.sin(act.yaw) * cp * f,
                         me.pos.z + math.sin(act.pitch) * f)
                 # (where a player flew the map: those runs' lowest pull-out, vehicles.AIR_ENVELOPE run_floor)
-                if T.height_over(p.x, p.y, p.z) < max(AIR_RUN_FLOOR, (env or {}).get("run_floor", 0.0)):
+                # (custom, Nov 25) a Reach bomber's dive on its man: AIR_RUN_FLOOR only. Spire's run_floor of 4 u is
+                # over the look's last point, AIR_BOMBER_PULL_SPARE short of him, on any dive under 53 deg, so every
+                # run ended 1.2 s of flight + 5 u out: live Spire 20261125-175509 at 12-17 u/s, 18 runs pulled out
+                # 19-32 u off (2 within the bomb's 18 u), a line to the man on 100% of most runs' rows, no bomb
+                if T.height_over(p.x, p.y, p.z) < (AIR_RUN_FLOOR if tb is not None else
+                                                   max(AIR_RUN_FLOOR, (env or {}).get("run_floor", 0.0))):
                     act.pitch = max(act.pitch, 0.35)
                     run = getattr(s, "air_run", None)
                     if run is not None and run[0] == "in":
@@ -11377,16 +11742,47 @@ class Bot:
         lo, hi = REACH_BOMB_R
         o = eye(me)
         for e in snap.players:
-            if e.team == me.team or not e.alive or e.id == me.id or e.vehicle not in (None, -1):
+            # (custom, Nov 25: a man in a vehicle too, the owner: "Make the bot shoot at things it sees")
+            if e.team == me.team or not e.alive or e.id == me.id:
                 continue
             d = dist(me.pos, e.pos)
-            if not lo <= d <= hi or not s.line_clear(now, me, e.id, snap):
+            # (custom, Nov 25) selected AIR_BOMB_LEAD_S of its closing speed early, so its shot (0.25 s after the
+            # press) comes inside the bomb's reach, not 3-4 u further in
+            to = e.pos - me.pos
+            closing = max(0.0, (me.vel.x * to.x + me.vel.y * to.y + me.vel.z * to.z) / max(d, 1e-6))
+            if not lo <= d <= hi + min(AIR_BOMB_LEAD_MAX, closing * AIR_BOMB_LEAD_S) \
+                    or not s.line_clear(now, me, e.id, snap):
                 continue
-            ya, pa = angles_to(o, e.pos)
+            ya, pa = angles_to(o, s.bomb_lead(o, e.pos, e.vel))     # (Nov 26: where he will be when it lands)
             r = math.atan2(BOMB_GUN_R, max(d, 1.0))
             if abs(wrap(ya - act.yaw)) < r and abs(pa - act.pitch) < r:
-                s.rod, s.rod_next = ["to", now - 1e-3], now + fuelrod_times(s.game)[0]
-                act.cycle, act.fire, act.fire2 = True, False, False
+                sel = getattr(s, "bomb_sel", None) if s.bomb_kept() else None
+                if sel is not None:
+                    # (custom, Nov 25) kept selected, its shot is now: inside AIR_BOMBER_DROP_R and with the craft's own
+                    # nose on him (the bomb leaves along it, air_pass). Live Spire 20261125-193322: all 15 bombs went at
+                    # 17-19 u, the tick he came into reach; 3 of the 4 let go under 9 u/s killed, none of the 9 at
+                    # 12-27 u/s (the view on his feet within 0.3 u on most)
+                    # (tried the same day and taken out: held to AIR_BOMBER_DROP_R, 11 u, with the craft's nose on him.
+                    # Replayed over that match, 2 of its 62 dives had the view on a man inside 11 u, 15 inside 18 u:
+                    # its dives pass 12-24 u over their man, air_pass)
+                    if d > hi:
+                        continue
+                    # (custom, Nov 25) its release: the craft's nose on him too, from 15 u in while closing, never
+                    # boosted or past AIR_REL_MAX_SPD (bomb_release)
+                    if not s.bomb_release(now, me, v, e, d, ya, pa, r, act):
+                        continue
+                s.rod_next = now + fuelrod_times(s.game)[0]
+                if sel is not None and now - sel >= fuelrod_times(s.game)[1]:
+                    # (custom, Nov 25) the bomb kept selected (fuel_rod): its shot this tick
+                    s.rod = ["shot", now]
+                    act.cycle, act.fire, act.fire2 = False, True, False
+                    s.note("air: him under the nose, the bomb away")
+                    return
+                s.rod = ["to", now - 1e-3]
+                act.cycle = sel is None
+                if s.bomb_kept() and sel is None:
+                    s.bomb_sel = now
+                act.fire, act.fire2 = False, False
                 s.note("air: him under the nose, the bomb")
                 return
 

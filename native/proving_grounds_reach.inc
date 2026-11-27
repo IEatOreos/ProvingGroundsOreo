@@ -69,17 +69,17 @@ static const char* RM_CAT_BLURB[5] = {
     "Playlists built from the community's own maps and games.",
     "Firefight and the campaign, with your squad." };
 static const rm_pl RM_PL[] = {
-    { 0, "TEAM SLAYER", -1, "Two teams, one goal: more kills than the other side." },
-    { 0, "TEAM SWAT", -1, "Team Slayer with precision weapons, no shields and no motion tracker." },
-    { 0, "TEAM SNIPERS", -1, "Team Slayer with sniper rifles from the start." },
-    { 0, "LIVING DEAD", -1, "Infection: the survivors hold out as the dead spread." },
+    { 0, "TEAM SLAYER", 9, nullptr },                // (Nov 24, the owner: Arena's maps, TU TEAM SLAYER DMR only)
+    { 0, "TEAM SWAT", 4, nullptr },                  // (Nov 24, the owner: his Team SWAT)
+    { 0, "TEAM SNIPERS", 5, nullptr },               // (Nov 24: his TU Snipers)
+    { 0, "LIVING DEAD", 3, nullptr },                // (Nov 24, the owner: Infection, his TU Infection)
     { 0, "INVASION", -1, "Spartans against Elites, six on six, phase by phase." },
     { 1, "SUPER SLAYER", -1, "Slayer with every power-up and every big weapon in play." },
-    { 1, "TEAM OBJECTIVE", -1, "Flags, bombs, territories and hills: objective games only." },
-    { 1, "RUMBLE PIT", -1, "Every player for themselves." },
-    { 1, "DOUBLE TEAM", -1, "Two on two." },
+    { 1, "TEAM OBJECTIVE", 8, nullptr },             // (Nov 24: Arena without Slayer)
+    { 1, "RUMBLE PIT", 6, nullptr },                 // (Nov 24: 8 players, free for all)
+    { 1, "DOUBLE TEAM", 7, nullptr },                // (Nov 24: 2v2)
     { 1, "BIG TEAM BATTLE", 1, nullptr },
-    { 1, "MULTI TEAM", -1, "Four teams of three, Slayer and objective games." },
+    { 1, "MULTI TEAM", 2, nullptr },                 // (Nov 24, the owner: 4 teams of 3)
     { 1, "THE ARENA", 0, nullptr } };
 static const int RM_NPL = (int)(sizeof RM_PL / sizeof RM_PL[0]);
 
@@ -89,7 +89,7 @@ static int rm_lists(int cat, int* out) {         // the playlists of a category,
     return n;
 }
 static int rm_current() {                        // the RM_PL entry Project Noble is set to
-    for (int i = 0; i < RM_NPL; i++) if (RM_PL[i].pl == (g_size >= 8 ? 1 : 0)) return i;
+    for (int i = 0; i < RM_NPL; i++) if (RM_PL[i].pl == pl_index(g_size)) return i;
     return 0;
 }
 
@@ -402,7 +402,9 @@ static void rm_mm(pg_env& e, float t) {
                                   A(IM_COL32(8, 10, 12, 220)), A(IM_COL32(8, 10, 12, 220)));
     char a[48], b[48];
     sprintf_s(a, "%d Bots in Your Pool", g_pool_count);
-    sprintf_s(b, "%s: %dv%d", cur_pl().title, cur_pl().size, cur_pl().size);
+    char sz[32];
+    pl_size_text(cur_pl(), sz, sizeof sz);
+    sprintf_s(b, "%s: %s", cur_pl().title, sz);
     text(g_fl, 30, 258, 270, C_TEXT, a);
     text(g_fl, 30, 926, 276, C_TEXT, b, 2);
     rm_big_header("MATCHMAKING", "This party is offline: you and the bots you invite.", "MAIN MENU");
@@ -514,7 +516,11 @@ static void rm_playlist(pg_env& e, float t) {
             const playlist& pl = g_pl[p.pl];
             rm_wrap(g_fl, 25, 1170, y, 345, IM_COL32(222, 226, 230, 255), pl.blurb);
             char l[4][48];
-            sprintf_s(l[0], "Team Size: %d", pl.size);
+            char sz[32];
+            pl_size_text(pl, sz, sizeof sz);
+            if (pl.ffa) sprintf_s(l[0], "Players: %d, free for all", pl_players(pl));
+            else if (pl.teams == 2) sprintf_s(l[0], "Team Size: %d", pl.size);
+            else sprintf_s(l[0], "Teams: %s", sz);
             sprintf_s(l[1], "Max Party Size: %d", pl.size);
             sprintf_s(l[2], "Bots in Your Pool: %d", g_pool_count);
             sprintf_s(l[3], "Voting: %d s", g_vote_s);
@@ -546,7 +552,7 @@ static void rm_playlist(pg_env& e, float t) {
             if (!pressed(base + k)) continue;
             const rm_pl& p = RM_PL[lists[k]];
             if (p.pl < 0) { sound(PS_ERROR); continue; }
-            g_size = g_pl[p.pl].size >= 8 ? 8 : 4;
+            g_size = PL_CODE[p.pl];
             while (g_nparty > cur_pl().size - 1) g_nparty--;
             save_settings();
             sound(PS_SELECT);

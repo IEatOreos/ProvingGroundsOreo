@@ -70,6 +70,14 @@ The owner: "right now they all laser beam even the lower levels because how big 
 - **Noble's shot book:** a press at a man in any vehicle is no longer recorded (the rounds hit the vehicle; his own shield never shows a hit).
 - **Validation:** new `tools/test_banshee_miss.py` (5: each tier's rate level and flipping within 4% over 2,000 presses, the miss 1.6 u off, DMR and Banshee only, one roll a press, the flip held 0.6 s, Scaling untouched); full suite 1834, the same 2 `test_layout_lifts.py` failures as before. The simulator's Banshee reports no orientation, so flips are not simulated. **Untested in game.**
 
+### Reach Banshee pilot: the bomb leads the man like the owner, 2026-11-26
+
+- `Bot.bomb_lead` (new): a Reach Banshee pilot's bomb point is the man's feet plus his walk over the bomb's flight (distance / `REACH_BOMB_SPEED` 20 u/s, + 0.05 s), at most `AIR_BOMB_LEAD_CAP` 3 u. Used by the pilot's aim (`Bot.drive`, with Aim.step's own lead not added), the release (`Bot.air_snap_bomb`, so the 5 deg nose and half-second hold are on the led point) and `Bot.bomb_lined`. Why: Vexloo at 21:12 had every bomb lined up (view within 1 deg, nose within 5 deg, 7 of 11 held 0.5 s) and got 1 kill in 11: its aim point sat 0.1-0.4 u from his feet, he walked 1.1-1.7 u in the bomb's 0.5-0.8 s flight, and the bomb landed 1.2-2.4 u behind him. The Legendary/Demon aim profile has no lead (`lead=0.0`, unchanged). The owner's 12 bomb kills at 20:45 led the man a median 0.59 s of his walk (8 of 12 0.3-0.95 s), the bomb's flight time. Untested in game; no sim (owner's call). Checks: `test_banshee_bomb_riders` (the lead's size, the cap, Reach only; a walking man bombed at the led point), full suite 1829 tests with the 2 old `test_layout_lifts` failures only.
+
+### Reach Banshee pilot: the aim held on him half a second before the bomb, 2026-11-26
+
+- `Bot.bomb_release` (a2): the view on his feet `AIR_REL_AIM_S` 0.5 s first ("air: bomb held, the aim settling on him"; the clock as before, restarted 0.25 s after the view leaves him). Why: live Boneyard 20:29, the first match with the 5 deg nose wait: every bomb had the nose within 5 deg and the view within 1 deg of his feet, yet 7 of 10 missed; over 20:03 and 20:29 bombs let go under 0.5 s on him killed 2 of 18, 0.5 s or more 7 of 11. The owner's own Banshee run (20:41: 5 bomb kills in 39 s, one bomb two kills) had his crosshair within about 1-3 u of the man for 1-1.5 s before every kill. Untested in game; no sim (owner's call). Checks: `test_banshee_bomb_riders` (0.4 s holds, 0.5 s bombs; the bomb tests now keep the view on him), full suite 1827 tests with the 2 old `test_layout_lifts` failures only.
+
 ### Bots go up Boneyard's sniper stairs: the wall check trusts the nav's next point, 2026-11-26
 
 The owner's Boneyard bug report 20261126-200759: "My team on boneyard just likes to accumulate around the stairs below our teams sniper and they dont use the stairs properly. Just roam the bottom". Then: "I just seen bots not going up the stairs when they were completely able". Then: "Fix it but dont implement the one call per power weapon thing" (888100c reverted in 5c1cec3).
@@ -78,6 +86,37 @@ The owner's Boneyard bug report 20261126-200759: "My team on boneyard just likes
 - **Cause:** the way onto the stairs passes the corner of a block at (279.0-279.75, 111.5-112.0), walled from the floor to about 1.4 u. `Bot.redirect`'s chest ray (`Terrain.clearance`) reads that corner 0.25-0.5 u ahead, under `REDIRECT_D` 0.55, and turns the step 30 degrees aside. Its "a corner the nav turns at" exception only ran with the bot looking along its path (`att` "path"). These bots were watching the enemy. The nav's way up both flights is right (checked offline from each spot they stood on).
 - **`brain/bot.py` `Bot.redirect`:** that exception also holds when this tick's step is the nav's own (`nav_cmd`) and the nav's next point (`s.wp`) is short of the wall hit (within its distance + 0.2 u), wherever the bot looks. A wall with the next point past it, or a step that is not the nav's, is stepped around as before. Every map and tier.
 - **Checks:** new `tools/test_stair_corner.py` (4 tests on Boneyard's level data, skipped without it: the corner reads as a wall there, the nav's step walks on, a step off the nav and a next point past the wall still step around). With the fix taken out, the walk-on test fails. Full suite: 1826 tests, with the same 2 `test_layout_lifts.py` failures as before. Import check of `brain/` and `tools/live_bots.py`. **Untested in game.**
+
+### Reach Banshee pilot: the bomb waits for the nose within 5 deg of him, 2026-11-26
+
+- `Bot.bomb_release` (a): the craft's nose must be within `AIR_REL_NOSE_R` 5 deg of him left/right; the early release on a nose "swinging onto him" (`AIR_REL_NOSE_LOOSE` 17 deg) and the range-wide window (about 10-14 deg at 12-17 u) are gone. Why: live Boneyard 20:03, the first match with the left/right-only nose check: 10.9 bombs a minute (2.6 the match before), 18 bombs and 5 kills; the view on his feet within 1 deg on nearly all, and the nose under 5 deg off him killed 5 of 6, 5-15 deg 0 of 5, past 15 deg 1 of 8. The owner: they "still dont wait long enough to line up the shot". Untested in game; no sim (owner's call). Checks: `test_banshee_bomb_riders` (8 deg off holds past 1 s, 3 deg off bombs), full suite 1822 tests: the 2 old `test_layout_lifts` failures, and 2 thread-timing errors that pass when run alone.
+
+### Reach Banshee pilot: the nose check is left/right only, 2026-11-26
+
+- `Bot.bomb_release` (a): the craft's nose (`fwd`) is compared with the view left/right only; a nose pointing up holds the bomb ("air: bomb held, the nose climbing"). Why: the owner's three live matches (Island 19:08, Boneyard 19:20 and 19:48) had a Reach Banshee's body 15-25 deg above the view at all times, the 23 bombs that went too (10 kills); its pitch held the bomb as "the nose not on him yet" on 1500+ ticks with a man 3-18 u off, in sight, the bomb charged (20-38 such moments a game). The sim's body pointed along the view, so it never showed. Untested in game; no sim run (owner's call). Checks: `test_banshee_bomb_riders` (the body 17 deg above the view bombs, a climbing nose holds, 40 deg off to the side holds), full suite 1821 tests with the 2 old `test_layout_lifts` failures only. A brief try of the steep-limit removal (`AIR_BOMB_MAN_STEEP` 90 deg) the same day was reverted: no change seen live.
+
+### Reach Banshee pilot: the bomb on the man it can bomb now, let go with the craft's nose on him, 2026-11-26
+
+The owner: "I want about 15-20 kills a game in the banshee by an ai pilot. Find a way to make it happen", then "Just fix the banshee piloting. Regardless of map." A read-only diagnosis (Nov 25: five analysts and skeptics) found the pilot bombed almost every time its view was on a man, but in the sim a man was in reach with the bomb ready for 307 s of 1440 s flying while the view was on his feet for 6 s: the nose was on its climb-out, on a farther man, or on nobody. Six candidate fixes were built as in-memory patches, each reviewed, then raced in the sim against the pilot as it was.
+
+- **Target** (`Bot.air_bomb_man`, `Bot.air_feet_open`, `Bot.drive`, `Bot.air_pass`): with the bomb ready (or within a second of it), the nearest enemy in sight that it can bomb now (a line, his feet open to it, ahead of the craft, not too steep under it, within `AIR_BOMB_MAN_R` 22 u) is its man, over the run's old man, kept while he stays bombable. A run on him is dived at once.
+- **What it sees** (`Perception.update`, `Bot.plan`): a Reach Banshee pilot (only that pilot: `reach_bomber()` and `piloting`) sees a man within `AIR_LOOK_R` 25 u whose 3D direction is within `AIR_LOOK_HALF` 75 deg of its view, under or beside the craft, with the same line check as always. Every other bot, game and aircraft sees as before (checked on 60 random worlds each by the review).
+- **Release** (`Bot.bomb_release`, `Bot.bomb_leaving`, `Bot.air_snap_bomb`): the kept bomb goes only with the craft's own nose (`fwd`) near his feet as well as the view, or the nose swinging onto him; nearer than 15 u while still closing, unless he is about to leave the line; the boost let off; never above 12 u/s.
+- **Measured** (`tools/banshee_sim.py`, Boneyard, 8 Demon vs 8 Normal, a Blue bot always seated in the Banshee, full games): this pair 13, 20, 14, 6 (seeds 4-7) and 8, 15, 8, 14 (seeds 8-11): **12.25 Banshee kills a game**, 0.86 kills a bomb. The pilot before: 3.8 a game over 14 games (0.13-0.33 kills a bomb). On seeds 8-11, paired, it beat it on every seed (11.25 against 2.25). Each fix alone did much less (target 6.25-8.0, release 4.5), and adding the climb-out, seek or dive-ending candidates lowered the pair's kills (the five together 8.75-9.0); those stay out.
+- The review of the target fix caught two helper calls that would have raised NameError the first time a pilot's bomb was ready in the real file (a sim test could never show it), and its 3D view applying to every aircraft pilot in every game. The review of the release fix caught a clock that two men under the view reset every tick, and a boost request that held the bomb for good. All fixed before the port. The brain as ported, run unpatched (seeds 4-11): 13, 20, 8, 6, 8, 15, 10, 14, **11.75 a game**, 0.85 kills a bomb.
+- Tried on top of the pair and left out (same seeds, no gain beyond noise): a looser nose gate (9.0 a game), the climb-out (11.5), staying off a bunch until clear (11.0), the survival rules (12.1, but wedged 61-151 s in Boneyard's scaffolding in 3 of 8 games).
+- `tools/test_banshee_target.py` (6) and `tools/test_banshee_bomb_riders.py` (the nose check; 14). Full suite 1819, the same 2 test_layout_lifts failures as before. **Untested in game.** The sim's absolute numbers are not live numbers: on Spire it rates the old pilot at 20 a game where live it gets 2-3.
+
+### The Banshee is boarded: no "dud" ban on an aircraft a teammate just flew, and a pilot sent while our Falcon flies, 2026-11-26
+
+The owner: "I want about 15-20 kills a game in the banshee by an ai pilot." A read-only diagnosis (five analysts and skeptics, Nov 25) found that in live Spire 20261125-193322 the bot did not board the Banshee until 271 s of a 735 s game.
+
+- **Why it could not get in:** the owner set the Banshee down beside a low wall and got out. Bot 8 walked to its walled side and pressed Use 21 times from 2.5-2.7 u with the wall between (the only Banshee Use presses of four Spire matches that did not take; 76 others took at 1.3-2.66 u). After 10 s `Bot.dud_check` marked it a dud for everyone for `vehicles.DUD_FOR` 120 s; it stood empty 92 s of those 120.
+- `Bot.air_crewed_note` (new, called from `think`): each bot remembers when and where it last saw each vehicle with somebody in it. `Bot.dud_check`: an aircraft somebody was in within `AIR_DUD_PROVEN` (60 s), still within `VEH_BAN_MOVED` of where it was left, is not a dud: the bot's own clock starts again and it tries another side. The dud rule is unchanged for ground vehicles and for an aircraft nobody was in lately.
+- `Bot.air_board_point` (new, called from `plan`'s vehicle walk): an aircraft pilot's seat point with a wall between it and the craft's middle is swapped for the nearest point `AIR_BOARD_R` (1.5 u) from the middle with an open line; after a failed side, not within 60 degrees of it.
+- **Nobody was sent:** from 52 to 132 s our crewed Falcon filled the "anti_air" role, so no bot of ours was sent to the empty Banshee (62 s empty while the other team's bots were sent). `Director.crew_orders`'s Nov 23 tank pass now also covers a power aircraft (Banshee, Hornet). A review caught that its pool took a Demon off our flying Falcon's gun, mid-air; a bot riding an aircraft is never picked for it.
+- **Live traces:** an aircraft pilot's row now records its craft's own nose (`vfwd`) and speed (`vspd`), to settle whether a Reach Banshee bomb leaves along the nose or the reticle (live bombs killed 0.21 a press against the sim's 0.3-0.8).
+- Validation: built and reviewed as an in-memory patch first (21 of 21 checks, on a stand-in wall and on the real Spire level at the live coordinates), then ported with the same text edits. `tools/test_banshee_boarding.py` (5), and its aircraft-gunner test fails without the review's fix. **Untested in game.**
 
 ### The Falcon's side guns hit: aimed from the gun, led for its round, 2026-11-25
 
@@ -90,6 +129,22 @@ The owner: "The falcon gunner never hits a shot. Dig and see if campaign aiming 
 - **Trigger** (`Bot.falcon_gun_fire`): never on a man more than 30 u from the gun (`FALCON_GUN_MAX_FIRE`); the campaign's bursts, 1.5-2 s on, 0.75-1.25 s off (let go 0.75 s and the next press starts a new one).
 - **Its pilot** holds 8-12 u (`FALCON_GUN_RANGE`; was 8-18), Reach only.
 - **Checks:** new `tools/test_falcon_side_gun.py` (11 tests). Full suite: 1793 tests, the 2 `test_layout_lifts.py` failures as before. **Untested in game:** that the live mount reads as expected, and whether its rounds carry the Falcon's own speed (the data leaned no).
+
+### Reach Banshee pilot: its dives reach bomb range, and the bomb goes on men in vehicles, 2026-11-25
+
+The owner: "The banshee is doing good dive bombs but just not shooting at the enemy enough". Live Spire 20261125-175509: two pilots, 91 s of flying, 18 runs, no bomb.
+
+- `Bot.air_guard`: a Reach bomber's dive on its man pulls out for the ground at `AIR_RUN_FLOOR` (1.5 u), not the map's `run_floor` (Spire's 4 u). The look stops 5 u short of the man, and that point is under 4 u over his floor on any dive shallower than 53 degrees, so every run ended 1.2 s of flight + 5 u out: 19-32 u off at the 12-17 u/s it flies live, past the bomb's 18 u. 2 of the 18 runs got within 18 u, none within 11.
+- `Bot.bomb_lined` and `Bot.air_snap_bomb`: a man in a vehicle counts (the run's man rode one on 12 of the 18 runs; a selected bomb was never "lined" on him and went back unfired). `bomb_lined` holds from `AIR_BOMB_NEAR` = 3 u (was 6): a bomb selected at 6 u in a dive is 3-4 u nearer when its shot comes.
+- `Terrain.height_over`: where the level data holds no surface (past the map's edge) the height is over the map's lowest known ground, not `ground()`'s 0.0 (`_ground_known`). Live Spire 20261125-183258: a Banshee past the east edge at z -43.6 read 43.6 u under the ground, climbed at full pitch for 11 s at 1.8 u/s and died to the return-to-battlefield countdown at 226 s (34 s flight, 1 bomb, 2 kills). The same spot now reads 26.6 u over the ground. 
+- `Terrain.set_oob` (`air_safes`): for an aircraft's boundary test (`kill_hit`) a kind's sphere safe zone is left out where that kind has a box too, as `air_roof` already leaves it out. Spire's 150 u soft safe sphere covers the air past its soft safe box's east side, so that Banshee read in bounds while its countdown ran and `oob_escape` never turned it back. With the box alone its recorded rows read out of bounds from 215.6 to 224.6 s (death at 226.3 s; the last 1.7 s read back inside by over 1 u, so the game's edge may sit further in than our data). False alarms: 16 of 4902 recorded player positions in that match.
+- The bomb kept selected (the owner: "Make it to where the bomb is always selected? And just calculate the recharge rate as normal so its always ready?"). `Bot.fuel_rod` / `Bot.bomb_kept`: a Reach Banshee's pilot presses the cycle once, a second after boarding (`bomb_sel`, cleared at each boarding), and never cycles back; `air_snap_bomb` fires the same tick a man is under its nose in reach with the recharge done (`rod_next`, 3.2 s). Before, each bomb was cycle, 0.25 s, shot, cycle back: live Spire 20261125-183823, one pilot's four dives on one man at 398-421 s selected the bomb 14-18 u out and on two of them the run was over before the shot ("off him before the shot, the bomb kept"; again at 476 s). If the game is ever on the cannons while the brain believes the bomb is selected (not read back from the game), the trigger fires cannons until the next boarding.
+- Measured after that: live Spire 20261125-193322 (260 s flying) 15 bombs, 3 kills, every bomb at 17-19 u the tick the man came into reach (3 of 4 under 9 u/s killed, 0 of 9 at 12-27 u/s); `tools/banshee_sim.py` Boneyard seeds 1-5 against the Nov 23 batch: bombs a minute 3.0 to 3.7, hits 44 of 68 to 27 of 95, Banshee kills 36 to 18. Holding the kept bomb's shot to `AIR_BOMBER_DROP_R` (11 u) with the craft's nose on him was tried and taken out the same evening: replayed over that match the view was on a man with a line inside 11 u on 2 of its 62 dives, inside 18 u on 15.
+- `Bot.air_pass`: a Reach bomber more than `AIR_BOMB_STEEP_UP` (8 u) over its man with its bomb ready keeps its run, diving on down at him, until `PASS_OVER` (6 u) off in all three axes or `AIR_BOMB_HOLD_H` (4 u) over the floor. The run used to end `PASS_OVER` flat of him from any height: in that match its runs came in 12-24 u over their man and ended 19-24 u off, past the bomb's 18 u (427.1 s: 6 u flat, 19 u up, a line all the run, no bomb). `tools/test_banshee_bomb_riders.py` 12. Sim batch (Boneyard seeds 1-5, Spire seeds 1-3) running at this entry.
+- `Bot.air_pass`: a Reach bomber boosts into its run only past `AIR_BOMB_NO_BOOST_R` (30 u) of its man (the owner: "Are they boosting too long in the dive and then they cant bomb?"). In that match the boost was let off 0.03 s before the bomb's press on 9 of 15 bombs: 0 kills of the 9 with 1.0-1.9 s of boost in the 2 s before the press, 3 kills among the 6 with 0.8 s or less. Whether the game refuses the bomb or it misses at that speed is not known; the sim models neither. `tools/test_banshee_bomb_riders.py` 13.
+- Until the bomb is up (the first second after boarding) a selected bomb holds the dive: `air_pass` does not end the run while `rod` is "to" with `AIR_BOMB_HOLD_H` = 4 u under it, and `Bot.think` puts the nose back on the run's aim after the guards ("wall ahead, turning to open air" swung it 15-28 degrees off him). `air_snap_bomb` selects up to 0.3 s of closing speed early (at most 6 u) when the bomb is not yet selected.
+- The aim: a Reach Banshee's pilot aims at his feet all the run (`Bot.drive` `bombing`, `reach_shot_speed`), not from the selection on (the owner: "the reticle isnt aiming for their feet"; its view sat 0.3-0.5 u over his feet until the cycle press). `tools/test_banshee_bomb_aim.py` updated for Reach.
+- Validation: `tools/test_banshee_bomb_riders.py` (10), `tools/test_spire_safe_edge.py` (5). Full suite 1804 run, 2 failures, both in `tools/test_layout_lifts.py` (man cannon layout; not rerun without this change). `brain.bot` imports. The pull-out change has no test of its own and the Boneyard sim cannot show it (no `run_floor` there). **Untested in game.**
 
 ### The brain no longer stops the first time a bot flies (air_hold), 2026-11-25
 
@@ -167,6 +222,40 @@ The owner: "banshees dont get mutilated at once, but also theyre not flying free
 - **Not changed:** `tools/real_sim.py`, `tools/banshee_sim.py` and their goals; pilots' flying; bots in vehicles.
 - **Checks:** new `tools/test_air_hold.py` (25 tests: each difficulty, Scaling, the counter, people's deaths, betrayals, trades, the reset, the hold, self-defence, in-vehicle bots, `pick_target`, `decide` with only held crew in view, the fallback, free for all). `unittest discover` over `tools`: 1748 OK. Import check of `brain/` and `tools/live_bots.py`; `kill_record.py` self-check OK. **Untested in game.**
 
+### Eight new Project Noble playlists: Team Slayer, Multi Team, Living Dead, Team SWAT, Team Snipers, Rumble Pit, Double Team, Team Objective, 2026-11-24
+
+The owner: "add Multi Team and Infection to our menus", then "Add these modes as well. Swat ... Tu Snipers ... Rumble pit ... Double team (2v2) ... Team Objective will just be the same as arena with no slayer". His answers: Multi Team is its own playlist in the EVOLVED tab; "Slayer is set to 65% split the rest"; MCC's TU CRAZY KING (Multi Team and Double Team); Infection uses his own TU Infection, 16 players, "Not rated"; Multi Team "1st wins, rest lose"; he made Team SWAT; Rumble Pit 8 players, "Slayer 90%"; Double Team "Slayer more often" (3 in 4 offered; "Yes, keep 75%"); then "Add team Slayer as well. Itll be all arena maps, with Tu team slayer dmr only".
+
+- **The playlists (`native/proving_grounds.cpp` `default_playlists`), Reach's own greyed entries made playable (`proving_grounds_reach.inc` `RM_PL`):**
+
+  | Playlist | Tab | Players | Gametypes (weights) | Maps |
+  |---|---|---|---|---|
+  | MULTI TEAM | EVOLVED | 4 teams of 3 | TU TEAM SLAYER DMR 39, TU HEADHUNTER 7, TU STOCKPILE 7, TU CRAZY KING 7 | Countdown, Powerhouse, Reflection, Sword Base, Zealot, Anchor 9, Condemned, Battle Canyon, Penance, Solitary, High Noon, Asylum, Pinnacle, The Cage, FOUNDRY (Slayer only) |
+  | LIVING DEAD | STANDARD | 16, free for all | his " TU Infection" | Boardwalk, Countdown, Powerhouse, Reflection, Sword Base, Zealot, Anchor 9, Battle Canyon |
+  | TEAM SWAT | STANDARD | 4v4 | his Team SWAT | Arena's |
+  | TEAM SNIPERS | STANDARD | 4v4 | his TU Snipers | Arena's |
+  | RUMBLE PIT | EVOLVED | 8, free for all | SLAYER PRO 18, his TU CRAZY KIng FFA 1, his TU Oddball FFA 1 | Arena's |
+  | DOUBLE TEAM | EVOLVED | 2v2 | TU TEAM SLAYER DMR 3, TU CRAZY KING 1 | Arena's |
+  | TEAM OBJECTIVE | EVOLVED | 4v4 | Arena's, without Slayer and SWAT | Arena's |
+  | TEAM SLAYER | STANDARD | 4v4 | TU TEAM SLAYER DMR only | Arena's |
+
+  - "Arena's" maps (and its `removepair=` lines) are read from Arena as `proving_grounds.ini` leaves them, so they follow later changes to Arena. Each playlist has its own ini prefix (`multiteam.`, `infection.`, `swat.`, `snipers.`, `rumble.`, `doubles.`, `objective.`, `slayer.`) for the usual add/remove lines.
+  - A gametype's name is matched without regard to case or the spaces at either end. His Infection file is named " TU Infection".
+  - The free-for-all playlists take MCC's free-for-all gametypes and show the lobby without teams.
+  - `size=` in `proving_grounds.ini` and the friend link carry the playlist: 4 and 8 as before, 3, 16, 5, 6, 9, 2, 7, 1 for the new ones. An older copy reads them as Arena or Big Team Battle.
+  - The screens (playlist page, stats, game size, session counts) show "4 teams of 3" / "16 players" / "2v2".
+- **Dealing (`native/bots_panel.cpp` `bot_pool_matchmake`):** any number of teams of any size up to the game's 16. The person's team, a friend's, the kept bots and the empty seats work for 4 teams as for 2. Arena and Big Team Battle deal as before. The 3+ team balancing by rating was already there (`roster_point_balance`).
+- **Ratings (`native/skill_rating.cpp` `sr_rate`):**
+  - Multi Team: only the first team wins. A losing team's 150 gap is to the winners' average rating; a winner's is to everyone it beat. With two teams this is the same as before.
+  - A gametype with "infection" in its name changes no rating. The match is marked counted, so it is not tried again, and its RATING page shows "-".
+  - Rumble Pit uses the free-for-all rating by place, as before.
+- **Checks:**
+  - `pool_test`, new section 28, all pass: 150 Multi Team lobbies (sizes, the party on red, a clan whole and off red, no name twice), a friend with no team yet, Double Team 2v2 lobbies, Multi Team's 1st-wins and the losers' gap, and Infection unrated.
+  - `pg_preview lists` with the new files in its stand-in library: every playlist finds its gametypes and maps.
+  - Preview screenshots: the playlist pages (Team Slayer's too) and a Multi Team vote with four teams of three.
+  - `unittest discover` over `tools`: 1723 OK. Built as `botcore_pg64.dll`.
+  - **Untested in game:** whether MCC plays these gametypes with 4 teams, and how it reads his new files' team flags. A team playlist whose file MCC reads as free for all finds no gametype and says so.
+
 ### No learned shoot-through holes in solid walls (Boneyard), 2026-11-24
 
 The owner's bug report `20261124-194946` (Boneyard, t 157): "Bots are trying to shoot through boneyards walls"; asked, "Fired rounds into it"; then "As long as it only blocks small holes and not the larger holes in railing and stuff".
@@ -206,6 +295,23 @@ The owner: "I also did it once with the rocket im not sure if you grabbed it but
 - **His rocket try** (Condemned Neutral Bomb, `20261124-185819`): he carried the bomb with his rocket launcher (2 rockets) behind it until 512.47 s, and the launcher was in hand the tick the drop was read. Its first rocket left at 513.39 s, **0.89 s after the drop**; the next a second on, its own rate. The DMR's was 0.57 s.
 - **`brain/bot.py` `DROP_READY_BY` {"rockets": 0.89}, `drop_ready_s`:** a drop to fight waits for the gun in hand's own time. A gun not measured yet waits the DMR's 0.57 s.
 - **Checks:** `tools/test_drop_ready.py` +1 (the rocket launcher waits longer; the times by gun). `unittest discover` over `tools` is OK, and so is the `live_bots` import. **Untested in a match.**
+
+### Carnage report: the map's picture for any match, and the credit screen again, 2026-11-24
+
+The owner, with a screenshot of the report showing "Halo: Reach" in place of the map: "add the picture of the map that you played last match. Also, Add the ability to see your credit gain screen again if you accidentally miss it the first time". Asked, he put the credits on the carnage report.
+
+- **The map (`tools/service_record.py` `write_last_carnage`, `native/proving_grounds.cpp` `carnage_enter`):**
+  - The picture came only from `last_played.txt`, which is written when Project Noble's vote launches a game. His Neutral Bomb on Condemned (match `cf4971da…`) was not launched that way, so the report had no map.
+  - `last_carnage.txt`'s `game` line now also carries the map's shown name (`map_name`, "Condemned").
+  - When `last_played.txt` is not that match's, the report takes its map from there. Its picture is the squashed name (`condemned.jpg`), the caption reads "Neutral Bomb on Condemned", and the gametype's icon comes from MCC's list when that has been read.
+  - A map with no picture on this PC shows its name only.
+- **The credit screen again (`credits_replay`, `credits_of`):**
+  - The report's footer has **Credits** (Y on the pad, C on the keys, or a click) while `last_match.txt` is still the report's match, which is until the next match.
+  - It plays the credit screen of that match again (the same lines, rank steps and promotion). Its Continue, Skip-then-Continue, or Back returns to the report on the tab and row it was on.
+  - Opened as Prior Game Stats over the search or the vote, it plays there too, on its own clock, so the search's or vote's timer is untouched. It ends with the report when the stage moves on.
+  - It is off while following a friend's Project Noble.
+- **Preview:** case 52 (`carnage_any_match`): the report with no `last_played.txt` match (`PG_CARNAGE` set to a copy of his report with the new column) shows Condemned and the Credits prompt.
+- **Checks:** `unittest discover` over `tools` is OK (1711 tests; `test_carnage_of_the_last_match` expects the new column), and `build.bat up030n` builds `botcore_up030n.dll`. **Untested in game:** the Credits replay. His current report gets the map once the Service Record build runs again (after the next match).
 
 ### A bot's first round after dropping the bomb comes when the gun is ready, 2026-11-24
 

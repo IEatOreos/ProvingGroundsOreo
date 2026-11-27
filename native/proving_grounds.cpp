@@ -94,7 +94,10 @@ static const char* GT_SHOW[][2] = {
     {"ONE BOMB ASSAULT", "One Bomb"}, {"NEUTRAL BOMB ASSAULT", "Neutral Bomb"}, {"TU ONE BOMB ASSAULT", "One Bomb (TU)"},
     {"TU MULTI BOMB ASSAULT", "Multi Bomb (TU)"}, {"3-PLOT TERRITORIES", "3 Plot Territories"},
     {"TU 3-PLOT TERRITORIES", "3 Plot Territories (TU)"}, {"TU STOCKPILE", "Stockpile (TU)"},
-    {"TU TERRITORIES", "Territories (TU)"}, {"TU HEADHUNTER", "Team Headhunter (TU)"} };
+    {"TU TERRITORIES", "Territories (TU)"}, {"TU HEADHUNTER", "Team Headhunter (TU)"},
+    // (Nov 24) the owner's files for Infection, SWAT, Snipers and Rumble Pit
+    {"TU Infection", "Infection"}, {"Team SWAT", "Team SWAT"}, {"TU Snipers", "Team Snipers"},
+    {"TU CRAZY KIng FFA", "Crazy King"}, {"TU Oddball FFA", "Oddball"}, {"SLAYER PRO", "Slayer Pro"} };
 // team games when MCC's own flag could not be read (pg_lobby.cpp: its SLAYER and CAPTURE THE FLAG check)
 static const char* TEAM_GAMES[] = { "TU TEAM SLAYER DMR", "SWAT", "CAPTURE THE FLAG", "ONE FLAG CTF", "MULTI FLAG CTF",
     "NEUTRAL FLAG CTF", "TU MULTI FLAG CTF", "TU ONE FLAG CTF", "ASSAULT", "ONE BOMB ASSAULT", "NEUTRAL BOMB ASSAULT",
@@ -108,17 +111,31 @@ struct playlist {
     const char* title;           // "ARENA"
     const char* blurb;
     int size;                    // players a team
+    // (Nov 24, the owner: "Multi Team and Infection") its teams (Multi Team 4 of 3), and ffa: free for all gametypes
+    // (Infection: MCC deals the zombies; no teams shown, not rated); code: its size= value in proving_grounds.ini and
+    // the friend link (4, 8 as before; 3 Multi Team, 16 Infection: an older copy reads them as Arena and BTB)
+    int teams = 2;
+    bool ffa = false;
+    int code = 4;
+    // (Nov 24, the owner: "same maps as arena") arena_maps: Arena's maps and its removepair= lines as
+    // proving_grounds.ini leaves them (this playlist's own map lines after); arena_objective ("Team Objective will
+    // just be the same as arena with no slayer"): Arena's gametypes and weights too, without Slayer and SWAT
+    bool arena_maps = false;
+    bool arena_objective = false;
     std::vector<pl_gametype> gametypes;
     std::vector<std::string> maps;
     // (Nov 23, the owner: "Remove multi flag, multi bomb and neutral bomb from sword base, damnation, hang em high,
     // boardwalk and prisoner") <playlist>.removepair=MAP|GAMETYPE: that gametype never drawn on that map
     std::vector<std::pair<std::string, std::string>> skip;
 };
-static playlist g_pl[2];
+static const int PL_N = 10;                      // Arena, Big Team Battle, Multi Team, Infection, (Nov 24) Team SWAT,
+                                                 // Team Snipers, Rumble Pit, Double Team, Team Objective, Team Slayer
+static playlist g_pl[PL_N];
 
 static void default_playlists() {
+    for (playlist& pl : g_pl) { pl.skip.clear(); pl.arena_maps = pl.arena_objective = false; }
     playlist& a = g_pl[0];
-    a.key = "arena"; a.title = "ARENA"; a.size = 4;
+    a.key = "arena"; a.title = "ARENA"; a.size = 4; a.teams = 2; a.ffa = false; a.code = 4;
     a.blurb = "Four on four on Reach's tightest maps. Team Slayer most of all, with objective games in the mix.";
     a.gametypes = { {"TU TEAM SLAYER DMR", 5}, {"SWAT", 1}, {"ONE FLAG CTF", 1}, {"MULTI FLAG CTF", 1},
                     {"CAPTURE THE FLAG", 1}, {"KING OF THE HILL", 1}, {"CRAZY KING", 1}, {"ODDBALL", 1},
@@ -127,17 +144,75 @@ static void default_playlists() {
     a.maps = { "Sword Base", "Countdown", "Zealot", "Powerhouse", "Reflection", "Boardwalk", "Anchor 9", "Condemned",
                "Asylum", "The Cage", "Pinnacle", "Beaver Creek", "Damnation", "Hang 'Em High", "Prisoner" };
     playlist& b = g_pl[1];
-    b.key = "btb"; b.title = "BIG TEAM BATTLE"; b.size = 8;
+    b.key = "btb"; b.title = "BIG TEAM BATTLE"; b.size = 8; b.teams = 2; b.ffa = false; b.code = 8;
     b.blurb = "Eight on eight on Reach's biggest battlefields. Vehicles, objectives and Team Slayer.";
     b.gametypes = { {"TU TEAM SLAYER DMR", 5}, {"MULTI FLAG CTF", 1}, {"CAPTURE THE FLAG", 1}, {"ONE BOMB ASSAULT", 1},
                     {"NEUTRAL BOMB ASSAULT", 1}, {"STOCKPILE", 1}, {"TERRITORIES", 1}, {"HEADHUNTER", 1} };
     b.maps = { "Boneyard", "Spire", "Breakpoint", "Tempest", "Highlands", "Hemorrhage", "Paradiso", "Ridgeline",
                "Breakneck", "Headlong", "Timberland" };
+    // (Nov 24, the owner) Multi Team: "4 teams of 3", "Slayer is set to 65% split the rest" (39 of 60, 7 each),
+    // MCC's TU CRAZY KING, "foundry (only slayer)"; only the first team wins, the other three lose (skill_rating.cpp)
+    playlist& m = g_pl[2];
+    m.key = "multiteam"; m.title = "MULTI TEAM"; m.size = 3; m.teams = 4; m.ffa = false; m.code = 3;
+    m.blurb = "Four teams of three. Team Slayer most of all, with Headhunter, Stockpile and Crazy King.";
+    m.gametypes = { {"TU TEAM SLAYER DMR", 39}, {"TU HEADHUNTER", 7}, {"TU STOCKPILE", 7}, {"TU CRAZY KING", 7} };
+    m.maps = { "Countdown", "Powerhouse", "Reflection", "Sword Base", "Zealot", "Anchor 9", "Condemned", "Battle Canyon",
+               "Penance", "Solitary", "High Noon", "Asylum", "Pinnacle", "The Cage", "FOUNDRY" };
+    m.skip = { {"FOUNDRY", "TU HEADHUNTER"}, {"FOUNDRY", "TU STOCKPILE"}, {"FOUNDRY", "TU CRAZY KING"} };
+    // (Nov 24, the owner) Infection: his own TU Infection, 16 players, not rated; Reach's LIVING DEAD in the menus.
+    // Dealt as two halves of 8 like Big Team Battle (the gametype is free for all: MCC picks the zombies)
+    playlist& z = g_pl[3];
+    z.key = "infection"; z.title = "LIVING DEAD"; z.size = 8; z.teams = 2; z.ffa = true; z.code = 16;
+    z.blurb = "Sixteen players, Infection only. Survive the dead, or join them.";
+    z.gametypes = { {"TU Infection", 1} };
+    z.maps = { "Boardwalk", "Countdown", "Powerhouse", "Reflection", "Sword Base", "Zealot", "Anchor 9", "Battle Canyon" };
+    // (Nov 24, the owner: "Swat, to the swat playlist", "Tu Snipers", "Rumble pit is ffa use Slayer pro, Tu crazy king
+    // ffa, Tu Oddball ffa" (8 players, "Slayer 90%"), "Double team (2v2), only use tu team Slayer and tu crazy king"
+    // ("Slayer more often": 3 in 4), "Team Objective will just be the same as arena with no slayer"; all on Arena's maps.
+    // His own Team SWAT, TU Snipers, TU CRAZY KIng FFA and TU Oddball FFA files
+    playlist& w = g_pl[4];
+    w.key = "swat"; w.title = "TEAM SWAT"; w.size = 4; w.teams = 2; w.ffa = false; w.code = 5; w.arena_maps = true;
+    w.blurb = "Four on four. Precision weapons, no shields, no motion tracker: one headshot kills.";
+    w.gametypes = { {"Team SWAT", 1} };
+    playlist& n = g_pl[5];
+    n.key = "snipers"; n.title = "TEAM SNIPERS"; n.size = 4; n.teams = 2; n.ffa = false; n.code = 6; n.arena_maps = true;
+    n.blurb = "Four on four with sniper rifles from the start.";
+    n.gametypes = { {"TU Snipers", 1} };
+    playlist& u = g_pl[6];
+    u.key = "rumble"; u.title = "RUMBLE PIT"; u.size = 4; u.teams = 2; u.ffa = true; u.code = 9; u.arena_maps = true;
+    u.blurb = "Eight players, every one for themselves. Slayer Pro most of all, with Crazy King and Oddball.";
+    u.gametypes = { {"SLAYER PRO", 18}, {"TU CRAZY KIng FFA", 1}, {"TU Oddball FFA", 1} };
+    playlist& d = g_pl[7];
+    d.key = "doubles"; d.title = "DOUBLE TEAM"; d.size = 2; d.teams = 2; d.ffa = false; d.code = 2; d.arena_maps = true;
+    d.blurb = "Two on two. Team Slayer most of all, with Crazy King.";
+    d.gametypes = { {"TU TEAM SLAYER DMR", 3}, {"TU CRAZY KING", 1} };
+    playlist& o = g_pl[8];
+    o.key = "objective"; o.title = "TEAM OBJECTIVE"; o.size = 4; o.teams = 2; o.ffa = false; o.code = 7;
+    o.arena_maps = o.arena_objective = true;
+    o.blurb = "Four on four, objective games only: flags, bombs, hills, balls and stockpiles.";
+    // (Nov 24, the owner: "Add team Slayer as well. Itll be all arena maps, with Tu team slayer dmr only")
+    playlist& ts = g_pl[9];
+    ts.key = "slayer"; ts.title = "TEAM SLAYER"; ts.size = 4; ts.teams = 2; ts.ffa = false; ts.code = 1; ts.arena_maps = true;
+    ts.blurb = "Four on four, Team Slayer only: the most kills wins.";
+    ts.gametypes = { {"TU TEAM SLAYER DMR", 1} };
+    for (playlist* q : { &w, &n, &u, &d, &o, &ts }) q->maps.clear();
+    o.gametypes.clear();
+}
+
+static const int PL_CODE[PL_N] = { 4, 8, 3, 16, 5, 6, 9, 2, 7, 1 };   // (each playlist's code, as default_playlists sets it)
+static int pl_index(int code) { for (int k = 0; k < PL_N; k++) if (PL_CODE[k] == code) return k; return 0; }
+static bool pl_code_ok(int code) { for (int c : PL_CODE) if (c == code) return true; return false; }
+static int pl_players(const playlist& pl) { return pl.size * pl.teams; }
+// "4v4", "4 teams of 3", "16 players"
+static void pl_size_text(const playlist& pl, char* out, int cap) {
+    if (pl.ffa) sprintf_s(out, cap, "%d players", pl_players(pl));
+    else if (pl.teams == 2) sprintf_s(out, cap, "%dv%d", pl.size, pl.size);
+    else sprintf_s(out, cap, "%d teams of %d", pl.teams, pl.size);
 }
 
 // ------------------------------------------------------------------ settings (native\bin\proving_grounds.ini)
 static wchar_t g_bin[MAX_PATH], g_root[MAX_PATH];
-static int g_size = 4;                           // 4 Arena, 8 Big Team Battle
+static int g_size = 4;                           // the playlist's code: 4 Arena, 8 Big Team Battle, 3 Multi Team, 16 Infection
 static int g_vote_s = 30;                        // (Nov 23, the owner: 30 by default; 15, 30 or 45 on the Psych Profile)
 static char g_party[8][16];
 static int g_nparty;
@@ -178,29 +253,28 @@ static void load_settings() {
     g_loaded = true;
     find_dirs();
     default_playlists();
-    for (playlist& pl : g_pl) pl.skip.clear();
     wchar_t p[MAX_PATH];
     ini_path(p);
     FILE* f = nullptr;
     if (_wfopen_s(&f, p, L"r") || !f) return;
-    bool replaced[2][2] = {};                    // (a playlist's gametype / map lines replace its defaults)
+    bool replaced[PL_N][2] = {};                    // (a playlist's gametype / map lines replace its defaults)
     // (Nov 16, the owner: "Can I add my own maps and modes") addgametype= / addmap= add to a list, removegametype= /
     // removemap= take out of it; applied after every line is read
-    std::vector<pl_gametype> add_gt[2];
-    std::vector<std::string> add_map[2], drop_gt[2], drop_map[2];
+    std::vector<pl_gametype> add_gt[PL_N];
+    std::vector<std::string> add_map[PL_N], drop_gt[PL_N], drop_map[PL_N];
     char line[256];
     g_nparty = 0;
     while (fgets(line, sizeof line, f)) {
         trim(line);
         if (!line[0] || line[0] == '#' || line[0] == ';') continue;
         int v;
-        if (sscanf_s(line, "size=%d", &v) == 1) { g_size = v >= 8 ? 8 : 4; continue; }
+        if (sscanf_s(line, "size=%d", &v) == 1) { g_size = pl_code_ok(v) ? v : v >= 8 ? 8 : 4; continue; }
         if (sscanf_s(line, "vote_seconds=%d", &v) == 1) { g_vote_s = v < 5 ? 5 : v > 60 ? 60 : v; continue; }
         if (!strncmp(line, "party=", 6)) {
             if (g_nparty < 8 && line[6]) strncpy_s(g_party[g_nparty++], line + 6, _TRUNCATE);
             continue;
         }
-        for (int k = 0; k < 2; k++) {
+        for (int k = 0; k < PL_N; k++) {
             size_t kl = strlen(g_pl[k].key);
             if (_strnicmp(line, g_pl[k].key, kl) || line[kl] != '.') continue;
             const char* rest = line + kl + 1;
@@ -242,8 +316,18 @@ static void load_settings() {
         }
     }
     fclose(f);
-    for (int k = 0; k < 2; k++) {
+    for (int k = 0; k < PL_N; k++) {
         playlist& pl = g_pl[k];
+        if (k && pl.arena_objective && !replaced[k][0])          // (Nov 24: Arena's without Slayer; Arena done first)
+            for (const pl_gametype& g : g_pl[0].gametypes) {
+                char sq[96];
+                squash(g.name.c_str(), sq, sizeof sq);
+                if (!strstr(sq, "slayer") && !strstr(sq, "swat")) pl.gametypes.push_back(g);
+            }
+        if (k && pl.arena_maps) {
+            if (!replaced[k][1]) pl.maps = g_pl[0].maps;
+            pl.skip.insert(pl.skip.end(), g_pl[0].skip.begin(), g_pl[0].skip.end());
+        }
         for (const std::string& d : drop_gt[k])
             pl.gametypes.erase(std::remove_if(pl.gametypes.begin(), pl.gametypes.end(),
                                [&](const pl_gametype& g) { return !_stricmp(g.name.c_str(), d.c_str()); }), pl.gametypes.end());
@@ -323,8 +407,9 @@ const char* pg_map_name(const char* mcc_name, const char* key, char* out, int ca
     return out;
 }
 
+static bool gt_name_is(const char* a, const char* b);
 static void gametype_show(const char* mcc_name, char* out, int cap) {
-    for (auto& g : GT_SHOW) if (!strcmp(g[0], mcc_name)) { strcpy_s(out, cap, g[1]); return; }
+    for (auto& g : GT_SHOW) if (gt_name_is(g[0], mcc_name)) { strcpy_s(out, cap, g[1]); return; }
     int k = 0;
     bool start = true;
     for (const char* c = mcc_name; *c && k < cap - 1; c++) {
@@ -418,7 +503,17 @@ static bool team_game(const pg_entry& g) {
     return false;
 }
 
-// the playlist's gametypes MCC has (team games), weights kept; its maps MCC has
+// (Nov 24) two gametype names the same but for case and the spaces at either end (the owner's file is " TU Infection")
+static bool gt_name_is(const char* a, const char* b) {
+    while (*a == ' ') a++;
+    while (*b == ' ') b++;
+    size_t na = strlen(a), nb = strlen(b);
+    while (na && a[na - 1] == ' ') na--;
+    while (nb && b[nb - 1] == ' ') nb--;
+    return na == nb && !_strnicmp(a, b, na);
+}
+
+// the playlist's gametypes MCC has (team games; Infection's free for all ones), weights kept; its maps MCC has
 struct pool_gt { const pg_entry* e; int weight; };
 static void playlist_pool(const playlist& pl, std::vector<pool_gt>& gts, std::vector<const pg_entry*>& maps) {
     gts.clear(); maps.clear();
@@ -427,7 +522,8 @@ static void playlist_pool(const playlist& pl, std::vector<pool_gt>& gts, std::ve
     for (const pl_gametype& w : pl.gametypes) {
         const pg_entry* pick = nullptr;
         for (int i = 0; i < g_nlgts; i++)
-            if (!_stricmp(g_lgts[i].name, w.name.c_str()) && team_game(g_lgts[i]) && (!pick || (g_lgts[i].kind == 3 && pick->kind != 3)))
+            if (gt_name_is(g_lgts[i].name, w.name.c_str()) && (pl.ffa || team_game(g_lgts[i])) &&
+                (!pick || (g_lgts[i].kind == 3 && pick->kind != 3)))
                 pick = &g_lgts[i];
         if (pick) gts.push_back({ pick, w.weight });
     }
@@ -587,7 +683,8 @@ static hb_roster g_f_roster;                     // (following) the host's lobby
 static char g_f_clan[HB_ROSTER_MAX][8];          // (following) their clan tags, as the host's profiles have them
 static const char* seat_clan(const hb_roster& r, int i) { return g_follow ? g_f_clan[i] : profile_clan_of(r.bot[i].name); }
 
-static const playlist& cur_pl() { return g_pl[g_size >= 8 ? 1 : 0]; }
+static const playlist& cur_pl() { return g_pl[pl_index(g_size)]; }
+static uint32_t pool_format() { return cur_pl().size >= 8 ? 8u : 4u; }   // (the pool's 4v4 or 8v8 file)
 
 static uint64_t people_now(uint64_t* ids, char (*names)[32], int* teams, int* n) {   // MCC's list now, and its sig
     *n = mcc_session_people(ids, names, teams, PG_PEOPLE);
@@ -651,6 +748,7 @@ static bool carnage_enter(const char* id, bool from_menu, double now);
 static bool carnage_on_disk();
 static bool carnage_over_open(double now);
 static bool g_cg_over;                           // (Nov 23: Prior Game Stats over the search, the vote, the result: below)
+static bool g_cr_replay, g_cr_over;              // (Nov 24: the report's credits again; over the stage: below)
 static int g_cg_menu_focus;                     // (Prior Game Stats: the matchmaking page's focus to come back to)
 static int g_rm_psych[4];                        // (the psych profile, also shown in MY PARTY DETAILS)
 static void rm_load();
@@ -689,6 +787,7 @@ void pg_back() {
         return;
     }
     if (g_stage == S_MENU && rmenu_back()) return;   // (Reach's pages: one page back; from the title, closed)
+    if (g_cg_over && g_cr_replay) { credits_done(ImGui::GetTime()); return; }   // (Nov 24: its credits again: back to it)
     if (g_cg_over) { carnage_back(); return; }   // (Nov 23: Prior Game Stats over the search or the vote)
     switch (g_stage) {
     case S_MENU: g_stage = S_OFF; logf("proving grounds: closed"); break;
@@ -705,7 +804,7 @@ static bool pair_skipped(const playlist& pl, const char* map, const char* gt) {
     squash(map, a, sizeof a);
     for (const auto& s : pl.skip) {
         squash(s.first.c_str(), b, sizeof b);
-        if (!strcmp(a, b) && !_stricmp(s.second.c_str(), gt)) return true;
+        if (!strcmp(a, b) && gt_name_is(s.second.c_str(), gt)) return true;
     }
     return false;
 }
@@ -858,7 +957,7 @@ static void schedule(const hb_roster& r, float total, const bool* seated_before)
 // bot_pool_humans.txt from the last team match (Red when none yet)
 static int person_team() {
     int t = mcc_player_team();
-    if (t == 0 || t == 1) return t;
+    if (t >= 0 && t < cur_pl().teams) return t;          // (Nov 24: Multi Team's four)
     wchar_t dir[MAX_PATH];
     swprintf_s(dir, L"%s\\", g_bin);
     bot_pool_load(dir);
@@ -883,7 +982,8 @@ static int deal(hb_roster& r, int keep_pct, uint32_t difficulty) {
     g_people_sig = people_now(g_people_id, g_people_name, teams, &g_npeople);
     for (int i = 0; i < g_npeople; i++) friends[i] = sr_person(g_people_name[i]);   // (Nov 23: each friend's own)
     bot_pool_set_people_ratings(g_pts, friends, g_npeople);
-    int fresh = bot_pool_matchmake(r, g_size, g_party, g_nparty, party_team, keep_pct, difficulty, g_pinned, teams, g_npeople);
+    int fresh = bot_pool_matchmake(r, cur_pl().size, g_party, g_nparty, party_team, keep_pct, difficulty, g_pinned, teams,
+                                   g_npeople, cur_pl().teams);   // (Nov 24: Multi Team's 4 teams of 3)
     g_me_team = party_team;
     for (int i = 0; i < g_npeople; i++) g_people_team[i] = teams[i];
     if (g_npeople) {
@@ -921,7 +1021,7 @@ static bool start_search(pg_env& e) {
     }
     if (e.bots_enabled) *e.bots_enabled = 1;
     if (e.lidar_mode) *e.lidar_mode = 0;
-    bot_pool_set_format((uint32_t)g_size);
+    bot_pool_set_format(pool_format());
     int fresh = deal(*e.roster, 0, e.difficulty);
     g_search_s = 4.0f + frnd() * 6.0f;
     schedule(*e.roster, g_search_s, nullptr);
@@ -940,7 +1040,7 @@ bool pg_after_match(hb_roster& r, uint32_t difficulty) {
     if (!g_loaded) load_settings();
     bool before[HB_ROSTER_MAX] = {};
     hb_roster old = r;
-    bot_pool_set_format((uint32_t)g_size);
+    bot_pool_set_format(pool_format());
     int fresh = deal(r, 70, difficulty);                 // (the people as MCC's list has them; dealt again if that changes)
     for (int i = 0; i < r.n; i++)
         for (int k = 0; k < old.n; k++) if (!_stricmp(r.bot[i].name, old.bot[k].name)) before[i] = true;
@@ -1575,9 +1675,11 @@ static void stats_panel(float x0, float y0, float w = 415) {
     panel(x0, y0, x0 + w, y0 + 268);
     text(g_fl, 26, x0 + 14, y0 + 10, C_BLUE, "PLAYLIST STATS");
     char v[6][24];
-    sprintf_s(v[0], "%d", pl.size * 2);
+    sprintf_s(v[0], "%d", pl_players(pl));             // (Nov 24: Multi Team 12, Infection 16)
     sprintf_s(v[1], "%d", pl.size);
-    sprintf_s(v[2], "%d", pl.size);
+    if (pl.ffa) strcpy_s(v[2], "Free for all");
+    else if (pl.teams == 2) sprintf_s(v[2], "%d", pl.size);
+    else sprintf_s(v[2], "%d (%d teams)", pl.size, pl.teams);
     sprintf_s(v[3], "Clans together");
     sprintf_s(v[4], "%d s", g_vote_s);
     sprintf_s(v[5], "%d", g_pool_count);                    // (each bot once: Name*N lines are one bot)
@@ -1824,9 +1926,9 @@ static void session_panel(pg_env& e) {
         rows.push_back({ RK_BOT, g_party[i], profile_clan_of(g_party[i]), -1, tiers[i], true, 1, 0, (np || i) ? 0.0f : 5.0f });
     }
     char cnt[16], now[8], max[8];
-    sprintf_s(cnt, "%d/%d", g_nparty + 1 + np, cur_pl().size * 2);
+    sprintf_s(cnt, "%d/%d", g_nparty + 1 + np, pl_players(cur_pl()));
     sprintf_s(now, "%d", g_nparty + 1 + np);
-    sprintf_s(max, "%d", cur_pl().size * 2);
+    sprintf_s(max, "%d", pl_players(cur_pl()));
     // (Nov 19) one name for the list wherever it stands: Reach's own ("MY GAME SESSION" before)
     ros_head h = { "IN PROJECT NOBLE LOBBY", cnt, "In Project Noble Lobby", cnt, "MY PARTY", "MY PARTY DETAILS",
                    { me_name(), cur_pl().title, now, max, "Project Noble" } };
@@ -2384,7 +2486,7 @@ static void menu_screen(pg_env& e, float t) {
     text(g_fl, 40, 238, 236, C_TEXT, "PROJECT NOBLE");
     text(g_fl, 24, 240, 286, C_BLUE, cur_pl().title);
     const char* desc[7] = { "Find a game: a lobby of bots from your pool, then the vote.",
-                            "Arena is 4v4, Big Team Battle 8v8.",
+                            "Arena 4v4, Big Team Battle 8v8, Team Slayer, Multi Team, Living Dead, SWAT, Snipers, Rumble Pit, Doubles, Objective.",
                             "Bots who play on your team every game, whatever the lobby.",
                             "Today's and this week's challenges, as your Service Record has them.",
                             "Your commendations, tiers and progress, as your Service Record has them.",
@@ -2399,7 +2501,8 @@ static void menu_screen(pg_env& e, float t) {
     row(96, ry(0), 880, ry(0) + RH, f0, "PLAY");
     bool f1 = item(96, ry(1), 880, ry(1) + RH);
     char sz[32];
-    sprintf_s(sz, "%dV%d (TEAM)", cur_pl().size, cur_pl().size);
+    pl_size_text(cur_pl(), sz, sizeof sz);
+    for (char* c = sz; *c; c++) *c = (char)toupper((unsigned char)*c);
     row(96, ry(1), 880, ry(1) + RH, f1, "GAME SIZE", sz, true);
     bool f2 = item(96, ry(2), 880, ry(2) + RH);
     char inv[32];
@@ -2441,7 +2544,7 @@ static void menu_screen(pg_env& e, float t) {
     if (!g_invite) footer(desc[focus >= 0 && focus < 6 ? focus : 6], "Select", true);   // (the invite list: its own)
     if (f1 && g_left_right) {
         g_lr_taken = true;                               // (Right here is the size, not the roster)
-        g_size = g_size >= 8 ? 4 : 8;
+        g_size = PL_CODE[(pl_index(g_size) + (g_left_right > 0 ? 1 : PL_N - 1)) % PL_N];   // (Nov 24: the four in turn)
         while (g_nparty > cur_pl().size - 1) g_nparty--;
         save_settings(); sound(PS_MOVE);
     }
@@ -2455,7 +2558,7 @@ static void menu_screen(pg_env& e, float t) {
         }
     }
     if (pressed(base + 0)) { sound(PS_SELECT); start_search(e); }
-    if (pressed(base + 1)) { g_size = g_size >= 8 ? 4 : 8; while (g_nparty > cur_pl().size - 1) g_nparty--; save_settings(); sound(PS_SELECT); }
+    if (pressed(base + 1)) { g_size = PL_CODE[(pl_index(g_size) + 1) % PL_N]; while (g_nparty > cur_pl().size - 1) g_nparty--; save_settings(); sound(PS_SELECT); }
     if (pressed(base + 2)) { g_invite = true; g_npool_names = 0; g_invite_scroll = 0; g_focus = 0; sound(PS_SELECT); }
     if (pressed(base + 3)) { g_chal = true; g_chal_check = 0; sound(PS_SELECT); }
     if (pressed(base + 4)) { g_comm = true; g_comm_check = 0; g_comm_tab = 0; g_comm_scroll = 0; g_focus = 0; sound(PS_SELECT); }
@@ -2482,7 +2585,10 @@ static void lobby_rows(pg_env& e, float t, bool teams, float x1, float y0, const
     int n = r.n + 1 + g_npeople, filled = 1 + g_npeople;
     for (int i = 0; i < r.n; i++) filled += t >= g_arrive[i];
     std::vector<ros_row> rows;
-    int party_team = g_me_team == 1 ? 1 : 0;             // (the team the deal put the player on: MCC's)
+    const playlist& pl = cur_pl();
+    int party_team = g_me_team >= 0 && g_me_team < pl.teams ? g_me_team : 0;   // (the team the deal put the player on: MCC's)
+    bool shown_teams = teams;                            // (the header's words: voting or searching)
+    if (pl.ffa) teams = false;                           // (Nov 24: Infection, free for all: no teams shown)
     float gap = 0;
     auto me = [&](int team) { rows.push_back({ RK_ME, me_name(), "", team, -1, false, 1, 0, gap }); gap = 0; };
     auto person = [&](int k, int team) {                 // a friend who joined: their own look, no bot's rank
@@ -2506,7 +2612,7 @@ static void lobby_rows(pg_env& e, float t, bool teams, float x1, float y0, const
         std::stable_sort(order.begin(), order.end(), [&](int a, int b) { return g_arrive[a] < g_arrive[b]; });
         for (int i : order) bot(i);
     } else {
-        for (int team : { 0, 1 }) {
+        for (int team = 0; team < pl.teams; team++) {   // (Nov 24: Multi Team's four)
             if (team == party_team) me(team);
             for (int k = 0; k < g_npeople; k++) if (g_people_team[k] == team) person(k, team);
             for (int i = 0; i < r.n; i++) if (r.bot[i].team == team) bot(i);
@@ -2519,7 +2625,7 @@ static void lobby_rows(pg_env& e, float t, bool teams, float x1, float y0, const
     sprintf_s(max, "%d", n);
     // (Nov 19) one name for the list wherever it stands: Reach's own ("IN LOBBY", "SETTING UP MATCH..." before)
     ros_head h = { "IN MATCHMAKING LOBBY", cnt, "In Matchmaking Lobby", cnt, "MATCHMAKING", "LOBBY DETAILS",
-                   { me_name(), cur_pl().title, now, max, teams ? "Voting" : "Searching for Players" } };
+                   { me_name(), cur_pl().title, now, max, shown_teams ? "Voting" : "Searching for Players" } };
     roster(e, rows, h, x1, y0, y0 + 44, t, empty_text);
 }
 
@@ -3117,7 +3223,7 @@ struct cg_team { int team, place, score; };
 struct cg_top { cg_medal m; int row; };
 static struct {
     bool have, teams;
-    std::string id, type, map;
+    std::string id, type, map, map_name;          // (map_name: Nov 24, the shown name, "Condemned")
     std::vector<cg_team> team;
     std::vector<cg_player> pl;
     std::vector<cg_top> top;
@@ -3223,7 +3329,7 @@ static bool carnage_load(const char* want) {
         split_tabs(line, c);
         const std::string& k = c[0];
         if (k == "match") g_cg.id = str(1);
-        else if (k == "game") { g_cg.type = str(1); g_cg.teams = str(2) == "1"; g_cg.map = str(3); }
+        else if (k == "game") { g_cg.type = str(1); g_cg.teams = str(2) == "1"; g_cg.map = str(3); g_cg.map_name = str(4); }
         else if (k == "team" && c.size() >= 4) g_cg.team.push_back({ num(1), num(2), num(3) });
         else if (k == "player" && c.size() >= 27) {
             cg_player q;
@@ -3379,6 +3485,15 @@ static bool carnage_enter(const char* id, bool from_menu, double now) {
         strncpy_s(g_played.id, g_cg.id.c_str(), _TRUNCATE);
         played_save();
     } else played_load(g_cg.id);
+    // (Nov 24, the owner: "add the picture of the map that you played last match") a match Project Noble's vote did not
+    // launch (MCC's own lobby, another menu): its map from the report itself (tools/service_record.py writes its shown
+    // name, "Condemned", whose squashed form is its picture's), its gametype's icon from MCC's list when it is read
+    if (!g_played.map_key[0] && !g_cg.map_name.empty()) {
+        strncpy_s(g_played.map_key, g_cg.map_name.c_str(), _TRUNCATE);
+        strncpy_s(g_played.map_name, g_cg.map_name.c_str(), _TRUNCATE);
+        for (int i = 0; i < g_nlgts && g_played.family < 0; i++)
+            if (!_stricmp(g_lgts[i].name, g_cg.type.c_str())) g_played.family = family_of(g_lgts[i].category);
+    }
     g_focus_after = 0;
     g_t0 = now;
     logf("proving grounds: the carnage report of match %s (%d players)", g_cg.id.c_str(), (int)g_cg.pl.size());
@@ -3390,6 +3505,7 @@ static void carnage_over_close(bool back = true) {   // (back: on the screen's f
     g_cg_over = false;
     g_cg_tab = 0;
     g_played = g_played_under;
+    if (g_cr_over) { g_cr_replay = g_cr_over = false; g_credit_id[0] = 0; }   // (Nov 24: its credits again ended with it)
     if (back) g_focus_after = g_cg_over_focus;
 }
 static bool carnage_over_open(double now) {       // (Nov 23: Prior Game Stats over the search, the vote, the result)
@@ -3416,7 +3532,55 @@ static void carnage_exit(double now) {
     g_cg_presses = 0;
     g_cg_press_t = 0;
 }
+// (Nov 24, the owner: "Add the ability to see your credit gain screen again if you accidentally miss it the first time";
+// asked, he put it on the carnage report) the report's CREDITS (Y, C) plays the credit screen of its match again from
+// last_match.txt (kept till the next match), then comes back to the report where it was; over the search or the vote
+// (Prior Game Stats over them) it plays there too, the stage going on under it
+// (g_cr_replay, g_cr_over: above, by carnage_enter's declaration)
+static int g_cr_tab, g_cr_page, g_cr_sel, g_cr_player;
+static bool g_cr_menu;
+static double g_cr_t0;                           // (the replay's own clock over the stage: g_t0 is the stage's)
+static bool credits_of(const std::string& id) {  // last_match.txt is this match's (looked at every 2 s)
+    static double at = -10;
+    static std::string had;
+    double now = ImGui::GetTime();
+    if (now - at > 2.0) {
+        at = now;
+        had.clear();
+        wchar_t p[MAX_PATH];
+        swprintf_s(p, L"%s\\logs\\service_record\\last_match.txt", g_root);
+        FILE* f = nullptr;
+        if (!_wfopen_s(&f, p, L"rb") && f) {
+            char line[256];
+            while (fgets(line, sizeof line, f))
+                if (!strncmp(line, "match\t", 6)) { line[strcspn(line, "\r\n")] = 0; had = line + 6; break; }
+            fclose(f);
+        }
+    }
+    return !id.empty() && had == id;
+}
+static void credits_replay(double now) {
+    g_cr_replay = true;
+    g_cr_over = g_cg_over;
+    g_cr_tab = g_cg_tab; g_cr_page = g_cg_page; g_cr_sel = g_cg_sel; g_cr_player = g_cg_player; g_cr_menu = g_cg_menu;
+    strncpy_s(g_credit_id, g_cg.id.c_str(), _TRUNCATE);
+    g_credit_have = false;
+    g_credit_read = 0;
+    g_promoted_to = -1;
+    if (g_cr_over) g_cr_t0 = now;
+    else { g_stage = S_CREDITS; g_t0 = now; }
+    logf("proving grounds: the credits of match %s again, from its carnage report", g_cg.id.c_str());
+}
 static void credits_done(double now) {           // (the credits over: the carnage report, else on)
+    if (g_cr_replay) {                           // (Nov 24: a replay: back on the report as it was)
+        g_cr_replay = false;
+        g_credit_id[0] = 0;
+        g_cg_tab = g_cr_tab; g_cg_page = g_cr_page; g_cg_sel = g_cr_sel; g_cg_player = g_cr_player; g_cg_menu = g_cr_menu;
+        g_focus_after = g_cg_tab == 0 ? 0 : g_cg_sel;
+        if (!g_cr_over) { g_stage = S_CARNAGE; g_t0 = now; }
+        g_cr_over = false;
+        return;
+    }
     g_cg_menu = false;
     bool shown = !g_follow && carnage_enter(g_credit_id, false, now);
     g_credit_id[0] = 0;
@@ -3725,7 +3889,17 @@ static void carnage_screen(pg_env& e, float t, double now) {
     // the prompts: A Select, B Back at the left; Exit at the right
     g_dl->AddLine(P(325, 981), P(1596, 981), A(IM_COL32(206, 212, 218, 70)), U(1));
     float x = prompt(330, 992, "A", "Enter", "Select", nullptr);
-    prompt(x, 992, "B", "Esc", "Back", &g_footer_back);
+    x = prompt(x, 992, "B", "Esc", "Back", &g_footer_back);
+    // (Nov 24) the credit screen of this match again (its credits still in last_match.txt: till the next match)
+    bool cr_click = false;
+    if (!idle && !g_follow && credits_of(g_cg.id)) {
+        prompt(x, 992, "Y", "C", "Credits", &cr_click);
+        if (cr_click || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false) || ImGui::IsKeyPressed(ImGuiKey_C, false)) {
+            sound(PS_SELECT);
+            credits_replay(now);
+            return;
+        }
+    }
     prompt(1452, 992, "Start", "X", "Exit", &exit_click);
     if (idle) {
         g_dl->AddRectFilled(ImVec2(0, 0), d, IM_COL32(6, 8, 10, 120));
@@ -3820,7 +3994,7 @@ static void link_host(const pg_env& e, double now) {
         s.people[k].team = (int8_t)g_people_team[k];
         s.people[k].vote = (int8_t)g_people_vote[k];
     }
-    s.host_team = (uint8_t)(g_me_team == 1 ? 1 : 0);
+    s.host_team = (uint8_t)(g_me_team > 0 && g_me_team < HB_TEAMS_MAX ? g_me_team : 0);   // (Nov 24: Multi Team's four)
     s.host_vote = g_vote_me;
     s.vote_key = g_vote_key;
     s.search_s = g_search_s;
@@ -3907,7 +4081,7 @@ static void follow_update(double now) {
         g_f_hide = false;
         g_f_host_stage = hs;
     }
-    g_size = s.size >= 8 ? 8 : 4;
+    g_size = pl_code_ok(s.size) ? s.size : s.size >= 8 ? 8 : 4;
     g_vote_s = (int)s.vote_s;
     g_round = s.round;
     g_nota_open = s.nota_open != 0;
@@ -3967,7 +4141,7 @@ static void follow_update(double now) {
         char nm[32];
         memcpy(nm, s.people[k].name, sizeof nm);
         nm[31] = 0;
-        if (!_stricmp(nm, me)) { g_me_team = s.people[k].team == 1 ? 1 : 0; continue; }
+        if (!_stricmp(nm, me)) { g_me_team = s.people[k].team < HB_TEAMS_MAX ? s.people[k].team : 0; continue; }
         add(nm, s.people[k].team, s.people[k].vote);
     }
     if (s.vote_key != g_f_key) { g_f_key = s.vote_key; g_vote_me = -1; g_f_sent_vote = -9; }
@@ -4043,7 +4217,13 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 16: pg_open(); g_rpage = RP_MAIN; g_focus = 1; break;
     case 17: pg_open(); g_rpage = RP_MM; g_focus = 0; break;
     case 18: pg_open(); g_rpage = RP_PLAYLIST; g_rm_col = 0; g_rm_cat = 1; g_focus = 1; break;
-    case 19: pg_open(); g_rpage = RP_PLAYLIST; g_rm_col = 1; g_rm_cat = 1; g_focus = 4; break;
+    case 19: {                                           // (Nov 24: PG_FOCUS another playlist, PG_CAT another category)
+        pg_open(); g_rpage = RP_PLAYLIST; g_rm_col = 1; g_rm_cat = 1; g_focus = 4;
+        char f[8];
+        if (GetEnvironmentVariableA("PG_FOCUS", f, sizeof f)) g_focus = atoi(f);
+        if (GetEnvironmentVariableA("PG_CAT", f, sizeof f)) g_rm_cat = atoi(f);
+        break;
+    }
     case 20: pg_open(); g_rpage = RP_RESTRICT; g_focus = 0; break;
     case 21: pg_open(); g_rpage = RP_PSYCH; g_focus = 0; break;
     // (Nov 19, phase 2) the Start menu on the armory, the Service Record, Career on matchmaking, the campaign's
@@ -4131,6 +4311,8 @@ void pg_preview_stage(int which, float t, pg_env& e) {
     case 50: pg_open(); lobby_open(3); g_rpage = RP_FILM; g_focus = 2; break;
     // (Nov 23) Firefight's SELECT MISSION (PG_FF_LIVE=1: MCC's lists as if read; case 42 with PG_LOBBY=1: its lobby)
     case 51: pg_open(); lobby_open(1); g_rpage = RP_FF_MAP; g_focus = 1; break;
+    // (Nov 24) the carnage report of a match Project Noble's vote did not launch: its map from the report itself
+    case 52: pg_open(); g_played = { "", "", "", "", -1 }; if (!carnage_enter(nullptr, true, now)) printf("no report\n"); break;
     }
     if (which < 15 && g_stage == S_MENU) g_rpage = RP_OPTIONS;   // (the older screens: Project Noble's own menu)
     g_focus_after = -1;                                  // (the focus as set here, not pg_open's)
@@ -4139,7 +4321,7 @@ void pg_preview_stage(int which, float t, pg_env& e) {
 // the playlists as read (proving_grounds.ini's add / remove lines applied)
 void pg_preview_lists() {
     load_settings();
-    for (int k = 0; k < 2; k++) {
+    for (int k = 0; k < PL_N; k++) {          // (Nov 24: all ten)
         printf("%s:", g_pl[k].key);
         for (auto& g : g_pl[k].gametypes) printf(" [%s*%d]", g.name.c_str(), g.weight);
         printf("\n  maps:");
@@ -4366,7 +4548,13 @@ static bool pg_frame_body(pg_env& e) {
         unseen.Merge(g_dl);
         g_inert = false;
         g_footer_back = g_footer_players = false;
-        carnage_screen(e, (float)(now - g_cg_over_t0), now);
+        if (g_cr_replay && g_cr_over) {          // (Nov 24: its credits again, on their own clock: g_t0 is the stage's)
+            double keep = g_t0;
+            g_t0 = g_cr_t0;
+            credits_screen(e, (float)(now - g_t0), now);
+            g_cr_t0 = g_t0;
+            g_t0 = keep;
+        } else carnage_screen(e, (float)(now - g_cg_over_t0), now);
         // what goes on under it, at the top right (the report closes by itself when the vote starts)
         const char* under = g_stage == S_SEARCH ? "SEARCHING FOR PLAYERS..." : g_stage == S_VOTE ? "VOTING IN PROGRESS"
                                                                                                : "GAME STARTING";

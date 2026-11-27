@@ -28,6 +28,15 @@ game, DELAY_Q old in whole 60 Hz ticks (live: the brain's loop, then the bots th
 the action on the next game tick), with vel / vel_t / read_wall set the way tools/live_bots.py sets them so Noble's lead
 (Bot.noble_lead_s, lead_ray) runs as live; its action and shot land on this tick's world. Directors read the present.
 tools/sim_scorecard.py measures the sim against live traces.
+
+(custom, Nov 25) Any map with a Banshee: where BANSHEE_PAD lists none, the variant's own (mvar_banshee; Spire
+reach_35_island/variants/v704f87f3). Opt-in live conditions, defaults unchanged: --live-flight (live speeds by pitch,
+the path over the view, turns, accelerations: LIVE_*), --regen (quarter health: REGEN_*), --air-hold (Bot.air_hold on
+snap.air_kills), --air-oob (out of bounds as the brain reads it: terrain.air_safes), --face-mid, --veh-rounds; --live
+turns on all of them and --delay. e.g. Spire as the owner played it Nov 25:
+  python -I tools/banshee_sim.py --map reach_35_island/variants/v704f87f3 --live --seat-team 1 --minutes 12
+      --tiers demon,demon,mythic,mythic,top,blind,blind,top
+      --red-tiers strong,strong,tactician,tactician,tactician,average,average,novice
 """
 import argparse
 import collections
@@ -84,6 +93,30 @@ GIMBAL = math.radians(15.0)    # ASSUMED: how far off the craft's nose its guns 
 SPLAT_SPEED, SPLAT_R = 5.0, 1.1
 SOFT_KILL_S = 9.5             # s: live Spire, pilots over the soft roof died 9-10 s later (brain/terrain.py air_roof)
 BANSHEE_PAD = {"reach_70_boneyard": (Vec(295.7, 100.4, -5.0), 0.0)}
+VEH_RESPAWN_DEFAULT = VEH_RESPAWN
+# (custom, Nov 25) the options below are opt-in (Match keywords, command-line flags; --live turns on all but map_pad,
+# which is on by default and changes nothing on a map with a BANSHEE_PAD entry: Boneyard keeps its pad)
+# map_pad: a map with no BANSHEE_PAD entry gets the Banshee its variant places (maps/<variant>/mvar_objects.json
+# 'vehicles', item 'banshee', an Invasion-only label 'inv_*' left out), back its spawn_time s after: Spire
+# reach_35_island/variants/v704f87f3 at (-138.3, -329.9, -62.5), yaw -136.9 deg, 180 s (live: every Banshee there, x8;
+# respawn 180-181 s x4)
+# live_flight: the live Reach Banshee, fitted to the bot pilots' rows of the owner's four live Spire traces
+# (logs/trace_reach_35_island_20261125-*.jsonl; full throttle, boost held all or none, the view's pitch steady 1 s:
+# tools' fit in the Nov 25 sim_v2 notes): its top speed (u/s) along its path by the craft's pitch, unboosted and boosted
+# (a dive gains, a climb crawls), and the climb angle (deg) its path takes at that pitch: live it flies 8-19 deg ABOVE
+# the view (a level view climbs ~11 deg; it flies level with the view ~0.3 rad down); the nose's turn cap by speed
+# (live flight-path heading rate p99 by speed band) and its accelerations (live p90-p99: speed gained, lost, across)
+LIVE_PITCH = (-1.2, -1.1, -0.9, -0.7, -0.5, -0.3, -0.1, 0.1, 0.3, 0.5, 1.2)
+LIVE_TOP = (7.8, 7.8, 7.5, 6.7, 5.8, 5.3, 5.0, 4.5, 2.55, 2.5, 2.4)
+LIVE_TOP_BOOST = (18.5, 18.2, 17.1, 15.7, 14.9, 13.7, 11.0, 9.75, 6.0, 6.2, 6.0)
+LIVE_PATH = (-55.0, -49.0, -42.0, -22.0, -13.0, -8.0, 7.5, 14.4, 36.0, 48.0, 60.0)
+LIVE_TURN_SP = (0.0, 5.0, 9.0, 11.0, 13.0, 15.0, 18.0)
+LIVE_TURN = (230.0, 220.0, 150.0, 125.0, 112.0, 92.0, 80.0)      # deg/s
+LIVE_ACC_UP, LIVE_ACC_UP_BOOST, LIVE_ACC_DOWN, LIVE_ACC_N = 8.0, 10.0, 14.0, 22.0   # u/s^2
+LIVE_CRUISE = 4.9              # u/s: unboosted level (maps/_inputs/reach.json fire2: 4.89 -> 10.17 boosted); strafe half
+# regen: Reach's Banshee heals in quarters (live vehicles rows' 'left', 25 episodes): REGEN_DELAY s after its last
+# damage it regains REGEN_RATE of its whole body a second, up to the top of the quarter it is in (1, 0.75, 0.5, 0.25)
+REGEN_DELAY, REGEN_RATE, REGEN_STEPS = 5.0, 0.07, 4
 DEFAULT_TIERS = "demon,top,top,strong,strong,average,average,blind"
 # (custom, Nov 21) the game's delays (Match(delay=True)): live a bot thinks on a read of the game that is this old when its
 # action lands (the read's middle to botcore's next 60 Hz tick: the brain's loop, then the bots think and send one by
@@ -107,6 +140,34 @@ def delay_ticks(rng, age):
     stays the age."""
     return max(1, int(age * GAME_HZ + rng.random()))
 STYLES = ("rusher", "flanker", "camper", "grudger", "spammer", "objector", "flanker", "rusher")
+
+
+def interp(x, xs, ys):
+    """(custom, Nov 25) ys at x, linear between the points xs (rising), held past the ends."""
+    if x <= xs[0]:
+        return ys[0]
+    for i in range(1, len(xs)):
+        if x <= xs[i]:
+            return ys[i - 1] + (ys[i] - ys[i - 1]) * (x - xs[i - 1]) / (xs[i] - xs[i - 1])
+    return ys[-1]
+
+
+def mvar_banshee(map_name):
+    """(custom, Nov 25) (pad Vec, yaw rad, respawn s) of the Banshee map_name's variant places (maps/<variant>/
+    mvar_objects.json 'vehicles': item 'banshee', not an Invasion label 'inv_*'), or None."""
+    path = os.path.join(HERE, "..", "maps", *map_name.replace("\\", "/").split("/"), "mvar_objects.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            objs = json.load(f)
+    except (OSError, ValueError):
+        return None
+    vs = objs.get("vehicles") if isinstance(objs, dict) else None
+    for v in vs or ():
+        lab = str(v.get("label") or "")
+        if v.get("item") == "banshee" and not lab.startswith("inv") and len(v.get("pos") or ()) == 3:
+            return Vec(*map(float, v["pos"])), math.radians(float(v.get("yaw") or 0.0)), float(v.get("spawn_time")
+                                                                                              or VEH_RESPAWN)
+    return None
 
 
 def nose(yaw, pitch):
@@ -148,10 +209,12 @@ class Man:
 
 
 class Banshee:
-    def __init__(s, handle, pos, yaw):
+    def __init__(s, handle, pos, yaw, hp=None):
         s.handle, s.pad, s.pad_yaw = handle, pos, yaw
         s.pos, s.vel, s.yaw, s.pitch = pos, Vec(), yaw, 0.0
-        s.hp, s.alive, s.respawn_at, s.driver = VEH_HP, True, 0.0, None
+        s.hp_max = hp if hp is not None else VEH_HP     # (custom, Nov 25: Match(veh_rounds), --veh-rounds)
+        s.hp, s.alive, s.respawn_at, s.driver = s.hp_max, True, 0.0, None
+        s.hurt_at = -99.0                               # (custom, Nov 25: its last damage, for --regen)
         s.bomb_sel, s.bomb_at, s.bolt_at, s.cycle_was = False, 0.0, 0.0, False
         s.boost = BOOST_S
         s.soft = 0.0
@@ -163,7 +226,7 @@ class Banshee:
         return dict(handle=s.handle, kind="banshee", pos=(s.pos.x, s.pos.y, s.pos.z), occupied=d is not None,
                     riders=1 if d is not None else 0, team=d.team if d is not None else -1,
                     fwd=(n.x, n.y, n.z), up=(0.0, 0.0, 1.0), turrets=[], manned=[],
-                    left=round(s.hp / VEH_HP, 3), dead=False, vel=(s.vel.x, s.vel.y, s.vel.z))
+                    left=round(s.hp / s.hp_max, 3), dead=False, vel=(s.vel.x, s.vel.y, s.vel.z))
 
 
 class Shot:
@@ -175,8 +238,19 @@ class Shot:
 
 class Match:
     def __init__(s, map_name="reach_70_boneyard", seed=1, tiers=DEFAULT_TIERS, limit=100, per_team=8, trace=None,
-                 quiet=False, pilot=None, red_tiers=None, seat_team=None, delay=False):
+                 quiet=False, pilot=None, red_tiers=None, seat_team=None, delay=False, map_pad=True, live_flight=False,
+                 regen=False, air_hold=False, air_oob=False, face_mid=False, veh_rounds=None, bomb_nose=False):
         s.rng = random.Random(seed)
+        s.bomb_nose = bomb_nose      # (custom, Nov 25: --bomb-nose, fly())
+        # (custom, Nov 25) opt-in live conditions (the constants' notes: LIVE_*, REGEN_*); air_hold: Red holds fire on a
+        # fresh Banshee as live (Bot.air_hold reads snap.air_kills: {its handle: {victim's team: its pilot's kills}});
+        # air_oob: its out of bounds as the brain reads it (terrain.air_safes: a safe kind's sphere left out where it has
+        # a box: Spire's 150 u soft_safe sphere); face_mid: a spawn faces the map's middle (its flags' midpoint), not
+        # Boneyard's; veh_rounds: the Banshee's body in DMR rounds (default VEH_HP's 82)
+        s.live_flight, s.regen, s.air_hold, s.air_oob, s.face_mid = live_flight, regen, air_hold, air_oob, face_mid
+        s.veh_hp = veh_rounds * GUNS["dmr"][1] if veh_rounds else None
+        s.air_kills = {}
+        s.veh_respawn = None
         # (custom, Nov 21) delay: each bot thinks on a read of the game DELAY_Q old (whole 60 Hz ticks), its velocities
         # and read time set the way tools/live_bots.py sets them (delayed_snapshot); its action lands this tick
         s.delay, s.drng = delay, random.Random(seed * 7919 + 13)
@@ -191,6 +265,12 @@ class Match:
         s.T = terrain(s.M)
         s.vols = O.volumes(map_name) or []
         s.T.set_oob([], 0, s.vols)
+        s.fly_vols = s.vols
+        if air_oob and s.vols:
+            from brain.terrain import air_safes
+            safes = air_safes({k: [v for v in s.vols if v["kind"] == k] for k in O.SAFES
+                               if any(v["kind"] == k for v in s.vols)})
+            s.fly_vols = [v for v in s.vols if v["kind"] not in O.SAFES] + [v for vs in safes.values() for v in vs]
         s.spawns = {t: list(s.M["spawns"]["slayer"][t]) for t in (0, 1)}
         s.limit, s.quiet = limit, quiet
         s.now = 0.0
@@ -218,7 +298,14 @@ class Match:
                                    random.Random(seed + t), log=[], side=t, home_rule=True) for t in (0, 1)}
         # (a variant, "<base>/variants/<id>": its base map's pad; the Banshee is the base scenario's, not a Forge piece)
         pad, yaw = BANSHEE_PAD.get(map_name) or BANSHEE_PAD.get(map_name.replace("\\", "/").partition("/")[0], (None, 0.0))
-        s.veh = Banshee(0x5A000001, pad, yaw) if pad is not None else None
+        if pad is None and map_pad:
+            # (custom, Nov 25) no pad listed: the variant's own Banshee (mvar_banshee), back its spawn_time s after
+            # (VEH_RESPAWN when --veh-respawn set it)
+            got = mvar_banshee(map_name)
+            if got is not None:
+                pad, yaw, back = got
+                s.veh_respawn = back if VEH_RESPAWN == VEH_RESPAWN_DEFAULT else None
+        s.veh = Banshee(0x5A000001, pad, yaw, s.veh_hp) if pad is not None else None
         s.shots = []
         s.score = {0: 0, 1: 0}
         s.events = []                # (t, killer, victim, how)
@@ -245,6 +332,9 @@ class Match:
         m.vel, m.alive, m.shield, m.body, m.vehicle = Vec(), True, SHIELD, BODY, -1
         m.weapon, m.next_shot, m.last_by = "dmr", s.now + 0.5, None
         mid = Vec(280.0, 96.0, m.pos.z)
+        if s.face_mid:            # (custom, Nov 25) the map's middle: its two flags' midpoint
+            f0, f1 = s.M["flags"][0], s.M["flags"][1]
+            mid = Vec((f0.x + f1.x) * 0.5, (f0.y + f1.y) * 0.5, m.pos.z)
         m.yaw, m.pitch = math.atan2(mid.y - m.pos.y, mid.x - m.pos.x), 0.0
 
     # --- the world each bot sees ------------------------------------------------------------------------------------
@@ -252,7 +342,8 @@ class Match:
         v = s.veh if s.veh is not None and s.veh.alive else None
         players = [m.state(v) for m in s.men.values()]
         return Snapshot(s.now, players, score=dict(s.score), mode="slayer", score_limit=s.limit, score_live=True,
-                        vehicles=[v.row(s.men)] if v is not None else [])
+                        vehicles=[v.row(s.men)] if v is not None else [],
+                        air_kills={h: dict(by) for h, by in s.air_kills.items()} if s.air_hold else None)
 
     def read_at(s, g60):
         """Every player as the game had him at game tick g60 (60 Hz; the history holds the sim's 30 Hz ticks, the odd
@@ -337,6 +428,7 @@ class Match:
     def veh_hurt(s, dmg, by, veh_shot=False, how="gun"):
         v = s.veh
         v.hp -= dmg
+        v.hurt_at = s.now
         if by is not None:
             v.last_by = (by, veh_shot)
         if v.hp <= 0:
@@ -344,7 +436,7 @@ class Match:
 
     def veh_destroyed(s, how):
         v = s.veh
-        v.alive, v.respawn_at = False, s.now + VEH_RESPAWN
+        v.alive, v.respawn_at = False, s.now + (s.veh_respawn if s.veh_respawn is not None else VEH_RESPAWN)
         lb = getattr(v, "last_by", None)
         d = s.men.get(v.driver) if v.driver is not None else None
         s.stats["banshee_destroyed_" + how] += 1
@@ -358,6 +450,11 @@ class Match:
     def kill(s, m, killer, veh_shot, how):
         if not m.alive:
             return
+        if (s.air_hold and killer is not None and killer.team != m.team and killer.vehicle != -1 and s.veh is not None
+                and s.veh.alive and s.veh.driver == killer.id):
+            # (custom, Nov 25) its pilot's kill, counted to the Banshee by the victim's team (tools/air_kills.py)
+            by = s.air_kills.setdefault(s.veh.handle, {})
+            by[m.team] = by.get(m.team, 0) + 1
         if m.vehicle != -1:
             s.leave(m)
         m.alive, m.respawn_at, m.deaths = False, s.now + RESPAWN, m.deaths + 1
@@ -396,6 +493,34 @@ class Match:
                 m.pos = Vec(v.pos.x, v.pos.y, s.T.nav_z(v.pos.x, v.pos.y, v.pos.z))
         m.vehicle = -1
 
+    @staticmethod
+    def live_dv(vel, dv, boosting):
+        """(custom, Nov 25) live_flight: the change toward the wanted velocity this tick, its part along the flight
+        path capped at LIVE_ACC_UP(_BOOST) gaining / LIVE_ACC_DOWN losing, the part across at LIVE_ACC_N."""
+        up = LIVE_ACC_UP_BOOST if boosting else LIVE_ACC_UP
+        sp = vel.length()
+        if sp < 0.5:
+            return dv * min(1.0, up * DT / max(dv.length(), 1e-6))
+        u = vel * (1.0 / sp)
+        along = dv.x * u.x + dv.y * u.y + dv.z * u.z
+        cap = (up if along > 0.0 else LIVE_ACC_DOWN) * DT
+        tan = max(-cap, min(cap, along))
+        nrm = dv - u * along
+        new = vel + u * tan + nrm * min(1.0, LIVE_ACC_N * DT / max(nrm.length(), 1e-6))
+        # (the part across turns the path, it adds no speed: the speed is the old one plus the part along)
+        n = new.length()
+        return (new * (max(0.0, sp + tan) / n) if n > 1e-6 else new) - vel
+
+    def veh_regen(s, v):
+        """(custom, Nov 25) regen: REGEN_DELAY s after its last damage the Banshee heals REGEN_RATE of its body a second
+        up to the top of the quarter (REGEN_STEPS) it is in."""
+        if s.now - v.hurt_at < REGEN_DELAY or v.hp >= v.hp_max or v.hp <= 0:
+            return
+        top = math.ceil(v.hp / v.hp_max * REGEN_STEPS - 1e-6) / REGEN_STEPS * v.hp_max
+        if v.hp < top:
+            v.hp = min(top, v.hp + REGEN_RATE * v.hp_max * DT)
+            s.stats["veh_regen_ticks"] += 1
+
     def fly(s, m, a):
         """The Banshee under its pilot's action a this tick."""
         v = s.veh
@@ -407,6 +532,8 @@ class Match:
         turn = (TURN if sp0 <= 3.0 else
                 TURN + (math.radians(66.0) - TURN) * (sp0 - 3.0) / (CRUISE - 3.0) if sp0 <= CRUISE else
                 max(math.radians(32.0), math.radians(66.0) - math.radians(34.0) * (sp0 - CRUISE) / (BOOST - CRUISE)))
+        if s.live_flight:       # (custom, Nov 25) live: the turn cap by speed (LIVE_TURN)
+            turn = math.radians(interp(sp0, LIVE_TURN_SP, LIVE_TURN))
         v.yaw = wrap(v.yaw + max(-turn * DT, min(turn * DT, dy)))
         v.pitch += max(-PITCH_TURN * DT, min(PITCH_TURN * DT, want_pitch - v.pitch))
         m.yaw, m.pitch = a.yaw, a.pitch
@@ -420,9 +547,20 @@ class Match:
         f = max(-0.4, min(1.0, a.forward))
         flat = Vec(math.cos(v.yaw), math.sin(v.yaw), 0.0) * (f * top * math.cos(v.pitch))
         target = flat + Vec(0.0, 0.0, abs(f) * top * math.sin(v.pitch)) + side * (max(-1.0, min(1.0, a.strafe)) * CRUISE * 0.5)
+        if s.live_flight:
+            # (custom, Nov 25) live: its top speed by its pitch, its path LIVE_PATH (over the view), the strafe on
+            # LIVE_CRUISE; the speed it gains, loses and turns across capped apart (live_dv)
+            top = interp(v.pitch, LIVE_PITCH, LIVE_TOP_BOOST if boosting else LIVE_TOP)
+            gp = math.radians(interp(v.pitch, LIVE_PITCH, LIVE_PATH))
+            flat = Vec(math.cos(v.yaw), math.sin(v.yaw), 0.0) * (f * top * math.cos(gp))
+            target = (flat + Vec(0.0, 0.0, abs(f) * top * math.sin(gp))
+                      + side * (max(-1.0, min(1.0, a.strafe)) * LIVE_CRUISE * 0.5))
         dv = target - v.vel
-        k = min(1.0, (ACCEL * (2.0 if boosting else 1.0)) * DT / max(dv.length(), 1e-6))
-        v.vel = v.vel + dv * k
+        if s.live_flight:
+            v.vel = v.vel + s.live_dv(v.vel, dv, boosting)
+        else:
+            k = min(1.0, (ACCEL * (2.0 if boosting else 1.0)) * DT / max(dv.length(), 1e-6))
+            v.vel = v.vel + dv * k
         step = v.vel * DT
         sp = v.vel.length()
 
@@ -456,7 +594,8 @@ class Match:
             p = Vec(p.x, p.y, floor + 0.6)
             v.vel = Vec(v.vel.x, v.vel.y, max(0.0, v.vel.z))   # (slides on: only the way down is stopped)
         v.pos = p
-        where = O.where(s.vols, (p.x, p.y, p.z)) if s.vols else None
+        vols = s.fly_vols if s.air_oob else s.vols      # (custom, Nov 25: air_oob)
+        where = O.where(vols, (p.x, p.y, p.z)) if vols else None
         if where is not None and where["kind"] == "hard":
             s.stats["veh_oob_hard"] += 1
             s.veh_hurt(VEH_HP * 2, None, how="oob")
@@ -482,6 +621,10 @@ class Match:
             # aim at the crosshair's point; past that, along the nose
             gy = v.yaw + max(-GIMBAL, min(GIMBAL, wrap(a.yaw - v.yaw)))
             gp = v.pitch + max(-GIMBAL, min(GIMBAL, a.pitch - v.pitch))
+            if s.bomb_nose and v.bomb_sel:
+                # (custom, Nov 25) bomb_nose, a sensitivity test (open question, not in --live): the bomb leaves along
+                # the craft's nose, no gimbal toward the view (brain/bot.py's own comment: the bomb follows the nose)
+                gy, gp = v.yaw, v.pitch
             n = nose(gy, gp)
             muzzle = v.pos + n * (VEH_R + 0.3)
             if v.bomb_sel:
@@ -603,8 +746,10 @@ class Match:
         s.now += DT
         v = s.veh
         if v is not None and not v.alive and s.now >= v.respawn_at:
-            s.veh = Banshee(v.handle + 1, v.pad, v.pad_yaw)
+            s.veh = Banshee(v.handle + 1, v.pad, v.pad_yaw, s.veh_hp)
             v = s.veh
+        if s.regen and v is not None and v.alive:
+            s.veh_regen(v)
         if (s.pilot is not None and v is not None and v.alive and v.driver is None and s.men[s.pilot].alive
                 and s.men[s.pilot].vehicle == -1 and s.now - getattr(v, "free_since", s.now) >= 0.0):
             s.enter(s.men[s.pilot])
@@ -705,7 +850,7 @@ class Match:
                  round((vv.pos if m.vehicle != -1 else m.pos).y, 2), round((vv.pos if m.vehicle != -1 else m.pos).z, 2),
                  0, 0, 0, 0, round(m.yaw, 3)] for m in s.men.values()],
                 vehicles=[[vv.handle, "banshee", round(vv.pos.x, 2), round(vv.pos.y, 2), round(vv.pos.z, 2),
-                           int(vv.driver is not None), -1, 1.0, round(vv.hp / VEH_HP, 2), 0]]
+                           int(vv.driver is not None), -1, 1.0, round(vv.hp / vv.hp_max, 2), 0]]
                 if vv is not None and vv.alive else [])) + "\n")
 
     def walk(s, m, a):
@@ -747,13 +892,19 @@ class Match:
 
     def result(s, real):
         best = max(s.men.values(), key=lambda m: m.veh_kills)
-        return dict(t=round(s.now, 1), score=dict(s.score), real_s=round(real, 1),
+        r = dict(t=round(s.now, 1), score=dict(s.score), real_s=round(real, 1),
                     best=dict(name=best.name, id=best.id, tier=best.tier, banshee_kills=best.veh_kills,
                               kills=best.kills, deaths=best.deaths),
                     banshee_kills={m.name: m.veh_kills for m in s.men.values() if m.veh_kills},
                     rides=[r for r in s.rides], stats=dict(s.stats), events=s.events,
                     oob_time={k: round(v, 1) for k, v in s.oob_time.items()}, oob_deaths=s.oob_deaths, exits=s.exits,
                     kd={m.name: (m.kills, m.deaths) for m in s.men.values()})
+        opts = dict(live_flight=s.live_flight, regen=s.regen, air_hold=s.air_hold, air_oob=s.air_oob,
+                    face_mid=s.face_mid, veh_hp=s.veh_hp, bomb_nose=s.bomb_nose)
+        if any(opts.values()):         # (custom, Nov 25: only with an opt-in on, so the default result is unchanged)
+            r["sim_options"] = opts
+            r["air_kills"] = {str(h): by for h, by in s.air_kills.items()}
+        return r
 
 
 def main():
@@ -771,12 +922,28 @@ def main():
     ap.add_argument("--red-tiers", help="team 0's tiers (e.g. demon,demon,...), the rest --tiers")
     ap.add_argument("--seat-team", type=int, help="seat a man of this team whenever the Banshee stands free")
     ap.add_argument("--delay", action="store_true", help="the game's delays: each bot thinks on a read DELAY_Q old")
+    # (custom, Nov 25) opt-in live conditions (Match keywords; the constants' notes)
+    ap.add_argument("--live-flight", action="store_true", help="live Banshee speeds by pitch, path, turns (LIVE_*)")
+    ap.add_argument("--regen", action="store_true", help="the Banshee heals in quarters, as live (REGEN_*)")
+    ap.add_argument("--air-hold", action="store_true", help="men on foot hold fire on a fresh Banshee (Bot.air_hold)")
+    ap.add_argument("--air-oob", action="store_true", help="its out of bounds as the brain reads it (terrain.air_safes)")
+    ap.add_argument("--face-mid", action="store_true", help="spawns face the map's middle (its flags'), not Boneyard's")
+    ap.add_argument("--veh-rounds", type=float, help="the Banshee's body in DMR rounds (default 82; the owner's 38)")
+    ap.add_argument("--no-map-pad", action="store_true", help="no Banshee from the variant's mvar where none is listed")
+    ap.add_argument("--bomb-nose", action="store_true",
+                    help="sensitivity test, not in --live: the bomb leaves along the craft's nose (no GIMBAL)")
+    ap.add_argument("--live", action="store_true",
+                    help="the owner's live conditions: --live-flight --regen --air-hold --air-oob --face-mid --delay")
     o = ap.parse_args()
+    if o.live:
+        o.live_flight = o.regen = o.air_hold = o.air_oob = o.face_mid = o.delay = True
     global VEH_RESPAWN
     if o.veh_respawn is not None:
         VEH_RESPAWN = o.veh_respawn
     m = Match(o.map, o.seed, o.tiers, o.limit, trace=o.trace, quiet=o.quiet, pilot=o.pilot, red_tiers=o.red_tiers,
-              seat_team=o.seat_team, delay=o.delay)
+              seat_team=o.seat_team, delay=o.delay, map_pad=not o.no_map_pad, live_flight=o.live_flight,
+              regen=o.regen, air_hold=o.air_hold, air_oob=o.air_oob, face_mid=o.face_mid, veh_rounds=o.veh_rounds,
+              bomb_nose=o.bomb_nose)
     r = m.run(o.minutes)
     print(json.dumps(r, indent=1))
     if o.json:

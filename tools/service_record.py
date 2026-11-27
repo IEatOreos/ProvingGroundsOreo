@@ -2843,7 +2843,10 @@ def write_last_carnage(data, paths, short=None):
         if f[4] == "kill" and f[1]:
             tools.setdefault(f[1], {}).setdefault(f[3], 0)
             tools[f[1]][f[3]] += 1
-    lines = [f"match\t{m['id']}", f"game\t{clean(m.get('type'))}\t{int(bool(m.get('teams')))}\t{clean(m.get('map'))}"]
+    # (Nov 24, the owner: "add the picture of the map that you played last match") the map's shown name too, so the
+    # report has its picture and name for any match, not only one Project Noble's vote launched
+    lines = [f"match\t{m['id']}", f"game\t{clean(m.get('type'))}\t{int(bool(m.get('teams')))}\t{clean(m.get('map'))}"
+                                  f"\t{clean(map_name(m.get('map') or ''))}"]
     if m.get("teams"):
         teams = {}
         for r in rows:
@@ -2874,7 +2877,7 @@ def write_last_carnage(data, paths, short=None):
         best = max(rows, key=lambda r: (int((r.get("medals") or {}).get(mid, 0)), -index[r["n"]]))
         lines.append(f"top\t{mid}\t{best['medals'][mid]}\t{index[best['n']]}\t{medal_text(mid)}")
     head = ["# made by tools/service_record.py with the site: Project Noble's carnage report of the newest match; do not edit",
-            "# match id; game type teams map; team id place score; player row name tag team place score kills deaths",
+            "# match id; game type teams map map-name; team id place score; player row name tag team place score kills deaths",
             "# assists medals spree headshots cR bot fg bg primary secondary background most n by n tool kills picture",
             "# finished (1, 0 quit: the skill ratings, native/skill_rating.cpp);",
             "# medal row id count name picture what-for; top id count row name picture what-for"]

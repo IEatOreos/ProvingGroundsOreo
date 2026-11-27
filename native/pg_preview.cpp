@@ -68,7 +68,10 @@ static const fake MAPS[] = {
     {5110, 2, -1, -1, "$HReach_MPMap_R-25_Title", "HReachMP_ForgeWorld"}, {5102, 2, -1, -1, "Beaver Creek Anniversary", "HReachMP_BattleCanyon"},
     {5103, 2, -1, -1, "Damnation Anniversary", "HReachMP_Penance"}, {5104, 2, -1, -1, "Hang 'Em High Anniv", "HReachMP_HighNoon"},
     {5105, 2, -1, -1, "Headlong Anniversary", "HReachMP_Breakneck"}, {5111, 2, -1, -1, "Prisoner Anniversary", "HReachMP_Solitary"},
-    {5112, 2, -1, -1, "Timberland Anniversary", "HReachMP_Ridgeline"} };
+    {5112, 2, -1, -1, "Timberland Anniversary", "HReachMP_Ridgeline"},
+    // (Nov 24: Multi Team's) Battle Canyon, Penance, Solitary and the owner's FOUNDRY, as lobby_library.txt has them
+    {5336, 1, -1, -1, "$HReach_MPMap_R-14_Title", "HReachMP_BattleCanyon"}, {5337, 1, -1, -1, "$HReach_MPMap_R-15_Title", "HReachMP_Penance"},
+    {5339, 1, -1, -1, "$HReach_MPMap_R-17_Title", "HReachMP_Solitary"}, {5358, 3, -1, -1, "FOUNDRY", "HReachMP_ForgeWorld"} };
 static const fake GTS[] = {
     // (team flags as the owner's MCC read them, lobby_library.txt Nov 16: SWAT, King, Crazy King, Oddball free for all)
     {5160, 2, 1, 1, "TU TEAM SLAYER DMR", "CG_Slayer"}, {5182, 2, 1, 0, "SLAYER", "CG_Slayer"}, {5187, 2, 1, 0, "SWAT", "CG_Slayer"},
@@ -84,7 +87,15 @@ static const fake GTS[] = {
     {6003, 3, 0, 1, "TU MULTI FLAG CTF (4-10)", "CG_CaptureTheFlag"}, {6004, 3, 0, 1, "TU ONE FLAG CTF (4-10)", "CG_CaptureTheFlag"},
     {6005, 3, 16, 1, "TU NEUTRAL BOMB ASSAULT (4-10)", "CG_Assault"}, {6006, 3, 3, 1, "TU TEAM CRAZY KING (4-10)", "CG_KingOfTheHill"},
     {6007, 3, 2, 1, "TU TEAM ODDBALL", "CG_OddBall"}, {6008, 3, 3, 0, "TU FFA CRAZY KING", "CG_KingOfTheHill"},
-    {6009, 3, 15, 1, "CTU 5-PLOT TERRITORIES", "CG_Territories"} };
+    {6009, 3, 15, 1, "CTU 5-PLOT TERRITORIES", "CG_Territories"},
+    // (Nov 24) Multi Team's, Arena's TU files, and the owner's new ones (team flags as he says he made them; MCC reads
+    // the real ones)
+    {5405, 2, 22, 1, "TU HEADHUNTER", "CG_HeadHunter"}, {5411, 2, 21, 1, "TU STOCKPILE", "CG_Stockpile"},
+    {5404, 2, 3, 1, "TU CRAZY KING", "CG_KingOfTheHill"}, {5435, 2, 1, 0, "SLAYER PRO", "CG_Slayer"},
+    {5412, 2, 16, 1, "TU ONE BOMB ASSAULT", "CG_Assault"}, {5409, 2, 16, 1, "TU MULTI BOMB ASSAULT", "CG_Assault"},
+    {6010, 3, 5, 0, " TU Infection", "CG_Infection"}, {6011, 3, 1, 1, "Team SWAT", "CG_Slayer"},
+    {6012, 3, 1, 1, "TU Snipers", "CG_Slayer"}, {6013, 3, 3, 0, "TU CRAZY KIng FFA", "CG_KingOfTheHill"},
+    {6014, 3, 2, 0, "TU Oddball FFA", "CG_OddBall"} };
 static void put(pg_entry& p, const fake& f) {
     memset(&p, 0, sizeof p);
     p.id = f.id; p.kind = f.kind; p.category = f.cat; p.teams = f.teams;
@@ -356,17 +367,18 @@ int main(int argc, char** argv) {
                             // (Nov 23) the carnage report after a game
                             "carnage_overview", "carnage_stats", "carnage_stats_credits", "carnage_player",
                             "credits_not_counted", "credits_after_match",
-                            "prior_stats_over_search", "reach_choose_film", "reach_firefight_missions" };   // (Nov 23)
+                            "prior_stats_over_search", "reach_choose_film", "reach_firefight_missions",
+                            "carnage_any_match" };   // (Nov 24)   // (Nov 23)
     // (Nov 19) the credits three times, as Reach's sequence runs: a line in the middle (1.0 s), the total gone to the
     // band (8.9 s), the promotion (11.5 s; six lines)
     const float at[] = { 2.0f, 0.5f, 3.2f, 6.0f, 1.5f, 0.5f, 2.0f, 6.0f, 6.0f, 1.0f, 1.0f, 1.0f, 8.9f, 11.5f, 6.0f,
                          3.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
                          2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f,
-                         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 2.0f };
+                         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 2.0f, 1.0f };
     // (PG_ONLY=<n>: that screen alone, 1-based as its file's number)
     char only_s[8];
     int only = GetEnvironmentVariableA("PG_ONLY", only_s, sizeof only_s) ? atoi(only_s) : 0;
-    for (int s = 0; s < 52; s++) {
+    for (int s = 0; s < 53; s++) {
         if (only && s + 1 != only) continue;
         g_loop_on = s == 14;                                   // (the friend's screen only)
         pg_env e{};

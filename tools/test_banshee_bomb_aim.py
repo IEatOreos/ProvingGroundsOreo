@@ -56,7 +56,11 @@ class BombAimTests(unittest.TestCase):
     def check(self, game):
         cannon, me, foe = aim_goal(game, False)
         bomb, _, _ = aim_goal(game, True)
-        self.assertLess(bomb[1], cannon[1] - 0.008, game)            # lower: his feet, not his chest
+        if game.startswith("reach"):
+            # (custom, Nov 25) Reach's pilot has no other shot: his feet before the bomb is selected too
+            self.assertAlmostEqual(cannon[1], bomb[1], delta=0.004, msg=game)
+        else:
+            self.assertLess(bomb[1], cannon[1] - 0.008, game)        # lower: his feet, not his chest
         floor = foe.pos - Vec(0.0, 0.0, H2A_FEET if game.startswith("h4") else 0.0)    # (Halo 4: its place 0.38 up)
         self.assertAlmostEqual(bomb[1], angles_to(me.pos, floor)[1], delta=0.05, msg=game)
         self.assertAlmostEqual(bomb[0], cannon[0], delta=0.02, msg=game)   # (the same way: he stands still)
