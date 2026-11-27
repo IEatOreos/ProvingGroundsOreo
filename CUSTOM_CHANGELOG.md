@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### CTF's "their defense is down" push; both pushes at 8v8 (5 of 8), 2026-11-27
+The owner: "Was it Halo 4 or Halo reach I added ctf an assault logic to about when 75% of enemy team is dead to push" (Reach, Assault only, Nov 23), then "Do the same logic for Ctf as well. And Add it to 8v8 logic as well", "Sorry, Make 5 of 8 trigger it for 8v8".
+- **CTF (`brain/director.py` `Director.flag_push`, from `desperate`), every game:** with enough of the other team dead the whole team goes in as a blitz, at once (no rally, no cool-down, as Assault's `bomb:` pushes): our flag carried by one of theirs still standing, all on him ("flag: their team is down, ours back"); else their flag at its stand or dropped, all to take it ("flag: their defense is down"). One Flag: the attackers go for the flag, the defenders only after a carrier. Never while one of ours carries a flag (his and his escorts' plan, as before).
+- **8v8 (`defense_down`, both CTF and Assault's `bomb_push`):** 3 of 4 dead in 4v4 (75%, as before), 5 of 8 with teams of 8 or more (`BIG_TEAM` 8, `BIG_DEAD_SHARE` 0.625). Assault's push stays Reach only.
+- **Validation:** new `tools/test_flag_push.py` (6: 3 of 4, 5 of 8 and not 4 of 8, ours back first, One Flag, not while carried or outside CTF, Assault 5 of 8); `test_bomb_push.py` OK; full suite 1850, the same 2 `test_layout_lifts.py` failures as before. **Untested in game.**
+
 ### Noble plays the owner's own spots in Slayer: short visits, then the next, 2026-11-27
 The owner: "I want good bots to get to power positions more and utilize them like a real high KD player would but im not sure how to do that"; "Yes, Noble first".
 - **His spots:** maps/<map>/owner_profile.json (tools/owner_profile.py, from his recorded matches: where he stood for his kills), 20 Reach maps. A map variant (Forge World's layouts) uses its base map's spots where this layout has floor within a unit (Asylum: 6 of 8; Anchor 9: all 8). Spots of 3 kills or more; each valued his kills a minute there x his K/D there (up to 3).

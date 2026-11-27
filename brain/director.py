@@ -113,6 +113,20 @@ BLITZ_MODES = ("ctf", "assault", "stockpile", "king", "headhunter")    # (+ Inva
 # clock (and in sudden death), with their bomb within BOMB_SITE_R of its goal, or with BOMB_DEAD_SHARE of the defenders
 # dead; these pushes go at once, no rally (blitz_tick)
 BOMB_LAST_S, BOMB_SITE_R, BOMB_DEAD_SHARE = 15.0, 5.0, 0.75
+# (custom, Nov 27, the owner: "Do the same logic for Ctf as well. And Add it to 8v8 logic as well") CTF: this share of
+# the other team dead, the whole team pushes (Director.flag_push); a share, so 3 of 4 or 6 of 8 (Assault's the same)
+FLAG_DEAD_SHARE = BOMB_DEAD_SHARE
+# (custom, Nov 27, the owner: "Make 5 of 8 trigger it for 8v8") teams of BIG_TEAM or more: BIG_DEAD_SHARE (5 of 8)
+BIG_TEAM, BIG_DEAD_SHARE = 8, 0.625
+
+
+def defense_down(them):
+    """(custom, Nov 27) Enough of the other team dead for bomb_push's and flag_push's all in: BOMB_DEAD_SHARE (3 of 4),
+    BIG_DEAD_SHARE with BIG_TEAM or more (5 of 8)."""
+    if not them:
+        return False
+    share = BIG_DEAD_SHARE if len(them) >= BIG_TEAM else BOMB_DEAD_SHARE
+    return sum(1 for p in them if not p.alive) >= share * len(them) - 1e-9
 AIR_CALL = 2.5               # a transport aircraft calls riders from this many CALL_R (rider_calls; Bot.crew_coming waits)
 HORN_CALL_R = 40.0           # u: the bot a person's horn picked (his view on him) is called from this far (honk_orders)
 LAND_CALL_R_PERSON = 20.0    # u: (custom) ... a person's aircraft set down (honk_orders)
@@ -344,6 +358,9 @@ class Director:
             return bomb
         if any(p.team == s.team and p.alive and p.has_flag for p in snap.players):
             return None
+        flag = s.flag_push(snap)                 # (custom, Nov 27: CTF, their team mostly dead: all in)
+        if flag is not None:
+            return flag
         if snap.mode == "infection":
             # the infected, at survivors grouped and holding well (two or more together, standing): all rally, then
             # charge at once (issue #3: they came in one at a time)
@@ -433,11 +450,34 @@ class Director:
         elif holder is None and left is not None and left <= BOMB_LAST_S:
             return it["pos"], "bomb: the last seconds, take it"
         them = [p for p in snap.players if p.team != s.team and p.team in (0, 1)]
-        if them and sum(1 for p in them if not p.alive) >= BOMB_DEAD_SHARE * len(them):
+        if defense_down(them):                  # (custom, Nov 27: 3 of 4, 5 of 8)
             if ours:
                 return goal, "bomb: their defense is down"
             if holder is None:
                 return it["pos"], "bomb: their defense is down"
+        return None
+
+    def flag_push(s, snap):
+        """(custom, Nov 27, the owner: "Do the same logic for Ctf as well. And Add it to 8v8 logic as well") CTF, every
+        game: enough of the other team dead (defense_down: 3 of 4, 5 of 8 with eight or more): (where,
+        why) for the team's blitz, else None. Our flag carried by one of theirs still standing: all on him first (back
+        before they score); else their flag at its stand or dropped: all go and take it ("flag: their defense is down").
+        One Flag: the defenders only go after a carrier, the attackers after the flag. Never while one of ours carries a
+        flag (desperate: the carrier's and his escorts' plan)."""
+        if snap.mode != "ctf":
+            return None
+        them = [p for p in snap.players if p.team != s.team and p.team in (0, 1)]
+        if not defense_down(them):
+            return None
+        flags = snap.flags or {}
+        own = flags.get(s.team)
+        if own is not None and own.state == "carried":
+            c = snap.player(own.carrier)
+            if c is not None and c.alive and c.team != s.team:
+                return c.pos, "flag: their team is down, ours back"
+        for t, f in flags.items():
+            if t != s.team and f.state in ("home", "dropped"):
+                return f.pos, "flag: their defense is down"
         return None
 
     def blitz_target(s, snap, c):
@@ -490,7 +530,7 @@ class Director:
             ot = s.overtime(snap)
             # (custom, Nov 23) bomb_push's pushes are never held back by the cool-down: "the last seconds" turning into
             # "at the plant site" must go on at once
-            if want is None or (now < getattr(s, "blitz_cool", 0.0) and not ot and not want[1].startswith("bomb:")):
+            if want is None or (now < getattr(s, "blitz_cool", 0.0) and not ot and not want[1].startswith(("bomb:", "flag:"))):
                 return
             team = s.blitz_team(snap)
             if len(team) < 2:
@@ -503,7 +543,7 @@ class Director:
             # goes at once (the sim, Spire phase 3: a 6 s rally of a team already together cut pickups 6 of 6 -> 3 of 6)
             # (the infected gather unless already together: from 25 u apart they came in one at a time, issue #3)
             spread = INF_SPREAD if snap.mode == "infection" else BLITZ_SPREAD
-            near = (ot or why.startswith("bomb:") or (c - target).flat() < BLITZ_RALLY_D + 6.0   # (bomb_push: at once)
+            near = (ot or why.startswith(("bomb:", "flag:")) or (c - target).flat() < BLITZ_RALLY_D + 6.0   # (bomb_push: at once)
                     or max((q - c).flat() for q in pos) < spread)
             bz = s.blitz = dict(t0=now, target=target, rally=rally, why=why, go=now if near else None,
                                 prongs=s.blitz_prongs(rally, target))
