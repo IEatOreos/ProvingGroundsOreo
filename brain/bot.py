@@ -9779,6 +9779,14 @@ class Bot:
         att = getattr(s, "att", None)                               # the nav's next point is short of the wall: a
         if att and att[0] == "path" and math.hypot(att[2] - me.pos.x, att[3] - me.pos.y) < ahead + 0.2:
             return                                                  # corner it turns at, not a wall in the way
+        # (custom, Nov 26) the same with its eyes elsewhere (watching a man, a radar dot): the step is the nav's own
+        # (nav_cmd) and the nav's next point (s.wp) is short of the wall. The owner's Boneyard report 20261126-200759,
+        # "they dont use the stairs properly": the way onto the sniper's stairs passes a block's corner 0.25 u off, and
+        # bots watching the enemy were stepped aside there; 9 of 318 tries at the stairs' foot went up
+        wp = getattr(s, "wp", None)
+        if (wp is not None and getattr(s, "nav_cmd", None) == (act.forward, act.strafe)
+                and math.hypot(wp.x - me.pos.x, wp.y - me.pos.y) < ahead + 0.2):
+            return
         for off in (0.52, -0.52, 1.05, -1.05):
             if T.clearance(s.feet(me), walk + off, 1.5) >= 1.2:
                 rel = walk + off - act.yaw

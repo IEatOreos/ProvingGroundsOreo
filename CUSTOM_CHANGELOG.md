@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Bots go up Boneyard's sniper stairs: the wall check trusts the nav's next point, 2026-11-26
+
+The owner's Boneyard bug report 20261126-200759: "My team on boneyard just likes to accumulate around the stairs below our teams sniper and they dont use the stairs properly. Just roam the bottom". Then: "I just seen bots not going up the stairs when they were completely able". Then: "Fix it but dont implement the one call per power weapon thing" (888100c reverted in 5c1cec3).
+
+- **The match** (trace_reach_70_boneyard_20261126-200304): his bots stood at the stairs' foot (280, 112) 17% of their time on their half. 42% of that time their goal was upstairs: the rockets in the middle, the sniper, an objective, a hold. Of 318 tries from the foot, 9 went up. The rest shuffled there up to 11 s ("wall ahead: stepping around" 1,154 times, unstuck wiggles 644 times) until a hunt, retreat or fight took over.
+- **Cause:** the way onto the stairs passes the corner of a block at (279.0-279.75, 111.5-112.0), walled from the floor to about 1.4 u. `Bot.redirect`'s chest ray (`Terrain.clearance`) reads that corner 0.25-0.5 u ahead, under `REDIRECT_D` 0.55, and turns the step 30 degrees aside. Its "a corner the nav turns at" exception only ran with the bot looking along its path (`att` "path"). These bots were watching the enemy. The nav's way up both flights is right (checked offline from each spot they stood on).
+- **`brain/bot.py` `Bot.redirect`:** that exception also holds when this tick's step is the nav's own (`nav_cmd`) and the nav's next point (`s.wp`) is short of the wall hit (within its distance + 0.2 u), wherever the bot looks. A wall with the next point past it, or a step that is not the nav's, is stepped around as before. Every map and tier.
+- **Checks:** new `tools/test_stair_corner.py` (4 tests on Boneyard's level data, skipped without it: the corner reads as a wall there, the nav's step walks on, a step off the nav and a next point past the wall still step around). With the fix taken out, the walk-on test fails. Full suite: 1826 tests, with the same 2 `test_layout_lifts.py` failures as before. Import check of `brain/` and `tools/live_bots.py`. **Untested in game.**
+
 ### The Falcon's side guns hit: aimed from the gun, led for its round, 2026-11-25
 
 The owner: "The falcon gunner never hits a shot. Dig and see if campaign aiming for ai is better than ours." Then: "DO all of them just no extra error per round", and, asked about Legendary's and Demon's protected aim: "Yes, this gun only".
