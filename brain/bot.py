@@ -453,13 +453,6 @@ POWER_RECHARGE_SHIELD = 0.5        # shield under this with an enemy known withi
 POWER_RECHARGE_R = 20.0
 POWER_COMMIT_MAX = 25.0            # s: a run this long is no longer held (a way that does not get there)
 POWER_COMMIT_MARGIN = 0.5          # over the best other goal (the flip-flop rule adds 0.2 to the goal it has)
-# (custom, Nov 26, the owner's Boneyard report 20261126-200759: "My team ... just likes to accumulate around the stairs
-# below our teams sniper ... Just roam the bottom"; "Yes, fix it") one bot of a team runs for a power weapon spawn at a
-# time (Bot.power_claim, best_item): the one nearest it; a teammate's claim holds POWER_CLAIM_FRESH s after its last
-# decide on it. The match: 966 ticks of runs at the sniper, up to 5 of the owner's bots on it at once, through the foot
-# of its stairs, 17% of his team's time on its half there
-TEAM_POWER_RUNS = {}               # {(map, team): {bot id: (t, spot, its distance to it)}}
-POWER_CLAIM_FRESH = 1.0
 DOT_THREAT_R = 20.0                # u: dots this near are ranked (the DOT_RANKED nearest)
 DOT_RANKED = 3                     # (2 left the killer out, 12.5 u off past dots at 9.8 and 12.0: 176 s of that match)
 DOT_FRESH = 2.5                    # s: a dot (radar or a team callout) at most this old
@@ -8490,8 +8483,6 @@ class Bot:
                 continue      # one slot: a second item drops the first; never swap down (guide 08)
             if not it.get("reachable", True) or now < s.item_skip.get(i, 0.0):
                 continue      # on a rock nobody can climb, or we stood on its spot and got nothing
-            if it["kind"] == "weapon" and it["value"] >= 0.8 and s.power_taken(now, me, it["pos"]):
-                continue      # (custom, Nov 26) a teammate nearer it runs for it (TEAM_POWER_RUNS)
             d = dist(me.pos, it["pos"])
             back = s.item_timers.get(i, 0.0)
             if back not in s.item_err.setdefault(i, {}):
@@ -9143,7 +9134,6 @@ class Bot:
         the rest only). Not in a vehicle nor carrying. The owner's Forge World 20261118-180057: about 170 runs at the
         rockets ended after 1-4 s for a hunt (78), a retreat (35) or a fight (30), and were begun again from farther off;
         one bot got them, at 206 s, by the east ramp the nav takes."""
-        s.power_claim(now, me, snap)
         g = s.goal
         run = getattr(s, "power_run", None)
         if (not POWER_COMMIT or g[0] != "item" or not isinstance(g[1], Vec) or g not in scores
@@ -9188,28 +9178,6 @@ class Bot:
         if scores[g] < top + POWER_COMMIT_MARGIN:
             scores[g] = top + POWER_COMMIT_MARGIN
             s.note("power weapon run: committed" + (f", wins against {len(men)}" if men else ""))
-
-    def power_claim(s, now, me, snap):
-        """(custom, Nov 26: TEAM_POWER_RUNS) This bot's claim on the power weapon it runs for (its goal an item at a
-        power spawn, on foot, alive), its own distance to it kept for best_item's "nearest has it"; no such run, no claim."""
-        claims = TEAM_POWER_RUNS.setdefault(((s.map or {}).get("name"), me.team), {})
-        g = s.goal
-        if (g[0] == "item" and isinstance(g[1], Vec) and me.alive and me.vehicle in (None, -1) and not me.has_flag
-                and s.power_spawn(g[1])):
-            claims[me.id] = (now, g[1], dist(me.pos, g[1]))
-        elif me.id in claims:
-            claims.pop(me.id, None)
-
-    def power_taken(s, now, me, q):
-        """(custom, Nov 26: TEAM_POWER_RUNS) A teammate runs for the power weapon spawn at q and is nearer it than we
-        are (a tie: the lower bot id): we leave it to him."""
-        claims = TEAM_POWER_RUNS.get(((s.map or {}).get("name"), me.team), {})
-        mine = dist(me.pos, q)
-        for k, c in claims.items():
-            if (k != me.id and now - c[0] < POWER_CLAIM_FRESH and dist(c[1], q) < 1.0
-                    and (c[2] < mine or (c[2] == mine and k < me.id))):
-                return True
-        return False
 
     def power_spawn(s, q):
         """A power weapon's spawn (a map item: a weapon of value 0.8 or more) at q."""
