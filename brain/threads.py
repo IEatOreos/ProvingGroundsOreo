@@ -26,7 +26,8 @@ from . import bot as botmod
 from . import terrain as termod
 
 LEARNS = ("learn_stuck", "learn_blocked", "learn_shot_through")
-NESTED = ("TEAM_SIGHTINGS", "TEAM_EYES", "TEAM_FACING", "TEAM_TARGETS", "TEAM_CRACKED", "TEAM_ATTACKERS", "TEAM_SPACE")
+NESTED = ("TEAM_SIGHTINGS", "TEAM_EYES", "TEAM_FACING", "TEAM_TARGETS", "TEAM_CRACKED", "TEAM_ATTACKERS", "TEAM_SPACE",
+          "TEAM_POWER_RUNS")
 FLAT = ("BOT_PROFILES", "DEAD_SPOTS", "AT_WHEEL")   # (AT_WHEEL: upstream 0.3.0 note #32a, Nov 24)
 _who = threading.local()          # the player's place in the pass on this thread: the order held-back writes go in
 _GONE = object()

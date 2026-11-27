@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### One bot of a team on a power weapon run at a time (Boneyard's sniper stairs), 2026-11-26
+
+The owner's Boneyard bug report 20261126-200759 (F9, 293 s in): "My team on boneyard just likes to accumulate around the stairs below our teams sniper and they dont use the stairs properly. Just roam the bottom". He answered "Yes, fix it".
+
+- **The match** (trace_reach_70_boneyard_20261126-200304): on its own half, his team spent 83% of its time on the bottom floor and 4% on top. The enemy team, on its half, spent 51% on the bottom and 19% on top. The busiest spot, 17% of his team's time there, is the foot of the stairs at (280, 112), under the sniper spawn (277.2, 112.6, -6.4), 4 u up. Up to 5 of his bots ran for that one sniper at once: 966 ticks with 1 to 5 on it. Unstuck wiggles at the foot, and runs of 10-19 s broken by fights. The nav's way up both flights is right (checked offline: the landing at (276.7, 110.3, -8.4), then -6.5).
+- **`brain/bot.py`:** `TEAM_POWER_RUNS` and `POWER_CLAIM_FRESH` (1 s). `Bot.power_claim` (called from `power_commit`, every decide) records a bot's run at a power spawn: its goal an item at a weapon of value 0.8 or more, on foot, alive, not carrying. `Bot.power_taken` reports a teammate's fresh claim on the same spawn by a bot nearer it (a tie: the lower id). `best_item` passes such a spawn, so only the bot nearest it scores the run. Every tier, every map and mode. Enemies' runs, plain guns, the director's fetch (`power_runs`, one bot already), a gun lying close (`upgrade_point`) and the rearm run are unchanged. `brain/threads.py`: the table is held per think pass like `TEAM_SPACE`.
+- **Not changed:** retreats. Several end at the stairs' foot and landing (lidar cover, and `regroup_cover` pulls a retreat toward teammates, the owner's earlier rule). The director's slayer posts are not changed either.
+- **Checks:** new `tools/test_power_claim.py` (7 tests: alone, a nearer or farther teammate, an enemy, a claim running out, another goal, a plain gun). Full suite: 1829 tests, with the same 2 `test_layout_lifts.py` failures as before. Import check of `brain/` and `tools/live_bots.py`. **Untested in game.**
+
 ### The Falcon's side guns hit: aimed from the gun, led for its round, 2026-11-25
 
 The owner: "The falcon gunner never hits a shot. Dig and see if campaign aiming for ai is better than ours." Then: "DO all of them just no extra error per round", and, asked about Legendary's and Demon's protected aim: "Yes, this gun only".
