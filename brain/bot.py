@@ -573,6 +573,13 @@ SPACE_AT_R = 4.5            # u: on its spot (a hold goal loiters 4 u about it i
 # a stand. His Anchor 9 (80-29 in 18.5 minutes): 34 visits of a median 3.8 s to his best spot, 23 kills to 4 deaths
 NOBLE_ROT_REACH, NOBLE_ROT_DIST_K, NOBLE_ROT_MIN_KILLS, NOBLE_ROT_VISIT, NOBLE_ROT_AT_R = 35.0, 15.0, 3, (2.0, 8.0), 2.0
 _OWNER_SPOTS = {}          # map name -> [(spot, value, visit s)] (Bot.noble_rotation)
+# (custom, Nov 27, the owner's three, after the sim's first look (Noble 32-46 and 24-48 rotating on a timer, 39-36
+# and 33-35 without): "Rotate only when it's safe ... or just after a kill", "Stay longer on a spot that's working:
+# a kill there extends the visit", "Pick spots that see where the enemies are") its visit over, on only within
+# NOBLE_ROT_KILL_S s of a kill or with no enemy known (NOBLE_ROT_KNOWN_S s) within NOBLE_ROT_SAFE_R u of the way to
+# the next spot (Bot.noble_rot_safe); a kill there, a whole visit more; a spot with a line to where an enemy is known
+# x NOBLE_ROT_SEE_K (noble_rot_pick)
+NOBLE_ROT_SAFE_R, NOBLE_ROT_KNOWN_S, NOBLE_ROT_KILL_S, NOBLE_ROT_SEE_K = 8.0, 4.0, 3.0, 2.0
 # (custom, Nov 8) the team's eyes for the fight odds (Bot.share_sightings, mate_kill_times): every bot posts the enemies
 # in its view each tick {(map, team): {bot id: (t, enemy ids, accuracy)}}; a Halo 4 Demon's odds count a teammate on
 # foot whose post is under TEAM_FRESH s old and has that enemy in it, at his gun's pace over his accuracy (a Demon
@@ -3429,6 +3436,34 @@ class Bot:
             out.append((q, sp.get("kills_per_min", 0.0) * min(3.0, kd), visit))
         return out
 
+    def noble_rot_known(s, now, me, snap):
+        """(custom, Nov 27) Where living enemies were known within NOBLE_ROT_KNOWN_S s (eyes, radar, callouts, hits)."""
+        out = []
+        for k, b in s.per.beliefs.items():
+            e = snap.player(k) if isinstance(k, int) else None
+            if e is not None and e.alive and e.team != me.team and now - b.t < NOBLE_ROT_KNOWN_S:
+                out.append(b.pos)
+        return out
+
+    def noble_rot_safe(s, now, me, snap, claims, sp, rot):
+        """(custom, Nov 27, the owner: "Rotate only when it's safe: no enemy known near the path, or just after a kill")
+        Its visit over: on to the next spot only just after a kill (a visit and NOBLE_ROT_KILL_S s: a kill there held
+        it a visit more) or with no enemy known within
+        NOBLE_ROT_SAFE_R of the way there; else it stays on this one."""
+        ks = getattr(s, "kill_seen", None)
+        if ks is not None and now - ks[0] <= sp.get("visit", 0.0) + NOBLE_ROT_KILL_S:
+            return True                         # (a kill lately: a kill there held it a visit more, then on at once)
+        nxt = s.noble_rot_pick(now, me, snap, claims, sp["held"] + [sp["spot"]], rot)
+        if nxt is None:
+            return True
+        ax, ay, bx, by = me.pos.x, me.pos.y, nxt[0].x, nxt[0].y
+        L2 = (bx - ax) ** 2 + (by - ay) ** 2
+        for p in s.noble_rot_known(now, me, snap):
+            u = 0.0 if L2 < 1e-6 else max(0.0, min(1.0, ((p.x - ax) * (bx - ax) + (p.y - ay) * (by - ay)) / L2))
+            if math.hypot(p.x - (ax + (bx - ax) * u), p.y - (ay + (by - ay) * u)) < NOBLE_ROT_SAFE_R:
+                return False
+        return True
+
     def noble_rot_pick(s, now, me, snap, claims, held, rot):
         """(spot, words, visit s) the owner's best spot now: his value there, halved NOBLE_ROT_DIST_K u off, within
         NOBLE_ROT_REACH, not one held this round (else not the one just left), not one a teammate claimed or stands on.
@@ -3436,6 +3471,12 @@ class Bot:
         live = [q for j, (t, q) in claims.items() if j != me.id and now - t < 3.0]
         mates = [p.pos for p in snap.players if p.team == me.team and p.id != me.id and p.alive]
         bans = getattr(s, "goal_ban", {})
+        known = s.noble_rot_known(now, me, snap)          # (custom, Nov 27: a spot that sees him, NOBLE_ROT_SEE_K)
+        try:
+            T = s.T() if known else None
+        except Exception:
+            T = None
+        up = Vec(0.0, 0.0, 0.62)
         for skip in (held, held[-1:]):
             best = None
             for q, v, visit in rot:
@@ -3445,6 +3486,12 @@ class Bot:
                         or any(dist(q, c) < SPACE_TAKEN_R for c in live + mates)):
                     continue
                 score = v / (1.0 + d / NOBLE_ROT_DIST_K)
+                if T is not None:
+                    try:
+                        if any(dist(q, e) < 40.0 and T.los(q + up, e + up) for e in known):
+                            score *= NOBLE_ROT_SEE_K
+                    except Exception:
+                        pass
                 if best is None or score > best[0]:
                     best = (score, q, visit, v)
             if best is not None:
@@ -3564,10 +3611,13 @@ class Bot:
             sp["until"] = now + SPACE_ACTIVE
             if sp["at"] is not None:
                 sp["kills"] += 1
+                if sp.get("owner"):                       # (custom, Nov 27: a kill there, a whole visit more)
+                    sp["visit_end"] = max(sp.get("visit_end", now), now + sp.get("visit", SPACE_QUIET))
         if hurt:
             sp["until"] = max(sp["until"], now + 8.0)     # (a recharge first: the space is taken after it)
             if sp["at"] is not None:
                 sp["at"] = now                            # (its quiet time there starts again)
+                sp["visit_end"] = now + sp.get("visit", SPACE_QUIET)
         if now > sp["until"]:
             if not always:
                 s.space_end(claims, me)
@@ -3577,8 +3627,13 @@ class Bot:
             at_r = NOBLE_ROT_AT_R if sp.get("owner") else SPACE_AT_R
             if sp["at"] is None and (me.pos - sp["spot"]).flat() < at_r and abs(me.pos.z - sp["spot"].z) < 1.5:
                 sp["at"] = now
-            if sp.get("owner"):                           # (his spot: his own visit there, then the next)
-                done = sp["at"] is not None and now - sp["at"] >= sp.get("visit", SPACE_QUIET) and not seen
+                sp["visit_end"] = now + sp.get("visit", SPACE_QUIET)
+            if sp.get("owner"):                           # (his spot: his own visit there, then the next, if safe)
+                ready = (sp["at"] is not None and not seen
+                         and now >= sp.get("visit_end", sp["at"] + sp.get("visit", SPACE_QUIET)))
+                done = ready and s.noble_rot_safe(now, me, snap, claims, sp, rot)
+                if ready and not done:
+                    s.note("noble: staying on the spot, a man near the way on")
             else:
                 done = sp["at"] is not None and (sp["kills"] >= SPACE_KILLS or (now - sp["at"] > SPACE_QUIET and not seen))
             banned = getattr(s, "goal_ban", {}).get(s._goal_key(("hold", sp["spot"])), 0.0) > now

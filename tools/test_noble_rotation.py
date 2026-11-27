@@ -66,6 +66,43 @@ class RotationTests(Base):
         self.assertIsNone(b.noble_rotation(snap(man(1, 0, Vec()))))
 
 
+class SaferRotationTests(RotationTests):
+    """(Nov 27, the owner's three: safe rotations, a kill extends the visit, spots that see the enemy)"""
+
+    def there(self):
+        b, me = mk("noble"), man(1, 0, Vec(0, 0, 0))
+        self.go(b, me, 1.0)
+        me.pos = Vec(20, 0, 0)
+        self.go(b, me, 2.0)                                       # (on his best spot, its visit 4 s)
+        return b, me
+
+    def test_stays_with_a_man_near_the_way_on(self):
+        b, me = self.there()
+        foe = man(9, 1, Vec(15, 1, 0))                            # (by the way to the next spot, at 10 u)
+        b.per.beliefs[9] = types.SimpleNamespace(pos=foe.pos, t=6.0)
+        sc = self.go(b, me, 6.5, mates=[foe])
+        self.assertEqual(list(sc), [("hold", Vec(20, 0, 0))])     # (visit over, but not safe: it stays)
+        b.kill_seen = (6.4, Vec(25, 0, 0))                        # (a kill there: a visit more, then on at once)
+        self.assertEqual(list(self.go(b, me, 6.6, mates=[foe])), [("hold", Vec(20, 0, 0))])
+        self.assertEqual(list(self.go(b, me, 10.7, mates=[foe])), [("hold", Vec(10, 0, 0))])   # (the man still there)
+
+    def test_a_kill_there_extends_the_visit(self):
+        b, me = self.there()
+        b.kill_seen = (5.0, Vec(25, 0, 0))
+        self.go(b, me, 5.1)                                       # (a kill on the spot: 4 s more from 5.1)
+        b.kill_seen = None
+        self.assertEqual(list(self.go(b, me, 8.0)), [("hold", Vec(20, 0, 0))])   # (past the first 4 s, still on)
+        self.assertEqual(list(self.go(b, me, 9.3)), [("hold", Vec(10, 0, 0))])
+
+    def test_a_spot_that_sees_him_first(self):
+        b, me = mk("noble"), man(1, 0, Vec(0, 0, 0))
+        foe = man(9, 1, Vec(-15, 5, 0))
+        b.per.beliefs[9] = types.SimpleNamespace(pos=foe.pos, t=0.9)
+        b.T = lambda: types.SimpleNamespace(los=lambda a, c: a.x < 0)           # (only the west spot sees him)
+        sc = self.go(b, me, 1.0, mates=[foe])
+        self.assertEqual(list(sc), [("hold", Vec(-10, 0, 0))])    # (6 a minute x 2 over 12 a minute 20 u off)
+
+
 class LoadTests(unittest.TestCase):
     def test_his_spots_their_value_and_a_layouts_floor(self):
         prof = dict(spots=[dict(pos=[1, 2, 0], kills=23, deaths=4, kills_per_min=8.5, median_visit_s=3.8),
