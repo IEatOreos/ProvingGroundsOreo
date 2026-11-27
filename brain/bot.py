@@ -19,6 +19,7 @@ from . import odds as odds_model
 from . import nade
 from . import noble          # (custom, Nov 20) Noble, the testing bot: its tune, shot learning, winning spots
 from . import noble_habits   # (custom, Nov 22) Noble: pre-aim, each person's habits, dodges, team focus
+from . import banshee_miss   # (custom, Nov 26) DMR shots at a Banshee's pilot may go wide, by tier and its flips
 
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
@@ -3143,8 +3144,8 @@ class Bot:
                 or me.vehicle not in (None, -1) or not noble.tune(getattr(s, "game", None))["shot_learn"]):
             return
         target = snap.player(part_[0])
-        if target is None:
-            return
+        if target is None or target.vehicle not in (None, -1):
+            return          # (custom, Nov 26: a man in a vehicle: the rounds hit it, his own shield never says)
         if getattr(s, "noble_watch", None) is None:
             s.noble_watch = noble.ShotWatch(getattr(s, "game", None))
         s.noble_watch.pressed(now, snap, me, part_[0], dist(me.pos, target.pos), me.weapon, part_[1],
@@ -3674,6 +3675,7 @@ class Bot:
                 act.forward = max(-1.0, min(1.0, f * c - st * sn))
                 act.strafe = max(-1.0, min(1.0, f * sn + st * c))
                 act.yaw, act.pitch = yaw, pitch
+            banshee_miss.apply(s, now, me, snap, act)   # (custom, Nov 26: a DMR press at a Banshee pilot may go wide)
             s.nade_release(now, me, act)           # (custom, Nov 18: the solved throw's press, on the capped view)
             if act.grenade and me.vehicle == -1 and me.weapon not in CHARGE and me.weapon not in LUNGE:
                 s.nade_retry = dict(until=now + POST_GRENADE_RETRY, weapon=me.weapon,

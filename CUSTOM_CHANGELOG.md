@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Bots miss DMR shots at a Banshee's pilot, by difficulty and while it flips, 2026-11-26
+The owner: "right now they all laser beam even the lower levels because how big the hit box is. And for the higher difficulty bots they can only miss when the banshee is backflipping with a percentage.. You can make the rest miss with a base chance on flips. and Normal and easy can just have a base chance to miss the banshee completely. (Dmr shots)"; "Use your numbers".
+- **`brain/banshee_miss.py` (new), called from `Bot.think` after the turn cap and the shot correction:** each DMR press, from a bot on foot, at a man flying a Banshee is a miss with its tier's chance; the round goes 1.6 u off the craft's middle (past its wings and body), a random way across the line to it. Legendary, Blind, Tactician, Mythic, Demon and Noble: 25% while the Banshee flips, none otherwise; Heroic: 50% while it flips, none otherwise; Normal: 35%, 60% while it flips; Easy: 50%, 75% while it flips. Flipping: tipped past 60 degrees (`vehicles.upright`, the live orientation) within 0.6 s, watched every tick. Scaling keeps its own aim. For Banshee pilots only, a miss goes past the protected head-shot correction (the owner asked the higher tiers to miss on flips).
+- **Noble's shot book:** a press at a man in any vehicle is no longer recorded (the rounds hit the vehicle; his own shield never shows a hit).
+- **Validation:** new `tools/test_banshee_miss.py` (5: each tier's rate level and flipping within 4% over 2,000 presses, the miss 1.6 u off, DMR and Banshee only, one roll a press, the flip held 0.6 s, Scaling untouched); full suite 1834, the same 2 `test_layout_lifts.py` failures as before. The simulator's Banshee reports no orientation, so flips are not simulated. **Untested in game.**
+
 ### Bots go up Boneyard's sniper stairs: the wall check trusts the nav's next point, 2026-11-26
 
 The owner's Boneyard bug report 20261126-200759: "My team on boneyard just likes to accumulate around the stairs below our teams sniper and they dont use the stairs properly. Just roam the bottom". Then: "I just seen bots not going up the stairs when they were completely able". Then: "Fix it but dont implement the one call per power weapon thing" (888100c reverted in 5c1cec3).
