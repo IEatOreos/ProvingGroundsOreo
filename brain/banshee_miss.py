@@ -6,9 +6,9 @@ and Normal and easy can just have a base chance to miss the banshee completely. 
 Each DMR press at a man flying a Banshee, from a bot on foot, is a miss with its tier's chance (MISS: no flip, flipping);
 a miss sends that round just past the Banshee (MISS_R off its middle, a random way across the line to it), after the
 aim and the shot correction, so it whiffs by the craft as a person's does. Flipping: the craft tipped past 60 degrees
-(vehicles.upright) within FLIP_HOLD s (a backflip is upside down only part of the way round). Legendary and up
-(profiles.fixed_high: Legendary, Blind, Tactician, Mythic, Demon, Noble) miss only while it flips; Heroic too, more;
-Normal and Easy at any time, more while it flips. Scaling keeps its own aim (excluded: prof.extra)."""
+(vehicles.upright) within FLIP_HOLD s (a backflip is upside down only part of the way round). Mythic, Demon and
+Noble miss only while it flips; Legendary, Blind, Tactician, Heroic, Normal and Easy at any time, more while it flips.
+Scaling keeps its own aim (excluded: prof.extra)."""
 import math
 
 from .core import Vec, angles_to, eye
@@ -16,7 +16,9 @@ from . import profiles
 from . import vehicles
 
 # tier -> (miss chance, miss chance while the Banshee flips)
-MISS = {"high": (0.0, 0.25), "strong": (0.0, 0.5), "average": (0.35, 0.6), "novice": (0.5, 0.75)}
+# (Nov 26, the owner, later: "Give heroic a base of 25% to miss, and Legendary Blind and Tactician to miss as a 15%")
+MISS = {"high": (0.0, 0.25), "legendary": (0.15, 0.25), "strong": (0.25, 0.5), "average": (0.35, 0.6),
+        "novice": (0.5, 0.75)}
 FLIP_HOLD = 0.6    # s: a tip past 60 degrees this recent is still the flip
 MISS_R = 1.6       # u off the craft's middle: past its wings (about 0.7 u each side) and its body
 
@@ -24,7 +26,9 @@ MISS_R = 1.6       # u off the craft's middle: past its wings (about 0.7 u each 
 def tier_key(prof):
     if prof.extra is not None:
         return None                                   # (Scaling: its own aim)
-    return "high" if profiles.fixed_high(prof) else prof.tier
+    if profiles.fixed_demon(prof) or profiles.fixed_mythic(prof):
+        return "high"                                 # (Mythic, Demon, Noble: only while it flips)
+    return "legendary" if profiles.fixed_high(prof) else prof.tier   # (Legendary, Blind, Tactician)
 
 
 def flipping(bot, now, v):

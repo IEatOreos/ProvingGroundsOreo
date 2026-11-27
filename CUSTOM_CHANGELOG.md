@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Banshee misses: Heroic 25% and Legendary, Blind, Tactician 15% even in level flight, 2026-11-26
+The owner: "Give heroic a base of 25% to miss, and Legendary Blind and Tactician to miss as a 15%".
+- **`brain/banshee_miss.py` MISS:** Heroic 25% (50% while the Banshee flips); Legendary, Blind and Tactician 15% (25% flipping); Mythic, Demon and Noble unchanged, 25% only while it flips; Normal 35% / 60% and Easy 50% / 75% unchanged.
+- **Validation:** `tools/test_banshee_miss.py` (5, every tier's level and flipping rate within 4% over 2,000 presses) OK. **Untested in game.**
+
 ### Bots miss DMR shots at a Banshee's pilot, by difficulty and while it flips, 2026-11-26
 The owner: "right now they all laser beam even the lower levels because how big the hit box is. And for the higher difficulty bots they can only miss when the banshee is backflipping with a percentage.. You can make the rest miss with a base chance on flips. and Normal and easy can just have a base chance to miss the banshee completely. (Dmr shots)"; "Use your numbers".
 - **`brain/banshee_miss.py` (new), called from `Bot.think` after the turn cap and the shot correction:** each DMR press, from a bot on foot, at a man flying a Banshee is a miss with its tier's chance; the round goes 1.6 u off the craft's middle (past its wings and body), a random way across the line to it. Legendary, Blind, Tactician, Mythic, Demon and Noble: 25% while the Banshee flips, none otherwise; Heroic: 50% while it flips, none otherwise; Normal: 35%, 60% while it flips; Easy: 50%, 75% while it flips. Flipping: tipped past 60 degrees (`vehicles.upright`, the live orientation) within 0.6 s, watched every tick. Scaling keeps its own aim. For Banshee pilots only, a miss goes past the protected head-shot correction (the owner asked the higher tiers to miss on flips).
