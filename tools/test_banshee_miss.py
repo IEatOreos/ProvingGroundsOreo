@@ -39,9 +39,9 @@ def rate(tier, up=UPRIGHT, n=2000):
 class BansheeMissTests(unittest.TestCase):
     def test_rates_by_tier(self):
         # (the owner, later: Heroic a 25% base, Legendary, Blind and Tactician 15%)
-        for tier, (base, flip) in (("top", (0.15, 0.25)), ("blind", (0.15, 0.25)), ("tactician", (0.15, 0.25)),
+        for tier, (base, flip) in (("top", (0.15, 0.5)), ("blind", (0.15, 0.5)), ("tactician", (0.15, 0.5)),
                                    ("demon", (0.0, 0.25)), ("noble", (0.0, 0.25)), ("mythic", (0.0, 0.25)),
-                                   ("strong", (0.25, 0.5)), ("average", (0.35, 0.7)), ("novice", (0.5, 1.0))):
+                                   ("strong", (0.25, 0.65)), ("average", (0.35, 0.7)), ("novice", (0.5, 1.0))):
             self.assertAlmostEqual(rate(tier), base, delta=0.04, msg=f"{tier} level")
             self.assertAlmostEqual(rate(tier, TIPPED), flip, delta=0.04, msg=f"{tier} flipping")
 
