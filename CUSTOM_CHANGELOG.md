@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Noble plays the owner's own spots in Slayer: short visits, then the next, 2026-11-27
+The owner: "I want good bots to get to power positions more and utilize them like a real high KD player would but im not sure how to do that"; "Yes, Noble first".
+- **His spots:** maps/<map>/owner_profile.json (tools/owner_profile.py, from his recorded matches: where he stood for his kills), 20 Reach maps. A map variant (Forge World's layouts) uses its base map's spots where this layout has floor within a unit (Asylum: 6 of 8; Anchor 9: all 8). Spots of 3 kills or more; each valued his kills a minute there x his K/D there (up to 3).
+- **`brain/bot.py` Take Space, a Noble in Slayer with his spots (`noble_rotation`, `noble_rot_pick`, `owner_spots_load`; its tune's new `owner_spots`, on):** from its spawn, all match, its spot his best open one within 35 u (his value there, halved 15 u off), not one a teammate claimed or stands on, not one held this round; on it within 2 u it holds his own median visit there (2-8 s; his Anchor 9: 34 visits of 3.8 s to his best spot, 23 kills to 4 deaths) and then takes the next, a man in view excepted (the fight first). It loiters 1 u about his spot, not 4. Everything else of Take Space stays: the walk there fighting a man it beats (c162865), the recharge first, the claims, the shuffle on the spot.
+- **Validation:** new `tools/test_noble_rotation.py` (5); full suite 1844, the same 2 `test_layout_lifts.py` failures as before. Simulator check (Noble with and without, against Demon on Asylum) running. **Untested in game.**
+
 ### Demon, Mythic and Noble shoot on the way to their Take Space spot, 2026-11-27
 The owner: "Take Space / hot spot add this to the shoots while still walking to it" (as on a power weapon run).
 - **`brain/bot.py` take_space:** on the way to its spot with a man in view (within 30 u) and not hurt, a Demon, Mythic or Noble keeps the spot as its goal, over every other goal, fights included (POWER_COMMIT_MARGIN over the best), while it wins the fight (odds of POWER_PUSH_ODDS or better, every man in view on it at once), as power_commit does. Losing, or hurt: the usual choice, as before. At the spot: the spot's own fights, as before.

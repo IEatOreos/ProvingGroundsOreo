@@ -565,6 +565,14 @@ SPACE_REACH, SPACE_FORWARD, SPACE_QUIET, SPACE_KILLS, SPACE_STEPS, SPACE_ACTIVE 
 # a power weapon grab 3.15+. The window waits while a recharge goes on: cover took 35-45% of them)
 SPACE_TAKEN_R, SPACE_PAIR_R, SPACE_SCORE, SPACE_CLEAR_S, SPACE_CLEAR_R = 3.0, 2.5, 2.2, 2.0, 20.0
 SPACE_AT_R = 4.5            # u: on its spot (a hold goal loiters 4 u about it in Slayer, 2.5 elsewhere: plan)
+# (custom, Nov 27, the owner: "I want good bots to get to power positions more and utilize them like a real high KD
+# player would"; "Yes, Noble first") Noble plays the owner's own spots (maps/<map>/owner_profile.json "spots",
+# tools/owner_profile.py: where he stood for his kills) in Slayer: its Take Space from its spawn, all match, the next
+# spot his best open one within NOBLE_ROT_REACH (his kills a minute there x his K/D there up to 3, halved
+# NOBLE_ROT_DIST_K u off), held his own median visit there (clamped to NOBLE_ROT_VISIT s), then the next: visits, not
+# a stand. His Anchor 9 (80-29 in 18.5 minutes): 34 visits of a median 3.8 s to his best spot, 23 kills to 4 deaths
+NOBLE_ROT_REACH, NOBLE_ROT_DIST_K, NOBLE_ROT_MIN_KILLS, NOBLE_ROT_VISIT, NOBLE_ROT_AT_R = 35.0, 15.0, 3, (2.0, 8.0), 2.0
+_OWNER_SPOTS = {}          # map name -> [(spot, value, visit s)] (Bot.noble_rotation)
 # (custom, Nov 8) the team's eyes for the fight odds (Bot.share_sightings, mate_kill_times): every bot posts the enemies
 # in its view each tick {(map, team): {bot id: (t, enemy ids, accuracy)}}; a Halo 4 Demon's odds count a teammate on
 # foot whose post is under TEAM_FRESH s old and has that enemy in it, at his gun's pace over his accuracy (a Demon
@@ -3374,6 +3382,75 @@ class Bot:
                 return q
         return q
 
+    def noble_rotation(s, snap):
+        """(custom, Nov 27) A Noble in Slayer on a map with the owner's spots (its tune's owner_spots): [(spot, value,
+        visit s)], else None. A map variant's spots are its base map's, pooled over its layouts: kept where this layout
+        has floor within a unit of it."""
+        if (not profiles.fixed_noble(s.p) or getattr(snap, "mode", "slayer") != "slayer"
+                or not noble.tune(getattr(s, "game", None)).get("owner_spots")):
+            return None
+        name = (s.map or {}).get("name")
+        if not name:
+            return None
+        if name not in _OWNER_SPOTS:
+            _OWNER_SPOTS[name] = s.owner_spots_load(name)
+        return _OWNER_SPOTS[name] or None
+
+    def owner_spots_load(s, name):
+        """The owner's spots on this map (owner_profile.json): those of NOBLE_ROT_MIN_KILLS kills or more."""
+        import json
+        import os
+        from .maps import ROOT as MAPS
+        base = name.replace(chr(92), "/").partition("/variants/")[0]
+        try:
+            with open(os.path.join(MAPS, base, "owner_profile.json"), encoding="utf-8") as f:
+                d = json.load(f)
+        except (OSError, ValueError):
+            return []
+        T = None
+        if base != name:
+            try:
+                T = s.T()
+            except Exception:
+                return []
+        out = []
+        for sp in d.get("spots") or ():
+            if sp.get("kills", 0) < NOBLE_ROT_MIN_KILLS or len(sp.get("pos") or ()) < 3:
+                continue
+            q = Vec(*sp["pos"][:3])
+            if T is not None:
+                try:
+                    if not T.walkable(q) or abs(T.nav_z(q.x, q.y, q.z) - q.z) > 1.0:
+                        continue
+                except Exception:
+                    continue
+            kd = (sp["kills"] + 1.0) / (sp.get("deaths", 0) + 1.0)
+            visit = min(NOBLE_ROT_VISIT[1], max(NOBLE_ROT_VISIT[0], sp.get("median_visit_s", 4.0)))
+            out.append((q, sp.get("kills_per_min", 0.0) * min(3.0, kd), visit))
+        return out
+
+    def noble_rot_pick(s, now, me, snap, claims, held, rot):
+        """(spot, words, visit s) the owner's best spot now: his value there, halved NOBLE_ROT_DIST_K u off, within
+        NOBLE_ROT_REACH, not one held this round (else not the one just left), not one a teammate claimed or stands on.
+        None: none open."""
+        live = [q for j, (t, q) in claims.items() if j != me.id and now - t < 3.0]
+        mates = [p.pos for p in snap.players if p.team == me.team and p.id != me.id and p.alive]
+        bans = getattr(s, "goal_ban", {})
+        for skip in (held, held[-1:]):
+            best = None
+            for q, v, visit in rot:
+                d = dist(me.pos, q)
+                if (d > NOBLE_ROT_REACH or any(dist(q, h) < 1.0 for h in skip)
+                        or bans.get(s._goal_key(("hold", q)), 0.0) > now
+                        or any(dist(q, c) < SPACE_TAKEN_R for c in live + mates)):
+                    continue
+                score = v / (1.0 + d / NOBLE_ROT_DIST_K)
+                if best is None or score > best[0]:
+                    best = (score, q, visit, v)
+            if best is not None:
+                return best[1], f"the owner's spot ({best[3]:.1f} kills a minute there)", best[2]
+        return None
+
     def space_pick(s, now, me, snap, claims, held):
         """(spot, words) the next hot spot: within SPACE_REACH, SPACE_FORWARD nearer the target than we are, not one
         held already this time, nearest us (and a little the target). One a teammate claimed or stands on is passed;
@@ -3474,7 +3551,8 @@ class Bot:
                    for k, b in s.per.beliefs.items())
         cleared = SPACE_CLEAR_S <= fought < 6.0 and not near and not seen
         hurt = now < getattr(s, "recharge_until", 0.0) or (not snap.shieldless and me.shield < 0.9)
-        always = s.space_always()                        # (custom, Nov 24: a Flanker or Rusher, all match)
+        rot = s.noble_rotation(snap)                     # (custom, Nov 27: Noble on the owner's spots)
+        always = s.space_always() or bool(rot)           # (custom, Nov 24: a Flanker or Rusher, all match)
         sp = getattr(s, "space", None)
         if sp is None:
             if not (new_kill or cleared or (always and now >= getattr(s, "space_retry", 0.0))) or hurt:
@@ -3496,9 +3574,13 @@ class Bot:
                 return
             sp["until"] = now + SPACE_ACTIVE              # (all match: never runs out)
         if sp["spot"] is not None:
-            if sp["at"] is None and (me.pos - sp["spot"]).flat() < SPACE_AT_R and abs(me.pos.z - sp["spot"].z) < 1.5:
+            at_r = NOBLE_ROT_AT_R if sp.get("owner") else SPACE_AT_R
+            if sp["at"] is None and (me.pos - sp["spot"]).flat() < at_r and abs(me.pos.z - sp["spot"].z) < 1.5:
                 sp["at"] = now
-            done = sp["at"] is not None and (sp["kills"] >= SPACE_KILLS or (now - sp["at"] > SPACE_QUIET and not seen))
+            if sp.get("owner"):                           # (his spot: his own visit there, then the next)
+                done = sp["at"] is not None and now - sp["at"] >= sp.get("visit", SPACE_QUIET) and not seen
+            else:
+                done = sp["at"] is not None and (sp["kills"] >= SPACE_KILLS or (now - sp["at"] > SPACE_QUIET and not seen))
             banned = getattr(s, "goal_ban", {}).get(s._goal_key(("hold", sp["spot"])), 0.0) > now
             if done or banned:
                 sp["held"].append(sp["spot"])
@@ -3510,13 +3592,15 @@ class Bot:
                         return
                     sp["steps"], sp["held"] = 0, sp["held"][-1:]   # (all match: on, every spot again but the last)
         if sp["spot"] is None:
-            got = s.space_pick(now, me, snap, claims, sp["held"])
+            got = s.noble_rot_pick(now, me, snap, claims, sp["held"], rot) if rot else \
+                s.space_pick(now, me, snap, claims, sp["held"])
             if got is None:
                 s.space_end(claims, me)
                 if always:
                     s.space_retry = now + SPACE_RETRY     # (no spot forward now: again in a moment)
                 return
             sp["spot"], sp["at"], sp["kills"], sp["why"] = got[0], None, 0, got[1]
+            sp["owner"], sp["visit"] = len(got) > 2, (got[2] if len(got) > 2 else SPACE_QUIET)
             s.note(f"take space: {got[1]}")
         claims[me.id] = (now, sp["spot"])
         k = ("hold", sp["spot"])
@@ -4240,6 +4324,9 @@ class Bot:
                                   and not onto):
                 on_hill = snap.hill is not None and dist(point, snap.hill) < 0.5      # (the hill holder stays inside it)
                 wander = 0.6 * snap.hill_r if on_hill else (4.0 if snap.mode == "slayer" else 2.5)
+                nsp = getattr(s, "space", None)
+                if nsp is not None and nsp.get("owner") and nsp.get("spot") is not None and dist(point, nsp["spot"]) < 0.5:
+                    wander = 1.0       # (custom, Nov 27) on the owner's own spot (noble_rotation), not 4 u round it
                 if snap.mode == "infection":
                     # in the hold's room (director: a few entrances), not out of its door; (custom, Nov 24) at a haven
                     # marker or a hot spot too (director: groups of 3), a haven's own size below
