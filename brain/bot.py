@@ -3519,9 +3519,21 @@ class Bot:
             sp["spot"], sp["at"], sp["kills"], sp["why"] = got[0], None, 0, got[1]
             s.note(f"take space: {got[1]}")
         claims[me.id] = (now, sp["spot"])
+        k = ("hold", sp["spot"])
+        if seen and not hurt and sp["at"] is None and profiles.demon_rules(s.p):
+            # (custom, Nov 27, the owner: "Take Space / hot spot add this to the shoots while still walking to it")
+            # Demon, Mythic and Noble on their way to the spot with a man in view: on to it, fighting him on the way
+            # (on_way_target), while it is a fight it wins (POWER_PUSH_ODDS, all of them in view on it at once), as a
+            # power weapon run does (power_commit). Losing: the usual choice (break off, cover, a fight)
+            men = [j for j in seen if j in s.per.beliefs and dist(me.pos, s.per.beliefs[j].pos) <= DEMON_ENGAGE_R]
+            th = [t for j in men for _, t in s.odds_threats(now, me, snap, [], only=j, all_aware=True)]
+            if men and (odds_model.simulate(th) if th else 9.0) >= POWER_PUSH_ODDS:
+                rest = [v for key, v in scores.items() if key != k]
+                scores[k] = max(scores.get(k, 0.0), SPACE_SCORE, (max(rest) if rest else 0.0) + POWER_COMMIT_MARGIN)
+                s.note(f"take space: on to it, fighting {len(men)}")
+            return
         if seen or hurt:
             return                                        # (a man in view, or its shield first: their goals win)
-        k = ("hold", sp["spot"])
         scores[k] = max(scores.get(k, 0.0), SPACE_SCORE)
 
     def space_shuffle(s, now, me, act, kind, arg):
@@ -5201,7 +5213,11 @@ class Bot:
         goal, as a patrol does); None otherwise, or in the last steps onto a gun (the pickup's own presses). The owner's
         Rasu game, Nov 7: a Demon looked at him 6.6 s at 22 u on its way to a plasma pistol and a gun and never fired."""
         run = kind == "objective" and snap.mode not in ("slayer", "race")   # (owner: objective runs too, Nov 7)
-        if ((kind not in ON_WAY_KINDS and not run) or not isinstance(arg, Vec) or not profiles.demon_rules(s.p)
+        # (custom, Nov 27, the owner) on its way to its Take Space spot too, until it is there (then the spot's fights)
+        sp = getattr(s, "space", None)
+        space = (kind == "hold" and isinstance(arg, Vec) and sp is not None and sp.get("spot") is not None
+                 and sp.get("at") is None and dist(arg, sp["spot"]) < 0.5)
+        if ((kind not in ON_WAY_KINDS and not run and not space) or not isinstance(arg, Vec) or not profiles.demon_rules(s.p)
                 or me.vehicle not in (None, -1) or me.has_flag or s.dry(me)):
             return None
         if kind == "item" and (me.pos - arg).flat() < ON_WAY_LAST:

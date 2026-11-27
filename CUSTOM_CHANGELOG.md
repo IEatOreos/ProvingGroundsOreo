@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Demon, Mythic and Noble shoot on the way to their Take Space spot, 2026-11-27
+The owner: "Take Space / hot spot add this to the shoots while still walking to it" (as on a power weapon run).
+- **`brain/bot.py` take_space:** on the way to its spot with a man in view (within 30 u) and not hurt, a Demon, Mythic or Noble keeps the spot as its goal, over every other goal, fights included (POWER_COMMIT_MARGIN over the best), while it wins the fight (odds of POWER_PUSH_ODDS or better, every man in view on it at once), as power_commit does. Losing, or hurt: the usual choice, as before. At the spot: the spot's own fights, as before.
+- **`on_way_target`:** a hold at its Take Space spot is walked on while fighting (fight's aim and trigger, the feet on to the spot), until it is there.
+- **Validation:** new `tools/test_take_space_fight.py` (5); `test_take_space.py` (17) unchanged and OK; full suite 1839, the same 2 `test_layout_lifts.py` failures as before. **Untested in game.**
+
 ### Banshee misses: Mythic, Demon and Noble 50% while it flips, 2026-11-26
 The owner: "Mythic demon noble to 50% when flipping".
 - **`brain/banshee_miss.py` MISS:** Mythic, Demon and Noble 50% while the Banshee flips (none level); Legendary, Blind, Tactician 15% / 50%, Heroic 25% / 65%, Normal 35% / 70% and Easy 50% / 100% unchanged.
