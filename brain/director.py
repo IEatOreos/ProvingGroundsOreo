@@ -118,6 +118,13 @@ BOMB_LAST_S, BOMB_SITE_R, BOMB_DEAD_SHARE = 15.0, 5.0, 0.75
 FLAG_DEAD_SHARE = BOMB_DEAD_SHARE
 # (custom, Nov 27, the owner: "Make 5 of 8 trigger it for 8v8") teams of BIG_TEAM or more: BIG_DEAD_SHARE (5 of 8)
 BIG_TEAM, BIG_DEAD_SHARE = 8, 0.625
+# (custom, Nov 27, the owner: "Mythics, Demons, Legendaries, Nobles, will make calls to move together in groups of 2-3.
+# Like alot of 8v8 ctf games dont seem to have any sort of cordination"; "would a squad be able to be built around a
+# player? Similar to how our firefight setup is?") CTF squads (Director.ctf_squads): SQUAD_SIZE at most, a leader (a
+# person on their half, else a Legendary-and-up runner) and the runners nearest it within SQUAD_JOIN_R as its escorts,
+# kept while within SQUAD_KEEP_R. His 8v8 CTF games (Nov 25-26: 0-1, 1-0, 0-0): half of each team runners, none of the
+# walks into their base with 3 or more together, 77-94% of the deaths there with one teammate near at most
+SQUAD_SIZE, SQUAD_JOIN_R, SQUAD_KEEP_R = 3, 25.0, 40.0
 
 
 def defense_down(them):
@@ -1029,6 +1036,7 @@ class Director:
                 b.set_order(o, sure=fit == "anchor")
             if role == "cutoff":
                 s.__dict__.setdefault("_cuts", {})[b.id] = point   # (kept while it still beats him there: intercepts)
+        s.ctf_squads(now, snap, alive)        # (custom, Nov 27: runners in squads of 3 round a leader)
         for b in free:
             s.roles[b.id] = "free"
             b.set_order(Order("free"))
@@ -1042,6 +1050,53 @@ class Director:
         s.vehicle_orders(now, snap, alive + blitzing)
         s.infantry_patrol_orders(now, snap, alive)
         s.pair_orders(now, snap, alive)
+
+    def ctf_squads(s, now, snap, alive):
+        """(custom, Nov 27) CTF squads of SQUAD_SIZE (the comment by SQUAD_SIZE): after the role pass, the leaders (each
+        person of ours on their half of the map, nearer their stand than ours, as Firefight's teammates go with the
+        person; then our Legendary-and-up runners, profiles.fixed_high) take the runners nearest them within
+        SQUAD_JOIN_R as escorts that go with them (Order.target: Bot.lead, live_point), last pass's kept while within
+        SQUAD_KEEP_R. A runner waits by their base for a teammate within 8 u before going in (Bot.stage, STAGE_WAIT):
+        now its squad. Not while one of ours carries a flag (his escorts' plan) or their flag is carried."""
+        if snap.mode != "ctf":
+            s.squads = {}
+            return
+        mine = {p.id: p for p in snap.players if p.team == s.team and p.alive}
+        theirs = [f for t, f in (snap.flags or {}).items() if t != s.team]
+        if any(p.has_flag for p in mine.values()) or not theirs or all(f.state == "carried" for f in theirs):
+            return
+        bots = {b.id: b for b in alive if b.id in mine}
+        runners = [b for b in bots.values() if s.roles.get(b.id) == "runner"]
+        ours_at = s.map["flags"].get(s.side)
+        their_at = s.map["flags"].get(1 - s.side)
+        people = [p.id for p in mine.values() if p.id not in s.bots and not p.is_bot and ours_at is not None
+                  and their_at is not None and dist(p.pos, their_at) < dist(p.pos, ours_at)]
+        leads = people + [b.id for b in sorted(runners, key=lambda b: b.id) if profiles.fixed_high(b.p)]
+        old, squads, taken = getattr(s, "squads", {}) or {}, {}, set()
+        for lid in leads:
+            if lid in taken:
+                continue
+            lp = mine[lid].pos
+            keep = [m for m in old.get(lid, ()) if m in bots and m not in taken and m != lid
+                    and s.roles.get(m) in ("runner", "escort") and dist(mine[m].pos, lp) < SQUAD_KEEP_R]
+            more = sorted((b.id for b in runners if b.id not in taken and b.id != lid and b.id not in keep
+                           and dist(mine[b.id].pos, lp) < SQUAD_JOIN_R), key=lambda k: dist(mine[k].pos, lp))
+            members = (keep + more)[:SQUAD_SIZE - 1]
+            if not members:
+                continue
+            taken.update(members + [lid])
+            squads[lid] = members
+            for m in members:
+                s.roles[m] = "escort"
+                bots[m].set_order(Order("escort", lp, target=lid))
+            if lid in bots:
+                bots[lid].squad = list(members)
+            if sorted(old.get(lid, ())) != sorted(members):
+                s.event(now, "squad", f"{mine[lid].name}: squad with {', '.join(mine[m].name for m in members)}")
+        for b in bots.values():
+            if b.id not in squads:
+                b.squad = []
+        s.squads = squads
 
     def hh_bankers(s, now, snap, free):
         """(custom, Nov 12) Headhunter: [(bot, drop point)] the bots of free carrying skulls enough to bank them now
