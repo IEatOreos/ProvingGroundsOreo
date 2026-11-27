@@ -17,8 +17,9 @@ from . import vehicles
 
 # tier -> (miss chance, miss chance while the Banshee flips)
 # (Nov 26, the owner, later: "Give heroic a base of 25% to miss, and Legendary Blind and Tactician to miss as a 15%")
-MISS = {"high": (0.0, 0.25), "legendary": (0.15, 0.25), "strong": (0.25, 0.5), "average": (0.35, 0.6),
-        "novice": (0.5, 0.75)}
+# (later still: "Easy a 100% when flipping. Normal a 70% when flipping")
+MISS = {"high": (0.0, 0.25), "legendary": (0.15, 0.25), "strong": (0.25, 0.5), "average": (0.35, 0.7),
+        "novice": (0.5, 1.0)}
 FLIP_HOLD = 0.6    # s: a tip past 60 degrees this recent is still the flip
 MISS_R = 1.6       # u off the craft's middle: past its wings (about 0.7 u each side) and its body
 

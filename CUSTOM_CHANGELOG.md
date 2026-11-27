@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Banshee misses: Easy every shot and Normal 70% while it flips, 2026-11-26
+The owner: "Easy a 100% when flipping. Normal a 70% when flipping".
+- **`brain/banshee_miss.py` MISS:** Easy 100% while the Banshee flips (50% level), Normal 70% (35% level); the rest unchanged (Heroic 25% / 50%, Legendary, Blind, Tactician 15% / 25%, Mythic, Demon, Noble 0 / 25%).
+- **Validation:** `tools/test_banshee_miss.py` (5) OK. **Untested in game.**
+
 ### Banshee misses: Heroic 25% and Legendary, Blind, Tactician 15% even in level flight, 2026-11-26
 The owner: "Give heroic a base of 25% to miss, and Legendary Blind and Tactician to miss as a 15%".
 - **`brain/banshee_miss.py` MISS:** Heroic 25% (50% while the Banshee flips); Legendary, Blind and Tactician 15% (25% flipping); Mythic, Demon and Noble unchanged, 25% only while it flips; Normal 35% / 60% and Easy 50% / 75% unchanged.
