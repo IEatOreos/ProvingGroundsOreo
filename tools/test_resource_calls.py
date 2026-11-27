@@ -120,6 +120,10 @@ class ResourceCallTests(unittest.TestCase):
 
     def test_transport_still_selects_nearest(self):
         d, snap, bots, players = scene('mongoose')
+        # (custom, Nov 27: a Mongoose only for the objective, brain/goose_rules: here the CTF getaway ride)
+        snap.mode = 'ctf'
+        d.carry_point = lambda *a: Vec(0, 0, 0)
+        d.getaway_park = lambda *a: Vec(100, 0, 0)
         d.crew_orders(100, snap, players, bots)
         self.assertEqual(d.crews[10][0], 1)
 

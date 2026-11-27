@@ -49,22 +49,27 @@ def drive(bot, me, snap, now=100):
 
 class MongooseTransportTests(unittest.TestCase):
     def test_transport_role_and_crew_need_a_useful_trip(self):
+        # (custom, Nov 27, the owner: "Dont have bots use mongoose in slayer or koth"; brain/goose_rules) a Mongoose
+        # for the objective only: in CTF the getaway ride's spot (a useful trip, no retry ban), never in Slayer or King
         self.assertEqual(vehicles.roles_of('mongoose'), ('transport',))
-        for point, retry, expected in ((None, 0, False), (Vec(10, 0, 0), 0, False),
-                                       (Vec(80, 0, 0), 0, True), (Vec(80, 0, 0), 120, False)):
-            d, b, me, snap = scene()
+        for mode, park, retry, expected in (('slayer', Vec(80, 0, 0), 0, False), ('king', Vec(80, 0, 0), 0, False),
+                                            ('ctf', None, 0, False), ('ctf', Vec(10, 0, 0), 0, False),
+                                            ('ctf', Vec(80, 0, 0), 0, True), ('ctf', Vec(80, 0, 0), 120, False)):
+            d, b, me, snap = scene(mode=mode)
+            d.getaway_park = lambda *args, park=park: park
             me.vehicle = -1
             snap.vehicles[0]['occupied'] = False
-            b.order = Order('mid', point)
+            b.order = Order('mid', Vec(80, 0, 0))
             b.vehicle_retry_at = retry
             b.set_order = lambda order, **kwargs: setattr(b, 'order', order)
             d.crew_orders(100, snap, {0: me}, [b])
-            self.assertEqual(b.order.role == 'drive', expected)
+            self.assertEqual(b.order.role == 'drive', expected, (mode, park, retry))
             if expected:
-                self.assertEqual(b.drive_to, point)
+                self.assertEqual(b.drive_to, park)
 
     def test_multiple_mongooses_do_not_fill_harasser_roles(self):
-        d, b, me, snap = scene()
+        d, b, me, snap = scene(mode='ctf')
+        d.getaway_park = lambda *args: Vec(80, 0, 0)         # (custom, Nov 27: a Mongoose's objective trip)
         other = Bot(1, 0, b.p, d.map)
         other.order = Order('mid', Vec(80, 0, 0))
         other.set_order = lambda order, **kwargs: setattr(other, 'order', order)
@@ -245,7 +250,7 @@ class MongooseTransportTests(unittest.TestCase):
         # (custom, Nov 25, the owner: off a Mongoose with an enemy on radar, Bot.mongoose_bail; it drove away from him,
         # 'evade', before: tools/test_mongoose_bail.py)
         self.assertTrue(act.action)
-        self.assertIn('mongoose: an enemy on radar, off and on foot', b.notes)
+        self.assertIn('mongoose: an enemy on radar (an enemy close), off and on foot', b.notes)   # (Nov 27: 4 u off)
         d, b, me, snap = scene()
         jobs(d, b, me, snap)
         drive(b, me, snap)

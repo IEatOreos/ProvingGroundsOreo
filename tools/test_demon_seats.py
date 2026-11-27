@@ -74,6 +74,7 @@ class CallTests(unittest.TestCase):
         d, snap, bots, players = scene("mongoose", distances=(2, 10), tiers=("noble", "top"))
         snap.vehicles[0].update(occupied=True, riders=1)
         d.rider_ok = lambda *a: True
+        snap.mode, d.roles = "ctf", {0: "runner", 1: "runner"}   # (custom, Nov 27: a Mongoose's back seat, runners only)
         d.rider_calls(100, snap, bots, players)
         self.assertEqual([b.order.role for b in bots], ["mid", "board"])
 

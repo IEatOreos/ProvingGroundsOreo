@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Mongooses only for the objective; shot or spotted on one, drive away first, 2026-11-27
+The owner: "We have to do something about making Mongoose less used. Not totally but theyre just not practical. They just always have too many riders, and they always seem to die really easy ... Like only use them when escorting a bomb carrier, or flag carrier? Cause even now in 8v8 they just drive to the open, get hit dismount and die anyways"; "Yes, build it"; "Dont have bots use mongoose in slayer or koth".
+- **Found (his four vehicle games Nov 26: Tempest, Forge World twice, Boneyard, 14 bots each):** 165 Mongoose rides of 7 s on average. About 10 got where they were going, 105 ended in the Nov 25 bail (shot or an enemy on radar), and 31 of those riders died within 10 s of getting off in the open. Bots got onto them by four ways: a bot's own pick for any long trip (most bots pass that roll), the team plan's transport driver, a Wheelman's last-choice ride, and drivers calling any teammate within 12 u onto the back seat.
+- **Now (new `brain/goose_rules.py`):**
+  - A bot takes a Mongoose only in a race, with the objective in hand, or in CTF, Assault or Stockpile for the carrier:
+    - the team plan sends a free bot to one to fetch our carrier on foot 30 u or more from home (`Director.goose_goal`; `ferry_orders` runs him in once it drives), else to the CTF getaway ride's spot;
+    - a runner may pick one himself;
+    - at most one Mongoose of ours at a time on a trip without our carrier aboard.
+  - Never in Slayer, King of the Hill, Oddball, Infection, Firefight, Invasion or any other game.
+  - A bot's own pick (a long trip, a Wheelman) is checked in `Bot.veh_banned` (`goose_use`, set each decide); the director's own orders are checked when given. `rider_calls` puts only a runner on a Mongoose's back seat, a person's too. A person's horn or stop (`honk_orders`) still calls whoever he wants.
+- **The bail (`Bot.goose_flee`):** shot, or an enemy on radar (25 m, 8.2 u), a Mongoose driver now drives straight away from him at full speed (drive's retreat). It gets off once it has been out of every enemy's sight for 0.5 s after 1 s of running (behind cover), with an enemy within 5 u (at once, no outrunning him), stalled under 4 u/s, or after 3 s. A passenger stays aboard while it runs over 4 u/s and gets off as it slows or with an enemy within 5 u. The note says why ("mongoose: shot, driving away", then "mongoose: shot (out of sight), off and on foot"). The carrier and racers still never bail; the 30 s no-vehicle rest after getting off is unchanged.
+- **Validation:** new `tools/test_goose_rules.py` (13). `test_mongoose_bail.py`, `test_mongoose_transport.py`, `test_resource_calls.py` and `test_demon_seats.py` updated to the new rules (off at once only with him close, the drive away, the passenger riding it out, CTF's getaway for the transport role, Slayer and King none, a runner for the back seat). Full suite 1877, the same 2 `test_layout_lifts.py` failures as before. The real-rules sim has no vehicles (Asylum), so nothing was measured in a sim. **Untested in game.**
+
 ### CTF squads: runners in groups of 3 round a leader (a Legendary-and-up bot, or you on their half), 2026-11-27
 The owner: "I would also like to add a mechanic where Mythics, Demons, Legendaries, Nobles, will make calls to move together in groups of 2-3. Like alot of 8v8 ctf games dont seem to have any sort of cordination and thats why the games usually end 0-0 or 0-1"; "Yes build squads, and also would a squad be able to be built around a player? Similar to how our firefight setup is?".
 - **Found (his 8v8 CTF games, Nov 25-26: 0-1, 1-0, 0-0):** about half of each team runners, each on its own; none of a team's walks into the enemy base came with 3 or more of it together (0-12%), 77-94% of the deaths there with one teammate near at most; 5-6 pulls a game, almost every carrier down within 1-25 s and 15 u of the stand.

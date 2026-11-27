@@ -20,6 +20,7 @@ from . import nade
 from . import noble          # (custom, Nov 20) Noble, the testing bot: its tune, shot learning, winning spots
 from . import noble_habits   # (custom, Nov 22) Noble: pre-aim, each person's habits, dodges, team focus
 from . import banshee_miss   # (custom, Nov 26) DMR shots at a Banshee's pilot may go wide, by tier and its flips
+from . import goose_rules    # (custom, Nov 27) Mongooses only for the objective; the bail drives away first
 
 FOV_HALF = math.radians(35)      # CE default 70 degree horizontal FOV
 PERIPHERAL_HALF = math.radians(55)  # noticed later, at the edge of attention
@@ -5496,6 +5497,7 @@ class Bot:
         seen = s.per.visible_enemies()
         scores = {}
         s.goose_off_limits(now, me, snap)     # (custom, Nov 25: no Mongoose with an enemy on radar, veh_banned)
+        s.goose_use = (now, goose_rules.self_ok(snap, me, s.order.role, None))   # (custom, Nov 27: veh_banned)
         if s.goal[0] == "fight" and isinstance(s.goal[1], int):
             s.commit_carry = s.goal[1]          # the man it fights, carried through a hunt or a retreat (carried_target)
         post = getattr(s, "posture", 0.5)     # the team's score posture (director, brain/match.py)
@@ -6561,6 +6563,52 @@ class Bot:
         s.goose_radar = (now, off)
         return off
 
+    def goose_flee(s, now, me, snap, why):
+        """(custom, Nov 27, the owner: "even now in 8v8 they just drive to the open, get hit dismount and die anyways")
+        Shot or an enemy on radar on a Mongoose (mongoose_bail): True while it keeps going, False to get off now. A
+        driver drives straight away from the threat at full speed (retreat_to, drive's retreat), off once out of every
+        enemy's sight (none in its view goose_rules.HIDDEN_FOR s, after HIDDEN_AFTER s: behind cover), with an enemy within
+        CLOSE_R, stalled (under RUN_SPEED), or after FLEE_MAX s. A passenger rides on while it runs, off with an enemy
+        close, after FLEE_MAX s, or as it slows."""
+        G = goose_rules
+        fl = getattr(s, "goose_flight", None)
+        if fl is None or fl["veh"] != me.vehicle or now - fl.get("last", now) > 1.0:
+            fl = s.goose_flight = dict(veh=me.vehicle, since=now, seen_at=now, why=why)
+        fl["last"] = now
+        t = now - fl["since"]
+        threats = [b.pos for k, b in s.per.beliefs.items()
+                   if isinstance(k, int) and b.source in ("eyes", "radar", "hit") and now - b.t <= 1.0
+                   and snap.player(k) is not None and snap.player(k).alive and snap.player(k).team != me.team]
+        if any((q - me.pos).flat() < G.CLOSE_R for q in threats):
+            fl["off"] = "an enemy close"
+            return False
+        if t >= G.FLEE_MAX:
+            fl["off"] = "ran long enough"
+            return False
+        hurt = getattr(s.per, "hurt_at", None)
+        if (s.per.visible_enemies() or (hurt is not None and now - hurt < G.HIDDEN_FOR)
+                or any(isinstance(k, int) and b.seen and now - b.t < 0.2 for k, b in s.per.beliefs.items())):
+            fl["seen_at"] = now                  # (in his sight still: seen, recognised or not, or hit)
+        if t >= G.HIDDEN_AFTER and now - fl["seen_at"] >= G.HIDDEN_FOR:
+            fl["off"] = "out of sight"
+            return False
+        speed = me.vel.flat() if me.vel is not None else 0.0
+        if s.seat != "driver":
+            if speed < G.RUN_SPEED:
+                fl["off"] = "it slowed"
+                return False
+            s.note(f"mongoose: {fl['why']}, riding it out")
+            return True
+        if t >= G.HIDDEN_AFTER and speed < G.RUN_SPEED:
+            fl["off"] = "stalled"
+            return False
+        threat = min(threats, key=lambda q: (q - me.pos).flat(), default=None)
+        if threat is not None or fl.get("away") is None:
+            fl["away"] = G.away_point(me.pos, threat if threat is not None else me.pos + Vec(-1.0, 0.0, 0.0))
+        s.retreat_to, s.retreat_until = fl["away"], now + 0.3
+        s.note(f"mongoose: {fl['why']}, driving away")
+        return True
+
     def scorpion_sees_feet(s, me, foe, cam):
         """(custom, Nov 24) A shell's line from a Scorpion's camera (cam u over it) to a man's feet (Bot.feet, 0.05 u up:
         Aim.step's explosive aim) is open on the level data (Terrain.point_los "shot"); open where there is none to ask."""
@@ -6862,6 +6910,16 @@ class Bot:
             s.note("vehicle: aboard theirs, beating it")
             return
         why = s.mongoose_bail(now, me, snap) if v is not None and vehicles.kind_of(v["kind"]) == "mongoose" else None
+        fl = getattr(s, "goose_flight", None)
+        if (why is None and fl is not None and fl["veh"] == me.vehicle and now - fl.get("last", -9.0) < 1.0
+                and v is not None and vehicles.kind_of(v["kind"]) == "mongoose" and not s.mongoose_exempt(me, snap)):
+            why = fl["why"]                      # (custom, Nov 27) a drive away under way runs to its end: off after it
+        if why is not None and s.goose_flee(now, me, snap, why):
+            why = None                           # (custom, Nov 27) away from him first (goose_flee), then off
+        elif why is not None:
+            why = why + (f" ({s.goose_flight['off']})" if getattr(s, "goose_flight", None) and
+                         s.goose_flight.get("off") else "")
+            s.goose_flight = None
         if why is not None:
             # (custom, Nov 25, the owner: "They drive until an enemy is on radar, or as soon as they get shot and
             # dismount") off, Use held as every get-out, and on foot: no Mongoose (nor any vehicle) for MONGOOSE_RETRY s
@@ -9371,6 +9429,11 @@ class Bot:
         goose = getattr(s, "goose_radar", None)
         if goose is not None and goose[0] == now and goose[1] and vehicles.kind_of(v["kind"]) == "mongoose":
             return True       # (custom, Nov 25) an enemy on radar: no Mongoose now (goose_off_limits, set in decide)
+        use = getattr(s, "goose_use", None)
+        if (use is not None and not use[1] and vehicles.kind_of(v["kind"]) == "mongoose"
+                and not (s.order.role in ("drive", "ride", "board") and s.order.target == v["handle"])):
+            return True       # (custom, Nov 27) not its own pick: no objective trip for it (goose_rules.self_ok, decide);
+                              # the director's orders onto one were checked when given (goose_goal, rider_calls)
         park = getattr(s, "parked_ban", {}).get(v["handle"])
         if (park is not None and park[0] > now and dist(Vec(*v["pos"]), park[1]) < s.VEH_BAN_MOVED
                 and v.get("riders", 0) <= park[2]):

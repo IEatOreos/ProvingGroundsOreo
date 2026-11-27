@@ -1,6 +1,8 @@
 """(custom, Nov 25) Off a Mongoose when hit or with an enemy on radar (Bot.mongoose_bail, MONGOOSE_RADAR_R): the owner,
 "They drive until an enemy is on radar, or as soon as they get shot and dismount". Driver and passenger, every tier and
-game; not with the objective, not in a race."""
+game; not with the objective, not in a race. (custom, Nov 27, the owner: "they just drive to the open, get hit
+dismount and die anyways") a driver drives away from him first and gets off behind cover, with him close (CLOSE_R),
+stalled, or after FLEE_MAX s; a passenger rides on while it runs (Bot.goose_flee, brain/goose_rules)."""
 import sys
 import unittest
 from pathlib import Path
@@ -8,10 +10,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from brain.bot import MONGOOSE_RADAR_R, MONGOOSE_RETRY, Belief    # noqa: E402
+from brain import goose_rules as G                                # noqa: E402
 from brain.core import PlayerState, Vec                            # noqa: E402
 from test_mongoose_transport import drive, scene                   # noqa: E402
 
 NOTE = "mongoose: {}, off and on foot"
+
+
+def got_off(bot, why):
+    """Off with that reason (Nov 27: its end of the drive away in brackets)."""
+    return any(n.startswith(f"mongoose: {why}") and n.endswith("off and on foot") for n in bot.notes)
 
 
 def ride(kind="mongoose", seat="driver", mode="slayer"):
@@ -30,11 +38,12 @@ def spot(b, enemy, x, source="eyes", t=100.0):
 class MongooseBailTests(unittest.TestCase):
     def test_off_when_shot(self):
         b, me, snap, enemy = ride()
+        spot(b, enemy, G.CLOSE_R - 1.0)                     # (him close: off at once, no outrunning him)
         b.per.hurt_at = 100.0
         act = drive(b, me, snap)
         self.assertTrue(act.action)
         self.assertEqual((act.forward, act.fire), (0.0, False))
-        self.assertIn(NOTE.format("shot"), b.notes)
+        self.assertIn(NOTE.format("shot (an enemy close)"), b.notes)
         self.assertGreaterEqual(b.vehicle_retry_at, 100.0 + MONGOOSE_RETRY)
         self.assertEqual(b.vjob, "dismount")
 
@@ -47,10 +56,38 @@ class MongooseBailTests(unittest.TestCase):
     def test_off_with_an_enemy_on_radar_or_in_view_close(self):
         for source in ("eyes", "radar"):
             b, me, snap, enemy = ride()
-            spot(b, enemy, MONGOOSE_RADAR_R - 0.5, source)
+            spot(b, enemy, G.CLOSE_R - 1.0, source)
             act = drive(b, me, snap)
             self.assertTrue(act.action, source)
-            self.assertIn(NOTE.format("an enemy on radar"), b.notes, source)
+            self.assertIn(NOTE.format("an enemy on radar (an enemy close)"), b.notes, source)
+
+    def test_shot_from_afar_drives_away_then_off(self):
+        # (custom, Nov 27) him 30 u off: away from him at full speed, in sight still; off after FLEE_MAX s
+        b, me, snap, enemy = ride()
+        me.vel = Vec(10, 0, 0)
+        spot(b, enemy, -30.0)
+        b.per.hurt_at = 100.0
+        act = drive(b, me, snap)
+        self.assertFalse(act.action)
+        self.assertEqual(act.forward, 1.0)
+        self.assertIn("mongoose: shot, driving away", b.notes)
+        self.assertGreater(b.retreat_to.x, 10.0)            # (away: he is at -30)
+        t = 100.0
+        while not act.action and t < 100.0 + G.FLEE_MAX + 0.5:
+            t += 0.1
+            spot(b, enemy, -30.0, t=t)
+            act = drive(b, me, snap, t)
+        self.assertTrue(act.action)
+        self.assertAlmostEqual(t, 100.0 + G.FLEE_MAX, delta=0.15)
+        self.assertTrue(got_off(b, "shot (ran long enough)"))
+
+    def test_radar_dot_in_range_drives_away_first(self):
+        b, me, snap, enemy = ride()
+        me.vel = Vec(10, 0, 0)
+        spot(b, enemy, MONGOOSE_RADAR_R - 0.5, "radar")
+        act = drive(b, me, snap)
+        self.assertFalse(act.action)
+        self.assertIn("mongoose: an enemy on radar, driving away", b.notes)
 
     def test_rides_on_past_radar_range_or_on_an_old_dot_or_a_teammate(self):
         b, me, snap, enemy = ride()
@@ -69,8 +106,13 @@ class MongooseBailTests(unittest.TestCase):
     def test_the_passenger_too(self):
         b, me, snap, enemy = ride(seat="passenger")
         b.per.hurt_at = 100.0
-        self.assertTrue(drive(b, me, snap).action)
-        self.assertIn(NOTE.format("shot"), b.notes)
+        self.assertTrue(drive(b, me, snap).action)          # (stopped: off at once)
+        self.assertIn(NOTE.format("shot (it slowed)"), b.notes)
+        b, me, snap, enemy = ride(seat="passenger")         # (custom, Nov 27) running: it rides it out
+        me.vel = Vec(10, 0, 0)
+        b.per.hurt_at = 100.0
+        self.assertFalse(drive(b, me, snap).action)
+        self.assertIn("mongoose: shot, riding it out", b.notes)
 
     def test_rides_on_with_the_objective_or_in_a_race(self):
         b, me, snap, enemy = ride()

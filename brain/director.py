@@ -1358,6 +1358,7 @@ class Director:
         teammate a defender). Not our carrier (ferry), not Easy (it never plans). The driver waits for them
         (Bot.crew_coming)."""
         from . import vehicles
+        from . import goose_rules
         called, last = s.__dict__.setdefault("aboard_calls", {}), {}   # vehicle handle -> who it called last pass
         s.aboard_calls = last
         for v in snap.vehicles:
@@ -1396,7 +1397,11 @@ class Director:
             # (custom, Nov 13) a Wheelman's calls anyone it came for, whatever his trip (wheel_rider_ok)
             wheel = drv is not None and profiles.wheelman(drv.p)
 
+            goose = goose_rules.is_goose(v)
+
             def wanted(b):
+                if goose and not goose_rules.rider_ok(snap, s.roles.get(b.id), h):
+                    return False                 # (custom, Nov 27) a Mongoose's back seat: our runner only (goose_rules)
                 return b.id in was or s.rider_ok(b, players, gun_free, bound, person) or (wheel and s.wheel_rider_ok(b))
             cands = sorted((b for b in alive if b not in coming and b.p.teamwork > 0 and players[b.id] is not None
                             and players[b.id].vehicle == -1 and not players[b.id].has_flag and s.gunner_available(b)
@@ -1720,6 +1725,27 @@ class Director:
             return ("dismount", me.pos)
         return (job, point)
 
+    def goose_goal(s, snap, b, me, fetch=None):
+        """(custom, Nov 27, brain/goose_rules) Where free bot b would take a Mongoose: a race's lap as before; in a
+        carrier game (goose_rules.MODES) our carrier on foot far from home when nobody of ours is fetching him (its id
+        joins fetch: ferry_orders runs him in once it drives), else, with a slot free, the CTF getaway ride's spot.
+        None: no Mongoose for it (Slayer, King of the Hill, every other game)."""
+        from . import goose_rules
+        if snap.mode == "race":
+            return getattr(b, "drive_to", None) if b.order.role == "drive" else b.order.point
+        if me is None or snap.mode not in goose_rules.MODES:
+            return None
+        c = goose_rules.our_carrier_far(snap, s.team, s.carry_point(snap))
+        if c is not None and not any(x.order.role == "ferry" for x in s.bots.values()):
+            if fetch is not None:
+                fetch.add(b.id)
+            return c.pos
+        if not goose_rules.slot_free(snap, s.team):
+            return None
+        if GETAWAY and not any(getattr(x, "vjob", None) == "getaway" for x in s.bots.values()):
+            return s.getaway_park(snap, me.pos)
+        return None
+
     @staticmethod
     def ferry_seat(v):
         """A seat for our carrier in v: a passenger's, never a tank's (guide 18 ODST-OBJ-01)."""
@@ -1904,8 +1930,9 @@ class Director:
         power_pool = dict(free)
         power_pool.update({b.id: b for b in foot if profiles.fixed_high(b.p)})
         power_pool.update({b.id: b for b in seated if profiles.fixed_high(b.p) and players.get(b.id) is not None})
-        mongoose_goals = {bid: (getattr(b, "drive_to", None) if b.order.role == "drive" else b.order.point)
-                          for bid, b in free.items()}
+        # (custom, Nov 27) a Mongoose only for the objective: goose_goal (brain/goose_rules)
+        goose_fetch = set()
+        mongoose_goals = {bid: s.goose_goal(snap, b, players.get(bid), goose_fetch) for bid, b in free.items()}
         def may_drive(b, v):
             # (custom: no Demon at the wheel of a Warthog or a Mongoose, vehicles.DEMON_NO_DRIVE; Race laps excepted)
             # (custom, Nov 13: nor anyone at a Warthog's a Wheelman of ours is on his way to, Bot.wheel_yield: a job on
@@ -1942,7 +1969,8 @@ class Director:
             if (mine and now - since < 30.0
                     and may_drive(s.bots[bid], empty[h])
                     and not (vehicles.kind_of(empty[h]["kind"]) == "mongoose"
-                             and now < getattr(s.bots[bid], "vehicle_retry_at", 0.0))):
+                             and (now < getattr(s.bots[bid], "vehicle_retry_at", 0.0)
+                                  or mongoose_goals.get(bid) is None))):    # (custom, Nov 27: its purpose gone)
                 b, v = pool_for(empty[h])[bid], empty.pop(h)
                 leave(b)
                 drop_run(b, v)
@@ -1971,7 +1999,8 @@ class Director:
                          and (vehicles.kind_of(v["kind"]) != "mongoose" or (
                              now >= getattr(b, "vehicle_retry_at", 0.0) and mongoose_goals.get(bid) is not None
                              and Bot.trip_ok(v, players[bid], mongoose_goals[bid])
-                             and (snap.mode == "race" or dist(players[bid].pos, mongoose_goals[bid]) > VEHICLE_TRIP)))
+                             and (snap.mode == "race" or bid in goose_fetch
+                                  or dist(players[bid].pos, mongoose_goals[bid]) > VEHICLE_TRIP)))
                          and dist(players[bid].pos, Vec(*v["pos"])) <= reach_of(bid, v)]
                 d, b, v = min(pairs, key=lambda x: x[0], default=(None, None, None))
                 if d is None or d > (s.WHEEL_CREW_REACH if any(profiles.wheelman(x[1].p) for x in pairs) else s.CREW_REACH):
